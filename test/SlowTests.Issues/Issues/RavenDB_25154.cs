@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -1303,12 +1304,103 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ShouldNotThrowConcurrencyException_WhenIncludedDocumentEvictedFromSessionAsync(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                string addressId;
+                using (var session = store.OpenAsyncSession(new SessionOptions()
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities,
+                       }))
+                {
+                    var address = new Address()
+                    {
+                        City = "Harish",
+                        Street = "Erets Rd"
+                    };
+                 await   session.StoreAsync(address);
+                    addressId = session.Advanced.GetDocumentId(address);
+                    Assert.NotNull(addressId);
+                    address.Id = addressId;
+                    await session.StoreAsync(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = address
+                    }, "employees/1-A");
+                    await session.StoreAsync(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                 await   session.SaveChangesAsync();
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+
+                    var numOfRequests = session.Advanced.NumberOfRequests;
+                    var address = session.Load<Address>(jerry.Address.Id);
+                    Assert.NotNull(address);
+                    Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
+
+                    var expected = session.Advanced.GetChangeVectorFor(address);
+
+                    // Evict the included address from tracking
+                    session.Advanced.Evict(address);
+
+                    ModifyEgorInSession(session);
+
+                    var actual = string.Empty;
+                    using (var s = store.OpenSession())
+                    {
+                        var a = s.Load<Address>(addressId);
+                        a.City = "Hadera";
+                        s.SaveChanges();
+
+                        actual = s.Advanced.GetChangeVectorFor(a);
+                    }
+
+                    Assert.NotEmpty(actual);
+                    Assert.NotNull(actual);
+                    Assert.NotEqual(expected, actual);
+
+                    // Should NOT throw concurrency exception because address was evicted
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Address>(addressId);
+                    Assert.Equal("Hadera", j.City);
+                }
+            }
+        }
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void ShouldNotThrowConcurrencyException_WhenIncludedDocumentEvictedFromSession(Options options)
         {
             using (var store = GetDocumentStore(options))
             {
                 string addressId;
-                using (var session = store.OpenSession())
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                       {
+                           TrackingMode = TrackingMode.TrackAllEntities,
+                       }))
                 {
                     var address = new Address()
                     {
@@ -2627,6 +2719,231 @@ namespace SlowTests.Issues
                     var j = session.Load<Employee>("employees/1-A");
                     Assert.Null(j);
                 }
+            }
+        }
+
+        internal static IEnumerable<object[]> SessionAsyncActions()
+        {
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorInSessionAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorInPatchAfterLoadAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorInPatchNoLoad(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithStoreOverwriteAfterLoadAndEvictAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithStoreOverwriteWithoutLoadAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithLoadAndDeleteByIdAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithLoadAndDeleteByEntityAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorWithMultiplePatchesAsync(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorByReplacingAddressAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithAttachmentWithLoadAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorWithAttachmentNoLoadAsync(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorWithTimeSeriesNoLoadAsync(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithTimeSeriesWithLoadAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithCounterWithLoadAsync];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorWithCounterNoLoadAsync(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)(s => { ModifyEgorWithRevisionNoLoadAsync(s); return Task.CompletedTask; })];
+            yield return [(Func<IAsyncDocumentSession, Task>)ModifyEgorWithRevisionWithLoadAsync];
+        }
+        internal static async Task ModifyEgorInPatchAfterLoadAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Advanced.Patch(egor, e => e.Address.Street, "Mul HaHof Village");
+        }
+
+        internal static void ModifyEgorInPatchNoLoad(IAsyncDocumentSession session)
+        {
+            session.Advanced.Patch<Employee, string>("employees/2-A", e => e.Address.Street, "Mul HaHof Village");
+        }
+
+        internal static async Task ModifyEgorInSessionAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            egor.Address = new Address()
+            {
+                Street = "Mul HaHof Village"
+            };
+        }
+
+        internal static async Task ModifyEgorWithStoreOverwriteAfterLoadAndEvictAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+
+            // tracked entity is evicted from the session, so its not in the trackedEntities list anymore
+            session.Advanced.Evict(egor);
+            // store after evict is treated as _new_ document, so it will be added to the trackedEntities list again with null change vector, and this should not cause concurrency exception because the original entity is evicted !
+            await session.StoreAsync(new Employee
+            {
+                FirstName = "Egor",
+                Address = new Address()
+                {
+                    Street = "Mul HaHof Village"
+                }
+            }, "employees/2-A");
+        }
+
+        internal static async Task ModifyEgorWithStoreOverwriteWithoutLoadAsync(IAsyncDocumentSession session)
+        {
+            await session.StoreAsync(new Employee
+            {
+                FirstName = "Egor",
+                Address = new Address()
+                {
+                    Street = "Mul HaHof Village"
+                }
+            }, "employees/2-A");
+        }
+
+        internal static async Task ModifyEgorWithLoadAndDeleteByIdAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Delete("employees/2-A");
+        }
+
+        internal static async Task ModifyEgorWithLoadAndDeleteByEntityAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Delete(egor);
+        }
+
+        internal static void ModifyEgorWithMultiplePatchesAsync(IAsyncDocumentSession session)
+        {
+            session.Advanced.Patch<Employee, string>("employees/2-A", e => e.Address.Street, "Mul HaHof Village");
+            session.Advanced.Patch<Employee, string>("employees/2-A", e => e.FirstName, "Egor");
+        }
+
+        internal static async Task ModifyEgorByReplacingAddressAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Advanced.Patch(egor, e => e.Address, new Address()
+            {
+                Street = "Mul HaHof Village",
+                City = "Hadera"
+            });
+        }
+
+        internal static async Task ModifyEgorWithAttachmentWithLoadAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Advanced.Attachments.Store(egor, "profile-picture", new MemoryStream("image data"u8.ToArray()));
+        }
+
+        internal static void ModifyEgorWithAttachmentNoLoadAsync(IAsyncDocumentSession session)
+        {
+            session.Advanced.Attachments.Store("employees/2-A", "profile-picture", new MemoryStream("image data"u8.ToArray()));
+        }
+
+        internal static void ModifyEgorWithTimeSeriesNoLoadAsync(IAsyncDocumentSession session)
+        {
+            session.TimeSeriesFor("employees/2-A", "profile-picture-likes")
+                .Append(DateTime.UtcNow, new[] { 322d }, "super-like");
+        }
+
+        internal static async Task ModifyEgorWithTimeSeriesWithLoadAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.TimeSeriesFor(egor, "profile-picture-likes")
+                .Append(DateTime.UtcNow, new[] { 322d }, "super-like");
+        }
+
+        internal static async Task ModifyEgorWithCounterWithLoadAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.CountersFor(egor).Increment("profile-picture-likes");
+        }
+
+        internal static void ModifyEgorWithCounterNoLoadAsync(IAsyncDocumentSession session)
+        {
+            session.CountersFor("employees/2-A").Increment("profile-picture-likes");
+        }
+
+        internal static void ModifyEgorWithRevisionNoLoadAsync(IAsyncDocumentSession session)
+        {
+            session.Advanced.Revisions.ForceRevisionCreationFor("employees/2-A");
+        }
+
+        internal static async Task ModifyEgorWithRevisionWithLoadAsync(IAsyncDocumentSession session)
+        {
+            var egor = await session.LoadAsync<Employee>("employees/2-A");
+            session.Advanced.Revisions.ForceRevisionCreationFor(egor);
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [MemberData(nameof(SessionAsyncActions))]
+        public async Task ShouldThrowConcurrencyException_WhenTrackedEntityWasChangedInBackgroundSessionAsync(Func<IAsyncDocumentSession, Task> sessionAction)
+        {
+            using (var store = GetDocumentStore())
+            {
+                await ShouldThrowConcurrencyException_WhenTrackedEntityWasChangedInBackgroundSessionInternalAsync(sessionAction, store);
+            }
+        }
+
+        private static async Task ShouldThrowConcurrencyException_WhenTrackedEntityWasChangedInBackgroundSessionInternalAsync(Func<IAsyncDocumentSession, Task> sessionAction, DocumentStore store)
+        {
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Employee
+                {
+                    FirstName = "Jerry"
+                }, "employees/1-A");
+                await session.StoreAsync(new Employee
+                {
+                    FirstName = "Egor",
+                    Address = new Address()
+                    {
+                        Street = "Ahad Ha'am"
+                    }
+                }, "employees/2-A");
+                await session.SaveChangesAsync();
+            }
+
+            using (IAsyncDocumentSession session = store.OpenAsyncSession(new SessionOptions()
+            {
+                TrackingMode = TrackingMode.TrackAllEntities,
+            }))
+            {
+                var jerry = await session.LoadAsync<Employee>("employees/1-A");
+
+                await sessionAction.Invoke(session);
+
+                var expected = session.Advanced.GetChangeVectorFor(jerry);
+                Assert.NotEmpty(expected);
+                Assert.NotNull(expected);
+
+                var actual = string.Empty;
+                using (var s = store.OpenSession())
+                {
+                    var j = s.Load<Employee>("employees/1-A");
+                    j.Address = new Address()
+                    {
+                        City = "Hadera"
+                    };
+                    s.SaveChanges();
+
+                    actual = s.Advanced.GetChangeVectorFor(j);
+                }
+
+                Assert.NotEmpty(actual);
+                Assert.NotNull(actual);
+
+                // this should throw concurrency exception for jerry
+                var e = await Assert.ThrowsAsync<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChangesAsync());
+
+                Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                Assert.Equal("employees/1-A", e.Id);
+                Assert.Equal(actual, e.ActualChangeVector);
+                Assert.Equal(expected, e.ExpectedChangeVector);
+            }
+
+            using (var session = store.OpenSession(new SessionOptions()
+            {
+                TrackingMode = TrackingMode.TrackAllEntities
+            }))
+            {
+                var egor = session.Load<Employee>("employees/2-A");
+
+                Assert.Equal("Egor", egor.FirstName);
+                Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                var j = session.Load<Employee>("employees/1-A");
+                Assert.Equal("Hadera", j.Address.City);
             }
         }
     }

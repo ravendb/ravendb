@@ -433,8 +433,10 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.TrackedEntities:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
-                        var trackedEntities = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
-                        commandData.TrackedEntities = BatchTrackChangesCommand.Parse(trackedEntities);
+                        using (var trackedEntities = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        {
+                            commandData.TrackedEntities = BatchTrackChangesCommand.Parse(trackedEntities);
+                        }
                         break;
 
                     case CommandPropertyName.TimeSeries:

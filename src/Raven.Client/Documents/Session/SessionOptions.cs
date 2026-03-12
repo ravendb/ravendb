@@ -85,13 +85,14 @@ namespace Raven.Client.Documents.Session
                 if (TrackingModeWasSet)
                     throw new InvalidOperationException($"{nameof(NoTracking)} cannot be set when {nameof(TrackingMode)} was set. Please use {nameof(TrackingMode)} instead of {nameof(NoTracking)}.");
 
-                TrackingMode = value ? TrackingMode.NoTracking : TrackingMode.Default;
+                _trackingMode = value ? TrackingMode.NoTracking : TrackingMode.Default;
                 NoTrackingWasSet = true;
             }
         }
 
         internal bool NoTrackingWasSet { get; set; }
         internal bool TrackingModeWasSet { get; set; }
+        private TrackingMode _trackingMode;
 
         /// <summary>
         /// Enable tracking mode in the session<br/>
@@ -99,7 +100,7 @@ namespace Raven.Client.Documents.Session
         /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.TrackingMode"/></remarks>
         public TrackingMode TrackingMode
         {
-            get;
+            get => _trackingMode;
             set
             {
                 if (NoTrackingWasSet)
@@ -113,7 +114,7 @@ namespace Raven.Client.Documents.Session
                         throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
                 }
 
-                field = value;
+                _trackingMode = value;
             }
         }
 
