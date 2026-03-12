@@ -135,7 +135,7 @@ namespace Raven.Client.Documents.Session
             get;
             set
             {
-                if (TrackingMode == TrackingMode.TrackAllEntities)
+                if (value == TransactionMode.ClusterWide && TrackingMode == TrackingMode.TrackAllEntities)
                     throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
 
                 field = value;

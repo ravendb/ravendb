@@ -941,20 +941,23 @@ namespace Raven.Server.Documents
 
                         yield return new Document()
                         {
-                            Id = context.GetLazyString(id)
+                            Id = context.GetLazyString(id),
+                            ChangeVector = string.Empty // doesn't exists
                         };
                     }
-
-                    if (start > 0)
+                    else
                     {
-                        start--;
-                        continue;
+                        if (start > 0)
+                        {
+                            start--;
+                            continue;
+                        }
+
+                        if (take-- <= 0)
+                            continue; // we need to calculate totalCount correctly
+
+                        yield return TableValueToDocument(context, ref reader, fields);
                     }
-
-                    if (take-- <= 0)
-                        continue; // we need to calculate totalCount correctly
-
-                    yield return TableValueToDocument(context, ref reader, fields);
                 }
             }
         }

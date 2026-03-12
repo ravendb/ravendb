@@ -22,13 +22,25 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             {
                 var expected = _trackedEntities[document.Id];
                 if (expected == null)
+                {
+                    // we don't care
                     continue;
+                }
+
+                if (document.ChangeVector == string.Empty && expected == string.Empty)
+                {
+                    // this document doesn't exist, and it wasn't existing when we loaded it, so we are good
+                    continue;
+                }
 
                 ChangeVector current = context.GetChangeVector(document.ChangeVector);
 
                 if (current.IsEqual(context.GetChangeVector(expected)) == false)
                 {
-                    throw new ConcurrencyException($"Document '{document.Id}' has been modified since it was loaded. The expected change vector '{expected}' does not match the current change vector '{document.ChangeVector}'.")
+
+                    var expectedStr = expected == string.Empty ? "string.Empty" : expected;
+                    var currentStr = document.ChangeVector == null ? "NULL" : document.ChangeVector == string.Empty ? "string.Empty" : document.ChangeVector;
+                    throw new ConcurrencyException($"Document '{document.Id}' has been modified since it was loaded. The expected change vector '{expectedStr}' does not match the current change vector '{currentStr}'.")
                     {
                         Id = document.Id,
                         ActualChangeVector = document.ChangeVector,

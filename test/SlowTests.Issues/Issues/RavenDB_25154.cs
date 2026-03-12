@@ -1164,6 +1164,73 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void ShouldNotThrowConcurrencyException_WhenNonExistsEntityIncludedBySessionButThenWasNotAddedInBackgroundSession(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                string addressId = "addresses/1-A";
+                var address = new Address()
+                {
+                    City = "Harish",
+                    Street = "Erets Rd",
+                    Id = addressId
+                };
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry",
+                        Address = address
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+                    // this should put the include into missing ids
+                    var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
+
+                    var numOfRequests = session.Advanced.NumberOfRequests;
+                    Assert.Null(session.Load<Address>(jerry.Address.Id));
+                    Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
+
+                    ModifyEgorInSession(session);
+
+                   session.SaveChanges();
+
+                }
+
+                using (var session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities
+                }))
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+
+                    var j = session.Load<Address>(addressId);
+                    Assert.Null(j);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromSession(Options options)
         {
             using (var store = GetDocumentStore(options))
@@ -2450,9 +2517,9 @@ namespace SlowTests.Issues
                     // this should throw concurrency exception for jerry
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                    Assert.Contains($"Document 'employees/1-A' has been modified since it was loaded. The expected change vector '{expected}' does not match the current change vector 'string.Empty'.", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
-                    Assert.Null(e.ActualChangeVector);
+                    Assert.Empty(e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
                 }
 
@@ -2537,7 +2604,7 @@ namespace SlowTests.Issues
                         var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
                         Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
                         Assert.Equal("employees/1-A", e.Id);
-                        Assert.Null(e.ActualChangeVector);
+                        Assert.Empty(e.ActualChangeVector);
                         Assert.Equal(expected, e.ExpectedChangeVector);
                     }
                     else

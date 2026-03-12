@@ -67,21 +67,39 @@ namespace FastTests.Client
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           NoTracking = false,
-                           TransactionMode = TransactionMode.ClusterWide,
+                {
+                    NoTracking = false,
+                    TransactionMode = TransactionMode.ClusterWide,
 
-                       }))
+                }))
                 {
 
                 }
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
-                       {
-                           TransactionMode = TransactionMode.ClusterWide,
-                           NoTracking = false,
+                {
+                    TransactionMode = TransactionMode.ClusterWide,
+                    NoTracking = false,
 
 
-                       }))
+                }))
+                {
+
+                }
+
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TransactionMode = TransactionMode.SingleNode,
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                }))
+                {
+
+                }
+                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                {
+                    TrackingMode = TrackingMode.TrackAllEntities,
+                    TransactionMode = TransactionMode.SingleNode,
+
+                }))
                 {
 
                 }
