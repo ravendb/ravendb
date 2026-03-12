@@ -18,6 +18,8 @@ namespace Raven.Server.Documents.Sharding.Operations.Queries;
 public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TIncludes> : IShardedReadOperation<QueryResult, TCombinedResult>
 {
     private readonly ShardedDatabaseRequestHandler _requestHandler;
+    private readonly QueryMetadata _metadata;
+    private readonly DateTime? _timeBasedQueryTime;
 
     protected readonly Dictionary<int, ShardedQueryCommand> QueryCommands;
 
@@ -30,7 +32,8 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         [NotNull] Dictionary<int, ShardedQueryCommand> queryCommands,
         [NotNull] TransactionOperationContext context,
         [NotNull] ShardedDatabaseRequestHandler requestHandler,
-        string expectedEtag)
+        string expectedEtag,
+        DateTime? timeBasedQueryTime = null)
     {
         if (metadata == null)
             throw new ArgumentNullException(nameof(metadata));
@@ -38,8 +41,10 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         QueryCommands = queryCommands ?? throw new ArgumentNullException(nameof(queryCommands));
         Context = context ?? throw new ArgumentNullException(nameof(context));
         _requestHandler = requestHandler ?? throw new ArgumentNullException(nameof(requestHandler));
+        _metadata = metadata;
+        _timeBasedQueryTime = timeBasedQueryTime;
         ExpectedEtag = metadata.HasNonDeterministicFunction == false ? expectedEtag : null;
-        
+
         HadActiveMigrationsBeforeQueryStarted = requestHandler.DatabaseContext.DatabaseRecord.Sharding.HasActiveMigrations();
     }
 
@@ -60,6 +65,11 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
         foreach (var cmd in commands.Values)
         {
             CombinedResultEtag = Hashing.Combine(CombinedResultEtag, cmd.Result.ResultEtag);
+        }
+
+        if (_metadata.HasToday && _timeBasedQueryTime.HasValue)
+        {
+            CombinedResultEtag = Hashing.Combine(CombinedResultEtag, _timeBasedQueryTime.Value.Date.Ticks);
         }
 
         return CharExtensions.ToInvariantString(CombinedResultEtag);

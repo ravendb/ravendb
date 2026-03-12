@@ -35,13 +35,13 @@ public abstract class IndexOperationBase : IDisposable
     public abstract void Dispose();
 
     protected Query GetLuceneQuery(DocumentsOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer,
-        QueryBuilderFactories factories)
+        QueryBuilderFactories factories, QueryTimeScope queryTime = null)
     {
-        return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, factories);
+        return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, factories, queryTime);
     }
 
     protected Query GetLuceneQuery(DocumentsOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters,
-        Analyzer analyzer, QueryBuilderFactories factories)
+        Analyzer analyzer, QueryBuilderFactories factories, QueryTimeScope queryTime = null)
     {
         Query documentQuery;
 
@@ -70,7 +70,7 @@ public abstract class IndexOperationBase : IDisposable
                 }
 
                 using (closeServerTransaction)
-                    documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, factories);
+                    documentQuery = LuceneQueryBuilder.BuildQuery(serverContext, context, metadata, whereExpression, _index, parameters, analyzer, factories, queryTime);
             }
             finally
             {

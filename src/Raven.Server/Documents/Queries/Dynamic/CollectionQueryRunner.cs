@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 
-            if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
+            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
             {
                 if (result.ResultEtag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;
@@ -329,8 +329,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             resultToFill.TotalResults = numberOfDocuments;
             
+            var pos = bufferSize;
+
             if (hasCmpXchg)
-                buffer[bufferSize - 1] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
+                buffer[--pos] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;

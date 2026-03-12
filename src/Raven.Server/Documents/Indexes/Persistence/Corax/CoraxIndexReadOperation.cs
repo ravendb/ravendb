@@ -575,7 +575,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments,
                     IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
                     Func<string, SpatialField> getSpatialField,
-                    CancellationToken token)
+                    QueryTimeScope queryTime, CancellationToken token)
                 where TDistinct : struct, IHasDistinct
                 where THasProjection : struct, IHasProjection
                 where THighlighting : struct, ISupportsHighlighting
@@ -643,7 +643,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
 
                         builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
-                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, deduplicationDisabled: false, indexReadOperation: this, token: token);
+                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, deduplicationDisabled: false, indexReadOperation: this, token: token, queryTime: queryTime);
 
                         using (closeServerTransaction)
                         {
@@ -898,7 +898,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         public override IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<long> totalResults, Reference<long> skippedResults,
             Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
-            CancellationToken token)
+            QueryTimeScope queryTime, CancellationToken token)
         {
             // We've a chain-like builder here.
             return BuildHighlightings();
@@ -946,7 +946,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     totalResults, skippedResults, scannedDocuments,
                     retriever, documentsContext,
                     getSpatialField,
-                    token);
+                    queryTime, token);
         }
 
         private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)
@@ -1028,7 +1028,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         public override IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults,
             Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever,
-            DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
+            DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
         {
             throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
         }

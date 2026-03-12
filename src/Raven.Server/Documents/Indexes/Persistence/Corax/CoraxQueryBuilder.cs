@@ -179,7 +179,6 @@ public static partial class CoraxQueryBuilder
     internal static IQueryMatch BuildQuery(Parameters builderParameters, out OrderMetadata[] sortMetadata)
     {
         using (CultureHelper.EnsureInvariantCulture())
-        using (QueryBuilderHelper.CreateQueryTimeScope())
         {
             IQueryMatch coraxQuery;
             var metadata = builderParameters.Query.Metadata;
@@ -379,7 +378,7 @@ public static partial class CoraxQueryBuilder
 
                         if (where.Right is MethodExpression rme)
                         {
-                            right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext.DocumentDatabase.CompareExchangeStorage, rme, queryParameters);
+                            right = QueryBuilderHelper.EvaluateMethod(metadata.Query, metadata, serverContext, documentsContext.DocumentDatabase.CompareExchangeStorage, rme, queryParameters, builderParameters.QueryTime);
                         }
 
 

@@ -230,9 +230,13 @@ function execute(doc, args){
 
         public bool HasOrderByRandom;
 
-        public bool HasTemporalFunction;
+        public bool HasNow;
 
-        public bool HasNonDeterministicFunction => HasOrderByRandom || HasTemporalFunction;
+        public bool HasToday;
+
+        public bool HasTimeBasedFunction => HasNow || HasToday;
+
+        public bool HasNonDeterministicFunction => HasOrderByRandom || HasNow;
 
         public DateTime CreatedAt;
 
@@ -2208,8 +2212,10 @@ function execute(doc, args){
                             _metadata.HasCmpXchg = true;
                             break;
                         case MethodType.Now:
+                            _metadata.HasNow = true;
+                            break;
                         case MethodType.Today:
-                            _metadata.HasTemporalFunction = true;
+                            _metadata.HasToday = true;
                             break;
                     }
                 }

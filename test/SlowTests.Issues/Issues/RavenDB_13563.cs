@@ -232,7 +232,7 @@ namespace SlowTests.Issues
                         indexQueryServerSide.Metadata.Query.Where,
                         null,
                         blittableParameters, null,
-                        null, buildSteps);
+                        null, buildSteps: buildSteps);
 
                     return luceneQuery.ToString();
                 }

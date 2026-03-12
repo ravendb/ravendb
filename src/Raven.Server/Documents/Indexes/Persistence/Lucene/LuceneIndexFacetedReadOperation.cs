@@ -54,14 +54,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _releaseSearcher = searcherHolder.GetSearcher(readTransaction, _state, out _searcher);
         }
 
-        public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(context, facetQuery, SearchEngineType.Lucene);
 
             var query = facetQuery.Query;
             Dictionary<string, Dictionary<string, FacetValues>> facetsByName = null;
 
-            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer, _queryBuilderFactories, queryTime);
 
             List<ReaderFacetInfo> returnedReaders;
             using (queryTimings?.For(nameof(QueryTimingsScope.Names.Lucene)))

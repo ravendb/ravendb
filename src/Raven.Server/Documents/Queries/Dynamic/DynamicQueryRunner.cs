@@ -55,16 +55,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = result.Instance;
             queryContext.WithIndex(index);
 
+            var queryTime = query.Metadata.HasTimeBasedFunction ? new QueryTimeScope() : null;
+
             if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag(queryContext, query.Metadata);
+                var etag = index.GetIndexEtag(queryContext, query.Metadata, queryTime);
                 if (etag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                var queryResult = await index.Query(query, queryContext, token);
+                var queryResult = await index.Query(query, queryContext, token, queryTime);
                 queryResult.AutoIndexCreationRaftIndex = result.Index;
 
                 return queryResult;

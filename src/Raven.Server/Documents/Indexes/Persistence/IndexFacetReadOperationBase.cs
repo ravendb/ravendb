@@ -23,7 +23,7 @@ public abstract class IndexFacetReadOperationBase : IndexOperationBase
     }
 
     public abstract List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context,
-        Func<string, SpatialField> getSpatialField, CancellationToken token);
+        Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token);
 
     protected static void CompleteFacetCalculationsStage(Dictionary<string, FacetedQueryParser.FacetResult> results, IndexQueryServerSide query)
     {

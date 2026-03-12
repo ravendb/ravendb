@@ -49,6 +49,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     private readonly bool _ignoreLimit;
     private readonly string _raftUniqueRequestId;
     private HashSet<int> _filteredShardIndexes;
+    protected DateTime? QueryTime;
 
     protected readonly TransactionOperationContext Context;
     protected readonly ShardedDatabaseRequestHandler RequestHandler;
@@ -442,22 +443,23 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
-        if (queryChanges.HasFlag(QueryChanges.RewriteTemporalFunctions))
+        if (queryChanges.HasFlag(QueryChanges.RewriteTimeBasedFunctions))
         {
             // In sharded queries, each shard resolves now()/today() independently, which can lead to
             // slightly different values across shards. We resolve them once on the orchestrator and
             // replace the function calls with query parameters to ensure consistency.
-            var usedFunctions = TemporalFunction.None;
+            var usedFunctions = TimeBasedFunction.None;
 
             if (clone.Where != null)
-                clone.Where = ReplaceTemporalFunctions(clone.Where, ref usedFunctions);
+                clone.Where = ReplaceTimeBasedFunctions(clone.Where, ref usedFunctions);
 
             if (clone.Filter != null)
-                clone.Filter = ReplaceTemporalFunctions(clone.Filter, ref usedFunctions);
+                clone.Filter = ReplaceTimeBasedFunctions(clone.Filter, ref usedFunctions);
 
-            if (usedFunctions != TemporalFunction.None)
+            if (usedFunctions != TimeBasedFunction.None)
             {
                 var now = DateTime.UtcNow;
+                QueryTime = now;
 
                 DynamicJsonValue modifiedArgs;
                 if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args) && args != null)
@@ -470,10 +472,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                     modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
                 }
 
-                if (usedFunctions.HasFlag(TemporalFunction.Now))
+                if (usedFunctions.HasFlag(TimeBasedFunction.Now))
                     modifiedArgs[NowToken] = now.GetDefaultRavenFormat(isUtc: true);
 
-                if (usedFunctions.HasFlag(TemporalFunction.Today))
+                if (usedFunctions.HasFlag(TimeBasedFunction.Today))
                     modifiedArgs[TodayToken] = now.Date.GetDefaultRavenFormat(isUtc: true);
             }
         }
@@ -496,21 +498,21 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    private static QueryExpression ReplaceTemporalFunctions(QueryExpression expr, ref TemporalFunction usedFunctions)
+    private static QueryExpression ReplaceTimeBasedFunctions(QueryExpression expr, ref TimeBasedFunction usedFunctions)
     {
         switch (expr)
         {
             case MethodExpression me when me.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase):
-                usedFunctions |= TemporalFunction.Now;
+                usedFunctions |= TimeBasedFunction.Now;
                 return new ValueExpression(NowToken, ValueTokenType.Parameter);
 
             case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
-                usedFunctions |= TemporalFunction.Today;
+                usedFunctions |= TimeBasedFunction.Today;
                 return new ValueExpression(TodayToken, ValueTokenType.Parameter);
 
             case BinaryExpression be:
-                var newLeft = ReplaceTemporalFunctions(be.Left, ref usedFunctions);
-                var newRight = ReplaceTemporalFunctions(be.Right, ref usedFunctions);
+                var newLeft = ReplaceTimeBasedFunctions(be.Left, ref usedFunctions);
+                var newRight = ReplaceTimeBasedFunctions(be.Right, ref usedFunctions);
 
                 if (ReferenceEquals(newLeft, be.Left) && ReferenceEquals(newRight, be.Right))
                     return be;
@@ -518,7 +520,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 return new BinaryExpression(newLeft, newRight, be.Operator) { Parenthesis = be.Parenthesis };
 
             case NegatedExpression ne:
-                var newInner = ReplaceTemporalFunctions(ne.Expression, ref usedFunctions);
+                var newInner = ReplaceTimeBasedFunctions(ne.Expression, ref usedFunctions);
 
                 if (ReferenceEquals(newInner, ne.Expression))
                     return ne;
@@ -531,7 +533,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
                 foreach (var arg in me.Arguments)
                 {
-                    var newArg = ReplaceTemporalFunctions(arg, ref usedFunctions);
+                    var newArg = ReplaceTimeBasedFunctions(arg, ref usedFunctions);
                     if (ReferenceEquals(newArg, arg) == false)
                         changed = true;
                     newArgs.Add(newArg);
@@ -548,7 +550,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
                 foreach (var val in ie.Values)
                 {
-                    var newVal = ReplaceTemporalFunctions(val, ref usedFunctions);
+                    var newVal = ReplaceTimeBasedFunctions(val, ref usedFunctions);
                     if (ReferenceEquals(newVal, val) == false)
                         valuesChanged = true;
                     newValues.Add(newVal);
@@ -690,8 +692,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
-        if (indexQuery.Metadata.HasTemporalFunction)
-            queryChanges |= QueryChanges.RewriteTemporalFunctions;
+        if (indexQuery.Metadata.HasTimeBasedFunction)
+            queryChanges |= QueryChanges.RewriteTimeBasedFunctions;
 
         return queryChanges;
     }
@@ -990,11 +992,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         RewriteForLimitWithOrderByInMapReduce = 1 << 4,
         UpdateOrderByFieldsInMapReduce = 1 << 5,
         UseCachedOrderByFieldsInMapReduce = 1 << 6,
-        RewriteTemporalFunctions = 1 << 7
+        RewriteTimeBasedFunctions = 1 << 7
     }
 
     [Flags]
-    private enum TemporalFunction
+    private enum TimeBasedFunction
     {
         None = 0,
         Now = 1 << 0,

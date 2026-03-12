@@ -111,14 +111,14 @@ namespace Raven.Server.Documents.Indexes.Auto
             return references == null ? HandleReferencesBase.InMemoryReferencesInfo.Default : references.GetReferencesInfo(collection);
         }
         
-        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
+        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale, QueryTimeScope queryTime = null)
         {
             if (_handleReferences == null)
-                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
+                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale, queryTime);
 
             return CalculateIndexEtagWithReferences(
                 _handleReferences, null, queryContext,
-                indexContext, query, isStale, _referencedCollections, _referencedCollectionsDict, null);
+                indexContext, query, isStale, _referencedCollections, _referencedCollectionsDict, null, queryTime);
         }
         
         public override Dictionary<string, long> GetLastProcessedTombstonesPerCollection(ITombstoneAware.TombstoneType tombstoneType, Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null)

@@ -26,8 +26,9 @@ public sealed class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOper
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
         [NotNull] Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> sortingComparerCreator,
-        string expectedEtag)
-        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
+        string expectedEtag,
+        DateTime? timeBasedQueryTime = null)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag, timeBasedQueryTime)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
         _sortingComparerCreator = sortingComparerCreator ?? throw new ArgumentNullException(nameof(sortingComparerCreator));

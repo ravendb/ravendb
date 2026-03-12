@@ -46,7 +46,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     }
 
     public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context,
-        Func<string, SpatialField> getSpatialField, CancellationToken token)
+        Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
     {
         //We currently only supports count aggregation by index, however in scanning we already have entry reader so let's use indexed facet only in case when user wants to count per term/range
         var canUseIndexedFacetQuery = true;
@@ -61,12 +61,12 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         }
 
         return canUseIndexedFacetQuery
-            ? IndexedFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, token)
-            : ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, token);
+            ? IndexedFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, queryTime, token)
+            : ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, queryTime, token);
     }
 
     private List<FacetResult> IndexedFacetedQuery(Dictionary<string, FacetedQueryParser.FacetResult> results, FacetQuery facetQuery, QueryTimingsScope queryTimings,
-        DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, CancellationToken token)
+        DocumentsOperationContext context, Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
     {
         var query = facetQuery.Query;
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
@@ -163,14 +163,14 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
 
     private List<FacetResult> ScanningFacetedQuery(Dictionary<string, FacetedQueryParser.FacetResult> results, FacetQuery facetQuery, QueryTimingsScope queryTimings,
         DocumentsOperationContext context,
-        Func<string, SpatialField> getSpatialField, CancellationToken token)
+        Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token)
     {
         var query = facetQuery.Query;
         Dictionary<string, Dictionary<string, FacetValues>> facetsByName = new();
         Dictionary<string, Dictionary<string, FacetValues>> facetsByRange = new();
 
         var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index, query.QueryParameters, _queryBuilderFactories,
-            _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token);
+            _fieldMappings, null, null, -1, deduplicationDisabled: false, token: token, queryTime: queryTime);
         var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
 
         var coraxPageSize = CoraxBufferSize(_indexSearcher, facetQuery.Query.PageSize, query);

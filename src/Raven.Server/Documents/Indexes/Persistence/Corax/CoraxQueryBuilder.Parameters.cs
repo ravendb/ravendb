@@ -39,11 +39,13 @@ public partial class CoraxQueryBuilder
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
         public readonly bool IsVectorSingleClause;
-        
+        public readonly QueryTimeScope QueryTime;
+
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default)
         {
+            QueryTime = queryTime;
             IndexSearcher = searcher;
             ServerContext = serverContext;
             Query = query;

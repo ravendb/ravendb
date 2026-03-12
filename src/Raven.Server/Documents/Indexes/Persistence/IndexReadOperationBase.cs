@@ -46,14 +46,14 @@ namespace Raven.Server.Documents.Indexes.Persistence
         internal virtual void AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved()
         {
         }
-        
+
         public abstract IEnumerable<QueryResult> Query(IndexQueryServerSide query, QueryTimingsScope queryTimings, FieldsToFetch fieldsToFetch,
             Reference<long> totalResults, Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext,
-            Func<string, SpatialField> getSpatialField, CancellationToken token);
+            Func<string, SpatialField> getSpatialField, QueryTimeScope queryTime, CancellationToken token);
 
         public abstract IEnumerable<QueryResult> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<long> totalResults,
             Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
-            CancellationToken token);
+            QueryTimeScope queryTime, CancellationToken token);
 
         public abstract List<string> Terms(string field, string fromValue, long pageSize, CancellationToken token);
 

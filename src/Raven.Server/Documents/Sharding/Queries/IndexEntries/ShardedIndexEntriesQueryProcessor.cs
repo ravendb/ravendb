@@ -29,7 +29,7 @@ public sealed class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBas
     {
         var commands = GetOperationCommands(scope: null);
 
-        var operation = new ShardedIndexEntriesQueryOperation(Query, Context, RequestHandler, commands, ComparerCreator, ExistingResultEtag?.ToString());
+        var operation = new ShardedIndexEntriesQueryOperation(Query, Context, RequestHandler, commands, ComparerCreator, ExistingResultEtag?.ToString(), QueryTime);
         int[] shards = GetShardNumbers(commands);
         var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
 
