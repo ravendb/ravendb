@@ -38,7 +38,7 @@ export interface AiAgentRunResult {
 export interface AiAgentDocMessage {
     role: AiAgentRole;
     content: string;
-    tool_calls: {
+    tool_calls?: {
         id: string;
         type: string;
         function: {

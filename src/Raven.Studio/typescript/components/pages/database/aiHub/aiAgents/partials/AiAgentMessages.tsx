@@ -46,7 +46,7 @@ export default function AiAgentMessages({
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
             {messages.map((message) => (
-                <AiAgentMessage
+                <AiAgentMessageComponent
                     key={message.id}
                     message={message}
                     allMessages={messages}
@@ -71,7 +71,7 @@ interface AiAgentMessageProps {
     parametersFromUser?: Record<string, string>;
 }
 
-function AiAgentMessage({
+function AiAgentMessageComponent({
     message,
     allMessages,
     toolQueries,
@@ -84,12 +84,12 @@ function AiAgentMessage({
         .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
         ?.toolCalls.find((x) => x.id === message.toolCallId)?.name;
 
-    const isActionTool = !!(toolName && toolActions.some((x) => x.Name === toolName));
+    const isSubmittedActionTool = !!(toolName && toolActions.some((x) => x.Name === toolName));
 
     return (
         <div>
             {message.role === "system" && <SystemMessage message={message} />}
-            {isActionTool && <ToolMessage message={message} type="action" />}
+            {isSubmittedActionTool && <ToolMessage message={message} type="action" />}
             {message.role === "user" && (
                 <UserMessage message={message} toolQueries={toolQueries} toolActions={toolActions} />
             )}

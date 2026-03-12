@@ -4,29 +4,49 @@ import ChatAiAgent from "./ChatAiAgent";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { AiAgentStubs } from "test/stubs/AiAgentStubs";
+import document from "models/database/documents/document";
 
 export default {
     title: "Pages/AI Hub/AI Agents/Chat AI Agent",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
-export const ChatAiAgentStory: StoryObj = {
+interface ChatAiAgentStoryArgs {
+    agentId: string;
+    conversationId: string;
+    isHistory: boolean;
+    agents: GetAiAgentResultDto;
+    conversationDocument: document;
+}
+
+export const ChatAiAgentStory: StoryObj<ChatAiAgentStoryArgs> = {
     name: "Chat AI Agent",
-    render: () => {
+    render: (args) => {
         const { databases } = mockStore;
         const { aiAgentService, databasesService } = mockServices;
 
         databases.withActiveDatabase();
 
-        aiAgentService.withAiAgents();
-        databasesService.withDocumentWithMetadata(AiAgentStubs.getAiAgentDocument());
+        aiAgentService.withAiAgents(args.agents);
+        databasesService.withDocumentWithMetadata(args.conversationDocument);
 
         return (
-            <div style={{ height: 700 }}>
+            <div style={{ height: 1000 }}>
                 <ChatAiAgent
-                    queryParams={{ agentId: "first-agent", conversationId: "conversation-1", isHistory: false }}
+                    queryParams={{
+                        agentId: args.agentId,
+                        conversationId: args.conversationId,
+                        isHistory: args.isHistory,
+                    }}
                 />
             </div>
         );
+    },
+    args: {
+        agentId: "first-agent",
+        conversationId: "conversation-1",
+        isHistory: false,
+        agents: AiAgentStubs.getAiAgents(),
+        conversationDocument: AiAgentStubs.getAiAgentDocument(),
     },
 };
