@@ -68,9 +68,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "Chats/1",
                 new AiConversationCreationOptions().AddParameter("maxBudgetNis", 3500) // send
                     .AddParameter("minRamGb", 16) // send
-                    .AddParameter("customerId", "Customers/1", sendToModel: false) //don't-send
+                    .AddParameter("customerId", "Customers/1", new AiConversationParameterOptions(){ SendToModel = false}) //don't-send
                     // Additional fields for sub-agent
-                    .AddParameter("customerName", "Shahar", sendToModel: true) // dont-send (pass it as is to the sub-agent if exists)
+                    .AddParameter("customerName", "Shahar", new AiConversationParameterOptions(){ SendToModel = true}) // dont-send (pass it as is to the sub-agent if exists)
             );
             chat.SetUserPrompt(
                 "Find laptops for me."
@@ -161,9 +161,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 new AiConversationCreationOptions()
                     .AddParameter("customerId", "Customers/1")// send to root-agent and to the sub-agent. sub-agent won't send it cause its config doesn't have this param definition
                     // for sub-agent only (additional params)
-                    .AddParameter("productType", "Laptop", sendToModel: true) // send to sub-agent
-                    .AddParameter("minRamGb", 16, sendToModel: false) // don't-send (only for sub-agent query)
-                    .AddParameter("maxBudgetNis", 3500, sendToModel: false) //don't-send to sub-agent (only for sub-agent query)
+                    .AddParameter("productType", "Laptop", new AiConversationParameterOptions(){ SendToModel = true}) // send to sub-agent
+                    .AddParameter("minRamGb", 16, new AiConversationParameterOptions(){ SendToModel = false}) // don't-send (only for sub-agent query)
+                    .AddParameter("maxBudgetNis", 3500, new AiConversationParameterOptions(){ SendToModel = false}) //don't-send to sub-agent (only for sub-agent query)
             );
             chat.SetUserPrompt("Find laptops for me.");
             var r = await chat.RunAsync<OutputSchema>();

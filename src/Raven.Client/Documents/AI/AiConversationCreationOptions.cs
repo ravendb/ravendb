@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.AI;
 
 public class AiConversationCreationOptions : IDynamicJson
 {
-    public Dictionary<string, AiConversationParameterValue> Parameters { get; set; }
+    public Dictionary<string, AiConversationParameter> Parameters { get; set; }
     public int? ExpirationInSec { get; set; }
     public int? MaxModelIterationsPerCall { get; set; }
 
@@ -16,23 +16,23 @@ public class AiConversationCreationOptions : IDynamicJson
     {
     }
 
-    public AiConversationCreationOptions AddParameter(string name, object value, bool sendToModel = true)
+    public AiConversationCreationOptions AddParameter(string name, object value, AiConversationParameterOptions options = null)
     {
         if (value is not string && value is IEnumerable ie)
             value = new DynamicJsonArray(ie);
-        Parameters ??= new Dictionary<string, AiConversationParameterValue>();
-        Parameters.Add(name, new AiConversationParameterValue { Value = value, SendToModel = sendToModel});
+        Parameters ??= new Dictionary<string, AiConversationParameter>();
+        Parameters.Add(name, new AiConversationParameter { Value = value, SendToModel = options?.SendToModel ?? true});
         return this;
     }
 
-    public AiConversationCreationOptions(Dictionary<string, AiConversationParameterValue> parameters)
+    public AiConversationCreationOptions(Dictionary<string, AiConversationParameter> parameters)
     {
         Parameters = parameters;
     }
 
     public AiConversationCreationOptions(Dictionary<string, object> parameters)
     {
-        Parameters = parameters.ToDictionary(kv => kv.Key, kv => new AiConversationParameterValue { Value = kv.Value, SendToModel = true});
+        Parameters = parameters.ToDictionary(kv => kv.Key, kv => new AiConversationParameter { Value = kv.Value, SendToModel = true});
     }
 
     public DynamicJsonValue ToJson()
@@ -45,7 +45,12 @@ public class AiConversationCreationOptions : IDynamicJson
     }
 }
 
-public class AiConversationParameterValue : IDynamicJson
+public class AiConversationParameterOptions
+{
+    public bool SendToModel { get; set; } = true;
+}
+
+public class AiConversationParameter : IDynamicJson
 {
     public object Value { get; set; }
     public bool SendToModel { get; set; } = true;
