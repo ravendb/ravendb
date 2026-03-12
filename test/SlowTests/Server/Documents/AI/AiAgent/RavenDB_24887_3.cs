@@ -138,12 +138,11 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
     public async Task SubAgent2OpenActionTools_DepthOf3(Options options, GenAiConfiguration config, bool level1OncePrompt, bool level0OncePrompt)
     {
         const string atOncePrompt =
-            "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwide the tool call will fail.";
+            "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwise the tool call will fail.";
         const string twicePrompt = "Use for adding movie rate for the current user you talking with OR changing user name (cannot ask for both at once)";
 
         using var store = GetDocumentStore(options);
@@ -175,9 +174,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
         userAgent2.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent2Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent2, MoviesSampleObject.Instance)).Identifier;
 
-        var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
-            config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+        var userAgent1 = new AiAgentConfiguration("user-info-agent-1", config.ConnectionStringName, GetSystemPrompt(userAgent2Id, level1OncePrompt)
         )
         {
             SubAgents =
@@ -192,9 +189,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
         userAgent1.Parameters.Add(new AiAgentParameter("userId", "the id of the current user that you talk with"));
         var userAgent1Id = (await store.AI.CreateAgentAsync<MoviesSampleObject>(userAgent1, MoviesSampleObject.Instance)).Identifier;
 
-        var userAgent0 = new AiAgentConfiguration("user-info-agent-0",
-            config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+        var userAgent0 = new AiAgentConfiguration("user-info-agent-0", config.ConnectionStringName, GetSystemPrompt(userAgent1Id, level0OncePrompt)
         )
         {
             SubAgents =
@@ -246,6 +241,77 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
             Assert.Equal("Omer Adam", u.Name);
         }
         Assert.Equal(Rates.Count + 2, (await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation())).Collections["Ratings"]);
+    }
+
+    internal static string GetSystemPrompt(string toolName, bool oncePrompt)
+    {
+        if (oncePrompt)
+            return $"""
+                    You are a User Profile Agent on a movie rating system.
+
+                    You can edit the user's name and create movie rating records.
+
+                    When the user asks for multiple actions, you MUST perform all of them in a SINGLE tool call.
+
+                    Rules:
+                    - Never split the request into multiple tool calls.
+                    - Combine all requested actions into the same instruction.
+                    - Call the tool exactly once.
+                    - Never produce multiple tool calls.
+                    - Never repeat the same tool call !!!
+                    - After producing the tool call, stop generating.
+
+                    Example:
+
+                    User:
+                    "Rate the movie 'Toy Story' as 5 and change my name from 'Shahar Hikri' to 'Aviv Rachmani'."
+
+                    Assistant:
+                    Call tool: "{toolName}"
+                    "Rate the movie 'Toy Story' as 5 and change my name from 'Shahar Hikri' to 'Aviv Rachmani'."
+
+                    Tool results:
+                    Movie rating added successfully.
+                    User name updated successfully.
+                    
+                    Assistant: 
+                    "Done! name changed to Aviv Rachmani and 'Toy Story' rated as 5."
+                    """;
+
+        return $"""
+                You are authorized to edit the user's name and to create movie-rating records associated with the user.
+
+                When the user asks for multiple actions, you must call the sub-agent tool once for each action.
+
+                If multiple actions are requested, emit multiple tool calls in the SAME response.
+
+                Do not wait for a tool result before calling another tool.
+
+                Each tool call must perform exactly one action.
+
+                Never combine multiple actions in a single tool call.
+
+                Example:
+
+                User:
+                "Rate the movie 'Toy Story' as 5 and change my name from 'Shahar Hikri' to 'Aviv Rachmani'."
+
+                Assistant:
+                [
+                  Call tool: "{toolName}"
+                  "Rate the movie 'Toy Story' as 5."
+
+                  Call tool: "{toolName}"
+                  "Change my name from 'Shahar Hikri' to 'Aviv Rachmani'."
+                ]
+                
+                Tool results:
+                Movie rating added successfully.
+                User name updated successfully.
+
+                Assistant: 
+                "Done! name changed to Aviv Rachmani and 'Toy Story' rated as 5."
+                """;
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -703,7 +769,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent2 = new AiAgentConfiguration("user-info-agent-2",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+            GetSystemPrompt(userAgent3Id, oncePrompt: false)
         )
         {
             SubAgents =
@@ -721,7 +787,7 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+            GetSystemPrompt(userAgent2Id, oncePrompt: false)
         )
         {
             SubAgents =

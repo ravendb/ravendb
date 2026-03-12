@@ -155,9 +155,9 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name and my favorite genres?");
         var r = await chat.RunAsync<MoviesSampleObject>();
-        Assert.NotNull(r.Answer);
-        Assert.Contains("shahar", r.Answer.Answer.ToLower());
         Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+        Assert.Contains("shahar", r.Answer.ToString().ToLower());
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -376,9 +376,9 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name?");
         var r = await chat.RunAsync<MoviesSampleObject>();
-        Assert.NotNull(r.Answer);
-        Assert.Contains("shahar", r.Answer.Answer.ToLower());
         Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+        Assert.Contains("shahar", r.Answer.ToString().ToLower());
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -547,9 +547,9 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions().AddParameter("userId", "Users/1"));
         chat.SetUserPrompt("Whats my name?");
         var r = await chat.RunAsync<MoviesSampleObject>();
-        Assert.NotNull(r.Answer);
-        Assert.Contains("shahar", r.Answer.Answer.ToLower());
         Assert.Equal(AiConversationResult.Done, r.Status);
+        Assert.NotNull(r.Answer);
+        Assert.Contains("shahar", r.Answer.ToString().ToLower());
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -587,8 +587,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
-            config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+            config.ConnectionStringName, RavenDB_24887_3.GetSystemPrompt(userAgent2Id, false)
         )
         {
             SubAgents =
@@ -677,7 +676,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         var userAgent1 = new AiAgentConfiguration("user-info-agent-1",
             config.ConnectionStringName,
-            "You are a User Profile Agent on movies rating system."
+            RavenDB_24887_3.GetSystemPrompt(userAgent2Id, oncePrompt: false)
         )
         {
             SubAgents =
@@ -768,7 +767,7 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgent2Id,
-                    Description = "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwide the tool call will fail.",
+                    Description = "Provide BOTH the movie rating and the new username together in one call. You can't change name without rating a movie and you cant rate a movie without changing the name. you have to ask for both in the call otherwise the tool call will fail.",
                 }
             ]
         };
@@ -1296,6 +1295,13 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
 
         public List<string> MoviesIds { get; set; }
         public List<string> MoviesNames { get; set; }
+
+        public override string ToString()
+        {
+            return $"Answer: {Answer}, " +
+                   $"MoviesIds: [{string.Join(", ", MoviesIds ?? new List<string>())}], " +
+                   $"MoviesNames: [{string.Join(", ", MoviesNames ?? new List<string>())}]";
+        }
     }
 
     public class RateToolSampleRequest

@@ -87,6 +87,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
             sb.Append(s);
             return Task.CompletedTask;
         }, CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, result.Status);
         Assert.Equal(result.Answer.Answer, sb.ToString());
     }
 }

@@ -55,6 +55,26 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
         };
     }
 
+    public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
+    {
+        if (_settings.ReasoningEffort.HasValue)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName("reasoning_effort");
+            writer.WriteString(_settings.ReasoningEffort.Value.ToString().ToLower());
+        }
+        if (_settings.Seed.HasValue)
+        {
+            // Use a fixed seed to make sampling more reproducible across runs.
+            // This helps stabilize tests. Combined with reasoning_effort="minimal"
+            // it further reduces the probability of flaky responses.
+            writer.WriteComma();
+            writer.WritePropertyName("seed");
+            writer.WriteInteger(_settings.Seed.Value);
+        }
+        base.HandleCompletionRequestPayload(writer);
+    }
+
     private class OpenAiErrorHolder
     {
         public static readonly Func<BlittableJsonReaderObject, OpenAiErrorHolder> Deserializer = JsonDeserializationBase.GenerateJsonDeserializationRoutine<OpenAiErrorHolder>();

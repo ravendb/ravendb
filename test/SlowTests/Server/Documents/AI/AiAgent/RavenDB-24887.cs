@@ -202,7 +202,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
                 SubAgents = [new AiAgentToolSubAgent
                 {
                     Identifier = ordersAgentId,
-                    Description = "Use to ask everything about orders. From recent orders to order history. This is an agent, which you can communicate with using natural language"
+                    Description = "Use to ask everything about orders. From recent orders to order history. Adding an item to the cart. This is an agent, which you can communicate with using natural language"
                 },new AiAgentToolSubAgent
                 {
                     Identifier = productsAgentId,

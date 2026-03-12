@@ -62,7 +62,22 @@ public class RavenDB_24407 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.";
+        const string systemPrompt = @"
+You are an AI shopping assistant for an online store.
+
+You MUST use the available tools to answer user questions whenever the information can be retrieved from them.
+
+Rules:
+- ALWAYS use the ""RecentOrder"" tool when the user asks about their orders or past purchases.
+- ALWAYS use the ""ProductSearch"" tool when suggesting products, alternatives, or recommendations.
+- DO NOT rely on your general knowledge for product suggestions when tools are available.
+- DO NOT invent products or details — only use real data returned from tools.
+- You may call multiple tools if needed before answering.
+- Only provide a final answer after you have gathered enough data using tools.
+
+When talking about orders or products, always include their IDs.
+
+If you do not have enough data, call another tool instead of guessing.";
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
         agent.Parameters.Add(new AiAgentParameter("company"));
@@ -74,7 +89,7 @@ public class RavenDB_24407 : RavenTestBase
                     Name = "ProductSearch",
                     Description =  "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query) limit 5",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\", \"cheese or similar products\"]}"
                 }
                 ,
                 new AiAgentToolQuery
