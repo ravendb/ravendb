@@ -626,6 +626,11 @@ namespace Raven.Server.Documents.Handlers.Batches
                         ThrowMissingPatchProperty();
                     break;
 
+                case CommandType.JsonPatch:
+                    if (commandData.JsonPatchCommands == null)
+                        ThrowMissingJsonPatchProperty();
+                    break;
+
                 case CommandType.AttachmentPUT:
                     if (commandData.Name == null)
                         ThrowMissingNameProperty();
@@ -683,6 +688,12 @@ namespace Raven.Server.Documents.Handlers.Batches
         private static void ThrowMissingPatchProperty()
         {
             throw new InvalidOperationException($"PUT command must have a '{nameof(CommandData.Patch)}' property");
+        }
+
+        [DoesNotReturn]
+        private static void ThrowMissingJsonPatchProperty()
+        {
+            throw new InvalidOperationException($"JsonPatch command must have a '{nameof(CommandData.JsonPatchCommands)}' property");
         }
 
         [DoesNotReturn]
