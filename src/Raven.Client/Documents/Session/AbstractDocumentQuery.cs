@@ -672,7 +672,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
                 }
-                else if (mc is Time dtmc)
+                else if (mc is RavenDocumentQuery.Time dtmc)
                 {
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(dtmc.MethodType, args, mc.AccessPath, whereParams.Exact));

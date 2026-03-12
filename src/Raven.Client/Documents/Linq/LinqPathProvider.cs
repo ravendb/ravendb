@@ -414,10 +414,10 @@ namespace Raven.Client.Documents.Linq
                                     value = CmpXchg.Value((string)args[0]);
                                     return true;
                                 case nameof(RavenQuery.Now):
-                                    value = Time.Now;
+                                    value = RavenDocumentQuery.Now();
                                     return true;
                                 case nameof(RavenQuery.Today):
-                                    value = Time.Today;
+                                    value = RavenDocumentQuery.Today();
                                     return true;
                             }
                         }

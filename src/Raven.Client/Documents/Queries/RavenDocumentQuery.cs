@@ -1,4 +1,6 @@
+using System;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Session.Tokens;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -17,7 +19,7 @@ namespace Raven.Client.Documents.Queries
         ///     .WhereGreaterThan(x => x.CreatedAt, RavenDocumentQuery.Now());
         /// </code>
         /// </example>
-        public static Time Now() => Time.Now;
+        public static MethodCall Now() => Time.NowInstance;
 
         /// <summary>
         /// Returns the start of the current UTC day (midnight) on the server. Translates to the <c>today()</c> RQL function.
@@ -29,6 +31,20 @@ namespace Raven.Client.Documents.Queries
         ///     .WhereGreaterThanOrEqual(x => x.CreatedAt, RavenDocumentQuery.Today());
         /// </code>
         /// </example>
-        public static Time Today() => Time.Today;
+        public static MethodCall Today() => Time.TodayInstance;
+
+        internal sealed class Time : MethodCall
+        {
+            internal static readonly Time NowInstance = new Time(WhereToken.MethodsType.Now);
+            internal static readonly Time TodayInstance = new Time(WhereToken.MethodsType.Today);
+
+            public WhereToken.MethodsType MethodType { get; }
+
+            private Time(WhereToken.MethodsType methodType)
+            {
+                MethodType = methodType;
+                Args = Array.Empty<object>();
+            }
+        }
     }
 }

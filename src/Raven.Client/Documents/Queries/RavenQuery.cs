@@ -222,7 +222,7 @@ namespace Raven.Client.Documents.Queries
 
         /// <summary>
         /// Returns the current UTC date and time on the server. Translates to the <c>now()</c> RQL function.
-        /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="Time.Now"/> instead.
+        /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="RavenDocumentQuery.Now"/> instead.
         /// </summary>
         /// <returns>The current UTC date and time.</returns>
         /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
@@ -233,7 +233,7 @@ namespace Raven.Client.Documents.Queries
 
         /// <summary>
         /// Returns the start of the current UTC day (midnight) on the server. Translates to the <c>today()</c> RQL function.
-        /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="Time.Today"/> instead.
+        /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="RavenDocumentQuery.Today"/> instead.
         /// </summary>
         /// <returns>The start of the current UTC day.</returns>
         /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
