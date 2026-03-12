@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -510,6 +512,94 @@ namespace SlowTests.Issues
                     session.SaveChanges();
 
                     Assert.Equal("Updated", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public async Task Patch_WithOptimisticConcurrency_DoesNotSendChangeVector_JsonPatch()
+        {
+            // Session.Advanced.Patch does not enforce optimistic concurrency (change vector is always null).
+            // A concurrent modification between Load and Patch+SaveChanges should succeed, not throw ConcurrencyException.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Original", Age = 25 }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    var user = await session.LoadAsync<UserWithTags>("users/1");
+
+                    // Simulate a concurrent modification by another session
+                    using (var otherSession = store.OpenSession())
+                    {
+                        var otherUser = otherSession.Load<UserWithTags>("users/1");
+                        otherUser.Age = 99;
+                        otherSession.SaveChanges();
+                    }
+
+                    // JsonPatch path
+                    session.Advanced.Patch(user, u => u.Name, "Updated");
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.JsonPatch, null)));
+
+                    await session.SaveChangesAsync(); // should not throw ConcurrencyException
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal("Updated", user.Name);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
+        public async Task Patch_WithOptimisticConcurrency_DoesNotSendChangeVector_JavaScript()
+        {
+            // Same test as above but forcing the JavaScript patch path via Increment,
+            // to confirm both paths behave identically with optimistic concurrency.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new UserWithTags { Name = "Original", Age = 25 }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Advanced.UseOptimisticConcurrency = true;
+
+                    var user = await session.LoadAsync<UserWithTags>("users/1");
+
+                    // Simulate a concurrent modification by another session
+                    using (var otherSession = store.OpenSession())
+                    {
+                        var otherUser = otherSession.Load<UserWithTags>("users/1");
+                        otherUser.Age = 99;
+                        otherSession.SaveChanges();
+                    }
+
+                    // JavaScript patch path (Increment always uses JavaScript)
+                    session.Advanced.Increment<UserWithTags, int>(user, u => u.Age, 1);
+
+                    var sessionOps = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(sessionOps.DeferredCommandsDictionary.ContainsKey(("users/1", CommandType.PATCH, null)));
+
+                    await session.SaveChangesAsync(); // should not throw ConcurrencyException
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<UserWithTags>("users/1");
+                    Assert.Equal(100, user.Age); // 99 + 1
                 }
             }
         }
