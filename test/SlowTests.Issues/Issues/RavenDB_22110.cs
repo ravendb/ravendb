@@ -11,6 +11,7 @@ using Raven.Client.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+#pragma warning disable CS0618 // Type or member is obsolete
 
 namespace SlowTests.Issues;
 

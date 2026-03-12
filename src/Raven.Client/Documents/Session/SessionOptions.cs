@@ -1,5 +1,6 @@
 using System;
 using Raven.Client.Http;
+#pragma warning disable CS0618 // Type or member is obsolete
 
 namespace Raven.Client.Documents.Session
 {
