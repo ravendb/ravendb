@@ -506,7 +506,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         try
         {
-            await _database.TxMerger.Enqueue(new HandleIEmbeddingCommand(batch));
+            await _database.TxMerger.Enqueue(new HandleEmbeddingsCommand(batch));
 
             foreach (var work in batch)
             {
@@ -514,7 +514,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 {
                     case BatchGenerator pde:
                     {
-                        pde.TaskCompletionSourceForDocumentEmbeddingsStorage.TrySetResult();
+                        pde.DocumentEmbeddingsStorageTcs.TrySetResult();
                         break;
                     }
                     case StoreEmbeddingCacheDocuments se:
@@ -551,7 +551,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 {
                     case BatchGenerator pde:
                     {
-                        pde.TaskCompletionSourceForDocumentEmbeddingsStorage.TrySetException(e);
+                        pde.DocumentEmbeddingsStorageTcs.TrySetException(e);
                         break;
                     }
                     case StoreEmbeddingCacheDocuments se:
@@ -585,7 +585,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         return results;
     }
 
-    private sealed class HandleIEmbeddingCommand(List<IEmbeddingsCommand> batch)
+    private sealed class HandleEmbeddingsCommand(List<IEmbeddingsCommand> batch)
         : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -677,7 +677,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         {
             public MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction> ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new HandleIEmbeddingCommand(work);
+                return new HandleEmbeddingsCommand(work);
             }
         }
     }
@@ -813,7 +813,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
     {
         private readonly AiWorker _worker = parent._workers[taskId];
         private readonly HashSet<Task> _tasks = [];
-        public readonly TaskCompletionSource TaskCompletionSourceForDocumentEmbeddingsStorage = new();
+        public readonly TaskCompletionSource DocumentEmbeddingsStorageTcs = new();
         private readonly List<PutDocumentEmbeddings> _results = [];
         private readonly Reference<int> _cachedEmbeddings = new();
         private readonly List<string> _toDelete = [];
@@ -835,10 +835,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             await Task.WhenAll(_tasks);
         }
 
-        public Task WaitForDocumentEmbeddingsStorage()
+        public Task StoreDocumentEmbeddingsAsync()
         {
             parent.ProcessInBackground(this);
-            return TaskCompletionSourceForDocumentEmbeddingsStorage.Task;
+            return DocumentEmbeddingsStorageTcs.Task;
         }
 
         // Applies changes to document embeddings (does not update cache documents)

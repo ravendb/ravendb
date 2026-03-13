@@ -162,8 +162,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
             
             using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
             {
-                // Wait for storage of embedding documents
-                batch.WaitForDocumentEmbeddingsStorage().GetAwaiter().GetResult();
+                // Start storing embedding documents and wait for them to be stored
+                batch.StoreDocumentEmbeddingsAsync().GetAwaiter().GetResult();
                 
                 storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
                 storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
