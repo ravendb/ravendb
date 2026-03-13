@@ -509,8 +509,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private communication endpoint for clients and browsers. By default,
-                                        this value is set to 8080."
+                                    description={`Defines the communication endpoint for clients and browsers. By default, this value is set to ${setupWizardData.securityStep.securityOption === "none" ? "8080" : "443"}.`}
                                     docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
                                 />
                             }
@@ -532,8 +531,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the privately accessible TCP endpoint for cluster nodes to communicate
-                                        with each other. By default, this value is set to 38888."
+                                    description="Defines the TCP endpoint for cluster nodes to communicate with each other. By default, this value is set to 38888."
                                     docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
                                 />
                             }
@@ -555,7 +553,7 @@ function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private network endpoint where the server is accessible."
+                                    description="Defines the network endpoint where the server is accessible."
                                     docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
                                 />
                             }
