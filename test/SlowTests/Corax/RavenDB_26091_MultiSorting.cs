@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -16,22 +15,22 @@ namespace SlowTests.Corax;
 public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingString(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
@@ -86,22 +85,22 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingInt(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
@@ -114,13 +113,17 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
         query = query.WhereExists(x => x.Id);
         if (fieldFirst)
         {
-            query = isAscending ? query.OrderBy(x => x.IntValue, OrderingType.Long) : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
+            query = isAscending 
+                ? query.OrderBy(x => x.IntValue, OrderingType.Long) 
+                : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
             query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
             query = query.OrderBy(x => x.ToIgnore);
-            query = isAscending ? query.OrderBy(x => x.IntValue, OrderingType.Long) : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
+            query = isAscending 
+                ? query.OrderBy(x => x.IntValue, OrderingType.Long) 
+                : query.OrderByDescending(x => x.IntValue, OrderingType.Long);
         }
         var queryResults = await query.ToListAsync();
 
@@ -156,22 +159,22 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingDouble(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
@@ -226,22 +229,22 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingAlphaNumeric(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst);
@@ -296,22 +299,22 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenMultiFieldSortingSpatial(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool fieldFirst)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex);

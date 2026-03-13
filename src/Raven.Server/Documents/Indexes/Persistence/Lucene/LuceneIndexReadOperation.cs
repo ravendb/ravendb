@@ -66,6 +66,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private static readonly LuceneCleaner _luceneCleaner;
 
+        public override bool IsSharded => false;
+        
         static LuceneIndexReadOperation()
         {
             _luceneCleaner = new LuceneCleaner();

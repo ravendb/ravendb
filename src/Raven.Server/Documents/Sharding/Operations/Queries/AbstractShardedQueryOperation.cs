@@ -44,6 +44,8 @@ public abstract class AbstractShardedQueryOperation<TCombinedResult, TResult, TI
     }
 
     public HttpRequest HttpRequest { get => _requestHandler.HttpContext.Request; }
+    
+    protected ShardedDatabaseContext DatabaseContext => _requestHandler.DatabaseContext;
 
     public string ExpectedEtag { get; }
 

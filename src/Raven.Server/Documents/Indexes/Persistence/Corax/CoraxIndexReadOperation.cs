@@ -98,6 +98,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         private TermsReader _documentIdReader;
 
+        public override bool IsSharded => false;
 
         public CoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories, IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, queryBuilderFactories, query)
         {

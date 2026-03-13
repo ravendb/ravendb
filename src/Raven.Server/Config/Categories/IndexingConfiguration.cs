@@ -671,7 +671,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
         
-        [Description("Corax: nulls are lowest values in ascending sorting.")]
+        [Description("Corax: Null values appear first when sorting in ascending order.")]
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]

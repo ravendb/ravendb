@@ -22,24 +22,30 @@ public sealed class ShardedQueryResultDocument : Document
         });
     }
 
-    public void AddLongOrderByField(long value)
+    public void AddLongOrderByField(long? value)
     {
-        OrderByFields.Add(new OrderByField
-        {
-            OrderType = OrderByFieldType.Long,
-            LongValue = value
-        });
+        var orderField = value.HasValue ?
+            new OrderByField
+            {
+                OrderType = OrderByFieldType.Long,
+                LongValue = value.Value
+            } : new OrderByField(){OrderType = OrderByFieldType.Long, IsNull = true};
+        
+        OrderByFields.Add(orderField);
     }
 
-    public void AddDoubleOrderByField(double value)
+    public void AddDoubleOrderByField(double? value)
     {
-        OrderByFields.Add(new OrderByField
-        {
-            OrderType = OrderByFieldType.Double,
-            DoubleValue = value
-        });
+        var orderField = value.HasValue ?
+            new OrderByField
+            {
+                OrderType = OrderByFieldType.Double,
+                DoubleValue = value.Value
+            } : new OrderByField(){OrderType = OrderByFieldType.Double, IsNull = true};
+        
+        OrderByFields.Add(orderField);
     }
-
+    
     public static ShardedQueryResultDocument From(Document doc)
     {
         return new ShardedQueryResultDocument
@@ -62,6 +68,7 @@ public sealed class ShardedQueryResultDocument : Document
 
     public struct OrderByField
     {
+        public bool IsNull;
         public OrderByFieldType OrderType;
         public string StringValue;
         public long LongValue;

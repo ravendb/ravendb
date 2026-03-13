@@ -835,7 +835,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    protected IComparer<BlittableJsonReaderObject> GetComparer(IndexQueryServerSide query)
+    protected IComparer<BlittableJsonReaderObject> ComparerCreator(ShardedDatabaseContext databaseContext, string indexName, IndexQueryServerSide query)
     {
         var queryType = GetQueryType();
 
@@ -846,7 +846,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             return ConstantComparer.Instance;
 
         if (query.Metadata.OrderBy?.Length > 0)
-            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom);
+        {
+            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var nullFirst, out var acceptMissing);
+            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, nullFirst, acceptMissing);
+        }
 
         if (queryType == QueryType.IndexEntries)
             return ConstantComparer.Instance;

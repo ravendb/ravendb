@@ -40,8 +40,6 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
 
         random.Shuffle(table);
 
-        var positions = Enumerable.Range(0, size).Select(x => (long)x).ToArray();
-
         for (int pageSize = (size / 10); pageSize <= size; pageSize += (size / 10))
         {
             var indexes = new int[pageSize].AsSpan();
@@ -52,7 +50,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
                 sorter.Insert(docPos, table[docPos]);
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty);
+            sorter.Fill(table, ref result, ref _scorePlaceHolder, Span<float>.Empty);
             Assert.Equal(table.OrderBy(x => x).Take(pageSize).ToArray().AsSpan(), result.ToSpan());
             result.Dispose();
         }

@@ -18,24 +18,23 @@ namespace SlowTests.Corax;
 
 public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 {
-
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenSortingString(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool forceSortUsingIndex)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex);
@@ -44,23 +43,25 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
             .ToListAsync();
 
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.Equal("SortingMatch", root.Operation);
-        Assert.Contains("FieldName", root.Parameters);
-        Assert.Equal("Name", root.Parameters["FieldName"]);
-        Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
-        Assert.Equal("Sequence", root.Parameters["FieldType"]);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.Equal("SortingMatch", root.Operation);
+            Assert.Contains("FieldName", root.Parameters);
+            Assert.Equal("Name", root.Parameters["FieldName"]);
+            Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
+            Assert.Equal("Sequence", root.Parameters["FieldType"]);
 
-        Assert.Equal(1, root.Children.Count);
+            Assert.Equal(1, root.Children.Count);
 
-        var secondLevel = root.Children[0];
-        Assert.Equal("MultiTermMatch", secondLevel.Operation);
-        Assert.Equal(1, secondLevel.Children.Count);
+            var secondLevel = root.Children[0];
+            Assert.Equal("MultiTermMatch", secondLevel.Operation);
+            Assert.Equal(1, secondLevel.Children.Count);
 
-        var thirdLevel = secondLevel.Children[0];
-        Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
-        Assert.Empty(thirdLevel.Children);
-
+            var thirdLevel = secondLevel.Children[0];
+            Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
+            Assert.Empty(thirdLevel.Children);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -109,21 +110,21 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenSortingInt(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool forceSortUsingIndex)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex);
@@ -131,22 +132,25 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.Equal("SortingMatch", root.Operation);
-        Assert.Contains("FieldName", root.Parameters);
-        Assert.Equal("IntValue", root.Parameters["FieldName"]);
-        Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
-        Assert.Equal("Integer", root.Parameters["FieldType"]);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.Equal("SortingMatch", root.Operation);
+            Assert.Contains("FieldName", root.Parameters);
+            Assert.Equal("IntValue", root.Parameters["FieldName"]);
+            Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
+            Assert.Equal("Integer", root.Parameters["FieldType"]);
 
-        Assert.Equal(1, root.Children.Count);
+            Assert.Equal(1, root.Children.Count);
 
-        var secondLevel = root.Children[0];
-        Assert.Equal("MultiTermMatch", secondLevel.Operation);
-        Assert.Equal(1, secondLevel.Children.Count);
+            var secondLevel = root.Children[0];
+            Assert.Equal("MultiTermMatch", secondLevel.Operation);
+            Assert.Equal(1, secondLevel.Children.Count);
 
-        var thirdLevel = secondLevel.Children[0];
-        Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
-        Assert.Empty(thirdLevel.Children);
+            var thirdLevel = secondLevel.Children[0];
+            Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
+            Assert.Empty(thirdLevel.Children);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -195,21 +199,21 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true, false])]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenSortingDouble(Options options, bool nullFirst, bool isAutoIndex, bool isAscending, bool forceSortUsingIndex)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex);
@@ -217,22 +221,25 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.Equal("SortingMatch", root.Operation);
-        Assert.Contains("FieldName", root.Parameters);
-        Assert.Equal("DoubleValue", root.Parameters["FieldName"]);
-        Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
-        Assert.Equal("Floating", root.Parameters["FieldType"]);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.Equal("SortingMatch", root.Operation);
+            Assert.Contains("FieldName", root.Parameters);
+            Assert.Equal("DoubleValue", root.Parameters["FieldName"]);
+            Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
+            Assert.Equal("Floating", root.Parameters["FieldType"]);
 
-        Assert.Equal(1, root.Children.Count);
+            Assert.Equal(1, root.Children.Count);
 
-        var secondLevel = root.Children[0];
-        Assert.Equal("MultiTermMatch", secondLevel.Operation);
-        Assert.Equal(1, secondLevel.Children.Count);
+            var secondLevel = root.Children[0];
+            Assert.Equal("MultiTermMatch", secondLevel.Operation);
+            Assert.Equal(1, secondLevel.Children.Count);
 
-        var thirdLevel = secondLevel.Children[0];
-        Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
-        Assert.Empty(thirdLevel.Children);
+            var thirdLevel = secondLevel.Children[0];
+            Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
+            Assert.Empty(thirdLevel.Children);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -280,14 +287,14 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenStreamingSortingString(Options options, bool nullFirst, bool isAutoIndex, bool isAscending)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex: false);
@@ -295,8 +302,11 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.NotEqual("SortingMatch", root.Operation);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.NotEqual("SortingMatch", root.Operation);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -343,14 +353,14 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenStreamingSortingInt(Options options, bool nullFirst, bool isAutoIndex, bool isAscending)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex: false);
@@ -358,8 +368,11 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.NotEqual("SortingMatch", root.Operation);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.NotEqual("SortingMatch", root.Operation);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -406,14 +419,14 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenStreamingSortingDouble(Options options, bool nullFirst, bool isAutoIndex, bool isAscending)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex: false);
@@ -421,8 +434,11 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.NotEqual("SortingMatch", root.Operation);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.NotEqual("SortingMatch", root.Operation);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -469,14 +485,14 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     }
     
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenSortingAlphaNumeric(Options options, bool nullFirst, bool isAutoIndex, bool isAscending)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex: false);
@@ -484,22 +500,25 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         var queryResults = await CreateQuery(out var timings)
             .ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.Equal("SortingMatch", root.Operation);
-        Assert.Contains("FieldName", root.Parameters);
-        Assert.Equal("Name", root.Parameters["FieldName"]);
-        Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
-        Assert.Equal("Alphanumeric", root.Parameters["FieldType"]);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.Equal("SortingMatch", root.Operation);
+            Assert.Contains("FieldName", root.Parameters);
+            Assert.Equal("Name", root.Parameters["FieldName"]);
+            Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
+            Assert.Equal("Alphanumeric", root.Parameters["FieldType"]);
 
-        Assert.Equal(1, root.Children.Count);
+            Assert.Equal(1, root.Children.Count);
 
-        var secondLevel = root.Children[0];
-        Assert.Equal("MultiTermMatch", secondLevel.Operation);
-        Assert.Equal(1, secondLevel.Children.Count);
+            var secondLevel = root.Children[0];
+            Assert.Equal("MultiTermMatch", secondLevel.Operation);
+            Assert.Equal(1, secondLevel.Children.Count);
 
-        var thirdLevel = secondLevel.Children[0];
-        Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
-        Assert.Empty(thirdLevel.Children);
+            var thirdLevel = secondLevel.Children[0];
+            Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
+            Assert.Empty(thirdLevel.Children);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -547,14 +566,14 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     }
 
     [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true, false, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, true, false])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true, false, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, true, false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false, false, false])]
     public async Task CanChangeOrderOfTheNullsWhenSortingSpatial(Options options, bool nullFirst, bool isAutoIndex, bool isAscending)
     {
         using var store = await CreateDocumentsAndIndexes(options, nullFirst, isAutoIndex, true, forceSortUsingIndex: false);
@@ -568,24 +587,27 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         rql += " include timings()";
         var queryResults = await session.Advanced.AsyncRawQuery<Document>(rql).Timings(out var timings).ToListAsync();
 
-        var root = (QueryInspectionNode)timings.QueryPlan;
-        Assert.Equal("SortingMatch", root.Operation);
-        Assert.Contains("FieldName", root.Parameters);
-        Assert.Equal(isAutoIndex ? "spatial.point(Location.Latitude, Location.Longitude)" : "Location", root.Parameters["FieldName"]);
-        Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
-        Assert.Equal("Spatial", root.Parameters["FieldType"]);
-        Assert.Equal("Pt(x=0.0,y=0.0)", root.Parameters["Point"]);
-        Assert.Equal("Kilometers", root.Parameters["Units"]);
+        if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+        {
+            var root = (QueryInspectionNode)timings.QueryPlan;
+            Assert.Equal("SortingMatch", root.Operation);
+            Assert.Contains("FieldName", root.Parameters);
+            Assert.Equal(isAutoIndex ? "spatial.point(Location.Latitude, Location.Longitude)" : "Location", root.Parameters["FieldName"]);
+            Assert.Equal(isAscending.ToString(), root.Parameters["Ascending"]);
+            Assert.Equal("Spatial", root.Parameters["FieldType"]);
+            Assert.Equal("Pt(x=0.0,y=0.0)", root.Parameters["Point"]);
+            Assert.Equal("Kilometers", root.Parameters["Units"]);
 
-        Assert.Equal(1, root.Children.Count);
+            Assert.Equal(1, root.Children.Count);
 
-        var secondLevel = root.Children[0];
-        Assert.Equal("MultiTermMatch", secondLevel.Operation);
-        Assert.Equal(1, secondLevel.Children.Count);
+            var secondLevel = root.Children[0];
+            Assert.Equal("MultiTermMatch", secondLevel.Operation);
+            Assert.Equal(1, secondLevel.Children.Count);
 
-        var thirdLevel = secondLevel.Children[0];
-        Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
-        Assert.Empty(thirdLevel.Children);
+            var thirdLevel = secondLevel.Children[0];
+            Assert.Equal("ExistsTermProvider", thirdLevel.Operation);
+            Assert.Empty(thirdLevel.Children);
+        }
 
         Assert.Equal(4, queryResults.Count);
 
@@ -631,8 +653,8 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
 
 
     [RavenTheory(RavenTestCategory.Corax)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Data = [false])]
     public async Task AlphanumericalNullPagingTest(Options options, bool nullFirst)
     {
         options.ModifyDatabaseRecord += record =>
@@ -812,6 +834,7 @@ update {{
 
         if (forceSortUsingIndex)
         {
+            Assert.NotEqual(RavenDatabaseMode.Sharded, options.DatabaseMode);
             var db = await GetDatabase(store.Database);
             var indexInstance = db.IndexStore.GetIndex(indexName);
             indexInstance.ForTestingPurposesOnly().CoraxConfiguration = new CoraxTestingConfiguration() { ForceSortingUsingIndex = true };

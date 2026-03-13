@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
 {
     public abstract class IndexReadOperationBase : IndexOperationBase
     {
+        public abstract bool IsSharded { get; }
         protected readonly QueryBuilderFactories QueryBuilderFactories;
         private readonly MemoryInfo _memoryInfo;
         private static readonly long ThresholdForMemoryUsageLoggingInBytes = new Size(512, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);

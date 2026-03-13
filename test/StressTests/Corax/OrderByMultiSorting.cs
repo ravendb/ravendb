@@ -45,8 +45,8 @@ namespace StressTests.Corax
                 var match1 = searcher.AllEntries();
                 var orderMetadata = new OrderMetadata[2]
                 {
-                    new(searcher.FieldMetadataBuilder("Content1", Content1), false, MatchCompareFieldType.Integer),
-                    new(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer)
+                    new(searcher.FieldMetadataBuilder("Content1", Content1), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false),
+                    new(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer, fieldHasNoTerms: false)
                 };
                 
                 var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
@@ -85,8 +85,8 @@ namespace StressTests.Corax
                 var match1 = searcher.AllEntries();
                 var orderMetadata = new OrderMetadata[2]
                 {
-                    new(searcher.FieldMetadataBuilder("Content1", Content1), true, MatchCompareFieldType.Integer),
-                    new(searcher.FieldMetadataBuilder("Content2", Content2), false, MatchCompareFieldType.Integer)
+                    new(searcher.FieldMetadataBuilder("Content1", Content1), true, MatchCompareFieldType.Integer, fieldHasNoTerms: false),
+                    new(searcher.FieldMetadataBuilder("Content2", Content2), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false)
                 };
 
                 var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);

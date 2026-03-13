@@ -2453,6 +2453,13 @@ namespace Raven.Server.Json
                             writer.WriteComma();
 
                         firstOrderByField = false;
+
+                        if (orderByField.IsNull)
+                        {
+                            writer.WriteNull();
+                            continue;
+                        }
+                        
                         switch (orderByField.OrderType)
                         {
                             case OrderByFieldType.Long:

@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
     {
         private readonly HttpContext _httpContext;
         private readonly Func<(JsonOperationContext, IDisposable)> _allocateJsonContext;
-        private readonly IComparer<BlittableJsonReaderObject> _comparer;
+        private readonly Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> _comparerCreator;
         private readonly Dictionary<int, PostQueryStreamCommand> _queryStreamCommands;
         private readonly IndexQueryServerSide _query;
         private readonly ShardedDatabaseContext _databaseContext;
@@ -153,14 +153,13 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         private readonly long _take;
         private readonly CancellationToken _token;
 
-        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext,
-            IComparer<BlittableJsonReaderObject> comparer, Dictionary<int, PostQueryStreamCommand> queryStreamCommands,
+        public ShardedStreamQueryOperation(HttpContext httpContext, Func<(JsonOperationContext, IDisposable)> allocateJsonContext,Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> comparerCreator, Dictionary<int, PostQueryStreamCommand> queryStreamCommands,
             IndexQueryServerSide query, ShardedDatabaseContext databaseContext, List<OrderByField> groupByFields,
             bool isProjectionFromMapReduceIndex, TransactionOperationContext context, CancellationToken token)
         {
             _httpContext = httpContext;
             _allocateJsonContext = allocateJsonContext;
-            _comparer = comparer;
+            _comparerCreator = comparerCreator;
             _queryStreamCommands = queryStreamCommands;
             _query = query;
             _databaseContext = databaseContext;
@@ -183,9 +182,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
         {
             var queryStats = new StreamQueryStatistics();
 
-            var mergedEnumerator = _groupByFields != null
-                ? new ShardedMapReduceStreamingEnumerator(_query, _databaseContext, _groupByFields, _isProjectionFromMapReduceIndex, queryStats, _context, _token)
-                : new MergedEnumerator<BlittableJsonReaderObject>(_comparer);
+            MergedEnumerator<BlittableJsonReaderObject> mergedEnumerator = null;
 
             foreach (var streamResult in results.Values)
             {
@@ -202,8 +199,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Streaming
                     queryStats.IndexTimestamp = qs.IndexTimestamp;
                 }
 
+                mergedEnumerator ??= _groupByFields != null
+                    ? new ShardedMapReduceStreamingEnumerator(_query, _databaseContext, _groupByFields, _isProjectionFromMapReduceIndex, queryStats, _context, _token)
+                    : new MergedEnumerator<BlittableJsonReaderObject>(_comparerCreator(_databaseContext, queryStats.IndexName, _query));
+                
                 mergedEnumerator.AddEnumerator(enumerator);
             }
+            
+            mergedEnumerator ??= _groupByFields != null
+                ? new ShardedMapReduceStreamingEnumerator(_query, _databaseContext, _groupByFields, _isProjectionFromMapReduceIndex, queryStats, _context, _token)
+                : new MergedEnumerator<BlittableJsonReaderObject>(_comparerCreator(_databaseContext, _query.Metadata.IndexName, _query));
 
             return new ShardedStreamQueryResult(mergedEnumerator, _skip, _take, queryStats);
         }

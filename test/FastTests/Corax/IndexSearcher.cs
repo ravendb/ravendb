@@ -937,7 +937,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullFirst: true);
@@ -962,7 +962,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
@@ -1027,7 +1027,7 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(bsc));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
                 var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);

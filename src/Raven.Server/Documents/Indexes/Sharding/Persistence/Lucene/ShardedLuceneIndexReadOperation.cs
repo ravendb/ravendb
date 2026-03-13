@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Lucene;
 
 public sealed class ShardedLuceneIndexReadOperation : LuceneIndexReadOperation
 {
+    public override bool IsSharded => true;
+
     public ShardedLuceneIndexReadOperation(Index index, LuceneVoronDirectory directory, LuceneIndexSearcherHolder searcherHolder,
         QueryBuilderFactories queryBuilderFactories, Transaction readTransaction, IndexQueryServerSide query) : base(index, directory, searcherHolder,
         queryBuilderFactories, readTransaction, query)

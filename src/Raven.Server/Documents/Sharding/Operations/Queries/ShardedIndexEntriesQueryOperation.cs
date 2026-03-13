@@ -19,18 +19,18 @@ namespace Raven.Server.Documents.Sharding.Operations.Queries;
 public sealed class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOperation<ShardedIndexEntriesQueryResult, BlittableJsonReaderObject, BlittableJsonReaderObject>
 {
     private readonly IndexQueryServerSide _query;
-    private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
+    private readonly Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> _sortingComparerCreator;
 
     public ShardedIndexEntriesQueryOperation([NotNull] IndexQueryServerSide query,
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
-        [NotNull] IComparer<BlittableJsonReaderObject> sortingComparer,
+        [NotNull] Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> sortingComparerCreator,
         string expectedEtag)
         : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
-        _sortingComparer = sortingComparer ?? throw new ArgumentNullException(nameof(sortingComparer));
+        _sortingComparerCreator = sortingComparerCreator ?? throw new ArgumentNullException(nameof(sortingComparerCreator));
     }
 
     public bool FromStudio => HttpRequest.IsFromStudio();
@@ -52,7 +52,7 @@ public sealed class ShardedIndexEntriesQueryOperation : AbstractShardedQueryOper
         }
 
         // all the results from each command are already ordered
-        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
+        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparerCreator(DatabaseContext, result.IndexName, _query)))
         {
             foreach (var (shardNumber, cmdResult) in results)
             {

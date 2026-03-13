@@ -50,7 +50,7 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
         StreamQueryStatistics queryStats,
         TransactionOperationContext context,
         CancellationToken token)
-        : base(new DocumentsComparer(reduceKeys.ToArray(), extractFromData: true, hasOrderByRandom: false))
+        : base(CreateComparer(reduceKeys, databaseContext, queryStats))
     {
         _query = query;
         _databaseContext = databaseContext;
@@ -61,6 +61,12 @@ public class ShardedMapReduceStreamingEnumerator : MergedEnumerator<BlittableJso
 
         if (query.Metadata.Query.Filter != null)
             _queryFilter = new ShardedQueryFilter(query, new ShardedQueryResult(), queryTimings: null, _databaseContext.Indexes.ScriptRunnerCache, _context);
+    }
+
+    private static DocumentsComparer CreateComparer(List<OrderByField> reduceKeys, ShardedDatabaseContext databaseContext, StreamQueryStatistics queryStats)
+    {
+        DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, queryStats.IndexName, out var nullFirst, out var acceptMissing);
+        return new DocumentsComparer(reduceKeys.ToArray(), extractFromData: true, hasOrderByRandom: false, nullFirst, acceptMissing);
     }
 
     public override bool MoveNext()

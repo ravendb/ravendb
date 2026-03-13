@@ -183,7 +183,7 @@ public static partial class CoraxQueryBuilder
             IQueryMatch coraxQuery;
             var metadata = builderParameters.Query.Metadata;
             var indexSearcher = builderParameters.IndexSearcher;
-            sortMetadata = GetSortMetadata(builderParameters);
+            sortMetadata = GetSortMetadata(builderParameters, out var hasEmptySortingMatches);
             var streamingOptimization = new StreamingOptimization(indexSearcher, sortMetadata, builderParameters.HasBoost);
             
             if (metadata.Query.Where is not null)
@@ -240,7 +240,7 @@ public static partial class CoraxQueryBuilder
                 // In the case of ordering by multiple fields, we still want to benefit from the streaming
                 // optimization, but we have to sort again anyway, this ensure that this happens
                 if (streamingOptimization.SkipOrderByClause == false || sortMetadata.Length > 1)
-                    coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
+                    coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata, hasEmptySortingMatches);
             }
 
             // The parser already throws parse exception if there is a syntax error.
@@ -1246,8 +1246,9 @@ public static partial class CoraxQueryBuilder
         }
     }
 
-    public static OrderMetadata[] GetSortMetadata(Parameters builderParameters)
+    public static OrderMetadata[] GetSortMetadata(Parameters builderParameters, out bool hasEmpty)
     {
+        hasEmpty = false;
         var query = builderParameters.Query;
         var index = builderParameters.Index;
         var getSpatialField = builderParameters.Factories?.GetSpatialFieldFactory;
@@ -1255,7 +1256,9 @@ public static partial class CoraxQueryBuilder
         var queryMapping = builderParameters.FieldsToFetch;
         var allocator = builderParameters.Allocator;
         if (query.PageSize == 0) // no need to sort when counting only
+        {
             return null;
+        }
 
         var orderByFields = query.Metadata.OrderBy;
 
@@ -1285,6 +1288,8 @@ public static partial class CoraxQueryBuilder
 
         foreach (var field in orderByFields)
         {
+            
+            
             if (field.OrderingType == OrderByFieldType.Random)
             {
                 var seed = field.Arguments is { Length: > 0 } ?
@@ -1306,10 +1311,15 @@ public static partial class CoraxQueryBuilder
 
             var fieldMetadata = QueryBuilderHelper.GetFieldIdForOrderBy(allocator, field.Name, index, builderParameters.HasDynamics,
                 builderParameters.DynamicFields, indexMapping, queryMapping, false);
-
-            if (builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0)
-                continue;
-
+            
+            bool fieldIsEmpty = builderParameters.IndexSearcher.GetTermAmountInField(fieldMetadata) == 0;
+            if (fieldIsEmpty)
+            {
+                if (builderParameters.IndexReadOperation.IsSharded == false)
+                    continue;
+                hasEmpty = true;
+            }
+            
             if (field.OrderingType == OrderByFieldType.Distance)
             {
                 var spatialField = getSpatialField(field.Name);
@@ -1353,7 +1363,7 @@ public static partial class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty);
                 continue;
             }
 
@@ -1370,27 +1380,46 @@ public static partial class CoraxQueryBuilder
                 case OrderByFieldType.Custom:
                     throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support Custom OrderBy.");
                 case OrderByFieldType.AlphaNumeric:
-                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric);
+                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty);
                     continue;
                 case OrderByFieldType.Long:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty);
                     break;
                 case OrderByFieldType.Double:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty);
                     break;
             }
 
-            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence);
+            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty);
         }
 
         return sortArray[0..sortIndex];
     }
 
-    private static IQueryMatch OrderBy(Parameters builderParameters, IQueryMatch match, in OrderMetadata[] orderMetadata)
+    private static IQueryMatch OrderBy(Parameters builderParameters, IQueryMatch match, in OrderMetadata[] orderMetadataSource, bool hasEmptySortingMatches)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
         var indexSearcher = builderParameters.IndexSearcher;
         var take = builderParameters.Take;
+        OrderMetadata[] orderMetadata = null;
+        if (hasEmptySortingMatches == false)
+            orderMetadata = orderMetadataSource;
+        else
+        {
+            var currentIdx = 0;
+            foreach (var orderMetadataItem in orderMetadataSource)
+            {
+                if (orderMetadataItem.FieldHasNoTerms)
+                    continue;
+                
+                orderMetadata ??= new OrderMetadata[orderMetadataSource.Length];
+                orderMetadata[currentIdx++] = orderMetadataItem;
+                
+            }
+
+            orderMetadata = currentIdx == 0 ? [] : orderMetadata![..currentIdx];
+        }
+  
         switch (orderMetadata.Length)
         {
             case 0:
