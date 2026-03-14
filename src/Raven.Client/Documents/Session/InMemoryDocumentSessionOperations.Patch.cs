@@ -259,19 +259,26 @@ namespace Raven.Client.Documents.Session
                 return; // never hit
             }
 
+            object key;
+            object value = null;
+
+            if (call.Method.Name == nameof(JavaScriptDictionary<TKey, TValue>.Add))
+                (key, value) = GetKeyAndValue<TKey, TValue>(call);
+            else
+                key = GetKey(call);
+
             if (HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 switch (call.Method.Name)
                 {
                     case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                     {
-                        var (dictKey, dictValue) = GetKeyAndValue<TKey, TValue>(call);
-                        if (ShouldUseJsonPatch(typeof(TValue), dictValue))
+                        if (ShouldUseJsonPatch(typeof(TValue), value))
                         {
-                            var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
+                            var escapedKey = EscapeJsonPointerSegment(key.ToString());
                             var jpd = new JsonPatchDocument();
 
-                            jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(dictValue));
+                            jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(value));
 
                             if (TryMergeJsonPatches(id, jpd) == false)
                                 Defer(new JsonPatchCommandData(id, jpd));
@@ -283,8 +290,7 @@ namespace Raven.Client.Documents.Session
                     }
                     case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
                     {
-                        var dictKey = GetKey(call);
-                        var escapedKey = EscapeJsonPointerSegment(dictKey.ToString());
+                        var escapedKey = EscapeJsonPointerSegment(key.ToString());
                         var jpd = new JsonPatchDocument();
                         jpd.Remove($"{jsonPointer}/{escapedKey}");
 
@@ -298,12 +304,9 @@ namespace Raven.Client.Documents.Session
 
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
             var patchRequest = new PatchRequest();
-            object key;
             switch (call.Method.Name)
             {
                 case nameof(JavaScriptDictionary<TKey, TValue>.Add):
-                    object value;
-                    (key, value) = GetKeyAndValue<TKey, TValue>(call);
                     var formattedKey = FormatKeyForJavaScript(key);
                     patchRequest.Script = $"this.{pathScript}[{formattedKey}] = args.val_{_valsCount};";
                     if (DocumentStore.Conventions.SaveEnumsAsIntegersForPatching && value is Enum)
@@ -314,7 +317,6 @@ namespace Raven.Client.Documents.Session
                     _valsCount++;
                     break;
                 case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
-                    key = GetKey(call);
                     formattedKey = FormatKeyForJavaScript(key);
                     patchRequest.Script = $"delete this.{pathScript}[{formattedKey}];";
                     break;
