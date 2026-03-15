@@ -87,6 +87,8 @@ namespace Raven.Server.Documents.Sharding
 
                 try
                 {
+                    shardedIncomingHandler.Initialize();
+
                     using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var writer = new BlittableJsonTextWriter(context, tcpConnectionOptions.Stream))
                     {
