@@ -14,7 +14,7 @@ import Modal from "components/common/Modal";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
-    onConfirm: (includeForceCreated: boolean, collections: string[]) => Promise<void>;
+    onConfirm: (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number) => Promise<void>;
 }
 
 export default function EnforceConfiguration(props: EnforceConfigurationProps) {
@@ -22,12 +22,13 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames);
 
-    const { control, formState, setValue, handleSubmit } = useForm<FormData>({
+    const { control, formState, setValue, handleSubmit, register } = useForm<FormData>({
         resolver: formResolver,
         defaultValues: {
             isIncludeForceCreated: false,
             isAllCollections: false,
             collections: [],
+            maxOpsPerSecond: null,
         },
     });
 
@@ -36,7 +37,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     const onEnforce: SubmitHandler<FormData> = (formData) => {
         const formCollections = formData.isAllCollections ? null : formData.collections;
 
-        onConfirm(formData.isIncludeForceCreated, formCollections);
+        onConfirm(formData.isIncludeForceCreated, formCollections, formData.maxOpsPerSecond);
         toggle();
     };
 
@@ -62,6 +63,23 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                     >
                         Include Force Created Revisions
                     </FormSwitch>
+                    <Form.Group className="mt-2">
+                        <Form.Label>Max operations per second</Form.Label>
+                        <Form.Control
+                            type="number"
+                            placeholder="No limit"
+                            min={1}
+                            {...register("maxOpsPerSecond", { valueAsNumber: true })}
+                            isInvalid={!!formState.errors.maxOpsPerSecond}
+                            disabled={formState.isSubmitting}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                            {formState.errors.maxOpsPerSecond?.message}
+                        </Form.Control.Feedback>
+                        <Form.Text className="text-muted">
+                            Limits the number of revisions processed per second. Leave empty for no limit.
+                        </Form.Text>
+                    </Form.Group>
                     <hr />
                     <p>
                         Clicking <strong>Enforce</strong> will enforce the current revision configuration definitions{" "}
@@ -111,6 +129,11 @@ const schema = yup.object({
             is: false,
             then: (schema) => schema.min(1),
         }),
+    maxOpsPerSecond: yup
+        .number()
+        .nullable()
+        .transform((value) => (isNaN(value) ? null : value))
+        .min(1, "Max operations per second must be greater than 0"),
 });
 
 const formResolver = yupResolver(schema);

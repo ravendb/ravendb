@@ -210,9 +210,10 @@ export default class DatabasesService {
     async enforceRevisionsConfiguration(
         databaseName: string,
         includeForceCreated = false,
-        collections: string[] = null
+        collections: string[] = null,
+        maxOpsPerSecond: number = null
     ) {
-        return new enforceRevisionsConfigurationCommand(databaseName, includeForceCreated, collections).execute();
+        return new enforceRevisionsConfigurationCommand(databaseName, includeForceCreated, collections, maxOpsPerSecond).execute();
     }
 
     async revertRevisions(databaseName: string, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {
