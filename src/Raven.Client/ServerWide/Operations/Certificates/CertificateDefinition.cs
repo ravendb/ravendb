@@ -31,6 +31,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public List<string> CollectionSecondaryKeys = new List<string>();
         public string CollectionPrimaryKey = string.Empty;
         public string PublicKeyPinningHash;
+        public bool Disabled;
 
         public DynamicJsonValue ToJson()
         {
@@ -50,7 +51,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 [nameof(NotBefore)] = NotBefore,
                 [nameof(CollectionSecondaryKeys)] = CollectionSecondaryKeys,
                 [nameof(CollectionPrimaryKey)] = CollectionPrimaryKey,
-                [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash
+                [nameof(PublicKeyPinningHash)] = PublicKeyPinningHash,
+                [nameof(Disabled)] = Disabled
             };
             return jsonValue;
         }

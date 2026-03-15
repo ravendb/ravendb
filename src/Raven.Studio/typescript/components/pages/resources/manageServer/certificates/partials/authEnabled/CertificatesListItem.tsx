@@ -19,7 +19,10 @@ import { ThemeColor } from "components/models/common";
 import CertificatesItemStatus from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesItemStatus";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
-import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
+import {
+    CertificateItem,
+    UpdateCertificateDto,
+} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
 import { useAppDispatch, useAppSelector } from "components/store";
 import assertUnreachable from "components/utils/assertUnreachable";
@@ -55,9 +58,16 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const isCurrentBrowserCert = certificate.Thumbprints.includes(clientCertificateThumbprint);
     const has2fa = certificate.HasTwoFactor ?? false;
 
+    const isDisabled = certificate.Disabled ?? false;
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
     const canEdit = !isServerCert && !isServerCertForCommunication && state !== "Expired";
     const canClone = !isServerCert && !isServerCertForCommunication;
+    const canToggleDisable =
+        !isServerCert &&
+        !isServerCertForCommunication &&
+        !isCurrentBrowserCert &&
+        certificate.SecurityClearance !== "ClusterNode" &&
+        (isClusterAdminOrClusterNode || clearance !== "Admin");
     const canDelete = (() => {
         if (isServerCert || isServerCertForCommunication) {
             return false;
@@ -85,6 +95,47 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
         if (isConfirmed) {
             asyncRenewServerCertificate.execute();
         }
+    };
+
+    const asyncToggleDisable = useAsyncCallback(async () => {
+        const newDisabledState = !isDisabled;
+        reportEvent("certificates", newDisabledState ? "disable" : "enable");
+
+        const dto: UpdateCertificateDto = {
+            Name: certificate.Name,
+            Thumbprint: certificate.Thumbprint,
+            SecurityClearance: certificate.SecurityClearance,
+            Permissions: certificate.Permissions,
+            TwoFactorAuthenticationKey: null,
+            Disabled: newDisabledState,
+        };
+
+        await manageServerService.updateCertificate(dto, false);
+        await dispatch(certificatesActions.fetchData());
+    });
+
+    const handleToggleDisable = async () => {
+        if (!isDisabled) {
+            const isConfirmed = await confirm({
+                icon: "disable",
+                title: "Do you want to disable this certificate?",
+                message: (
+                    <span>
+                        Certificate: <strong>{certificate.Name}</strong>
+                        <br />
+                        Thumbprint: <code>{certificate.Thumbprint}</code>
+                    </span>
+                ),
+                actionColor: "warning",
+                confirmText: "Disable certificate",
+            });
+
+            if (!isConfirmed) {
+                return;
+            }
+        }
+
+        asyncToggleDisable.execute();
     };
 
     const asyncDeleteCertificate = useAsyncCallback(async () => {
@@ -141,6 +192,11 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     Current browser
                                 </Badge>
                             )}
+                            {isDisabled && (
+                                <Badge bg="danger" className="ms-1 fs-6" pill title="This certificate is disabled">
+                                    Disabled
+                                </Badge>
+                            )}
                             {has2fa && (
                                 <Badge
                                     bg="2fa"
@@ -184,6 +240,15 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>
+                        )}
+                        {canToggleDisable && (
+                            <ButtonWithSpinner
+                                title={isDisabled ? "Enable certificate" : "Disable certificate"}
+                                variant={isDisabled ? "success" : "warning"}
+                                onClick={handleToggleDisable}
+                                icon={isDisabled ? "unlock" : "lock"}
+                                isSpinning={asyncToggleDisable.loading}
+                            />
                         )}
                         {canDelete && (
                             <ButtonWithSpinner

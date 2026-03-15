@@ -150,6 +150,7 @@ function mapEditToDto(formData: CertificatesEditFormData, certificate: Certifica
             databasePermissions: formData.databasePermissions,
         }),
         TwoFactorAuthenticationKey: formData.isRequire2FA ? formData.authenticationKey : null,
+        Disabled: certificate.Disabled ?? false,
     };
 }
 

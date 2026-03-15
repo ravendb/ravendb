@@ -38,6 +38,7 @@ export interface UpdateCertificateDto {
     NotAfter?: string;
     Permissions: Record<string, DatabaseAccess>;
     TwoFactorAuthenticationKey: string;
+    Disabled?: boolean;
 }
 
 export interface UploadCertificateDto {

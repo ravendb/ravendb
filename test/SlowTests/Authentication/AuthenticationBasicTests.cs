@@ -750,6 +750,157 @@ namespace SlowTests.Authentication
                 session.SaveChanges();
             }
         }
+
+        [RavenFact(RavenTestCategory.Security)]
+        public async Task DisabledCertificate_ShouldBeRejected()
+        {
+            var certificates = SetupServerAuthentication(Certificates);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "AdminCert");
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                ["SomeName"] = DatabaseAccess.ReadWrite
+            }, certificateName: "UserCert");
+
+            using var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            // Disable the user certificate
+            var parameters = new EditClientCertificateOperation.Parameters
+            {
+                Thumbprint = certificates.ClientCertificate2.Value.Thumbprint,
+                Name = "UserCert",
+                Permissions = new Dictionary<string, DatabaseAccess> { ["SomeName"] = DatabaseAccess.ReadWrite },
+                Clearance = SecurityClearance.ValidUser,
+                Disabled = true
+            };
+            await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
+
+            // Verify the disabled certificate is rejected
+            using (var disabledStore = new DocumentStore
+            {
+                Database = store.Database,
+                Urls = store.Urls,
+                Certificate = certificates.ClientCertificate2.Value,
+                Conventions = { DisposeCertificate = false }
+            }.Initialize())
+            {
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    using var session = disabledStore.OpenSession();
+                    session.Load<dynamic>("test/1");
+                });
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security)]
+        public async Task DisabledCertificate_CanBeReEnabled()
+        {
+            var certificates = SetupServerAuthentication(Certificates);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "AdminCert");
+
+            using var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            // Register user cert with permission to the actual database
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [store.Database] = DatabaseAccess.ReadWrite
+            }, certificateName: "UserCert");
+
+            var permissions = new Dictionary<string, DatabaseAccess> { [store.Database] = DatabaseAccess.ReadWrite };
+
+            // Disable the user certificate
+            var parameters = new EditClientCertificateOperation.Parameters
+            {
+                Thumbprint = certificates.ClientCertificate2.Value.Thumbprint,
+                Name = "UserCert",
+                Permissions = permissions,
+                Clearance = SecurityClearance.ValidUser,
+                Disabled = true
+            };
+            await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
+
+            // Re-enable the certificate
+            parameters.Disabled = false;
+            await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
+
+            // Verify the re-enabled certificate works
+            using (var reEnabledStore = new DocumentStore
+            {
+                Database = store.Database,
+                Urls = store.Urls,
+                Certificate = certificates.ClientCertificate2.Value,
+                Conventions = { DisposeCertificate = false }
+            }.Initialize())
+            {
+                using var session = reEnabledStore.OpenAsyncSession();
+                await session.StoreAsync(new { Id = "test/1" });
+                await session.SaveChangesAsync();
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security)]
+        public async Task CannotDisableClusterNodeCertificate()
+        {
+            var certificates = SetupServerAuthentication(Certificates);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "AdminCert");
+
+            using var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            // Register a ClusterNode certificate
+            await store.Maintenance.Server.SendAsync(new PutClientCertificateOperation("NodeCert", certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterNode));
+
+            // Try to disable it — should fail
+            var parameters = new EditClientCertificateOperation.Parameters
+            {
+                Thumbprint = certificates.ClientCertificate2.Value.Thumbprint,
+                Name = "NodeCert",
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                Clearance = SecurityClearance.ClusterNode,
+                Disabled = true
+            };
+            await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
+            });
+        }
+
+        [RavenFact(RavenTestCategory.Security)]
+        public async Task CannotDisableOwnCertificate()
+        {
+            var certificates = SetupServerAuthentication(Certificates);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "AdminCert");
+
+            using var store = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            // Try to disable the admin certificate currently in use
+            var parameters = new EditClientCertificateOperation.Parameters
+            {
+                Thumbprint = certificates.ClientCertificate1.Value.Thumbprint,
+                Name = "AdminCert",
+                Permissions = new Dictionary<string, DatabaseAccess>(),
+                Clearance = SecurityClearance.ClusterAdmin,
+                Disabled = true
+            };
+            await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                await store.Maintenance.Server.SendAsync(new EditClientCertificateOperation(parameters));
+            });
+        }
     }
 }
 

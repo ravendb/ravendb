@@ -1924,6 +1924,12 @@ namespace Raven.Server
             {
                 Definition = definition;
 
+                if (definition.Disabled)
+                {
+                    Status = AuthenticationStatus.UnfamiliarCertificate;
+                    return;
+                }
+
                 if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
                 {
                     Status = AuthenticationStatus.ClusterAdmin;
