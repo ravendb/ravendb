@@ -58,7 +58,6 @@ namespace Raven.Client.Documents.Session
 
         public void AddOrIncrement<T, TU>(string id, T entity, Expression<Func<T, TU>> path, TU valueToAdd)
         {
-
             var pathScript = path.CompileToJavascript(_pathScriptCompilationOptions.Value);
 
             var variable = $"this.{pathScript}";
@@ -143,6 +142,7 @@ namespace Raven.Client.Documents.Session
             {
                 valueToUse = Convert.ToInt32(value);
             }
+
             var patchRequest = new PatchRequest
             {
                 Script = $"this.{patchScript} = args.val_{_valsCount};",
@@ -186,7 +186,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, U>> path, U value)
         {
             if (ShouldUseJsonPatch(path.Body.Type, value) && HasExistingJavaScriptPatch(id) == false
-                && TryBuildJsonPointer(path.Body, out var jsonPointer))
+                                                          && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
                 var jpd = new JsonPatchDocument();
                 jpd.Replace(jsonPointer, ConvertValueForJsonPatch(value));
@@ -313,6 +313,7 @@ namespace Raven.Client.Documents.Session
                     {
                         value = Convert.ToInt32(value);
                     }
+
                     patchRequest.Values[$"val_{_valsCount}"] = value;
                     _valsCount++;
                     break;
@@ -501,6 +502,7 @@ namespace Raven.Client.Documents.Session
                         {
                             return false;
                         }
+
                         break;
 
                     case MethodCallExpression call when call.Method.Name == "get_Item" && call.Arguments.Count == 1:
@@ -513,6 +515,7 @@ namespace Raven.Client.Documents.Session
                         {
                             return false;
                         }
+
                         break;
 
                     case UnaryExpression unary:
@@ -603,6 +606,7 @@ namespace Raven.Client.Documents.Session
 
                             jpd.Add($"{jsonPointer}/-", ConvertValueForJsonPatch(val));
                         }
+
                         break;
                     case nameof(JavaScriptArray<U>.RemoveAt):
                         jpd.Remove($"{jsonPointer}/{values[0]}");
