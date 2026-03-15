@@ -115,24 +115,24 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     });
 
     const handleToggleDisable = async () => {
-        if (!isDisabled) {
-            const isConfirmed = await confirm({
-                icon: "disable",
-                title: "Do you want to disable this certificate?",
-                message: (
-                    <span>
-                        Certificate: <strong>{certificate.Name}</strong>
-                        <br />
-                        Thumbprint: <code>{certificate.Thumbprint}</code>
-                    </span>
-                ),
-                actionColor: "warning",
-                confirmText: "Disable certificate",
-            });
+        const isConfirmed = await confirm({
+            icon: isDisabled ? "unlock" : "disable",
+            title: isDisabled
+                ? "Do you want to enable this certificate?"
+                : "Do you want to disable this certificate?",
+            message: (
+                <span>
+                    Certificate: <strong>{certificate.Name}</strong>
+                    <br />
+                    Thumbprint: <code>{certificate.Thumbprint}</code>
+                </span>
+            ),
+            actionColor: isDisabled ? "primary" : "warning",
+            confirmText: isDisabled ? "Enable certificate" : "Disable certificate",
+        });
 
-            if (!isConfirmed) {
-                return;
-            }
+        if (!isConfirmed) {
+            return;
         }
 
         asyncToggleDisable.execute();
