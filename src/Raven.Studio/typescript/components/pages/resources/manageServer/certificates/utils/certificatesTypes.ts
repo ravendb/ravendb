@@ -5,7 +5,7 @@ type DatabaseAccess = Raven.Client.ServerWide.Operations.Certificates.DatabaseAc
 
 export type CertificatesClearance = "Admin" | "Operator" | "User";
 
-export type CertificatesState = "Valid" | "About to expire" | "Expired";
+export type CertificatesState = "Valid" | "About to expire" | "Expired" | "Disabled";
 
 export type CertificatesSortMode =
     | "By Name - Asc"

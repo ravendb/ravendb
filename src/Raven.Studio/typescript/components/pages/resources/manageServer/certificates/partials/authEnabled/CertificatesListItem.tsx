@@ -51,7 +51,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const state = certificatesUtils.getState(certificate.NotAfter);
+    const state = certificatesUtils.getState(certificate.NotAfter, certificate.Disabled);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
     const isServerCertForCommunication = certificate.Thumbprints.includes(serverCertificateForCommunicationThumbprint);
