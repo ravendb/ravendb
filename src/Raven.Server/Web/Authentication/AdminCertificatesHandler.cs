@@ -795,6 +795,7 @@ namespace Raven.Server.Web.Authentication
 
                 CertificateDefinition existingCertificate;
                 string twoFactorAuthenticationKey;
+                bool effectiveDisabled = false;
                 using (ctx.OpenWriteTransaction())
                 {
                     var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, editedCertificate.Thumbprint);
@@ -814,7 +815,7 @@ namespace Raven.Server.Web.Authentication
 
                     existingCertificate = JsonDeserializationServer.CertificateDefinition(existingCertificateJson);
 
-                    var effectiveDisabled = disabledExplicitlySet ? disabledValue : existingCertificate.Disabled;
+                    effectiveDisabled = disabledExplicitlySet ? disabledValue : existingCertificate.Disabled;
 
                     if (effectiveDisabled)
                     {

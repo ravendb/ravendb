@@ -764,7 +764,7 @@ namespace SlowTests.Authentication
             });
 
             // Register user cert with permission to the actual database
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [store.Database] = DatabaseAccess.ReadWrite
             }, certificateName: "UserCert");
@@ -810,7 +810,7 @@ namespace SlowTests.Authentication
             });
 
             // Register user cert with permission to the actual database
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [store.Database] = DatabaseAccess.ReadWrite
             }, certificateName: "UserCert");
