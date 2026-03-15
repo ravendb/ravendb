@@ -3,6 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -34,6 +35,9 @@ namespace Raven.Server.Documents.Handlers
                     case PatchStatus.NotModified:
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                         break;
+
+                    case PatchStatus.DocumentDoesNotExist:
+                        throw new DocumentDoesNotExistException($"Cannot apply json patch because the document {id} does not exist");
 
                     default:
                         throw new ArgumentOutOfRangeException();
