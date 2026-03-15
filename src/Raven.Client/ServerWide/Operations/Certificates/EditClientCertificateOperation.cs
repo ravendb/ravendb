@@ -20,14 +20,14 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             public Dictionary<string, DatabaseAccess> Permissions { get; set; }
             public string Name { get; set; }
             public SecurityClearance Clearance { get; set; }
-            public bool Disabled { get; set; }
+            public bool? Disabled { get; set; }
         }
 
         private readonly string _thumbprint;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly string _name;
         private readonly SecurityClearance _clearance;
-        private readonly bool _disabled;
+        private readonly bool? _disabled;
 
         /// <inheritdoc cref="EditClientCertificateOperation"/>
         /// <param name="parameters">See <see cref="Parameters"/>.</param>
@@ -55,9 +55,9 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly string _name;
             private readonly SecurityClearance _clearance;
-            private readonly bool _disabled;
+            private readonly bool? _disabled;
 
-            public EditClientCertificateCommand(DocumentConventions conventions, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disabled)
+            public EditClientCertificateCommand(DocumentConventions conventions, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool? disabled)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _thumbprint = thumbprint;
@@ -78,9 +78,12 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Thumbprint = _thumbprint,
                     Permissions = _permissions,
                     SecurityClearance = _clearance,
-                    Name = _name,
-                    Disabled = _disabled
+                    Name = _name
                 };
+
+                if (_disabled.HasValue)
+                    definition.Disabled = _disabled.Value;
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,

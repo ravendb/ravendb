@@ -756,10 +756,6 @@ namespace SlowTests.Authentication
         {
             var certificates = SetupServerAuthentication(Certificates);
             var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "AdminCert");
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
-            {
-                ["SomeName"] = DatabaseAccess.ReadWrite
-            }, certificateName: "UserCert");
 
             using var store = GetDocumentStore(new Options
             {
@@ -767,12 +763,18 @@ namespace SlowTests.Authentication
                 ClientCertificate = adminCert,
             });
 
+            // Register user cert with permission to the actual database
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            {
+                [store.Database] = DatabaseAccess.ReadWrite
+            }, certificateName: "UserCert");
+
             // Disable the user certificate
             var parameters = new EditClientCertificateOperation.Parameters
             {
                 Thumbprint = certificates.ClientCertificate2.Value.Thumbprint,
                 Name = "UserCert",
-                Permissions = new Dictionary<string, DatabaseAccess> { ["SomeName"] = DatabaseAccess.ReadWrite },
+                Permissions = new Dictionary<string, DatabaseAccess> { [store.Database] = DatabaseAccess.ReadWrite },
                 Clearance = SecurityClearance.ValidUser,
                 Disabled = true
             };

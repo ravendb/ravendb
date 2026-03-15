@@ -789,6 +789,7 @@ namespace Raven.Server.Web.Authentication
                 var editedCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
                 
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
+                var disabledExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.Disabled), out bool disabledValue);
 
                 ValidateCertificateDefinition(editedCertificate, ServerStore);
 
@@ -813,7 +814,9 @@ namespace Raven.Server.Web.Authentication
 
                     existingCertificate = JsonDeserializationServer.CertificateDefinition(existingCertificateJson);
 
-                    if (editedCertificate.Disabled)
+                    var effectiveDisabled = disabledExplicitlySet ? disabledValue : existingCertificate.Disabled;
+
+                    if (effectiveDisabled)
                     {
                         if (existingCertificate.SecurityClearance == SecurityClearance.ClusterNode)
                             throw new InvalidOperationException($"Cannot disable the certificate '{existingCertificate.Name}'. It is a cluster node certificate and disabling it would break the cluster.");
@@ -846,7 +849,7 @@ namespace Raven.Server.Web.Authentication
                     var permissions = FormatPermissions(editedCertificate);
 
                     LogAuditForServer("CHANGE",
-                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {editedCertificate?.Disabled}.");
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {effectiveDisabled}.");
                 }
 
                 var cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
@@ -860,7 +863,7 @@ namespace Raven.Server.Web.Authentication
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
                         NotAfter = existingCertificate.NotAfter,
                         NotBefore = existingCertificate.NotBefore,
-                        Disabled = editedCertificate.Disabled
+                        Disabled = effectiveDisabled
                     }, GetRaftRequestIdFromQuery())
                 { TwoFactorAuthenticationKey = twoFactorAuthenticationKey };
 
