@@ -227,7 +227,7 @@ namespace SlowTests.Issues
 
                 var db = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
                 WaitForUserToContinueTheTest(store);
                 using (var session = store.OpenAsyncSession())
                 {

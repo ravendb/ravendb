@@ -52,7 +52,7 @@ namespace SlowTests.Issues
                 var db = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "users/1");
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
                 }
 
                 using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -118,7 +118,7 @@ namespace SlowTests.Issues
                 var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 IOperationResult enforceResult;
                 using (var token = new OperationCancelToken(db1.Configuration.Databases.OperationTimeout.AsTimeSpan, db1.DatabaseShutdown, CancellationToken.None))
-                    enforceResult = await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token);
+                    enforceResult = await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
 
                 var val = await WaitForValueAsync(() =>
                     {
@@ -207,7 +207,7 @@ namespace SlowTests.Issues
 
                 var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
 
                 await UpdateConflictResolver(store1, resolveToLatest: true);
 

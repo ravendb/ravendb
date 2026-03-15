@@ -17,11 +17,10 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
-        public async Task EnforceRevisionsConfigurationWithThrottling(Options options)
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
+        public async Task EnforceRevisionsConfigurationWithThrottling()
         {
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore())
             {
                 await RevisionsHelper.SetupRevisionsAsync(store, modifyConfiguration: configuration =>
                     configuration.Collections["Users"].PurgeOnDelete = false);

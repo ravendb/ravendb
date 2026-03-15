@@ -69,6 +69,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                             type="number"
                             placeholder="No limit"
                             min={1}
+                            step={1}
                             {...register("maxOpsPerSecond", { valueAsNumber: true })}
                             isInvalid={!!formState.errors.maxOpsPerSecond}
                             disabled={formState.isSubmitting}
@@ -77,7 +78,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                             {formState.errors.maxOpsPerSecond?.message}
                         </Form.Control.Feedback>
                         <Form.Text className="text-muted">
-                            Limits the number of revisions processed per second. Leave empty for no limit.
+                            Limits the number of documents processed per second. Leave empty for no limit.
                         </Form.Text>
                     </Form.Group>
                     <hr />
@@ -133,6 +134,7 @@ const schema = yup.object({
         .number()
         .nullable()
         .transform((value) => (isNaN(value) ? null : value))
+        .integer("Max operations per second must be a whole number")
         .min(1, "Max operations per second must be greater than 0"),
 });
 

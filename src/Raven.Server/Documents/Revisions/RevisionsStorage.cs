@@ -2062,12 +2062,12 @@ namespace Raven.Server.Documents.Revisions
                     if (ids.Count > 0)
                     {
                         var moreWork = true;
-                        while (moreWork || ids.Count > 0)
+                        while (moreWork)
                         {
                             token.ThrowIfCancellationRequested();
                             var cmd = createCommand(ids, result, token, rateGate);
                             await _database.TxMerger.Enqueue(cmd);
-                            moreWork = cmd.MoreWork;
+                            moreWork = cmd.MoreWork || cmd.NeedWait;
 
                             if (cmd.NeedWait)
                                 rateGate?.WaitToProceed();

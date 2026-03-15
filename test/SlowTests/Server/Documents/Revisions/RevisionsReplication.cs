@@ -307,7 +307,7 @@ namespace SlowTests.Server.Documents.Revisions
                 var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var dbName = db.Name;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token);
+                    await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
 
                 await EnsureReplicatingAsync(store1, store2);
 
