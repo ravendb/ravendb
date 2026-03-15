@@ -126,7 +126,7 @@ export default function DocumentRevisions() {
     });
 
     const asyncEnforceRevisionsConfiguration = useAsyncCallback(
-        async (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number) => {
+        async (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number | null) => {
             const dto = await databasesService.enforceRevisionsConfiguration(
                 databaseName,
                 includeForceCreated,

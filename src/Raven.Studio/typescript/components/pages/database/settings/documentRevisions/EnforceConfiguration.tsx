@@ -14,7 +14,7 @@ import Modal from "components/common/Modal";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
-    onConfirm: (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number) => Promise<void>;
+    onConfirm: (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number | null) => Promise<void>;
 }
 
 export default function EnforceConfiguration(props: EnforceConfigurationProps) {

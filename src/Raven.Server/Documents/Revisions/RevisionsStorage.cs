@@ -1989,6 +1989,9 @@ namespace Raven.Server.Documents.Revisions
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 
+            using (var rateGate = maxOpsPerSecond.HasValue
+                       ? new RateGate(maxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
+                       : null)
             foreach (var collection in collections)
             {
                 // we need to reset the last scanned etag for each collection.
@@ -2004,14 +2007,11 @@ namespace Raven.Server.Documents.Revisions
             string collection, List<string> ids, Stopwatch sw,
             Func<List<string>, TOperationResult, OperationCancelToken, RateGate, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
             TOperationResult result,
-            Parameters parameters, int? maxOpsPerSecond, OperationCancelToken token)
+            Parameters parameters, RateGate rateGate, OperationCancelToken token)
             where TOperationResult : OperationResult
         {
             var hasMore = true;
 
-            using (var rateGate = maxOpsPerSecond.HasValue
-                       ? new RateGate(maxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
-                       : null)
             while (hasMore)
             {
                 hasMore = false;
