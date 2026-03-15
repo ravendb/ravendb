@@ -19,6 +19,9 @@ namespace Raven.Server.Documents.TcpHandlers
 {
     public sealed class TcpConnectionOptions : IDisposable
     {
+#if !RELEASE
+        private readonly string _allocationStackTrace = Environment.StackTrace;
+#endif
         private static long _sequence;
 
         private MeterMetric _bytesReceivedMetric;
@@ -151,7 +154,7 @@ namespace Raven.Server.Documents.TcpHandlers
 #if !RELEASE
         ~TcpConnectionOptions()
         {
-            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer.");
+            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer. Allocated at:{Environment.NewLine}{_allocationStackTrace}");
         }
 #endif
 
