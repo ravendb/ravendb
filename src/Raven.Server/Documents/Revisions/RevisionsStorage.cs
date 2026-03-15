@@ -1906,16 +1906,6 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
-        {
-            return EnforceConfigurationAsync(onProgress, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true }, token);
-        }
-
-        public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, bool includeForceCreated, OperationCancelToken token)
-        {
-            return EnforceConfigurationAsync(onProgress, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = includeForceCreated }, token);
-        }
-
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
             EnforceRevisionsConfigurationOperation.Parameters parameters,
            int? maxOpsPerSecond,
