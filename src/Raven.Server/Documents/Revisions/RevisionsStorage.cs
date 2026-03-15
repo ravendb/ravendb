@@ -30,6 +30,7 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
+using Voron.Util.RateLimiting;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Revisions;
 using static Raven.Server.Documents.Schemas.Tombstones;
@@ -1917,7 +1918,8 @@ namespace Raven.Server.Documents.Revisions
 
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
             EnforceRevisionsConfigurationOperation.Parameters parameters,
-            OperationCancelToken token)
+           int? maxOpsPerSecond,
+           OperationCancelToken token)
         {
             var result = new EnforceConfigurationResult();
             await PerformRevisionsOperationAsync(onProgress, result,
@@ -1956,8 +1958,9 @@ namespace Raven.Server.Documents.Revisions
         private async Task PerformRevisionsOperationAsync<TOperationResult>(
             Action<IOperationProgress> onProgress,
             TOperationResult result,
-            Func<List<string>, TOperationResult, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
+            Func<List<string>, TOperationResult, OperationCancelToken, RateGate, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
             RevisionsOperationParameters operationParameters,
+            int? maxOpsPerSecond,
             OperationCancelToken token) where TOperationResult : OperationResult
         {
             var databaseName = _database.Name;
@@ -2009,12 +2012,16 @@ namespace Raven.Server.Documents.Revisions
 
         private async Task PerformRevisionsOperationOnSingleCollectionAsync<TOperationResult>(
             string collection, List<string> ids, Stopwatch sw,
-            Func<List<string>, TOperationResult, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
+            Func<List<string>, TOperationResult, OperationCancelToken, RateGate, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
             TOperationResult result,
-            Parameters parameters, OperationCancelToken token)
+            Parameters parameters, int? maxOpsPerSecond, OperationCancelToken token)
             where TOperationResult : OperationResult
         {
             var hasMore = true;
+
+            using (var rateGate = maxOpsPerSecond.HasValue
+                       ? new RateGate(maxOpsPerSecond.Value, TimeSpan.FromSeconds(1))
+                       : null)
             while (hasMore)
             {
                 hasMore = false;
@@ -2027,8 +2034,8 @@ namespace Raven.Server.Documents.Revisions
                     {
                         if (GetRevisionsByCollection(ctx, collection, parameters.LastScannedEtag, out var revisions) == false)
                         {
-                            /*  there is no collection named like that, or that collection doesn't have any revisions, 
-                                but we won't throw here because this will fail the whole operation, 
+                            /*  there is no collection named like that, or that collection doesn't have any revisions,
+                                but we won't throw here because this will fail the whole operation,
                                 so we'll just skip this collection.
                              */
                             return;
@@ -2065,12 +2072,15 @@ namespace Raven.Server.Documents.Revisions
                     if (ids.Count > 0)
                     {
                         var moreWork = true;
-                        while (moreWork)
+                        while (moreWork || ids.Count > 0)
                         {
                             token.ThrowIfCancellationRequested();
-                            var cmd = createCommand(ids, result, token);
+                            var cmd = createCommand(ids, result, token, rateGate);
                             await _database.TxMerger.Enqueue(cmd);
                             moreWork = cmd.MoreWork;
+
+                            if (cmd.NeedWait)
+                                rateGate?.WaitToProceed();
                         }
                     }
                 }
@@ -2379,16 +2389,16 @@ namespace Raven.Server.Documents.Revisions
 
             collections ??= [null]; // revert all collections
 
-            foreach (var collection in collections)
-            {
-                var list = new List<Document>();
-            
+                foreach (var collection in collections)
+                {
+                    var list = new List<Document>();
+
                 await RevertRevisionsInternal(list, collection, parameters, onProgress, result, token);
 
                 var current = result.LastProcessedEtags.TryGetValue(databaseName, out var existing) ? existing : 0;
                 result.LastProcessedEtags[databaseName] = Math.Max(current, parameters.LastScannedEtag);
                 parameters.LastScannedEtag = etagBarrier;
-            }
+                }
 
             return result;
         }

@@ -24,11 +24,29 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// </summary>
         public sealed class Parameters : RevisionsOperationParameters
         {
+            private int? _maxOpsPerSecond;
+
             /// <summary>
             /// Gets or sets a value indicating whether to include force-created revisions.
             /// For more information, visit <a href="https://ravendb.net/docs/article-page/7.2/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
             /// </summary>
             public bool IncludeForceCreated { get; set; } = false;
+
+            /// <summary>
+            /// Limits the number of revisions processed per second.
+            /// Use this to throttle the operation and reduce resource consumption on large datasets.
+            /// Default is <c>null</c> (no throttling).
+            /// </summary>
+            public int? MaxOpsPerSecond
+            {
+                get => _maxOpsPerSecond;
+                set
+                {
+                    if (value.HasValue && value.Value <= 0)
+                        throw new InvalidOperationException("MaxOpsPerSecond must be greater than 0");
+                    _maxOpsPerSecond = value;
+                }
+            }
         }
 
         /// <summary>
