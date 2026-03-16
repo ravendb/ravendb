@@ -84,7 +84,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             {
                 var doc = await session.LoadAsync<Chat>("Chats/1");
                 Assert.True(
-                    doc.Messages.Any(m => (string)m.Content == expectedParamsMsg));
+                    doc.Messages.Any(m => m.Content as string == expectedParamsMsg));
             }
         }
 
@@ -120,10 +120,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     }
                 }
             };
-            productsSearchAgent.Parameters.Add(new AiAgentParameter("productType", "product type")
-            {
-                Type = AiAgentParameterValueType.String
-            });
             productsSearchAgent.Parameters.Add(new AiAgentParameter("maxBudgetNis", "Max budget (NIS)")
             {
                 Type = AiAgentParameterValueType.Number
@@ -139,8 +135,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "store-clerk-agent",
                 config.ConnectionStringName,
                 "You are the store clerk (root). " +
-                "Use the `products-search-agent` to retrieve product IDs.\n\nIf the user did not specify any criteria for products or laptops, "+
-                "call `products-search-agent` without parameters (or with empty parameters). "+
+                "Use the `products-search-agent` to retrieve product IDs.\n\nIf the user did not specify any criteria for products or laptops, " +
+                "call `products-search-agent` without parameters (or with empty parameters). " +
                 "only 'subAgentUserPrompt'  param is mandatory."
             )
             {
@@ -159,43 +155,58 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 rootId,
                 "Chats/1",
                 new AiConversationCreationOptions()
-                    .AddParameter("customerId", "Customers/1")// send to root-agent and to the sub-agent. sub-agent won't send it cause its config doesn't have this param definition
+                  
                     // for sub-agent only (additional params)
-                    .AddParameter("productType", "Laptop", new AiConversationParameterOptions(){ SendToModel = true}) // send to sub-agent
-                    .AddParameter("minRamGb", 16, new AiConversationParameterOptions(){ SendToModel = false}) // don't-send (only for sub-agent query)
-                    .AddParameter("maxBudgetNis", 3500, new AiConversationParameterOptions(){ SendToModel = false}) //don't-send to sub-agent (only for sub-agent query)
+                    .AddParameter("minRamGb", 16, new AiConversationParameterOptions() { SendToModel = false }) // don't-send (only for sub-agent query)
+                    .AddParameter("maxBudgetNis", 3500, new AiConversationParameterOptions() { SendToModel = false }) //don't-send to sub-agent (only for sub-agent query)
+
+                    // additional params
+                    .AddParameter("customerId", "Customers/1") // additional at the sub-agent - send to root-agent and to the sub-agent
+                    .AddParameter("productType", "Laptop", new AiConversationParameterOptions() { SendToModel = true }) // additional param (true) - send to root and sub-agent
+                    .AddParameter("someAdditionalParam", "abc", new AiConversationParameterOptions() { SendToModel = false }) // additional param (false) - don't send to root/sub-agent
             );
             chat.SetUserPrompt("Find laptops for me.");
             var r = await chat.RunAsync<OutputSchema>();
+            Assert.Equal(AiConversationResult.Done, r.Status);
 
-            // only customerId is sent to the model (root agent), all the rest are additional
-            var expectedParamsMsg1 = "AI Agent Parameters:\ncustomerId = Customers/1" + Environment.NewLine;
+            var expectedParamsMsg1 = "AI Agent Parameters:\ncustomerId = Customers/1" + Environment.NewLine + "productType = Laptop" + Environment.NewLine;
             using (var session = store.OpenAsyncSession())
             {
                 var doc = await session.LoadAsync<Chat>("Chats/1");
-                Assert.True(
-                    doc.Messages.Any(m => (string)m.Content == expectedParamsMsg1));
+                Assert.Equal(5, doc.Parameters.Count);
+                Assert.True(doc.Messages.Any(m => m.Content as string == expectedParamsMsg1));
+
+                var subDoc = (await session.Advanced.LoadStartingWithAsync<Chat>("Chats/1/products-search-agent/")).Single();
+                Assert.Equal(5, subDoc.Parameters.Count);
+                Assert.True(subDoc.Messages.Any(m => m.Content as string == expectedParamsMsg1));
             }
 
-            try
-            {
-                // only productType is sent to the model (sub-agent agent),
-                // customerId isn't on the agent config, and minRamGb&maxBudgetNis defined as 'sendToModel' false on the chat
-                var expectedParamsMsg2 = "AI Agent Parameters:\nproductType = Laptop" + Environment.NewLine;
-                using (var session = store.OpenAsyncSession())
-                {
-                    var doc = (await session.Advanced.LoadStartingWithAsync<Chat>("Chats/1/products-search-agent/")).Single();
-                    Assert.True(
-                        doc.Messages.Any(m => (string)m.Content == expectedParamsMsg2));
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex);
-                Console.ForegroundColor = ConsoleColor.White;
-                WaitForUserToContinueTheTest(store, false);
-            }
+            // Expected Flow:
+
+            // credit-card true
+            // root credit-card false -> false
+            // child credit-card true -> true
+
+            // credit-card false
+            // root credit-card false -> false
+            // child credit-card true -> false
+
+            //Additional Param:
+            // credit-card false
+            // root          -> false
+            // child credit-card true -> false
+
+            // credit-card true
+            // root          -> true
+            // child credit-card true
+
+            // credit-card true
+            // root          -> true
+            // child credit-card false -> false
+
+            // credit-card false
+            // root          -> false
+            // child credit-card false -> false
         }
 
 
@@ -250,6 +261,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         // Chat
         private class Chat
         {
+            public Dictionary<string, AiConversationParameter> Parameters { get; set; }
             public List<Message> Messages { get; set; }
         }
 

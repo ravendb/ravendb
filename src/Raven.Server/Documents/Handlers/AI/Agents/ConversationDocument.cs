@@ -45,27 +45,40 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
 
-        List<AiAgentParameter> relevantParameters = [];
-        var parameters = configuration.Parameters;
+        List<AiAgentParameter> modelParameters = [];
+        var configParams = configuration.Parameters ?? [];
 
-        if (parameters != null)
+        foreach (var p in configParams)
         {
-            for (int i = 0; i < parameters.Count; i++)
+            // Skip parameters that should not be sent to the model
+            if (p.SendToModel == false)
+                continue;
+
+            if (Parameters == null || Parameters.TryGet(p.Name, out object value) == false)
+                throw new MissingAiAgentParameterException($"Parameter '{p.Name}' is missing.");
+
+            var param = ConversationHandler.GetAiConversationParameter(p.Name, value);
+            if (param.SendToModel)
+                modelParameters.Add(p);
+        }
+
+        // Additional Parameters (that are not defined in the configuration, but still should be sent to the model)
+        if (Parameters != null)
+        {
+            foreach (var paramName in Parameters.GetPropertyNames())
             {
-                var p = parameters[i];
-                if (p.SendToModel != false)
-                    relevantParameters.Add(p);
+                if (configParams.Any(p => p.Name == paramName))
+                    continue;
+
+                var param = ConversationHandler.GetAiConversationParameter(paramName, Parameters[paramName]);
+                if (param.SendToModel)
+                    modelParameters.Add(new AiAgentParameter(paramName));
             }
         }
 
-        foreach (var parameter in relevantParameters)
-        {
-            if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
-                throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing.");
-        }
 
         var promptMessage = configuration.SystemPrompt;
-        if (TryCreateParameterDescriptionMessage(relevantParameters, out string message))
+        if (TryCreateParameterDescriptionMessage(modelParameters, out string message))
         {
             promptMessage += "\n" + message;
         }
@@ -76,12 +89,12 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [ChatCompletionClient.Constants.RequestFields.Content] = promptMessage
         }, "system/msg"), usage: null);
 
-        if (relevantParameters.Count > 0)
+        if (modelParameters.Count > 0)
         {
             AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
                 [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
-                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(relevantParameters)
+                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(modelParameters)
             }, "system/msg"), usage: null);
         }
 
@@ -155,9 +168,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         var sb = new StringBuilder("AI Agent Parameters:\n");
         foreach (var parameter in parameters)
         {
-            var value = ConversationHandler.GetAiConversationParameter(parameter.Name, Parameters[parameter.Name]);
-            if (value.SendToModel)
-                sb.AppendLine($"{parameter.Name} = {value.Value?.ToString() ?? "null"}");
+            var value = ConversationHandler.GetAiConversationParameter(parameter.Name, Parameters[parameter.Name]).Value;
+            sb.AppendLine($"{parameter.Name} = {value?.ToString() ?? "null"}");
         }
 
         return sb.ToString();
