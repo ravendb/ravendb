@@ -202,10 +202,50 @@ describe("AiAgentMessages", () => {
             },
         ]);
 
-        const { screen } = await rtlRender_WithWaitForLoad(
+        const { screen, fireClick } = await rtlRender_WithWaitForLoad(
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("Sub-agent: " + subAgentId)).toBeInTheDocument();
+        const transcriptButton = screen.getByText("Sub-agent: " + subAgentId);
+        await fireClick(transcriptButton);
+        expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
+        expect(screen.getByText("Sub-conversation created")).toBeInTheDocument();
+        expect(screen.getByText("Sub-agent final answer")).toBeInTheDocument();
+    });
+
+    it("can show unknown tool", async () => {
+        const toolName = "unknown-tool";
+
+        const conversationDocument = createDocumentWithMessages([
+            {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                    {
+                        id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                        type: "function",
+                        function: {
+                            name: toolName,
+                            arguments: "{}",
+                        },
+                    },
+                ],
+                date: "2025-08-08T10:28:01.5884757Z",
+            },
+            {
+                tool_call_id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                role: "tool",
+                content: '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales"}]',
+                date: "2025-08-08T10:28:02.5884757Z",
+            },
+        ]);
+
+        const { screen, fireClick } = await rtlRender_WithWaitForLoad(
+            <ChatAiAgentStory conversationDocument={conversationDocument} />
+        );
+
+        const transcriptButton = screen.getByText("Tool: " + toolName);
+        await fireClick(transcriptButton);
+        expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
     });
 });

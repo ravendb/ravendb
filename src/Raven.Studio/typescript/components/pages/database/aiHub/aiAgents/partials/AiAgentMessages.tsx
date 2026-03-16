@@ -140,13 +140,6 @@ function UserMessage({ message }: UserMessageProps) {
                             </div>
                         )}
                     </div>
-                    {message.toolCalls?.length > 0 && (
-                        <div className="vstack gap-2">
-                            {message.toolCalls.map((toolCall) => (
-                                <AiAgentToolTranscript key={toolCall.id} toolCall={toolCall} />
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -272,7 +265,7 @@ function AgentMessage({
                 <div className="hstack justify-content-end mt-2">
                     <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
                         {parametersFieldsArray.fields.map((field, idx) => (
-                            <ParameterField key={field.id} idx={idx} name={field.name} control={control} />
+                            <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
                         ))}
                         <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
                             <Icon icon="check" />
@@ -285,13 +278,13 @@ function AgentMessage({
     );
 }
 
-interface ParameterFieldProps {
+interface ActionToolParameterFieldProps {
     idx: number;
     name: string;
     control: Control<{ parameters: AiAgentToolCall[] }>;
 }
 
-function ParameterField({ idx, name, control }: ParameterFieldProps) {
+function ActionToolParameterField({ idx, name, control }: ActionToolParameterFieldProps) {
     const aceRef = useRef<ReactAce>(null);
 
     return (
@@ -306,11 +299,11 @@ function ParameterField({ idx, name, control }: ParameterFieldProps) {
                 mode="text"
                 height="150px"
                 actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
-                placeholder={idx === 0 ? parameterFieldPlaceholder : ""}
+                placeholder={idx === 0 ? actionToolParameterFieldPlaceholder : ""}
             />
         </FormGroup>
     );
 }
 
-const parameterFieldPlaceholder = `Provide a free-text response to the LLM after completing the requested action, e.g.:
+const actionToolParameterFieldPlaceholder = `Provide a free-text response to the LLM after completing the requested action, e.g.:
 The issue has been forwarded to the support team.`;

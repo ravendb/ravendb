@@ -96,17 +96,6 @@ export class AiAgentStubs {
                     role: "user",
                     content: "use QueryRecentCategories tool",
                     date: "2025-08-08T10:28:20.5582920Z",
-                    // TODO Ask Karmel is it possible
-                    // tool_calls: [
-                    //     {
-                    //         id: "call_whzFC5Mlx17thYJYOvdWf7RW",
-                    //         type: "function",
-                    //         function: {
-                    //             name: "QueryRecentCategories",
-                    //             arguments: "{}",
-                    //         },
-                    //     },
-                    // ],
                 },
                 {
                     role: "assistant",
@@ -174,6 +163,27 @@ export class AiAgentStubs {
                     role: "tool",
                     content: "Submitted content",
                     date: "2025-08-08T10:28:32.5884757Z",
+                },
+                {
+                    role: "assistant",
+                    content: null,
+                    tool_calls: [
+                        {
+                            id: "call_whzFC5Mlx17thYJYOvdWf7RZ",
+                            type: "function",
+                            function: {
+                                name: "UnknownTool",
+                                arguments: "{}",
+                            },
+                        },
+                    ],
+                    date: "2025-08-08T10:28:01.5884757Z",
+                },
+                {
+                    tool_call_id: "call_whzFC5Mlx17thYJYOvdWf7RZ",
+                    role: "tool",
+                    content: '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales"}]',
+                    date: "2025-08-08T10:28:02.5884757Z",
                 },
                 {
                     content: null,

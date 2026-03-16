@@ -84,10 +84,11 @@ function QueryToolTranscript({
                                             <div>{toolCall.configDetails.Description}</div>
                                             <hr className="my-1" />
                                         </div>
-                                        <ParametersSchemaField
+                                        <SchemaField
                                             parametersSchema={toolCall.configDetails.ParametersSchema}
+                                            parametersSampleObject={toolCall.configDetails.ParametersSampleObject}
                                         />
-                                        <div className="d-flex justify-content-between mb-1 align-items-end">
+                                        <div className="d-flex justify-content-between mb-1 align-items-end mt-2">
                                             <small className="text-muted">Query</small>
                                             <Button
                                                 variant="info"
@@ -154,8 +155,9 @@ function ActionToolTranscript({ toolCall }: { toolCall: AiAgentToolCallAction })
                                             <div>{toolCall.configDetails.Description}</div>
                                             <hr className="my-1" />
                                         </div>
-                                        <ParametersSchemaField
+                                        <SchemaField
                                             parametersSchema={toolCall.configDetails.ParametersSchema}
+                                            parametersSampleObject={toolCall.configDetails.ParametersSampleObject}
                                         />
                                     </Accordion.Body>
                                 </Accordion.Collapse>
@@ -202,7 +204,7 @@ function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent })
                                 <Icon icon="user" color="primary" margin="m-0" />
                             </div>
                             <div className="sub-agent-transcript__content">
-                                <div className="text-truncate">Sub-conversation created</div>
+                                <div>Sub-conversation created</div>
                                 <a
                                     href={subAgentConversationLink}
                                     className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between px-2 py-1 text-muted"
@@ -211,7 +213,7 @@ function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent })
                                     rel="noreferrer"
                                 >
                                     <Icon icon="ai-agents" />
-                                    <span className="text-truncate">{subConversationId}</span>
+                                    <span className="text-truncate">Conversation details</span>
                                     <Icon icon="newtab" margin="ms-auto" />
                                 </a>
                             </div>
@@ -282,19 +284,38 @@ function FilledParametersField({ toolArguments, className }: FilledParametersFie
     );
 }
 
-interface ParametersSchemaFieldProps {
+interface SchemaFieldProps {
     parametersSchema: string;
+    parametersSampleObject: string;
 }
 
-function ParametersSchemaField({ parametersSchema }: ParametersSchemaFieldProps) {
+function SchemaField({ parametersSchema, parametersSampleObject }: SchemaFieldProps) {
+    if (parametersSchema) {
+        const prettifiedSchema = aiAgentsUtils.getPrettifiedContent(parametersSchema);
+
+        return (
+            <div>
+                <small className="text-muted">Parameters schema</small>
+                <AceEditor
+                    defaultValue={prettifiedSchema}
+                    readOnly
+                    mode="json"
+                    height={aceEditorUtils.getAceEditorHeight(prettifiedSchema, { maxLineCount: 6 })}
+                />
+            </div>
+        );
+    }
+
+    const prettifiedSampleObject = aiAgentsUtils.getPrettifiedContent(parametersSampleObject);
+
     return (
         <div>
-            <small className="text-muted">Parameters schema</small>
+            <small className="text-muted">Sample parameters object</small>
             <AceEditor
-                defaultValue={parametersSchema}
+                defaultValue={prettifiedSampleObject}
                 readOnly
                 mode="json"
-                height={aceEditorUtils.getAceEditorHeight(parametersSchema, { maxLineCount: 6 })}
+                height={aceEditorUtils.getAceEditorHeight(prettifiedSampleObject, { maxLineCount: 6 })}
             />
         </div>
     );
