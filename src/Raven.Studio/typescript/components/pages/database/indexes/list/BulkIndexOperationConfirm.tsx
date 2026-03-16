@@ -10,9 +10,10 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
 import ActionContextUtils from "components/utils/actionContextUtils";
-import IconName from "typings/server/icons";
 import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import Modal from "components/common/Modal";
+import Accordion from "react-bootstrap/Accordion";
+import Badge from "react-bootstrap/Badge";
 
 type operationType = "pause" | "disable" | "start";
 
@@ -47,12 +48,12 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     const { type, indexes, toggle, allActionContexts, onConfirm } = props;
 
     const infinitive = getInfinitiveForType(type);
-    const infinitiveLowerCase = infinitive.toLowerCase();
     const icon = getIcon(type);
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
     const indexGroups = getIndexGroups(type, indexes).filter((x) => x.indexes.length > 0);
+    const defaultActiveKey = indexGroups.length === 1 ? ["indexGroup0"] : [];
 
     const onSubmit = () => {
         onConfirm(selectedActionContexts);
@@ -60,66 +61,92 @@ export function BulkIndexOperationConfirm(props: BulkIndexOperationConfirmProps)
     };
 
     return (
-        <Modal show scrollable onHide={toggle} contentClassName={`modal-border bulge-${getColorForType(type)}`}>
-            <Modal.Header className="p-0" onCloseClick={toggle} />
-            <Modal.Body className="vstack gap-4">
-                <div className="text-center">
-                    <Icon
-                        icon="index"
-                        color={`${getColorForType(type)}`}
-                        addon={`${infinitiveLowerCase}` as IconName}
-                        className="fs-1"
-                        margin="m-0"
-                    />
-                </div>
-                {indexGroups.map((indexGroup, idx) => (
-                    <div key={"indexGroup" + idx}>
-                        <div className="text-center lead">{indexGroup.title}</div>
-                        <div className="vstack gap-1 my-4">
-                            {indexGroup.indexes.map((index) => (
-                                <div key={index.name} className="d-flex">
-                                    <div
-                                        className={classNames(
-                                            "bg-faded-primary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
-                                        )}
+        <Modal
+            show
+            scrollable
+            onHide={toggle}
+            contentClassName={`modal-border bulge-${getColorForType(type)}`}
+            size="lg"
+        >
+            <Modal.Header className="hstack pb-2 mb-0" onCloseClick={toggle}>
+                <div className="text-center lead">Confirm {infinitive} Operation</div>
+            </Modal.Header>
+            <Modal.Body className="vstack gap-1 pt-0">
+                {indexGroups.map((indexGroup, idx) => {
+                    const groupEventKey = "indexGroup" + idx;
+
+                    return (
+                        <Accordion
+                            key={groupEventKey}
+                            className="bs5 accordion-inside-modal"
+                            defaultActiveKey={defaultActiveKey}
+                            alwaysOpen
+                            flush
+                        >
+                            <Accordion.Item eventKey={groupEventKey}>
+                                <Accordion.Header>
+                                    {indexGroup.title}{" "}
+                                    <Badge className="ms-1 px-1 align-self-center rounded-circle" bg="secondary">
+                                        {indexGroup.indexes.length}
+                                    </Badge>
+                                </Accordion.Header>
+                                <Accordion.Collapse unmountOnExit mountOnEnter eventKey={groupEventKey}>
+                                    <Accordion.Body
+                                        className="pb-2 pt-0 overflow-scroll"
+                                        style={{ maxHeight: "160px" }}
                                     >
-                                        <Icon
-                                            icon={getStatusIcon(index.currentStatus)}
-                                            color={getStatusColor(index.currentStatus)}
-                                            margin="m-0"
-                                        />
-                                        {indexGroup.destinationStatus && (
-                                            <>
-                                                <Icon
-                                                    icon="arrow-thin-right"
-                                                    margin="mx-1"
-                                                    className="fs-6 align-self-center"
-                                                />
-                                                <Icon
-                                                    icon={getStatusIcon(indexGroup.destinationStatus)}
-                                                    color={getStatusColor(indexGroup.destinationStatus)}
-                                                    margin="m-0"
-                                                />
-                                            </>
-                                        )}
-                                    </div>
-                                    <div className="word-break align-self-center">{index.name}</div>
-                                </div>
-                            ))}
+                                        <div className="vstack gap-1">
+                                            {indexGroup.indexes.map((index) => (
+                                                <div key={index.name} className="d-flex">
+                                                    <div
+                                                        className={classNames(
+                                                            "bg-secondary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                                        )}
+                                                    >
+                                                        <Icon
+                                                            icon={getStatusIcon(index.currentStatus)}
+                                                            color={getStatusColor(index.currentStatus)}
+                                                            title={getStatusTitle(index.currentStatus)}
+                                                            margin="m-0"
+                                                        />
+                                                        {indexGroup.destinationStatus && (
+                                                            <>
+                                                                <Icon
+                                                                    icon="arrow-thin-right"
+                                                                    margin="mx-1"
+                                                                    className="fs-6 align-self-center"
+                                                                />
+                                                                <Icon
+                                                                    icon={getStatusIcon(indexGroup.destinationStatus)}
+                                                                    color={getStatusColor(indexGroup.destinationStatus)}
+                                                                    title={getStatusTitle(indexGroup.destinationStatus)}
+                                                                    margin="m-0"
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <div className="word-break align-self-center">{index.name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Accordion.Body>
+                                </Accordion.Collapse>
+                            </Accordion.Item>
+                        </Accordion>
+                    );
+                })}
+                <div className="mt-2">
+                    {ActionContextUtils.showContextSelector(allActionContexts) && (
+                        <div>
+                            <h4 className="fw-light mb-1">Select context</h4>
+                            <MultipleDatabaseLocationSelector
+                                allActionContexts={allActionContexts}
+                                selectedActionContexts={selectedActionContexts}
+                                setSelectedActionContexts={setSelectedActionContexts}
+                            />
                         </div>
-                        {idx < indexGroups.length - 1 && <hr className="m-0" />}
-                    </div>
-                ))}
-                {ActionContextUtils.showContextSelector(allActionContexts) && (
-                    <div>
-                        <h4>Select context</h4>
-                        <MultipleDatabaseLocationSelector
-                            allActionContexts={allActionContexts}
-                            selectedActionContexts={selectedActionContexts}
-                            setSelectedActionContexts={setSelectedActionContexts}
-                        />
-                    </div>
-                )}
+                    )}
+                </div>
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="link" onClick={toggle} className="link-muted">
@@ -162,6 +189,7 @@ function getStatusIcon(status: IndexRunningStatus) {
             return "index";
     }
 }
+
 function getStatusColor(status: IndexRunningStatus) {
     switch (status) {
         case "Disabled":
@@ -172,6 +200,21 @@ function getStatusColor(status: IndexRunningStatus) {
             return "success";
         default:
             return "primary";
+    }
+}
+
+function getStatusTitle(status: IndexRunningStatus) {
+    switch (status) {
+        case "Disabled":
+            return "Disabled";
+        case "Paused":
+            return "Paused";
+        case "Running":
+            return "Running";
+        case "Pending":
+            return "Pending";
+        default:
+            assertUnreachable(status);
     }
 }
 
@@ -214,7 +257,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-danger">disable</strong> following indexes
+                            Indexes to <strong className="text-danger margin-left-xxxs">Disable</strong>
                         </>
                     ),
                     indexes: affectedIndexGrouped.disabling,
@@ -250,7 +293,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-warning">pause</strong> following indexes
+                            Indexes to <strong className="text-warning margin-left-xxxs">Pause</strong>
                         </>
                     ),
                     indexes: affectedIndexGrouped.pausing,
@@ -287,7 +330,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-success">enable</strong> following indexes
+                            Indexes to <strong className="text-success margin-left-xxxs">Enable</strong>
                         </>
                     ),
                     indexes: affectedIndexGrouped.enabling,
@@ -297,7 +340,7 @@ function getIndexGroups(type: operationType, indexes: IndexSharedInfo[]): IndexG
                 {
                     title: (
                         <>
-                            You&apos;re about to <strong className="text-success">resume</strong> following indexes
+                            Indexes to <strong className="text-success margin-left-xxxs">Resume</strong>
                         </>
                     ),
                     indexes: affectedIndexGrouped.resuming,

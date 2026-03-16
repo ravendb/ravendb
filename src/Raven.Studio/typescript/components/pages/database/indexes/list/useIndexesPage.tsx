@@ -44,6 +44,10 @@ import useBoolean from "components/hooks/useBoolean";
 import router from "plugins/router";
 import RichAlert from "components/common/RichAlert";
 import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
+import Accordion from "react-bootstrap/Accordion";
+import Badge from "react-bootstrap/Badge";
+import classNames from "classnames";
+import { Icon } from "components/common/Icon";
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -530,21 +534,57 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
                 (index) => index.type !== "AutoMap" && index.type !== "AutoMapReduce"
             );
 
+            const defaultActiveKey = indexes.length <= 12 ? ["0"] : [];
+
             const isConfirmed = await confirm({
                 icon: IndexUtils.getLockIcon(lockMode),
                 title: (
                     <span>
-                        Do you want to <strong>{IndexUtils.formatLockMode(lockMode)}</strong> selected indexes?
+                        Do you want to <strong>{IndexUtils.formatActionLockMode(lockMode)}</strong> selected indexes?
                     </span>
                 ),
                 actionColor: "primary",
                 message: (
                     <div>
-                        <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
-                            {indexes.map((x) => (
-                                <li key={x.name}>{x.name}</li>
-                            ))}
-                        </ul>
+                        <Accordion
+                            className="bs5 accordion-inside-modal mb-2"
+                            alwaysOpen
+                            flush
+                            defaultActiveKey={defaultActiveKey}
+                        >
+                            <Accordion.Item eventKey="0">
+                                <Accordion.Header>
+                                    Indexes to{" "}
+                                    <strong className="text-primary margin-left-xxxs">
+                                        {IndexUtils.formatActionLockMode(lockMode)}
+                                    </strong>{" "}
+                                    <Badge className="ms-1 px-1 align-self-center rounded-2" bg="secondary">
+                                        {indexes.length}
+                                    </Badge>
+                                </Accordion.Header>
+                                <Accordion.Collapse unmountOnExit mountOnEnter eventKey="0">
+                                    <Accordion.Body
+                                        className="pb-2 pt-0 overflow-scroll"
+                                        style={{ maxHeight: "160px" }}
+                                    >
+                                        <div className="vstack gap-1">
+                                            {indexes.map((x) => (
+                                                <div key={x.name} className="d-flex">
+                                                    <div
+                                                        className={classNames(
+                                                            "bg-secondary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                                        )}
+                                                    >
+                                                        <Icon icon="index" margin="m-0" />
+                                                    </div>
+                                                    <div className="word-break align-self-center">{x.name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Accordion.Body>
+                                </Accordion.Collapse>
+                            </Accordion.Item>
+                        </Accordion>
                         <RichAlert variant="info">
                             Static-indexes only will be set, &apos;Lock Mode&apos; is not relevant for auto-indexes.
                         </RichAlert>
