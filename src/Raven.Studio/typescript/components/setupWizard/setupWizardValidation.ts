@@ -73,6 +73,7 @@ const licenseKeyStepSchema = yup.object({
     //states
     isLoadingKey: yup.boolean(),
     isInvalidKey: yup.boolean(),
+    isConnectionError: yup.boolean(),
 });
 
 export const licenseKeySchema = yup.object().shape({

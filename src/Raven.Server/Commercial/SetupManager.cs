@@ -1225,7 +1225,8 @@ namespace Raven.Server.Commercial
                     await DeleteAllExistingCertificates(serverStore);
                     
                     await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                    await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                    if (setupInfo.License != null)
+                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
 
                     serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },
