@@ -1312,7 +1312,8 @@ namespace Raven.Server.Documents
                     CompareExchangeCount = ServerStore.Cluster.GetNumberOfCompareExchange(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     CompareExchangeTombstonesCount = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     IdentitiesCount = ServerStore.Cluster.GetNumberOfIdentities(transactionContext, DocumentsStorage.DocumentDatabase.Name),
-                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext)
+                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext),
+                    TimeSeriesDeletedRangesCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(documentsContext)
                 };
             }
         }
