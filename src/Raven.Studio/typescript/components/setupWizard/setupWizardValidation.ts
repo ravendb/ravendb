@@ -5,6 +5,7 @@ import { ipAddressFormSchema } from "components/setupWizard/steps/SetupWizardNod
 export type SetupWizardSetupMethod = "newCluster" | "createPackage" | "usePackage";
 export type SetupWizardSecurityOption = "letsEncrypt" | "ownCertificate" | "none";
 export type LicenseTypeToGenerate = "community" | "developer";
+export type LicenseKeyStatus = "loading" | "valid" | "invalid" | "connection-error";
 
 const setupMethodStepSchema = yup.object({
     method: yup.string<SetupWizardSetupMethod>().nullable().required(),
@@ -71,9 +72,7 @@ const licenseKeyStepSchema = yup.object({
     verificationCode: yup.string(),
 
     //states
-    isLoadingKey: yup.boolean(),
-    isInvalidKey: yup.boolean(),
-    isConnectionError: yup.boolean(),
+    licenseStatus: yup.string<LicenseKeyStatus>().nullable(),
 });
 
 export const licenseKeySchema = yup.object().shape({

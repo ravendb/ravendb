@@ -72,8 +72,8 @@ export function SetupWizardSecurityStep() {
                         isActive: isLetsEncryptDisabled,
                         message: (
                             <div>
-                                Let&#39;s Encrypt is not available without a license. Go back to the{" "}
-                                <b>License Key</b> step and insert an existing license or generate a free{" "}
+                                Let&#39;s Encrypt is not available without a license. Go back to the <b>License Key</b>{" "}
+                                step and insert an existing license or generate a free{" "}
                                 <Button
                                     variant="link"
                                     className="text-info p-0 text-decoration-underline"
