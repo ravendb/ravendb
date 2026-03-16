@@ -36,6 +36,7 @@ describe("AiAgentMessages", () => {
             {
                 role: "system",
                 content: systemPromptText,
+                date: "2025-08-08T10:28:01.5884757Z",
             },
         ]);
 
@@ -52,6 +53,7 @@ describe("AiAgentMessages", () => {
             {
                 role: "user",
                 content: "AI Agent Parameters:\ncompany = companies/90-A\r\n",
+                date: "2025-08-08T10:28:01.5884757Z",
             },
         ]);
 
@@ -79,11 +81,13 @@ describe("AiAgentMessages", () => {
                         },
                     },
                 ],
+                date: "2025-08-08T10:28:01.5884757Z",
             },
             {
                 tool_call_id: "call_whzFC5Mlx17thYJYOvdWf7RW",
                 role: "tool",
                 content: '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales"}]',
+                date: "2025-08-08T10:28:02.5884757Z",
             },
         ]);
 
@@ -119,6 +123,7 @@ describe("AiAgentMessages", () => {
                         type: "function",
                     },
                 ],
+                date: "2025-08-08T10:28:01.5884757Z",
             },
         ]);
 
@@ -149,11 +154,13 @@ describe("AiAgentMessages", () => {
                         type: "function",
                     },
                 ],
+                date: "2025-08-08T10:28:01.5884757Z",
             },
             {
                 tool_call_id: "call_MdKvWaFtl0cJAc5a0q26Lo97",
                 role: "tool",
                 content: "Submitted content",
+                date: "2025-08-08T10:28:02.5884757Z",
             },
         ]);
 
@@ -184,12 +191,14 @@ describe("AiAgentMessages", () => {
                         type: "function",
                     },
                 ],
+                date: "2025-08-08T10:28:01.5884757Z",
             },
             {
                 tool_call_id: "call_CscbrKZ4VC1GibM2oERi7nF9",
                 role: "tool",
                 content: "Sub agent answer",
                 subConversationId: "Chats/2",
+                date: "2025-08-08T10:28:02.5884757Z",
             },
         ]);
 

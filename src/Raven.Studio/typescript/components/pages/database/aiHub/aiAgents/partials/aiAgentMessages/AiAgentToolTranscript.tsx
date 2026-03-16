@@ -134,9 +134,9 @@ function ActionToolTranscript({ toolCall }: { toolCall: AiAgentToolCallAction })
                 <Accordion.Header>
                     <div className="hstack gap-2">
                         <div className="tool-icon bg-faded-primary">
-                            <Icon icon="query" color="primary" margin="m-0" />
+                            <Icon icon="force" color="primary" margin="m-0" />
                         </div>
-                        <div className="text-truncate">Query tool: {toolCall.name}</div>
+                        <div className="text-truncate">Action tool: {toolCall.name}</div>
                     </div>
                 </Accordion.Header>
                 <Accordion.Collapse eventKey={toolCall.id} mountOnEnter unmountOnExit>
@@ -180,11 +180,13 @@ function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent })
     return (
         <Accordion className="transcript-tool sub-agent-transcript border border-secondary rounded-2 panel-bg-1">
             <Accordion.Item eventKey={toolCall.id} className="panel-bg-1">
-                <Accordion.Header className="hstack gap-2">
-                    <div className="tool-icon bg-faded-primary">
-                        <Icon icon="user" color="primary" margin="m-0" />
+                <Accordion.Header>
+                    <div className="hstack gap-2">
+                        <div className="tool-icon bg-faded-primary">
+                            <Icon icon="user" color="primary" margin="m-0" />
+                        </div>
+                        <div className="text-truncate">Sub-agent: {toolCall.name}</div>
                     </div>
-                    <div className="text-truncate">Sub-agent: {toolCall.name}</div>
                 </Accordion.Header>
                 <Accordion.Collapse eventKey={toolCall.id} mountOnEnter unmountOnExit>
                     <Accordion.Body className="panel-bg-1 rounded-2 sub-agent-transcript__steps">
@@ -203,7 +205,7 @@ function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent })
                                 <div className="text-truncate">Sub-conversation created</div>
                                 <a
                                     href={subAgentConversationLink}
-                                    className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between p-2 text-muted"
+                                    className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between px-2 py-1 text-muted"
                                     title={subConversationId}
                                     target="_blank"
                                     rel="noreferrer"

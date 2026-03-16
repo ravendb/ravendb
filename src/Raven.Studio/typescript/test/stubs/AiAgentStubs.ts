@@ -154,6 +154,64 @@ export class AiAgentStubs {
                         ReasoningTokens: 20,
                     },
                 },
+                {
+                    content: null,
+                    role: "assistant",
+                    tool_calls: [
+                        {
+                            function: {
+                                arguments: '{"Query":["test"]}',
+                                name: "ActionProductSearch",
+                            },
+                            id: "call_MdKvWaFtl0cJAc5a0q26Lo98",
+                            type: "function",
+                        },
+                    ],
+                    date: "2025-08-08T10:28:31.5884757Z",
+                },
+                {
+                    tool_call_id: "call_MdKvWaFtl0cJAc5a0q26Lo98",
+                    role: "tool",
+                    content: "Submitted content",
+                    date: "2025-08-08T10:28:32.5884757Z",
+                },
+                {
+                    content: null,
+                    role: "assistant",
+                    tool_calls: [
+                        {
+                            function: {
+                                arguments: '{"subAgentUserPrompt":"Explain how to query documents in RavenDB"}',
+                                name: "raven-expert-agent",
+                            },
+                            id: "call_CscbrKZ4VC1GibM2oERi7nF9",
+                            type: "function",
+                        },
+                    ],
+                    date: "2025-08-08T10:28:33.5884757Z",
+                },
+                {
+                    tool_call_id: "call_CscbrKZ4VC1GibM2oERi7nF9",
+                    role: "tool",
+                    content: "Sub agent answer",
+                    subConversationId: "Chats/2",
+                    date: "2025-08-08T10:28:34.5884757Z",
+                },
+                {
+                    content: null,
+                    role: "assistant",
+                    tool_calls: [
+                        {
+                            function: {
+                                arguments: '{"Query":["test"]}',
+                                name: "ActionProductSearch",
+                            },
+                            id: "call_MdKvWaFtl0cJAc5a0q26Lo99",
+                            type: "function",
+                        },
+                    ],
+                    date: "2025-08-08T10:28:35.5884757Z",
+                },
             ],
             LinkedConversations: [],
             TotalUsage: {
