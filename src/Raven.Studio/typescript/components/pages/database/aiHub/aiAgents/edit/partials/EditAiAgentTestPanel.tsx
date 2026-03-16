@@ -18,19 +18,18 @@ import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
 import { tryHandleSubmit } from "components/utils/common";
 import messagePublisher from "common/messagePublisher";
-import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { compareSets } from "common/typeUtils";
 import AiAgentParametersDropdown from "../../partials/AiAgentParametersDropdown";
 import classNames from "classnames";
+import { AiAgentToolCall } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes";
 
 interface EditAiAgentTestPanelProps {
     testForm: UseFormReturn<TestAiAgentFormData>;
     editForm: UseFormReturn<EditAiAgentFormData>;
-    allQueriesNames: string[];
 }
 
-export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNames }: EditAiAgentTestPanelProps) {
+export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgentTestPanelProps) {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const rawDataRef = useRef<ReactAce>(null);
@@ -69,7 +68,6 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                     configuration,
                     testFormValues,
                     toolCallParameters,
-                    allQueriesNames,
                 })
             ).unwrap();
 
@@ -186,8 +184,6 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                     {!isRawData && messages.length > 0 && (
                         <AiAgentMessages
                             messages={messages}
-                            toolQueries={configuration.Queries}
-                            toolActions={configuration.Actions}
                             handleSaveParameters={handleSaveParameters}
                             setIsWaitingForActionToolSubmit={(value: boolean) =>
                                 dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))

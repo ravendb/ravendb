@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import {
@@ -66,12 +66,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
             ),
     });
 
-    const editFormValues = useWatch({
-        control: editForm.control,
-    });
-
-    const allQueriesNames = editFormValues.queries?.map((x) => x.name) ?? [];
-
     const testForm = useForm<TestAiAgentFormData>({
         defaultValues: {
             prompt: "",
@@ -102,7 +96,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         testForm,
         reloadEditForm,
         asyncGetEditDefaultValues,
-        allQueriesNames,
         handleSubmit: editForm.handleSubmit(saveAgent),
         isEditAiAgent,
     };

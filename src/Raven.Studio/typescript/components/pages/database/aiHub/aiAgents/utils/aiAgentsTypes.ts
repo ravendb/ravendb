@@ -1,15 +1,50 @@
-export interface AiAgentToolCall {
+interface AiAgentToolCallBase {
     id: string;
     name: string;
     arguments: string;
-    queryToolResult?: AiAgentMessage;
+    responseMessage?: AiAgentMessage;
 }
 
-export type AiAgentRole = "system" | "user" | "assistant" | "tool";
+export interface AiAgentToolCallQuery extends AiAgentToolCallBase {
+    type: "query";
+    configDetails: Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
+}
+
+export interface AiAgentToolCallAction extends AiAgentToolCallBase {
+    type: "action";
+    configDetails: Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
+}
+
+export interface AiAgentToolCallSubAgent extends AiAgentToolCallBase {
+    type: "sub-agent";
+    configDetails: Raven.Client.Documents.Operations.AI.Agents.AiAgentToolSubAgent;
+}
+
+// When someone removes a tool from the agent configuration but there are messages in the conversation related to that tool, we want to show it on the UI
+export interface AiAgentToolCallUnknown extends AiAgentToolCallBase {
+    type: "unknown";
+    configDetails: null;
+}
+
+export type AiAgentToolCall =
+    | AiAgentToolCallAction
+    | AiAgentToolCallQuery
+    | AiAgentToolCallSubAgent
+    | AiAgentToolCallUnknown;
+
+export type AiAgentToolType = AiAgentToolCall["type"];
+export type AiAgentToolCallForType<TType extends AiAgentToolType> = Extract<AiAgentToolCall, { type: TType }>;
+export type AiAgentToolInfoForType<TType extends AiAgentToolType> = Pick<
+    AiAgentToolCallForType<TType>,
+    "type" | "configDetails"
+>;
+export type AiAgentToolInfo = { [TType in AiAgentToolType]: AiAgentToolInfoForType<TType> }[AiAgentToolType];
+export type AiAgentDocRole = "system" | "user" | "assistant" | "tool";
+export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool";
 
 export interface AiAgentMessage {
     id: string;
-    role: AiAgentRole;
+    role: AiAgentMessageRole;
     content?: string;
     date?: string;
     state?: "loading" | "success" | "error";
@@ -17,12 +52,13 @@ export interface AiAgentMessage {
     toolCalls?: AiAgentToolCall[];
     toolCallId?: string;
     toolName?: string;
+    subConversationId?: string;
 }
 
 export interface AiAgentDocumentResponse {
     Agent: string;
-    Parameters: TODO;
-    Messages: TODO[];
+    Parameters: Record<string, any>;
+    Messages: AiAgentDocMessage[];
     TotalUsage: Raven.Client.Documents.Operations.AI.AiUsage;
     OpenActionCalls: TODO;
 }
@@ -36,7 +72,7 @@ export interface AiAgentRunResult {
 }
 
 export interface AiAgentDocMessage {
-    role: AiAgentRole;
+    role: AiAgentDocRole;
     content: string;
     tool_calls?: {
         id: string;
@@ -49,4 +85,5 @@ export interface AiAgentDocMessage {
     tool_call_id?: string;
     date?: string;
     usage?: Raven.Client.Documents.Operations.AI.AiUsage;
+    subConversationId?: string;
 }

@@ -113,8 +113,6 @@ export default function ChatAiAgentFormBody({
                     {!isRawData && messages.length > 0 && (
                         <AiAgentMessages
                             messages={messages}
-                            toolQueries={config.data?.Queries}
-                            toolActions={config.data?.Actions}
                             handleSaveParameters={runChat}
                             setIsWaitingForActionToolSubmit={(value: boolean) =>
                                 dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))

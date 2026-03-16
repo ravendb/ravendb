@@ -51,6 +51,13 @@ export class AiAgentStubs {
                             ParametersSchema: null,
                         },
                     ],
+                    SubAgents: [
+                        {
+                            Identifier: "raven-expert-agent",
+                            Description:
+                                "An expert in RavenDB, who can answer any question about RavenDB and its features.",
+                        },
+                    ],
                     Parameters: [
                         {
                             Name: "company",
@@ -61,7 +68,6 @@ export class AiAgentStubs {
                     ],
                     ChatTrimming: null,
                     MaxModelIterationsPerCall: null,
-                    SubAgents: [],
                     Disabled: false,
                 },
             ],
@@ -90,6 +96,17 @@ export class AiAgentStubs {
                     role: "user",
                     content: "use QueryRecentCategories tool",
                     date: "2025-08-08T10:28:20.5582920Z",
+                    // TODO Ask Karmel is it possible
+                    // tool_calls: [
+                    //     {
+                    //         id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                    //         type: "function",
+                    //         function: {
+                    //             name: "QueryRecentCategories",
+                    //             arguments: "{}",
+                    //         },
+                    //     },
+                    // ],
                 },
                 {
                     role: "assistant",

@@ -68,9 +68,12 @@ export const editAiAgentSlice = createSlice({
             state.runTestState = "success";
             state.testDocument = action.payload.result.Document;
 
-            const messages = action.payload.result.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
+            const { result, configuration } = action.payload;
 
-            state.testMessages = aiAgentsUtils.mergeToolResults(messages, action.payload.allQueriesNames);
+            state.testMessages = aiAgentsUtils.mapMessagesFromDoc({
+                docMessages: result.Document.Messages,
+                config: configuration,
+            });
         });
         builder.addCase(getAllIdentifiers.fulfilled, (state, action) => {
             state.allIdentifiers = action.payload;
@@ -97,11 +100,13 @@ const runTest = createAsyncThunk(
             configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
             testFormValues: TestAiAgentFormData;
             toolCallParameters?: AiAgentToolCall[];
-            allQueriesNames: string[];
         },
         { getState }
-    ): Promise<{ result: AiAgentRunResult; allQueriesNames: string[] }> => {
-        const { databaseName, configuration, testFormValues, toolCallParameters, allQueriesNames } = payload;
+    ): Promise<{
+        result: AiAgentRunResult;
+        configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
+    }> => {
+        const { databaseName, configuration, testFormValues, toolCallParameters } = payload;
 
         const state = getState() as RootState;
         const testDocument = state.editAiAgent.testDocument;
@@ -120,7 +125,7 @@ const runTest = createAsyncThunk(
             },
         });
 
-        return { result, allQueriesNames };
+        return { result, configuration };
     }
 );
 

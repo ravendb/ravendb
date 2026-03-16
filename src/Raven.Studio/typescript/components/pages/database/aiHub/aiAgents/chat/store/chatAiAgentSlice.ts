@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
@@ -93,14 +93,10 @@ export const chatAiAgentSlice = createSlice({
                 state.document = createSuccessState(action.payload);
                 state.isDocumentChanged = false;
 
-                const messages: AiAgentMessage[] = action.payload.Messages.map((x: AiAgentDocMessage) =>
-                    aiAgentsUtils.mapMessageFromDoc(x)
-                );
-
-                state.messages = aiAgentsUtils.mergeToolResults(
-                    messages,
-                    state.config.data?.Queries.map((x) => x.Name) ?? []
-                );
+                state.messages = aiAgentsUtils.mapMessagesFromDoc({
+                    docMessages: action.payload.Messages,
+                    config: state.config.data,
+                });
             })
             .addCase(runChat.pending, (state) => {
                 state.runChatState = "loading";

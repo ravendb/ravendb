@@ -1,5 +1,5 @@
 import moment from "moment";
-import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
+import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall, AiAgentToolInfo, AiAgentToolType } from "./aiAgentsTypes";
 
 function getPrettifiedContent(content: string | Record<string, any>): string {
     if (content == null) {
@@ -25,46 +25,123 @@ function getContentFromDoc(docMessage: AiAgentDocMessage): string {
     return getPrettifiedContent(docMessage.content);
 }
 
-function mapMessageFromDoc(docMessage: AiAgentDocMessage): AiAgentMessage {
-    return {
-        id: _.uniqueId(),
-        role: docMessage.role,
-        content: getContentFromDoc(docMessage),
-        state: "success",
-        toolCalls: docMessage.tool_calls
-            ? docMessage.tool_calls.map((x) => ({
-                  id: x.id,
-                  name: x.function.name,
-                  arguments: x.function.arguments,
-              }))
-            : [],
-        date: docMessage.date ? moment(docMessage.date).format(aiAgentsUtils.messageDateFormat) : null,
-        usage: docMessage.usage,
-        toolCallId: docMessage.tool_call_id,
-    };
+interface MapMessagesFromDocOptions {
+    docMessages: AiAgentDocMessage[];
+    config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
 }
 
-function mergeToolResults(messages: AiAgentMessage[], allQueriesNames: string[]) {
-    for (const message of messages) {
-        if (message.toolCallId) {
-            const messageWithToolCall = messages.find((x) => x.toolCalls.some((y) => y.id === message.toolCallId));
-            const toolCall = messageWithToolCall.toolCalls.find((x) => x.id === message.toolCallId);
-            const isQueryTool = allQueriesNames.some((name) => name === toolCall.name);
+function mapMessagesFromDoc({ docMessages, config }: MapMessagesFromDocOptions): AiAgentMessage[] {
+    const formatDate = (date: string) => (date ? moment(date).format(aiAgentsUtils.messageDateFormat) : null);
 
-            if (toolCall && isQueryTool) {
-                toolCall.queryToolResult = message;
+    function getToolInfoByName(toolName: string): AiAgentToolInfo {
+        const queryConfig = config.Queries?.find((tool) => tool.Name === toolName);
+        if (queryConfig) {
+            return { type: "query", configDetails: queryConfig };
+        }
+
+        const actionConfig = config.Actions?.find((tool) => tool.Name === toolName);
+        if (actionConfig) {
+            return { type: "action", configDetails: actionConfig };
+        }
+
+        const subAgentConfig = config.SubAgents?.find((tool) => tool.Identifier === toolName);
+        if (subAgentConfig) {
+            return { type: "sub-agent", configDetails: subAgentConfig };
+        }
+
+        return { type: "unknown", configDetails: null };
+    }
+
+    const getToolResponseMessageById = (id: string): AiAgentMessage => {
+        const message = docMessages.find((message) => message.tool_call_id === id);
+        if (!message) {
+            return null;
+        }
+
+        return {
+            id,
+            role: message.role,
+            content: getContentFromDoc(message),
+            state: "success",
+            subConversationId: message.subConversationId,
+        };
+    };
+
+    const getMessageToolCalls = (docToolCalls: AiAgentDocMessage["tool_calls"]): AiAgentToolCall[] => {
+        if (!docToolCalls) {
+            return null;
+        }
+
+        return docToolCalls.map((x) => {
+            const info = getToolInfoByName(x.function.name);
+            const responseMessage = getToolResponseMessageById(x.id);
+
+            return {
+                id: x.id,
+                name: x.function.name,
+                arguments: x.function.arguments,
+                responseMessage,
+                ...info,
+            } satisfies AiAgentToolCall;
+        });
+    };
+
+    const toolCallsInfoById = new Map<string, { name: string; type: AiAgentToolType }>();
+    docMessages.forEach((docMessage) => {
+        docMessage.tool_calls?.forEach((toolCall) => {
+            const { type } = getToolInfoByName(toolCall.function.name);
+            toolCallsInfoById.set(toolCall.id, { name: toolCall.function.name, type });
+        });
+    });
+
+    const messages: AiAgentMessage[] = [];
+    for (const docMessage of docMessages) {
+        // User parameters are filled by the server. We don't want to show it on the UI
+        if (
+            docMessage.role === "user" &&
+            typeof docMessage.content === "string" &&
+            docMessage.content?.startsWith("AI Agent Parameters")
+        ) {
+            continue;
+        }
+
+        // Message with "tool" role contains the tool call result.
+        // If it's an action we show it as a separate message. For other ones it's nested inside the assistant message.
+        if (docMessage.role === "tool") {
+            const toolInfo = toolCallsInfoById.get(docMessage.tool_call_id);
+
+            if (toolInfo?.type === "action") {
+                messages.push({
+                    id: docMessage.date,
+                    role: "submitted-action-tool",
+                    content: getContentFromDoc(docMessage),
+                    state: "success",
+                    date: formatDate(docMessage.date),
+                    toolName: toolInfo.name,
+                });
             }
 
-            message.toolName = toolCall.name;
+            continue;
         }
+
+        messages.push({
+            id: docMessage.date,
+            role: docMessage.role,
+            content: getContentFromDoc(docMessage),
+            state: "success",
+            toolCalls: getMessageToolCalls(docMessage.tool_calls),
+            date: formatDate(docMessage.date),
+            usage: docMessage.usage,
+            toolCallId: docMessage.tool_call_id,
+            subConversationId: docMessage.subConversationId,
+        });
     }
 
     return messages;
 }
 
 export const aiAgentsUtils = {
-    mapMessageFromDoc,
     messageDateFormat: "HH:mm A",
-    mergeToolResults,
     getPrettifiedContent,
+    mapMessagesFromDoc,
 };

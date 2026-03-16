@@ -97,11 +97,7 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                     className="panel-bg-1 h-100 vstack"
                 >
                     <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                    <EditAiAgentTestPanel
-                        testForm={aiAgentEditor.testForm}
-                        editForm={aiAgentEditor.editForm}
-                        allQueriesNames={aiAgentEditor.allQueriesNames}
-                    />
+                    <EditAiAgentTestPanel testForm={aiAgentEditor.testForm} editForm={aiAgentEditor.editForm} />
                 </div>
             )}
         </div>

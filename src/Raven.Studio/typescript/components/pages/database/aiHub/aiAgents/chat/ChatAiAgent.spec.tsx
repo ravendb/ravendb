@@ -63,6 +63,8 @@ describe("AiAgentMessages", () => {
     });
 
     it("can show query tool", async () => {
+        const queryToolName = "QueryRecentCategories";
+
         const conversationDocument = createDocumentWithMessages([
             {
                 role: "assistant",
@@ -72,7 +74,7 @@ describe("AiAgentMessages", () => {
                         id: "call_whzFC5Mlx17thYJYOvdWf7RW",
                         type: "function",
                         function: {
-                            name: "QueryRecentCategories",
+                            name: queryToolName,
                             arguments: "{}",
                         },
                     },
@@ -83,18 +85,13 @@ describe("AiAgentMessages", () => {
                 role: "tool",
                 content: '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales"}]',
             },
-            {
-                role: "assistant",
-                content:
-                    '{"Answer":"I ran QueryRecentCategories for company companies/90-A and found 1 recent categories:\\n1) Beverages (categories/1-A) — Soft drinks, coffees, teas, beers, and ales"}',
-            },
         ]);
 
         const { screen, fireClick } = await rtlRender_WithWaitForLoad(
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        const transcriptButton = screen.getByText("Query tool: QueryRecentCategories");
+        const transcriptButton = screen.getByText("Query tool: " + queryToolName);
         await fireClick(transcriptButton);
         expect(screen.getByText("Parameters filled by LLM")).toBeInTheDocument();
         expect(screen.getByText("Query tool result")).toBeInTheDocument();
@@ -106,6 +103,8 @@ describe("AiAgentMessages", () => {
     });
 
     it("can show action tool to submit", async () => {
+        const actionToolName = "ActionProductSearch";
+
         const conversationDocument = createDocumentWithMessages([
             {
                 content: null,
@@ -114,7 +113,7 @@ describe("AiAgentMessages", () => {
                     {
                         function: {
                             arguments: '{"Query":["test"]}',
-                            name: "ActionProductSearch",
+                            name: actionToolName,
                         },
                         id: "call_MdKvWaFtl0cJAc5a0q26Lo97",
                         type: "function",
@@ -127,13 +126,15 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("Action tool: ActionProductSearch")).toBeInTheDocument();
+        expect(screen.getByText("Action tool: " + actionToolName)).toBeInTheDocument();
 
         expect(screen.getByText(/Enter a response after completing action/)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Submit" })).toBeInTheDocument();
     });
 
     it("can show submitted action tool", async () => {
+        const actionToolName = "ActionProductSearch";
+
         const conversationDocument = createDocumentWithMessages([
             {
                 content: null,
@@ -142,7 +143,7 @@ describe("AiAgentMessages", () => {
                     {
                         function: {
                             arguments: '{"Query":["test"]}',
-                            name: "ActionProductSearch",
+                            name: actionToolName,
                         },
                         id: "call_MdKvWaFtl0cJAc5a0q26Lo97",
                         type: "function",
@@ -154,9 +155,41 @@ describe("AiAgentMessages", () => {
                 role: "tool",
                 content: "Submitted content",
             },
+        ]);
+
+        const { screen } = await rtlRender_WithWaitForLoad(
+            <ChatAiAgentStory conversationDocument={conversationDocument} />
+        );
+
+        expect(screen.getByText("Action tool: " + actionToolName)).toBeInTheDocument();
+
+        expect(screen.getByText(/Response from action tool/)).toBeInTheDocument();
+        expect(screen.getByText("Submitted")).toBeInTheDocument();
+    });
+
+    it("can show sub-agent", async () => {
+        const subAgentId = "raven-expert-agent";
+
+        const conversationDocument = createDocumentWithMessages([
             {
+                content: null,
                 role: "assistant",
-                content: "LLM answer",
+                tool_calls: [
+                    {
+                        function: {
+                            arguments: '{"subAgentUserPrompt":"Explain how to query documents in RavenDB"}',
+                            name: subAgentId,
+                        },
+                        id: "call_CscbrKZ4VC1GibM2oERi7nF9",
+                        type: "function",
+                    },
+                ],
+            },
+            {
+                tool_call_id: "call_CscbrKZ4VC1GibM2oERi7nF9",
+                role: "tool",
+                content: "Sub agent answer",
+                subConversationId: "Chats/2",
             },
         ]);
 
@@ -164,9 +197,6 @@ describe("AiAgentMessages", () => {
             <ChatAiAgentStory conversationDocument={conversationDocument} />
         );
 
-        expect(screen.getByText("Action tool: ActionProductSearch")).toBeInTheDocument();
-
-        expect(screen.getByText(/Response from action tool/)).toBeInTheDocument();
-        expect(screen.getByText("Submitted")).toBeInTheDocument();
+        expect(screen.getByText("Sub-agent: " + subAgentId)).toBeInTheDocument();
     });
 });
