@@ -913,6 +913,7 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const licenseKeyStep = getValues("licenseKeyStep");
     const nodeData = getValues("nodeAddressStep.nodes");
 
+    const hasLicense = !!licenseKeyStep?.licenseInfo;
     const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
     const isMaxClusterNodes = maxClusterSize === nodeData?.length;
 
@@ -924,21 +925,41 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
             )}
         >
             <ConditionalPopover
-                conditions={{
-                    isActive: isMaxClusterNodes,
-                    message: (
-                        <>
-                            <p className="mb-0">Your license doesn&apos;t allow more nodes in the cluster.</p>
-                            <hr className="my-2" />
-                            <span className="md-label">
-                                <Icon icon="link" /> See{" "}
-                                <a href="https://ravendb.net/buy" target="_blank">
-                                    licenses comparison <Icon icon="newtab" />
-                                </a>
-                            </span>
-                        </>
-                    ),
-                }}
+                conditions={[
+                    {
+                        isActive: !hasLicense,
+                        message: (
+                            <>
+                                <p className="mb-0">
+                                    Without a license you can only run a single-node cluster. Otherwise, go back to the{" "}
+                                    <b>License Key</b> step to provide a license and unlock multi-node clusters.
+                                </p>
+                                <hr className="my-2" />
+                                <span className="md-label">
+                                    <Icon icon="link" /> See{" "}
+                                    <a href="https://ravendb.net/buy" target="_blank">
+                                        licenses comparison <Icon icon="newtab" />
+                                    </a>
+                                </span>
+                            </>
+                        ),
+                    },
+                    {
+                        isActive: isMaxClusterNodes,
+                        message: (
+                            <>
+                                <p className="mb-0">Your license doesn&apos;t allow more nodes in the cluster.</p>
+                                <hr className="my-2" />
+                                <span className="md-label">
+                                    <Icon icon="link" /> See{" "}
+                                    <a href="https://ravendb.net/buy" target="_blank">
+                                        licenses comparison <Icon icon="newtab" />
+                                    </a>
+                                </span>
+                            </>
+                        ),
+                    },
+                ]}
             >
                 <Button
                     disabled={isMaxClusterNodes}
