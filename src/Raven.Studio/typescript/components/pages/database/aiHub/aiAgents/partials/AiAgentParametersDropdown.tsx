@@ -5,7 +5,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 
 interface AiAgentParametersDropdownProps {
-    parameters: Record<string, string>;
+    parameters: Record<string, string | Raven.Client.Documents.AI.AiConversationParameter>;
     isCompact?: boolean;
 }
 
@@ -33,31 +33,44 @@ export default function AiAgentParametersDropdown({ parameters, isCompact = fals
                 className="panel-bg-1 p-3 rounded-2 overflow-auto"
             >
                 {parametersArray.map((x, idx) => (
-                    <div key={x.name} className="w-100">
-                        <div className="hstack justify-content-between">
-                            <Badge
-                                bg="primary"
-                                className="text-truncate me-2 fs-5"
-                                title={x.name}
-                                style={{ width: "150px" }}
-                                pill
-                            >
-                                {x.name}
-                            </Badge>
-                            <div className="flex-grow-1">
-                                <Form.Control
-                                    type="text"
-                                    value={x.value}
-                                    disabled
-                                    className="text-truncate"
-                                    title={x.value}
-                                />
-                            </div>
-                        </div>
-                        {idx !== parametersArray.length - 1 && <hr className="my-1" />}
-                    </div>
+                    <ParameterItem
+                        key={x.name}
+                        name={x.name}
+                        value={x.value}
+                        isLast={idx === parametersArray.length - 1}
+                    />
                 ))}
             </Dropdown.Menu>
         </Dropdown>
+    );
+}
+
+interface ParameterItemProps {
+    name: string;
+    value: string | Raven.Client.Documents.AI.AiConversationParameter;
+    isLast: boolean;
+}
+
+function ParameterItem({ name, value, isLast }: ParameterItemProps) {
+    const extractedValue = typeof value === "object" && "Value" in value ? value.Value : value;
+
+    return (
+        <div className="w-100">
+            <div className="hstack justify-content-between">
+                <Badge bg="primary" className="text-truncate me-2 fs-5" title={name} style={{ width: "150px" }} pill>
+                    {name}
+                </Badge>
+                <div className="flex-grow-1">
+                    <Form.Control
+                        type="text"
+                        value={extractedValue}
+                        disabled
+                        className="text-truncate"
+                        title={extractedValue}
+                    />
+                </div>
+            </div>
+            {!isLast && <hr className="my-1" />}
+        </div>
     );
 }
