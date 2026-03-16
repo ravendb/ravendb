@@ -851,7 +851,6 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
             {
-                string addressId;
                 using (var session = store.OpenSession())
                 {
                     session.Store(new Employee
