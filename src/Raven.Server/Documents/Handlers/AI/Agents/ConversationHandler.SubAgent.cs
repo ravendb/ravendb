@@ -60,6 +60,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             args.Modifications = new DynamicJsonValue(args);
+            // this is going to be the prompt so we remove this from the parameters we pass to the sub-agent,
+            // we want to keep the parameters clean and only with what the sub-agent needs to do its work
             args.Modifications.Remove(ConversationDocument.SubAgentUserPromptKey);
 
             var parameters = MergeParams(context, document.Parameters, args);
@@ -213,7 +215,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public static Dictionary<string, ParameterDefinition> BuildSubAgentParameters(JsonOperationContext context, AiAgentConfiguration parent, AiAgentConfiguration child)
+        public Dictionary<string, ParameterDefinition> BuildSubAgentParameters(JsonOperationContext context, AiAgentConfiguration parent, AiAgentConfiguration child)
         {
             var parameters = new Dictionary<string, ParameterDefinition>();
             // We only add what the sub-agent has that the root agent doesn't have
@@ -235,6 +237,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     }
 
                     // parent has this parameter with matching type
+                    continue;
+                }
+
+                if (_document.Parameters.TryGetMember(parameter.Name, out _))
+                {
+                    // conversation has this parameter
                     continue;
                 }
 

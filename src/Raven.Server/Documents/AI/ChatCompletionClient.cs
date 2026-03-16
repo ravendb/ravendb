@@ -128,7 +128,7 @@ public class ChatCompletionClient : IDisposable
         foreach (var subAgent in configuration.SubAgents ?? [])
         {
             var subAgentConfiguration = handler.GetAiAgentConfiguration(subAgent.Identifier);
-            var parameters = ConversationHandler.BuildSubAgentParameters(context, configuration, subAgentConfiguration);
+            var parameters = handler.BuildSubAgentParameters(context, configuration, subAgentConfiguration);
             var paramsSchema = ConversationHandler.GetSchemaForSubAgentTool(context, parameters);
             var description = new StringBuilder(subAgent.Description).AppendLine();
             subAgentConfiguration.AppendCapabilities(description);
