@@ -550,18 +550,27 @@ public static partial class CoraxQueryBuilder
     {
         var indexSearcher = builderParameters.IndexSearcher;
         IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
+        
         // Corax does support internal negation of some primitives. Let's check if we can use it.
         if (TryUseNegatedQuery(builderParameters, rightExpr, out var right, exact) == false)
         {
+            if (left is CoraxWhenQuery)
+                left = builderParameters.AllEntries.Replay();
+            
             right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
             Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+            
+            return right is CoraxWhenQuery 
+                ? left 
+                : indexSearcher.AndNot(left, right, token: builderParameters.Token);
         }
 
         // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
-        if (leftExpr is TrueExpression)
+        if (leftExpr is TrueExpression || left is CoraxWhenQuery)
             return right; // true and not... optimization
 
+        Debug.Assert(right is not CoraxWhenQuery, "TryUseNegatedQuery should not return CoraxWhenQuery as right side of the expression.");
+        
         // Materialize the query
         if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
             return merged;
