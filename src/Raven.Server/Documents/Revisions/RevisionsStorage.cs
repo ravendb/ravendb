@@ -1642,7 +1642,6 @@ namespace Raven.Server.Documents.Revisions
                     var etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr.Result.Reader);
                     if (etag > parameters.EtagBarrier)
                     {
-                        progressResult.Warn(id, "This document wouldn't be reverted, because it changed after the revert progress started.");
                         return null;
                     }
 
@@ -1771,20 +1770,9 @@ namespace Raven.Server.Documents.Revisions
             return result;
         }
 
-        public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
-            OperationCancelToken token)
-        {
-            var result = new AdoptOrphanedRevisionsResult();
-            await PerformRevisionsOperationAsync(onProgress, result,
-                (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
-                collections: null, token);
-
-            return result;
-        }
-
         private bool CanContinueBatch(List<string> idsToCheck, TimeSpan elapsed, JsonOperationContext context)
         {
-            if (idsToCheck.Count > 1024)
+            if (idsToCheck.Count > 4 * 1024)
                 return false;
 
             if (elapsed > MaxEnforceConfigurationSingleBatchTime)
@@ -1837,7 +1825,6 @@ namespace Raven.Server.Documents.Revisions
             {
                 await PerformRevisionsOperationOnSingleCollectionAsync(collection, ids, sw, createCommand, result, parameters, token);
             }
-
         }
 
         private async Task PerformRevisionsOperationOnSingleCollectionAsync<TOperationResult>(
@@ -2059,7 +2046,7 @@ namespace Raven.Server.Documents.Revisions
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
                 var lastModifiedTicks = _database.Time.GetUtcNow().Ticks;
 
-                var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false);
+                var local = _documentsStorage.GetDocumentOrTombstone(context, lowerId, throwOnConflict: false, fields: DocumentFields.Default);
                 var deletedDoc = local.Document == null;
 
                 var configuration = GetRevisionsConfiguration(collectionName.Name, deleteRevisionsWhenNoCofiguration: true);
@@ -2173,13 +2160,13 @@ namespace Raven.Server.Documents.Revisions
             public DateTime MinimalDate;
             public long EtagBarrier;
             public long LastScannedEtag;
-            public readonly HashSet<string> ScannedIds = new HashSet<string>();
+            public readonly LruHashSet<string> ScannedIds = new LruHashSet<string>(64 * 1024);
             public Action<IOperationProgress> OnProgress;
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return await RevertRevisions(before, window, onProgress, collections: null, token);
+            return RevertRevisions(before, window, onProgress, collections: null, token);
         }
 
         public Task RevertDocumentsToRevisionsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
@@ -2248,17 +2235,17 @@ namespace Raven.Server.Documents.Revisions
                 using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
                 {
                     hasMore = PrepareRevertedRevisions(writeCtx, parameters, result, list, collection, token);
-                    await WriteRevertedRevisions(list, token);
+                    await WriteRevertedRevisions(list, parameters, token);
                 }
             }
         }
 
-        private async Task WriteRevertedRevisions(List<Document> list, OperationCancelToken token)
+        private async Task WriteRevertedRevisions(List<Document> list, Parameters parameters, OperationCancelToken token)
         {
             if (list.Count == 0)
                 return;
 
-            await _database.TxMerger.Enqueue(new RevertDocumentsCommand(list, token));
+            await _database.TxMerger.Enqueue(new RevertDocumentsCommand(list, parameters.EtagBarrier, token));
 
             list.Clear();
         }
@@ -2391,20 +2378,20 @@ namespace Raven.Server.Documents.Revisions
         internal sealed class RevertDocumentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             private readonly List<Document> _list;
+            private readonly long? _etagBarrier;
             private readonly Dictionary<string, string> _idToChangeVector;
             private readonly CancellationToken _token;
 
-            public RevertDocumentsCommand(List<Document> list, OperationCancelToken token)
+            public RevertDocumentsCommand(List<Document> list, long? etagBarrier, OperationCancelToken token)
             {
                 _list = list;
+                _etagBarrier = etagBarrier;
                 _token = token.Token;
             }
 
-            public RevertDocumentsCommand(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
+            public RevertDocumentsCommand(Dictionary<string, string> idToChangeVector, OperationCancelToken token) : this(new List<Document>(), etagBarrier: null, token)
             {
                 _idToChangeVector = idToChangeVector;
-                _list = new List<Document>();
-                _token = token.Token;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -2423,6 +2410,16 @@ namespace Raven.Server.Documents.Revisions
 
                 foreach (var document in _list)
                 {
+                    if (_etagBarrier.HasValue)
+                    {
+                        // this protects against ourselves, if we already reverted the document
+                        var current = documentsStorage.GetDocumentOrTombstone(context, document.Id, DocumentFields.Default, throwOnConflict: false);
+                        var currentEtag = current.Document?.Etag ?? current.Tombstone?.Etag ?? 0;
+                        var currentflags = current.Document?.Flags ?? current.Tombstone?.Flags ?? DocumentFlags.None;
+                        if (currentEtag > _etagBarrier.Value && currentflags.HasFlag(DocumentFlags.Reverted))
+                            continue;
+                    }
+
                     _token.ThrowIfCancellationRequested();
                     var flags = document.Flags.Strip(DocumentFlags.Revision | DocumentFlags.Conflicted | DocumentFlags.Resolved | DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication) | DocumentFlags.Reverted;
 
@@ -2504,22 +2501,24 @@ namespace Raven.Server.Documents.Revisions
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
             {
-                return new RevertDocumentsCommandDto(_list);
+                return new RevertDocumentsCommandDto(_list, _etagBarrier);
             }
         }
 
         internal sealed class RevertDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevertDocumentsCommand>
         {
             public readonly List<Document> List;
+            private readonly long? _etagBarrier;
 
-            public RevertDocumentsCommandDto(List<Document> list)
+            public RevertDocumentsCommandDto(List<Document> list, long? etagBarrier)
             {
                 List = list;
+                _etagBarrier = etagBarrier;
             }
 
             public RevertDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new RevertDocumentsCommand(List, OperationCancelToken.None);
+                return new RevertDocumentsCommand(List, _etagBarrier, OperationCancelToken.None);
             }
         }
 
