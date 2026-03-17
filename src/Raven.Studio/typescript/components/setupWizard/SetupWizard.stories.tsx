@@ -254,9 +254,11 @@ async function navigateToStep(
     }
 
     // Continue to SECURITY
-    continueButton = canvas.getByRole("button", { name: /Continue/ });
+    continueButton = await canvas.findByRole("button", { name: /Continue|Skip license/ });
     await waitFor(() => expect(continueButton).not.toBeDisabled());
-    await userEvent.click(continueButton);
+    await userEvent.click(continueButton, {
+        pointerEventsCheck: 0,
+    });
 
     if (targetStep === "Security") {
         return;
