@@ -9,6 +9,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -893,6 +895,40 @@ public class RavenDB_26183 : RavenTestBase
 
                 Assert.Equal(1, employees.Count);
             }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Subscription_ShouldThrowOnNow(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var exception = await Assert.ThrowsAsync<RavenException>(() =>
+                store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = "from Employees where HiredAt <= now()"
+                }));
+
+            Assert.Contains("now()", exception.Message);
+            Assert.Contains("not supported in subscriptions", exception.Message);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Subscriptions)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task Subscription_ShouldThrowOnToday(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            var exception = await Assert.ThrowsAsync<RavenException>(() =>
+                store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
+                {
+                    Query = "from Employees where HiredAt < today()"
+                }));
+
+            Assert.Contains("today()", exception.Message);
+            Assert.Contains("not supported in subscriptions", exception.Message);
         }
     }
 

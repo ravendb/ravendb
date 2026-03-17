@@ -6,7 +6,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public sealed class JavascriptCodeQueryVisitor : QueryVisitor
+    public class JavascriptCodeQueryVisitor : QueryVisitor
     {
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
@@ -102,8 +102,14 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.Append(")");
         }
 
+        protected virtual void OnBeforeVisitMethod(MethodExpression expr)
+        {
+        }
+
         public override void VisitMethod(MethodExpression expr)
         {
+            OnBeforeVisitMethod(expr);
+
             if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase))
             {
                 if (expr.Arguments.Count != 0)
