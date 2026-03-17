@@ -136,7 +136,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private void LoadDataToSession(InMemoryDocumentSessionOperations s)
         {
-            if (s.TrackingMode == TrackingMode.NoTracking)
+            if (s.NoTracking)
                 return;
 
             if (_includes?.Count > 0)

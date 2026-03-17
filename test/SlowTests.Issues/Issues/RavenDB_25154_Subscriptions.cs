@@ -45,7 +45,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             foreach (var item in batch.Items)
@@ -114,7 +114,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             foreach (var item in batch.Items)
@@ -173,7 +173,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             foreach (var item in batch.Items)
@@ -244,7 +244,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             var jerry = session.Load<User>("users/1-A");
@@ -300,7 +300,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             var jerry = session.Load<User>("users/1-A");
@@ -364,7 +364,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             foreach (var item in batch.Items)
@@ -417,7 +417,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             var jerry = session.Load<User>("users/1-A");
@@ -486,7 +486,7 @@ namespace SlowTests.Issues
                         // Use NoTracking mode - should not track entities
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.NoTracking
+                            NoTracking = true
                         }))
                         {
                             var jerry = session.Load<User>("users/1-A");
@@ -543,7 +543,7 @@ namespace SlowTests.Issues
                     {
                         using (var session = batch.OpenSession(new SessionOptions
                         {
-                            TrackingMode = TrackingMode.TrackAllEntities
+                            OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                         }))
                         {
                             // Load a document that doesn't exist - should track as missing

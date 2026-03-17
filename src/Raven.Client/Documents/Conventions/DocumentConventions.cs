@@ -399,7 +399,7 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string> _findClrTypeName;
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private Func<string, Type> _resolveTypeFromClrTypeName;
-        private bool _useOptimisticConcurrency;
+        private OptimisticConcurrencyMode _optimisticConcurrencyMode;
         private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
 
@@ -837,15 +837,30 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        ///     Configure optimistic concurrency mode for all opened sessions by default
         /// </summary>
-        public bool UseOptimisticConcurrency
+        public OptimisticConcurrencyMode OptimisticConcurrencyMode
         {
-            get => _useOptimisticConcurrency;
+            get => _optimisticConcurrencyMode;
             set
             {
                 AssertNotFrozen();
-                _useOptimisticConcurrency = value;
+                _optimisticConcurrencyMode = value;
+            }
+        }
+
+        /// <summary>
+        ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        /// </summary>
+        [Obsolete("UseOptimisticConcurrency is obsolete and will be removed in the next major version. Please use " +
+                  nameof(OptimisticConcurrencyMode) + " instead.")]
+        public bool UseOptimisticConcurrency
+        {
+            get => _optimisticConcurrencyMode != OptimisticConcurrencyMode.None;
+            set
+            {
+                AssertNotFrozen();
+                _optimisticConcurrencyMode = value ? OptimisticConcurrencyMode.Writes : OptimisticConcurrencyMode.None;
             }
         }
 

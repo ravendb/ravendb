@@ -71,7 +71,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             var metadata = document.GetMetadata();
             var id = metadata.GetId();
-            var entity = _session.JsonConverter.FromBlittable<T>(ref document, id, _session.TrackingMode != TrackingMode.NoTracking);
+            var entity = _session.JsonConverter.FromBlittable<T>(ref document, id, _session.NoTracking == false);
 
             _session.DocumentsByEntity[entity] = new DocumentInfo
             {

@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Session
         internal CompareExchangeSessionValue RegisterMissingCompareExchangeValue(string key)
         {
             var value = new CompareExchangeSessionValue(key, -1, CompareExchangeSessionValue.CompareExchangeValueState.Missing);
-            if (_session.TrackingMode == TrackingMode.NoTracking)
+            if (_session.NoTracking)
                 return value;
 
             _state.Add(key, value);
@@ -234,7 +234,7 @@ namespace Raven.Client.Documents.Session
 
         internal void RegisterCompareExchangeIncludes(BlittableJsonReaderObject values, bool includingMissingAtomicGuards)
         {
-            if (_session.TrackingMode == TrackingMode.NoTracking)
+            if (_session.NoTracking)
                 return;
 
             if (values != null)
@@ -272,7 +272,7 @@ namespace Raven.Client.Documents.Session
 
             AssertNotAtomicGuard(value);
 
-            if (_session.TrackingMode == TrackingMode.NoTracking)
+            if (_session.NoTracking)
                 return new CompareExchangeSessionValue(value);
 
             _compareExchangeIncludes.Remove(value.Key);
@@ -291,7 +291,7 @@ namespace Raven.Client.Documents.Session
 
             AssertNotAtomicGuard(value);
 
-            if (_session.TrackingMode == TrackingMode.NoTracking)
+            if (_session.NoTracking)
                 return;
 
             _compareExchangeIncludes[value.Key] = value;
@@ -301,7 +301,7 @@ namespace Raven.Client.Documents.Session
         {
             AssertNotAtomicGuard(key);
 
-            if (_session.TrackingMode == TrackingMode.NoTracking)
+            if (_session.NoTracking)
                 return;
             
             _compareExchangeIncludes[key] = new CompareExchangeValue<BlittableJsonReaderObject>(key, -1, null);

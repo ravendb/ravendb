@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -204,7 +205,7 @@ namespace SlowTests.Issues
 
             using (IDocumentSession session = store.OpenSession(new SessionOptions()
                    {
-                       TrackingMode = TrackingMode.TrackAllEntities,
+                       OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                    }))
             {
                 var jerry = session.Load<Employee>("employees/1-A");
@@ -242,7 +243,7 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenSession(new SessionOptions()
                    {
-                       TrackingMode = TrackingMode.TrackAllEntities
+                       OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                    }))
             {
                 var egor = session.Load<Employee>("employees/2-A");
@@ -281,7 +282,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -321,7 +322,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -357,7 +358,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -396,7 +397,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -436,7 +437,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -474,7 +475,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -514,7 +515,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -526,7 +527,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -566,7 +567,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -586,7 +587,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -625,7 +626,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -660,7 +661,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -717,7 +718,7 @@ namespace SlowTests.Issues
 
             using (IDocumentSession session = store.OpenSession(new SessionOptions()
                    {
-                       TrackingMode = TrackingMode.TrackAllEntities,
+                       OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                    }))
             {
                 var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
@@ -759,7 +760,7 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenSession(new SessionOptions()
                    {
-                       TrackingMode = TrackingMode.TrackAllEntities
+                       OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                    }))
             {
                 var egor = session.Load<Employee>("employees/2-A");
@@ -773,11 +774,13 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityEvictedFromTheSessionAndThenAddedBack()
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityEvictedFromTheSessionAndThenAddedBack()
         {
+            // WritesAndReads mode includes write concurrency checks.
+            // After evicting and re-storing with the same ID, the entity is treated as new (empty CV),
+            // so the server rejects the put because the document already exists.
             using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
             {
-                string addressId;
                 using (var session = store.OpenSession())
                 {
                     var address = new Address()
@@ -786,9 +789,6 @@ namespace SlowTests.Issues
                         Street = "Erets Rd"
                     };
                     session.Store(address);
-                    addressId = session.Advanced.GetDocumentId(address);
-                    Assert.NotNull(addressId);
-                    address.Id = addressId;
                     session.Store(new Employee
                     {
                         FirstName = "Jerry",
@@ -803,52 +803,31 @@ namespace SlowTests.Issues
                         }
                     }, "employees/2-A");
                     session.SaveChanges();
-
                 }
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                        {
-                           TrackingMode = TrackingMode.TrackAllEntities,
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                        }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
-
-                    var numOfRequests = session.Advanced.NumberOfRequests;
-
                     var address = session.Load<Address>(jerry.Address.Id);
-
                     Assert.NotNull(address);
-                    Assert.Equal(numOfRequests, session.Advanced.NumberOfRequests);
 
                     ModifyEgorWithStoreOverwriteAfterLoadAndEvict(session);
 
-                    var expected = session.Advanced.GetChangeVectorFor(address);
-                    Assert.NotEmpty(expected);
-                    Assert.NotNull(expected);
-
-                    // this should not throw concurrency exception
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession(new SessionOptions()
-                       {
-                           TrackingMode = TrackingMode.TrackAllEntities
-                       }))
-                {
-                    var egor = session.Load<Employee>("employees/2-A");
-
-                    Assert.Equal("Egor", egor.FirstName);
-                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
-
-                    var j = session.Load<Address>(addressId);
-                    Assert.Equal("Harish", j.City);
+                    // WritesAndReads enables write concurrency, evict+store treats entity as new → ConcurrencyException
+                    Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
             }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void ShouldNotThrowConcurrencyException_WhenTrackedEntityReStored()
+        public void ShouldThrowConcurrencyException_WhenTrackedEntityReStored()
         {
+            // WritesAndReads mode includes write concurrency checks.
+            // Storing a new entity with an existing document ID (without loading first)
+            // sends an empty change vector, which the server rejects because the document already exists.
             using (var store = GetDocumentStore(Options.ForMode(RavenDatabaseMode.Single)))
             {
                 using (var session = store.OpenSession())
@@ -866,7 +845,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     session.Store(new Employee
@@ -878,19 +857,8 @@ namespace SlowTests.Issues
                         }
                     }, "employees/2-A");
 
-                    // this should not throw concurrency exception
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession(new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities
-                }))
-                {
-                    var egor = session.Load<Employee>("employees/2-A");
-
-                    Assert.Equal("Egor", egor.FirstName);
-                    Assert.Equal("Mul HaHof Village", egor.Address.Street);
+                    // WritesAndReads enables write concurrency, blind store (without load) → ConcurrencyException
+                    Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
             }
         }
@@ -930,7 +898,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // this should put the include into missing ids
@@ -966,7 +934,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1018,7 +986,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // this should put the include into missing ids
@@ -1059,7 +1027,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1110,7 +1078,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
@@ -1147,7 +1115,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1196,7 +1164,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // this should put the include into missing ids
@@ -1214,7 +1182,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1253,7 +1221,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1287,7 +1255,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1309,7 +1277,7 @@ namespace SlowTests.Issues
                 string addressId;
                 using (var session = store.OpenAsyncSession(new SessionOptions()
                        {
-                           TrackingMode = TrackingMode.TrackAllEntities,
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                        }))
                 {
                     var address = new Address()
@@ -1339,7 +1307,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
@@ -1376,7 +1344,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1397,7 +1365,7 @@ namespace SlowTests.Issues
                 string addressId;
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                        {
-                           TrackingMode = TrackingMode.TrackAllEntities,
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                        }))
                 {
                     var address = new Address()
@@ -1427,7 +1395,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Include<Employee>(x => x.Address.Id).Load("employees/1-A");
@@ -1464,7 +1432,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1506,7 +1474,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1537,7 +1505,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1580,7 +1548,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1633,7 +1601,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1663,7 +1631,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1722,7 +1690,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1757,7 +1725,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1826,7 +1794,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1849,7 +1817,7 @@ namespace SlowTests.Issues
                 }
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1889,7 +1857,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -1912,7 +1880,7 @@ namespace SlowTests.Issues
                 }
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -1943,7 +1911,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -2002,7 +1970,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -2059,7 +2027,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load Jerry to get his change vector
@@ -2142,7 +2110,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load Jerry normally
@@ -2220,7 +2188,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load Jerry normally
@@ -2268,7 +2236,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load Jerry normally
@@ -2316,7 +2284,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load Jerry normally
@@ -2412,7 +2380,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.NoTracking,
+                    NoTracking = true,
                 }))
                 {
                     // Try to register an external entity in NoTracking session
@@ -2482,7 +2450,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     // Load with include
@@ -2581,7 +2549,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                        {
-                           TrackingMode = TrackingMode.TrackAllEntities,
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                        }))
                 {
                     var jerry = session.Load<Employee>("employees/1-A");
@@ -2615,7 +2583,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                        {
-                           TrackingMode = TrackingMode.TrackAllEntities
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                        }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -2657,7 +2625,7 @@ namespace SlowTests.Issues
 
                 using (IDocumentSession session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
                 }))
                 {
                     string expected = null;
@@ -2706,7 +2674,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession(new SessionOptions()
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
                 }))
                 {
                     var egor = session.Load<Employee>("employees/2-A");
@@ -2894,7 +2862,7 @@ namespace SlowTests.Issues
 
             using (IAsyncDocumentSession session = store.OpenAsyncSession(new SessionOptions()
             {
-                TrackingMode = TrackingMode.TrackAllEntities,
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
             }))
             {
                 var jerry = await session.LoadAsync<Employee>("employees/1-A");
@@ -2932,7 +2900,7 @@ namespace SlowTests.Issues
 
             using (var session = store.OpenSession(new SessionOptions()
             {
-                TrackingMode = TrackingMode.TrackAllEntities
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
             }))
             {
                 var egor = session.Load<Employee>("employees/2-A");

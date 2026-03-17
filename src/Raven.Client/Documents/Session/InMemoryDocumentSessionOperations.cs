@@ -197,20 +197,55 @@ namespace Raven.Client.Documents.Session
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
 
+        private OptimisticConcurrencyMode _optimisticConcurrencyMode;
+        private bool _useOptimisticConcurrencyWasSet;
+        private bool _optimisticConcurrencyModeWasSet;
+
+        /// <summary>
+        /// Gets or sets the optimistic concurrency mode for the session.
+        /// </summary>
+        public OptimisticConcurrencyMode OptimisticConcurrencyMode
+        {
+            get => _optimisticConcurrencyMode;
+            set
+            {
+                if (_useOptimisticConcurrencyWasSet)
+#pragma warning disable CS0618
+                    throw new InvalidOperationException($"{nameof(OptimisticConcurrencyMode)} cannot be set when {nameof(UseOptimisticConcurrency)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+#pragma warning restore CS0618
+
+                _optimisticConcurrencyModeWasSet = true;
+                _optimisticConcurrencyMode = value;
+            }
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether the session should use optimistic concurrency.
         /// When set to <c>true</c>, a check is made so that a change made behind the session back would fail
         /// and raise <see cref="ConcurrencyException"/>.
         /// </summary>
         /// <value></value>
-        public bool UseOptimisticConcurrency { get; set; }
+        [Obsolete("UseOptimisticConcurrency is obsolete and will be removed in the next major version. Please use " +
+                  nameof(OptimisticConcurrencyMode) + " instead.")]
+        public bool UseOptimisticConcurrency
+        {
+            get => _optimisticConcurrencyMode != OptimisticConcurrencyMode.None;
+            set
+            {
+                if (_optimisticConcurrencyModeWasSet)
+                    throw new InvalidOperationException($"{nameof(UseOptimisticConcurrency)} cannot be set when {nameof(OptimisticConcurrencyMode)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+
+                _useOptimisticConcurrencyWasSet = true;
+                _optimisticConcurrencyMode = value ? OptimisticConcurrencyMode.Writes : OptimisticConcurrencyMode.None;
+            }
+        }
 
         protected readonly List<ICommandData> DeferredCommands = new List<ICommandData>();
 
         protected internal readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary =
             new Dictionary<(string, CommandType, string), ICommandData>();
 
-        public readonly TrackingMode TrackingMode;
+        public readonly bool NoTracking;
 
         internal Dictionary<string, ForceRevisionStrategy> IdsForCreatingForcedRevisions = new Dictionary<string, ForceRevisionStrategy>(StringComparer.OrdinalIgnoreCase);
 
@@ -238,12 +273,13 @@ namespace Raven.Client.Documents.Session
             _requestExecutor = options.RequestExecutor ?? documentStore.GetRequestExecutor(DatabaseName);
             _releaseOperationContext = _requestExecutor.ContextPool.AllocateOperationContext(out _context);
 
-            TrackingMode = options.TrackingMode;
+            NoTracking = options.NoTracking;
 
-            TrackedEntities = new TrackedEntitiesHolder(options.TrackingMode);
+            _optimisticConcurrencyMode = options.OptimisticConcurrencyMode
+                                         ?? _requestExecutor.Conventions.OptimisticConcurrencyMode;
+
+            TrackedEntities = new TrackedEntitiesHolder(_optimisticConcurrencyMode == OptimisticConcurrencyMode.WritesAndReads);
             _knownMissingIds = new KnownMissingIdsHolder(TrackedEntities);
-
-            UseOptimisticConcurrency = _requestExecutor.Conventions.UseOptimisticConcurrency;
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => _requestExecutor.Conventions.GenerateDocumentIdAsync(DatabaseName, entity));
             JsonConverter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
@@ -486,12 +522,12 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, DocumentInfo documentFound)
         {
-            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: TrackingMode == TrackingMode.NoTracking);
+            return TrackEntity(entityType, documentFound.Id, documentFound.Document, documentFound.Metadata, noTracking: NoTracking);
         }
 
         internal void RegisterExternalLoadedIntoTheSession(DocumentInfo info)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (DocumentsById.TryGetValue(info.Id, out var existing))
@@ -523,7 +559,7 @@ more responsive application.
         /// <returns></returns>
         private object TrackEntity(Type entityType, string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, bool noTracking)
         {
-            noTracking = TrackingMode == TrackingMode.NoTracking || noTracking; // if noTracking is session-wide then we want to override the passed argument
+            noTracking = NoTracking || noTracking; // if noTracking is session-wide then we want to override the passed argument
 
             if (string.IsNullOrEmpty(id))
             {
@@ -667,7 +703,7 @@ more responsive application.
                 _knownMissingIds.AddWithoutTracking(id);
             }
 
-            changeVector = UseOptimisticConcurrency ? changeVector : null;
+            changeVector = _optimisticConcurrencyMode != OptimisticConcurrencyMode.None ? changeVector : null;
 
             _countersByDocId?.Remove(id);
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector, expectedChangeVector ?? documentInfo?.ChangeVector));
@@ -700,7 +736,7 @@ more responsive application.
 
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 throw new InvalidOperationException("Cannot store entity. Entity tracking is disabled in this session.");
 
             if (entity == null)
@@ -888,9 +924,9 @@ more responsive application.
             if (TransactionMode != TransactionMode.ClusterWide)
                 return;
 
-            if (UseOptimisticConcurrency)
+            if (_optimisticConcurrencyMode != OptimisticConcurrencyMode.None)
                 throw new NotSupportedException(
-                    $"{nameof(UseOptimisticConcurrency)} is not supported with {nameof(TransactionMode)} set to {nameof(TransactionMode.ClusterWide)}");
+                    $"{nameof(OptimisticConcurrencyMode)} is not supported with {nameof(TransactionMode)} set to {nameof(TransactionMode.ClusterWide)}");
 
             foreach (var command in result.SessionCommands)
             {
@@ -1031,7 +1067,7 @@ more responsive application.
                             result.OnSuccess.RemoveDocumentById(documentInfo.Id);
                         }
 
-                        if (UseOptimisticConcurrency == false)
+                        if (_optimisticConcurrencyMode == OptimisticConcurrencyMode.None)
                             changeVector = null;
 
                         if (deletedEntity.ExecuteOnBeforeDelete)
@@ -1118,7 +1154,7 @@ more responsive application.
                     }
 
                     string changeVector;
-                    if (UseOptimisticConcurrency)
+                    if (_optimisticConcurrencyMode != OptimisticConcurrencyMode.None)
                     {
                         if (entity.Value.ConcurrencyCheckMode != ConcurrencyCheckMode.Disabled)
                             // if the user didn't provide a change vector, we'll test for an empty one
@@ -1495,7 +1531,7 @@ more responsive application.
 
         public void RegisterMissing(string id)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             _knownMissingIds.Add(id);
@@ -1503,7 +1539,7 @@ more responsive application.
 
         public void RegisterMissing(IEnumerable<string> ids)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             _knownMissingIds.UnionWith(ids);
@@ -1511,7 +1547,7 @@ more responsive application.
 
         internal void RegisterIncludes(BlittableJsonReaderObject includes, bool registerMissingIds = false)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (includes == null)
@@ -1541,7 +1577,7 @@ more responsive application.
 
         internal void RegisterRevisionIncludes(BlittableJsonReaderArray revisionIncludes)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (revisionIncludes == null)
@@ -1573,7 +1609,7 @@ more responsive application.
 
         public void RegisterMissingIncludes(BlittableJsonReaderArray results, BlittableJsonReaderObject includes, ICollection<string> includePaths)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (includePaths == null || includePaths.Count == 0)
@@ -1609,7 +1645,7 @@ more responsive application.
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, string[] ids, string[] countersToInclude, bool gotAll)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (resultCounters == null || resultCounters.Count == 0)
@@ -1634,7 +1670,7 @@ more responsive application.
 
         internal void RegisterCounters(BlittableJsonReaderObject resultCounters, Dictionary<string, string[]> countersToInclude)
         {
-            if (TrackingMode == TrackingMode.NoTracking)
+            if (NoTracking)
                 return;
 
             if (resultCounters == null || resultCounters.Count == 0)
@@ -1794,7 +1830,7 @@ more responsive application.
 
         internal void RegisterTimeSeries(BlittableJsonReaderObject resultTimeSeries)
         {
-            if (TrackingMode == TrackingMode.NoTracking || resultTimeSeries == null)
+            if (NoTracking || resultTimeSeries == null)
                 return;
 
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -2350,10 +2386,10 @@ more responsive application.
                 documentInfo.ChangeVector = (LazyStringValue)changeVector;
             }
 
-            if (documentInfo.Entity != null && TrackingMode != TrackingMode.NoTracking)
+            if (documentInfo.Entity != null && NoTracking == false)
                 JsonConverter.RemoveFromMissing(documentInfo.Entity);
 
-            documentInfo.Entity = JsonConverter.FromBlittable<T>(ref document, documentInfo.Id, TrackingMode != TrackingMode.NoTracking);
+            documentInfo.Entity = JsonConverter.FromBlittable<T>(ref document, documentInfo.Id, NoTracking == false);
             documentInfo.Document = document;
 
             var type = entity.GetType();
@@ -2655,7 +2691,7 @@ more responsive application.
 
         internal void AssertNoIncludesInNonTrackingSession()
         {
-            if (TrackingMode != TrackingMode.NoTracking)
+            if (NoTracking == false)
                 return;
 
             throw new InvalidOperationException(
@@ -2902,9 +2938,9 @@ more responsive application.
 
         private readonly bool _shouldTrack;
 
-        public TrackedEntitiesHolder(TrackingMode trackingMode)
+        public TrackedEntitiesHolder(bool shouldTrack)
         {
-            _shouldTrack = trackingMode == TrackingMode.TrackAllEntities;
+            _shouldTrack = shouldTrack;
         }
 
         public bool Any()

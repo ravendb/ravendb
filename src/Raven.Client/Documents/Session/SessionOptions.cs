@@ -1,6 +1,5 @@
 using System;
 using Raven.Client.Http;
-#pragma warning disable CS0618 // Type or member is obsolete
 
 namespace Raven.Client.Documents.Session
 {
@@ -42,22 +41,24 @@ namespace Raven.Client.Documents.Session
         NonTransactionalMultiBucket
     }
 
-    public enum TrackingMode
+    public enum OptimisticConcurrencyMode
     {
         /// <summary>
-        /// Do not force any behavior from the Client API and rely on Server's default
+        /// No optimistic concurrency checks are performed
         /// </summary>
-        Default,
+        None,
 
         /// <summary>
-        /// Disable tracking for all entities in the session<br/>
+        /// Optimistic concurrency checks are performed for written entities only
         /// </summary>
-        NoTracking,
+        Writes,
 
         /// <summary>
-        /// Enable tracking for all entities in the session<br/>
+        /// Optimistic concurrency checks are performed for all entities loaded or written in the session.
+        /// On <see cref="DocumentSession.SaveChanges"/>, the server will verify that no tracked entity
+        /// was modified by another session since it was loaded.
         /// </summary>
-        TrackAllEntities
+        WritesAndReads
     }
 
     /// <summary>
@@ -73,50 +74,30 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
-        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.TrackingMode"/></remarks>
-        [Obsolete("SessionOptions.NoTracking is obsolete and will be removed in the next major version. Please use " +
-                  nameof(SessionOptions) + "." + nameof(TrackingMode) + " instead. " +
-                  "See: https://ravendb.net/docs/article-page/latest/csharp/client-api/session/options#notracking")]
-        public bool NoTracking
-        {
-            get => TrackingMode == TrackingMode.NoTracking;
-            set
-            {
-                if (TrackingModeWasSet)
-                    throw new InvalidOperationException($"{nameof(NoTracking)} cannot be set when {nameof(TrackingMode)} was set. Please use {nameof(TrackingMode)} instead of {nameof(NoTracking)}.");
-
-                _trackingMode = value ? TrackingMode.NoTracking : TrackingMode.Default;
-                NoTrackingWasSet = true;
-            }
-        }
-
-        internal bool NoTrackingWasSet { get; set; }
-        internal bool TrackingModeWasSet { get; set; }
-        private TrackingMode _trackingMode;
+        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
+        public bool NoTracking { get; set; }
 
         /// <summary>
-        /// Enable tracking mode in the session<br/>
+        /// Configure optimistic concurrency mode for the session.<br/>
+        /// When set, overrides the default from <see cref="Conventions.DocumentConventions.OptimisticConcurrencyMode"/>.
         /// </summary>
-        /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.TrackingMode"/></remarks>
-        public TrackingMode TrackingMode
+        public OptimisticConcurrencyMode? OptimisticConcurrencyMode
         {
-            get => _trackingMode;
+            get => _optimisticConcurrencyMode;
             set
             {
-                if (NoTrackingWasSet)
-                    throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set when {nameof(NoTracking)} was set. Please use {nameof(TrackingMode)} instead of {nameof(NoTracking)}.");
-
-                TrackingModeWasSet = true;
-
-                if (value == TrackingMode.TrackAllEntities)
+                if (value != null && value != Session.OptimisticConcurrencyMode.None
+                    && TransactionMode == TransactionMode.ClusterWide)
                 {
-                    if (TransactionMode == TransactionMode.ClusterWide)
-                        throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+                    throw new InvalidOperationException(
+                        $"{nameof(OptimisticConcurrencyMode)} cannot be set to {value} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
                 }
 
-                _trackingMode = value;
+                _optimisticConcurrencyMode = value;
             }
         }
+
+        private OptimisticConcurrencyMode? _optimisticConcurrencyMode;
 
         /// <summary>
         /// Disable caching of HTTP responses for the session<br/>
@@ -136,8 +117,12 @@ namespace Raven.Client.Documents.Session
             get;
             set
             {
-                if (value == TransactionMode.ClusterWide && TrackingMode == TrackingMode.TrackAllEntities)
-                    throw new InvalidOperationException($"{nameof(TrackingMode)} cannot be set to {nameof(TrackingMode.TrackAllEntities)} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+                if (value == TransactionMode.ClusterWide &&
+                    _optimisticConcurrencyMode != null && _optimisticConcurrencyMode != Session.OptimisticConcurrencyMode.None)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(OptimisticConcurrencyMode)} cannot be set to {_optimisticConcurrencyMode} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+                }
 
                 field = value;
             }

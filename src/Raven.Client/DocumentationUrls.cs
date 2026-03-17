@@ -143,7 +143,7 @@ internal static class DocumentationUrls
         internal static class Options
         {
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/7.2/csharp/client-api/session/configuration/how-to-disable-tracking#disable-entity-tracking"/></remarks>
-            public const string TrackingMode = nameof(TrackingMode);
+            public const string NoTracking = nameof(NoTracking);
 
             ///<remarks><seealso href="https://ravendb.net/docs/article-page/7.2/csharp/client-api/session/configuration/how-to-disable-caching"/></remarks>
             public const string NoCaching = nameof(NoCaching);

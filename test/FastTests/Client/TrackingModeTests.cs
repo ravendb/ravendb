@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
@@ -13,289 +13,191 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void NoTracking_CanBeSetMultipleTimes_WithoutThrowingMisleadingError()
+        public void NoTracking_CanBeSetMultipleTimes()
         {
             var options = new SessionOptions();
 
-            // First assignment - should not throw
             options.NoTracking = true;
             Assert.True(options.NoTracking);
-            Assert.Equal(TrackingMode.NoTracking, options.TrackingMode);
 
-            // Second assignment (toggling off) - must not throw with a misleading
-            // "TrackingMode was set" message, because TrackingMode was never set explicitly
-            var ex = Record.Exception(() => options.NoTracking = false);
-            Assert.Null(ex);
+            options.NoTracking = false;
             Assert.False(options.NoTracking);
-            Assert.Equal(TrackingMode.Default, options.TrackingMode);
 
-            // Third assignment (toggling back on) - must still not throw
-            ex = Record.Exception(() => options.NoTracking = true);
-            Assert.Null(ex);
+            options.NoTracking = true;
             Assert.True(options.NoTracking);
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void NoTracking_DoesNotSetTrackingModeWasSet_Flag()
+        public void UseOptimisticConcurrency_AfterOptimisticConcurrencyMode_ShouldThrow()
         {
-            var options = new SessionOptions();
+            var options = new SessionOptions { OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads };
 
-            options.NoTracking = true;
+            using (var store = GetDocumentStore())
+            {
+                using var session = store.OpenSession(options);
+                var advanced = session.Advanced;
+                advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
 
-            // TrackingModeWasSet must remain false so that the cross-flag guard between
-            // NoTracking and TrackingMode still works correctly in both directions
-            Assert.False(options.TrackingModeWasSet);
-            Assert.True(options.NoTrackingWasSet);
+                var ex = Assert.Throws<InvalidOperationException>(() => advanced.UseOptimisticConcurrency = true);
+                Assert.Contains(nameof(InMemoryDocumentSessionOperations.UseOptimisticConcurrency), ex.Message);
+            }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void TrackingMode_AfterNoTracking_ShouldThrow()
+        public void OptimisticConcurrencyMode_AfterUseOptimisticConcurrency_ShouldThrow()
         {
-            var options = new SessionOptions();
-            options.NoTracking = true;
+            using (var store = GetDocumentStore())
+            {
+                using var session = store.OpenSession();
+                var advanced = session.Advanced;
+                advanced.UseOptimisticConcurrency = true;
 
-            // Setting TrackingMode explicitly after NoTracking was used must still throw
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                options.TrackingMode = TrackingMode.TrackAllEntities);
-
-            Assert.Contains(nameof(SessionOptions.TrackingMode), ex.Message);
+                var ex = Assert.Throws<InvalidOperationException>(() => advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads);
+                Assert.Contains(nameof(InMemoryDocumentSessionOperations.OptimisticConcurrencyMode), ex.Message);
+            }
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public void NoTracking_AfterTrackingMode_ShouldThrow()
+        public void OptimisticConcurrencyMode_Writes_WithClusterWide_ShouldThrow()
         {
-            var options = new SessionOptions();
-            options.TrackingMode = TrackingMode.NoTracking;
+            var exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
 
-            // Setting NoTracking explicitly after TrackingMode was used must still throw
-            var ex = Assert.Throws<InvalidOperationException>(() => options.NoTracking = false);
+            exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes,
+                    TransactionMode = TransactionMode.ClusterWide,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+        }
 
-            Assert.Contains(nameof(SessionOptions.NoTracking), ex.Message);
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_WritesAndReads_WithClusterWide_ShouldThrow()
+        {
+            var exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    TransactionMode = TransactionMode.ClusterWide,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+
+            exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+                    TransactionMode = TransactionMode.ClusterWide,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_None_WithClusterWide_ShouldNotThrow()
+        {
+            _ = new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide,
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.None,
+            };
+
+            _ = new SessionOptions
+            {
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.None,
+                TransactionMode = TransactionMode.ClusterWide,
+            };
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_WithSingleNode_ShouldNotThrow()
+        {
+            _ = new SessionOptions
+            {
+                TransactionMode = TransactionMode.SingleNode,
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+            };
+
+            _ = new SessionOptions
+            {
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+                TransactionMode = TransactionMode.SingleNode,
+            };
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void UseOptimisticConcurrency_MapsCorrectly()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using var session = store.OpenSession();
+                var advanced = session.Advanced;
+
+                Assert.Equal(OptimisticConcurrencyMode.None, advanced.OptimisticConcurrencyMode);
+
+                advanced.UseOptimisticConcurrency = true;
+                Assert.Equal(OptimisticConcurrencyMode.Writes, advanced.OptimisticConcurrencyMode);
+
+                advanced.UseOptimisticConcurrency = false;
+                Assert.Equal(OptimisticConcurrencyMode.None, advanced.OptimisticConcurrencyMode);
+            }
         }
 
         [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanConfigureTrackingModeForClusterwideSessions(Options options)
+        public void CanConfigureOptimisticConcurrencyModeForSessions(Options options)
         {
-            var exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var ses = new SessionOptions()
-                {
-                    TransactionMode = TransactionMode.ClusterWide,
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set to TrackAllEntities when TransactionMode is ClusterWide.", exp.Message);
-
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                    TransactionMode = TransactionMode.ClusterWide,
-
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set to TrackAllEntities when TransactionMode is ClusterWide.", exp.Message);
-
-            var session = new SessionOptions()
-            {
-                NoTracking = true,
-                TransactionMode = TransactionMode.ClusterWide,
-            };
-
-            session = new SessionOptions()
-            {
-                TransactionMode = TransactionMode.ClusterWide,
-                NoTracking = true,
-            };
-
-            session = new SessionOptions()
-            {
-                NoTracking = false,
-                TransactionMode = TransactionMode.ClusterWide,
-
-            };
-            session = new SessionOptions()
-            {
-                TransactionMode = TransactionMode.ClusterWide,
-                NoTracking = false,
-
-
-            };
-
-            session = new SessionOptions()
-            {
-                TransactionMode = TransactionMode.SingleNode,
-                TrackingMode = TrackingMode.TrackAllEntities,
-            };
-            session = new SessionOptions()
-            {
-                TrackingMode = TrackingMode.TrackAllEntities,
-                TransactionMode = TransactionMode.SingleNode,
-
-            };
-        }
-
-        [RavenTheory(RavenTestCategory.ClientApi)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanConfigureTrackingModeForSessions(Options options)
-        {
-            var exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                    NoTracking = true
-                };
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.Default,
-                    NoTracking = true
-                };
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.NoTracking,
-                    NoTracking = true
-                };
-
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                    NoTracking = false
-                };
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.Default,
-                    NoTracking = false
-                };
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    TrackingMode = TrackingMode.NoTracking,
-                    NoTracking = false
-                };
-            });
-            Assert.Equal("NoTracking cannot be set when TrackingMode was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    NoTracking = true,
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set when NoTracking was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    NoTracking = true,
-                    TrackingMode = TrackingMode.Default,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set when NoTracking was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    NoTracking = true,
-                    TrackingMode = TrackingMode.NoTracking,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set when NoTracking was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    NoTracking = false,
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set when NoTracking was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-
-                var session = new SessionOptions()
-                {
-                    NoTracking = false,
-                    TrackingMode = TrackingMode.Default,
-                };
-            });
-            Assert.Equal("TrackingMode cannot be set when NoTracking was set. Please use TrackingMode instead of NoTracking.", exp.Message);
-            exp = Assert.Throws<InvalidOperationException>(() =>
-            {
-                var session = new SessionOptions()
-                {
-                    NoTracking = false,
-                    TrackingMode = TrackingMode.NoTracking,
-                };
-            });
             using (var store = GetDocumentStore(options))
             {
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                using (var session = store.OpenSession(new SessionOptions { NoTracking = false }))
                 {
-                    NoTracking = false
-                }))
-                {
-                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
-                    Assert.Equal(inMemSes.TrackingMode, TrackingMode.Default);
+                    var inMemSes = (InMemoryDocumentSessionOperations)session;
+                    Assert.False(inMemSes.NoTracking);
                 }
 
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                using (var session = store.OpenSession(new SessionOptions { NoTracking = true }))
                 {
-                    NoTracking = true
-                }))
-                {
-                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
-                    Assert.Equal(inMemSes.TrackingMode, TrackingMode.NoTracking);
+                    var inMemSes = (InMemoryDocumentSessionOperations)session;
+                    Assert.True(inMemSes.NoTracking);
                 }
 
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
                 {
-                    TrackingMode = TrackingMode.NoTracking,
-                }))
-                {
-                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
-                    Assert.Equal(inMemSes.TrackingMode, TrackingMode.NoTracking);
+                    var inMemSes = (InMemoryDocumentSessionOperations)session;
+                    Assert.Equal(OptimisticConcurrencyMode.WritesAndReads, inMemSes.OptimisticConcurrencyMode);
                 }
 
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes
+                       }))
                 {
-                    TrackingMode = TrackingMode.Default,
-                }))
-                {
-                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
-                    Assert.Equal(inMemSes.TrackingMode, TrackingMode.Default);
+                    var inMemSes = (InMemoryDocumentSessionOperations)session;
+                    Assert.Equal(OptimisticConcurrencyMode.Writes, inMemSes.OptimisticConcurrencyMode);
                 }
 
-                using (IDocumentSession session = store.OpenSession(new SessionOptions()
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.None
+                       }))
                 {
-                    TrackingMode = TrackingMode.TrackAllEntities,
-                }))
-                {
-                    var inMemSes = ((InMemoryDocumentSessionOperations)session);
-                    Assert.Equal(inMemSes.TrackingMode, TrackingMode.TrackAllEntities);
+                    var inMemSes = (InMemoryDocumentSessionOperations)session;
+                    Assert.Equal(OptimisticConcurrencyMode.None, inMemSes.OptimisticConcurrencyMode);
                 }
             }
         }
