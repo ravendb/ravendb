@@ -12,6 +12,7 @@ import { AutocompleteGroupBy } from "./providers/group_by";
 import { AutocompleteOrderBy } from "./providers/order_by";
 import { ProgContext } from "./generated/BaseRqlParser";
 import { AutoCompleteFields } from "./providers/fields";
+import { AutocompleteAiTasks } from "./providers/aiTasks";
 
 export const ignoredTokens: number[] = [
     RqlParser.EOF,
@@ -128,7 +129,8 @@ export class autoCompleteEngine {
             RqlParser.RULE_orderBySortingAs,
             RqlParser.RULE_orderByOrder,
             RqlParser.RULE_identifiersWithoutRootKeywords,
-            RqlParser.RULE_identifiersAllNames
+            RqlParser.RULE_identifiersAllNames,
+            RqlParser.RULE_aiTaskMethod
         ]);
 
         core.translateRulesTopDown = true;
@@ -177,7 +179,8 @@ export class autoCompleteEngine {
             new AutocompleteFrom(metadataProvider),
             new AutoCompleteFields(metadataProvider),
             new AutocompleteGroupBy(metadataProvider),
-            new AutocompleteOrderBy(metadataProvider)
+            new AutocompleteOrderBy(metadataProvider),
+            new AutocompleteAiTasks(metadataProvider)
         ];
     }
 }

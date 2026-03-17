@@ -2,6 +2,7 @@ import database = require("models/resources/database");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexEntriesFieldsCommand");
 import getCollectionFieldsCommand = require("commands/database/documents/getCollectionFieldsCommand");
+import getEmbeddingGenerationTasksCommand = require("commands/database/tasks/getEmbeddingGenerationTasksCommand");
 import IndexUtils = require("components/utils/IndexUtils");
 import databases = require("components/models/databases");
 import DatabaseUtils = require("components/utils/DatabaseUtils");
@@ -27,6 +28,16 @@ class remoteMetadataProvider implements queryCompleterProviders {
             .execute()
             .done(result => {
                 callback(result.filter(x => x.FieldType === "Static").map(x => x.Name).filter(x => !IndexUtils.default.FieldsToHideOnUi.includes(x)));
+            });
+    }
+
+    aiTasks(callback: (data: Record<string, Record<string, string[]>>) => void): void {
+        const locations = this.db instanceof database ? this.db.getLocations() : DatabaseUtils.default.getLocations(this.db);
+
+        new getEmbeddingGenerationTasksCommand(this.db.name, locations[0])
+            .execute()
+            .done(result => {
+                callback(result);
             });
     }
 

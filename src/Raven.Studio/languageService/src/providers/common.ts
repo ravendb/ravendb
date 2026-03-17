@@ -20,6 +20,7 @@ export const AUTOCOMPLETE_META = {
     operator: "operator",
     keyword: "keyword",
     function: "function",
+    aiTask: "aiTask",
     field: "field",
     index: "index",
     collection: "collection"

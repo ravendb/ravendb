@@ -37,9 +37,9 @@ describe("can complete where", function () {
         }
     });
 
-    it("vector.search(embedding.text(Name,  <- suggest method ai_task", async () => {
+    it("vector.search(embedding.text(Name,  <- suggest method ai.task", async () => {
         const suggestions = await autocomplete("from CollectionWithoutDefinedFields where vector.search(embedding.text(Name, |", new EmptyMetadataProvider());
-        for (let specialFunction of ['ai_task']) {
+        for (let specialFunction of ['ai.task(']) {
             const matchingItem = suggestions.find(x => x.value.startsWith(specialFunction));
             expect(matchingItem)
                 .toBeTruthy();

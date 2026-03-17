@@ -16,4 +16,8 @@ export class EmptyMetadataProvider implements queryCompleterProviders {
     indexFields(indexName: string, callback: (fields: string[]) => void): void {
         callback([]);
     }
+
+    aiTasks(callback: (data: Record<string, Record<string, string[]>>) => void): void {
+        callback({});
+    }
 }

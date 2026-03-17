@@ -111,6 +111,13 @@ class rqlLanguageService implements aceEditor.LanguageService {
                     })
                 }
                 break;
+            case "aiTasks":
+                this.metadataProvider.aiTasks(data => {
+                    this.sendMetadataResponse(request, {
+                        data
+                    });
+                });
+                break;
             
             default:
                 throw new Error("Unhandled metadata request" + request.payload);
