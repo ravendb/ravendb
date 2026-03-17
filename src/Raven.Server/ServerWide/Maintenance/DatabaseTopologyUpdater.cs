@@ -682,8 +682,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotableDbStats.LastIndexStats,
                 mentorCurrDbStats.LastIndexStats,
                 out var outdatedIndexesReason);
+            // Normally we avoid promotion when indexes are not up-to-date.
+            // In case indexesUpToDate is false, we only log the index staleness.
+            // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
 
-            if (IsMentorAhead(lastSentEtag, mentorsEtag, timeDiff, indexesUpToDate))
+            if (indexesUpToDate && IsMentorAhead(lastSentEtag, mentorsEtag, timeDiff))
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
@@ -753,18 +756,9 @@ namespace Raven.Server.ServerWide.Maintenance
             return (false, null);
         }
 
-        private static bool IsMentorAhead(long lastSentEtag, long mentorsEtag, bool timeDiff, bool indexesUpToDate)
-        {
-            if (indexesUpToDate == false)
-            {
-                // Normally we avoid promotion when indexes are not up-to-date.
-                // In this case, we only log the index staleness.
-                // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
-                return false;
-            }
-
-            return lastSentEtag < mentorsEtag || timeDiff;
-        }
+        private static bool IsMentorAhead(long lastSentEtag, long mentorsEtag, bool timeDiff) 
+            => lastSentEtag < mentorsEtag || timeDiff;
+        
 
         protected virtual void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
         {
