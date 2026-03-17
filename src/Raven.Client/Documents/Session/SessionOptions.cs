@@ -45,18 +45,29 @@ namespace Raven.Client.Documents.Session
     public enum TrackingMode
     {
         /// <summary>
-        /// Do not force any behavior from the Client API and rely on Server's default
+        /// The default session tracking behavior.<br/>
+        /// All entities loaded in the session are tracked, but no concurrency check is performed on <see cref="DocumentSession.SaveChanges"/>.<br/>
+        /// If another session modified a tracked entity in the background, the change will be silently overwritten.
         /// </summary>
         Default,
 
         /// <summary>
-        /// Disable tracking for all entities in the session<br/>
+        /// Disables entity tracking entirely for the session.<br/>
+        /// Loaded entities are not tracked, and no change detection or concurrency checks are performed on <see cref="DocumentSession.SaveChanges"/>.<br/>
+        /// Use this mode for read-only operations to improve performance.
         /// </summary>
         NoTracking,
 
         /// <summary>
-        /// Enable tracking for all entities in the session<br/>
+        /// Tracks all entities loaded in the session and enforces optimistic concurrency on <see cref="DocumentSession.SaveChanges"/>.<br/>
+        /// If any tracked entity was modified by another session in the background since it was loaded,
+        /// a <see cref="Exceptions.ConcurrencyException"/> will be thrown to prevent accidentally overwriting concurrent changes.<br/>
+        /// Use this mode when you need to detect and handle conflicting writes from concurrent sessions.
         /// </summary>
+        /// <remarks>
+        /// This mode is not compatible with <see cref="TransactionMode.ClusterWide"/>.<br/>
+        /// To stop tracking a specific entity, use <c>session.Advanced.Evict(entity)</c>.
+        /// </remarks>
         TrackAllEntities
     }
 
