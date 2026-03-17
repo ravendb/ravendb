@@ -1006,7 +1006,7 @@ public static class QueryBuilderHelper
                 var leftValueAsString = GetValueAsString(paramValue);
                 var rightValueAsString = rightExpression.Token.Value;
 
-                var comparisonResult = string.Compare(leftValueAsString, rightValueAsString, StringComparison.InvariantCulture);
+                var comparisonResult = string.Compare(leftValueAsString, rightValueAsString, StringComparison.InvariantCultureIgnoreCase);
 
                 return constantExpression.Operator switch
                 {

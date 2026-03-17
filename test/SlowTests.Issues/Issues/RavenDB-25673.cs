@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
@@ -518,6 +517,13 @@ public class RavenDB_25673(ITestOutputHelper output) : RavenTestBase(output)
                 .Count();
             Assert.Equal(0, result);
 
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($myVar == 'BBB', Number != 1)")
+                .AddParameter("myVar", "bbb")
+                .WaitForNonStaleResults()
+                .Count();
+            Assert.Equal(0, result);
+            
             result = session.Advanced
                 .RawQuery<Dto>($"from {indexName} where when($myVar == 'bbb', Number != 1)")
                 .AddParameter("myVar", "aaa")
