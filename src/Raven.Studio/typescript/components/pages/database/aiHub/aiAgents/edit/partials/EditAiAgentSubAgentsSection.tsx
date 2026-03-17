@@ -23,14 +23,27 @@ export default function EditAiAgentSubAgentsSection() {
             <div className="hstack mt-3">
                 <h3 className="m-0">
                     Define sub-agents
-                    <PopoverWithHoverWrapper message="TODO">
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Sub-agents are other AI agents that this parent agent can trigger when requested by the
+                                LLM to handle specialized tasks.
+                                <br />
+                                <br />
+                                When the LLM determines it should delegate work to a sub-agent, it generates a
+                                natural-language prompt for that sub-agent. The parent agent then invokes the sub-agent
+                                and forwards the prompt. The sub-agent runs its own tools (queries, actions) to complete
+                                the task and returns its response to the parent agent.
+                            </>
+                        }
+                    >
                         <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </h3>
                 <FormErrorIcon control={control} paths={["subAgents"]} onError={() => setIsPanelOpen(true)} />
                 <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
-            <div className="mb-1">Choose current agents to act as a sub-agent for this one.</div>
+            <div className="mb-1">Choose existing agents to act as sub-agents for this one.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <div>
                     <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
@@ -41,7 +54,15 @@ export default function EditAiAgentSubAgentsSection() {
                                 </div>
                                 <div>
                                     Sub-agents
-                                    <PopoverWithHoverWrapper message="TODO">
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Add the agents that this agent is allowed to delegate work to. The
+                                                description you provide tells the LLM when it should trigger that
+                                                specific sub-agent.
+                                            </>
+                                        }
+                                    >
                                         <Icon icon="info-new" />
                                     </PopoverWithHoverWrapper>
                                 </div>
@@ -155,7 +176,8 @@ function SubAgentItem({ index, remove, save, edit }: SubAgentItemProps) {
                     control={control}
                     name={`subAgents.${index}.description`}
                     rows={4}
-                    placeholder="TODO placeholder"
+                    placeholder="In this description, explain to the LLM when it should delegate to this sub-agent.
+                                 E.g., Use this agent to handle all questions about orders, order history, and order status."
                 />
             </FormGroup>
         </div>
