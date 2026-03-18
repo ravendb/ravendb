@@ -672,7 +672,7 @@ namespace Raven.Server.ServerWide.Maintenance
             if (state.HasActiveMigrations() == false)
             {
                 // if resharding is active skip - index staleness will not prevent it from being promoted
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This is only a workaround until RavenDB-21327 will be fixed properly");
                 databaseEtag = promotablePrevDbStats.LastEtag;
             }
 
@@ -686,7 +686,7 @@ namespace Raven.Server.ServerWide.Maintenance
             // In case indexesUpToDate is false, we only log the index staleness.
             // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
 
-            if (indexesUpToDate && IsMentorAhead(lastSentEtag, mentorsEtag, timeDiff))
+            if (indexesUpToDate && IsMentorNotFullySynced(lastSentEtag, mentorsEtag, timeDiff))
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
@@ -743,7 +743,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
             {
                 var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
-                if (mentorsEtag - lastSentEtag > 1000)
+                if (mentorsEtag - lastSentEtag > 4000)
                 {
                     // The log will include the etag-lag details if the Etag difference is significant (Etag difference > 1000).
                     msg += $", and Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})";
@@ -756,7 +756,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return (false, null);
         }
 
-        private static bool IsMentorAhead(long lastSentEtag, long mentorsEtag, bool timeDiff) 
+        private static bool IsMentorNotFullySynced(long lastSentEtag, long mentorsEtag, bool timeDiff) 
             => lastSentEtag < mentorsEtag || timeDiff;
         
 
