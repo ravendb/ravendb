@@ -1081,6 +1081,9 @@ more responsive application.
                             OnBeforeDeleteInvoke(new BeforeDeleteEventArgs(this, documentInfo.Id, documentInfo.Entity));
                         }
 
+                        if (changeVector != null)
+                            result.IdsAlreadyCheckedForConcurrency.Add(documentInfo.Id);
+
                         var deleteCommandData = new DeleteCommandData(documentInfo.Id, changeVector, documentInfo.ChangeVector);
                         result.SessionCommands.Add(deleteCommandData);
                     }
@@ -1184,6 +1187,9 @@ more responsive application.
                             forceRevisionCreationStrategy = creationStrategy;
                         }
                     }
+
+                    if (changeVector != null)
+                        result.IdsAlreadyCheckedForConcurrency.Add(entity.Value.Id);
 
                     result.SessionCommands.Add(new PutCommandDataWithBlittableJson(entity.Value.Id, changeVector, entity.Value.ChangeVector, document, forceRevisionCreationStrategy));
                 }
@@ -2452,6 +2458,7 @@ more responsive application.
             public readonly Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary;
             public readonly List<ICommandData> SessionCommands = new List<ICommandData>();
             public BatchTrackChangesCommandData TrackChangesCommandData;
+            public readonly HashSet<string> IdsAlreadyCheckedForConcurrency = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             public readonly List<object> Entities = new List<object>();
             public readonly BatchOptions Options;
             internal readonly ActionsToRunOnSuccess OnSuccess;
@@ -3013,10 +3020,10 @@ more responsive application.
 
         public void PrepareForEntitiesTrack(InMemoryDocumentSessionOperations.SaveChangesData result)
         {
-            if (Any() == false) 
+            if (Any() == false)
                 return;
 
-            result.TrackChangesCommandData = new BatchTrackChangesCommandData(_trackedEntities);
+            result.TrackChangesCommandData = new BatchTrackChangesCommandData(_trackedEntities, result.IdsAlreadyCheckedForConcurrency);
             result.SessionCommands.Insert(0, result.TrackChangesCommandData);
         }
     }
