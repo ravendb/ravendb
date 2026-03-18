@@ -75,7 +75,20 @@ namespace Raven.Client.Documents.Session
         /// Disable tracking for all entities in the session<br/>
         /// </summary>
         /// <remarks>For more details visit: <inheritdoc cref="DocumentationUrls.Session.Options.NoTracking"/></remarks>
-        public bool NoTracking { get; set; }
+        public bool NoTracking
+        {
+            get;
+            set
+            {
+                if (value && _optimisticConcurrencyMode != null && _optimisticConcurrencyMode != Session.OptimisticConcurrencyMode.None)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(NoTracking)} cannot be set to true when {nameof(OptimisticConcurrencyMode)} is {_optimisticConcurrencyMode}.");
+                }
+
+                field = value;
+            }
+        }
 
         /// <summary>
         /// Configure optimistic concurrency mode for the session.<br/>
@@ -91,6 +104,12 @@ namespace Raven.Client.Documents.Session
                 {
                     throw new InvalidOperationException(
                         $"{nameof(OptimisticConcurrencyMode)} cannot be set to {value} when {nameof(TransactionMode)} is {TransactionMode.ClusterWide}.");
+                }
+
+                if (value != null && value != Session.OptimisticConcurrencyMode.None && NoTracking)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(OptimisticConcurrencyMode)} cannot be set to {value} when {nameof(NoTracking)} is true.");
                 }
 
                 _optimisticConcurrencyMode = value;

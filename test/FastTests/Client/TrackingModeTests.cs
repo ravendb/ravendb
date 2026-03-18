@@ -155,6 +155,86 @@ namespace FastTests.Client
             }
         }
 
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_Writes_WithNoTracking_ShouldThrow()
+        {
+            var exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    NoTracking = true,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+
+            exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes,
+                    NoTracking = true,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_WritesAndReads_WithNoTracking_ShouldThrow()
+        {
+            var exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    NoTracking = true,
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+
+            exp = Assert.Throws<InvalidOperationException>(() =>
+            {
+                _ = new SessionOptions
+                {
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads,
+                    NoTracking = true,
+                };
+            });
+            Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void OptimisticConcurrencyMode_None_WithNoTracking_ShouldNotThrow()
+        {
+            _ = new SessionOptions
+            {
+                NoTracking = true,
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.None,
+            };
+
+            _ = new SessionOptions
+            {
+                OptimisticConcurrencyMode = OptimisticConcurrencyMode.None,
+                NoTracking = true,
+            };
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void NoTracking_WithOptimisticConcurrencyMode_FromConventions_ShouldThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                   }))
+            {
+                var exp = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    store.OpenSession(new SessionOptions { NoTracking = true });
+                });
+                Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+            }
+        }
+
         [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanConfigureOptimisticConcurrencyModeForSessions(Options options)

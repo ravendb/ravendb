@@ -278,6 +278,12 @@ namespace Raven.Client.Documents.Session
             _optimisticConcurrencyMode = options.OptimisticConcurrencyMode
                                          ?? _requestExecutor.Conventions.OptimisticConcurrencyMode;
 
+            if (NoTracking && _optimisticConcurrencyMode != OptimisticConcurrencyMode.None)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(OptimisticConcurrencyMode)} cannot be set to {_optimisticConcurrencyMode} when {nameof(NoTracking)} is true.");
+            }
+
             TrackedEntities = new TrackedEntitiesHolder(_optimisticConcurrencyMode == OptimisticConcurrencyMode.WritesAndReads);
             _knownMissingIds = new KnownMissingIdsHolder(TrackedEntities);
             MaxNumberOfRequestsPerSession = _requestExecutor.Conventions.MaxNumberOfRequestsPerSession;
