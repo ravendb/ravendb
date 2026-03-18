@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
@@ -3014,6 +3015,160 @@ namespace SlowTests.Issues
 
                     // should NOT throw because session overrides convention with None
                     session.SaveChanges();
+                }
+            }
+        }
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesAndReads_ShouldStillDetectConcurrencyOnReadOnlyEntity_WhenModifiedEntityIsExcludedFromTrackCommand()
+        {
+            // This test verifies that when a document is modified (PUT), it is excluded from the
+            // BatchTrackChangesCommand (since the PUT already checks concurrency), but read-only
+            // tracked documents are still verified by the BatchTrackChangesCommand.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor", Address = new Address { Street = "Ahad Ha'am" } }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    // load both - both are tracked
+                    var jerry = session.Load<Employee>("employees/1-A");  // read-only (not modified)
+                    var egor = session.Load<Employee>("employees/2-A");   // will be modified
+
+                    // modify only egor - this will generate a PUT command with change vector
+                    egor.Address = new Address { Street = "New Street" };
+
+                    // background-modify jerry (the read-only entity)
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address { City = "Hadera" };
+                        s.SaveChanges();
+                    }
+
+                    // SaveChanges should throw for jerry via BatchTrackChangesCommand
+                    // (egor's PUT has its own concurrency check, jerry is only checked via the track command)
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    Assert.Contains("employees/1-A", e.Message);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesAndReads_ShouldStillDetectConcurrencyOnModifiedEntity_ViaPutCommand()
+        {
+            // This test verifies that even though the modified document is excluded from the
+            // BatchTrackChangesCommand, the PUT command itself still checks concurrency.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor", Address = new Address { Street = "Ahad Ha'am" } }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    // load both - both are tracked
+                    var jerry = session.Load<Employee>("employees/1-A");  // read-only
+                    var egor = session.Load<Employee>("employees/2-A");   // will be modified
+
+                    // modify egor
+                    egor.Address = new Address { Street = "New Street" };
+
+                    // background-modify egor (the entity we're also modifying)
+                    using (var s = store.OpenSession())
+                    {
+                        var e2 = s.Load<Employee>("employees/2-A");
+                        e2.Address = new Address { Street = "Background Street" };
+                        s.SaveChanges();
+                    }
+
+                    // SaveChanges should throw for egor via the PUT command's own concurrency check
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    Assert.Contains("employees/2-A", e.Message);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesAndReads_ModifiedEntityShouldBeExcludedFromBatchTrackChangesCommand()
+        {
+            // This test directly verifies that when PrepareForSaveChanges builds the batch,
+            // the modified entity's ID is in IdsAlreadyCheckedForConcurrency (used as idsToSkip),
+            // ensuring the server's BatchTrackChangesCommand does not redundantly check it.
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.Store(new Employee { FirstName = "Dana" }, "employees/3-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    var internalSession = (InMemoryDocumentSessionOperations)session;
+
+                    // load 3 docs - all tracked
+                    var jerry = session.Load<Employee>("employees/1-A");   // read-only
+                    var egor = session.Load<Employee>("employees/2-A");    // will be modified
+                    var dana = session.Load<Employee>("employees/3-A");    // read-only
+
+                    // modify only egor
+                    egor.FirstName = "Egor Modified";
+
+                    var saveChangesData = internalSession.PrepareForSaveChanges();
+
+                    // egor's ID should be in the skip set (because the PUT command already checks concurrency for it)
+                    Assert.Contains("employees/2-A", saveChangesData.IdsAlreadyCheckedForConcurrency);
+
+                    // jerry and dana should NOT be in the skip set (they are read-only, only checked by BatchTrackChanges)
+                    Assert.DoesNotContain("employees/1-A", saveChangesData.IdsAlreadyCheckedForConcurrency);
+                    Assert.DoesNotContain("employees/3-A", saveChangesData.IdsAlreadyCheckedForConcurrency);
+
+                    // the BatchTrackChangesCommandData should exist
+                    Assert.NotNull(saveChangesData.TrackChangesCommandData);
+
+                    // verify TrackedEntities contains all 3 docs
+                    Assert.True(saveChangesData.TrackChangesCommandData.TrackedEntities.ContainsKey("employees/1-A"));
+                    Assert.True(saveChangesData.TrackChangesCommandData.TrackedEntities.ContainsKey("employees/2-A"));
+                    Assert.True(saveChangesData.TrackChangesCommandData.TrackedEntities.ContainsKey("employees/3-A"));
+
+                    // now verify the JSON output - the serialized command should NOT include the modified entity
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var json = saveChangesData.TrackChangesCommandData.ToJson(store.Conventions, context);
+                        using (var blittable = context.ReadObject(json, "test"))
+                        {
+                            var trackedEntities = blittable["TrackedEntities"] as BlittableJsonReaderObject;
+                            Assert.NotNull(trackedEntities);
+
+                            var propertyNames = trackedEntities.GetPropertyNames();
+
+                            // jerry and dana (read-only) should be in the JSON sent to server
+                            Assert.Contains("employees/1-A", propertyNames);
+                            Assert.Contains("employees/3-A", propertyNames);
+
+                            // egor (modified) should NOT be in the JSON sent to server - no duplicate check
+                            Assert.DoesNotContain("employees/2-A", propertyNames);
+                        }
+                    }
                 }
             }
         }
