@@ -44,19 +44,27 @@ namespace Raven.Client.Documents.Session
     public enum OptimisticConcurrencyMode
     {
         /// <summary>
-        /// No optimistic concurrency checks are performed
+        /// No optimistic concurrency checks are performed.<br/>
+        /// PUT and DELETE commands are sent without a change vector, so the server does not check for concurrent modifications.
         /// </summary>
         None,
 
         /// <summary>
-        /// Optimistic concurrency checks are performed for written entities only
+        /// Optimistic concurrency checks are performed for written (PUT) and deleted (DELETE) entities only.<br/>
+        /// Each PUT/DELETE command includes the entity's change vector so the server rejects the operation
+        /// if the document was modified by another session since it was loaded.<br/>
+        /// Read-only entities (loaded but not modified) are <b>not</b> checked.
         /// </summary>
         Writes,
 
         /// <summary>
-        /// Optimistic concurrency checks are performed for all entities loaded or written in the session.
-        /// On <see cref="DocumentSession.SaveChanges"/>, the server will verify that no tracked entity
-        /// was modified by another session since it was loaded.
+        /// Optimistic concurrency checks are performed for <b>all</b> entities in the session — both written and read-only.<br/>
+        /// In addition to the per-command change vector checks from <see cref="Writes"/>, a <c>BatchTrackChangesCommand</c>
+        /// is sent as part of <see cref="DocumentSession.SaveChanges"/> that verifies no tracked entity
+        /// was modified by another session since it was loaded.<br/>
+        /// <br/>
+        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>,
+        /// <see cref="TransactionMode.ClusterWide"/>, and sharded databases.
         /// </summary>
         WritesAndReads
     }
@@ -92,8 +100,14 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         /// Configure optimistic concurrency mode for the session.<br/>
-        /// When set, overrides the default from <see cref="Conventions.DocumentConventions.OptimisticConcurrencyMode"/>.
+        /// When set, overrides the default from <see cref="Conventions.DocumentConventions.OptimisticConcurrencyMode"/>.<br/>
+        /// When <c>null</c> (default), the session inherits the value from conventions.
         /// </summary>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when set to <see cref="Session.OptimisticConcurrencyMode.Writes"/> or
+        /// <see cref="Session.OptimisticConcurrencyMode.WritesAndReads"/> while
+        /// <see cref="NoTracking"/> is <c>true</c> or <see cref="TransactionMode"/> is <see cref="TransactionMode.ClusterWide"/>.
+        /// </exception>
         public OptimisticConcurrencyMode? OptimisticConcurrencyMode
         {
             get => _optimisticConcurrencyMode;

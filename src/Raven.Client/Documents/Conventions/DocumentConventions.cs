@@ -839,7 +839,9 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Configure optimistic concurrency mode for all opened sessions by default
+        ///     Configure the default optimistic concurrency mode for all sessions opened from this store.<br/>
+        ///     Sessions inherit this value unless overridden via <see cref="SessionOptions.OptimisticConcurrencyMode"/>.<br/>
+        ///     Cannot be mixed with the obsolete <see cref="UseOptimisticConcurrency"/> property.
         /// </summary>
         public OptimisticConcurrencyMode OptimisticConcurrencyMode
         {
@@ -858,7 +860,10 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        ///     Gets or sets whether optimistic concurrency is enabled for all sessions by default.<br/>
+        ///     Setting to <c>true</c> maps to <see cref="OptimisticConcurrencyMode.Writes"/>;
+        ///     setting to <c>false</c> maps to <see cref="OptimisticConcurrencyMode.None"/>.<br/>
+        ///     Note: <see cref="OptimisticConcurrencyMode.WritesAndReads"/> cannot be represented by this property.
         /// </summary>
         [Obsolete("UseOptimisticConcurrency is obsolete and will be removed in the next major version. Please use " +
                   nameof(OptimisticConcurrencyMode) + " instead.")]

@@ -202,8 +202,10 @@ namespace Raven.Client.Documents.Session
         private bool _optimisticConcurrencyModeWasSet;
 
         /// <summary>
-        /// Gets or sets the optimistic concurrency mode for the session.
+        /// Gets or sets the optimistic concurrency mode for the session.<br/>
+        /// Cannot be set if the obsolete <see cref="UseOptimisticConcurrency"/> was already set on this session.
         /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when <see cref="UseOptimisticConcurrency"/> was already set on this session.</exception>
         public OptimisticConcurrencyMode OptimisticConcurrencyMode
         {
             get => _optimisticConcurrencyMode;
