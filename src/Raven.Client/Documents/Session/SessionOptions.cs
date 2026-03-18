@@ -104,8 +104,8 @@ namespace Raven.Client.Documents.Session
         /// When <c>null</c> (default), the session inherits the value from conventions.
         /// </summary>
         /// <exception cref="InvalidOperationException">
-        /// Thrown when set to <see cref="Session.OptimisticConcurrencyMode.Writes"/> or
-        /// <see cref="Session.OptimisticConcurrencyMode.WritesAndReads"/> while
+        /// Thrown when set to <see cref="OptimisticConcurrencyMode.Writes"/> or
+        /// <see cref="OptimisticConcurrencyMode.WritesAndReads"/> while
         /// <see cref="NoTracking"/> is <c>true</c> or <see cref="TransactionMode"/> is <see cref="TransactionMode.ClusterWide"/>.
         /// </exception>
         public OptimisticConcurrencyMode? OptimisticConcurrencyMode

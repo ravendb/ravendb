@@ -299,6 +299,44 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public void UseOptimisticConcurrency_AfterSessionOptionsOptimisticConcurrencyMode_ShouldThrow()
+        {
+            // Copilot review: constructor should set _optimisticConcurrencyModeWasSet when
+            // options.OptimisticConcurrencyMode is provided, so that UseOptimisticConcurrency
+            // cannot be set afterwards without going through advanced.OptimisticConcurrencyMode first
+            using (var store = GetDocumentStore())
+            {
+                using var session = store.OpenSession(new SessionOptions
+                {
+                    OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                });
+
+                // should throw because the session was created with the new API via SessionOptions
+                var ex = Assert.Throws<InvalidOperationException>(() => session.Advanced.UseOptimisticConcurrency = true);
+                Assert.Contains(nameof(InMemoryDocumentSessionOperations.UseOptimisticConcurrency), ex.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void UseOptimisticConcurrency_WhenInheritedFromConventions_ShouldNotThrow()
+        {
+            // When conventions set OptimisticConcurrencyMode but SessionOptions doesn't explicitly set it,
+            // the session inherits from conventions. In this case, UseOptimisticConcurrency should still
+            // be settable (no flag was set on the session itself).
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes
+                   }))
+            {
+                using var session = store.OpenSession(); // no explicit SessionOptions.OptimisticConcurrencyMode
+
+                // should NOT throw because the mode was inherited from conventions, not explicitly set on session
+                session.Advanced.UseOptimisticConcurrency = false;
+                Assert.Equal(OptimisticConcurrencyMode.None, session.Advanced.OptimisticConcurrencyMode);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Conventions_UseOptimisticConcurrency_LossyRoundTrip()
         {
             var conventions = new DocumentConventions();

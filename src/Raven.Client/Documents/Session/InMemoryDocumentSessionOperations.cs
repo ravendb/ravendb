@@ -280,6 +280,9 @@ namespace Raven.Client.Documents.Session
             _optimisticConcurrencyMode = options.OptimisticConcurrencyMode
                                          ?? _requestExecutor.Conventions.OptimisticConcurrencyMode;
 
+            if (options.OptimisticConcurrencyMode.HasValue)
+                _optimisticConcurrencyModeWasSet = true;
+
             if (NoTracking && _optimisticConcurrencyMode != OptimisticConcurrencyMode.None)
             {
                 throw new InvalidOperationException(
