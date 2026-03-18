@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
@@ -6,9 +7,9 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    public class TrackingModeTests : RavenTestBase
+    public class OptimisticConcurrencyModeTests : RavenTestBase
     {
-        public TrackingModeTests(ITestOutputHelper output) : base(output)
+        public OptimisticConcurrencyModeTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -280,6 +281,53 @@ namespace FastTests.Client
                     Assert.Equal(OptimisticConcurrencyMode.None, inMemSes.OptimisticConcurrencyMode);
                 }
             }
+        }
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void NoTracking_WithOptimisticConcurrencyMode_Writes_FromConventions_ShouldThrow()
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes
+                   }))
+            {
+                var exp = Assert.Throws<InvalidOperationException>(() =>
+                {
+                    store.OpenSession(new SessionOptions { NoTracking = true });
+                });
+                Assert.Contains(nameof(OptimisticConcurrencyMode), exp.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void Conventions_UseOptimisticConcurrency_LossyRoundTrip()
+        {
+            var conventions = new DocumentConventions();
+
+            // set WritesAndReads via new API
+            conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads;
+            Assert.Equal(OptimisticConcurrencyMode.WritesAndReads, conventions.OptimisticConcurrencyMode);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void Conventions_MutualExclusion_OptimisticConcurrencyMode_Then_UseOptimisticConcurrency_ShouldThrow()
+        {
+            var conventions = new DocumentConventions();
+
+            conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads;
+
+            var ex = Assert.Throws<InvalidOperationException>(() => conventions.UseOptimisticConcurrency = true);
+            Assert.Contains(nameof(DocumentConventions.UseOptimisticConcurrency), ex.Message);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void Conventions_MutualExclusion_UseOptimisticConcurrency_Then_OptimisticConcurrencyMode_ShouldThrow()
+        {
+            var conventions = new DocumentConventions();
+
+            conventions.UseOptimisticConcurrency = true;
+
+            var ex = Assert.Throws<InvalidOperationException>(() => conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes);
+            Assert.Contains(nameof(DocumentConventions.OptimisticConcurrencyMode), ex.Message);
         }
     }
 }

@@ -400,6 +400,8 @@ namespace Raven.Client.Documents.Conventions
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private Func<string, Type> _resolveTypeFromClrTypeName;
         private OptimisticConcurrencyMode _optimisticConcurrencyMode;
+        private bool _useOptimisticConcurrencyWasSet;
+        private bool _optimisticConcurrencyModeWasSet;
         private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
 
@@ -845,6 +847,12 @@ namespace Raven.Client.Documents.Conventions
             set
             {
                 AssertNotFrozen();
+#pragma warning disable CS0618
+                if (_useOptimisticConcurrencyWasSet)
+                    throw new InvalidOperationException($"{nameof(OptimisticConcurrencyMode)} cannot be set when {nameof(UseOptimisticConcurrency)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+#pragma warning restore CS0618
+
+                _optimisticConcurrencyModeWasSet = true;
                 _optimisticConcurrencyMode = value;
             }
         }
@@ -860,6 +868,11 @@ namespace Raven.Client.Documents.Conventions
             set
             {
                 AssertNotFrozen();
+
+                if (_optimisticConcurrencyModeWasSet)
+                    throw new InvalidOperationException($"{nameof(UseOptimisticConcurrency)} cannot be set when {nameof(OptimisticConcurrencyMode)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+
+                _useOptimisticConcurrencyWasSet = true;
                 _optimisticConcurrencyMode = value ? OptimisticConcurrencyMode.Writes : OptimisticConcurrencyMode.None;
             }
         }

@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -3169,6 +3171,199 @@ namespace SlowTests.Issues
                             Assert.DoesNotContain("employees/2-A", propertyNames);
                         }
                     }
+                }
+            }
+        }
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Sharding)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded)]
+        public void WritesAndReads_ShouldThrowOnShardedDatabase(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    Assert.Throws<NotSupportedInShardingException>(() => session.SaveChanges());
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesAndReads_DeferredDeleteById_IsStillCheckedByBatchTrackChangesCommand()
+        {
+            // Verifies that Delete(string id) via Defer path keeps the entity in BatchTrackChangesCommand
+            // (the deferred delete also checks concurrency, so the check is redundant but correct)
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.Store(new Employee { FirstName = "Egor" }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    var internalSession = (InMemoryDocumentSessionOperations)session;
+
+                    var jerry = session.Load<Employee>("employees/1-A");   // read-only
+                    var egor = session.Load<Employee>("employees/2-A");    // will be deleted by ID
+
+                    // delete by string ID — goes through Defer path (not PrepareForEntitiesDeletion)
+                    session.Delete("employees/2-A");
+
+                    var saveChangesData = internalSession.PrepareForSaveChanges();
+
+                    // egor's deferred delete is NOT in the skip set (only session commands from
+                    // PrepareForEntitiesPuts/PrepareForEntitiesDeletion add to IdsAlreadyCheckedForConcurrency)
+                    Assert.DoesNotContain("employees/2-A", saveChangesData.IdsAlreadyCheckedForConcurrency);
+
+                    // verify BatchTrackChangesCommand still includes both entities
+                    Assert.NotNull(saveChangesData.TrackChangesCommandData);
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var json = saveChangesData.TrackChangesCommandData.ToJson(store.Conventions, context);
+                        using (var blittable = context.ReadObject(json, "test"))
+                        {
+                            var trackedEntities = blittable["TrackedEntities"] as BlittableJsonReaderObject;
+                            Assert.NotNull(trackedEntities);
+
+                            var propertyNames = trackedEntities.GetPropertyNames();
+                            Assert.Contains("employees/1-A", propertyNames);
+                            Assert.Contains("employees/2-A", propertyNames); // still checked by BatchTrackChanges
+                        }
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesFromConventions_ShouldBeInherited_AndNotTrackEntities()
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes
+                   }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                // open session without explicit OptimisticConcurrencyMode - should inherit Writes from conventions
+                using (var session = store.OpenSession())
+                {
+                    var internalSession = (InMemoryDocumentSessionOperations)session;
+                    Assert.Equal(OptimisticConcurrencyMode.Writes, internalSession.OptimisticConcurrencyMode);
+
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    // Writes mode should NOT track entities (only WritesAndReads does)
+                    Assert.False(internalSession.TrackedEntities.TryGetValue("employees/1-A", out _));
+
+                    // but writes should still be concurrency-checked
+                    jerry.FirstName = "Modified";
+
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Background";
+                        s.SaveChanges();
+                    }
+
+                    // should throw because the PUT has a change vector (Writes mode)
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    Assert.Contains("employees/1-A", e.Message);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void WritesAndReads_ConcurrencyCheckModeDisabled_ShouldStillBeTracked()
+        {
+            // When ConcurrencyCheckMode.Disabled is used, the PUT won't check concurrency,
+            // but WritesAndReads tracking should still catch changes via BatchTrackChangesCommand
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    // Store with null changeVector → ConcurrencyCheckMode.Disabled
+                    session.Store(new Employee { FirstName = "NewEmployee" }, changeVector: null, id: "employees/2-A");
+
+                    // background-modify jerry (read-only entity)
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.FirstName = "Background";
+                        s.SaveChanges();
+                    }
+
+                    // should throw for jerry via BatchTrackChangesCommand
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+                    Assert.Contains("employees/1-A", e.Message);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task WritesAndReads_AsyncSession_ShouldThrowConcurrencyException()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Employee { FirstName = "Jerry" }, "employees/1-A");
+                    await session.StoreAsync(new Employee { FirstName = "Egor", Address = new Address { Street = "Ahad Ha'am" } }, "employees/2-A");
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                       }))
+                {
+                    var jerry = await session.LoadAsync<Employee>("employees/1-A");
+                    var egor = await session.LoadAsync<Employee>("employees/2-A");
+
+                    // modify egor so we have a write
+                    egor.Address = new Address { Street = "New Street" };
+
+                    // background-modify jerry (read-only)
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address { City = "Hadera" };
+                        s.SaveChanges();
+                    }
+
+                    // should throw for jerry via BatchTrackChangesCommand
+                    var e = await Assert.ThrowsAsync<ConcurrencyException>(() => session.SaveChangesAsync());
+                    Assert.Contains("employees/1-A", e.Message);
                 }
             }
         }
