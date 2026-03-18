@@ -2912,5 +2912,110 @@ namespace SlowTests.Issues
                 Assert.Equal("Hadera", j.Address.City);
             }
         }
+
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [MemberData(nameof(SessionActions))]
+        public void ShouldThrowConcurrencyException_WhenOptimisticConcurrencyModeIsSetViaConventions(Action<IDocumentSession> sessionAction)
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                   }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.Store(new Employee
+                    {
+                        FirstName = "Egor",
+                        Address = new Address()
+                        {
+                            Street = "Ahad Ha'am"
+                        }
+                    }, "employees/2-A");
+                    session.SaveChanges();
+                }
+
+                // open session without explicit SessionOptions - should inherit from conventions
+                using (IDocumentSession session = store.OpenSession())
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    sessionAction.Invoke(session);
+
+                    var expected = session.Advanced.GetChangeVectorFor(jerry);
+                    Assert.NotEmpty(expected);
+                    Assert.NotNull(expected);
+
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address()
+                        {
+                            City = "Hadera"
+                        };
+                        s.SaveChanges();
+                    }
+
+                    // this should throw concurrency exception for jerry because conventions set WritesAndReads
+                    var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
+
+                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                    Assert.Equal("employees/1-A", e.Id);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var egor = session.Load<Employee>("employees/2-A");
+
+                    Assert.Equal("Egor", egor.FirstName);
+                    Assert.Equal("Ahad Ha'am", egor.Address.Street);
+
+                    var j = session.Load<Employee>("employees/1-A");
+                    Assert.Equal("Hadera", j.Address.City);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public void SessionOptions_ShouldOverride_Conventions()
+        {
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDocumentStore = s => s.Conventions.OptimisticConcurrencyMode = OptimisticConcurrencyMode.WritesAndReads
+                   }))
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Employee
+                    {
+                        FirstName = "Jerry"
+                    }, "employees/1-A");
+                    session.SaveChanges();
+                }
+
+                // session explicitly sets None - should override the convention
+                using (var session = store.OpenSession(new SessionOptions
+                       {
+                           OptimisticConcurrencyMode = OptimisticConcurrencyMode.None
+                       }))
+                {
+                    var jerry = session.Load<Employee>("employees/1-A");
+
+                    using (var s = store.OpenSession())
+                    {
+                        var j = s.Load<Employee>("employees/1-A");
+                        j.Address = new Address { City = "Hadera" };
+                        s.SaveChanges();
+                    }
+
+                    // should NOT throw because session overrides convention with None
+                    session.SaveChanges();
+                }
+            }
+        }
     }
 }
