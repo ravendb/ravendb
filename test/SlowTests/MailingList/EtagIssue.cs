@@ -329,7 +329,9 @@ namespace SlowTests.MailingList
         {
             using (IDocumentSession session = store.OpenSession())
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 foreach (object obj in objs)
                     session.Store(obj);

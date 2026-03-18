@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Tests.Core.Utils.Entities;

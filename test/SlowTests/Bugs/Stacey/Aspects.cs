@@ -42,7 +42,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // try to insert the apertures into the database
                     session.Store(currency[0], "currencies/1");
@@ -62,7 +64,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // try to insert the aspects into the database
                     session.Store(aspects[0], "aspects/1");
@@ -87,7 +91,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // create an array to hold the results.
                     var results = new Aspect[2];
@@ -132,7 +138,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // create an array to hold the results.
                     // try to query each of the newly inserted aspects.
@@ -183,7 +191,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // try to insert the aspects into the database
                     session.Store(aspects[0]);
@@ -209,7 +219,9 @@ namespace SlowTests.Bugs.Stacey
                 using (var session = store.OpenSession())
                 {
                     // ensure optimistic concurrency
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     // create an array to hold the results.
                     // try to query each of the newly inserted aspects.

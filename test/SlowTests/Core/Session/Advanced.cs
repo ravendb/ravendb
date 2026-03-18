@@ -215,8 +215,10 @@ namespace SlowTests.Core.Session
             {
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     Assert.False(session.Advanced.UseOptimisticConcurrency);
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();

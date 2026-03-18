@@ -86,7 +86,9 @@ namespace SlowTests.Server.Replication
 
                 using (var session = store1.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     var user = new User
                     {

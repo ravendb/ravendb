@@ -40,7 +40,9 @@ namespace SlowTests.Client
                 }
                 using (var newSession = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     newSession.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var foo = new Foo { Name = "Two" };
                     newSession.Store(foo, fooId);
                     var e = Assert.Throws<ConcurrencyException>(() =>
@@ -69,7 +71,9 @@ namespace SlowTests.Client
                 }
                 using (var newSession = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     newSession.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var foo = new Foo { Name = "Two" };
                     newSession.Store(foo, changeVector: changeVector, fooId);
                     var e = Assert.Throws<ConcurrencyException>(() =>
@@ -96,7 +100,9 @@ namespace SlowTests.Client
                 }
                 using (var newSession = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     newSession.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     newSession.Delete(fooId, "A:1-dummy");
                     var e = Assert.Throws<ConcurrencyException>(() =>
                     {
@@ -123,7 +129,9 @@ namespace SlowTests.Client
 
                 using (var newSession = store.OpenAsyncSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     newSession.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     newSession.Delete(fooId, "A:1-dummy");
                     var e = await Assert.ThrowsAsync<ConcurrencyException>(async () =>
                     {
@@ -146,7 +154,9 @@ namespace SlowTests.Client
         {
             var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.UseOptimisticConcurrency = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ModifyDatabaseRecord = r => r.Settings["Tombstones.CleanupIntervalInMin"] = int.MaxValue.ToString()
             });
 
@@ -174,7 +184,9 @@ namespace SlowTests.Client
         {
             var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.UseOptimisticConcurrency = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ModifyDatabaseRecord = r => r.Settings["Tombstones.CleanupIntervalInMin"] = int.MaxValue.ToString()
             });
 
@@ -202,7 +214,9 @@ namespace SlowTests.Client
         {
             var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.UseOptimisticConcurrency = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ModifyDatabaseRecord = r => r.Settings["Tombstones.CleanupIntervalInMin"] = int.MaxValue.ToString()
             });
 
@@ -243,7 +257,9 @@ namespace SlowTests.Client
         {
             var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.UseOptimisticConcurrency = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ModifyDatabaseRecord = r => r.Settings["Tombstones.CleanupIntervalInMin"] = int.MaxValue.ToString()
             });
 
@@ -272,7 +288,9 @@ namespace SlowTests.Client
         {
             var store = GetDocumentStore(new Options
             {
+#pragma warning disable CS0618 // Type or member is obsolete
                 ModifyDocumentStore = s => s.Conventions.UseOptimisticConcurrency = true,
+#pragma warning restore CS0618 // Type or member is obsolete
                 ModifyDatabaseRecord = r => r.Settings["Tombstones.CleanupIntervalInMin"] = int.MaxValue.ToString()
             });
 
@@ -319,7 +337,9 @@ namespace SlowTests.Client
                 var storeTask = Task.Run(async () =>
                 {
                     using var session = store.OpenAsyncSession();
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     await session.StoreAsync(new TestObj(), "wrongChangedVector", concurrencyFailedId);
                     barrier.SignalAndWait();
