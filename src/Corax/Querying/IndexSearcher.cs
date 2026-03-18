@@ -30,13 +30,6 @@ namespace Corax.Querying;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
-    /// <summary>
-    /// Used for testing purposes only.
-    /// </summary>
-    private CoraxTestingConfiguration _testingConfiguration;
-
-    public void SetTestingConfiguration(CoraxTestingConfiguration testingConfiguration) => _testingConfiguration = testingConfiguration;
-    
     internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
