@@ -315,26 +315,24 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
     
     public static void RetrieveConfigurationForDocumentsComparer(ShardedDatabaseContext databaseContext, string indexName, out bool nullFirst, out bool acceptMissing)
     {
+        nullFirst = true;
+        acceptMissing = false;
+
         if (indexName == null)
-            goto Default;
-        
+            return;
+    
         var index = databaseContext.Indexes.GetIndex(indexName);
         if (index == null)
-            goto Default;
+            return;
 
         var searchEngine = index.Type.IsAuto() 
             ? index.Configuration.AutoIndexingEngineType 
             : index.Configuration.StaticIndexingEngineType;
-        
+    
         if (searchEngine == SearchEngineType.Lucene)
-            goto Default;
+            return;
 
         nullFirst = index.Configuration.NullFirst;
         acceptMissing = true;
-        return;
-        
-        Default:
-        nullFirst = true;
-        acceptMissing = false;
     }
 }

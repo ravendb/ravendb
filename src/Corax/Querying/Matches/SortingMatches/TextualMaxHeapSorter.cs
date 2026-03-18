@@ -160,6 +160,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     /// <param name="nullIndexes">Positions in batchResults that have null terms and were excluded from the heap</param>
     public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores, ContextBoundNativeList<int> nullIndexes)
     {
+        Debug.Assert(results.Count == 0, "Results should be empty");
         ValidateMaxHeapStructure();
         
         int nullCount = nullIndexes.HasContext ? nullIndexes.Count : 0;

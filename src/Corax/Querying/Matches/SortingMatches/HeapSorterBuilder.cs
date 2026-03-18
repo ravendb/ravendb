@@ -13,7 +13,7 @@ internal static class HeapSorterBuilder
     {
         static int Ascending(ref NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
         {
-            var cmp = CompactKeyComparer.Compare(termA, termB, sorter._nullFirst);
+            var cmp = CompactKeyComparer.Compare(termA, termB, sorter._nullResult);
             return cmp == 0 ? 
                 sorter.SecondaryComparer.Compare(posA, posB) 
                 : cmp;
@@ -22,7 +22,7 @@ internal static class HeapSorterBuilder
         static int Descending(ref NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
         {
             //In first comparer we control the order of parameters, however secondary comparer (and it's inners have to be wrapped in Descending<>)
-            var cmp = CompactKeyComparer.Compare(termB, termA, sorter._nullFirst);
+            var cmp = CompactKeyComparer.Compare(termB, termA, sorter._nullResult);
             return cmp == 0 ? 
                 sorter.SecondaryComparer.Compare(posA, posB) 
                 : cmp;

@@ -116,14 +116,15 @@ namespace FastTests.Corax
 
                 var term0 = entry1.Content.OrderBy(x => x).First();
                 var term1 = entry2.Content.OrderBy(x => x).First();
-                
-                var cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[1]), true);
+
+                var nullResults = -1;
+                var cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[1]), nullResults);
                 Assert.Equal(string.Compare(term0, term1, StringComparison.Ordinal),Math.Sign(cmp));
-                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[0]), true);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[0]), nullResults);
                 Assert.Equal(string.Compare(term1, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[0]), true);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[0]), nullResults);
                 Assert.Equal(string.Compare(term0, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[1]), true);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[1]), nullResults);
                 Assert.Equal(string.Compare(term1, term1, StringComparison.Ordinal), Math.Sign(cmp));
             }
         }

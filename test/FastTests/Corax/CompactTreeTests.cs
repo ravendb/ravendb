@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;

@@ -11,7 +11,6 @@ using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
-using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Impl;
@@ -195,19 +194,15 @@ unsafe partial struct SortingMatch<TInner>
             }
 
             match._cancellationToken.ThrowIfCancellationRequested();
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, NonExistingTermContainerId, NullTermContainerId, long.MinValue);
+            _lookup.GetFor(batchResults, batchTermIds, SortingHelpers.MissingTermId);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, NonExistingTermContainerId, NullTermContainerId, SortingHelpers.MissingTermId);
             
             var terms = new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length);
-            Container.GetAll(llt, batchTermIds, terms, long.MinValue, pageLocator);
+            Container.GetAll(llt, batchTermIds, terms, SortingHelpers.MissingTermId, pageLocator);
 
             
             var indirectComparer = new IndirectComparer<CompactKeyComparer>(batchTerms, new CompactKeyComparer(), descending);
             var indexes = SortByTerms(ref match, batchTermIds, batchTerms, descending, indirectComparer);
-            
-            // In our sort
-            
-            
             
             for (int i = 0; i < indexes.Length; i++)
             {
@@ -256,6 +251,9 @@ unsafe partial struct SortingMatch<TInner>
             where TComparer : struct, IComparer<long>
         {
             Debug.Assert(buffer.Length < (1 << 15), "buffer.Length < (1<<15)");
+            var nullValue = match._nullFirst
+                ? 0
+                : -1 >>> 16;
             for (int i = 0; i < buffer.Length; i++)
             {
                 long l = 0;
@@ -266,9 +264,7 @@ unsafe partial struct SortingMatch<TInner>
                 }
                 else
                 {
-                    l = match._nullFirst 
-                        ? 0 
-                        : -1 >>> 16;
+                    l = nullValue;
                 }
 
                 l = BinaryPrimitives.ReverseEndianness(l) >>> 1;
@@ -475,9 +471,9 @@ unsafe partial struct SortingMatch<TInner>
             }
 
             match._cancellationToken.ThrowIfCancellationRequested();
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, NonExistingTermContainerId, NullTermContainerId, long.MinValue);
-            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
+            _lookup.GetFor(batchResults, batchTermIds, SortingHelpers.MissingTermId);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, NonExistingTermContainerId, NullTermContainerId, SortingHelpers.MissingTermId);
+            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), SortingHelpers.MissingTermId, pageLocator);
 
             var heapCapacity = _take == -1 ? batchResults.Length : Math.Min(_take, batchResults.Length);
             var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(heapCapacity)];
@@ -503,6 +499,7 @@ unsafe partial struct SortingMatch<TInner>
             
 
             heap.Fill(batchResults, ref match._results, ref match._scoresResults, Span<float>.Empty, nullIndexes);
+            nullIndexes.Dispose();
         }
         
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)

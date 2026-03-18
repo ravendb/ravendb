@@ -207,7 +207,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private UnmanagedSpan<long> _batchResults;
         private int _comparerId;
         private TermsReader _termsReader;
-        private bool _nullFirst;
+        private int _nullResult;
         private long _nullTermContainerId;
         private long _nonExistingTermContainerId;
         
@@ -221,7 +221,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _lookup = match._searcher.EntriesToTermsReader(fieldName);
             _batchResults = batchResults;
             _termsReader = match._searcher.TermsReaderFor(fieldName);
-            _nullFirst = match._nullFirst;
+            _nullResult = match._nullFirst ? 1 : -1;
             
             if (match._searcher.TryGetPostingListForNull(fieldName, out _, out _nullTermContainerId) == false)
                 _nullTermContainerId = -1;
@@ -241,9 +241,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 return;
             }
             
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, _nonExistingTermContainerId, _nullTermContainerId, long.MinValue);
-            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
+            _lookup.GetFor(batchResults, batchTermIds, SortingHelpers.MissingTermId);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, _nonExistingTermContainerId, _nullTermContainerId, SortingHelpers.MissingTermId);
+            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), SortingHelpers.MissingTermId, pageLocator);
             match._token.ThrowIfCancellationRequested();
 
             var heapSize = Math.Min(match._take, batchResults.Length);
@@ -261,7 +261,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
         {
-            return CompactKeyComparer.Compare(x, y, _nullFirst);
+            return CompactKeyComparer.Compare(x, y, _nullResult);
         }
 
         public int Compare(int x, int y)
@@ -269,7 +269,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var termX = _termsReader.GetTerm(_batchResults[x], nullTermId: _nullTermContainerId, nonExistingTermId: _nonExistingTermContainerId);
             var termY = _termsReader.GetTerm(_batchResults[y], nullTermId: _nullTermContainerId, nonExistingTermId: _nonExistingTermContainerId);
             
-            return CompactKeyComparer.Compare(termX, termY, _nullFirst);
+            return CompactKeyComparer.Compare(termX, termY, _nullResult);
         }
     }
 
@@ -497,9 +497,9 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 return;
             }
 
-            _lookup.GetFor(batchResults, batchTermIds, long.MinValue);
-            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, _nonExistingTermContainerId, _nullTermContainerId, long.MinValue);
-            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), long.MinValue, pageLocator);
+            _lookup.GetFor(batchResults, batchTermIds, SortingHelpers.MissingTermId);
+            SortingHelpers.ReplaceNullAndNonExistingTermIds(batchTermIds, _nonExistingTermContainerId, _nullTermContainerId, SortingHelpers.MissingTermId);
+            Container.GetAll(llt, batchTermIds, new Span<UnmanagedSpan>(batchTerms, batchTermIds.Length), SortingHelpers.MissingTermId, pageLocator);
             var documents = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             for (int i = 0; i < batchTermIds.Length; i++)
                 documents[i] = i;
@@ -524,7 +524,6 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             }
 
             heapSorter.Fill(batchResults, ref match._results, ref match._scoresResults, match._secondaryScoreBuffer, nullIndexes);
-            
             nullIndexes.Dispose();
         }
 
