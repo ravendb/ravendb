@@ -291,29 +291,42 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     {
         var needToApplyAggregation = result.Aggregations.Count > 0;
         var ranges = result.Ranges;
+        if (ranges == null || ranges.Count == 0)
+            return;
+
+        // Read the field value once per document, then check every range against it.
+        var firstRange = ranges[0] as FacetedQueryParser.CoraxParsedRange;
+        if (firstRange == null)
+            return;
+
+        var fieldRootPage = GetFieldRootPage(firstRange.Field);
+        reader.Reset();
+        bool fieldFound = false;
+        while (reader.FindNext(fieldRootPage))
+        {
+            if (reader.IsNull || reader.IsNonExisting)
+                continue; // skip null/non-existing entries, look for actual value
+            fieldFound = true;
+            break;
+        }
+        if (!fieldFound)
+            return;
+
+        var currentDouble = reader.CurrentDouble;
+        var currentLong = reader.CurrentLong;
+        byte[] currentDecodedBytes = result.RangeType == RangeType.None ? reader.Current.Decoded().ToArray() : null;
 
         foreach (var parsedRange in ranges)
         {
             if (parsedRange is not FacetedQueryParser.CoraxParsedRange range)
                 continue;
 
-            var fieldRootPage = GetFieldRootPage(range.Field);
-
-            bool isMatching = false;
-            reader.Reset();
-            while (reader.FindNext(fieldRootPage))
+            bool isMatching = result.RangeType switch
             {
-                if (reader.IsNull || reader.IsNonExisting)
-                    continue;
-
-                isMatching = result.RangeType switch
-                {
-                    RangeType.Double => range.IsMatch(reader.CurrentDouble),
-                    RangeType.Long => range.IsMatch(reader.CurrentLong),
-                    _ => range.IsMatch(reader.Current.Decoded())
-                };
-                break;
-            }
+                RangeType.Double => range.IsMatch(currentDouble),
+                RangeType.Long => range.IsMatch(currentLong),
+                _ => range.IsMatch(currentDecodedBytes.AsSpan())
+            };
 
             var collectionOfFacetValues = facetValues[range.RangeText];
             if (isMatching)
@@ -322,7 +335,6 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 if (needToApplyAggregation)
                     ApplyAggregation(result.Aggregations, collectionOfFacetValues, ref reader);
             }
-
             token.ThrowIfCancellationRequested();
         }
     }
@@ -352,15 +364,14 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             if (reader.IsNonExisting)
                 continue;
-            
-            
+
             var key = reader.IsNull
                 ? Constants.ProjectionNullValueSlice
                 : reader.Current.Decoded();
 
             if (key.SequenceEqual(Constants.EmptyStringByteSpan))
                 key = Constants.ProjectionEmptyStringSlice;
-            
+
             InsertTerm(key, ref cloned, facetValues, result, legacy, needToApplyAggregation, token);
         }
     }
