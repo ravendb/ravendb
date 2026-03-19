@@ -452,7 +452,8 @@ namespace SlowTests.Issues
                     Assert.True(await processedBatch.WaitAsync(_reasonableWaitTime));
                     Assert.True(await concurrencyExceptionThrown.WaitAsync(_reasonableWaitTime));
                     Assert.NotNull(caughtException);
-                    Assert.Contains("Document 'users/1-A' has been modified", caughtException.Message);
+                    // The DELETE command detects the CV mismatch (background modified jerry)
+                    Assert.Contains("users/1-A", caughtException.Message);
                     Assert.Equal("users/1-A", ((Raven.Client.Exceptions.ConcurrencyException)caughtException).Id);
                 }
             }

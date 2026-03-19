@@ -466,10 +466,10 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(actual);
                     Assert.NotNull(actual);
 
-                    // this should throw concurrency exception for jerry
+                    // this should throw concurrency exception for jerry via the DELETE command's own CV check
                     var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
+                    Assert.Contains($"Document employees/1-A has change vector {actual}, but Delete was called with change vector '{expected}'", e.Message);
                     Assert.Equal("employees/1-A", e.Id);
                     Assert.Equal(actual, e.ActualChangeVector);
                     Assert.Equal(expected, e.ExpectedChangeVector);
@@ -2077,9 +2077,11 @@ namespace SlowTests.Issues
                     }
 
                     // This should throw concurrency exception for Egor (the externally tracked entity)
+                    // Note: external entities have Document=null, so EntityChanged returns true and a PUT is generated.
+                    // The concurrency error comes from the PUT command, not the BatchTrackChangesCommand.
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document 'employees/2-A' has been modified", ex.Message);
+                    Assert.Contains($"Document employees/2-A has change vector {actualEgorCv}, but Put was called with change vector {externalChangeVector}", ex.Message);
                     Assert.Equal("employees/2-A", ex.Id);
                     Assert.Equal(actualEgorCv, ex.ActualChangeVector);
                     Assert.Equal(externalChangeVector, ex.ExpectedChangeVector);
@@ -2357,9 +2359,10 @@ namespace SlowTests.Issues
                     }
 
                     // Should throw concurrency exception for Alice
+                    // Note: external entities have Document=null, so a PUT is generated and the error comes from the PUT command.
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document 'employees/3-A' has been modified", ex.Message);
+                    Assert.Contains($"Document employees/3-A has change vector {actualAliceCv}, but Put was called with change vector {aliceCv}", ex.Message);
                     Assert.Equal("employees/3-A", ex.Id);
                     Assert.Equal(actualAliceCv, ex.ActualChangeVector);
                     Assert.Equal(aliceCv, ex.ExpectedChangeVector);
@@ -2504,9 +2507,10 @@ namespace SlowTests.Issues
                     }
 
                     // Should throw concurrency exception for the address
+                    // Note: external entities have Document=null, so a PUT is generated and the error comes from the PUT command.
                     var ex = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
 
-                    Assert.Contains("Document 'addresses/1-A' has been modified", ex.Message);
+                    Assert.Contains($"Document {addressId} has change vector {actualAddressCv}, but Put was called with change vector {addressCv}", ex.Message);
                     Assert.Equal(addressId, ex.Id);
                     Assert.Equal(actualAddressCv, ex.ActualChangeVector);
                     Assert.Equal(addressCv, ex.ExpectedChangeVector);
@@ -2661,10 +2665,11 @@ namespace SlowTests.Issues
                     if (deleteByIdInBackgroundSession == false)
                     {
                         // this should throw concurrency exception for jerry since it was tracked in session when deleted
+                        // The DELETE command detects the doc was already deleted (tombstone) and throws with the expected CV
                         var e = Assert.Throws<Raven.Client.Exceptions.ConcurrencyException>(() => session.SaveChanges());
-                        Assert.Contains("Document 'employees/1-A' has been modified", e.Message);
-                        Assert.Equal("employees/1-A", e.Id);
-                        Assert.Empty(e.ActualChangeVector);
+                        Assert.Contains("does not exist, but delete was called with change vector", e.Message);
+                        Assert.Equal("employees/1-a", e.Id); // tombstone stores lowercase ID
+                        Assert.Null(e.ActualChangeVector); // doc no longer exists, so no actual CV
                         Assert.Equal(expected, e.ExpectedChangeVector);
                     }
                     else
