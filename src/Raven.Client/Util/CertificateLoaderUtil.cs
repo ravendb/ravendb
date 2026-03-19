@@ -38,11 +38,15 @@ internal static class CertificateLoaderUtil
 
     public static X509Certificate2 CreateCertificate(byte[] rawData, string password = null, X509KeyStorageFlags? flags = null)
     {
+        // In order not to tirgger MAC verification during PKCS12 import, we have to use null as password instead of empty string,
+        // since macOS security restrictions doesn't allow empty string as a password
         return CreateCertificate(f => new X509Certificate2(rawData, password == string.Empty ? null : password, f), flags);
     }
 
     internal static X509Certificate2 CreateCertificate(string fileName, string password = null, X509KeyStorageFlags? flags = null)
     {
+        // In order not to tirgger MAC verification during PKCS12 import, we have to use null as password instead of empty string,
+        // since macOS security restrictions doesn't allow empty string as a password
         return CreateCertificate(f => new X509Certificate2(fileName, password == string.Empty ? null : password, f), flags);
     }
 
