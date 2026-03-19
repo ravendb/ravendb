@@ -117,9 +117,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const handleToggleDisable = async () => {
         const isConfirmed = await confirm({
             icon: isDisabled ? "unlock" : "disable",
-            title: isDisabled
-                ? "Do you want to enable this certificate?"
-                : "Do you want to disable this certificate?",
+            title: isDisabled ? "Do you want to enable this certificate?" : "Do you want to disable this certificate?",
             message: (
                 <span>
                     Certificate: <strong>{certificate.Name}</strong>
