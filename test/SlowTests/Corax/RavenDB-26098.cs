@@ -193,6 +193,138 @@ start.AddDays(21).ToString("yyyy-MM-dd") });
         }
     }
 
+    /// <summary>
+    /// Term (ByField) facets with a WHERE clause must include NULL_VALUE and
+    /// EMPTY_STRING entries, consistent with Lucene behaviour.
+    /// </summary>
+    [RavenTheory(RavenTestCategory.Facets)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void TermFacetsWithWhereClauseIncludeNullAndEmptyString(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.ExecuteIndex(new ProductIndex());
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Product { Category = "Electronics", Price = 50.0, Stock = 10 });
+            session.Store(new Product { Category = "Electronics", Price = 150.0, Stock = 5 });
+            session.Store(new Product { Category = "Books", Price = 20.0, Stock = 100 });
+            session.Store(new Product { Category = null, Price = 75.0, Stock = 1 });
+            session.Store(new Product { Category = "", Price = 80.0, Stock = 2 });
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Product, ProductIndex>()
+                .Where(p => p.Price > 0)
+                .AggregateBy(facet => facet.ByField(p => p.Category))
+                .Execute();
+
+            Assert.True(results.ContainsKey("Category"));
+            var values = results["Category"].Values;
+            var ranges = values.Select(v => v.Range).ToList();
+
+            Assert.Contains("electronics", ranges);
+            Assert.Contains("books", ranges);
+            Assert.Contains("NULL_VALUE", ranges);
+            Assert.Contains("EMPTY_STRING", ranges);
+
+            Assert.Equal(2, values.First(v => v.Range == "electronics").Count);
+            Assert.Equal(1, values.First(v => v.Range == "books").Count);
+            Assert.Equal(1, values.First(v => v.Range == "NULL_VALUE").Count);
+            Assert.Equal(1, values.First(v => v.Range == "EMPTY_STRING").Count);
+        }
+    }
+
+    /// <summary>
+    /// Verifies that term facet counts for NULL_VALUE and EMPTY_STRING are
+    /// correct when the WHERE clause filters out some but not all of those
+    /// documents — ensuring the indexed intersection counts properly.
+    /// </summary>
+    [RavenTheory(RavenTestCategory.Facets)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void TermFacetsWithWhereClausePartialFilterCounts(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.ExecuteIndex(new ProductIndex());
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Product { Category = null, Price = 10.0, Stock = 1 });
+            session.Store(new Product { Category = null, Price = 200.0, Stock = 2 });
+            session.Store(new Product { Category = null, Price = 300.0, Stock = 3 });
+            session.Store(new Product { Category = "", Price = 15.0, Stock = 4 });
+            session.Store(new Product { Category = "", Price = 250.0, Stock = 5 });
+            session.Store(new Product { Category = "Electronics", Price = 50.0, Stock = 6 });
+            session.Store(new Product { Category = "Electronics", Price = 500.0, Stock = 7 });
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Product, ProductIndex>()
+                .Where(p => p.Price >= 100)
+                .AggregateBy(facet => facet.ByField(p => p.Category))
+                .Execute();
+
+            var values = results["Category"].Values;
+
+            Assert.Equal(2, values.First(v => v.Range == "NULL_VALUE").Count);
+            Assert.Equal(1, values.First(v => v.Range == "EMPTY_STRING").Count);
+            Assert.Equal(1, values.First(v => v.Range == "electronics").Count);
+        }
+    }
+
+    /// <summary>
+    /// Term facets with WHERE clause and ValueDesc sort mode must return
+    /// correctly ordered and paged results.
+    /// </summary>
+    [RavenTheory(RavenTestCategory.Facets)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void TermFacetsWithWhereClauseAndValueDescSortMode(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.ExecuteIndex(new ProductIndex());
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Product { Category = "Alpha", Price = 100.0, Stock = 1 });
+            session.Store(new Product { Category = "Beta", Price = 200.0, Stock = 2 });
+            session.Store(new Product { Category = "Gamma", Price = 300.0, Stock = 3 });
+            session.Store(new Product { Category = "Delta", Price = 400.0, Stock = 4 });
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Product, ProductIndex>()
+                .Where(p => p.Price >= 100)
+                .AggregateBy(builder => builder
+                    .ByField(p => p.Category)
+                    .WithOptions(new FacetOptions
+                    {
+                        TermSortMode = FacetTermSortMode.ValueDesc,
+                        Start = 0,
+                        PageSize = 2
+                    }))
+                .Execute();
+
+            var values = results["Category"].Values;
+
+            // ValueDesc: gamma, delta, beta, alpha — page size 2 → gamma, delta
+            Assert.Equal(2, values.Count);
+            Assert.Equal("gamma", values[0].Range);
+            Assert.Equal("delta", values[1].Range);
+        }
+    }
+
     private static void AssertFacetValue(List<FacetValue> values, string name, int expectedCount,
         double? average = null, double? min = null, double? max = null, double? sum = null,
         string range = null, string[] rangeFragments = null)

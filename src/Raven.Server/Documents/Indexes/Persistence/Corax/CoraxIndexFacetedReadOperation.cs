@@ -96,6 +96,8 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 for (int i = 0; i < read; i++)
                     baseQueryMatchingIds.Add(ids[i]);
 
+                token.ThrowIfCancellationRequested();
+
                 // When exceeded, fall back to the scanning path which streams with bounded memory.
                 if (baseQueryMatchingIds.Count > maxMatchingIds)
                 {
@@ -116,11 +118,45 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 var metadata = GetFieldMetadata(result.Key);
 
                 var provider = _indexSearcher.TextualAggregation(metadata, forward: result.Value.Options.TermSortMode is not FacetTermSortMode.ValueDesc);
-                using var aggregationScope = provider.AggregateByTerms(out result.Value.SortedIds, out var counts);
+                // When WHERE is present we must NOT set SortedIds: UpdateFacetResults uses it as the
+                // authoritative term list and would emit FacetValue{count=0} for every term in it,
+                // including terms filtered out by the WHERE clause.
+                List<string> sortedIds;
+                using var aggregationScope = provider.AggregateByTerms(out sortedIds, out var counts);
+                if (baseQueryMatchingIds == null)
+                    result.Value.SortedIds = sortedIds;
 
                 var idX = 0;
-                foreach (var term in CollectionsMarshal.AsSpan(result.Value.SortedIds))
+                foreach (var term in CollectionsMarshal.AsSpan(sortedIds))
                 {
+                    long count;
+                    if (baseQueryMatchingIds != null)
+                    {
+                        var queryTerm = ReferenceEquals(term, Constants.ProjectionNullValue) ? null
+                            : ReferenceEquals(term, Constants.ProjectionEmptyString) ? Constants.EmptyString
+                            : term;
+                        var termMatch = _indexSearcher.TermQuery(metadata, queryTerm);
+                        count = 0;
+                        int read;
+                        while ((read = termMatch.Fill(ids)) != 0)
+                        {
+                            for (int i = 0; i < read; i++)
+                            {
+                                if (baseQueryMatchingIds.Contains(ids[i]))
+                                    count++;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        count = counts[idX];
+                    }
+
+                    idX++;
+
+                    if (count == 0)
+                        continue;
+
                     ref var collectionOfFacetValues = ref CollectionsMarshal.GetValueRefOrAddDefault(facetValues, term, out var exists);
                     if (exists == false)
                     {
@@ -129,7 +165,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                         collectionOfFacetValues.AddDefault(range);
                     }
 
-                    collectionOfFacetValues.IncrementCount((int)counts[idX++]);
+                    collectionOfFacetValues.IncrementCount((int)count);
                 }
             }
 
