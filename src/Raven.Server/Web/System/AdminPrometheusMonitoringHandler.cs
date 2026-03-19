@@ -221,8 +221,8 @@ namespace Raven.Server.Web.System
             WriteGaugeWithHelp(writer, "Total GC heap size in MB after the last garbage collection.", "gc_heap_size_mb", gcMetrics.HeapSizeInMb, tags);
             WriteGaugeWithHelp(writer, "High memory load threshold in MB at the time of the last garbage collection.", "gc_high_memory_load_threshold_mb", gcMetrics.HighMemoryLoadThresholdInMb, tags);
             WriteGaugeWithHelp(writer, "Memory load in MB at the time of the last garbage collection.", "gc_memory_load_mb", gcMetrics.MemoryLoadInMb, tags);
-            WriteGaugeWithHelp(writer, "First GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_1_seconds", gcMetrics.PauseDurations1InSec, tags);
-            WriteGaugeWithHelp(writer, "Second GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_2_seconds", gcMetrics.PauseDurations2InSec, tags);
+            WriteGaugeWithHelp(writer, "First GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_1_seconds", gcMetrics.GetPauseDurationSeconds(0), tags);
+            WriteGaugeWithHelp(writer, "Second GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_2_seconds", gcMetrics.GetPauseDurationSeconds(1), tags);
             WriteGaugeWithHelp(writer, "Percentage of time spent paused for GC since the previous collection.", "gc_pause_time_percentage", gcMetrics.PauseTimePercentage, tags);
             WriteGaugeWithHelp(writer, "Number of pinned objects observed during the last garbage collection.", "gc_pinned_objects_count", gcMetrics.PinnedObjectsCount, tags);
             WriteGaugeWithHelp(writer, "Memory promoted during the last garbage collection in MB.", "gc_promoted_mb", gcMetrics.PromotedInMb, tags);

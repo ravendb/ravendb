@@ -183,14 +183,11 @@ public sealed class MetricsProvider
             HeapSizeInMb = new Size(info.HeapSizeBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
             HighMemoryLoadThresholdInMb = new Size(info.HighMemoryLoadThresholdBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
             MemoryLoadInMb = new Size(info.MemoryLoadBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
-            PauseDurations1InSec = GetPauseSeconds(info, 0),
-            PauseDurations2InSec = GetPauseSeconds(info, 1),
             PauseTimePercentage = info.PauseTimePercentage,
             PinnedObjectsCount = info.PinnedObjectsCount,
             PromotedInMb = new Size(info.PromotedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
             TotalAvailableMemoryInMb = new Size(info.TotalAvailableMemoryBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
             TotalCommittedInMb = new Size(info.TotalCommittedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
-
             TotalHeapSizeAfterBytes = info.HeapSizeBytes,
             PauseDurationsInMs =
             [
@@ -205,15 +202,6 @@ public sealed class MetricsProvider
         };
 
         return result;
-    }
-
-    private static double? GetPauseSeconds(GCMemoryInfo info, int index)
-    {
-        var pauses = info.PauseDurations;
-        if (pauses.IsEmpty || pauses.Length <= index)
-            return null;
-
-        return pauses[index].TotalSeconds;
     }
 
     private static GcInfoPayload.GenerationInfoSize GetGenerationInfoSize(GCMemoryInfo info, int index)
