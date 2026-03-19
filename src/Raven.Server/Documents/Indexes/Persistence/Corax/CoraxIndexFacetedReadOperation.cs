@@ -47,10 +47,12 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
     public override List<FacetResult> FacetedQuery(FacetQuery facetQuery, QueryTimingsScope queryTimings, DocumentsOperationContext context,
         Func<string, SpatialField> getSpatialField, CancellationToken token)
     {
-        //We currently only supports count aggregation by index, however in scanning we already have entry reader so let's use indexed facet only in case when user wants to count per term/range
+        // Use the indexed path (posting-list operations) when possible.
+        // The scanning path is only needed for aggregations (sum/avg/min/max) and AllResults facets
+        // which require per-document field access via EntryTermsReader.
+        // When a WHERE clause is present, the indexed path materializes matching doc IDs once
+        // and intersects with each facet's posting list.
         var canUseIndexedFacetQuery = true;
-        canUseIndexedFacetQuery &= facetQuery.Query.Metadata.Query.Where is null;
-
         var results = FacetedQueryParser.Parse(context, facetQuery, SearchEngineType.Corax);
         foreach (var result in results)
         {
@@ -73,9 +75,38 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         var coraxPageSize = CoraxBufferSize(_indexSearcher, facetQuery.Query.PageSize, query);
         var ids = CoraxIndexReadOperation.QueryPool.Rent(coraxPageSize);
         CreateMappingForRanges(results, facetsByRange, facetQuery);
+
+        // When a WHERE clause is present, materialize all matching doc IDs into a HashSet.
+        // Both term and range facets intersect their posting lists against this set.
+        // deduplicationDisabled: true is safe here because the HashSet absorbs duplicates
+        // and skipping the query-level dedup saves work during materialization.
+        HashSet<long> baseQueryMatchingIds = null;
+        if (query.Metadata.Query.Where is not null)
+        {
+            var parameters = new CoraxQueryBuilder.Parameters(_indexSearcher, _allocator, null, null, query, _index,
+                query.QueryParameters, _queryBuilderFactories, _fieldMappings, null, null, -1,
+                deduplicationDisabled: true, token: token);
+            var baseQuery = CoraxQueryBuilder.BuildQuery(parameters, out _);
+            queryTimings?.SetQueryPlan(baseQuery.Inspect());
+            var maxMatchingIds = _indexSearcher.MaxMemoizationSizeInBytes / sizeof(long);
+            baseQueryMatchingIds = new HashSet<long>();
+            int read;
+            while ((read = baseQuery.Fill(ids)) != 0)
+            {
+                for (int i = 0; i < read; i++)
+                    baseQueryMatchingIds.Add(ids[i]);
+
+                // When exceeded, fall back to the scanning path which streams with bounded memory.
+                if (baseQueryMatchingIds.Count > maxMatchingIds)
+                {
+                    CoraxIndexReadOperation.QueryPool.Return(ids);
+                    return ScanningFacetedQuery(results, facetQuery, queryTimings, context, getSpatialField, token);
+                }
+            }
+        }
+
         foreach (var result in results)
         {
-            var needToApplyAggregation = result.Value.Aggregations.Count > 0;
             Dictionary<string, FacetValues> facetValues;
             if (result.Value.Ranges == null || result.Value.Ranges.Count == 0)
             {
@@ -85,7 +116,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                 var metadata = GetFieldMetadata(result.Key);
 
                 var provider = _indexSearcher.TextualAggregation(metadata, forward: result.Value.Options.TermSortMode is not FacetTermSortMode.ValueDesc);
-                using var _ = provider.AggregateByTerms(out result.Value.SortedIds, out var counts);
+                using var aggregationScope = provider.AggregateByTerms(out result.Value.SortedIds, out var counts);
 
                 var idX = 0;
                 foreach (var term in CollectionsMarshal.AsSpan(result.Value.SortedIds))
@@ -95,23 +126,10 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     {
                         var range = FacetedQueryHelper.GetRangeName(result.Value.AggregateBy, term);
                         collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
-                        if (needToApplyAggregation == false)
-                            collectionOfFacetValues.AddDefault(range);
-                        else
-                        {
-                            foreach (var aggregation in result.Value.Aggregations)
-                                collectionOfFacetValues.Add(aggregation.Key, range);
-                        }
+                        collectionOfFacetValues.AddDefault(range);
                     }
 
                     collectionOfFacetValues.IncrementCount((int)counts[idX++]);
-                    if (needToApplyAggregation)
-                    {
-                        //not supported yet.
-                        throw new InvalidOperationException("Facet queries that need to apply aggregation should be handled via scanning reader. This code path is not supposed to be reached for such queries.");
-                    }
-
-                    continue;
                 }
             }
 
@@ -133,14 +151,29 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
                     collectionOfFacetValues = new FacetValues(facetQuery.Legacy);
 
                 var fieldMetadata = GetFieldMetadata(range.Field);
-                var aggregationProvider = range.GetAggregation(_indexSearcher, fieldMetadata, true);
-                var count = aggregationProvider.AggregateByRange();
-                collectionOfFacetValues.IncrementCount((int)count);
-                if (needToApplyAggregation)
+                long count;
+
+                if (baseQueryMatchingIds != null)
                 {
-                    //not supported yet.
-                    throw new InvalidOperationException("Facet queries that need to apply aggregation should be handled via scanning reader. This code path is not supposed to be reached for such queries.");
+                    var rangeQuery = range.GetQuery(_indexSearcher, fieldMetadata);
+                    count = 0;
+                    int read;
+                    while ((read = rangeQuery.Fill(ids)) != 0)
+                    {
+                        for (int i = 0; i < read; i++)
+                        {
+                            if (baseQueryMatchingIds.Contains(ids[i]))
+                                count++;
+                        }
+                    }
                 }
+                else
+                {
+                    var aggregationProvider = range.GetAggregation(_indexSearcher, fieldMetadata, true);
+                    count = aggregationProvider.AggregateByRange();
+                }
+
+                collectionOfFacetValues.IncrementCount((int)count);
 
                 token.ThrowIfCancellationRequested();
             }

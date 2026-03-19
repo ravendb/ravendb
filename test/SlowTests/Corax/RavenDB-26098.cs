@@ -146,6 +146,53 @@ start.AddDays(21).ToString("yyyy-MM-dd") });
         }
     }
 
+    [RavenTheory(RavenTestCategory.Facets)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void RangeFacetsWithWhereClauseReturnCorrectCounts(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        store.ExecuteIndex(new ProductIndex());
+
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Product { Category = "Electronics", Price = 50.0, Stock = 10 });
+            session.Store(new Product { Category = "Electronics", Price = 150.0, Stock = 5 });
+            session.Store(new Product { Category = "Electronics", Price = 250.0, Stock = 3 });
+            session.Store(new Product { Category = "Books", Price = 20.0, Stock = 100 });
+            session.Store(new Product { Category = "Books", Price = 80.0, Stock = 50 });
+            session.Store(new Product { Category = "Clothing", Price = 30.0, Stock = 75 });
+            session.SaveChanges();
+        }
+
+        Indexes.WaitForIndexing(store);
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Query<Product, ProductIndex>()
+                .Where(p => p.Category == "Electronics")
+                .AggregateBy(facet => facet.ByRanges(
+                    p => p.Price < 100,
+                    p => p.Price >= 100 && p.Price < 200,
+                    p => p.Price >= 200))
+                .Execute();
+
+            Assert.True(results.ContainsKey("Price"));
+            var priceRanges = results["Price"].Values;
+
+            var below100 = priceRanges.FirstOrDefault(v => v.Range.Contains("< 100"));
+            var between100and200 = priceRanges.FirstOrDefault(v => v.Range.Contains(">= 100") && v.Range.Contains("< 200"));
+            var above200 = priceRanges.FirstOrDefault(v => v.Range.Contains(">= 200") && !v.Range.Contains("< "));
+
+            Assert.NotNull(below100);
+            Assert.NotNull(between100and200);
+            Assert.NotNull(above200);
+
+            Assert.Equal(1, below100.Count);
+            Assert.Equal(1, between100and200.Count);
+            Assert.Equal(1, above200.Count);
+        }
+    }
+
     private static void AssertFacetValue(List<FacetValue> values, string name, int expectedCount,
         double? average = null, double? min = null, double? max = null, double? sum = null,
         string range = null, string[] rangeFragments = null)
