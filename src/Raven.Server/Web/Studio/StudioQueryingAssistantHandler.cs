@@ -7,7 +7,7 @@ namespace Raven.Server.Web.Studio;
 
 public class StudioQueryingAssistantHandler : DatabaseRequestHandler
 {
-    [RavenAction("/databases/*/studio/tasks/embeddinggenerationtasks", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    [RavenAction("/databases/*/studio/tasks/embeddings", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
     public async Task GetEmbeddingGenerationTasks()
     {
         using (var processor = new StudioQueryingAssistantProcessorForEmbeddingsGenerationTasks(this))

@@ -3,16 +3,8 @@ import database =  require("models/resources/database");
 import endpoints = require("endpoints");
 
 class getEmbeddingGenerationTasksCommand  extends commandBase {
-
-    private readonly db: database | string;
-    private readonly location: databaseLocationSpecifier;
-    private readonly reportFailure: boolean;
-
-    constructor(db: database | string, location: databaseLocationSpecifier, reportFailure = true) {
+    constructor(private db: database | string, private location: databaseLocationSpecifier, private reportFailure = true) {
         super();
-        this.db = db;
-        this.location = location;
-        this.reportFailure = reportFailure;
     }
 
     execute(): JQueryPromise<Record<string, Record<string, string[]>>> {
@@ -28,11 +20,9 @@ class getEmbeddingGenerationTasksCommand  extends commandBase {
     }
 
     private getEmbeddingsGenerationTaskNames(): JQueryPromise<Record<string, Record<string, string[]>>> {
-        const args = {
-            ...this.location
-        };
+        const args = this.location;
 
-        const url = endpoints.databases.studioQueryingAssistant.studioTasksEmbeddinggenerationtasks;
+        const url = endpoints.databases.studioQueryingAssistant.studioTasksEmbeddings;
 
         return this.query(url, args, this.db);
     }

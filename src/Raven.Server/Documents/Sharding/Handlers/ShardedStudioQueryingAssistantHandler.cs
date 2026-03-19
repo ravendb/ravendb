@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Sharding.Handlers;
 
 public class ShardedStudioQueryingAssistantHandler : ShardedDatabaseRequestHandler
 {
-    [RavenShardedAction("/databases/*/studio/tasks/embeddinggenerationtasks", "GET")]
+    [RavenShardedAction("/databases/*/studio/tasks/embeddings", "GET")]
     public async Task GetEmbeddingGenerationTasks()
     {
         using (var processor = new ShardedStudioQueryingAssistantProcessorForEmbeddingsGenerationTasks(this))

@@ -137,10 +137,10 @@ export class AutocompleteAiTasks extends BaseAutocompleteProvider implements Aut
                 return true;
             }
             
-            const t = scanner.tokenType();
-            const isNonContentToken = t === Token.EOF
-                || t === RqlParser.CL_PAR
-                || t === RqlParser.COMMA;
+            const tokenType = scanner.tokenType();
+            const isNonContentToken = tokenType === Token.EOF
+                || tokenType === RqlParser.CL_PAR
+                || tokenType === RqlParser.COMMA;
 
             if (isNonContentToken && scanner.lookBack() === RqlParser.OP_PAR) {
                 scanner.previous();
