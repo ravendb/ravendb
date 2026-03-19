@@ -1,5 +1,6 @@
 ﻿using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 
@@ -141,56 +142,13 @@ namespace Raven.Server.Utils.Monitoring
     }
     public sealed class GcMetrics
     {
-        public GcMemoryInfoMetrics Any { get; set; }
+        public GcInfoPayload.GcMemoryInfo Any { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Any)] = Any?.ToJson()
-            };
-        }
-    }
-
-    public sealed class GcMemoryInfoMetrics
-    {
-        public long Index { get; set; }
-        public int Generation { get; set; }
-        public bool Compacted { get; set; }
-        public bool Concurrent { get; set; }
-        public long FinalizationPendingCount { get; set; }
-        public long FragmentedInMb { get; set; }
-        public long HeapSizeInMb { get; set; }
-        public long HighMemoryLoadThresholdInMb { get; set; }
-        public long MemoryLoadInMb { get; set; }
-        public double? PauseDurations1InSec { get; set; }
-        public double? PauseDurations2InSec { get; set; }
-        public double PauseTimePercentage { get; set; }
-        public long PinnedObjectsCount { get; set; }
-        public long PromotedInMb { get; set; }
-        public long TotalAvailableMemoryInMb { get; set; }
-        public long TotalCommittedInMb { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Index)] = Index,
-                [nameof(Generation)] = Generation,
-                [nameof(Compacted)] = Compacted,
-                [nameof(Concurrent)] = Concurrent,
-                [nameof(FinalizationPendingCount)] = FinalizationPendingCount,
-                [nameof(FragmentedInMb)] = FragmentedInMb,
-                [nameof(HeapSizeInMb)] = HeapSizeInMb,
-                [nameof(HighMemoryLoadThresholdInMb)] = HighMemoryLoadThresholdInMb,
-                [nameof(MemoryLoadInMb)] = MemoryLoadInMb,
-                [nameof(PauseDurations1InSec)] = PauseDurations1InSec,
-                [nameof(PauseDurations2InSec)] = PauseDurations2InSec,
-                [nameof(PauseTimePercentage)] = PauseTimePercentage,
-                [nameof(PinnedObjectsCount)] = PinnedObjectsCount,
-                [nameof(PromotedInMb)] = PromotedInMb,
-                [nameof(TotalAvailableMemoryInMb)] = TotalAvailableMemoryInMb,
-                [nameof(TotalCommittedInMb)] = TotalCommittedInMb
             };
         }
     }

@@ -12,6 +12,7 @@ using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Monitoring;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Sparrow;
 using Sparrow.LowMemory;
 
@@ -149,9 +150,9 @@ namespace Raven.Server.Web.System
                         new Size(serverMetrics.Memory.UnmanagedMemoryInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Bytes));
 
                     // gc
-                    if (includeGc && serverMetrics.Gc?.Any != null)
+                    if (includeGc && serverMetrics.Gc.Any is GcInfoPayload.GcMemoryInfoMetrics gcMetrics)
                     {
-                        WriteGcMetrics(writer, serverMetrics.Gc.Any, "any");
+                        WriteGcMetrics(writer, gcMetrics, "any");
                     }
 
                     // network
@@ -203,7 +204,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteGcMetrics(StreamWriter writer, GcMemoryInfoMetrics gcMetrics, string gcKind)
+        private void WriteGcMetrics(StreamWriter writer, GcInfoPayload.GcMemoryInfoMetrics gcMetrics, string gcKind)
         {
             var tags = SerializeTags(new Dictionary<string, string> { { "gckind", gcKind } });
 
