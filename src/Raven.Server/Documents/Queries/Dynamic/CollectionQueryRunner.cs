@@ -328,11 +328,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             resultToFill.TotalResults = numberOfDocuments;
-            
-            var pos = bufferSize;
 
             if (hasCmpXchg)
-                buffer[--pos] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
+                buffer[bufferSize - 1] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
 
             resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * (uint)bufferSize);
             resultToFill.NodeTag = Database.ServerStore.NodeTag;

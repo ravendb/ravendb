@@ -312,7 +312,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 writer.Write("if (");
                 QueryExpression modified = HandleRefresh(q.Where);
-                new SubscriptionJavascriptVisitor(writer.GetStringBuilder(), q).VisitExpression(modified);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(modified);
                 writer.WriteLine(" )");
                 writer.WriteLine("{");
             }
@@ -329,7 +329,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     throw new NotSupportedException("Subscription select clause must specify an object literal");
                 writer.WriteLine();
                 writer.Write(" return ");
-                new SubscriptionJavascriptVisitor(writer.GetStringBuilder(), q).VisitExpression(q.Select[0].Expression);
+                new JavascriptCodeQueryVisitor(writer.GetStringBuilder(), q).VisitExpression(q.Select[0].Expression);
                 writer.WriteLine(";");
             }
             else

@@ -411,7 +411,7 @@ namespace Raven.Client.Documents.Linq
                                         value = null;
                                         return false;
                                     }
-                                    value = CmpXchg.Value((string)args[0]);
+                                    value = RavenDocumentQuery.CmpXchg((string)args[0]);
                                     return true;
                                 case nameof(RavenQuery.Now):
                                     value = RavenDocumentQuery.Now();

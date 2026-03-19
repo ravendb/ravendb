@@ -6,7 +6,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.AST
 {
-    public class JavascriptCodeQueryVisitor : QueryVisitor
+    public sealed class JavascriptCodeQueryVisitor : QueryVisitor
     {
         private readonly StringBuilder _sb;
         private readonly HashSet<string> _knownAliases = new HashSet<string>();
@@ -102,31 +102,18 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.Append(")");
         }
 
-        protected virtual void OnBeforeVisitMethod(MethodExpression expr)
+        private static void AssertMethodSupported(MethodExpression expr)
         {
+            if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase) ||
+                expr.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new NotSupportedException($"'{expr.Name.Value}()' function is not supported in filter or subscription expressions");
+            }
         }
 
         public override void VisitMethod(MethodExpression expr)
         {
-            OnBeforeVisitMethod(expr);
-
-            if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase))
-            {
-                if (expr.Arguments.Count != 0)
-                    throw new InvalidOperationException("now() expects zero arguments");
-
-                _sb.Append("new Date().toISOString()");
-                return;
-            }
-
-            if (expr.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase))
-            {
-                if (expr.Arguments.Count != 0)
-                    throw new InvalidOperationException("today() expects zero arguments");
-
-                _sb.Append("new Date(new Date().setUTCHours(0,0,0,0)).toISOString()");
-                return;
-            }
+            AssertMethodSupported(expr);
 
             if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase))
             {

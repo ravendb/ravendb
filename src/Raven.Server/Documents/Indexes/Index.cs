@@ -4281,40 +4281,37 @@ namespace Raven.Server.Documents.Indexes
             var hasTimeSeries = q.TimeSeriesIncludes != null || q.HasTimeSeriesSelect;
             var hasCmpXchg = q.HasCmpXchg || q.HasCmpXchgSelect || q.HasCmpXchgIncludes;
 
-            // today() ticks are written at the very end of the buffer, so all other offsets must account for them
-            var timeBasedSlots = q.HasToday ? 1 : 0;
+            // write optional slots from the end of the buffer backwards
+            var pos = length;
 
-            if (hasCounters)
+            if (q.HasToday)
             {
-                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
-
-                var offset = length - sizeof(long) *
-                                       (1 + (hasCmpXchg ? 1 : 0) +
-                                        (hasTimeSeries ? 1 : 0) +
-                                        timeBasedSlots);
-
-                *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastCountersEtag(queryContext.Documents.Transaction.InnerTransaction);
-            }
-
-            if (hasTimeSeries)
-            {
-                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last time series etag");
-
-                var offset = length - sizeof(long) * ((hasCmpXchg ? 2 : 1) + timeBasedSlots);
-
-                *(long*)(indexEtagBytes + offset) = DocumentsStorage.ReadLastTimeSeriesEtag(queryContext.Documents.Transaction.InnerTransaction);
+                pos -= sizeof(long);
+                *(long*)(indexEtagBytes + pos) = queryTime.Today.Ticks;
             }
 
             if (hasCmpXchg)
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
 
-                *(long*)(indexEtagBytes + length - sizeof(long) * (1 + timeBasedSlots)) = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
+                pos -= sizeof(long);
+                *(long*)(indexEtagBytes + pos) = queryContext.Documents.DocumentDatabase.CompareExchangeStorage.GetLastCompareExchangeIndex(queryContext.Server);
             }
 
-            if (q.HasToday)
+            if (hasTimeSeries)
             {
-                *(long*)(indexEtagBytes + length - sizeof(long)) = queryTime.Today.Ticks;
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last time series etag");
+
+                pos -= sizeof(long);
+                *(long*)(indexEtagBytes + pos) = DocumentsStorage.ReadLastTimeSeriesEtag(queryContext.Documents.Transaction.InnerTransaction);
+            }
+
+            if (hasCounters)
+            {
+                Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last counter etag");
+
+                pos -= sizeof(long);
+                *(long*)(indexEtagBytes + pos) = DocumentsStorage.ReadLastCountersEtag(queryContext.Documents.Transaction.InnerTransaction);
             }
         }
 

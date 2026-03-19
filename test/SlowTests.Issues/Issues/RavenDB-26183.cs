@@ -5,7 +5,6 @@ using System.Net;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
@@ -14,7 +13,6 @@ using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
@@ -596,105 +594,48 @@ public class RavenDB_26183 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Now_WorksInFilterClause(Options options)
+    public void Now_ShouldThrowInFilterClause(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
                 session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var employees = session.Advanced
-                    .RawQuery<Employee>("from Employees filter HiredAt <= now()")
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.Equal(2, employees.Count);
+                var e = Assert.Throws<RavenException>(() =>
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees filter HiredAt <= now()")
+                        .WaitForNonStaleResults()
+                        .ToList());
+                Assert.Contains("not supported in filter", e.Message);
             }
         }
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Today_WorksInFilterClause(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var employees = session.Advanced
-                    .RawQuery<Employee>("from Employees filter HiredAt < today()")
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.Equal(2, employees.Count);
-            }
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Linq_Now_WorksInFilterClause(Options options)
+    public void Today_ShouldThrowInFilterClause(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
                 session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var query = session.Query<Employee>()
-                    .Customize(x => x.WaitForNonStaleResults())
-                    .Filter(e => e.HiredAt <= RavenQuery.Now());
-
-                var employees = query.ToList();
-                Assert.Equal(2, employees.Count);
-            }
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void DocumentQuery_Now_WorksInFilterClause(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddHours(-1) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var query = session.Advanced
-                    .DocumentQuery<Employee>()
-                    .Filter(f => f.LessThanOrEqual("HiredAt", RavenDocumentQuery.Now()))
-                    .WaitForNonStaleResults();
-
-                var employees = query.ToList();
-                Assert.Equal(2, employees.Count);
+                var e = Assert.Throws<RavenException>(() =>
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees filter HiredAt < today()")
+                        .WaitForNonStaleResults()
+                        .ToList());
+                Assert.Contains("not supported in filter", e.Message);
             }
         }
     }
@@ -743,16 +684,12 @@ public class RavenDB_26183 : RavenTestBase
         using (var store = GetDocumentStore(options))
         {
             var config = Sharding.GetShardingConfiguration(store);
-            var ids = new List<string>();
 
             // place one past and one future employee on each of the 3 shards
             for (int shard = 0; shard < 3; shard++)
             {
                 var pastId = Sharding.GetRandomIdForShard(config, shard);
                 var futureId = Sharding.GetRandomIdForShard(config, shard);
-
-                ids.Add(pastId);
-                ids.Add(futureId);
 
                 using (var session = store.OpenSession())
                 {
@@ -869,31 +806,24 @@ public class RavenDB_26183 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Filter_WithBothNowAndToday(Options options)
+    public void Filter_WithBothNowAndToday_ShouldThrow(Options options)
     {
         using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenSession())
             {
-                // matches: hired today, guaranteed to be after today's midnight
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.Date.AddMinutes(1) });
-                // excluded: hired yesterday (before today)
                 session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
-                // excluded: hired before today
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-2) });
-                // excluded: hired in the future
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
                 session.SaveChanges();
             }
 
             using (var session = store.OpenSession())
             {
-                var employees = session.Advanced
-                    .RawQuery<Employee>("from Employees filter HiredAt >= today() and HiredAt <= now()")
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.Equal(1, employees.Count);
+                var e = Assert.Throws<RavenException>(() =>
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees filter HiredAt >= today() and HiredAt <= now()")
+                        .WaitForNonStaleResults()
+                        .ToList());
+                Assert.Contains("not supported in filter", e.Message);
             }
         }
     }
@@ -911,7 +841,7 @@ public class RavenDB_26183 : RavenTestBase
                 }));
 
             Assert.Contains("now()", exception.Message);
-            Assert.Contains("not supported in subscriptions", exception.Message);
+            Assert.Contains("not supported in filter or subscription expressions", exception.Message);
         }
     }
 
@@ -928,7 +858,7 @@ public class RavenDB_26183 : RavenTestBase
                 }));
 
             Assert.Contains("today()", exception.Message);
-            Assert.Contains("not supported in subscriptions", exception.Message);
+            Assert.Contains("not supported in filter or subscription expressions", exception.Message);
         }
     }
 
