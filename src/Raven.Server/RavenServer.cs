@@ -2074,6 +2074,9 @@ namespace Raven.Server
 
             foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
             {
+                if (certDef.Disabled)
+                    continue;
+
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
                 using (var goodKnownCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(certDef.Certificate)))
                 {
