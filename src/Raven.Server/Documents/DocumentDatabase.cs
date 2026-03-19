@@ -80,6 +80,8 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<LogMode, string> _addToInitLog;
         private readonly Logger _logger;
+        public Logger Logger => _logger;
+
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
 
