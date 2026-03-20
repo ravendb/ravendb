@@ -884,8 +884,9 @@ public static class QueryBuilderHelper
             throw new InvalidOperationException($"Expected parameter field (e.g. $p0), but got: '{constantExpression.Left}'.");
         
         bool paramIsMissing = false;
-        Debug.Assert(leftField.FieldValue.StartsWith('$'));
-        if (parameters.TryGet(new StringSegment(leftField.FieldValue, 1, leftField.FieldValue.Length - 1), out object paramValue) == false)
+        PortableExceptions.ThrowIfNot<InvalidOperationException>(leftField.FieldValue.StartsWith('$'), "Expected parameter field (e.g. $p0), but got: '{constantExpression.Left}'.");
+        
+        if (parameters == null || parameters.TryGet(new StringSegment(leftField.FieldValue, 1, leftField.FieldValue.Length - 1), out object paramValue) == false)
         {
             paramValue = null;
             paramIsMissing = true;
@@ -948,9 +949,13 @@ public static class QueryBuilderHelper
                     LazyNumberValue lnv => lnv.ToInt64(CultureInfo.InvariantCulture),
                     _ => throw new InvalidOperationException($"Cannot convert {paramValue!.GetType()} to long")
                 };
-            
+
                 if (long.TryParse(rightExpression.Token.Value, out var rightSideValue) == false)
-                    throw new InvalidOperationException($"Cannot convert {rightExpression.Token.Value} to long");
+                {
+                    var rightSideTokenValue = rightExpression.Token.Value.Replace("_", string.Empty);
+                    if (long.TryParse(rightSideTokenValue, out rightSideValue) == false)
+                        throw new InvalidOperationException($"Cannot convert {rightExpression.Token.Value} to long");
+                }
             
                 return constantExpression.Operator switch
                 {
@@ -980,7 +985,7 @@ public static class QueryBuilderHelper
                     decimal dc => checked((double)dc),
                     LazyStringValue lsv => lsv.ToDouble(CultureInfo.InvariantCulture),
                     LazyNumberValue lnv => lnv.ToDouble(CultureInfo.InvariantCulture),
-                    _ => throw new InvalidOperationException($"Cannot convert {paramValue!.GetType()} to long")
+                    _ => throw new InvalidOperationException($"Cannot convert {paramValue!.GetType()} to double")
                 };
             
                 if (double.TryParse(rightExpression.Token.Value, out var rightSideValue) == false)
@@ -1006,7 +1011,7 @@ public static class QueryBuilderHelper
                 var leftValueAsString = GetValueAsString(paramValue);
                 var rightValueAsString = rightExpression.Token.Value;
 
-                var comparisonResult = string.Compare(leftValueAsString, rightValueAsString, StringComparison.InvariantCultureIgnoreCase);
+                var comparisonResult = string.Compare(leftValueAsString, rightValueAsString, StringComparison.OrdinalIgnoreCase);
 
                 return constantExpression.Operator switch
                 {

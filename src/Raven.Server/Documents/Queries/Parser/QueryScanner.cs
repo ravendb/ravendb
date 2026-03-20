@@ -112,9 +112,9 @@ namespace Raven.Server.Documents.Queries.Parser
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
-            var isNotIdentifier = (Beggining: beginning, IsParameter: isParameter) switch
+            var isNotIdentifier = (Beginning: beginning, IsParameter: isParameter) switch
             {
-                (Beggining: true, IsParameter: false) => char.IsLetter(_q[_pos]) == false,
+                (Beginning: true, IsParameter: false) => char.IsLetter(_q[_pos]) == false,
                 _ => char.IsLetterOrDigit(_q[_pos]) == false
             };
             

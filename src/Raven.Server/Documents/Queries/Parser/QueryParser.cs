@@ -1287,8 +1287,13 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
 
         private bool Method(FieldExpression field, out MethodExpression op)
         {
+            if (field.FieldValue.Equals("when", StringComparison.OrdinalIgnoreCase))
+            {
+                if (_insideWhenMethod)
+                    ThrowParseException("When method cannot be nested");
+                _insideWhenMethod = true;
+            }
             
-            _insideWhenMethod = field.FieldValue.Equals("when", StringComparison.OrdinalIgnoreCase);
             var args = ReadMethodArguments();
             _insideWhenMethod = false;
             

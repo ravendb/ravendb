@@ -338,6 +338,12 @@ public class RavenDB_25673(ITestOutputHelper output) : RavenTestBase(output)
                 .AddParameter("myVar", 10L)
                 .Count();
             Assert.Equal(1, result);
+            
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($myVar != 1_0, Number != 1)")
+                .AddParameter("myVar", 1_0L)
+                .Count();
+            Assert.Equal(1, result);
 
             result = session.Advanced
                 .RawQuery<Dto>($"from {indexName} where when($myVar < 10, Number != 1)")
@@ -517,6 +523,20 @@ public class RavenDB_25673(ITestOutputHelper output) : RavenTestBase(output)
                 .Count();
             Assert.Equal(0, result);
 
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($myVar == 'BBB', Number != 1)")
+                .AddParameter("myVar", "bbb")
+                .WaitForNonStaleResults()
+                .Count();
+            Assert.Equal(0, result);
+            
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($myVar == 'bbb', Number != 1)")
+                .AddParameter("myVar", "BbB")
+                .WaitForNonStaleResults()
+                .Count();
+            Assert.Equal(0, result);
+            
             result = session.Advanced
                 .RawQuery<Dto>($"from {indexName} where when($myVar == 'BBB', Number != 1)")
                 .AddParameter("myVar", "bbb")
