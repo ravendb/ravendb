@@ -66,7 +66,20 @@ namespace Raven.Server.Documents.Patch
                 return true;
             }
 
-            return value.IsNull() || value.IsUndefined();
+            if (value.IsNull() || value.IsUndefined())
+            {
+                // Normalize undefined to null for null propagation.
+                // In Jint 4.6.x, Reference.IsUnresolvableReference changed from checking
+                // base._type == Undefined to ReferenceEquals(base, Unresolvable). This means
+                // property access on undefined values (e.g. r.FirstName where r is undefined)
+                // now routes through TryPropertyReference instead of TryUnresolvableReference.
+                // We must normalize to null here to preserve backward compatibility, matching
+                // the old TryUnresolvableReference behavior that returned JsValue.Null.
+                value = JsValue.Null;
+                return true;
+            }
+
+            return false;
         }
 
         public bool TryGetCallable(Engine engine, object callee, out JsValue value)
