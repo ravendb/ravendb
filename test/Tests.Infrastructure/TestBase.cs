@@ -23,6 +23,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Indexes.Static.NuGet;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Restore;
@@ -63,6 +64,8 @@ namespace FastTests
         private readonly ConcurrentSet<string> _localPathsToDelete = new(StringComparer.OrdinalIgnoreCase);
 
         private static RavenServer _globalServer;
+
+        private static long TotalAiTokensUsed;
 
         protected static bool IsGlobalServer(RavenServer server)
         {
@@ -144,6 +147,16 @@ namespace FastTests
             IOExtensions.AfterGc += (s, x) =>
             {
                 Console.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
+            };
+
+            ConversationDocument.OnUpdateUsage += usage =>
+            {
+                if (usage == null)
+                    return;
+
+                var value = Interlocked.Add(ref TotalAiTokensUsed, usage.TotalTokens);
+
+                Console.WriteLine($"Total AI tokens used across all tests: {value} (delta: {usage.TotalTokens})");
             };
 
             LowMemoryNotification.Instance.SupportsCompactionOfLargeObjectHeap = true;

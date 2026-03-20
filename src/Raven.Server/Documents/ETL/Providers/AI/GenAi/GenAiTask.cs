@@ -307,6 +307,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Output = context.Sync.ReadForMemory(result.Response, item.DocumentId)
             };
 
+            ConversationDocument.OnUpdateUsage?.Invoke(result.Usage);
+
             statsScope.Usage ??= new AiUsage();
             statsScope.Usage.CachedTokens += result.Usage.CachedTokens;
             statsScope.Usage.CompletionTokens += result.Usage.CompletionTokens;

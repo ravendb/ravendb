@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
 {
+    internal static Action<AiUsage> OnUpdateUsage;
+
     public string Agent = agent;
 
     public BlittableJsonReaderObject Parameters = parameters;
@@ -311,6 +313,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public void UpdateUsage(AiUsage usage)
     {
+        OnUpdateUsage?.Invoke(usage);
+
         if (TotalUsage is null)
         {
             TotalUsage = usage;
