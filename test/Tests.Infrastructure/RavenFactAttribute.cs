@@ -117,7 +117,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         return null;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
     {
         if (skip != null)
             return skip;
@@ -126,7 +126,13 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         {
             if (category.HasFlag(RavenTestCategory.Sharding))
                 return RavenDataAttributeBase.ShardingSkipMessage;
+
+            if (category.HasFlag(RavenTestCategory.Ai))
+                return RavenTestHelper.SkipAiMessage;
         }
+
+        if (category.HasFlag(RavenTestCategory.Ai) && RavenTestHelper.SkipAiTests)
+            return RavenTestHelper.SkipAiMessage;
 
         if (licenseRequired && ShouldSkipLicense(out skip))
             return skip;
