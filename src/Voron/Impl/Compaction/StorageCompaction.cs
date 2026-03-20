@@ -141,6 +141,11 @@ namespace Voron.Impl.Compaction
                         if (index.IsGlobal)
                             globalTableIndexesToSkipCopying.Add(index.Name.ToString());
                     }
+                    foreach (var index in schema.DynamicKeyIndexes.Values)
+                    {
+                        if (index.IsGlobal)
+                            globalTableIndexesToSkipCopying.Add(index.Name.ToString());
+                    }
 
                 } while (rootIterator.MoveNext());
 
