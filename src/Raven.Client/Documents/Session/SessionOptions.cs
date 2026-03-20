@@ -53,18 +53,18 @@ namespace Raven.Client.Documents.Session
         /// Optimistic concurrency checks are performed for written (PUT) and deleted (DELETE) entities only.<br/>
         /// Each PUT/DELETE command includes the entity's change vector so the server rejects the operation
         /// if the document was modified by another session since it was loaded.<br/>
-        /// Read-only entities (loaded but not modified) are <b>not</b> checked.
+        /// Entities that were loaded but not modified are <b>not</b> checked.
         /// </summary>
         Writes,
 
         /// <summary>
-        /// Optimistic concurrency checks are performed for <b>all</b> entities in the session — both written and read-only.<br/>
-        /// In addition to the per-command change vector checks from <see cref="Writes"/>, a <c>BatchTrackChangesCommand</c>
-        /// is sent as part of <see cref="DocumentSession.SaveChanges"/> that verifies no tracked entity
+        /// Optimistic concurrency checks are performed for <b>all</b> entities in the session — both modified and not modified.<br/>
+        /// In addition to the per-command change vector checks from <see cref="Writes"/>,
+        /// <see cref="DocumentSession.SaveChanges"/> verifies that no tracked entity
         /// was modified by another session since it was loaded.<br/>
         /// <br/>
-        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>,
-        /// <see cref="TransactionMode.ClusterWide"/>, and sharded databases.
+        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>
+        /// and <see cref="TransactionMode.ClusterWide"/>.
         /// </summary>
         WritesAndReads
     }

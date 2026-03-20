@@ -14,8 +14,8 @@ namespace Raven.Client.Documents.Session
 
         /// <summary>
         /// Disable optimistic concurrency check for this entity's PUT/DELETE command even if <see cref="OptimisticConcurrencyMode"/> is set.<br/>
-        /// Note: when <see cref="OptimisticConcurrencyMode.WritesAndReads"/> is active, the entity is still tracked
-        /// and verified by the <c>BatchTrackChangesCommand</c>.
+        /// Note: when <see cref="OptimisticConcurrencyMode.WritesAndReads"/> is active, the entity is still verified
+        /// during <see cref="DocumentSession.SaveChanges"/> to ensure it was not modified by another session.
         /// </summary>
         Disabled
     }
