@@ -3,7 +3,6 @@
     <Version></Version>
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Authors>Hibernating Rhinos</Authors>
     <Authors>RavenDB</Authors>
     <TargetFrameworks>net10.0;net8.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>

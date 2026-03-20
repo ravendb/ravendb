@@ -3,7 +3,6 @@
     <Version></Version>
     <Description>RavenDB Embedded library to run ravendb in embedded way</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <Authors>Hibernating Rhinos</Authors>
     <Authors>RavenDB</Authors>
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
