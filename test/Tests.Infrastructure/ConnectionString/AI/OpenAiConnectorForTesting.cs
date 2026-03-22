@@ -11,7 +11,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
     {
         RequiredEnvironmentVariables = [OpenAiConnectorHelper.EnvironmentVariable];
     }
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings);
 }
@@ -24,7 +24,7 @@ public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<G
     {
         RequiredEnvironmentVariables = [OpenAiConnectorHelper.EnvironmentVariable];
     }
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat);
     

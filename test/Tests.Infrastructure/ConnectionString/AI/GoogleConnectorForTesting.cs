@@ -13,7 +13,7 @@ public class EmbeddingsGoogleConnectorForTesting : AbstractEmbeddingsConnectorFo
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
     
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Google);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Google;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

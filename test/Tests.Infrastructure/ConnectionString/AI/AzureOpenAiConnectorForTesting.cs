@@ -15,7 +15,7 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
         RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.AzureOpenAi);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.AzureOpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {
@@ -39,7 +39,7 @@ public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTest
         RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.AzureOpenAi);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.AzureOpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

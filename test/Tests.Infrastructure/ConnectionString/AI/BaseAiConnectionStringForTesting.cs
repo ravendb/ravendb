@@ -20,7 +20,7 @@ where TConfig : EtlConfiguration<AiConnectionString>
     TConfig GetAiConfiguration();
     Lazy<bool> CanConnect { get; }
     bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token);
-    Lazy<AiConnectorType> AiConnectorType { get; }
+    AiConnectorType AiConnectorType { get; }
     bool MissingRequiredEnvVariables(out string environmentVariableName);
 }
 
@@ -32,13 +32,13 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
     public static T Instance => _instance ??= new T();
 
-    internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = new Lazy<string>(prefixName) };
+    internal static T CreateNewInstance(string prefixName) => new() { NamePrefix = prefixName };
 
-    protected readonly Lazy<TConfig> _aiIntegrationConfiguration;
+    protected readonly TConfig _aiIntegrationConfiguration;
 
     public Lazy<bool> CanConnect { get; }
 
-    public abstract Lazy<AiConnectorType> AiConnectorType { get; init; }
+    public abstract AiConnectorType AiConnectorType { get; init; }
 
     protected string[] RequiredEnvironmentVariables = [];
 
@@ -57,40 +57,38 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
         return false;
     }
 
-    private Lazy<string> NamePrefix { get; init; }
+    private string NamePrefix { get; init; }
 
     protected BaseAiConnectorForTesting()
     {
-        _aiIntegrationConfiguration = new Lazy<TConfig>(GetAiConfiguration);
+        _aiIntegrationConfiguration = GetAiConfiguration();
         CanConnect = new Lazy<bool>(IsConnectionAllowed);
     }
 
-    protected Lazy<string> AiIntegrationTaskName => new(() =>
+    protected string AiIntegrationTaskName
     {
-        var prefix = string.Empty;
+        get
+        {
+            var prefix = string.IsNullOrWhiteSpace(NamePrefix) ? string.Empty : $"{NamePrefix}_";
+            return $"{prefix}{AiConnectorType}_AiIntegrationTask";
+        }
+    }
 
-        if (string.IsNullOrWhiteSpace(NamePrefix?.Value) == false)
-            prefix = $"{NamePrefix.Value}_";
-
-        return $"{prefix}{AiConnectorType.Value.ToString()}_AiIntegrationTask";
-    });
-
-    protected Lazy<string> ConnectionStringName => new(() =>
+    protected string ConnectionStringName
     {
-        var prefix = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(NamePrefix?.Value) == false)
-            prefix = $"{NamePrefix.Value}_";
-
-        return $"{prefix}{AiConnectorType.Value.ToString()}_ConnectionString";
-    });
+        get
+        {
+            var prefix = string.IsNullOrWhiteSpace(NamePrefix) ? string.Empty : $"{NamePrefix}_";
+            return $"{prefix}{AiConnectorType}_ConnectionString";
+        }
+    }
 
     protected abstract AiConnectionString CreateAiConnectionStringImpl();
 
     public AiConnectionString GetAiConnectionString()
     {
         var connectionString = CreateAiConnectionStringImpl();
-        connectionString.Name = ConnectionStringName.Value;
+        connectionString.Name = ConnectionStringName;
         connectionString.Identifier = Guid.NewGuid().ToString();
 
         return connectionString;
@@ -102,8 +100,8 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
         return new TConfig
         {
-            Name = AiIntegrationTaskName.Value,
-            ConnectionStringName = ConnectionStringName.Value,
+            Name = AiIntegrationTaskName,
+            ConnectionStringName = ConnectionStringName,
             Connection = connectionString
         };
     }
@@ -136,7 +134,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
                 var errorDetails = context.ReadObject(errorDetailsJson, "error").ToString();
-                Console.WriteLine($"ERROR: Unable to connect to {AiConnectorType.Value} due to the following error:{Environment.NewLine}{errorDetails}");
+                Console.WriteLine($"ERROR: Unable to connect to {AiConnectorType} due to the following error:{Environment.NewLine}{errorDetails}");
             }
 
             return false;
@@ -157,13 +155,13 @@ public abstract class AbstractEmbeddingsConnectorForTesting<T> : BaseAiConnector
     {
         logger = null;
 
-        (IEmbeddingGenerator<string, Embedding<float>> service, logger) = AiHelper.CreateEmbeddingServicesForTest(_aiIntegrationConfiguration.Value);
+        (IEmbeddingGenerator<string, Embedding<float>> service, logger) = AiHelper.CreateEmbeddingServicesForTest(_aiIntegrationConfiguration);
         var embeddings = service.GenerateAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token).GetAwaiter().GetResult();
 
         var isExpectedResponse = embeddings.Count == EmbeddingsHelper.ValuesListToVerifyConnection.Count;
         if (isExpectedResponse == false)
             Console.WriteLine(
-                $"ERROR: Unexpected response from {AiConnectorType.Value}: '{embeddings.Count}' embeddings were generated for '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' input values.");
+                $"ERROR: Unexpected response from {AiConnectorType}: '{embeddings.Count}' embeddings were generated for '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' input values.");
 
         return isExpectedResponse;
     }
@@ -174,7 +172,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
 {
     public override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
-        var configuration = _aiIntegrationConfiguration.Value;
+        var configuration = _aiIntegrationConfiguration;
         var schema = ChatCompletionClient.GetSchemaFromSampleObject("{ \"Answer\" : \"answer here\" }");
         using (var contextPool = new JsonContextPool())
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))

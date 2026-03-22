@@ -14,7 +14,7 @@ public class EmbeddingsVertexConnectorForTesting : AbstractEmbeddingsConnectorFo
         RequiredEnvironmentVariables = [EnvironmentVariableGoogleCredentialsJson, EnvironmentVariableLocation];
     }
     
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Vertex);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Vertex;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

@@ -122,7 +122,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
             return true;
         }
 
-        skipMessage = $"Test requires connection to {aiConnectorForTesting.AiConnectorType.Value}.";
+        skipMessage = $"Test requires connection to {aiConnectorForTesting.AiConnectorType}.";
         return false;
     }
 

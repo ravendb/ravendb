@@ -13,7 +13,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings, EnvironmentVariable);
 }
@@ -28,7 +28,7 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat, EnvironmentVariable);
 }
