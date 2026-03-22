@@ -52,9 +52,16 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
                 {
                     if (string.IsNullOrEmpty(Skip))
                     {
-                        SetSkipValueIfShardedDbOnX86(databaseMode);
-                        SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting);
-                        SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting);
+                        if (RavenTestHelper.SkipAiTests)
+                        {
+                            Skip = RavenTestHelper.SkipAiMessage;
+                        }
+                        else
+                        {
+                            SetSkipValueIfShardedDbOnX86(databaseMode);
+                            SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting);
+                            SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting);
+                        }
                     }
                     
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();

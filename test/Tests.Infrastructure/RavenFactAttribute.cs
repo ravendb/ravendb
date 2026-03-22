@@ -131,9 +131,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
                 return RavenTestHelper.SkipAiMessage;
         }
 
-        if (category.HasFlag(RavenTestCategory.Ai) && RavenTestHelper.SkipAiTests)
-            return RavenTestHelper.SkipAiMessage;
-
         if (licenseRequired && ShouldSkipLicense(out skip))
             return skip;
 
