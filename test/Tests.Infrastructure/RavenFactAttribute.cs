@@ -126,9 +126,6 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         {
             if (category.HasFlag(RavenTestCategory.Sharding))
                 return RavenDataAttributeBase.ShardingSkipMessage;
-
-            if (category.HasFlag(RavenTestCategory.Ai))
-                return RavenTestHelper.SkipAiMessage;
         }
 
         if (licenseRequired && ShouldSkipLicense(out skip))
