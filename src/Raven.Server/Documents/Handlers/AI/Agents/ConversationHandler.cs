@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 internal class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
+    internal static Action<string, AiUsage> OnUpdateUsage;
+
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
@@ -176,6 +178,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
             _document.AddMessage(context, r.Message, currentTurnUsage);
             _document.UpdateUsage(talker.AiUsage);
+            OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
 
             if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
             {
@@ -333,6 +336,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 "system/msg"), usage);
 
         oldChat.UpdateUsage(usage);
+        OnUpdateUsage?.Invoke($"summary/{database.Name}", usage);
+
         oldChat.CurrentUsage = new AiUsage();
     }
 
