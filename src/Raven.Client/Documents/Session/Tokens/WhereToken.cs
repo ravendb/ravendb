@@ -119,10 +119,22 @@ namespace Raven.Client.Documents.Session.Tokens
                         writer.Append("cmpxchg(");
                         break;
                     case MethodsType.Now:
-                        writer.Append("now()");
+                        writer.Append("now(");
+                        if (Options.Method.Parameters is { Length: > 0 })
+                        {
+                            writer.Append("$");
+                            writer.Append(Options.Method.Parameters[0]);
+                        }
+                        writer.Append(")");
                         return true;
                     case MethodsType.Today:
-                        writer.Append("today()");
+                        writer.Append("today(");
+                        if (Options.Method.Parameters is { Length: > 0 })
+                        {
+                            writer.Append("$");
+                            writer.Append(Options.Method.Parameters[0]);
+                        }
+                        writer.Append(")");
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException();

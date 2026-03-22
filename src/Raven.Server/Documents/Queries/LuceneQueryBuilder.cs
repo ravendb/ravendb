@@ -591,17 +591,41 @@ namespace Raven.Server.Documents.Queries
                     return new ValueExpression(value.ToString(), ValueTokenType.String);
 
                 case MethodType.Now:
-                    if (method.Arguments is { Count: > 0 })
-                        throw new InvalidQueryException("Method now() expects zero arguments.", query.QueryText, parameters);
-                    return new ValueExpression(queryTime.Now.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                    if (method.Arguments is { Count: > 1 })
+                        throw new InvalidQueryException("Method now() expects zero or one argument.", query.QueryText, parameters);
+                    return new ValueExpression(
+                        ResolveTimeFunction(query, metadata, parameters, method, queryTime.Now).GetDefaultRavenFormat(isUtc: true),
+                        ValueTokenType.String);
 
                 case MethodType.Today:
-                    if (method.Arguments is { Count: > 0 })
-                        throw new InvalidQueryException("Method today() expects zero arguments.", query.QueryText, parameters);
-                    return new ValueExpression(queryTime.Today.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+                    if (method.Arguments is { Count: > 1 })
+                        throw new InvalidQueryException("Method today() expects zero or one argument.", query.QueryText, parameters);
+                    return new ValueExpression(
+                        ResolveTimeFunction(query, metadata, parameters, method, queryTime.Today).GetDefaultRavenFormat(isUtc: true),
+                        ValueTokenType.String);
             }
 
             throw new ArgumentException($"Unknown method {method.Name}");
+        }
+
+        private static DateTime ResolveTimeFunction(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, MethodExpression method, DateTime baseTime)
+        {
+            if (method.Arguments is not { Count: 1 })
+                return baseTime;
+
+            var (value, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, method.Arguments[0]);
+            var offsetString = value?.ToString();
+
+            if (string.IsNullOrEmpty(offsetString))
+                throw new InvalidQueryException($"Method {method.Name.Value}() offset argument must be a non-empty string.", query.QueryText, parameters);
+
+            if (TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
+                throw new InvalidQueryException(
+                    $"Invalid offset format '{offsetString}' for {method.Name.Value}(). " +
+                    "Expected format: [+|-]NyNmoNdNhNmNs (e.g., '+1d', '-2h30m', '1y6mo').",
+                    query.QueryText, parameters);
+
+            return offset.Apply(baseTime);
         }
 
         private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(

@@ -234,7 +234,13 @@ function execute(doc, args){
 
         public bool HasToday;
 
-        public bool HasTimeBasedFunction => HasNow || HasToday;
+        /// <summary>
+        /// Parsed offsets from now('+1h') / today('+1d') calls. Used for ETag computation.
+        /// Each entry records the offset spec and whether the base is Now or Today.
+        /// </summary>
+        internal List<(TimeFunctionOffset Offset, bool IsNow)> TimeBasedOffsets;
+
+        public bool HasTimeBasedFunction => HasNow || HasToday || TimeBasedOffsets is { Count: > 0 };
 
         public bool HasNonDeterministicFunction => HasOrderByRandom || HasNow;
 
@@ -297,6 +303,25 @@ function execute(doc, args){
                 }
                 return _queryData;
             }
+        }
+
+        internal void TrackTimeBasedOffset(MethodExpression me, bool isNow)
+        {
+            if (me.Arguments[0] is ValueExpression ve && ve.Value == ValueTokenType.String)
+            {
+                if (TimeFunctionOffset.TryParse(ve.Token.Value.AsSpan(), out var offset))
+                {
+                    TimeBasedOffsets ??= new List<(TimeFunctionOffset, bool)>();
+                    TimeBasedOffsets.Add((offset, isNow));
+                    return;
+                }
+            }
+
+            // parameter-based offset or unparseable literal — treat as non-deterministic for now()
+            if (isNow)
+                HasNow = true;
+            else
+                HasToday = true;
         }
 
         private void AddExistField(QueryFieldName fieldName, BlittableJsonReaderObject parameters)
@@ -2212,10 +2237,16 @@ function execute(doc, args){
                             _metadata.HasCmpXchg = true;
                             break;
                         case MethodType.Now:
-                            _metadata.HasNow = true;
+                            if (rme.Arguments is { Count: > 0 })
+                                _metadata.TrackTimeBasedOffset(rme, isNow: true);
+                            else
+                                _metadata.HasNow = true;
                             break;
                         case MethodType.Today:
-                            _metadata.HasToday = true;
+                            if (rme.Arguments is { Count: > 0 })
+                                _metadata.TrackTimeBasedOffset(rme, isNow: false);
+                            else
+                                _metadata.HasToday = true;
                             break;
                     }
                 }

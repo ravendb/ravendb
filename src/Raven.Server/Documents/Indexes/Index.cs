@@ -4290,6 +4290,16 @@ namespace Raven.Server.Documents.Indexes
                 *(long*)(indexEtagBytes + pos) = queryTime.Today.Ticks;
             }
 
+            if (q.TimeBasedOffsets is { Count: > 0 })
+            {
+                foreach (var (offset, isNow) in q.TimeBasedOffsets)
+                {
+                    var baseTime = isNow ? queryTime.Now : queryTime.Today;
+                    pos -= sizeof(long);
+                    *(long*)(indexEtagBytes + pos) = offset.Apply(baseTime).Ticks;
+                }
+            }
+
             if (hasCmpXchg)
             {
                 Debug.Assert(length > sizeof(long) * 5, "The index-etag buffer does not have enough space for last compare exchange index");
@@ -4337,6 +4347,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.HasToday)
                 length += sizeof(long);
+
+            if (q.TimeBasedOffsets is { Count: > 0 })
+                length += sizeof(long) * q.TimeBasedOffsets.Count;
 
             return length;
         }

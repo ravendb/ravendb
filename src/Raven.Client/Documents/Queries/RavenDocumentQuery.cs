@@ -22,6 +22,19 @@ namespace Raven.Client.Documents.Queries
         public static MethodCall Now() => Time.NowInstance;
 
         /// <summary>
+        /// Returns the current UTC date and time on the server, adjusted by the specified offset and floor-rounded
+        /// to the smallest precision unit. Translates to the <c>now(offset)</c> RQL function.
+        /// </summary>
+        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1d", "-2h30m", "1y6mo").</param>
+        /// <example>
+        /// <code>
+        /// session.Advanced.DocumentQuery&lt;Order&gt;()
+        ///     .WhereGreaterThan(x => x.CreatedAt, RavenDocumentQuery.Now("-30d"));
+        /// </code>
+        /// </example>
+        public static MethodCall Now(string offset) => new Time(WhereToken.MethodsType.Now, offset);
+
+        /// <summary>
         /// Returns the start of the current UTC day (midnight) on the server. Translates to the <c>today()</c> RQL function.
         /// For use with <c>WhereEquals</c>, <c>WhereGreaterThan</c>, and other DocumentQuery/AsyncDocumentQuery filter methods.
         /// </summary>
@@ -32,6 +45,19 @@ namespace Raven.Client.Documents.Queries
         /// </code>
         /// </example>
         public static MethodCall Today() => Time.TodayInstance;
+
+        /// <summary>
+        /// Returns the start of the current UTC day (midnight) on the server, adjusted by the specified offset
+        /// and floor-rounded to the smallest precision unit. Translates to the <c>today(offset)</c> RQL function.
+        /// </summary>
+        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1mo", "-7d", "1y").</param>
+        /// <example>
+        /// <code>
+        /// session.Advanced.DocumentQuery&lt;Order&gt;()
+        ///     .WhereGreaterThanOrEqual(x => x.CreatedAt, RavenDocumentQuery.Today("-1mo"));
+        /// </code>
+        /// </example>
+        public static MethodCall Today(string offset) => new Time(WhereToken.MethodsType.Today, offset);
 
         /// <summary>
         /// Retrieves a compare exchange value by key for use in a query filter. Translates to the <c>cmpxchg()</c> RQL function.
@@ -58,10 +84,16 @@ namespace Raven.Client.Documents.Queries
 
             public WhereToken.MethodsType MethodType { get; }
 
-            private Time(WhereToken.MethodsType methodType)
+            internal Time(WhereToken.MethodsType methodType)
             {
                 MethodType = methodType;
                 Args = Array.Empty<object>();
+            }
+
+            internal Time(WhereToken.MethodsType methodType, string offset)
+            {
+                MethodType = methodType;
+                Args = new object[] { offset };
             }
         }
     }
