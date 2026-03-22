@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -27,7 +26,6 @@ using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.TrafficWatch;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Json;
@@ -47,7 +45,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private const string QueryVirtualSubConversationId = "_QueryTools_";
 
     protected ConversationDocument _document;
-    private string _conversationId;
+    protected string _conversationId;
     protected RequestBody _request;
     private AiAgentConfiguration _configuration;
     private string _changeVector;
@@ -933,29 +931,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 toolsIterations += r.ToolsIterations;
                 using (r.Disposable)
                 {
-                    foreach (var m in r.Messages)
-                    {
-                        _document.AddMessage(context, m.Clone(context), usage: null);
-                    }
-
-                    foreach (var callId in r.OpenToolCallsToRemove)
-                    {
-                        _document.OpenActionCalls.Remove(callId, out _);
-                    }
-
-                    foreach (var (key, value) in r.ChildUserCalls)
-                    {
-                        AddChildrenUserCall(_childUserCalls, key, value);
-                        _document.Messages.Add(context.ReadObject(
-                            new DynamicJsonValue
-                            {
-                                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
-                                [ChatCompletionClient.Constants.ResponseFields.Type] = "sub-agent-action-call",
-                                [ChatCompletionClient.Constants.ResponseFields.Content] = $"[sub-agent called action-tool '{value.Name}']",
-                                [ChatCompletionClient.Constants.ResponseFields.ToolName] = value.Name,
-                                [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = value.SubConversationId,
-                            }, "tool-call/sub-agent-action-tool"));
-                    }
+                    ProcessSubConversationResult(context, r);
                 }
             }
             catch (Exception ex)
@@ -969,6 +945,33 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         _document.RemainingToolIterations = int.Max(_document.RemainingToolIterations - toolsIterations, 0);
         return toolsIterations;
+    }
+
+    protected virtual void ProcessSubConversationResult(JsonOperationContext context, SubConversationResult r)
+    {
+        foreach (var m in r.Messages)
+        {
+            _document.AddMessage(context, m.Clone(context), usage: null);
+        }
+
+        foreach (var callId in r.OpenToolCallsToRemove)
+        {
+            _document.OpenActionCalls.Remove(callId, out _);
+        }
+
+        foreach (var (key, value) in r.ChildUserCalls)
+        {
+            AddChildrenUserCall(_childUserCalls, key, value);
+            _document.Messages.Add(context.ReadObject(
+                new DynamicJsonValue
+                {
+                    [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
+                    [ChatCompletionClient.Constants.ResponseFields.Type] = "sub-agent-action-call",
+                    [ChatCompletionClient.Constants.ResponseFields.Content] = $"[sub-agent called action-tool '{value.Name}']",
+                    [ChatCompletionClient.Constants.ResponseFields.ToolName] = value.Name,
+                    [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = value.SubConversationId,
+                }, "tool-call/sub-agent-action-tool"));
+        }
     }
 
     private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)

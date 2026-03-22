@@ -18,7 +18,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -209,9 +208,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
             ];
 
+            using var _ = store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context);
+
             var r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                context,
                 agent,
-                document: null,
+                "TestConversationId",
+                documents: null,
                 "what goes well with my cheese for recent orders?",
                 new AiConversationCreationOptions(new Dictionary<string, object>{ ["company"] = "companies/90-A" }) ,
                 actionResponses: null)) as TestResult<OutputSchema>;
@@ -226,8 +229,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 });
             }
             r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                context,
                 agent,
-                document: r.Document,
+                "TestConversationId",
+                documents: r.Documents,
                 userPrompt: null, // "what goes well with my cheese for recent orders?",
                 options: null,
                 actionResponses: responses)) as TestResult<OutputSchema>;
@@ -256,10 +261,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
             ];
 
+            using var _ = store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context);
+
             var sb = new StringBuilder();
             var r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                context,
                 agent,
-                document: null,
+                "TestConversationId",
+                documents: null,
                 userPrompt: "what goes well with my cheese for recent orders?",
                 options: new AiConversationCreationOptions(new Dictionary<string, object> { ["company"] = "companies/90-A" }),
                 actionResponses : null,
@@ -285,8 +294,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             }
 
             r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                context,
                 agent,
-                document: r.Document,
+                "TestConversationId",
+                documents: r.Documents,
                 userPrompt: null, // "what goes well with my cheese for recent orders?",
                 options: null,
                 actionResponses: responses,
@@ -301,33 +312,36 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.True(r.ActionRequests?.Count > 0 || r.Response.Answer == sb.ToString());
         }
 
-        private class RunTestConversationOperation<TSchema> : RunConversationOperation<TSchema>
+        internal class RunTestConversationOperation<TSchema> : RunConversationOperation<TSchema>
         {
             private readonly AiAgentConfiguration _agent;
-            private readonly string _document;
+            private readonly Dictionary<string, BlittableJsonReaderObject> _documents;
             private readonly string _userPrompt;
             private readonly AiConversationCreationOptions _options;
             private readonly List<AiAgentActionResponse> _actionResponses;
+            private JsonOperationContext _context;
+
 #pragma warning disable CS0618 // Type or member is obsolete
-            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses) : 
-                base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses, options, changeVector: null, streamPropertyPath: null, streamedChunksCallback: null)
+            public RunTestConversationOperation(JsonOperationContext context, AiAgentConfiguration agent, string conversationId, Dictionary<string, BlittableJsonReaderObject> documents, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses) : 
+                base(agent.Identifier, conversationId, userPrompt, actionResponses, options, changeVector: null, streamPropertyPath: null, streamedChunksCallback: null)
 #pragma warning restore CS0618 // Type or member is obsolete
             {
                 _agent = agent;
-                _document = document;
+                _documents = documents;
                 _userPrompt = userPrompt;
                 _options = options;
                 _actionResponses = actionResponses;
+                _context = context;
             }
 
-            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses, Expression<Func<TSchema, string>> streamPropertyPath,
+            public RunTestConversationOperation(JsonOperationContext context, AiAgentConfiguration agent, string conversationId, Dictionary<string, BlittableJsonReaderObject> documents, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses, Expression<Func<TSchema, string>> streamPropertyPath,
 #pragma warning disable CS0618 // Type or member is obsolete
                 Func<string, Task> streamedChunksCallback) : 
-                base(agent.Identifier, conversationId: "test/" + Guid.NewGuid(), userPrompt, actionResponses: actionResponses, options, changeVector: null, streamPropertyPath.ToPropertyPath(DocumentConventions.Default), streamedChunksCallback)
+                base(agent.Identifier, conversationId, userPrompt, actionResponses: actionResponses, options, changeVector: null, streamPropertyPath.ToPropertyPath(DocumentConventions.Default), streamedChunksCallback)
 #pragma warning restore CS0618 // Type or member is obsolete
             {
                 _agent = agent;
-                _document = document;
+                _documents = documents;
                 _userPrompt = userPrompt;
                 _options = options;
                 _actionResponses = actionResponses;
@@ -335,33 +349,35 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             public override RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new RunTestConversationOperationCommand(this, _agent, _document, _userPrompt, _options, _actionResponses, conventions);
+                return new RunTestConversationOperationCommand(_context, this, _agent, _documents, _userPrompt, _options, _actionResponses, conventions);
             }
 
             private sealed class RunTestConversationOperationCommand : RunConversationOperationCommand
             {
                 private readonly AiAgentConfiguration _agent;
-                private readonly string _document;
+                private readonly Dictionary<string, BlittableJsonReaderObject> _documents;
                 private readonly string _prompt;
                 private readonly AiConversationCreationOptions _options;
                 private readonly List<AiAgentActionResponse> _toolResponses;
                 private readonly DocumentConventions _conventions;
+                private JsonOperationContext _context;
 
-                public RunTestConversationOperationCommand(RunTestConversationOperation<TSchema> parent, AiAgentConfiguration agent, string document, string prompt, AiConversationCreationOptions options,
+                public RunTestConversationOperationCommand(JsonOperationContext context, RunTestConversationOperation<TSchema> parent, AiAgentConfiguration agent, Dictionary<string, BlittableJsonReaderObject> documents, string prompt, AiConversationCreationOptions options,
                     List<AiAgentActionResponse> toolResponses, DocumentConventions conventions) : base(parent, conventions)
                 {
                     _agent = agent;
-                    _document = document;
+                    _documents = documents;
                     _prompt = prompt;
                     _options = options;
                     _toolResponses = toolResponses;
                     _conventions = conventions;
+                    _context = context;
                 }
 
                 public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     using var _ = base.CreateRequest(ctx, node, out url);
-                    url = url.Replace("/ai/agent","/ai/agent/test");
+                    url = url.Replace("/ai/agent", "/ai/agent/test");
                    
                     var body = new TestRequestBody
                     {
@@ -376,8 +392,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         Method = HttpMethod.Post,
                         Content = new BlittableJsonContent(async stream =>
                         {
-                            if (_document != null)
-                                body.Document = ctx.Sync.ReadForMemory(_document, "test");
+                            body.Documents = _documents;
 
                             await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
                         }, _conventions)
@@ -389,8 +404,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     if (response == null)
                         ThrowInvalidResponse();
 
-                    response.TryGet(nameof(TestResult<TSchema>.Document), out BlittableJsonReaderObject document);
-                    
+                    response.TryGet(nameof(TestResult<TSchema>.Documents), out BlittableJsonReaderObject documents);
+
                     var r = TestResult<TSchema>.Convert(response, _conventions);
                     Result = new TestResult<TSchema>
                     {
@@ -399,10 +414,26 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         ChangeVector = r.ChangeVector,
                         ActionRequests = r.ActionRequests,
                         ConversationId = r.ConversationId,
-                        Document = document.ToString()
+                        Documents = GetDocumentsDictionary(documents)
                     };
                 }
+
+                private Dictionary<string, BlittableJsonReaderObject> GetDocumentsDictionary(BlittableJsonReaderObject obj)
+                {
+                    var result = new Dictionary<string, BlittableJsonReaderObject>();
+
+                    foreach (var property in obj.GetPropertyNames())
+                    {
+                        if (obj.TryGet(property, out BlittableJsonReaderObject nested))
+                        {
+                            result[property] = nested.Clone(_context);
+                        }
+                    }
+
+                    return result;
+                }
             }
+
             public class TestRequestBody : IDynamicJson
             {
                 public string UserPrompt { get; set; }
@@ -410,7 +441,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 public AiAgentConfiguration Configuration { get; set; }
                 public List<AiAgentActionResponse> ActionResponses { get; set; }
 
-                public BlittableJsonReaderObject Document;
+                public Dictionary<string, BlittableJsonReaderObject> Documents { get; set; }
                 public DynamicJsonValue ToJson()
                 {
                     var json = new DynamicJsonValue
@@ -421,8 +452,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                         [nameof(ActionResponses)] = new DynamicJsonArray(ActionResponses.Select(x => x.ToJson()))
                     };
 
-                    if (Document != null)
-                        json[nameof(Document)] = Document;
+                    if (Documents != null)
+                        json[nameof(Documents)] = DynamicJsonValue.Convert(Documents);
 
                     return json;
                 }
@@ -431,7 +462,25 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         public class TestResult<TSchema> : ConversationResult<TSchema>
         {
-            public string Document;
+            public Dictionary<string, BlittableJsonReaderObject> Documents;
+
+            public override string ToString()
+            {
+                var docs = Documents == null
+                    ? "null"
+                    : "{ " + string.Join(", ", Documents.Select(x => $"\"{x.Key}\": {x.Value?.ToString()}")) + " }";
+
+                return $@"
+ConversationId: {ConversationId}
+ChangeVector: {ChangeVector}
+Response: {Response}
+Elapsed: {Elapsed}
+Usage: {Usage}
+TotalUsage: {TotalUsage}
+ActionRequests: {ActionRequests?.Count ?? 0}
+Documents: {docs}
+";
+            }
         }
     }
 }
