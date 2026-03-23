@@ -669,7 +669,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
 
-            if (lastSentEtag < mentorsEtag || timeDiff)
+            // A significant time-based replication lag means the mentor is far behind -- exit early before checking indexes or
+            // compare-exchange, because document replication is the root cause in this case.
+            if (timeDiff)
             {
                 var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
                           $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
@@ -725,27 +727,51 @@ namespace Raven.Server.ServerWide.Maintenance
                 mentorCurrDbStats.LastIndexStats,
                 out var reason);
 
-            if (indexesCaughtUp)
+            if (indexesCaughtUp == false)
             {
-                _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
+                // Index lag is the primary blocker. Report it even when there is also a minor etag lag,
+                // because in a continuously-written environment the replication destination is naturally
+                // always slightly behind -- reporting "replication not up to date" in that case is misleading.
+                _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
 
-                topology.PromotablesStatus.Remove(promotable);
-                topology.DemotionReasons.Remove(promotable);
-
-                return (true, $"Node {promotable} is up-to-date so promoting it to be member");
+                if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
+                    || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
+                {
+                    var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
+                    topology.DemotionReasons[promotable] = msg;
+                    return (false, msg);
+                }
+                return (false, null);
             }
 
-            _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
-
-            if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
+            // Indexes and compare-exchange are current; check whether documents have fully replicated.
+            // A minor etag gap (lastSentEtag < mentorsEtag without a timeDiff) is the only remaining
+            // blocker at this point, so it is now accurate to surface the replication-lag message.
+            if (lastSentEtag < mentorsEtag)
             {
-                var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
-                topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
-                topology.DemotionReasons[promotable] = msg;
-                return (false, msg);
+                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
+                          $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
+                          $"Mentor's Etag: {mentorsEtag:#,#;;0}";
+
+                _logger.Log($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", state.ObserverIteration, database: dbName);
+
+                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                    msg.Equals(demotionReason) == false)
+                {
+                    topology.DemotionReasons[promotable] = msg;
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                    return (false, msg);
+                }
+                return (false, null);
             }
-            return (false, null);
+
+            _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
+
+            topology.PromotablesStatus.Remove(promotable);
+            topology.DemotionReasons.Remove(promotable);
+
+            return (true, $"Node {promotable} is up-to-date so promoting it to be member");
         }
 
         protected virtual void RemoveOtherNodesIfNeeded(DatabaseObservationState state, ref List<DeleteDatabaseCommand> deletions)
