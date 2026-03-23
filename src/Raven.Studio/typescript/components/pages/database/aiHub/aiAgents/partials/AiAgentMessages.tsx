@@ -14,13 +14,14 @@ import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody
 import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
 import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSubmittedActionTool";
 import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
-import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/AiAgentMessagesAttachments";
+import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesAttachments";
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
     parametersFromUser?: Record<string, string>;
+    documentId?: string;
 }
 
 export default function AiAgentMessages({
@@ -28,6 +29,7 @@ export default function AiAgentMessages({
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
     parametersFromUser,
+    documentId,
 }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
@@ -39,6 +41,7 @@ export default function AiAgentMessages({
                     handleSaveParameters={handleSaveParameters}
                     setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
                     parametersFromUser={parametersFromUser}
+                    documentId={documentId}
                 />
             ))}
         </div>
@@ -51,6 +54,7 @@ interface AiAgentMessageProps {
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
     parametersFromUser?: Record<string, string>;
+    documentId: string;
 }
 
 function AiAgentMessageComponent({
@@ -59,11 +63,12 @@ function AiAgentMessageComponent({
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
     parametersFromUser,
+    documentId,
 }: AiAgentMessageProps) {
     return (
         <div>
             {message.role === "system" && <SystemMessage message={message} />}
-            {message.role === "user" && <UserMessage message={message} />}
+            {message.role === "user" && <UserMessage message={message} documentId={documentId} />}
             {message.role === "assistant" && (
                 <AgentMessage
                     agentMessage={message}
@@ -103,9 +108,10 @@ function SystemMessage({ message }: SystemMessageProps) {
 
 interface UserMessageProps {
     message: AiAgentMessage;
+    documentId: string;
 }
 
-function UserMessage({ message }: UserMessageProps) {
+function UserMessage({ message, documentId }: UserMessageProps) {
     const getMessageContent = (): string | { type: "text"; text: string }[] => {
         try {
             return JSON.parse(message.content);
@@ -127,7 +133,7 @@ function UserMessage({ message }: UserMessageProps) {
                     style={{ maxWidth: "75%" }}
                 >
                     <div className="overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
-                        <AiAgentMessagesAttachments attachments={message.attachments} />
+                        <AiAgentMessagesAttachments attachments={message.attachments} documentId={documentId} />
                         {isContentString && messageContent}
                         {isContentArray && (
                             <div className="vstack gap-2 align-items-start">

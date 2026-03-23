@@ -4,7 +4,7 @@ import appUrl = require("common/appUrl");
 class downloader {
     $downloadFrame = $("#downloadFrame");
 
-    download(db: database, url: string) {
+    download(db: database | string, url: string) {
         const dbUrl = appUrl.forDatabaseQuery(db);
         this.$downloadFrame.attr("src", dbUrl + url);
     }
