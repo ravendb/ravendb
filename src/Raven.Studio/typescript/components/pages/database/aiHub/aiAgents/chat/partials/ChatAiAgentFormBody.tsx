@@ -1,8 +1,9 @@
 import classNames from "classnames";
 import AceEditor from "components/common/ace/AceEditor";
 import { FormInput } from "components/common/Form";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { useRef, useEffect } from "react";
+import { ClipboardEvent, useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
 import AiAgentMessages from "../../partials/AiAgentMessages";
@@ -81,6 +82,27 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
     const isPromptDisabled =
         isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
     const hasPromptErrors = !!formState.errors.prompts;
+
+    const handlePromptPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+        const files = chatAiAgentAttachmentsUtils.getLocalFilesFromClipboardData(event.clipboardData);
+        if (!files.length) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const { attachments, invalidFiles } = chatAiAgentAttachmentsUtils.prepareConversationLocalFiles(
+            files,
+            attachmentsFieldsArray.fields.map((x) => x.name),
+            document.data?.["@metadata"]?.["@attachments"]?.map((attachment) => attachment.Name) ?? []
+        );
+
+        if (attachments.length) {
+            attachmentsFieldsArray.append(attachments);
+        }
+
+        chatAiAgentAttachmentsUtils.reportValidationErrors(invalidFiles);
+    };
 
     return (
         <>
@@ -171,6 +193,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                         handleSubmit(handleSend)();
                                     }
                                 }}
+                                onPaste={handlePromptPaste}
                                 disabled={isPromptDisabled}
                                 key={promptsFieldsArray.fields[activePromptIndex].id}
                             />

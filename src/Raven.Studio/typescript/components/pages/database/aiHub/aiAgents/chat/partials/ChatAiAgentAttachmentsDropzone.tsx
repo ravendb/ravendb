@@ -23,20 +23,17 @@ export default function ChatAiAgentAttachmentsDropzone({
     const { value: isDraggingFiles, setTrue: showOverlay, setFalse: hideOverlay } = useBoolean(false);
 
     const appendFiles = (files: File[]) => {
-        const existingAttachmentNames = [
-            ...attachmentsFieldsArray.fields.map((x) => x.name),
-            ...(conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []),
-        ];
-        const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
+        const { attachments, invalidFiles } = chatAiAgentAttachmentsUtils.prepareConversationLocalFiles(
             files,
-            existingAttachmentNames
+            attachmentsFieldsArray.fields.map((x) => x.name),
+            conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []
         );
 
         if (attachments.length) {
             attachmentsFieldsArray.append(attachments);
         }
 
-        chatAiAgentAttachmentsUtils.reportValidationErrors({ invalidFiles, duplicateFiles });
+        chatAiAgentAttachmentsUtils.reportValidationErrors(invalidFiles);
     };
 
     const onDrop = (files: File[]) => {

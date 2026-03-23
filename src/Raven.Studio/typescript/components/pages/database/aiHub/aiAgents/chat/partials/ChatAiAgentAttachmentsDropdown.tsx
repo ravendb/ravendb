@@ -86,14 +86,10 @@ function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdow
             return;
         }
 
-        const existingAttachmentNames = [
-            ...attachmentsFieldsArray.fields.map((x) => x.name),
-            ...(conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []),
-        ];
-
-        const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
+        const { attachments, invalidFiles } = chatAiAgentAttachmentsUtils.prepareConversationLocalFiles(
             files,
-            existingAttachmentNames
+            attachmentsFieldsArray.fields.map((x) => x.name),
+            conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []
         );
 
         if (attachments.length) {
@@ -101,7 +97,7 @@ function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdow
             dispatch(chatAiAgentActions.newAttachmentTabSet(null));
         }
 
-        chatAiAgentAttachmentsUtils.reportValidationErrors({ invalidFiles, duplicateFiles });
+        chatAiAgentAttachmentsUtils.reportValidationErrors(invalidFiles);
         event.target.value = "";
     };
 
