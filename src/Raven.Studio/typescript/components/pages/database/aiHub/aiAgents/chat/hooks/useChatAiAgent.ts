@@ -42,21 +42,29 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
     // Watch for document changes
     useEffect(() => {
+        let setIsChangedTimeout: NodeJS.Timeout;
+
         if (databaseChangesApi && conversationId) {
             const watchDocument = databaseChangesApi.watchDocument(conversationId, (e) => {
                 if (isLoading || e.ChangeVector === currentDocumentChangeVector) {
+                    clearTimeout(setIsChangedTimeout);
                     return;
                 }
 
                 if (e.Type === "Delete") {
                     dispatch(chatAiAgentActions.isDocumentDeletedSet(true));
                 } else {
-                    dispatch(chatAiAgentActions.isDocumentChangedSet(true));
+                    // onChange callback sends each event separately, so we need to wait a bit before checking
+                    // when the last one has the same change vector as the current document this timeout will be cleared
+                    setIsChangedTimeout = setTimeout(() => {
+                        dispatch(chatAiAgentActions.isDocumentChangedSet(true));
+                    }, 100);
                 }
             });
 
             return () => {
                 watchDocument.off();
+                clearTimeout(setIsChangedTimeout);
             };
         }
     }, [databaseChangesApi, conversationId, currentDocumentChangeVector, isLoading]);
