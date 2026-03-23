@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide
             _record = record ?? throw new ArgumentNullException(nameof(record));
         }
 
-        private RawDatabaseRecord(DatabaseRecord record)
+        internal RawDatabaseRecord(DatabaseRecord record)
         {
             _materializedRecord = record;
         }

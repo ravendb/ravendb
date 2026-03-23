@@ -595,7 +595,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return true;
         }
 
-        private (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, DatabaseObservationState state, string mentorNode, string promotable)
+        protected (bool Promote, string UpdateTopologyReason) TryPromote(ClusterOperationContext context, DatabaseObservationState state, string mentorNode, string promotable)
         {
             var dbName = state.Name;
             var topology = state.DatabaseTopology;
