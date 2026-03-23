@@ -689,6 +689,42 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
+            var databaseEtag = -1L;
+            if (state.HasActiveMigrations() == false)
+            {
+                // if resharding is active skip - index staleness will not prevent it from being promoted
+                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
+                databaseEtag = promotablePrevDbStats.LastEtag;
+            }
+
+            var indexesCaughtUp = CheckIndexProgress(
+                databaseEtag,
+                promotablePrevDbStats.LastIndexStats,
+                promotableDbStats.LastIndexStats,
+                mentorCurrDbStats.LastIndexStats,
+                out var reason);
+
+            if (indexesCaughtUp == false)
+            {
+                // Index lag is the primary blocker after a significant replication lag. Report it even when
+                // there is also a minor etag lag, because in a continuously-written environment the replication
+                // destination is naturally always slightly behind -- reporting "replication not up to date" in
+                // that case is misleading.
+                _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
+
+                if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
+                    || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
+                {
+                    var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
+                    topology.DemotionReasons[promotable] = msg;
+                    return (false, msg);
+                }
+                return (false, null);
+            }
+
+            // Indexes are current; check compare exchange before checking minor replication lag, so that
+            // compare exchange is reported as the root cause when it is the actual blocker.
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Check if we're getting the proper compare exchange for shard databases");
 #pragma warning disable CS0618
             var leaderLastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(context, dbName);
@@ -707,39 +743,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     topology.DemotionReasons[promotable] = msg;
                     topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
-                    return (false, msg);
-                }
-                return (false, null);
-            }
-
-            var databaseEtag = -1L;
-            if (state.HasActiveMigrations() == false)
-            {
-                // if resharding is active skip - index staleness will not prevent it from being promoted
-                DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "This only a workaround until RavenDB-21327 will be fixed properly");
-                databaseEtag = promotablePrevDbStats.LastEtag;
-            }
-
-            var indexesCaughtUp = CheckIndexProgress(
-                databaseEtag,
-                promotablePrevDbStats.LastIndexStats,
-                promotableDbStats.LastIndexStats,
-                mentorCurrDbStats.LastIndexStats,
-                out var reason);
-
-            if (indexesCaughtUp == false)
-            {
-                // Index lag is the primary blocker. Report it even when there is also a minor etag lag,
-                // because in a continuously-written environment the replication destination is naturally
-                // always slightly behind -- reporting "replication not up to date" in that case is misleading.
-                _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
-
-                if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                    || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
-                {
-                    var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
-                    topology.DemotionReasons[promotable] = msg;
                     return (false, msg);
                 }
                 return (false, null);
