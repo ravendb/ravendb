@@ -133,6 +133,7 @@ function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdow
 function DocumentTab() {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
     const [idPrefix, setIdPrefix] = useState("");
     const { databasesService } = useServices();
 
@@ -145,12 +146,11 @@ function DocumentTab() {
             try {
                 if (!idPrefix) {
                     const lastModifiedDocs = await databasesService.getDocumentsPreview(databaseName, 0, 10, undefined);
-                    return lastModifiedDocs.items.map((x) => x.getId());
+                    return lastModifiedDocs.items.map((x) => x.getId()).filter((id) => id !== conversationId);
                 }
 
                 const results = await databasesService.getDocumentsMetadataByIDPrefix(idPrefix, 10, databaseName);
-                console.log("kalczur results", results);
-                return results.map((x) => x["@metadata"]["@id"]);
+                return results.map((x) => x["@metadata"]["@id"]).filter((id) => id !== conversationId);
             } catch {
                 return [];
             }
