@@ -52,7 +52,7 @@ function splitFileName(name: string) {
     };
 }
 
-function appendLocalTimestampToFileName(name: string, date = new Date()) {
+function appendLocalTimestampToFileName(name: string, date = new Date(Date.now())) {
     const { baseName, extension } = splitFileName(name);
     const formattedLocalTimestamp = moment(date).format("YYYY-MM-DD_HH-mm-ss");
 

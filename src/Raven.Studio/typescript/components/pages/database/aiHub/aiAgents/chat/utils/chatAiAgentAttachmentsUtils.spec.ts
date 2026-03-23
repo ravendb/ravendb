@@ -91,14 +91,14 @@ describe("chatAiAgentAttachmentsUtils", () => {
 
     describe("prepareLocalFiles", () => {
         const fixedDate = new Date(2026, 2, 23, 12, 34, 56);
+        let dateNowSpy: jest.SpiedFunction<typeof Date.now>;
 
         beforeEach(() => {
-            jest.useFakeTimers();
-            jest.setSystemTime(fixedDate);
+            dateNowSpy = jest.spyOn(Date, "now").mockReturnValue(fixedDate.getTime());
         });
 
         afterEach(() => {
-            jest.useRealTimers();
+            dateNowSpy.mockRestore();
         });
 
         it("should assign a fallback name to pasted screenshots", () => {
