@@ -152,7 +152,6 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         dispatch(chatAiAgentActions.documentSet(null));
         dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
         dispatch(chatAiAgentActions.activePromptIndexSet(0));
-        dispatch(chatAiAgentActions.hasScrollSet(false));
         dispatch(chatAiAgentActions.isDocumentDeletedSet(false));
         dispatch(chatAiAgentActions.isDocumentChangedSet(false));
         chatForm.reset();

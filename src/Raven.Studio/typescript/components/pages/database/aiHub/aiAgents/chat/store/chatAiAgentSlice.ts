@@ -20,7 +20,6 @@ interface ChatAiAgentState {
     messages: AiAgentMessage[];
     isRawData: boolean;
     isWaitingForActionToolSubmit: boolean;
-    hasScroll: boolean;
     isDocumentExpirationEnabled: loadableData<boolean>;
     isDocumentDeleted: boolean;
     isDocumentChanged: boolean;
@@ -36,7 +35,6 @@ const initialState: ChatAiAgentState = {
     messages: [],
     isRawData: false,
     isWaitingForActionToolSubmit: false,
-    hasScroll: false,
     isDocumentExpirationEnabled: createIdleState(),
     isDocumentDeleted: false,
     isDocumentChanged: false,
@@ -62,9 +60,6 @@ export const chatAiAgentSlice = createSlice({
         },
         isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
             state.isWaitingForActionToolSubmit = action.payload;
-        },
-        hasScrollSet: (state, action: PayloadAction<boolean>) => {
-            state.hasScroll = action.payload;
         },
         isDocumentDeletedSet: (state, action: PayloadAction<boolean>) => {
             state.isDocumentDeleted = action.payload;
@@ -267,7 +262,6 @@ export const chatAiAgentSelectors = {
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
     isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
-    hasScroll: (state: RootState) => state.chatAiAgent.hasScroll,
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
     isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
     isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,

@@ -34,7 +34,6 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
-    const hasScroll = useAppSelector(chatAiAgentSelectors.hasScroll);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
@@ -64,17 +63,11 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
         name: "attachments",
     });
 
-    // Scroll to the bottom of the test panel when new messages are added and set hasScroll
+    // Scroll to the bottom of the test panel when new messages are added
     useEffect(() => {
         if (!messagesPanelRef.current) {
             return;
         }
-
-        dispatch(
-            chatAiAgentActions.hasScrollSet(
-                messagesPanelRef.current.scrollHeight > messagesPanelRef.current.clientHeight
-            )
-        );
 
         if (messagesPanelRef.current) {
             messagesPanelRef.current.scrollTo({
@@ -97,10 +90,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
         <>
             <div
                 ref={messagesPanelRef}
-                className={classNames(
-                    "ai-agents overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
-                    { "pe-2": !hasScroll }
-                )}
+                className="ai-agents overflow-auto flex-grow-1 position-relative d-flex justify-content-center chat-ai-agent-messages-panel"
                 style={{ height: height - promptHeightInPx }}
             >
                 <div className="w-100" style={{ maxWidth: "800px" }}>
