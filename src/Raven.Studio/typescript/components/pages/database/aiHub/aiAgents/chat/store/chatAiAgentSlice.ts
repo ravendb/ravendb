@@ -257,6 +257,7 @@ export const chatAiAgentSelectors = {
     config: (state: RootState) => state.chatAiAgent.config,
     isRawData: (state: RootState) => state.chatAiAgent.isRawData,
     document: (state: RootState) => state.chatAiAgent.document,
+    documentAttachments: (state: RootState) => state.chatAiAgent.document.data?.["@metadata"]?.["@attachments"] ?? [],
     runChatState: (state: RootState) => state.chatAiAgent.runChatState,
     isLoading: (state: RootState) =>
         state.chatAiAgent.runChatState === "loading" ||

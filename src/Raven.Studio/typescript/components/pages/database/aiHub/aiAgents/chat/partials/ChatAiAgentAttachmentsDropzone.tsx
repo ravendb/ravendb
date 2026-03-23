@@ -4,6 +4,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { useEffect, useRef, DragEvent } from "react";
 import { UseFieldArrayReturn } from "react-hook-form";
 import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
+import { useAppSelector } from "components/store";
+import { chatAiAgentSelectors } from "components/pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 
 const fileIcons = require("Content/img/dropzone-file-icons.png");
 
@@ -16,13 +18,18 @@ export default function ChatAiAgentAttachmentsDropzone({
 }: ChatAiAgentAttachmentsDropzoneProps) {
     // It prevents overlay flickering because of dragleave/dragleave events firing when dragging files over child elements of the overlay
     const dragCounterRef = useRef(0);
+    const conversationDocument = useAppSelector(chatAiAgentSelectors.document);
 
     const { value: isDraggingFiles, setTrue: showOverlay, setFalse: hideOverlay } = useBoolean(false);
 
     const appendFiles = (files: File[]) => {
+        const existingAttachmentNames = [
+            ...attachmentsFieldsArray.fields.map((x) => x.name),
+            ...(conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []),
+        ];
         const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
             files,
-            attachmentsFieldsArray.fields
+            existingAttachmentNames
         );
 
         if (attachments.length) {

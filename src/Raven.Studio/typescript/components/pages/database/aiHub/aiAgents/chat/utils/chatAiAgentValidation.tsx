@@ -17,6 +17,7 @@ interface ChatAiAgentAttachmentLocalFile extends ChatAiAgentAttachmentBase {
 interface ChatAiAgentAttachmentDocument extends ChatAiAgentAttachmentBase {
     type: "documentAttachment";
     sourceDocumentId: string;
+    originalName: string;
 }
 
 export type ChatAiAgentAttachment = ChatAiAgentAttachmentLocalFile | ChatAiAgentAttachmentDocument;

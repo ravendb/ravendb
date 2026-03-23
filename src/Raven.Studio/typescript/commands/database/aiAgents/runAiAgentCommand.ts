@@ -126,7 +126,7 @@ export default class runAiAgentCommand extends commandBase {
         return {
             Type: "AttachmentCOPY",
             Id: attachment.sourceDocumentId,
-            Name: attachment.name,
+            Name: attachment.originalName,
             ContentType: attachment.contentType,
             ChangeVector: null,
             FromEtl: false,

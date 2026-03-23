@@ -76,6 +76,7 @@ export default function ChatAiAgentAttachmentsDropdown({
 function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdownProps, "attachmentsFieldsArray">) {
     const dispatch = useAppDispatch();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const conversationDocument = useAppSelector(chatAiAgentSelectors.document);
 
     const handleLocalFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(event.target.files || []);
@@ -85,9 +86,14 @@ function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdow
             return;
         }
 
+        const existingAttachmentNames = [
+            ...attachmentsFieldsArray.fields.map((x) => x.name),
+            ...(conversationDocument.data?.["@metadata"]?.["@attachments"]?.map((a) => a.Name) ?? []),
+        ];
+
         const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
             files,
-            attachmentsFieldsArray.fields
+            existingAttachmentNames
         );
 
         if (attachments.length) {
@@ -221,13 +227,9 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
     const tabInfo = useAppSelector(chatAiAgentSelectors.newAttachmentTab);
     const { databasesService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const conversationDocAttachments = useAppSelector(chatAiAgentSelectors.documentAttachments);
 
     const documentId = tabInfo?.tab === "documentAttachments" ? tabInfo.documentId : null;
-
-    // TODO check also docs attachments
-    const currentPromptAttachmentNames = useMemo(() => {
-        return chatAttachmentsFieldsArray.fields.map((x) => x.name);
-    }, [chatAttachmentsFieldsArray.fields]);
 
     const asyncDocAttachments = useAsync(async (): Promise<documentAttachmentDto[]> => {
         const result = await databasesService.getDocumentWithMetadata(documentId, databaseName);
@@ -250,12 +252,9 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
             asyncDocAttachments.result?.map((attachment) => ({
                 value: attachment.Name,
                 label: attachment.Name,
-                disabledReason: currentPromptAttachmentNames.includes(attachment.Name)
-                    ? "Attachment with this name already exists"
-                    : undefined,
             })) ?? []
         );
-    }, [asyncDocAttachments.result, currentPromptAttachmentNames]);
+    }, [asyncDocAttachments.result, hasAttachmentsInDoc]);
 
     const { control, handleSubmit } = useForm<DocumentAttachmentsFormData>({
         defaultValues: {
@@ -270,10 +269,16 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
     });
 
     const handleAdd: SubmitHandler<DocumentAttachmentsFormData> = (data) => {
+        const reservedNames = chatAiAgentAttachmentsUtils.createReservedNames([
+            ...chatAttachmentsFieldsArray.fields.map((x) => x.name),
+            ...conversationDocAttachments.map((attachment) => attachment.Name),
+        ]);
+
         chatAttachmentsFieldsArray.append(
             data.names.map((name) => ({
                 type: "documentAttachment",
-                name: name,
+                name: chatAiAgentAttachmentsUtils.createUniqueName(name, reservedNames),
+                originalName: name,
                 contentType: asyncDocAttachments.result?.find((attachment) => attachment.Name === name)?.ContentType,
                 sourceDocumentId: documentId,
             }))
