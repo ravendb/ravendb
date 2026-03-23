@@ -150,7 +150,6 @@ namespace FastTests
                 Console.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
             };
 
-#if DEBUG
             ConversationHandler.OnUpdateUsage += (sender, usage) =>
             {
                 if (usage == null)
@@ -160,7 +159,6 @@ namespace FastTests
 
                 Console.WriteLine($"Total AI tokens used across all tests: {value} (delta: {usage.TotalTokens}, database: {sender})");
             };
-#endif
 
             LowMemoryNotification.Instance.SupportsCompactionOfLargeObjectHeap = true;
 #if DEBUG2

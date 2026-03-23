@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Org.BouncyCastle.Asn1.Cmp;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
@@ -32,7 +31,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 {
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.All;
     public RavenAiIntegration IntegrationType { get; set; } = RavenAiIntegration.All;
-    public object[] Data { get; set; } = null;
+    public object[] Data { get; set; }
 
     protected AbstractRavenAiIntegrationDataAttribute()
     {
@@ -45,13 +44,13 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 
     public override IEnumerable<object[]> GetData(MethodInfo testMethod)
     {
-        foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
+        foreach (var (_, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
             foreach (var aiConnectionStringForTesting in GetAiConnectionStringsSingleton(IntegrationType))
             {
                 using (ResetSkipReason(Skip))
                 {
-                    if (HasSkipReason(databaseMode, aiConnectionStringForTesting) == false)
+                    if (HasSkipReason(aiConnectionStringForTesting) == false)
                     {
                         if (aiConnectionStringForTesting.CanConnect.Value == false)
                         {
@@ -75,7 +74,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 
     private DisposableAction ResetSkipReason(string skip) => new(() => Skip = skip);
 
-    private bool HasSkipReason(RavenDatabaseMode databaseMode, IAiConnectorForTesting<TConfig> aiConnectorForTesting)
+    private bool HasSkipReason(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
         if (string.IsNullOrEmpty(Skip))
             return true;
