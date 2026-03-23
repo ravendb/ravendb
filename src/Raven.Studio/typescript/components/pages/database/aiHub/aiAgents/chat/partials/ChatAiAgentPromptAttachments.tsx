@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import { ChatAiAgentFormData } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentValidation";
 import Button from "react-bootstrap/Button";
 import { UseFieldArrayReturn } from "react-hook-form";
-import { aiAgentsUtils } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsUtils";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 
 interface ChatAiAgentPromptAttachmentsProps {
     attachmentsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "attachments", "id">;
@@ -24,7 +24,7 @@ export default function ChatAiAgentPromptAttachments({ attachmentsFieldsArray }:
                     }}
                 >
                     <Icon
-                        icon={aiAgentsUtils.getAttachmentIcon(attachment.contentType)}
+                        icon={chatAiAgentAttachmentsUtils.getIcon(attachment.contentType)}
                         color="primary"
                         margin="m-0"
                         size="xs"

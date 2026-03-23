@@ -1,16 +1,17 @@
 import genUtils from "common/generalUtils";
 import messagePublisher from "common/messagePublisher";
 import { ChatAiAgentAttachment } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentValidation";
+import IconName from "typings/server/icons";
 
-export const validAttachmentExtensions = ["txt", "pdf", "jpg", "jpeg", "png", "gif", "webp"];
-export const validAttachmentExtensionsAccept = validAttachmentExtensions.map((extension) => `.${extension}`).join(",");
+const validExtensions = ["txt", "pdf", "jpg", "jpeg", "png", "gif", "webp"];
+const validExtensionsAccept = validExtensions.map((extension) => `.${extension}`).join(",");
 
 interface AttachmentValidationErrors {
     invalidFiles?: string[];
     duplicateFiles?: string[];
 }
 
-export function prepareLocalFileAttachments(
+function prepareLocalFiles(
     files: File[],
     existingAttachments: Pick<ChatAiAgentAttachment, "name">[]
 ): {
@@ -29,11 +30,12 @@ export function prepareLocalFileAttachments(
         const extension = genUtils.getFileExtension(file.name)?.toLowerCase();
         const fileName = file.name;
 
-        if (!validAttachmentExtensions.includes(extension)) {
+        if (!validExtensions.includes(extension)) {
             invalidFiles.push(file.name);
             continue;
         }
 
+        // TODO check also docs attachments
         if (existingNames.has(fileName) || addedNames.has(fileName)) {
             duplicateFiles.push(file.name);
             continue;
@@ -55,10 +57,7 @@ export function prepareLocalFileAttachments(
     };
 }
 
-export function reportAttachmentValidationErrors({
-    invalidFiles = [],
-    duplicateFiles = [],
-}: AttachmentValidationErrors) {
+function reportValidationErrors({ invalidFiles = [], duplicateFiles = [] }: AttachmentValidationErrors) {
     if (!invalidFiles.length && !duplicateFiles.length) {
         return;
     }
@@ -70,3 +69,23 @@ export function reportAttachmentValidationErrors({
 
     messagePublisher.reportError(errors.join(". "));
 }
+
+function getIcon(contentType: string): IconName {
+    switch (contentType) {
+        case "image/png":
+        case "image/gif":
+        case "image/jpeg":
+        case "image/webp":
+            return "filesystem";
+        default:
+            return "document2";
+    }
+}
+
+export const chatAiAgentAttachmentsUtils = {
+    validExtensions,
+    validExtensionsAccept,
+    prepareLocalFiles,
+    reportValidationErrors,
+    getIcon,
+};

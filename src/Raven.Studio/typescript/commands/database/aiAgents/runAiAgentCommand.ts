@@ -9,16 +9,25 @@ export interface RunAiAgentRequestDto
     attachments?: ChatAiAgentAttachment[];
 }
 
-interface AttachmentPutCommandDto {
+interface AttachmentPutCommandBase {
     Id: string;
     Name: string;
     ContentType: string;
     ChangeVector: string;
-    Type: "AttachmentPUT" | "AttachmentCOPY";
     FromEtl: boolean;
-    DestinationId?: string;
-    DestinationName?: string;
 }
+
+interface AttachmentPutCommandLocalFile extends AttachmentPutCommandBase {
+    Type: "AttachmentPUT";
+}
+
+interface AttachmentPutCommandDocumentAttachment extends AttachmentPutCommandBase {
+    Type: "AttachmentCOPY";
+    DestinationId: string;
+    DestinationName: string;
+}
+
+type AttachmentPutCommandDto = AttachmentPutCommandLocalFile | AttachmentPutCommandDocumentAttachment;
 
 export default class runAiAgentCommand extends commandBase {
     constructor(
@@ -70,35 +79,7 @@ export default class runAiAgentCommand extends commandBase {
 
     private createMultipartPayload(attachments: ChatAiAgentAttachment[]): FormData {
         const formData = new FormData();
-        const attachmentCommands = attachments.map(
-            (x): AttachmentPutCommandDto => {
-                if (x.type === "localFile") {
-                    return {
-                        Id: "__this__",
-                        Name: x.name,
-                        ContentType: x.contentType,
-                        ChangeVector: null,
-                        Type: "AttachmentPUT",
-                        FromEtl: false,
-                    };
-                }
-
-                if (!x.sourceDocumentId) {
-                    throw new Error(`Document attachment '${x.name}' is missing source document ID.`);
-                }
-
-                return {
-                    Id: x.sourceDocumentId,
-                    Name: x.name,
-                    ContentType: x.contentType,
-                    ChangeVector: null,
-                    Type: "AttachmentCOPY",
-                    FromEtl: false,
-                    DestinationId: "__this__",
-                    DestinationName: x.name,
-                };
-            }
-        );
+        const attachmentCommands = attachments.map(this.createAttachmentCommand);
 
         formData.append(
             "request",
@@ -122,12 +103,36 @@ export default class runAiAgentCommand extends commandBase {
         );
 
         attachments
-            .filter((x) => Boolean(x.file))
+            .filter((x) => x.type === "localFile")
             .forEach((attachment) => {
                 formData.append("attachment", attachment.file, attachment.file.name);
             });
 
         return formData;
+    }
+
+    private createAttachmentCommand(attachment: ChatAiAgentAttachment): AttachmentPutCommandDto {
+        if (attachment.type === "localFile") {
+            return {
+                Type: "AttachmentPUT",
+                Id: "__this__",
+                Name: attachment.name,
+                ContentType: attachment.contentType,
+                ChangeVector: null,
+                FromEtl: false,
+            };
+        }
+
+        return {
+            Type: "AttachmentCOPY",
+            Id: attachment.sourceDocumentId,
+            Name: attachment.name,
+            ContentType: attachment.contentType,
+            ChangeVector: null,
+            FromEtl: false,
+            DestinationId: "__this__",
+            DestinationName: attachment.name,
+        };
     }
 
     private createRequestBody(): Omit<RunAiAgentRequestDto, "attachments"> {

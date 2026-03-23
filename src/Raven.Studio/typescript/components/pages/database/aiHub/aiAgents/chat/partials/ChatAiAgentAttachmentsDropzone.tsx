@@ -3,11 +3,7 @@ import { ChatAiAgentFormData } from "components/pages/database/aiHub/aiAgents/ch
 import useBoolean from "components/hooks/useBoolean";
 import { useEffect, useRef, DragEvent } from "react";
 import { UseFieldArrayReturn } from "react-hook-form";
-import {
-    prepareLocalFileAttachments,
-    reportAttachmentValidationErrors,
-    validAttachmentExtensions,
-} from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 
 const fileIcons = require("Content/img/dropzone-file-icons.png");
 
@@ -24,7 +20,7 @@ export default function ChatAiAgentAttachmentsDropzone({
     const { value: isDraggingFiles, setTrue: showOverlay, setFalse: hideOverlay } = useBoolean(false);
 
     const appendFiles = (files: File[]) => {
-        const { attachments, invalidFiles, duplicateFiles } = prepareLocalFileAttachments(
+        const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
             files,
             attachmentsFieldsArray.fields
         );
@@ -33,7 +29,7 @@ export default function ChatAiAgentAttachmentsDropzone({
             attachmentsFieldsArray.append(attachments);
         }
 
-        reportAttachmentValidationErrors({ invalidFiles, duplicateFiles });
+        chatAiAgentAttachmentsUtils.reportValidationErrors({ invalidFiles, duplicateFiles });
     };
 
     const onDrop = (files: File[]) => {
@@ -140,7 +136,8 @@ export default function ChatAiAgentAttachmentsDropzone({
                         <img src={fileIcons} alt="File icons" className="mb-4" />
                         <div className="fs-3 fw-bold">Drop files to add them to the conversation</div>
                         <div className="text-muted small">
-                            Supported types: {validAttachmentExtensions.map((extension) => `.${extension}`).join(", ")}
+                            Supported types:{" "}
+                            {chatAiAgentAttachmentsUtils.validExtensions.map((extension) => `.${extension}`).join(", ")}
                         </div>
                     </div>
                 </div>

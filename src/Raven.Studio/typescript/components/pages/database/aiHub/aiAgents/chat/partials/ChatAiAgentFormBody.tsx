@@ -65,10 +65,6 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
 
     // Scroll to the bottom of the test panel when new messages are added
     useEffect(() => {
-        if (!messagesPanelRef.current) {
-            return;
-        }
-
         if (messagesPanelRef.current) {
             messagesPanelRef.current.scrollTo({
                 top: messagesPanelRef.current.scrollHeight,

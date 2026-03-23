@@ -4,13 +4,22 @@ import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
 type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
 
-export interface ChatAiAgentAttachment {
-    type: "localFile" | "documentAttachment";
+interface ChatAiAgentAttachmentBase {
     name: string;
     contentType: string;
-    sourceDocumentId?: string;
-    file?: File;
 }
+
+interface ChatAiAgentAttachmentLocalFile extends ChatAiAgentAttachmentBase {
+    type: "localFile";
+    file: File;
+}
+
+interface ChatAiAgentAttachmentDocument extends ChatAiAgentAttachmentBase {
+    type: "documentAttachment";
+    sourceDocumentId: string;
+}
+
+export type ChatAiAgentAttachment = ChatAiAgentAttachmentLocalFile | ChatAiAgentAttachmentDocument;
 
 const schema = yup.object({
     prompts: yup

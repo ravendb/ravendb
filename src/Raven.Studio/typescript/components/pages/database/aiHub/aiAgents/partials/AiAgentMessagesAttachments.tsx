@@ -1,6 +1,6 @@
 import { AiAgentMessageAttachment } from "../utils/aiAgentsTypes";
 import { Icon } from "components/common/Icon";
-import { aiAgentsUtils } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsUtils";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 
 interface AiAgentMessagesAttachmentsProps {
     attachments: AiAgentMessageAttachment[];
@@ -22,7 +22,7 @@ export function AiAgentMessagesAttachments({ attachments }: AiAgentMessagesAttac
                     }}
                 >
                     <Icon
-                        icon={aiAgentsUtils.getAttachmentIcon(attachment.contentType)}
+                        icon={chatAiAgentAttachmentsUtils.getIcon(attachment.contentType)}
                         color="primary"
                         margin="m-0"
                         size="xs"

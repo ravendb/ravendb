@@ -23,11 +23,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { FormCheckboxes, FormCheckboxesOption } from "components/common/Form";
 import InnerForm from "components/common/InnerForm";
 import { ChatAiAgentFormData } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentValidation";
-import {
-    prepareLocalFileAttachments,
-    reportAttachmentValidationErrors,
-    validAttachmentExtensionsAccept,
-} from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 
 interface ChatAiAgentAttachmentDropdownProps {
     attachmentsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "attachments", "id">;
@@ -84,7 +80,7 @@ function SourceTab({ attachmentsFieldsArray }: ChatAiAgentAttachmentDropdownProp
             return;
         }
 
-        const { attachments, invalidFiles, duplicateFiles } = prepareLocalFileAttachments(
+        const { attachments, invalidFiles, duplicateFiles } = chatAiAgentAttachmentsUtils.prepareLocalFiles(
             files,
             attachmentsFieldsArray.fields
         );
@@ -94,7 +90,7 @@ function SourceTab({ attachmentsFieldsArray }: ChatAiAgentAttachmentDropdownProp
             dispatch(chatAiAgentActions.newAttachmentTabSet(null));
         }
 
-        reportAttachmentValidationErrors({ invalidFiles, duplicateFiles });
+        chatAiAgentAttachmentsUtils.reportValidationErrors({ invalidFiles, duplicateFiles });
         event.target.value = "";
     };
 
@@ -104,7 +100,7 @@ function SourceTab({ attachmentsFieldsArray }: ChatAiAgentAttachmentDropdownProp
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept={validAttachmentExtensionsAccept}
+                accept={chatAiAgentAttachmentsUtils.validExtensionsAccept}
                 className="d-none"
                 onChange={handleLocalFilesChange}
             />
@@ -223,6 +219,7 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
 
     const documentId = tabInfo?.tab === "documentAttachments" ? tabInfo.documentId : null;
 
+    // TODO check also docs attachments
     const currentPromptAttachmentNames = useMemo(() => {
         return chatAttachmentsFieldsArray.fields.map((x) => x.name);
     }, [chatAttachmentsFieldsArray.fields]);
@@ -275,7 +272,7 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
     };
 
     return (
-        <InnerForm onSubmit={handleSubmit(handleAdd)}>
+        <InnerForm onSubmit={handleSubmit(handleAdd)} className="h-100 vstack">
             <Dropdown.Header>
                 <div className="hstack">
                     <Button
@@ -295,17 +292,19 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
                     )}
                 </div>
             </Dropdown.Header>
-            {asyncDocAttachments.loading && <ListSkeleton />}
-            {asyncDocAttachments.error && <LoadError error="Failed to load attachments" />}
-            {hasAttachmentsInDoc && (
-                <FormCheckboxes
-                    control={control}
-                    name="names"
-                    options={attachmentOptions}
-                    className="px-2 pb-2 gap-1"
-                />
-            )}
-            {hasNoAttachmentsInDoc && <EmptySet compact>No attachments found</EmptySet>}
+            <div className="overflow-y-auto flex-grow-1">
+                {asyncDocAttachments.loading && <ListSkeleton />}
+                {asyncDocAttachments.error && <LoadError error="Failed to load attachments" />}
+                {hasAttachmentsInDoc && (
+                    <FormCheckboxes
+                        control={control}
+                        name="names"
+                        options={attachmentOptions}
+                        className="px-2 pb-2 gap-1"
+                    />
+                )}
+                {hasNoAttachmentsInDoc && <EmptySet compact>No attachments found</EmptySet>}
+            </div>
         </InnerForm>
     );
 }

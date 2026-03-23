@@ -7,7 +7,6 @@ import {
     AiAgentToolType,
     AiAgentMessageAttachment,
 } from "./aiAgentsTypes";
-import IconName from "typings/server/icons";
 
 function getPrettifiedContent(content: string | Record<string, any>): string {
     if (content == null) {
@@ -186,21 +185,8 @@ function mapMessagesFromDoc({ docMessages, config, docAttachments }: MapMessages
     return messages;
 }
 
-function getAttachmentIcon(contentType: string): IconName {
-    switch (contentType) {
-        case "image/png":
-        case "image/gif":
-        case "image/jpeg":
-        case "image/webp":
-            return "filesystem";
-        default:
-            return "document2";
-    }
-}
-
 export const aiAgentsUtils = {
     messageDateFormat: "HH:mm A",
     getPrettifiedContent,
     mapMessagesFromDoc,
-    getAttachmentIcon,
 };
