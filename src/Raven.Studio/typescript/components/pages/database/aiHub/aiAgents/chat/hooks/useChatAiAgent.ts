@@ -12,6 +12,8 @@ import { useAsyncCallback } from "react-async-hook";
 import { useForm } from "react-hook-form";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "../utils/chatAiAgentValidation";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import router from "plugins/router";
 
 export interface ChatAiAgentQueryParams {
     agentId: string;
@@ -23,6 +25,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
     const dispatch = useAppDispatch();
     const { databasesService } = useServices();
     const { databaseChangesApi } = useChanges();
+    const { appUrl } = useAppUrls();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
@@ -155,14 +158,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
     };
 
     const handleNewChat = () => {
-        dispatch(chatAiAgentActions.conversationIdSet(null));
-        dispatch(chatAiAgentActions.messagesSet([]));
-        dispatch(chatAiAgentActions.documentSet(null));
-        dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        dispatch(chatAiAgentActions.activePromptIndexSet(0));
-        dispatch(chatAiAgentActions.isDocumentDeletedSet(false));
-        dispatch(chatAiAgentActions.isDocumentChangedSet(false));
-        chatForm.reset();
+        router.navigate(appUrl.forChatAiAgent(databaseName, queryParams.agentId));
     };
 
     return {
