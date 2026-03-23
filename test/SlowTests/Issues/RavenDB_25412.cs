@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -180,38 +180,40 @@ public class RavenDB_25412 : ReplicationTestBase
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            // Link the caller's token with our dispose token to handle stream disposal correctly
-            using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCts.Token))
+            while (true)
             {
-                try
-                {
-                    // 1. If the gate is closed, wait for it to open.
-                    // This handles new connections created while the network is simulated as "down".
-                    await _gate.WaitToOpenAsync(linkedCts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    if (_disposeCts.IsCancellationRequested) throw new IOException("Stream disposed");
-                    throw;
-                }
+                cancellationToken.ThrowIfCancellationRequested();
 
-                // 2. Gate is open. Start reading, but also watch for the gate closing mid-read.
-                // ReSharper disable once PossiblyMistakenUseOfCancellationToken (intentionally using the original token; the recursive call creates a new linked token scope)
-                var readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
-                var closeGateTask = _gate.WaitToCloseAsync(linkedCts.Token);
-
-                var completed = await Task.WhenAny(readTask, closeGateTask);
-                if (completed == closeGateTask)
+                // Link the caller's token with our dispose token to handle stream disposal correctly
+                using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _disposeCts.Token))
                 {
-                    // Gate closed during the read operation.
-                    // Ignore the read result (simulating a hang/packet loss) and recurse to wait for the gate to open again.
-                    // ReSharper disable once PossiblyMistakenUseOfCancellationToken (intentionally using the original token; the recursive call creates a new linked token scope)
-                    return await ReadAsync(buffer, offset, count, cancellationToken);
-                }
+                    try
+                    {
+                        // If the gate is closed, wait for it to open.
+                        // This handles new connections created while the network is simulated as "down".
+                        await _gate.WaitToOpenAsync(linkedCts.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (_disposeCts.IsCancellationRequested) throw new IOException("Stream disposed");
+                        throw;
+                    }
 
-                return await readTask;
+                    // Gate is open. Start reading, but also watch for the gate closing mid-read.
+                    var readTask = _inner.ReadAsync(buffer, offset, count, cancellationToken);
+                    var closeGateTask = _gate.WaitToCloseAsync(linkedCts.Token);
+
+                    var completedTask = await Task.WhenAny(readTask, closeGateTask);
+                    if (completedTask == closeGateTask)
+                    {
+                        // Gate closed during the read operation — simulating mid-stream hang.
+                        // Discard the current read result (simulating packet loss) and loop back
+                        // to wait for the gate to reopen.
+                        continue;
+                    }
+
+                    return await readTask;
+                }
             }
         }
 
