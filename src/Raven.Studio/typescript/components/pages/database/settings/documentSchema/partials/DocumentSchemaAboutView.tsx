@@ -50,10 +50,11 @@ export default function DocumentSchemaAboutView() {
                                     Inserting documents via <i>patch by query</i> - the operation stops when an invalid
                                     document is encountered.
                                 </li>
-                                <li>Importing a database - import stops if an invalid document is encountered.</li>
+                                <li>Importing a database - invalid documents are skipped.</li>
                                 <li>
                                     RavenDB ETL task - if the task generates documents that are invalid for the
-                                    destination database, the task is automatically paused until the issue is resolved.
+                                    destination database, the entire batch is rejected, and the task enters a retry loop
+                                    until the issue is resolved.
                                 </li>
                             </ul>
                         </li>
