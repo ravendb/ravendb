@@ -1,5 +1,13 @@
 import moment from "moment";
-import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall, AiAgentToolInfo, AiAgentToolType } from "./aiAgentsTypes";
+import {
+    AiAgentDocMessage,
+    AiAgentMessage,
+    AiAgentToolCall,
+    AiAgentToolInfo,
+    AiAgentToolType,
+    AiAgentMessageAttachment,
+} from "./aiAgentsTypes";
+import IconName from "typings/server/icons";
 
 function getPrettifiedContent(content: string | Record<string, any>): string {
     if (content == null) {
@@ -28,9 +36,10 @@ function getContentFromDoc(docMessage: AiAgentDocMessage): string {
 interface MapMessagesFromDocOptions {
     docMessages: AiAgentDocMessage[];
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
+    docAttachments?: documentAttachmentDto[];
 }
 
-function mapMessagesFromDoc({ docMessages, config }: MapMessagesFromDocOptions): AiAgentMessage[] {
+function mapMessagesFromDoc({ docMessages, config, docAttachments }: MapMessagesFromDocOptions): AiAgentMessage[] {
     const formatDate = (date: string) => (date ? moment(date).format(aiAgentsUtils.messageDateFormat) : null);
 
     function getToolInfoByName(toolName: string): AiAgentToolInfo {
@@ -86,6 +95,21 @@ function mapMessagesFromDoc({ docMessages, config }: MapMessagesFromDocOptions):
         });
     };
 
+    const getDocMessageAttachments = (docMessage: AiAgentDocMessage): AiAgentMessageAttachment[] => {
+        if (typeof docMessage.content === "string" && docMessage.content.startsWith("[Attachments: ")) {
+            return docMessage.content
+                .substring("[Attachments: ".length, docMessage.content.length - 1)
+                .split(", ")
+                .map((name) => {
+                    const trimmedName = name.trim();
+                    const docAttachment = docAttachments?.find((a) => a.Name === trimmedName);
+                    return { name: trimmedName, contentType: docAttachment?.ContentType };
+                });
+        }
+
+        return null;
+    };
+
     const toolCallsInfoById = new Map<string, { name: string; type: AiAgentToolType }>();
     docMessages.forEach((docMessage) => {
         docMessage.tool_calls?.forEach((toolCall) => {
@@ -124,6 +148,28 @@ function mapMessagesFromDoc({ docMessages, config }: MapMessagesFromDocOptions):
             continue;
         }
 
+        const attachments = getDocMessageAttachments(docMessage);
+        if (attachments) {
+            const lastAddedMessage = messages[messages.length - 1];
+
+            // Attachments are treated as a separate 'user' message so we want to merge it with the previous 'user' message
+            if (lastAddedMessage && lastAddedMessage.role === "user") {
+                lastAddedMessage.attachments = attachments;
+                continue;
+            }
+
+            // Attachments can be sent without any text prompt, in that case we want to show it as a separate message with empty content
+            messages.push({
+                id: docMessage.date,
+                role: docMessage.role,
+                content: null,
+                state: "success",
+                date: formatDate(docMessage.date),
+                attachments,
+            });
+            continue;
+        }
+
         messages.push({
             id: docMessage.date,
             role: docMessage.role,
@@ -140,8 +186,21 @@ function mapMessagesFromDoc({ docMessages, config }: MapMessagesFromDocOptions):
     return messages;
 }
 
+function getAttachmentIcon(contentType: string): IconName {
+    switch (contentType) {
+        case "image/png":
+        case "image/gif":
+        case "image/jpeg":
+        case "image/webp":
+            return "filesystem";
+        default:
+            return "document2";
+    }
+}
+
 export const aiAgentsUtils = {
     messageDateFormat: "HH:mm A",
     getPrettifiedContent,
     mapMessagesFromDoc,
+    getAttachmentIcon,
 };

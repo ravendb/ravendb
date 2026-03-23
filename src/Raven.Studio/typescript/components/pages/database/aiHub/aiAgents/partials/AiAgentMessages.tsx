@@ -14,6 +14,7 @@ import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody
 import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
 import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSubmittedActionTool";
 import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
+import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/AiAgentMessagesAttachments";
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
@@ -126,6 +127,7 @@ function UserMessage({ message }: UserMessageProps) {
                     style={{ maxWidth: "75%" }}
                 >
                     <div className="overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
+                        <AiAgentMessagesAttachments attachments={message.attachments} />
                         {isContentString && messageContent}
                         {isContentArray && (
                             <div className="vstack gap-2 align-items-start">

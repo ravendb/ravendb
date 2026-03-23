@@ -42,6 +42,11 @@ export type AiAgentToolInfo = { [TType in AiAgentToolType]: AiAgentToolInfoForTy
 export type AiAgentDocRole = "system" | "user" | "assistant" | "tool";
 export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool";
 
+export interface AiAgentMessageAttachment {
+    name: string;
+    contentType?: string;
+}
+
 export interface AiAgentMessage {
     id: string;
     role: AiAgentMessageRole;
@@ -53,6 +58,7 @@ export interface AiAgentMessage {
     toolCallId?: string;
     toolName?: string;
     subConversationId?: string;
+    attachments?: AiAgentMessageAttachment[];
 }
 
 export interface AiAgentDocumentResponse {

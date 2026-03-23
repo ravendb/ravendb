@@ -99,6 +99,7 @@ export const chatAiAgentSlice = createSlice({
                 state.messages = aiAgentsUtils.mapMessagesFromDoc({
                     docMessages: action.payload.Messages,
                     config: state.config.data,
+                    docAttachments: action.payload["@metadata"]?.["@attachments"],
                 });
             })
             .addCase(runChat.pending, (state) => {
