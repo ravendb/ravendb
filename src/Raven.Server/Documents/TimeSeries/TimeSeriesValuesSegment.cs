@@ -612,7 +612,8 @@ namespace Raven.Server.Documents.TimeSeries
             if (tagPointer.Pointer == null)
                 return null;
 
-            var lzs = context.GetLazyStringValue(tagPointer.Pointer, out bool success);
+            //TODO Escape control characters to keep the previous behaviour
+            var lzs = context.GetLazyStringValue(tagPointer.Pointer, LazyStringType.JsonString, out var success);
             if (success == false)
                 ThrowInvalidTagLength();
             return lzs;
@@ -681,11 +682,13 @@ namespace Raven.Server.Documents.TimeSeries
                 switch (order)
                 {
                     case ParsingOrder.Id:
-                        docId = context.GetLazyString(ptr, i);
+                        //TODO We don't have the escape positions and we are going to disallow new document ids with escape controls, but we need to support old ones, so we will apply ToLower to the entire id including the escape controls
+                        docId = context.GetLazyString(ptr, i, LazyStringType.SimpleString);
                         break;
 
                     case ParsingOrder.Name:
-                        name = context.GetLazyString(ptr + next, i - next);
+                        //TODO When creating the key we only apply ToLower to the name without escaping it and without writing the escape positions. Also we are going to disallow new names with escape controls 
+                        name = context.GetLazyString(ptr + next, i - next, LazyStringType.SimpleString);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();

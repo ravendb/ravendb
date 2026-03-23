@@ -73,7 +73,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             {
                 LastModifiedTicks = *(long*)Reader.ReadExactly(sizeof(long));
 
-                SetLazyStringValue(context, ref Id);
+                //TODO We don't have the escape positions and we are going to reject docIds with control characters
+                SetLazyStringValue(context, ref Id, LazyStringType.SimpleString);
                 SetLazyStringValueFromString(context, out Collection);
                 Debug.Assert(Collection != null);
 
@@ -96,7 +97,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             if (index == -1)
                 return;
 
-            Id = context.AllocateStringValue(null, Id.Buffer + index + 1, Id.Size - index - 1);
+            //TODO We are going to disallow docId with control characters
+            Id = context.AllocateStringValue(null, Id.Buffer + index + 1, Id.Size - index - 1, LazyStringType.SimpleString);
         }
 
         public static ByteStringContext.InternalScope TryExtractChangeVectorSliceFromKey(ByteStringContext allocator, LazyStringValue key, out Slice changeVectorSlice)

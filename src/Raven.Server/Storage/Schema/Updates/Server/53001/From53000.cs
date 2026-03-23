@@ -56,7 +56,8 @@ namespace Raven.Server.Storage.Schema.Updates.Server
         private static unsafe LazyStringValue ReadCompareExchangeKey(JsonOperationContext context, TableValueReader reader)
         {
             var ptr = reader.Read((int)ClusterStateMachine.CompareExchangeTable.Key, out var size);
-            return context.AllocateStringValue(null, ptr, size);
+            //TODO We get the key for compare exchange from GetKeyAndPrefixIndexSlices which doesn't escape the control characters.
+            return context.AllocateStringValue(null, ptr, size, LazyStringType.SimpleString);
         }
 
         private static unsafe void Put(Transaction tx, Slice keySlice, long ticks)

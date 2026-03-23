@@ -5,7 +5,7 @@ using Sparrow.Compression;
 
 namespace Sparrow.Json
 {
-    public abstract unsafe class BlittableJsonReaderBase
+    public abstract unsafe partial class BlittableJsonReaderBase
     {
         protected BlittableJsonReaderObject _parent;
         protected internal byte* _mem;
@@ -147,12 +147,12 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LazyStringValue ReadStringLazily(int pos)
+        public LazyStringValue ReadStringLazily(int pos, bool shouldCheck = false)
         {
             AssertContextNotDisposed();
             var size = VariableSizeEncoding.Read<int>(_mem + pos, out var offset);
 
-            return _context.AllocateStringValue(null, _mem + pos + offset, size);
+            return _context.AllocateStringValue(null, _mem + pos + offset, size, LazyStringType.JsonString);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -163,7 +163,8 @@ namespace Sparrow.Json
             pos += offset;
             var compressedSize = VariableSizeEncoding.Read<int>(_mem + pos, out offset);
             pos += offset;
-            return new LazyCompressedStringValue(null, _mem + pos, uncompressedSize, compressedSize, _context);
+            //TODO To check
+            return new LazyCompressedStringValue(null, _mem + pos, uncompressedSize, compressedSize, LazyStringType.JsonString, _context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

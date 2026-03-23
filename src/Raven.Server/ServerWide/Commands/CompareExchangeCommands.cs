@@ -338,6 +338,13 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (key.Length > MaxNumberOfCompareExchangeKeyBytes || Encoding.GetByteCount(key) > MaxNumberOfCompareExchangeKeyBytes)
                 ThrowCompareExchangeKeyTooBig(key);
+
+            //TODO We should consider if we want to reject compare exchange with control characters.
+            //Also The database record is not available here so the check should move to another place.
+            // JsonParserState.FindEscapeAndControlCharactersCount(key, out _, out var controlCount);
+            // if (controlCount > 0)
+            //     ThrowCompareExchangeKeyWithControlCharacters(key);
+
             if (TryGetExpires(value, out long ticks))
                 ExpirationTicks = ticks;
 
@@ -428,6 +435,13 @@ namespace Raven.Server.ServerWide.Commands
             throw new CompareExchangeKeyTooBigException(
                 $"Compare Exchange key cannot exceed {MaxNumberOfCompareExchangeKeyBytes} bytes, " +
                 $"but the key was {Encoding.GetByteCount(str)} bytes. The invalid key is '{str}'. Parameter '{nameof(str)}'");
+        }
+
+        [DoesNotReturn]
+        private static void ThrowCompareExchangeKeyWithControlCharacters(string key)
+        {
+            throw new ControlCharactersAreNotAllowedException(
+                $"Compare Exchange key cannot contain control characters. Parameter '{nameof(key)}'.");
         }
 
         protected override bool Validate(ClusterOperationContext context, Slice keySlice, Table items, out long currentIndex)

@@ -3371,7 +3371,8 @@ namespace Raven.Server.ServerWide
         {
             var ptr = reader.Read((int)CompareExchangeTable.Key, out var size);
 
-            var storageKey = context.AllocateStringValue(null, ptr, size);
+            //TODO We don't escape the key of the compare exchange - GetKeyAndPrefixIndexSlices. 
+            var storageKey = context.AllocateStringValue(null, ptr, size, LazyStringType.SimpleString);
             return new CompareExchangeKey(storageKey, dbPrefix.Length + 1);
         }
 

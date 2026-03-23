@@ -351,13 +351,16 @@ namespace Raven.Server.Documents.Indexes
 
                     ptr = tvr.Result.Reader.Read(1, out size);
                     if (size != 0)
-                        error.Document = context.AllocateStringValue(null, ptr, size);
+                        //TODO a4800261 We didn't and we don't use the escape positions so better to keep it simple string 
+                        error.Document = context.AllocateStringValue(null, ptr, size, LazyStringType.SimpleString);
 
                     ptr = tvr.Result.Reader.Read(2, out size);
-                    error.Action = context.AllocateStringValue(null, ptr, size);
+                    //TODO a4800261 We didn't and we don't use the escape positions so better to keep it simple string
+                    error.Action = context.AllocateStringValue(null, ptr, size, LazyStringType.SimpleString);
 
                     ptr = tvr.Result.Reader.Read(3, out size);
-                    error.Error = context.AllocateStringValue(null, ptr, size);
+                    //TODO a4800261 We didn't and we don't use the escape positions so better to keep it simple string
+                    error.Error = context.AllocateStringValue(null, ptr, size, LazyStringType.SimpleString);
 
                     errors.Add(error);
                 }
@@ -1047,9 +1050,10 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var error = stats.Errors[i];
                         var ticksBigEndian = Bits.SwapBytes(error.Timestamp.Ticks);
-                        using (var document = context.GetLazyString(error.Document))
-                        using (var action = context.GetLazyString(error.Action))
-                        using (var e = context.GetLazyString(error.Error))
+                        //TODO a4800261 We didn't and we don't use the escape positions so better to keep it simple string
+                        using (var document = context.GetLazyString(error.Document, LazyStringType.SimpleString))
+                        using (var action = context.GetLazyString(error.Action, LazyStringType.SimpleString))
+                        using (var e = context.GetLazyString(error.Error, LazyStringType.SimpleString))
                         {
                             var tvb = new TableValueBuilder
                             {

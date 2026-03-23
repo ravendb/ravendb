@@ -472,14 +472,9 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe LazyStringValue CreateLazyStringValueFromParserState()
+        private LazyStringValue CreateLazyStringValueFromParserState()
         {
-            var lazyStringValueFromParserState = _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize);
-            if (_state.EscapePositions.Count <= 0)
-                return lazyStringValueFromParserState;
-
-            lazyStringValueFromParserState.EscapePositions = _state.EscapePositions.ToArray();
-            return lazyStringValueFromParserState;
+            return _context.AllocateStringValue(_state);
         }
 
         public void FinalizeDocument()

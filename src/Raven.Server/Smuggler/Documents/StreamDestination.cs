@@ -1481,7 +1481,8 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     unsafe
                     {
-                        using (var escapedId = _context.GetLazyString(tombstone.LowerId.Buffer, tombstone.LowerId.Size))
+                        //TODO We should keep the control characters escaped for backward compatibility.
+                        using (var escapedId = _context.GetLazyString(tombstone.LowerId.Buffer, tombstone.LowerId.Size, LazyStringType.JsonString, true, true))
                         {
                             _context.Write(Writer, new DynamicJsonValue
                             {

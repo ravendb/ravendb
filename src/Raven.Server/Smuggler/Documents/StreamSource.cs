@@ -1262,10 +1262,7 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.String)
                 UnmanagedJsonParserHelper.ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType, _peepingTomStream, _parser);
 
-            unsafe
-            {
-                return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
-            }
+            return _context.AllocateStringValue(_state).ToString();
         }
 
         private async Task ReadObjectAsync(BlittableJsonDocumentBuilder builder)

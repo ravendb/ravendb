@@ -231,7 +231,7 @@ namespace Sparrow.Json
 
         public void WriteString(string str, bool skipEscaping = false)
         {
-            using (var lazyStr = _context.GetLazyString(str))
+            using (var lazyStr = _context.GetLazyString(str, LazyStringType.SimpleString))
             {
                 WriteString(lazyStr, skipEscaping);
             }
@@ -245,9 +245,14 @@ namespace Sparrow.Json
                 WriteNull();
                 return;
             }
-
+            
             var size = str.Size;
 
+            //TODO I don't see why we need it.
+            //Maybe it was relevant in the past RavenDB-9479
+            //Also we escape here some characters differently like \n and also we escape come characters that we don't escape for string with more then 1 char.
+            //I think it is safe to delete it.
+            //But that make me think if we need for other cases to also escape b >= 127 && b <= 159
             if (size == 1 && str.IsControlCodeCharacter(out var b))
             {
                 WriteString($@"\u{b:X4}", skipEscaping: true);
@@ -256,6 +261,11 @@ namespace Sparrow.Json
 
             var strBuffer = str.Buffer;
             var escapeSequencePos = size;
+            
+            //TODO The code here relay on the function parameter to understand if the underline buffer has size prefix with escape positions.
+            //I think a clean way is to define that when you create/renew the LazyStringValue.
+            //I can make sure to assign the EscapePosition to empty array and check it here 
+            //but since it will require a lot of changes we may want to handle that later.
             var numberOfEscapeSequences = skipEscaping ? 0 : BlittableJsonReaderBase.ReadVariableSizeInt(str.Buffer, ref escapeSequencePos);
 
             // We ensure our buffer will have enough space to deal with the whole string.
@@ -819,7 +829,7 @@ namespace Sparrow.Json
                 return;
             }
 
-            using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture)))
+            using (var lazyStr = _context.GetLazyString(val.ToString(CultureInfo.InvariantCulture), LazyStringType.SimpleString))
             {
                 EnsureBuffer(lazyStr.Size);
                 WriteRawString(lazyStr.Buffer, lazyStr.Size);

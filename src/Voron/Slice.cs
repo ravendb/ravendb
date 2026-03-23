@@ -11,7 +11,7 @@ namespace Voron
 {
     [DebuggerDisplay("{ToString(),nq}")]
     [StructLayout(LayoutKind.Sequential)]
-    public unsafe struct Slice
+    public unsafe partial struct Slice
     {
         public ByteString Content;
 

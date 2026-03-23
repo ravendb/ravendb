@@ -1336,7 +1336,9 @@ namespace Raven.Server.Documents.TimeSeries
             SingleResult ToResult(TimeSeriesOperation.AppendOperation element)
             {
                 holder.Values = element.Values;
-                holder.Tag = context.GetLazyString(element.Tag);
+                //TODO The Tag is stored currectly with its escape position so there is no issue to allow control characters but we may want to dissallow that any way
+                //but I think we can implement that in a different PR
+                holder.Tag = context.GetLazyString(element.Tag, LazyStringType.JsonString);
                 holder.Timestamp = element.Timestamp;
                 holder.Status = TimeSeriesValuesSegment.Live;
                 return holder;
@@ -1457,6 +1459,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             var value = positive ? values[0] : values[1];
 
+            //TODO Here we escape control characters to keep the old behaviour but we may consider to avoid that.
             return context.GetLazyString(value);
         }
 
@@ -1800,14 +1803,20 @@ namespace Raven.Server.Documents.TimeSeries
             return context.LastDatabaseChangeVector;
         }
 
-        private static void VerifyLegalName(string name)
+        private void VerifyLegalName(string name)
         {
+            var checkControlChars = _documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier;
             for (int i = 0; i < name.Length; i++)
             {
-                if (name[i] == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
+                var c = name[i];
+                if (c == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
                     throw new InvalidOperationException($"Illegal time series name : '{name}'. " +
                                                         $"Time series names cannot contain '{TimeSeriesConfiguration.TimeSeriesRollupSeparator}' character, " +
                                                         "since this character is reserved for time series rollups.");
+                
+                //TODO To check if should skip check in some path like we have for put documents (replication .etc)
+                if(checkControlChars && StringUtils.IsControlCharacter(c))
+                    StringUtils.ThrowIdentifierWithControlCharacters(name);
             }
         }
 
@@ -2363,7 +2372,8 @@ namespace Raven.Server.Documents.TimeSeries
                 Type = ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                 Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
-                Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                //TODO We have the escape position so we can identify the type.
+                Collection = DocumentsStorage.TableValueSizePrefixToString(context, (int)TimeSeriesTable.Collection, ref reader, LazyStringType.JsonString),
                 Etag = Bits.SwapBytes(etag),
                 TransactionMarker = DocumentsStorage.TableValueToShort((int)TimeSeriesTable.TransactionMarker, nameof(TimeSeriesTable.TransactionMarker), ref reader)
             };
@@ -2447,7 +2457,8 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 Type = ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange,
                 ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
-                Collection = DocumentsStorage.TableValueToId(context, (int)DeletedRangeTable.Collection, ref reader),
+                //TODO We have the escape position so we can identify the type
+                Collection = DocumentsStorage.TableValueSizePrefixToString(context, (int)DeletedRangeTable.Collection, ref reader, LazyStringType.JsonString),
                 Etag = Bits.SwapBytes(etag),
                 TransactionMarker = DocumentsStorage.TableValueToShort((int)DeletedRangeTable.TransactionMarker, nameof(DeletedRangeTable.TransactionMarker), ref reader),
                 From = DocumentsStorage.TableValueToDateTime((int)DeletedRangeTable.From, ref reader),
@@ -2500,7 +2511,8 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return new TimeSeriesDeletedRangeEntry
                 {
-                    Key = new LazyStringValue(null, keyPtr, keySize, context),
+                    //TODO We don't have the escape positions and we are goid to reject docIds and time-series names with control characters
+                    Key = new LazyStringValue(null, keyPtr, keySize, context, LazyStringType.SimpleString),
                     DocId = docId,
                     Name = name,
                     Etag = Bits.SwapBytes(etag)
@@ -2636,14 +2648,16 @@ namespace Raven.Server.Documents.TimeSeries
 
                 return new TimeSeriesSegmentEntry
                 {
-                    Key = new LazyStringValue(null, keyPtr, keySize, context),
+                    //TODO We don't have the escape positions to identify the type and we are going to reject this situation for new databases
+                    Key = new LazyStringValue(null, keyPtr, keySize, context, LazyStringType.SimpleString),
                     LuceneKey = luceneKey,
                     DocId = docId,
                     Name = lowerName,
                     ChangeVector = Encoding.UTF8.GetString(changeVectorPtr, changeVectorSize),
                     Segment = new TimeSeriesValuesSegment(segmentPtr, segmentSize),
                     SegmentSize = segmentSize,
-                    Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader),
+                    //TODO We have the escape positions to identify the type
+                    Collection = DocumentsStorage.TableValueSizePrefixToString(context, (int)TimeSeriesTable.Collection, ref reader, LazyStringType.JsonString),
                     Start = baseline,
                     Etag = Bits.SwapBytes(etag),
                 };
@@ -2659,7 +2673,8 @@ namespace Raven.Server.Documents.TimeSeries
                 {
                     var keyPtr = reader.Read((int)TimeSeriesTable.TimeSeriesKey, out int keySize);
 
-                    result.Key = new LazyStringValue(null, keyPtr, keySize, context);
+                    //TODO We don't have the escape positions to identify the type and we are going to reject docIds and time-series name with control characters for new databases
+                    result.Key = new LazyStringValue(null, keyPtr, keySize, context, LazyStringType.SimpleString);
 
                     if (fields.Contain(TimeSeriesSegmentEntryFields.DocIdNameAndStart))
                     {
@@ -2696,7 +2711,8 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 if (fields.Contain(TimeSeriesSegmentEntryFields.Collection))
-                    result.Collection = DocumentsStorage.TableValueToId(context, (int)TimeSeriesTable.Collection, ref reader);
+                    //TODO We have the escape positions to identify the type
+                    result.Collection = DocumentsStorage.TableValueSizePrefixToString(context, (int)TimeSeriesTable.Collection, ref reader, LazyStringType.JsonString);
 
                 result.Etag = Bits.SwapBytes(*(long*)reader.Read((int)TimeSeriesTable.Etag, out _));
 
@@ -2725,7 +2741,8 @@ namespace Raven.Server.Documents.TimeSeries
                     if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
                         throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
 
-                    return context.GetLazyString(mem.Address, size);
+                    //TODO RavenDB-25738 I set it here to JsonString to keep the same behavior
+                    return context.GetLazyString(mem.Address, size, LazyStringType.JsonString);
                 }
                 finally
                 {
@@ -2749,7 +2766,8 @@ namespace Raven.Server.Documents.TimeSeries
                 var offset = documentId.Size;
                 bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                 name.AsSpan().CopyTo(bufferSpan.Slice(offset));
-                return context.GetLazyString(mem.Address, size);
+                //TODO Keep the same behaviour and escape control characters
+                return context.GetLazyString(mem.Address, size, LazyStringType.JsonString, true);
             }
             finally
             {

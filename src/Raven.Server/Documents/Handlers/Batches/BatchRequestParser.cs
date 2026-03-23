@@ -995,14 +995,14 @@ namespace Raven.Server.Documents.Handlers.Batches
         private static unsafe void ThrowInvalidProperty(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidOperationException("Invalid property name: " +
-                                                ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
+                                                ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize, state.StringType));
         }
 
         [DoesNotReturn]
         private static unsafe void ThrowInvalidCommandType(JsonParserState state, JsonOperationContext ctx)
         {
             throw new InvalidCommandTypeException("Invalid command type: "
-                                                  + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize));
+                                                  + ctx.AllocateStringValue(null, state.StringBuffer, state.StringSize, state.StringType));
         }
 
         [DoesNotReturn]

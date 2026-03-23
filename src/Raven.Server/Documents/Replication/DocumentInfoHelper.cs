@@ -17,36 +17,46 @@ namespace Raven.Server.Documents.Replication
         private LazyStringValue _tmpLazyStringInstance;
         private readonly JsonOperationContext _context;
         private readonly bool _contextOwner;
-        public unsafe LazyStringValue GetDocumentId(Slice key)
+        public unsafe LazyStringValue GetShortTimeDocumentId(Slice key)
         {
             var sepIdx = key.Content.IndexOf(SpecialChars.RecordSeparator);
-            if (_tmpLazyStringInstance == null)
-                _tmpLazyStringInstance = new LazyStringValue(null, null, 0, _context);
-            _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx, _context);
-            return _tmpLazyStringInstance;
+            return GetShortTimeDocumentId(key.Content.Ptr, sepIdx);
         }
 
-        public unsafe LazyStringValue GetDocumentId(LazyStringValue key)
+        public unsafe LazyStringValue GetShortTimeDocumentId(LazyStringValue key)
         {
             var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
             if (index == -1)
                 return null;
 
-            return _context.GetLazyString(key.Buffer, index);
+            return GetShortTimeDocumentId(key.Buffer, index);
+        }
+        
+        private unsafe LazyStringValue GetShortTimeDocumentId(byte* ptr, int sepIdx)
+        {
+            if (_tmpLazyStringInstance == null)
+            {
+                _tmpLazyStringInstance = new LazyStringValue(null, ptr, sepIdx, _context, LazyStringType.SimpleString);
+                return _tmpLazyStringInstance;
+            }
+            //TODO No escape positions and used for documentID which we are going to disallow control characters.
+            _tmpLazyStringInstance.Renew(null, ptr, sepIdx, _context, LazyStringType.SimpleString);
+            return _tmpLazyStringInstance;
         }
 
         // TODO unify if possible with AllowedPathsValidator
-        public LazyStringValue GetDocumentId(ReplicationBatchItem item)
+        // TODO We anyway convert it to string right away and the LazyStringValue is reused by the helper so better to convert it here to prevent wrong usage
+        public string GetShortTermDocumentId(ReplicationBatchItem item)
         {
             return item switch
             {
-                AttachmentReplicationItem a => GetDocumentId(a.Key),
-                AttachmentTombstoneReplicationItem at => GetDocumentId(at.Key),
+                AttachmentReplicationItem a => GetShortTimeDocumentId(a.Key),
+                AttachmentTombstoneReplicationItem at => GetShortTimeDocumentId(at.Key),
                 CounterReplicationItem c => c.Id,
                 DocumentReplicationItem d => d.Id,
-                RevisionTombstoneReplicationItem r => GetDocumentId(r.Id),
-                TimeSeriesDeletedRangeItem td => GetDocumentId(td.Key),
-                TimeSeriesReplicationItem t => GetDocumentId(t.Key),
+                RevisionTombstoneReplicationItem r => GetShortTimeDocumentId(r.Id),
+                TimeSeriesDeletedRangeItem td => GetShortTimeDocumentId(td.Key),
+                TimeSeriesReplicationItem t => GetShortTimeDocumentId(t.Key),
                 _ => throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}")
             };
         }
@@ -56,7 +66,7 @@ namespace Raven.Server.Documents.Replication
             switch (item)
             {
                 case AttachmentReplicationItem a:
-                    return $"Attachment '{a.Name}' for {GetDocumentId(a.Key)}";
+                    return $"Attachment '{a.Name}' for {GetShortTimeDocumentId(a.Key)}";
                 case AttachmentTombstoneReplicationItem at:
                     var result = AttachmentsStorage.AttachmentKey.ExtractDocIdAndAttachmentName(at.Key);
                     return $"Attachment tombstone '{result.AttachmentName}' for {result.DocId}";
@@ -70,10 +80,10 @@ namespace Raven.Server.Documents.Replication
                 case RevisionTombstoneReplicationItem r:
                     return "Revision for " + r.Id;
                 case TimeSeriesDeletedRangeItem td:
-                    return "Time Series deletion range for: " + GetDocumentId(td.Key);
+                    return "Time Series deletion range for: " + GetShortTimeDocumentId(td.Key);
                 case TimeSeriesReplicationItem t:
                     var baseline = TimeSeriesStorage.GetBaseline(t.Key.Content.Ptr, t.Key.Content.Length);
-                    return $"Time Series segment of '{t.Name}' [{baseline:s} - {t.Segment.GetLastTimestamp(baseline):s}] for {GetDocumentId(t.Key)}";
+                    return $"Time Series segment of '{t.Name}' [{baseline:s} - {t.Segment.GetLastTimestamp(baseline):s}] for {GetShortTimeDocumentId(t.Key)}";
                 default:
                     throw new ArgumentOutOfRangeException($"{nameof(item)} - {item}");
             }

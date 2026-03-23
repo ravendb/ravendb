@@ -10,6 +10,7 @@ namespace Sparrow.Json.Parsing
         public const int ControlCharacterItemSize = 5;
         public byte* StringBuffer;
         public int StringSize;
+        public LazyStringType StringType;
         public int? CompressedSize;
         public long Long;
         public JsonParserToken CurrentTokenType;
@@ -51,9 +52,10 @@ namespace Sparrow.Json.Parsing
             return FindMaxEscapePositionAndControlCharSize(str.AsSpan(), out controlCount);
         }
         
-        public static int FindMaxEscapePositionAndControlCharSize(ReadOnlySpan<char> str, out int controlCount)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void FindEscapeAndControlCharactersCount(ReadOnlySpan<char> str, out int escapedCount, out int controlCount)
         {
-            var count = 0;
+            escapedCount = 0;
             controlCount = 0;
 
             for (int i = 0; i < str.Length; i++)
@@ -72,15 +74,19 @@ namespace Sparrow.Json.Parsing
 
                 if (value == 92 || value == 34 || (value >= 8 && value <= 13 && value != 11))
                 {
-                    count++;
+                    escapedCount++;
                     continue;
                 }
 
                 if (value < 32)
-                {
                     controlCount++;
-                }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int FindMaxEscapePositionAndControlCharSize(ReadOnlySpan<char> str, out int controlCount)
+        {
+            FindEscapeAndControlCharactersCount(str, out int count, out controlCount);
 
             // we take 5 because that is the max number of bytes for variable size int
             // plus 1 for the actual number of positions
@@ -130,12 +136,12 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapedPositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize)
+        public void FindEscapedPositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize, LazyStringType type)
         {
-            FindEscapedPositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize);
+            FindEscapedPositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize, type);
         }
 
-        public static void FindEscapedPositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        public static void FindEscapedPositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize, LazyStringType type)
         {
             var originalLen = len;
             buffer.Clear();
@@ -169,6 +175,13 @@ namespace Sparrow.Json.Parsing
                 //Control character ascii values
                 if (value < 32)
                 {
+                    if(type == LazyStringType.SimpleString)
+                    {
+                        buffer.Add(i - lastEscape);
+                        lastEscape = i + 1;
+                        continue;
+                    }
+                    
                     if (len + ControlCharacterItemSize > originalLen + previousComputedMaxSize)
                         ThrowInvalidSizeForEscapeControlChars(previousComputedMaxSize);
 
@@ -197,11 +210,16 @@ namespace Sparrow.Json.Parsing
         public int WriteEscapePositionsTo(byte* buffer)
         {
             var escapePositions = EscapePositions;
-            var originalBuffer = buffer;
-            WriteVariableSizeInt(ref buffer, escapePositions.Count);
+            return WriteEscapePositionsTo(buffer, escapePositions.AsUnsafeSpan());
+        }
 
-            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using an struct enumerator. 
-            for (int i = 0; i < escapePositions.Count; i++)
+        public static int WriteEscapePositionsTo(byte* buffer, Span<int> escapePositions)
+        {
+            var originalBuffer = buffer;
+            WriteVariableSizeInt(ref buffer, escapePositions.Length);
+
+            // PERF: Using a for in this way will evict the bounds-check and also avoid the cost of using a struct enumerator. 
+            for (int i = 0; i < escapePositions.Length; i++)
                 WriteVariableSizeInt(ref buffer, escapePositions[i]);
 
             return (int)(buffer - originalBuffer);
@@ -211,6 +229,7 @@ namespace Sparrow.Json.Parsing
         {
             StringBuffer = null;
             StringSize = 0;
+            StringType = LazyStringType.Invalid;
             CompressedSize = null;
             Long = 0;
             CurrentTokenType = JsonParserToken.None;

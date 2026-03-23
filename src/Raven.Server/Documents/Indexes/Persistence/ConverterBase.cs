@@ -277,8 +277,8 @@ namespace Raven.Server.Documents.Indexes.Persistence
                 dblAsString = null;
                 return false;
             }
-
-            dblAsString = context.AllocateStringValue(null, ldv.Inner.Buffer, index + 1);
+            //TODO Used only for number so can be identified as SimpleString 
+            dblAsString = context.AllocateStringValue(null, ldv.Inner.Buffer, index + 1, LazyStringType.SimpleString);
             return true;
         }
 

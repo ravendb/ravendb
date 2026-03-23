@@ -206,7 +206,7 @@ namespace FastTests.Server.Documents
 
         private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
         {
-            var ret = context.GetLazyStringValue(idSlice.Content.Ptr, out var success);
+            var ret = context.GetLazyStringValue(idSlice.Content.Ptr, LazyStringType.JsonString,out var success);
             Assert.True(success);
             return ret;
         }

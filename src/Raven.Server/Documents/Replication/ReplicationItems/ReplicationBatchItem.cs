@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return tempBufferPos;
         }
 
-        protected unsafe void SetLazyStringValue(JsonOperationContext context, ref LazyStringValue prop)
+        protected unsafe void SetLazyStringValue(JsonOperationContext context, ref LazyStringValue prop, LazyStringType type)
         {
             var size = *(int*)Reader.ReadExactly(sizeof(int));
             if (size < 0)
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
             var mem = Reader.AllocateMemory(size);
             Memory.Copy(mem, Reader.ReadExactly(size), size);
-            prop = context.AllocateStringValue(null, mem, size);
+            prop = context.AllocateStringValue(null, mem, size, type);
         }
 
         protected unsafe void SetLazyStringValueFromString(JsonOperationContext context, out LazyStringValue prop)

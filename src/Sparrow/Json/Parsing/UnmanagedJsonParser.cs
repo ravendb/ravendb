@@ -228,6 +228,8 @@ namespace Sparrow.Json.Parsing
                 _prevEscapePosition = 0;
                 _currentQuote = b;
                 state.CurrentTokenType = JsonParserToken.String;
+                //TODO We unescape the control characters inside ParseString so we got a SimpleString
+                state.StringType = LazyStringType.SimpleString;
                 if (ParseString(ref pos) == false)
                 {
                     state.Continuation = JsonParserTokenContinuation.PartialString;

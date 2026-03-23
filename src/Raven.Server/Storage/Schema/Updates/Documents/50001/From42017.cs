@@ -345,7 +345,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                             if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
                                 continue;
 
-                            using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                            //TODO Doesn't contain the escape positions so we define it as SimpleString
+                            using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr, LazyStringType.SimpleString))
                             {
                                 if (entriesToUpdate.TryGetValue(counterGroupKey, out var putCountersData))
                                 {
@@ -398,7 +399,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                     // clone counter group key
                                     var scope = context.Allocator.Allocate(counterGroupKey.Size, out var output);
                                     counterGroupKey.CopyTo(output.Ptr);
-                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
+                                    //TODO Doesn't contain the escape positions so we define it as SimpleString
+                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length, LazyStringType.SimpleString);
                                     putCountersData.KeyScope = scope;
                                     entriesToUpdate[clonedKey] = putCountersData;
                                 }

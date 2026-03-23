@@ -1717,7 +1717,8 @@ namespace Raven.Server.Documents.Revisions
                         return new Document
                         {
                             Flags = DocumentFlags.DeleteRevision,
-                            LowerId = context.AllocateStringValue(null, copy.Content.Ptr, copy.Size),
+                            //TODO We are going to reject IDs with control characters and anyway we don't have the escape position to identify
+                            LowerId = context.AllocateStringValue(null, copy.Content.Ptr, copy.Size, LazyStringType.SimpleString),
                             Id = context.GetLazyString(id)
                         };
                     }
@@ -2825,7 +2826,8 @@ namespace Raven.Server.Documents.Revisions
                 return new Document(context, tvr.Id)
                 {
                     StorageId = tvr.Id,
-                    LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
+                    //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+                    LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr, LazyStringType.SimpleString),
                     Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
                     Etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
                     LastModified = TableValueToDateTime((int)RevisionsTable.LastModified, ref tvr),
@@ -2844,7 +2846,8 @@ namespace Raven.Server.Documents.Revisions
             var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
-                result.LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr);
+                //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+                result.LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr, LazyStringType.SimpleString);
 
             if (fields.Contain(DocumentFields.Id))
                 result.Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr);
@@ -2875,7 +2878,8 @@ namespace Raven.Server.Documents.Revisions
             var result = new Document
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr),
+                //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+                LowerId = TableValueToString(context, (int)RevisionsTable.LowerId, ref tvr, LazyStringType.SimpleString),
                 Id = TableValueToId(context, (int)RevisionsTable.Id, ref tvr),
                 Etag = etag = TableValueToEtag((int)RevisionsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(ptr, size, context),

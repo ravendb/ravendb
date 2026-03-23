@@ -19,6 +19,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -137,6 +138,8 @@ namespace Raven.Server.Documents
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
             string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false)
         {
+            ValidateAttachmentName(name);
+            
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -160,6 +163,7 @@ namespace Raven.Server.Documents
                         throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
                 }
 
+                //TODO To reject attachment with control characters in the name & content type
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                 using (Slice.From(context.Allocator, hash, out Slice base64Hash)) // Hash is a base64 string, so this is a special case that we do not need to escape
@@ -296,6 +300,13 @@ namespace Raven.Server.Documents
                     };
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateAttachmentName(string name)
+        {
+            if(_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                StringUtils.CheckAndThrowContainsControlCharacters(name);
         }
 
         /// <summary>
@@ -768,7 +779,8 @@ namespace Raven.Server.Documents
             var result = new Attachment
             {
                 StorageId = tvr.Id,
-                Key = TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
+                //TODO-c0e67da7 The key uses the lower attachment name from DocumentIdWorker.GetLowerIdSliceAndStorageKey which doesn't have the escape positions so I think we better disallow control characters on attachment name as well 
+                Key = TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, LazyStringType.SimpleString),
                 Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr),
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
@@ -1251,8 +1263,10 @@ namespace Raven.Server.Documents
                 var spanKey = key.AsReadOnlySpan();
                 ExtractDocIdAndAttachmentName(spanKey, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
 
-                var doc = context.AllocateStringValue(null, key.Buffer, sizeOfDocId);
-                var name = context.AllocateStringValue(null, key.Buffer + attachmentNameIndex, sizeOfAttachmentName);
+                //TODO Doesn't contain escape position so not way to identify the type and we are going to disallow that for new databases
+                var doc = context.AllocateStringValue(null, key.Buffer, sizeOfDocId, LazyStringType.SimpleString);
+                //TODO Doesn't contain escape position so not way to identify the type and we are going to disallow that for new databases
+                var name = context.AllocateStringValue(null, key.Buffer + attachmentNameIndex, sizeOfAttachmentName, LazyStringType.SimpleString);
 
                 return (doc, name);
             }

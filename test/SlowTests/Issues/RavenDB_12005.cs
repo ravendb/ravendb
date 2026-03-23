@@ -27,7 +27,7 @@ namespace SlowTests.Issues
                 idx = lsv.IndexOfAny(new[] { '/' });
                 Assert.Equal(3, idx);
 
-                lsv = context.AllocateStringValue(null, lsv.Buffer, lsv.Size);
+                lsv = context.AllocateStringValue(null, lsv.Buffer, lsv.Size, lsv.Type);
 
                 idx = lsv.LastIndexOf('/');
                 Assert.Equal(3, idx);

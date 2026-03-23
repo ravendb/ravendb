@@ -257,7 +257,8 @@ public class CountersRepairTask
 
                     if (collection == null)
                     {
-                        collection = TableValueToId(context, (int)Counters.CountersTable.Collection, ref tvr);
+                        //TODO To decide if we want to reject collection name with control characters.
+                        collection = TableValueSizePrefixToString(context, (int)Counters.CountersTable.Collection, ref tvr, LazyStringType.SimpleString);
                         collectionName = _database.DocumentsStorage.ExtractCollectionName(context, collection);
 
                         writeTable = _database.DocumentsStorage.CountersStorage.GetOrCreateTable(context.Transaction.InnerTransaction, _database.DocumentsStorage.CountersStorage.CountersSchema, collectionName, CollectionTableType.CounterGroups);
@@ -341,15 +342,17 @@ public class CountersRepairTask
 
                     // we're using the same change vector and etag here, in order to avoid replicating
                     // the counter group to other nodes (each node should fix its counters locally)
-                    using var changeVector = TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr);
+                    using var changeVector = TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr, LazyStringType.SimpleString);
                     var groupEtag = TableValueToEtag((int)Counters.CountersTable.Etag, ref tvr);
 
-                    using (var counterGroupKey = TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr))
+                    //TODO We are going to reject document IDs with control characters and any way we don't have the escape positions to identify the type
+                    using (var counterGroupKey = TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr, LazyStringType.SimpleString))
                     using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
                     {
                         counterGroupKey.CopyTo(buffer.Ptr);
 
-                        using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
+                        //TODO We are going to reject document IDs with control characters and any way we don't have the escape positions to identify the type
+                        using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length, LazyStringType.SimpleString))
                         using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
                         using (Slice.From(context.Allocator, changeVector, out var cv))
                         using (DocumentIdWorker.GetStringPreserveCase(context, collectionName.Name, out Slice collectionSlice))

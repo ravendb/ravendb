@@ -272,7 +272,7 @@ namespace SlowTests.Issues
                         Assert.True(endEtag >= lastLocalEtag, $"endEtag {endEtag}, lastLocalEtag: {lastLocalEtag}");
 
 
-                    var lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr);
+                    var lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr, LazyStringType.SimpleString);
                     Assert.Equal(id, lastLocalId);
 
                 }
@@ -305,7 +305,7 @@ namespace SlowTests.Issues
                         Assert.Equal(expectedEtag.Value, lastLocalEtag);
                     }
 
-                    string lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr).ToString();
+                    string lastLocalId = DocumentsStorage.TableValueToString(ctx, (int)TestTable.LowerId, ref tvr, LazyStringType.SimpleString).ToString();
                     Assert.Equal(id, lastLocalId);
                 }
             }

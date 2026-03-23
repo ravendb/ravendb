@@ -1447,7 +1447,8 @@ namespace Voron.Recovery
                 {
                     if (_logger.IsInfoEnabled)
                     {
-                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                        //TODO We don't have the escape positions and we are going to reject it for new databases
+                        using (var key = DocumentsStorage.TableValueToString(context, (int)CountersTable.CounterKey, ref tvr, LazyStringType.SimpleString))
                         {
                             _logger.Info(
                                 $"Found counter-group item (key = '{key}') with counter-data document that is missing '{CountersStorage.Values}' property.");

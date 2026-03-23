@@ -38,6 +38,7 @@ namespace Sparrow.Json
         private AllocatedMemoryData _tempBuffer;
 
         private readonly Dictionary<StringSegment, LazyStringValue> _fieldNames = new Dictionary<StringSegment, LazyStringValue>(StringSegmentEqualityStructComparer.BoxedInstance);
+        private readonly Dictionary<LazyStringValue, LazyStringValue> _fieldNamesLazyStrings = new Dictionary<LazyStringValue, LazyStringValue>(LazyStringValueComparer.Instance);
 
         private static readonly PerCoreContainer<PathCache> _perCorePathCache = new PerCoreContainer<PathCache>();
         private PathCache _activeAllocatePathCaches;
@@ -53,26 +54,35 @@ namespace Sparrow.Json
         /// </summary>
         public bool DoNotReuse;
 
-        public LazyStringValue Empty => _empty ??= GetLazyString(string.Empty);
+        public LazyStringValue Empty => _empty ??= GetLazyString(string.Empty, LazyStringType.SimpleString);
         private LazyStringValue _empty;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size)
+        public unsafe LazyStringValue AllocateStringValue(string str, byte* ptr, int size, LazyStringType type, bool shouldCheck = false)
         {
             if (_numberOfAllocatedStringsValues < _allocateStringValues.Count)
             {
                 var lazyStringValue = _allocateStringValues[_numberOfAllocatedStringsValues++];
-                lazyStringValue.Renew(str, ptr, size, this);
+                lazyStringValue.Renew(str, ptr, size, this, type, shouldCheck);
                 return lazyStringValue;
             }
 
-            var allocateStringValue = new LazyStringValue(str, ptr, size, this);
+            var allocateStringValue = new LazyStringValue(str, ptr, size, this, type, shouldCheck);
             if (_numberOfAllocatedStringsValues < _maxNumberOfAllocatedStringValues)
             {
                 _allocateStringValues.Add(allocateStringValue);
                 _numberOfAllocatedStringsValues++;
             }
 
+            return allocateStringValue;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe LazyStringValue AllocateStringValue(JsonParserState state, bool shouldCheck = false)
+        {
+            var allocateStringValue = AllocateStringValue(null, state.StringBuffer, state.StringSize, state.StringType, shouldCheck);
+            //TODO To verify that we want the allocation here
+            allocateStringValue.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
             return allocateStringValue;
         }
 
@@ -426,7 +436,7 @@ namespace Sparrow.Json
         public LazyStringValue GetLazyStringForFieldWithCaching(StringSegment key)
         {
             EnsureNotDisposed();
-
+            
             if (_fieldNames.TryGetValue(key, out LazyStringValue value))
             {
                 //sanity check, in case the 'value' is manually disposed outside of this function
@@ -437,6 +447,20 @@ namespace Sparrow.Json
             return GetLazyStringForFieldWithCachingUnlikely(key);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LazyStringValue GetLazyStringForFieldWithCaching(LazyStringValue field)
+        {
+            EnsureNotDisposed();
+            if (_fieldNamesLazyStrings.TryGetValue(field, out LazyStringValue value))
+            {
+                // PERF: This is usually the most common scenario, so actually being contiguous improves the behavior.
+                Debug.Assert(value.IsDisposed == false);
+                return value;
+            }
+
+            return GetLazyStringForFieldWithCachingUnlikely(field.ToString());
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue GetLazyStringForFieldWithCaching(string field)
         {
@@ -457,34 +481,36 @@ namespace Sparrow.Json
             using (new SingleThreadAccessAssertion(_threadId, "GetLazyStringForFieldWithCachingUnlikely"))
             {
 #endif
-            EnsureNotDisposed();
-            LazyStringValue value = GetLazyString(key, longLived: true);
-            _fieldNames[key.Value] = value;
+                EnsureNotDisposed();
+                //TODO To verify if it better to use JsonString here 
+                var value = GetLazyString(key, longLived: true, LazyStringType.JsonString);
+                _fieldNames[key.Value] = value;
+                _fieldNamesLazyStrings[value] = value;
 
-            //sanity check, in case the 'value' is manually disposed outside of this function
-            Debug.Assert(value.IsDisposed == false);
-            return value;
+                //sanity check, in case the 'value' is manually disposed outside of this function
+                Debug.Assert(value.IsDisposed == false);
+                return value;
 #if DEBUG || VALIDATE
             }
 #endif
         }
 
-        public LazyStringValue GetLazyString(string field)
+        public LazyStringValue GetLazyString(string field, LazyStringType type = LazyStringType.JsonString)
         {
             EnsureNotDisposed();
 
             if (field == null)
                 return null;
 
-            return GetLazyString(field, longLived: false);
+            return GetLazyString(field, longLived: false, type);
         }
 
-        private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived)
+        private unsafe LazyStringValue GetLazyString(StringSegment field, bool longLived, LazyStringType type)
         {
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(field.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(field, out _);
+            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(field, out var controlCount);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -494,21 +520,20 @@ namespace Sparrow.Json
                 var address = memory.Address;
                 var actualSize = Encodings.Utf8.GetBytes(pField + field.Offset, field.Length, address, memory.SizeInBytes);
 
-                state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
+                var originSize = actualSize;
+                state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize, type);
 
                 state.WriteEscapePositionsTo(address + actualSize);
-                LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
+                var actualType = actualSize > originSize ? LazyStringType.JsonString : LazyStringType.SimpleString;
+                var result = longLived ? new LazyStringValue(field.Value, address, actualSize, this, actualType) : AllocateStringValue(field.Value, address, actualSize, actualType);
                 result.AllocatedMemoryData = memory;
-
-                if (state.EscapePositions.Count > 0)
-                {
-                    result.EscapePositions = state.EscapePositions.ToArray();
-                }
+                result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
                 return result;
             }
         }
 
-        public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
+        //TODO 
+        public unsafe LazyStringValue GetLazyString(byte* ptr, int size, LazyStringType type, bool shouldCheck = false, bool longLived = false)
         {
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
@@ -522,25 +547,73 @@ namespace Sparrow.Json
 
             Memory.Copy(address, ptr, size);
 
-            state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize);
+            var originSize = size;
+            state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize, type);
 
             state.WriteEscapePositionsTo(address + size);
-            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
-            result.AllocatedMemoryData = memory;
+            
+            var actualType = size > originSize ? LazyStringType.JsonString : LazyStringType.SimpleString;
+            var result = longLived ? new LazyStringValue(null, address, size, this, actualType, shouldCheck) : AllocateStringValue(null, address, size, type, shouldCheck);
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.AllocatedMemoryData = memory;
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : []; 
+            
             return result;
         }
 
+        // public unsafe LazyStringValue UnescapeControlCharacters(byte* ptr, int size, int[] escapedPositions, bool longLived = false)
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe LazyStringValue GetLazyStringValue(byte* ptr, out bool success)
+        public unsafe bool CopyAndUnescapeControlCharacters(string stringValue, LazyStringValue str, out LazyStringValue result)
+        {
+            if (str.EscapePositions != null)
+                return CopyAndUnescapeControlCharactersInternal(stringValue, str, str.EscapePositions, out result);
+            
+            var reader = StringUtils.GetEscapePositionsReader(str);
+            //TODO To allocate on heap for very big
+            Span<int> buffer = stackalloc int[reader.Length];
+            var escapePositions = new StringUtils.SpanWriter<int>(buffer);
+            while (reader.Read())
+                escapePositions.Append(reader.Current);
+            
+            return CopyAndUnescapeControlCharactersInternal(stringValue, str, escapePositions.AsSpan(), out result);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private unsafe bool CopyAndUnescapeControlCharactersInternal(string stringValue, LazyStringValue str, Span<int> escapePositions, out LazyStringValue result)
+        {
+            var escapedCount = StringUtils.CountEscapedControlCharacters(str.AsReadOnlySpan(), escapePositions);
+            
+            if (escapedCount == 0)
+            {
+                result = null;
+                return false;
+            }
+            
+            // 1 for the count of the escaped positions
+            var destMemorySize = str.Size + (1 + escapePositions.Length + escapedCount) * JsonParserState.EscapePositionItemSize;
+            var destinationMemory = GetMemory(destMemorySize);
+            var destinationBuffer = new Span<byte>(destinationMemory.Address, str.Length);
+
+            var escapePosLength = escapePositions.Length + escapedCount;
+            //TODO To allocate on heap for very big
+            Span<int> destinationEscapedPositions = stackalloc int[escapePosLength];
+            var unescaped = StringUtils.UnescapeControlCharacters(str.AsReadOnlySpan(), escapePositions, destinationBuffer, destinationEscapedPositions);
+
+            result = AllocateStringValue(stringValue, destinationMemory.Address, unescaped.Length, LazyStringType.SimpleString);
+            JsonParserState.WriteEscapePositionsTo(destinationMemory.Address + unescaped.Length, destinationEscapedPositions);
+            result.Check_TempFunction();
+            
+            result.AllocatedMemoryData = destinationMemory;
+            
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe LazyStringValue GetLazyStringValue(byte* ptr, LazyStringType type, out bool success, bool shouldCheck = false)
         {
             // See format of the lazy string ID in the GetLowerIdSliceAndStorageKey method
             var size = BlittableJsonReaderBase.ReadVariableSizeInt(ptr, 0, out var offset, out success);
-            return AllocateStringValue(null, ptr + offset, size);
+            return AllocateStringValue(null, ptr + offset, size, type, shouldCheck);
         }
 
         public ValueTask<BlittableJsonReaderObject> ReadForDiskAsync(Stream stream, string documentId, CancellationToken? token = null)
@@ -913,6 +986,7 @@ namespace Sparrow.Json
                 allocatorForLongLivedValues.Dispose();
 
                 _fieldNames.Clear();
+                _fieldNamesLazyStrings.Clear(); // no need to dispose the data here, same instances as in _fieldNames 
             }
 
             if (_allocateStringValues != null)
@@ -1046,12 +1120,7 @@ namespace Sparrow.Json
                     writer.WriteComma();
                 first = false;
 
-                LazyStringValue lazyStringValue;
-                unsafe
-                {
-                    lazyStringValue = AllocateStringValue(null, state.StringBuffer, state.StringSize);
-                }
-
+                var lazyStringValue = AllocateStringValue(state);
                 writer.WritePropertyName(lazyStringValue);
 
                 if (parser.Read() == false)
@@ -1086,19 +1155,15 @@ namespace Sparrow.Json
                         LazyCompressedStringValue lazyCompressedStringValue;
                         unsafe
                         {
-                            lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer, state.StringSize, state.CompressedSize.Value, this);
+                            //TODO To check
+                            lazyCompressedStringValue = new LazyCompressedStringValue(null, state.StringBuffer, state.StringSize, state.CompressedSize.Value, state.StringType, this);
                         }
 
                         writer.WriteString(lazyCompressedStringValue);
                     }
                     else
                     {
-                        LazyStringValue lazyStringValue;
-                        unsafe
-                        {
-                            lazyStringValue = AllocateStringValue(null, state.StringBuffer, state.StringSize);
-                        }
-
+                        var lazyStringValue = AllocateStringValue(state);
                         writer.WriteString(lazyStringValue);
                     }
                     break;
@@ -1107,7 +1172,7 @@ namespace Sparrow.Json
                     LazyStringValue lazyStringValueForNumber;
                     unsafe
                     {
-                        lazyStringValueForNumber = AllocateStringValue(null, state.StringBuffer, state.StringSize);
+                        lazyStringValueForNumber = AllocateStringValue(null, state.StringBuffer, state.StringSize, LazyStringType.SimpleString);
                     }
 
                     writer.WriteDouble(new LazyNumberValue(lazyStringValueForNumber));

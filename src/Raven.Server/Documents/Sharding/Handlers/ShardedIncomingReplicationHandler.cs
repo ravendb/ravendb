@@ -301,7 +301,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 {
                     if (SupportedFeatures.Replication.RevisionTombstonesWithId)
                     {
-                        var docId = _documentInfoHelper.GetDocumentId(revisionTombstoneItem);
+                        var docId = _documentInfoHelper.GetShortTermDocumentId(revisionTombstoneItem);
                         if (docId != null)
                         {
                             batches[_parent.Context.GetShardNumberFor(context, docId)].Items.Add(item);
@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 case TimeSeriesDeletedRangeItem:
                 case TimeSeriesReplicationItem:
                 case RevisionTombstoneReplicationItem:
-                    var id = _documentInfoHelper.GetDocumentId(item);
+                    var id = _documentInfoHelper.GetShortTermDocumentId(item);
                     if (string.IsNullOrEmpty(id))
                         throw new ArgumentException("Document id cannot be null or empty", nameof(id));
 

@@ -34,6 +34,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data;
 using Voron.Data.Fixed;
@@ -1541,7 +1542,8 @@ namespace Raven.Server.Documents
         private static Document InitializeDocument(JsonOperationContext context, Document document, ref TableValueReader tvr)
         {
             document.StorageId = tvr.Id;
-            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+            //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+            document.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr, LazyStringType.SimpleString);
             document.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
             document.Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr);
             document.Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context);
@@ -1558,7 +1560,8 @@ namespace Raven.Server.Documents
             var result = new Document(context, tvr.Id);
 
             if (fields.Contain(DocumentFields.LowerId))
-                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr);
+                //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+                result.LowerId = TableValueToString(context, (int)DocumentsTable.LowerId, ref tvr, LazyStringType.SimpleString);
 
             if (fields.Contain(DocumentFields.Id))
                 result.Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr);
@@ -1598,7 +1601,8 @@ namespace Raven.Server.Documents
             var result = new Tombstone
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
+                //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+                LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr, LazyStringType.SimpleString),
                 Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(Tombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
@@ -2156,7 +2160,8 @@ namespace Raven.Server.Documents
             var allocated = context.GetMemory(size + 1); // we need this extra byte to mark that there is no escaping
             allocated.Address[size] = 0;
             Memory.Copy(allocated.Address, lowerId.Buffer, size);
-            var lsv = context.AllocateStringValue(null, allocated.Address, size);
+            //TODO We are going to reject docIds with control characters so we can treat the mas simple string.
+            var lsv = context.AllocateStringValue(null, allocated.Address, size, LazyStringType.SimpleString);
             lsv.AllocatedMemoryData = allocated;
             return lsv;
         }
@@ -2623,7 +2628,11 @@ namespace Raven.Server.Documents
             if (collections == null)
                 throw new InvalidOperationException("Should never happen!");
 
+            if(DocumentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                StringUtils.CheckAndThrowContainsControlCharacters(collectionName);
+                
             name = new CollectionName(collectionName);
+            //TODO Here we escape control with the escape position
             using (DocumentIdWorker.GetStringPreserveCase(context, collectionName, out Slice collectionSlice))
             {
                 using (collections.Allocate(out TableValueBuilder tvr))
@@ -2651,6 +2660,12 @@ namespace Raven.Server.Documents
                 };
             }
             return name;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private string MyInline()
+        {
+            return "Should be inline";
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2807,7 +2822,9 @@ namespace Raven.Server.Documents
             var collections = tx.OpenTable(CollectionsSchema, CollectionsSlice);
             foreach (var tvr in collections.SeekByPrimaryKey(Slices.BeforeAllKeys, 0))
             {
-                var collection = TableValueToId(context, (int)CollectionsTable.Name, ref tvr.Reader);
+                //TODO I think we should avoid also collection name with control characters. I prefer to be explicit about that but we can differ
+                var collection = TableValueSizePrefixToString(context, (int)CollectionsTable.Name, ref tvr.Reader, LazyStringType.JsonString);
+                
                 yield return collection.ToString();
             }
         }
@@ -2899,10 +2916,10 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr, LazyStringType type)
         {
             var ptr = tvr.Read(index, out int size);
-            return context.AllocateStringValue(null, ptr, size);
+            return context.AllocateStringValue(null, ptr, size, type);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2922,8 +2939,16 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToId(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
+            //TODO We are going to reject IDs with control characters so we can treat that as SImpleString
+            return TableValueSizePrefixToString(context, index, ref tvr, LazyStringType.SimpleString);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //TODO To find a better name
+        public static LazyStringValue TableValueSizePrefixToString(JsonOperationContext context, int index, ref TableValueReader tvr, LazyStringType type)
+        {
             var ptr = tvr.Read(index, out _);
-            var lzs = context.GetLazyStringValue(ptr, out bool success);
+            var lzs = context.GetLazyStringValue(ptr, type, out var success);
             if (success == false)
                 ThrowInvalidTagLength();
             return lzs;

@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Replication
         private readonly List<LazyStringValue> _allowedPaths;
         private readonly List<LazyStringValue> _allowedPathsPrefixes;
         private DocumentInfoHelper _documentInfoHelper;
-        private LazyStringValue GetDocumentId(Slice key) => _documentInfoHelper.GetDocumentId(key);
+        private LazyStringValue GetDocumentId(Slice key) => _documentInfoHelper.GetShortTimeDocumentId(key);
         public string GetItemInformation(ReplicationBatchItem item) => _documentInfoHelper.GetItemInformation(item);
         
         public bool ShouldAllow(ReplicationBatchItem item)

@@ -146,7 +146,8 @@ namespace Raven.Server.Documents
             var result = new DocumentConflict
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
+                //TODO We are going to reject Ids with control character and we don't have the escape position to identify the type so we are going to treat that as SimpleString
+                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr, LazyStringType.SimpleString),
                 Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
                 Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
@@ -175,7 +176,8 @@ namespace Raven.Server.Documents
             var result = new DocumentConflict
             {
                 StorageId = tvr.Id,
-                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr),
+                //TODO We are going to reject Ids with control character and we don't have the escape position to identify the type so we are going to treat that as SimpleString
+                LowerId = TableValueToString(context, (int)ConflictsTable.LowerId, ref tvr, LazyStringType.SimpleString),
                 Id = TableValueToId(context, (int)ConflictsTable.Id, ref tvr),
                 ChangeVector = TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr),
                 Etag = etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),

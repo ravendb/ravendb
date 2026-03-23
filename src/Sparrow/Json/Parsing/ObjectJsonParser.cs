@@ -414,6 +414,7 @@ namespace Sparrow.Json.Parsing
                     _state.StringSize = lsv.Size;
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = lsv.Type;
                     ReadEscapePositions(lsv.Buffer, lsv.Size);
                     return true;
                 }
@@ -422,6 +423,7 @@ namespace Sparrow.Json.Parsing
                 {
                     _state.StringBuffer = bs.Address;
                     _state.StringSize = bs.Length;
+                    _state.StringType = LazyStringType.Invalid;
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.Blob;
                     return true;
@@ -433,6 +435,8 @@ namespace Sparrow.Json.Parsing
                     _state.StringSize = lcsv.UncompressedSize;
                     _state.CompressedSize = lcsv.CompressedSize;
                     _state.CurrentTokenType = JsonParserToken.String;
+                    //TODO to check
+                    _state.StringType = lcsv.Type;
                     ReadEscapePositions(lcsv.Buffer, lcsv.CompressedSize);
                     return true;
                 }
@@ -441,6 +445,7 @@ namespace Sparrow.Json.Parsing
                 {
                     _state.StringBuffer = ldv.Inner.Buffer;
                     _state.StringSize = ldv.Inner.Size;
+                    _state.StringType = ldv.Inner.Type;
                     _state.CompressedSize = null;// don't even try
                     _state.CurrentTokenType = JsonParserToken.Float;
                     ReadEscapePositions(ldv.Inner.Buffer, ldv.Inner.Size);
@@ -517,6 +522,7 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = LazyStringType.SimpleString;
                     return true;
                 }
 
@@ -526,6 +532,7 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = LazyStringType.SimpleString;
                     return true;
                 }
 
@@ -535,6 +542,7 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = LazyStringType.SimpleString;
                     return true;
                 }
                 
@@ -545,6 +553,7 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = LazyStringType.SimpleString;
                     return true;
                 }
                 
@@ -554,6 +563,7 @@ namespace Sparrow.Json.Parsing
 
                     SetStringBuffer(s);
                     _state.CurrentTokenType = JsonParserToken.String;
+                    _state.StringType = LazyStringType.SimpleString;
                     return true;
                 }
 #endif
@@ -628,6 +638,7 @@ namespace Sparrow.Json.Parsing
 
         private void ReadEscapePositions(byte* buffer, int escapeSequencePos)
         {
+            //TODO Duplicated code. We can use the new function from LazyStringValue. Just avoid that now to reduce modifications
             _state.EscapePositions.Clear();
             var numberOfEscapeSequences = BlittableJsonReaderBase.ReadVariableSizeInt(buffer, ref escapeSequencePos);
             while (numberOfEscapeSequences > 0)
@@ -648,8 +659,7 @@ namespace Sparrow.Json.Parsing
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
            
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out _);
-
+            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out var controlCount);
             int byteCount = str.Length * 5 + escapePositionsSize;
             if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < byteCount)
             {
@@ -667,12 +677,13 @@ namespace Sparrow.Json.Parsing
             }
 
             _state.StringBuffer = _currentStateBuffer.Address;
+            _state.StringType = controlCount == 0 ? LazyStringType.SimpleString : LazyStringType.JsonString;
 
             fixed (char* pChars = str)
             {
                 _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, _currentStateBuffer.SizeInBytes);
                 _state.CompressedSize = null; // don't even try
-                _state.FindEscapedPositionsAndEscapeControls(_state.StringBuffer, ref _state.StringSize, escapePositionsSize);
+                _state.FindEscapedPositionsAndEscapeControls(_state.StringBuffer, ref _state.StringSize, escapePositionsSize, LazyStringType.JsonString);
 
                 var escapePos = _state.StringBuffer + _state.StringSize;
                 _state.WriteEscapePositionsTo(escapePos);

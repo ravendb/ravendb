@@ -13,7 +13,7 @@ using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
 {
-    public sealed unsafe class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
+    public sealed unsafe partial class BlittableJsonReaderObject : BlittableJsonReaderBase, IDisposable
     {
         private static readonly object BoxedTrue = true;
         private static readonly object BoxedFalse = false;
@@ -263,7 +263,7 @@ namespace Sparrow.Json
             // Get the relative "In Document" position of the property Name
             var propRelativePos = _propNames - propertyNameOffset - _mem;
 
-            var propertyName = ReadStringLazily((int)propRelativePos);
+            var propertyName = ReadStringLazily((int)propRelativePos, true);
             return propertyName;
         }
 
@@ -855,8 +855,10 @@ namespace Sparrow.Json
             // Get the property name size
             var size = VariableSizeEncoding.Read<int>(propertyNameRelativePosition, out var propertyNameLengthDataLength);
 
+            //TODO To check what I should do with that
             // Return result of comparison between property name and received comparer
-            return comparer.Compare(propertyNameRelativePosition + propertyNameLengthDataLength, size);
+            var lazyStringValue = _context.AllocateStringValue(null, propertyNameRelativePosition + propertyNameLengthDataLength, size, LazyStringType.JsonString);
+            return comparer.CompareTo(lazyStringValue);
         }
 
         public struct InsertionOrderProperties : IDisposable
@@ -976,7 +978,7 @@ namespace Sparrow.Json
 
                 case BlittableJsonToken.LazyNumber:
                     isBlittableJsonReader = false;
-                    return new LazyNumberValue(ReadStringLazily(position));
+                    return new LazyNumberValue(ReadStringLazily(position, true));
             }
 
             throw new ArgumentOutOfRangeException(nameof(type), type.ToString(), "Unexpected type: " + type);
@@ -1357,7 +1359,7 @@ namespace Sparrow.Json
 
         private void ThrowInvalidNumber(int numberPosition)
         {
-            throw new InvalidDataException("Number not valid (" + ReadStringLazily(numberPosition).ToString() + ")");
+            throw new InvalidDataException("Number not valid (" + ReadStringLazily(numberPosition, true).ToString() + ")");
         }
 
         private static void ThrowInvalidPropertiesId()
@@ -1480,7 +1482,16 @@ namespace Sparrow.Json
 
             foreach (var propertyName in data.GetPropertyNames())
             {
-                var property = data[propertyName];
+                object property = null;
+                try
+                {
+                    property = data[propertyName];
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    // throw;
+                }
                 if (property is BlittableJsonReaderObject inner)
                 {
                     AssertNoModifications(inner, id, assertChildren: true);

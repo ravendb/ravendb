@@ -19,7 +19,7 @@ namespace Sparrow.Json.Parsing
             if (state.CurrentTokenType != JsonParserToken.String)
                 ThrowInvalidJson(peepingTomStream);
 
-            return context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
+            return context.AllocateStringValue(state).ToString();
         }
 
         public static bool Read(PeepingTomStream stream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)

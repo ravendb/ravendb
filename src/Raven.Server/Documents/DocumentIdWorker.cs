@@ -97,7 +97,8 @@ namespace Raven.Server.Documents
                     buffer.Ptr[i] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapedPositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize);
+            //TODO We need to keep the key as before
+            _jsonParserState.FindEscapedPositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize, LazyStringType.JsonString);
             if (separator != null)
             {
                 buffer.Ptr[strLength] = separator.Value;
@@ -302,11 +303,13 @@ namespace Raven.Server.Documents
             }
 
             int lowerIdLength = originalStrLength;
-            _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr, ref lowerIdLength, escapePositionsSize);
+            //TODO We need to keep the key as before
+            _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr, ref lowerIdLength, escapePositionsSize, LazyStringType.JsonString);
             if (lowerIdLength != originalStrLength)
             {
                 var idLength = originalStrLength;
-                _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref idLength, escapePositionsSize);
+                //TODO We need to keep the key as before
+                _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref idLength, escapePositionsSize, LazyStringType.JsonString);
 
 #if DEBUG
                 if (lowerIdLength != idLength)
@@ -366,7 +369,8 @@ namespace Raven.Server.Documents
                     ThrowDocumentIdTooBig(str);
                 
                 var originalLowerSize = lowerIdSize;
-                _jsonParserState.FindEscapedPositionsAndEscapeControls(lowerId, ref lowerIdSize, escapePositionsSize);
+                //TODO We need to keep the key as before
+                _jsonParserState.FindEscapedPositionsAndEscapeControls(lowerId, ref lowerIdSize, escapePositionsSize, LazyStringType.JsonString);
                 
                 byte* actualIdPtr = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
                 int actualIdSize = Encoding.GetBytes(pChars, strLength, actualIdPtr + maxIdLenSize, maxStrSize);
@@ -379,7 +383,8 @@ namespace Raven.Server.Documents
                 
                 //We already checked if there are control characters to escape
                 if (originalLowerSize != lowerIdSize)
-                    _jsonParserState.FindEscapedPositionsAndEscapeControls(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize);
+                    //TODO We need to keep the key as before
+                    _jsonParserState.FindEscapedPositionsAndEscapeControls(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize, LazyStringType.JsonString);
 
                 JsonParserState.WriteVariableSizeInt(ref writePos, actualIdSize);
                 escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + actualIdSize);

@@ -650,15 +650,15 @@ namespace SlowTests.Issues
                     data = context.ReadObject(data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr);
+                using var changeVector = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.ChangeVector, ref tvr, LazyStringType.SimpleString);
                 var groupEtag = DocumentsStorage.TableValueToEtag((int)Counters.CountersTable.Etag, ref tvr);
 
-                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr))
+                using (var counterGroupKey = DocumentsStorage.TableValueToString(context, (int)Counters.CountersTable.CounterKey, ref tvr, LazyStringType.SimpleString))
                 using (context.Allocator.Allocate(counterGroupKey.Size, out var buffer))
                 {
                     counterGroupKey.CopyTo(buffer.Ptr);
 
-                    using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
+                    using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length, LazyStringType.SimpleString))
                     using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
                     using (Slice.From(context.Allocator, changeVector, out var cv))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, "Users", out _, out Slice collectionSlice))

@@ -344,7 +344,10 @@ namespace Raven.Server.Documents.TimeSeries
             if (table.ReadByKey(key, out var tvr) == false)
                 return null;
 
-            return DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr);
+            //TODO I think we should reject timeseries name with control characters as well we 
+            var value = DocumentsStorage.TableValueToString(context, (int)StatsColumns.Name, ref tvr, LazyStringType.SimpleString);
+            value.EscapePositions = [];
+            return value;
         }
 
         public void UpdateTimeSeriesName(DocumentsOperationContext context, CollectionName collection, TimeSeriesSliceHolder slicer)

@@ -104,7 +104,9 @@ namespace Sparrow.Json
 
             public int CompareTo(PropertyName other)
             {
-                return Comparer.CompareTo(other.Comparer);
+                //TODO
+                int compareTo = Comparer.CompareTo(other.Comparer);
+                return compareTo;
             }
 
             public override string ToString()
@@ -170,7 +172,8 @@ namespace Sparrow.Json
 
         private readonly FastList<PropertyName> _docPropNames = new FastList<PropertyName>();
         private readonly SortedDictionary<PropertyName, object> _propertiesSortOrder = new SortedDictionary<PropertyName, object>();
-        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(default(LazyStringValueStructComparer));
+        //LazyStringValueComparer.Instance
+        private readonly Dictionary<LazyStringValue, PropertyName> _propertyNameToId = new Dictionary<LazyStringValue, PropertyName>(LazyStringValueComparer.Instance);
         private bool _propertiesNeedSorting;
 
         public int PropertiesDiscovered;
@@ -213,13 +216,31 @@ namespace Sparrow.Json
             var prop = new PropertyName(propName.GetHashCode(), propName, -1, propIndex);
 
             _docPropNames.Add(prop);
-            _propertiesSortOrder.Add(prop, prop);
+            while (true)
+            {
+                try
+                {
+                    if (prop.Comparer.StartsWith("haludi"))
+                    {
+                        var a = 0;
+                    }
+                            
+                    _propertiesSortOrder.Add(prop, prop);
+                    break;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+            }
+                    
             _propertyNameToId[propName] = prop;
             _propertiesNeedSorting = true;
             if (_docPropNames.Count > PropertiesDiscovered + 1)
             {
                 prop = SwapPropertyIds(prop);
             }
+
             PropertiesDiscovered++;
             return prop;
         }

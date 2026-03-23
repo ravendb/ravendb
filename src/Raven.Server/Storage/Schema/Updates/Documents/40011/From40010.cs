@@ -1,6 +1,7 @@
 ﻿using Raven.Server.Documents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Voron;
 using Voron.Data.Tables;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -32,7 +33,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         {
-                            var collection = TableValueToString(context, (int)CollectionsTable.Name, ref read.Reader);
+                            //TODO The collection name uses the origin case value of GetLowerIdSliceAndStorageKey which contains the escape position 
+                            var collection = TableValueToString(context, (int)CollectionsTable.Name, ref read.Reader, LazyStringType.JsonString);
                             using (DocumentIdWorker.GetStringPreserveCase(context, collection, out Slice collectionSlice))
                             using (writeTable.Allocate(out TableValueBuilder write))
                             {
@@ -81,7 +83,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         {
                             var type = *(Tombstone.TombstoneType*)read.Reader.Read((int)TombstoneTable.Type, out _);
-                            var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader);
+                            //TODO The collection name uses the origin case value of GetLowerIdSliceAndStorageKey which contains the escape position 
+                            var oldCollection = TableValueToString(context, (int)TombstoneTable.Collection, ref read.Reader, LazyStringType.JsonString);
                             using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
                             using (writeTable.Allocate(out TableValueBuilder write))
                             {
@@ -119,7 +122,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         using (TableValueReaderUtil.CloneTableValueReader(context, read))
                         {
-                            var oldCollection = TableValueToString(context, (int)ConflictsTable.Collection, ref read.Reader);
+                            //TODO The collection name uses the origin case value of GetLowerIdSliceAndStorageKey which contains the escape position 
+                            var oldCollection = TableValueToString(context, (int)ConflictsTable.Collection, ref read.Reader, LazyStringType.JsonString);
                             using (DocumentIdWorker.GetStringPreserveCase(context, oldCollection, out Slice collectionSlice))
                             using (writeTable.Allocate(out TableValueBuilder write))
                             {

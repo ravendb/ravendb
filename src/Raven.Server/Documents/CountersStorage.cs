@@ -18,6 +18,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents
             return new CounterGroupDetail
             {
                 DocumentId = docId,
-                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToString(context, (int)CountersTable.ChangeVector, ref tvr, LazyStringType.SimpleString),
                 Etag = TableValueToEtag((int)CountersTable.Etag, ref tvr),
                 Values = GetCounterValuesData(context, ref tvr)
             };
@@ -254,7 +255,7 @@ namespace Raven.Server.Documents
             {
                 DocumentId = docId,
                 Name = name,
-                ChangeVector = TableValueToString(context, (int)CounterTombstonesTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToString(context, (int)CounterTombstonesTable.ChangeVector, ref tvr, LazyStringType.SimpleString),
                 Etag = TableValueToEtag((int)CounterTombstonesTable.Etag, ref tvr)
             };
         }
@@ -309,10 +310,7 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
-            if (name.Length > DocumentIdWorker.MaxIdSize)
-            {
-                ThrowCounterNameTooBig(name);
-            }
+            ValidateCounterName(name);
 
             try
             {
@@ -457,6 +455,15 @@ namespace Raven.Server.Documents
 
                 _counterModificationMemoryScopes.Clear();
             }
+        }
+
+        private void ValidateCounterName(string name)
+        {
+            if (name.Length > DocumentIdWorker.MaxIdSize)
+                ThrowCounterNameTooBig(name);
+
+            if(_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                StringUtils.CheckAndThrowContainsControlCharacters(name);
         }
 
         [DoesNotReturn]
@@ -933,7 +940,8 @@ namespace Raven.Server.Documents
                             if (table.SeekOneBackwardByPrimaryKeyPrefix(documentKeyPrefix, counterKeySlice, out var tvr) == false)
                                 continue;
 
-                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr))
+                            //TODO We are going to reject document IDs with control characters and we don't have the escape position to identify the type anyway
+                            using (var counterGroupKey = TableValueToString(context, (int)CountersTable.CounterKey, ref tvr, LazyStringType.SimpleString))
                             {
                                 if (entriesToUpdate.TryGetValue(counterGroupKey, out var putCountersData))
                                 {
@@ -1001,7 +1009,8 @@ namespace Raven.Server.Documents
                                     // clone counter group key
                                     var scope = context.Allocator.Allocate(counterGroupKey.Size, out var output);
                                     counterGroupKey.CopyTo(output.Ptr);
-                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length);
+                                    //TODO We are going to reject document IDs with control characters and we don't have the escape position to identify the type anyway, so we can use simple string here
+                                    var clonedKey = context.AllocateStringValue(null, output.Ptr, output.Length, LazyStringType.SimpleString);
                                     putCountersData.KeyScope = scope;
                                     entriesToUpdate[clonedKey] = putCountersData;
                                 }
@@ -2165,8 +2174,8 @@ namespace Raven.Server.Documents
                 if (p[sizeOfDocId] == SpecialChars.RecordSeparator)
                     break;
             }
-
-            return context.AllocateStringValue(null, p, sizeOfDocId);
+            //TODO We are going to reject IDs with control characters so we can consider it as SimpleString
+            return context.AllocateStringValue(null, p, sizeOfDocId, LazyStringType.SimpleString);
         }
 
         public static void ExtractDocIdAndCounterNameFromCounterTombstoneKey(JsonOperationContext context, ref TableValueReader tvr, out LazyStringValue docId, out LazyStringValue counterName)
@@ -2180,9 +2189,11 @@ namespace Raven.Server.Documents
                     break;
                 next++;
             }
-            docId = context.AllocateStringValue(null, p, sizeOfDocId);
-            counterName = context.GetLazyString(p + next + 1, size - next - 1);
+            //TODO We are going to reject IDs with control characters so we can consider it as SimpleString
+            docId = context.AllocateStringValue(null, p, sizeOfDocId, LazyStringType.SimpleString);
+            counterName = context.AllocateStringValue(null, p + next + 1, size - next - 1, LazyStringType.SimpleString);
 
+            //TODO I am not sure why we have those asserts and it will be nice to remove it as part of the PR
             Debug.Assert(docId != null);
             Debug.Assert(counterName != null);
         }
@@ -2557,7 +2568,8 @@ namespace Raven.Server.Documents
 
                     unsafe LazyStringValue CounterNameLsv()
                     {
-                        return context.GetLazyString(loweredCounterNameSlice.Content.Ptr, loweredCounterNameSlice.Size);
+                        //TODO I am going to reject future counter names with control characters but I want to keep the previous behavior for old data.
+                        return context.GetLazyString(loweredCounterNameSlice.Content.Ptr, loweredCounterNameSlice.Size, LazyStringType.JsonString, true);
                     }
                 }
             }
@@ -2658,7 +2670,8 @@ namespace Raven.Server.Documents
                 unsafe LazyStringValue CounterGroupKey()
                 {
                     var p = tvr.Read((int)CountersTable.CounterKey, out var size);
-                    return context.GetLazyString(p, size);
+                    //TODO We don't have the escape character and future counter names with control characters are going to be rejected
+                    return context.AllocateStringValue(null, p, size, LazyStringType.SimpleString);
                 }
 
                 unsafe LazyStringValue ExtractDocId()
@@ -2671,7 +2684,8 @@ namespace Raven.Server.Documents
                             break;
                     }
 
-                    return context.GetLazyString(p, sizeOfDocId);
+                    //TODO It is used only to hold the pointer and size so escaping makes no sense anyway
+                    return context.AllocateStringValue(null, p, sizeOfDocId, LazyStringType.SimpleString);
                 }
 
                 unsafe IDisposable ToDocumentIdPrefix(LazyStringValue documentId, out Slice documentIdPrefix)
@@ -2688,7 +2702,8 @@ namespace Raven.Server.Documents
                         var scope = context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer);
                         CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice);
 
-                        key = context.AllocateStringValue(null, counterKeySlice.Content.Ptr, counterKeySlice.Content.Length);
+                        //TODO We are going to reject doc IDs with control characters so we can consider it as SimpleString
+                        key = context.AllocateStringValue(null, counterKeySlice.Content.Ptr, counterKeySlice.Content.Length, LazyStringType.SimpleString);
                         return scope;
                     }
                 }
@@ -2709,7 +2724,8 @@ namespace Raven.Server.Documents
                             bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                             counterNameSlice.AsSpan().CopyTo(bufferSpan.Slice(offset));
 
-                            return context.GetLazyString(buffer.Ptr, size);
+                            //TODO We are going to reject counter names with control characters but better to keep the previous behavior for old data
+                            return context.GetLazyString(buffer.Ptr, size, LazyStringType.JsonString);
                         }
                     }
                 }

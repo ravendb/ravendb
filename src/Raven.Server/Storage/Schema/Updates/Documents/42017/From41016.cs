@@ -286,7 +286,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     {
                         var t = new Tombstone
                         {
-                            LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref result.Value.Reader),
+                            //TODO We didn't (and we don't) store the escape positions so there is no way to differ. Better to refer to it as SimpleString.
+                            LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref result.Value.Reader, LazyStringType.SimpleString),
                             Type = *(Tombstone.TombstoneType*)result.Value.Reader.Read((int)TombstoneTable.Type, out _),
                         };
 
@@ -526,7 +527,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 return new CounterDetail
                 {
-                    CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, ref tvr),
+                    //TODO Counter key contains the document Id and it doesn't have the escape position of it. Better to refer to it as SimpleString.
+                    CounterKey = TableValueToString(context, (int)LegacyCountersTable.CounterKey, ref tvr, LazyStringType.SimpleString),
                     DocumentId = doc.ToString(),
                     CounterName = name.ToString(),
                     TotalValue = TableValueToLong((int)LegacyCountersTable.Value, ref tvr),
@@ -546,7 +548,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     break;
             }
 
-            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
+            //TODO Lower DocId doesn't contain the escape positions
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId, LazyStringType.SimpleString);
             var name = TableValueToId(context, (int)LegacyCountersTable.Name, ref tvr);
             return (doc, name);
         }
@@ -562,12 +565,14 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     break;
             }
 
-            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
+            //TODO Doesn't contain the escape positions so we define it as SimpleString
+            var doc = context.AllocateStringValue(null, p, sizeOfDocId, LazyStringType.SimpleString);
 
             sizeOfDocId++;
             p += sizeOfDocId;
             int sizeOfName = size - sizeOfDocId - 1;
-            var name = context.AllocateStringValue(null, p, sizeOfName);
+            //TODO Doesn't contain the escape positions so we define it as SimpleString
+            var name = context.AllocateStringValue(null, p, sizeOfName, LazyStringType.SimpleString);
             return (doc, name);
         }
 
@@ -576,7 +581,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var offset = counterKey.Size - CountersStorage.DbIdAsBase64Size;
             var p = counterKey.Buffer + offset;
 
-            return context.AllocateStringValue(null, p, CountersStorage.DbIdAsBase64Size);
+            //TODO No way to get here control characters
+            return context.AllocateStringValue(null, p, CountersStorage.DbIdAsBase64Size, LazyStringType.SimpleString);
         }
 
         private static BlittableJsonReaderObject WriteNewCountersDocument(DocumentsOperationContext context, List<string> dbIds, IEnumerable<KeyValuePair<string, List<CounterDetail>>> batch)

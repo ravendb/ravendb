@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
             var mem = _ctx.GetMemory(maxSizeOfEscapePos + state.StringSize);
             _allocations.Add(mem);
             Memory.Copy(mem.Address, state.StringBuffer, state.StringSize);
-            var lazyStringValueFromParserState = _ctx.AllocateStringValue(null, mem.Address, state.StringSize);
+            var lazyStringValueFromParserState = _ctx.AllocateStringValue(null, mem.Address, state.StringSize, state.StringType);
             if (escapePositionsCount > 0)
             {
                 lazyStringValueFromParserState.EscapePositions = state.EscapePositions.ToArray();
@@ -520,6 +520,7 @@ namespace Raven.Server.Documents
                     var collection = _metadataCollections;
                     state.StringBuffer = collection.AllocatedMemoryData.Address;
                     state.StringSize = collection.Size;
+                    state.StringType = collection.Type;
                     aboutToReadPropertyName = true;
                     return true;
 
@@ -573,6 +574,7 @@ namespace Raven.Server.Documents
                     var expires = _metadataExpires;
                     state.StringBuffer = expires.AllocatedMemoryData.Address;
                     state.StringSize = expires.Size;
+                    state.StringType = expires.Type;
                     aboutToReadPropertyName = true;
                     return true;
 

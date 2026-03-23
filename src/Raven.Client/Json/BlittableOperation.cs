@@ -198,7 +198,8 @@ namespace Raven.Client.Json
                     fixed (byte* pBuff = bytes.Array)
                     {
                         // need to ignore the quote marks
-                        using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2);
+                        //TODO To check
+                        using var str = context.AllocateStringValue(null, pBuff + bytes.Offset + 1, (int)memoryStream.Length - 2, LazyStringType.JsonString, true);
 
                         return newProp.Value.Equals(str);
                     }

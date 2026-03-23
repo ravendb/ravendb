@@ -61,7 +61,8 @@ namespace Raven.Server.Documents.Replication
                         CollectionName.GetCollectionName(doc)
                     ),
                     LastModified = new DateTime(lastModifiedTicks),
-                    LowerId = documentsContext.AllocateStringValue(null, loweredKey.Content.Ptr, loweredKey.Content.Length),
+                    //TODO The actual value here is a JSON value but we are going to reject control characters in the document id and treat it as SimpleString.
+                    LowerId = documentsContext.AllocateStringValue(null, loweredKey.Content.Ptr, loweredKey.Content.Length, LazyStringType.SimpleString),
                     Id = lazyId,
                     ChangeVector = changeVector,
                     Flags = flags

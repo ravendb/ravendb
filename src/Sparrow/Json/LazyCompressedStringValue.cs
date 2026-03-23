@@ -4,13 +4,14 @@ using Sparrow.Compression;
 
 namespace Sparrow.Json
 {
-    public sealed unsafe class LazyCompressedStringValue
+    public sealed unsafe class LazyCompressedStringValue //TODO To check
     {
         private readonly JsonOperationContext _context;
         public readonly byte* Buffer;
 
         public readonly int UncompressedSize;
         public readonly int CompressedSize;
+        public readonly LazyStringType Type;
         public string String;
 
         public override bool Equals(object obj)
@@ -43,17 +44,19 @@ namespace Sparrow.Json
         {
             var allocatedUncompressedData = DecompressToAllocatedMemoryData(_context);
 
-            var lazyStringValue = _context.AllocateStringValue(null, allocatedUncompressedData.Address, UncompressedSize);
+            //TODO To check
+            var lazyStringValue = _context.AllocateStringValue(null, allocatedUncompressedData.Address, UncompressedSize, Type, true);
 
             lazyStringValue.AllocatedMemoryData = allocatedUncompressedData;
             return lazyStringValue;
         }
 
-        public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, JsonOperationContext context)
+        public LazyCompressedStringValue(string str, byte* buffer, int uncompressedSize, int compressedSize, LazyStringType type, JsonOperationContext context)
         {
             String = str;
             UncompressedSize = uncompressedSize;
             CompressedSize = compressedSize;
+            Type = type;
             _context = context;
             Buffer = buffer;
         }

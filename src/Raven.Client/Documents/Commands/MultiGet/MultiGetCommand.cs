@@ -234,7 +234,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        private static unsafe GetResponse ReadResponse(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
+        private static GetResponse ReadResponse(JsonOperationContext context, PeepingTomStream peepingTomStream, UnmanagedJsonParser parser, JsonParserState state, JsonOperationContext.MemoryBuffer buffer)
         {
             if (state.CurrentTokenType != JsonParserToken.StartObject)
                 ThrowInvalidJsonResponse(peepingTomStream);
@@ -251,7 +251,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 if (state.CurrentTokenType != JsonParserToken.String)
                     ThrowInvalidJsonResponse(peepingTomStream);
 
-                var property = context.AllocateStringValue(null, state.StringBuffer, state.StringSize).ToString();
+                var property = context.AllocateStringValue(state).ToString();
                 switch (property)
                 {
                     case nameof(GetResponse.Result):

@@ -58,7 +58,7 @@ namespace Sparrow.Json
     }
 
     // PERF: Sealed because in CoreCLR 2.0 it will devirtualize virtual calls methods like GetHashCode.
-    public sealed unsafe class LazyStringValue : IComparable<string>, IEquatable<string>,
+    public sealed unsafe partial class LazyStringValue : IComparable<string>, IEquatable<string>,
         IComparable<LazyStringValue>, IEquatable<LazyStringValue>, IDisposable, IComparable, IConvertible, IEnumerable<char>
     {
         internal JsonOperationContext _context;
@@ -87,6 +87,20 @@ namespace Sparrow.Json
             }
         }
 
+        //TODO I implement that so we cache the simple value lazily.
+        //This is only relevant if the value has control characters.
+        //If not we just set the time to SimpleString and this stays null
+        //Since this is only to handle relativly rare cases we can consider of disposing the simple value immidiately rather then caching it
+        private LazyStringValue _simpleStringValue;
+
+        public LazyStringType Type
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private set; 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get;
+        }
+        
         public bool EqualsOrdinalIgnoreCase(LazyStringValue other)
         {
             return CompareToOrdinalIgnoreCase(this.Buffer, Size, other.Buffer, other.Size) == 0;
@@ -151,21 +165,26 @@ namespace Sparrow.Json
             Memory.Copy(dest, _buffer, _size);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public LazyStringValue Clone(JsonOperationContext context)
         {
-            if (_size == 0)
-                return context.Empty;
-
-            return context.GetLazyString(_buffer, _size, longLived: false);
+            //The previous implementation used to also escape control characters so here it is a behaviour change
+            return Clone(context, Type);
         }
-
-        public LazyStringValue CloneOnSameContext()
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LazyStringValue Clone(JsonOperationContext context, LazyStringType type)
         {
-            if (_size == 0)
-                return _context.Empty;
-
-            return _context.GetLazyString(_buffer, _size, longLived: false);
+            return _size == 0
+                ? context.Empty
+                : Type == LazyStringType.SimpleString
+                    ? context.GetLazyString(_buffer, _size, type, longLived: false)
+                    //TODO Implement a more efficient way to clone a json string without the need to convert it to simple string first
+                    : AsSimpleValue().Clone(context, type);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public LazyStringValue CloneOnSameContext() => Clone(_context);
 
         public bool HasStringValue => _string != null;
 
@@ -175,7 +194,7 @@ namespace Sparrow.Json
         [ThreadStatic]
         private static byte[] _lazyStringTempComparisonBuffer;
 
-        private static char[] GetlazyStringTempBuffer(int charCount)
+        private static char[] GetLazyStringTempBuffer(int charCount)
         {
             if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < charCount)
                 _lazyStringTempBuffer = new char[Bits.NextAllocationSize(charCount)];
@@ -198,7 +217,7 @@ namespace Sparrow.Json
         public AllocatedMemoryData AllocatedMemoryData;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context)
+        public LazyStringValue(string str, byte* buffer, int size, JsonOperationContext context, LazyStringType type, bool shouldCheck = false)
         {
             Debug.Assert(context != null);
             _context = context;
@@ -206,6 +225,11 @@ namespace Sparrow.Json
             _buffer = buffer;
             _string = str;
             _length = -1;
+            Type = type;
+
+            //TODO To remove "shouldCheck" (it is just for the time of developing)
+            if (shouldCheck)
+                Check_TempFunction();
         }
 
         static LazyStringValue()
@@ -226,10 +250,11 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
-
+            if (other == null)
+                return false;
+            
             if (_string != null)
                 return string.Equals(_string, other, StringComparison.Ordinal);
-
 
             var buffer = GetLazyStringTempComparisonBuffer(other.Length);
             fixed (char* pOther = other)
@@ -239,7 +264,8 @@ namespace Sparrow.Json
                 if (Size != tmpSize)
                     return false;
 
-                return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;
+                var toCompare = Type == LazyStringType.SimpleString ? this : AsSimpleValue();
+                return Memory.CompareInline(toCompare.Buffer, pBuffer, tmpSize) == 0;
             }
         }
 
@@ -250,9 +276,22 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 #endif
+            if (other == null)
+                return false;
+            
+            if (Type == other.Type)
+                return EqualsSameType(other);
+            
+            return AsSimpleValue().EqualsSameType(other.AsSimpleValue());
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool EqualsSameType(LazyStringValue other)
+        {
+            Debug.Assert(Type == other.Type);
+            
             int size = Size;
-            if (other.Size != size)
+            if (size != other.Size)
                 return false;
 
             return Memory.CompareInline(Buffer, other.Buffer, size) == 0;
@@ -263,6 +302,20 @@ namespace Sparrow.Json
             if (_string != null)
                 return string.Compare(_string, other, StringComparison.Ordinal);
 
+            if(Type == LazyStringType.SimpleString)
+                return CompareSimpleStringTo(other);
+            
+            if(Type == LazyStringType.JsonString)
+                return AsSimpleValue().CompareSimpleStringTo(other);
+            
+            ThrowInvalidType();
+            return 0; // never reached
+        }
+
+        private int CompareSimpleStringTo(string other)
+        {
+            Debug.Assert(Type == LazyStringType.SimpleString);
+            
             var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);
 
             var buffer = GetLazyStringTempComparisonBuffer(other.Length);
@@ -270,20 +323,30 @@ namespace Sparrow.Json
             fixed (byte* pBuffer = buffer)
             {
                 var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
-                return Compare(pBuffer, tmpSize);
+                return CompareSameType(pBuffer, tmpSize);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareTo(LazyStringValue other)
         {
-            if (other.Buffer == Buffer && other.Size == Size)
-                return 0;
-            return Compare(other.Buffer, other.Size);
+            return Type == other.Type 
+                ? CompareSameType(other) 
+                : AsSimpleValue().CompareSameType(AsSimpleValue());
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int Compare(byte* other, int otherSize)
+        private int CompareSameType(LazyStringValue other)
+        {
+            Debug.Assert(Type == other.Type);
+            
+            if (other.Buffer == Buffer && other.Size == Size)
+                return 0;
+            return CompareSameType(other.Buffer, other.Size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int CompareSameType(byte* other, int otherSize)
         {
 #if DEBUG
             if (IsDisposed)
@@ -329,9 +392,83 @@ namespace Sparrow.Json
             if (self.IsDisposed)
                 self.ThrowAlreadyDisposed();
 #endif
-            return self._string ??
-                   (self._string = Encodings.Utf8.GetString(self._buffer, self._size));
+            if (self._string != null)
+                return self._string;
+
+            if (self.Type == LazyStringType.SimpleString)
+                return self._string = Encodings.Utf8.GetString(self._buffer, self._size);
+
+            if (self.Type == LazyStringType.JsonString)
+            {
+                //TODO
+                LazyStringValue lazyStringValue = self.AsSimpleValue();
+                return self._string = lazyStringValue;
+            }
+
+            ThrowInvalidType();
+            return null; // never reached
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private LazyStringValue AsSimpleValue()
+        {
+            if(Type == LazyStringType.SimpleString)
+                return this;
+            
+            if(_simpleStringValue != null)
+            {
+                //TODO Maybe to handle better if the context was reset
+                if(_simpleStringValue.Type != LazyStringType.Invalid)
+                    return _simpleStringValue;
+                _simpleStringValue = null;
+            }
+
+            if (Type == LazyStringType.JsonString)
+            {
+                if (_context.CopyAndUnescapeControlCharacters(_string, this, out var value))
+                    return _simpleStringValue = value;
+                
+                Type = LazyStringType.SimpleString;
+                return this;
+            }
+
+            ThrowInvalidType();
+            return null; // never reached
+        }
+
+        public void Check_TempFunction()
+        {
+            int controlCharsCount = 0;
+            try
+            {
+                controlCharsCount = CheckControlCharacters_TempFunction();
+            }
+            catch (Exception e)
+            {
+                var breakpoint = 0;
+            }
+            if (controlCharsCount > 0)
+            {
+                var breakpoint = 0;
+            }
+        }
+
+        private int CheckControlCharacters_TempFunction()
+        {
+            if (EscapePositions != null)
+                return StringUtils.CountEscapedControlCharacters(AsSpan(), EscapePositions.AsSpan());
+            
+            var reader = StringUtils.GetEscapePositionsReader(this);
+            //TODO To allocate on heap for very big
+            Span<int> buffer = stackalloc int[reader.Length];
+            var escapePositions = new StringUtils.SpanWriter<int>(buffer);
+            while (reader.Read())
+                escapePositions.Append(reader.Current);
+            
+            return StringUtils.CountEscapedControlCharacters(AsSpan(), escapePositions.AsSpan());
+        }
+        
+        private static void ThrowInvalidType() => throw new InvalidOperationException(); //TODO
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator byte[](LazyStringValue self)
@@ -442,11 +579,31 @@ namespace Sparrow.Json
             if (_hashCode.HasValue)
                 return _hashCode.Value;
 
+            if (Type == LazyStringType.SimpleString)
+            {
+                _hashCode = GetHashCodeForSimpleString();
+                return _hashCode.Value;
+            }
+
+            if (Type == LazyStringType.JsonString)
+            {
+                _hashCode = AsSimpleValue().GetHashCodeForSimpleString();
+                return _hashCode.Value;
+            }
+
+            ThrowInvalidType();
+            return 0; // never reached
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int? GetHashCodeForSimpleString()
+        {
+            Debug.Assert(Type == LazyStringType.SimpleString);
             _hashCode = IntPtr.Size == 4
                 ? (int)Hashing.XXHash32.CalculateInline(Buffer, Size)
                 : (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
 
-            return _hashCode.Value;
+            return _hashCode;
         }
 
         public override string ToString()
@@ -488,7 +645,9 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             ReturnAllocatedMemory();
-
+            //TODO The simple string dispose is done by the context
+            _simpleStringValue = null;
+            
             IsDisposed = true;
         }
 
@@ -655,7 +814,7 @@ namespace Sparrow.Json
 
             ValidateIndexes(startIndex, count);
 
-            var buffer = GetlazyStringTempBuffer(Length);
+            var buffer = GetLazyStringTempBuffer(Length);
             fixed (char* pChars = buffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
 
@@ -718,7 +877,7 @@ namespace Sparrow.Json
 
             ValidateIndexes(startIndex, count);
 
-            var buffer = GetlazyStringTempBuffer(Length);
+            var buffer = GetLazyStringTempBuffer(Length);
             fixed (char* pChars = buffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
 
@@ -756,7 +915,7 @@ namespace Sparrow.Json
 
             ValidateIndexes(Length - startIndex - 1, count);
 
-            var buffer = GetlazyStringTempBuffer(Length);
+            var buffer = GetLazyStringTempBuffer(Length);
 
             fixed (char* pChars = buffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
@@ -823,7 +982,7 @@ namespace Sparrow.Json
 
             ValidateIndexes(Length - startIndex - 1, count);
 
-            var buffer = GetlazyStringTempBuffer(Length);
+            var buffer = GetLazyStringTempBuffer(Length);
 
             fixed (char* pChars = buffer)
                 Encodings.Utf8.GetChars(Buffer, Size, pChars, Length);
@@ -1147,7 +1306,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             var maxCharCount = Encodings.Utf8.GetMaxCharCount(Length);
-            var charBuf = GetlazyStringTempBuffer(maxCharCount);
+            var charBuf = GetLazyStringTempBuffer(maxCharCount);
 
             var buffer = _buffer;
 
@@ -1177,11 +1336,11 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Reset()
         {
-            Renew(null, null, 0, null);
+            Renew(null, null, 0, null, LazyStringType.Invalid);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Renew(string str, byte* buffer, int size, JsonOperationContext context)
+        public void Renew(string str, byte* buffer, int size, JsonOperationContext context, LazyStringType type, bool shouldCheck = false)
         {
             Debug.Assert(size >= 0);
 
@@ -1194,8 +1353,18 @@ namespace Sparrow.Json
             EscapePositions = null;
             IsDisposed = false;
             AllocatedMemoryData = null;
-            _hashCode = default;
+            _hashCode = null;
             _context = context;
+
+            if (_simpleStringValue != null)
+            {
+                _simpleStringValue.Reset();
+                _simpleStringValue = null;
+            }
+            Type = type;
+            
+            if (shouldCheck)
+                Check_TempFunction();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
@@ -209,9 +210,11 @@ namespace Raven.Server.Documents.TimeSeries
                         Key = key,
                         DocId = docId,
                         Name = name,
-                        Collection = DocumentsStorage.TableValueToId(context, (int)RollupColumns.Collection, ref item.Result.Reader),
+                        //TODO We keep the escape positions so we can verify the type
+                        Collection = DocumentsStorage.TableValueSizePrefixToString(context, (int)RollupColumns.Collection, ref item.Result.Reader, LazyStringType.JsonString),
                         NextRollup = new DateTime(rollUpTime),
-                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader),
+                        //TODO We don't escape the PolicyToApply so we can treat is as SimpleString
+                        RollupPolicy = DocumentsStorage.TableValueToString(context, (int)RollupColumns.PolicyToApply, ref item.Result.Reader, LazyStringType.SimpleString),
                         Etag = DocumentsStorage.TableValueToLong((int)RollupColumns.Etag, ref item.Result.Reader),
                         ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)RollupColumns.ChangeVector, ref item.Result.Reader)
                     };

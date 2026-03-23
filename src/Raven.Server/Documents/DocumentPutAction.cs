@@ -19,6 +19,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Raven.Client.Util;
+using Sparrow.Utils;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -125,6 +126,7 @@ namespace Raven.Server.Documents
                 compareClusterTransaction.ValidateAtomicGuard(id, nonPersistentFlags, oldChangeVectorForClusterTransactionIndexCheck);
             }
 
+            ValidateId(id, newFlags, nonPersistentFlags);
             id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
@@ -333,6 +335,23 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateId(string id, DocumentFlags newFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if( string.IsNullOrWhiteSpace(id)
+               ||newFlags.Contain(DocumentFlags.FromReplication)
+               || newFlags.Contain(DocumentFlags.FromClusterTransaction)
+               //TODO To check if needed
+               || newFlags.Contain(DocumentFlags.FromResharding)
+               || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return;
+
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+
+            StringUtils.CheckAndThrowContainsControlCharacters(id);
+        }
+        
         [Conditional("DEBUG")]
         private static void ValidateDocument(string id, BlittableJsonReaderObject document, ref ulong documentDebugHash)
         {
@@ -374,7 +393,7 @@ namespace Raven.Server.Documents
                 var lastChar = id[^1];
                 if (lastChar == '|')
                 {
-                    ThrowInvalidDocumentId(id);
+                    ThrowIdCannotEndWithIdentitySeparator(id);
                 }
 
                 fixed (char* idPtr = id)
@@ -431,7 +450,7 @@ namespace Raven.Server.Documents
         }
 
         [DoesNotReturn]
-        private static void ThrowInvalidDocumentId(string id)
+        private static void ThrowIdCannotEndWithIdentitySeparator(string id)
         {
             throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
