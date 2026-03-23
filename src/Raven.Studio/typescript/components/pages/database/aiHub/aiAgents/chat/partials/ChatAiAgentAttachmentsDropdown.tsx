@@ -27,9 +27,13 @@ import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiA
 
 interface ChatAiAgentAttachmentDropdownProps {
     attachmentsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "attachments", "id">;
+    isPromptDisabled: boolean;
 }
 
-export default function ChatAiAgentAttachmentsDropdown({ attachmentsFieldsArray }: ChatAiAgentAttachmentDropdownProps) {
+export default function ChatAiAgentAttachmentsDropdown({
+    attachmentsFieldsArray,
+    isPromptDisabled,
+}: ChatAiAgentAttachmentDropdownProps) {
     const dispatch = useAppDispatch();
     const tabInfo = useAppSelector(chatAiAgentSelectors.newAttachmentTab);
 
@@ -48,6 +52,7 @@ export default function ChatAiAgentAttachmentsDropdown({ attachmentsFieldsArray 
                 variant="link"
                 title="Add attachments"
                 className="p-0"
+                disabled={isPromptDisabled}
             >
                 <Icon icon="attachment" margin="m-0" />
             </Dropdown.Toggle>
@@ -68,7 +73,7 @@ export default function ChatAiAgentAttachmentsDropdown({ attachmentsFieldsArray 
     );
 }
 
-function SourceTab({ attachmentsFieldsArray }: ChatAiAgentAttachmentDropdownProps) {
+function SourceTab({ attachmentsFieldsArray }: Pick<ChatAiAgentAttachmentDropdownProps, "attachmentsFieldsArray">) {
     const dispatch = useAppDispatch();
     const fileInputRef = useRef<HTMLInputElement>(null);
 

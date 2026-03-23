@@ -37,7 +37,10 @@ export default function ChatAiAgentPromptActions({
 
     return (
         <div className="hstack gap-1 prompt-actions">
-            <ChatAiAgentAttachmentsDropdown attachmentsFieldsArray={attachmentsFieldsArray} />
+            <ChatAiAgentAttachmentsDropdown
+                attachmentsFieldsArray={attachmentsFieldsArray}
+                isPromptDisabled={isPromptDisabled}
+            />
             {hasPromptErrors && (
                 <PopoverWithHoverWrapper message={promptsCount > 1 ? "Prompts are required" : "Prompt is required"}>
                     <Icon icon="warning" color="danger" margin="m-0" />
