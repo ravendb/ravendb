@@ -17,7 +17,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import document from "models/database/documents/document";
 import { LoadError } from "components/common/LoadError";
-import { SubmitHandler, UseFieldArrayReturn, useForm } from "react-hook-form";
+import { SubmitHandler, UseFieldArrayReturn, useForm, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { FormCheckboxes, FormCheckboxesOption } from "components/common/Form";
@@ -57,7 +57,7 @@ export default function ChatAiAgentAttachmentsDropdown({
                 <Icon icon="attachment" margin="m-0" />
             </Dropdown.Toggle>
             <Dropdown.Menu
-                style={{ width: 300, height: tabInfo?.tab === "source" ? undefined : 350 }}
+                style={{ width: 400, height: tabInfo?.tab === "source" ? undefined : 350 }}
                 renderOnMount
                 popperConfig={{ strategy: "fixed" }}
             >
@@ -264,6 +264,11 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
         resolver: yupResolver(documentAttachmentsSchema),
     });
 
+    const selectedNames = useWatch({
+        control,
+        name: "names",
+    });
+
     const handleAdd: SubmitHandler<DocumentAttachmentsFormData> = (data) => {
         chatAttachmentsFieldsArray.append(
             data.names.map((name) => ({
@@ -290,9 +295,15 @@ function DocumentAttachmentsTab({ chatAttachmentsFieldsArray }: DocumentAttachme
                     </Button>
                     <span className="small-label">Document attachments</span>
                     {hasAttachmentsInDoc && (
-                        <Button variant="primary" size="sm" onClick={handleSubmit(handleAdd)} className="ms-auto">
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={handleSubmit(handleAdd)}
+                            className="ms-auto"
+                            disabled={selectedNames.length === 0}
+                        >
                             <Icon icon="plus" />
-                            Add
+                            Add to prompt
                         </Button>
                     )}
                 </div>
