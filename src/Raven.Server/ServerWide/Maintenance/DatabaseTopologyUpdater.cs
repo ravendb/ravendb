@@ -689,6 +689,27 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
+            // If the etag gap is large enough to be considered "big", document replication is the root cause.
+            // Report it before checking indexes or compare exchange to avoid surfacing a secondary symptom
+            // (e.g. index staleness caused by docs not yet arriving) as the primary blocker.
+            if (mentorsEtag - lastSentEtag > BigReplicationEtagGap)
+            {
+                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
+                          $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
+                          $"Mentor's Etag: {mentorsEtag:#,#;;0}";
+
+                _logger.Log($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (big replication gap, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", state.ObserverIteration, database: dbName);
+
+                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
+                    msg.Equals(demotionReason) == false)
+                {
+                    topology.DemotionReasons[promotable] = msg;
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                    return (false, msg);
+                }
+                return (false, null);
+            }
+
             var databaseEtag = -1L;
             if (state.HasActiveMigrations() == false)
             {
@@ -1063,6 +1084,10 @@ namespace Raven.Server.ServerWide.Maintenance
         }
 
         private const string ThingsToCheck = "Things you may check: verify node is working, check for ports being blocked by firewall or similar software.";
+
+        // If the replication gap (mentor etag minus last-sent etag) exceeds this value the gap is considered
+        // "big" and document replication is reported as the root cause before index or compare-exchange lag.
+        private const long BigReplicationEtagGap = 1_000;
 
         private void RaiseNoLivingNodesAlert(string alertMsg, string dbName, long iteration)
         {
