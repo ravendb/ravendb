@@ -14,6 +14,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Debugging;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -200,12 +201,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [MethodImpl(MethodImplOptions.Synchronized)]
         public static void OutputResultToStream(TextWriter sw, HashSet<string> threadIds = null, bool includeStackObjects = false)
         {
-            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
-                PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
-            );
-
-            if (File.Exists(ravenDebugExec) == false)
-                throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
+            var ravenDebugExec = RavenDebugExecUtils.GetRavenDebugExecPath();
 
             using (var currentProcess = Process.GetCurrentProcess())
             {
