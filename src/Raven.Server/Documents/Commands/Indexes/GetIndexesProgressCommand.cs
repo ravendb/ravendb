@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Http;
@@ -8,14 +9,27 @@ namespace Raven.Server.Documents.Commands.Indexes;
 
 internal sealed class GetIndexesProgressCommand : RavenCommand<IndexProgress[]>
 {
-    public GetIndexesProgressCommand(string nodeTag)
+    private readonly string[] _indexesWithExactProgress;
+
+    public GetIndexesProgressCommand(string nodeTag, string[] indexesWithExactProgress = null)
     {
         SelectedNodeTag = nodeTag;
+        _indexesWithExactProgress = indexesWithExactProgress;
     }
 
     public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
     {
         url = $"{node.Url}/databases/{node.Database}/indexes/progress";
+
+        if (_indexesWithExactProgress is { Length: > 0 })
+        {
+            var separator = '?';
+            for (var i = 0; i < _indexesWithExactProgress.Length; i++)
+            {
+                url += $"{separator}exact={Uri.EscapeDataString(_indexesWithExactProgress[i])}";
+                separator = '&';
+            }
+        }
 
         return new HttpRequestMessage
         {

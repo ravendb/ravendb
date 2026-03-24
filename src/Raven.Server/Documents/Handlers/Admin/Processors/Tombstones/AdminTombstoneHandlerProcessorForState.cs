@@ -11,18 +11,15 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Tombstones;
 
 internal sealed class AdminTombstoneHandlerProcessorForState : AbstractAdminTombstoneHandlerProcessorForState<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    private readonly bool _exact;
-
-    public AdminTombstoneHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler, bool exact) : base(requestHandler)
+    public AdminTombstoneHandlerProcessorForState([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-        _exact = exact;
     }
 
     protected override bool SupportsCurrentNode => true;
 
     protected override async ValueTask HandleCurrentNodeAsync()
     {
-        var state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: _exact);
+        var state = RequestHandler.Database.TombstoneCleaner.GetState(addInfoForDebug: true, exact: IsExact());
         var response = new GetTombstonesStateCommand.Response(state);
 
         using (RequestHandler.Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -147,6 +144,9 @@ internal sealed class AdminTombstoneHandlerProcessorForState : AbstractAdminTomb
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.NumberOfTombstoneLeft));
                         writer.WriteInteger(info.Value.NumberOfTombstoneLeft);
+                        writer.WriteComma();
+                        writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.Estimated));
+                        writer.WriteBool(info.Value.Estimated);
                         writer.WriteComma();
                         writer.WritePropertyName(nameof(TombstoneCleaner.TombstonesState.SubscriptionInfoExtended.Types));
                         context.Write(writer, info.Value.Types?.ToJson());

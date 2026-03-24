@@ -20,11 +20,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override RavenCommand<IReplicationTaskProgress[]> CreateCommandForNode(string nodeTag)
         {
+            var exact = IsExact();
+
             if (_internalReplication)
-                return new GetOutgoingInternalReplicationProgressCommand(nodeTag);
+                return new GetOutgoingInternalReplicationProgressCommand(nodeTag, exact);
 
             var names = GetNames();
-            return new GetReplicationOngoingTasksProgressCommand(names, nodeTag);
+            return new GetReplicationOngoingTasksProgressCommand(names, nodeTag, exact);
         }
 
         protected StringValues GetNames() => RequestHandler.GetStringValuesQueryString("name", required: false);

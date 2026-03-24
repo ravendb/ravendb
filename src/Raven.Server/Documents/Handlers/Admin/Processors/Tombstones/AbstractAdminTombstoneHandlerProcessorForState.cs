@@ -14,5 +14,11 @@ internal abstract class AbstractAdminTombstoneHandlerProcessorForState<TRequestH
     {
     }
 
-    protected override RavenCommand<GetTombstonesStateCommand.Response> CreateCommandForNode(string nodeTag) => new GetTombstonesStateCommand(nodeTag);
+    protected override RavenCommand<GetTombstonesStateCommand.Response> CreateCommandForNode(string nodeTag)
+    {
+        var exact = IsExact();
+        return new GetTombstonesStateCommand(nodeTag, exact);
+    }
+
+    protected bool IsExact() => RequestHandler.GetBoolValueQueryString("exact", required: false) ?? false;
 }
