@@ -1681,7 +1681,7 @@ namespace Voron.Data.Fixed
                 Total = NumberOfEntries
             };
 
-            if (NumberOfEntries == 0)
+            if (result.Total == 0)
                 return result;
 
             if (Type.HasValue == false)
@@ -1692,7 +1692,7 @@ namespace Voron.Data.Fixed
                 using (var it = (EmbeddedIterator)Iterate())
                 {
                     if (it.Seek(value) == false)
-                        return new NumberOfEntriesAfterResult();
+                        return result;
 
                     result.Count = it.NumberOfEntriesLeft;
                     return result;
