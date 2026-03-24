@@ -27,6 +27,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
 
@@ -1172,7 +1173,16 @@ namespace Raven.Server.Web.Authentication
                         X509Certificate2 newCertificate;
                         try
                         {
-                            newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                            var flags = CertificateLoaderUtil.FlagsForPersist;
+    
+                            // macOS Keychain rigidly blocks exports of persisted private keys.
+                            // Keeping the key in memory (Ephemeral) by dropping PersistKeySet bypasses this.
+                            if (PlatformDetails.RunningOnMacOsx)
+                            {
+                                flags = CertificateLoaderUtil.FlagsForExport; 
+                            }
+
+                            newCertificate = CertificateLoaderUtil.CreateCertificate(certBytes, flags: flags);
                         }
                         catch (Exception e)
                         {

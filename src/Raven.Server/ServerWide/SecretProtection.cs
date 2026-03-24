@@ -836,9 +836,38 @@ namespace Raven.Server.ServerWide
         {
             ValidateExpiration("ValidateCertificateBeforeReplacement", certificate, licenseType, throwOnExpired: true);
 
-            ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
-            
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                // macOS AppleCrypto blocks exporting ephemeral private keys to PFX, 
+                // We validate the private key's presence directly in memory instead.
+                ValidatePrivateKeyOnMacOs("ValidateCertificateBeforeReplacement", certificate, out _);
+            }
+            else
+            {
+                // On Windows and Linux, proceed with the standard export-based validation
+                ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
+            }
+
             ValidateServerKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);
+        }
+        
+        internal static void ValidatePrivateKeyOnMacOs(string source, X509Certificate2 certificate, out AsymmetricAlgorithm pk, SetupProgressAndResult progress = null)
+        {
+            // Attempt to get the private key directly from memory
+            pk = certificate.GetRSAPrivateKey() ?? (AsymmetricAlgorithm)certificate.GetECDsaPrivateKey();
+
+            // If the certificate is explicitly marked as not having a key, 
+            // or if the key extraction failed/returned null, throw the exact expected exception.
+            if (certificate.HasPrivateKey == false || pk == null)
+            {
+                var msg = "Unable to find the private key in the provided certificate from " + source;
+
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations(msg);
+                progress?.AddInfo(msg);
+        
+                throw new CryptographicException(msg);
+            }
         }
 
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricAlgorithm pk, SetupProgressAndResult progress = null)

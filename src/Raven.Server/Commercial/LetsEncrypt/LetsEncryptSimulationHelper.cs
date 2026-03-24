@@ -122,20 +122,18 @@ public sealed class LetsEncryptSimulationHelper
 
             using (var httpMessageHandler = new HttpClientHandler())
             {
-                // on MacOS this is not supported because Apple...
-                if (PlatformDetails.RunningOnMacOsx == false)
-                {
-                    httpMessageHandler.ServerCertificateCustomValidationCallback += (_, certificate2, _, _) =>
+                httpMessageHandler.ServerCertificateCustomValidationCallback += (_, certificate2, _, _) =>
                     // we want to verify that we get the same thing back
-                    {
-                        if (certificate2.Thumbprint != serverCertificate.Thumbprint)
-                            throw new InvalidOperationException("Expected to get " + serverCertificate.FriendlyName + " with thumbprint " +
-                                                                serverCertificate.Thumbprint + " but got " +
-                                                                certificate2.FriendlyName + " with thumbprint " + certificate2.Thumbprint);
-                        return true;
-                    };
-                }
-
+                {
+                    if (certificate2.Thumbprint != serverCertificate.Thumbprint)
+                        throw new InvalidOperationException("Expected to get " + serverCertificate.FriendlyName + " with thumbprint " +
+                                                            serverCertificate.Thumbprint + " but got " +
+                                                            certificate2.FriendlyName + " with thumbprint " + certificate2.Thumbprint);
+                
+                    // This tells the HttpClient to ignore the UntrustedRoot error
+                    return true;
+                };
+                
                 using (var client = new RavenHttpClient(httpMessageHandler) { BaseAddress = new Uri(serverUrl) })
                 {
                     HttpResponseMessage response = null;

@@ -306,7 +306,13 @@ public class RavenDB_22210 : RavenTestBase
                 using (var store = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
                 {
                     store.Open(OpenFlags.ReadWrite);
-                    store.Add(certificate);
+                
+                    // Strip the private key. macOS Keychain crashes if you try to add 
+                    // an ephemeral private key. Validation only needs the public cert anyway.
+                    using (var publicOnlyCert = new X509Certificate2(certificate.Export(X509ContentType.Cert)))
+                    {
+                        store.Add(publicOnlyCert);
+                    }
                 }
 
                 Thread.Sleep(73);

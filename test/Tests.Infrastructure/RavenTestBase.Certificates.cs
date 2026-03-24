@@ -15,6 +15,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 
 namespace FastTests;
 
@@ -80,7 +81,10 @@ public partial class RavenTestBase
             if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
 
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? (
+                PlatformDetails.RunningOnMacOsx 
+                ? "https://127.0.0.1:0" 
+                : $"https://{Environment.MachineName}:0");
 
             _parent.DoNotReuseServer(customSettings);
 

@@ -81,6 +81,7 @@ using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
+using Sparrow.Platform;
 using Constants = Sparrow.Global.Constants;
 using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
 using ClientConstants = Raven.Client.Constants;
@@ -1344,8 +1345,16 @@ namespace Raven.Server
                     Configuration.Security.CertificateRenewExecArguments,
                     ServerStore.GetLicenseType(),
                     ServerStore.Configuration.Security.CertificateValidationKeyUsages);
-
-                return CertificateLoaderUtil.CreateCertificate(certificate.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForPersist);
+                
+                var flags = CertificateLoaderUtil.FlagsForPersist;
+        
+                // macOS Keychain rigidly blocks silent exports of persisted private keys.
+                // Keeping the key in memory (Ephemeral) bypasses the Keychain restriction.
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    flags = CertificateLoaderUtil.FlagsForExport;
+                }
+                return CertificateLoaderUtil.CreateCertificate(certificate.Export(X509ContentType.Pfx), flags: flags);
             }
             catch (Exception e)
             {
@@ -1450,7 +1459,16 @@ namespace Raven.Server
             X509Certificate2 refreshedCertificate;
             try
             {
-                refreshedCertificate = CertificateLoaderUtil.CreateCertificate(newCertBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                var flags = CertificateLoaderUtil.FlagsForPersist;
+        
+                // macOS Keychain blocks the export of private keys loaded with PersistKeySet.
+                // We must load it as Ephemeral (FlagsForExport) so StartCertificateReplicationAsync can broadcast it.
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    flags = CertificateLoaderUtil.FlagsForExport;
+                }
+
+                refreshedCertificate = CertificateLoaderUtil.CreateCertificate(newCertBytes, flags: flags);
             }
             catch (Exception e)
             {
