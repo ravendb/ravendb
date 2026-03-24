@@ -16,9 +16,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/databases/*/admin/tombstones/state", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task State()
         {
-            var exact = GetBoolValueQueryString("exact", required: false) ?? false;
-
-            using (var processor = new AdminTombstoneHandlerProcessorForState(this, exact))
+            using (var processor = new AdminTombstoneHandlerProcessorForState(this))
                 await processor.ExecuteAsync();
         }
     }

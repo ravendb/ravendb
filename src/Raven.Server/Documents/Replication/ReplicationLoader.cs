@@ -2048,7 +2048,7 @@ namespace Raven.Server.Documents.Replication
             var result = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsToProcess(documentsContext, lastProcessedEtag, overallDuration, exact);
             progress.NumberOfAttachmentsToProcess = result.Count;
             progress.TotalNumberOfAttachments = result.Total;
-            progress.Estimated = result.Estimated;
+            progress.Estimated |= result.Estimated;
 
             progress.TotalNumberOfRevisionTombstones = Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionTombstones(documentsContext);
             progress.TotalNumberOfAttachmentTombstones = Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentTombstones(documentsContext);

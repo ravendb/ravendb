@@ -223,6 +223,10 @@ namespace Raven.Server.Json
                     wp.WriteBool(processProgress.Disabled);
                     wp.WriteComma();
 
+                    wp.WritePropertyName(nameof(processProgress.Estimated));
+                    wp.WriteBool(processProgress.Estimated);
+                    wp.WriteComma();
+
                     wp.WritePropertyName(nameof(processProgress.AverageProcessedPerSecond));
                     wp.WriteDouble(processProgress.AverageProcessedPerSecond);
                     wp.WriteComma();
@@ -308,7 +312,11 @@ namespace Raven.Server.Json
                     w.WritePropertyName(nameof(processProgress.Completed));
                     w.WriteBool(processProgress.Completed);
                     w.WriteComma();
-                    
+
+                    w.WritePropertyName(nameof(processProgress.Estimated));
+                    w.WriteBool(processProgress.Estimated);
+                    w.WriteComma();
+
                     w.WritePropertyName(nameof(processProgress.HandlerId));
                     w.WriteString(processProgress.HandlerId);
                     w.WriteComma();
@@ -1676,6 +1684,10 @@ namespace Raven.Server.Json
                     writer.WritePropertyName(kvp.Key);
 
                     writer.WriteStartObject();
+
+                    writer.WritePropertyName(nameof(kvp.Value.Estimated));
+                    writer.WriteBool(kvp.Value.Estimated);
+                    writer.WriteComma();
 
                     writer.WritePropertyName(nameof(kvp.Value.LastProcessedItemEtag));
                     writer.WriteInteger(kvp.Value.LastProcessedItemEtag);
