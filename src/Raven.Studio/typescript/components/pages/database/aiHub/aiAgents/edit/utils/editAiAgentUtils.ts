@@ -47,6 +47,7 @@ function mapFromDto(
                 isSendToModel: x.SendToModel ?? true,
                 policy: x.Policy ?? "Default",
                 type: x.Type ?? "Default",
+                isEditing: false,
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({

@@ -221,11 +221,35 @@ function createParametersDto(
         formParameters.map((x) => [
             x.name,
             {
-                Value: x.value,
-                SendToModel: true,
+                Value: mapParameterToType(x.value, x.type),
+                SendToModel: x.isSendToModel,
             },
         ])
     );
+}
+
+function mapParameterToType(
+    value: string,
+    type: Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType
+) {
+    switch (type) {
+        case "Number":
+            return Number(value);
+        case "Boolean":
+            return value === "true";
+        case "ArrayOfString":
+            return value.split(",").map((x) => x.trim());
+        case "ArrayOfNumber":
+            return value.split(",").map((x) => Number(x.trim()));
+        case "ArrayOfBoolean":
+            return value.split(",").map((x) => x.trim() === "true");
+        case "Null":
+            return null;
+        case "String":
+        case "Default":
+        default:
+            return value;
+    }
 }
 
 const getIsDocumentExpirationEnabled = createAsyncThunk(

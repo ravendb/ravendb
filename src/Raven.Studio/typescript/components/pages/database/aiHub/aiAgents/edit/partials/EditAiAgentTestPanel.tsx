@@ -109,10 +109,16 @@ export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgent
         testForm.setValue("prompt", "");
         testForm.setValue(
             "parameters",
-            editFormValues.parameters.map((x) => ({
-                name: x.name,
-                value: testFormValues.parameters.find((y) => y.name === x.name)?.value ?? "",
-            }))
+            editFormValues.parameters.map((x) => {
+                const persistedParameter = testFormValues.parameters.find((y) => y.name === x.name);
+
+                return {
+                    name: x.name,
+                    type: x.type,
+                    isSendToModel: persistedParameter?.isSendToModel ?? x.isSendToModel,
+                    value: persistedParameter?.value ?? "",
+                };
+            })
         );
     };
 
@@ -172,12 +178,13 @@ export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgent
             <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
                 <div className="flex-grow-1 vstack w-100 overflow-auto p-2 position-relative" ref={messagesPanelRef}>
                     {messages.length === 0 && (
-                        <div className="h-100 vstack justify-content-center">
+                        <div className="h-100 vstack justify-content-center mx-auto" style={{ maxWidth: "600px" }}>
                             <AiAgentParametersField
                                 control={testForm.control}
-                                name="parameters"
                                 value={testFormValues.parameters}
-                                isTest
+                                panelClassName="panel-bg-2"
+                                wrapperClassName="justify-content-center"
+                                headerClassName="text-center"
                             />
                         </div>
                     )}

@@ -17,6 +17,8 @@ const schema = yup.object({
                     is: true,
                     then: (schema) => schema.required(),
                 }),
+            type: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType>().nullable(),
+            isSendToModel: yup.boolean(),
         })
     ),
 

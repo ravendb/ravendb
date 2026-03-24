@@ -34,10 +34,16 @@ export default function EditAiAgentFooter({ testForm, editForm }: EditAiAgentFoo
 
         testForm.setValue(
             "parameters",
-            editFormValues.parameters.map((x) => ({
-                name: x.name,
-                value: testFormValues.parameters.find((y) => y.name === x.name)?.value ?? "",
-            }))
+            editFormValues.parameters.map((x) => {
+                const persistedParameter = testFormValues.parameters.find((y) => y.name === x.name);
+
+                return {
+                    name: x.name,
+                    type: x.type,
+                    isSendToModel: persistedParameter?.isSendToModel ?? x.isSendToModel,
+                    value: persistedParameter?.value ?? "",
+                };
+            })
         );
         dispatch(editAiAgentActions.isTestOpenSet(true));
     };

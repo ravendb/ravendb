@@ -78,7 +78,12 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
         return {
             prompts: [{ text: "" }],
-            parameters: config.Parameters.map((x) => ({ name: x.Name, value: "" })),
+            parameters: config.Parameters.map((x) => ({
+                name: x.Name,
+                value: "",
+                type: x.Type ?? "Default",
+                sendToModel: x.SendToModel ?? true,
+            })),
             isEnableDocumentExpiration: !isDocumentExpirationEnabled,
             isDocumentExpireInCustomizeEnabled: false,
             persistenceConversationIdPrefix: "",

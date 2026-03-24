@@ -56,6 +56,7 @@ const editSchema = yup.object({
             isSendToModel: yup.boolean(),
             policy: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterPolicy>(),
             type: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType>(),
+            isEditing: yup.boolean(),
         })
     ),
 
@@ -180,6 +181,8 @@ const testSchema = yup.object({
         yup.object({
             name: yup.string().nullable(),
             value: yup.string().nullable().required(),
+            type: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType>(),
+            isSendToModel: yup.boolean(),
         })
     ),
 });
