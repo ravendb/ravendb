@@ -45,6 +45,7 @@ export function AiAgentMessagesAttachments({ attachments, documentId }: AiAgentM
                     onClick={() => downloadAttachment(attachment.name)}
                     size="xs"
                     title="Download attachment"
+                    variant="secondary"
                 >
                     <Icon
                         icon={chatAiAgentAttachmentsUtils.getIcon(attachment.contentType)}
