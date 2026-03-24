@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
             RevisionsStorage revisionsStorage,
             List<string> ids,
             TOperationResult result,
-            OperationCancelToken token,
-            RateGate rateGate = null)
+            RateGate rateGate,
+            OperationCancelToken token)
         {
             _revisionsStorage = revisionsStorage;
             _ids = ids;

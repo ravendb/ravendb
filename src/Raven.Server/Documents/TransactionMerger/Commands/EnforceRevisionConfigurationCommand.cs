@@ -16,8 +16,8 @@ internal sealed class EnforceRevisionConfigurationCommand : RevisionsScanningOpe
         List<string> ids,
         EnforceConfigurationResult result,
         bool includeForceCreated,
-        OperationCancelToken token,
-        RateGate rateGate = null) : base(revisionsStorage, ids, result, token, rateGate)
+        RateGate rateGate,
+        OperationCancelToken token) : base(revisionsStorage, ids, result, rateGate, token)
     {
         _includeForceCreatedRevisionsOnDeleteInCaseOfNoConfiguration = includeForceCreated;
     }
@@ -67,7 +67,7 @@ internal sealed class EnforceRevisionConfigurationCommand : RevisionsScanningOpe
 
         public EnforceRevisionConfigurationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
-            return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids, new EnforceConfigurationResult(), _includeForceCreated, OperationCancelToken.None);
+            return new EnforceRevisionConfigurationCommand(_revisionsStorage, _ids, new EnforceConfigurationResult(), _includeForceCreated, null, OperationCancelToken.None);
         }
     }
 }

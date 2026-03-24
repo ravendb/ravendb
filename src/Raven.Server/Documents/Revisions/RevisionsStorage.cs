@@ -1948,7 +1948,7 @@ namespace Raven.Server.Documents.Revisions
         private async Task PerformRevisionsOperationAsync<TOperationResult>(
             Action<IOperationProgress> onProgress,
             TOperationResult result,
-            Func<List<string>, TOperationResult, OperationCancelToken, RateGate, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
+            Func<List<string>, TOperationResult, RateGate, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
             RevisionsOperationParameters operationParameters,
             int? maxOpsPerSecond,
             OperationCancelToken token) where TOperationResult : OperationResult
@@ -2005,7 +2005,7 @@ namespace Raven.Server.Documents.Revisions
 
         private async Task PerformRevisionsOperationOnSingleCollectionAsync<TOperationResult>(
             string collection, List<string> ids, Stopwatch sw,
-            Func<List<string>, TOperationResult, OperationCancelToken, RateGate, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
+            Func<List<string>, TOperationResult, RateGate, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
             TOperationResult result,
             Parameters parameters, RateGate rateGate, OperationCancelToken token)
             where TOperationResult : OperationResult
@@ -2065,12 +2065,12 @@ namespace Raven.Server.Documents.Revisions
                         while (moreWork)
                         {
                             token.ThrowIfCancellationRequested();
-                            var cmd = createCommand(ids, result, token, rateGate);
+                            var cmd = createCommand(ids, result, rateGate, token);
                             await _database.TxMerger.Enqueue(cmd);
                             moreWork = cmd.MoreWork || cmd.NeedWait;
 
                             if (cmd.NeedWait)
-                                rateGate?.WaitToProceed();
+                                await rateGate.WaitToProceedAsync();
                         }
                     }
                 }
