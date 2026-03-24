@@ -65,6 +65,56 @@ export class AiAgentStubs {
                             Policy: "Default",
                             Type: "Default",
                         },
+                        {
+                            Name: "LicenseId",
+                            Description: null,
+                            SendToModel: false,
+                            Policy: "Default",
+                            Type: "String",
+                        },
+                        {
+                            Name: "RavenVersion",
+                            Description: "Currently used server version of RavenDB",
+                            SendToModel: true,
+                            Policy: "Default",
+                            Type: "Number",
+                        },
+                        {
+                            Name: "NumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName",
+                            Description:
+                                "Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion ",
+                            SendToModel: true,
+                            Policy: "ForbidModelGeneration",
+                            Type: "ArrayOfNumber",
+                        },
+                        {
+                            Name: "boolParam",
+                            Description: null,
+                            SendToModel: true,
+                            Policy: "Default",
+                            Type: "Boolean",
+                        },
+                        {
+                            Name: "stringArrayParam",
+                            Description: null,
+                            SendToModel: true,
+                            Policy: "Default",
+                            Type: "ArrayOfString",
+                        },
+                        {
+                            Name: "boolArrayParam",
+                            Description: null,
+                            SendToModel: true,
+                            Policy: "Default",
+                            Type: "ArrayOfBoolean",
+                        },
+                        {
+                            Name: "nullParam",
+                            Description: null,
+                            SendToModel: true,
+                            Policy: "Default",
+                            Type: "Null",
+                        },
                     ],
                     ChatTrimming: null,
                     MaxModelIterationsPerCall: null,
@@ -78,7 +128,35 @@ export class AiAgentStubs {
         return new document({
             Agent: "first-agent",
             Parameters: {
-                company: { Value: "companies/90-A", SendToModel: true },
+                LicenseId: {
+                    Value: "cee0a5b9-9da8-433d-a673-a689da5cdb14",
+                    SendToModel: false,
+                },
+                RavenVersion: {
+                    Value: 7.1,
+                    SendToModel: true,
+                },
+                NumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName:
+                    {
+                        Value: [-0.00001, -553542, -3, 4.132231],
+                        SendToModel: true,
+                    },
+                boolParam: {
+                    Value: true,
+                    SendToModel: true,
+                },
+                stringArrayParam: {
+                    Value: ["aa", "bb"],
+                    SendToModel: true,
+                },
+                boolArrayParam: {
+                    Value: [true, false],
+                    SendToModel: true,
+                },
+                nullParam: {
+                    Value: null,
+                    SendToModel: true,
+                },
             },
             Messages: [
                 {

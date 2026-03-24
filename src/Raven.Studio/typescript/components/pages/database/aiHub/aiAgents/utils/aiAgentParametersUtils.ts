@@ -33,11 +33,12 @@ function getParameterTypeInfo(type: AiAgentParameterValueType): AiAgentParameter
             return { label: "Number[]", exampleValue: "[1, 2, 3]" };
         case "ArrayOfBoolean":
             return { label: "Boolean[]", exampleValue: "[true, false, true]" };
+        case "Default":
+            return { label: "Any" };
         case "String":
         case "Number":
         case "Boolean":
         case "Null":
-        case "Default":
             return { label: type };
         default:
             assertUnreachable(type);

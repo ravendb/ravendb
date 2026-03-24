@@ -248,7 +248,7 @@ const typeOptions: SelectOption<Raven.Client.Documents.Operations.AI.Agents.AiAg
     { value: "ArrayOfString", label: "String[]" },
     { value: "ArrayOfNumber", label: "Number[]" },
     { value: "ArrayOfBoolean", label: "Boolean[]" },
-    { value: "Default", label: "Default" },
+    { value: "Default", label: "Any" },
     { value: "Null", label: "Null" },
 ];
 
