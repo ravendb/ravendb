@@ -332,7 +332,7 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    private class AiActionContext<TActionParametersSchema>
+    internal class AiActionContext<TActionParametersSchema>
         where TActionParametersSchema : class
     {
         private readonly AiConversation _conversation;
@@ -376,7 +376,7 @@ internal class AiConversation : IAiConversationOperations
             }
         }
 
-        private static string CreateErrorMessageForLlm(Exception e)
+        internal static string CreateErrorMessageForLlm(Exception e)
         {
             var sb = new StringBuilder();
             var currentException = e;

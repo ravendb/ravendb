@@ -116,6 +116,11 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     }
 }
 
+/// <summary>
+/// Specifies the reasoning effort level used by supported models.
+/// Controls how much internal reasoning the model performs,
+/// affecting latency and response variability.
+/// </summary>
 public enum OpenAiReasoningEffort
 {
     Minimal,

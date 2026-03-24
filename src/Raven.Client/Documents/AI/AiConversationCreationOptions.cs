@@ -13,6 +13,10 @@ namespace Raven.Client.Documents.AI;
 /// </summary>
 public class AiConversationCreationOptions : IDynamicJson
 {
+    /// <summary>
+    /// Conversation-level parameters passed to the agent.
+    /// Each parameter defines a value and whether it should be sent to the model.
+    /// </summary>
     public Dictionary<string, AiConversationParameter> Parameters { get; set; }
 
     /// <summary>
@@ -43,12 +47,12 @@ public class AiConversationCreationOptions : IDynamicJson
 
     public AiConversationCreationOptions(Dictionary<string, AiConversationParameter> parameters)
     {
-        Parameters = parameters;
+        Parameters = parameters ?? new ();
     }
 
     public AiConversationCreationOptions(Dictionary<string, object> parameters)
     {
-        Parameters = parameters.ToDictionary(kv => kv.Key, kv => new AiConversationParameter { Value = kv.Value, SendToModel = true});
+        Parameters = parameters?.ToDictionary(kv => kv.Key, kv => new AiConversationParameter { Value = kv.Value, SendToModel = true}) ?? new ();
     }
 
     /// <summary>
@@ -70,9 +74,23 @@ public class AiConversationParameterOptions
     public bool SendToModel { get; set; } = true;
 }
 
+/// <summary>
+/// Represents a single conversation parameter, including its value
+/// and whether it should be sent to the model.
+/// </summary>
 public class AiConversationParameter : IDynamicJson
 {
+    /// <summary>
+    /// The parameter value.
+    /// </summary>
     public object Value { get; set; }
+
+    /// <summary>
+    /// Controls whether this parameter is sent to the model at the conversation level.
+    /// The parameter will be included only if it is also allowed in the agent configuration
+    /// (SendToModel = true or unset there) and this flag is true.
+    /// Default is true.
+    /// </summary>
     public bool SendToModel { get; set; } = true;
     public DynamicJsonValue ToJson()
     {

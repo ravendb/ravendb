@@ -39,7 +39,7 @@ public class AiAgentParameter : IDynamicJson
 
     /// <summary>
     /// Initializes a new agent parameter and controls whether its value should be sent to the LLM.
-    /// Use this overload when you need to explicitly hide sensitive values (e.g. userId/tenant/company) from the model.
+    /// Use this overload when you need to explicitly hide sensitive values (e.g. email / SSN / credit card number) from the model.
     /// </summary>
     /// <inheritdoc cref="AiAgentParameter(string, string)" />
     /// <param name="sendToModel">
@@ -54,7 +54,7 @@ public class AiAgentParameter : IDynamicJson
 
     /// <summary>
     /// Initializes a new agent parameter and controls whether its value should be sent to the LLM.
-    /// Use this overload when you need to explicitly hide sensitive values (e.g. userId/tenant/company) from the model.
+    /// Use this overload when you need to explicitly hide sensitive values (e.g. email / SSN / credit card number) from the model.
     /// </summary>
     /// <inheritdoc cref="AiAgentParameter(string, string, bool)" />
     /// <param name="policy">
@@ -89,7 +89,7 @@ public class AiAgentParameter : IDynamicJson
 
     /// <summary>
     /// Initializes a new agent parameter and controls whether its value should be sent to the LLM.
-    /// Use this overload when you need to explicitly hide sensitive values (e.g. userId/tenant/company) from the model.
+    /// Use this overload when you need to explicitly hide sensitive values (e.g. email / SSN / credit card number) from the model.
     /// </summary>
     /// <inheritdoc cref="AiAgentParameter(string, string, bool, AiAgentParameterPolicy)" />
     /// <param name="type">
@@ -155,15 +155,13 @@ public class AiAgentParameter : IDynamicJson
             [nameof(Type)] = Type,
         };
     }
-
-    [Flags]
-    public enum AiAgentParameterPolicy
-    {
-        Default = 0,
-        ForbidModelGeneration = 1
-    }
 }
 
+/// <summary>
+/// Defines the expected JSON value type of an agent parameter.
+/// Used for validation before execution.
+/// <see cref="AiAgentParameterValueType.Default"/> disables type validation.
+/// </summary>
 public enum AiAgentParameterValueType
 {
     Default, // Don't care - for backward compatibility
@@ -174,4 +172,24 @@ public enum AiAgentParameterValueType
     ArrayOfNumber,
     ArrayOfBoolean,
     Null
+}
+
+/// <summary>
+/// Defines policy flags that control how a parameter behaves,
+/// especially when used across parent and sub-agent boundaries.
+/// </summary>
+[Flags]
+public enum AiAgentParameterPolicy
+{
+    /// <summary>
+    /// No special behavior.
+    /// </summary>
+    Default = 0,
+
+    /// <summary>
+    /// Prevents the model from generating a value for this parameter.
+    /// When used in a sub-agent, the value may only be inherited
+    /// from the parent agent's parameters.
+    /// </summary>
+    ForbidModelGeneration = 1
 }

@@ -482,8 +482,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
         _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
-            ["role"] = "user",
-            ["content"] = $"[Attachments: {attachmentNames}]"
+            [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+            [ChatCompletionClient.Constants.ResponseFields.Content] = $"[Attachments: {attachmentNames}]"
         }, "user/attachments-msg"), usage: null); // usage: null
     }
 
@@ -690,7 +690,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (reqs.Count is 0)
             return Task.FromResult(0);
 
-        return ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
+        return ExecuteSubAgentAndQueryRequestsAsync(context, reqs);
     }
 
     private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
@@ -736,11 +736,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 return query;
         }
 
-        foreach (var agent in self.SubAgents ?? [])
-        {
-            if (agent.Identifier == name)
-                return agent;
-        }
+        var subAgent = self.FindSubAgent(name);
+        if (subAgent != null)
+            return subAgent;
 
         foreach (AiAgentToolAction action in self.Actions ?? [])
         {
@@ -825,9 +823,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                     _document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
                         {
-                            ["tool_call_id"] = t.ToolId,
-                            ["role"] = "tool",
-                            ["content"] = t.Content
+                            [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = t.ToolId,
+                            [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                            [ChatCompletionClient.Constants.ResponseFields.Content] = t.Content
                         },
                         "user/tool"), usage: null);
                 }
@@ -838,7 +836,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                     subAgentsActions ??= new Dictionary<string, SubAgentActionResponse>();
 
+                    // Aggregate sub-agent responses per root tool call (one group per sub-agent call).
                     var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
+
                     subAgent.Responses.Add(new AiAgentActionResponse
                     {
                         ToolId = childToolId, // sub call ID
@@ -890,8 +890,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         {
             _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
-                ["role"] = "user",
-                ["content"] = _request.Content
+                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
             }, "user/msg"), usage: null);
         }
 
@@ -907,7 +907,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
     }
 
-    private async Task<int> ExecuteMultiAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+    private async Task<int> ExecuteSubAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
     {
         List<Task<SubConversationResult>> tasks = [];
         foreach (var (conversationId, conversationReqs) in reqs)
@@ -951,11 +951,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         _document.Messages.Add(context.ReadObject(
                             new DynamicJsonValue
                             {
-                                ["role"] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
-                                ["type"] = "sub-agent-action-call",
-                                ["content"] = $"[sub-agent called action-tool '{value.Name}']",
-                                ["toolName"] = value.Name,
-                                ["subConversationId"] = value.SubConversationId,
+                                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
+                                [ChatCompletionClient.Constants.ResponseFields.Type] = "sub-agent-action-call",
+                                [ChatCompletionClient.Constants.ResponseFields.Content] = $"[sub-agent called action-tool '{value.Name}']",
+                                [ChatCompletionClient.Constants.ResponseFields.ToolName] = value.Name,
+                                [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = value.SubConversationId,
                             }, "tool-call/sub-agent-action-tool"));
                     }
                 }
@@ -1009,10 +1009,10 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                             result.Messages.Add(context.ReadObject(
                                     new DynamicJsonValue
                                     {
-                                        ["tool_call_id"] = currentCall.Id,
-                                        ["role"] = "tool",
-                                        ["content"] = "Error has been occurred during the tool call execution: " + e.Message,
-                                        ["subConversationId"] = conversationId,
+                                        [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = currentCall.Id,
+                                        [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                                        [ChatCompletionClient.Constants.ResponseFields.Content] = "Error has been occurred during the tool call execution: " + AiConversation.AiActionContext<object>.CreateErrorMessageForLlm(e),
+                                        [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = conversationId,
                                     }, "tool-call/response"));
                             result.OpenToolCallsToRemove.Add(currentCall.Id);
                         }
@@ -1025,9 +1025,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                         result.Messages.Add(context.ReadObject(
                             new DynamicJsonValue
                             {
-                                ["tool_call_id"] = currentCall.Id,
-                                ["role"] = "tool",
-                                ["content"] = GetToolResultContent(queryResult)
+                                [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = currentCall.Id,
+                                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                                [ChatCompletionClient.Constants.ResponseFields.Content] = GetToolResultContent(queryResult)
                             }, "tool-call/response"));
                         break;
                     default:

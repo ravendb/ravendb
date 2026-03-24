@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             _conversationDoc = _conversation.ToBlittable(context);
-            PutResult = _database.DocumentsStorage.Put(context, _conversation.Id, _expectedChangeVector, _conversationDoc);
+            PutResult = _database.DocumentsStorage.Put(context, _conversation.Id, _expectedChangeVector, _conversationDoc, nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
 
             if (Attachments is not null)
             {

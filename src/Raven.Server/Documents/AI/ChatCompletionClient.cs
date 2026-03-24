@@ -459,7 +459,7 @@ public class ChatCompletionClient : IDisposable
         return request;
 
         static bool IsValidMessage(BlittableJsonReaderObject msg) 
-            => msg.TryGet("role", out string role) == false || role != Constants.RequestFields.RoleInternalValue; // isn't an internal message
+            => msg.TryGet(Constants.ResponseFields.Role, out string role) == false || role != Constants.RequestFields.RoleInternalValue; // isn't an internal message
     }
 
     public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming,
@@ -970,6 +970,10 @@ public class ChatCompletionClient : IDisposable
             public const string Arguments = "arguments";
             public const string Delta = "delta";
             public const string Role = "role";
+
+            public const string ToolCallId = "tool_call_id";
+            public const string SubConversationId = "subConversationId";
+            public const string ToolName = "toolName";
         }
 
         public static class Headers
@@ -1029,6 +1033,7 @@ public class ChatCompletionClient : IDisposable
             // JSON property values / enums
             public const string RoleSystemValue = "system";
             public const string RoleUserValue = "user";
+            public const string RoleToolValue = "tool";
             public const string RoleAssistantValue = "assistant";
             public const string RoleInternalValue = "internal";
 

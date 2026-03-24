@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 reqs.GetOrAdd(conversationId).Add((call, r));
             }
 
-            await ExecuteMultiAgentAndQueryRequestsAsync(context, reqs);
+            await ExecuteSubAgentAndQueryRequestsAsync(context, reqs);
 
             if (_childUserCalls.Count > 0)
                 return;
@@ -65,7 +65,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             args.Modifications.Remove(ConversationDocument.SubAgentUserPromptKey);
 
             var parameters = MergeParams(context, document.Parameters, args);
+
+            // Hash only the parameters without the original prompt ('subAgentUserPrompt').
+            // The prompt is sent separately, and excluding it keeps the same hash
+            // so repeated calls with the same parameters (with the same values) continue the same sub-conversation.
             var subConversationParamsHash = call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
+
             // Unique conversation identifier for this sub-agent (includes document ID, call name, and index).
             var conversationId = document.Id + "/" + subConversationParamsHash;
 
@@ -136,8 +141,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             if (subAgentsActions.TryGetValue(parent.SubConversationId, out var subAgent))
             {
-                Debug.Assert(subAgent.ParentId == parentToolId, $"subAgent.ParentId != rootToolId. subAgent.ParentId is '{subAgent.ParentId}',  rootToolId is '{parentToolId}'");
-                Debug.Assert(subAgent.Agent == parent.Name, $"subAgent.Agent != action.Name. subAgent.Agent is '{subAgent.Agent}', action.Name is '{parent.Name}'");
+                if (subAgent.ParentId != parentToolId)
+                    throw new InvalidOperationException($"subAgent.ParentId mismatch. Expected '{parentToolId}', got '{subAgent.ParentId}'");
+
+                if (subAgent.Agent != parent.Name)
+                    throw new InvalidOperationException($"subAgent.Agent mismatch. Expected '{parent.Name}', got '{subAgent.Agent}'");
             }
             else
             {
@@ -204,14 +212,18 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     newActionCall) == false)
             {
                 // Already exists
+
+                // If an entry already exists for this subToolId, it must be identical.
+                // Different values indicate conflicting action calls for the same subToolId,
                 var existingActionCall = childUserCalls[subToolId];
-                Debug.Assert(newActionCall.IsEqual(existingActionCall),
-                    $"Mismatch detected in OpenActionCalls for key '{subToolId}'.\n" +
-                    $"--- NEW ACTION CALL ---\n{newActionCall}\n\n" +
-                    $"--- EXISTING ACTION CALL ---\n{existingActionCall}\n\n" +
-                    "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
-                    "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
-                );
+                if (newActionCall.IsEqual(existingActionCall) == false)
+                    throw new InvalidOperationException(
+                        $"Mismatch detected in OpenActionCalls for key '{subToolId}'.\n" +
+                        $"--- NEW ACTION CALL ---\n{newActionCall}\n\n" +
+                        $"--- EXISTING ACTION CALL ---\n{existingActionCall}\n\n" +
+                        "The existing ActionCall does not match the newly attempted ActionCall insertion.\n" +
+                        "If this mismatch is valid, ensure higher-level logic prevents conflicting ActionCalls with the same ToolId."
+                    );
             }
         }
 
@@ -246,7 +258,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     continue;
                 }
 
-                if (parameter.Policy.HasFlag(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration) == false)
+                if (parameter.Policy.HasFlag(AiAgentParameterPolicy.ForbidModelGeneration) == false)
                 {
                     // the parent doesn't have this parameter BUT it's allowed to be generated -> we add it to the tool schema
                     parameters[parameter.Name] = new ParameterDefinition(parameter.Description, parameter.Type);
@@ -255,7 +267,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                 throw new MissingAiAgentParameterException($"Parameter '{parameter.Name}' is missing from the parent scope." +
                                                            " To allow the root agent to generate this value dynamically, " +
-                                                           $"unset the '{nameof(AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration)}' " +
+                                                           $"unset the '{nameof(AiAgentParameterPolicy.ForbidModelGeneration)}' " +
                                                            "flag in the sub-agent parameter policy.");
             }
 

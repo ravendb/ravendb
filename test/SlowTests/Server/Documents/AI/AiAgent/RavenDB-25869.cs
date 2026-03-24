@@ -59,7 +59,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             };
             changeUserNameAgent.Parameters.Add(new AiAgentParameter("userId", "The id of the user whose name should be changed", 
-                AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration));
+                AiAgentParameterPolicy.ForbidModelGeneration));
             var changeUserNameAgentId = (await store.AI.CreateAgentAsync(changeUserNameAgent, MoviesSampleObject.Instance)).Identifier;
 
 
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 ]
             };
             userProfileAgent.Parameters.Add(new AiAgentParameter("userId", "The current user id",
-                AiAgentParameter.AiAgentParameterPolicy.ForbidModelGeneration));
+                AiAgentParameterPolicy.ForbidModelGeneration));
             var userProfileAgentId = (await store.AI.CreateAgentAsync(userProfileAgent, MoviesSampleObject.Instance)).Identifier;
 
             var chat = store.AI.Conversation(userProfileAgentId, "chats/1",
@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             chat2.SetUserPrompt("change my name from 'Shahar' to 'Aviv'");
             await Assert.ThrowsAsync<MissingAiAgentParameterException>(() => chat2.RunAsync<MoviesSampleObject>());
 
-            changeUserNameAgent.Parameters.First(x => x.Name == "userId").Policy = AiAgentParameter.AiAgentParameterPolicy.Default;
+            changeUserNameAgent.Parameters.First(x => x.Name == "userId").Policy = AiAgentParameterPolicy.Default;
             await store.AI.CreateAgentAsync(changeUserNameAgent, MoviesSampleObject.Instance);
             var chat22 = store.AI.Conversation(userProfileAgent2Id, "chats/2",
                 new AiConversationCreationOptions().AddParameter("currentUserId", "Users/1"));
