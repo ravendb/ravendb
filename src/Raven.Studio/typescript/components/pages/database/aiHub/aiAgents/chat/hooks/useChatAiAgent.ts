@@ -78,11 +78,11 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
         return {
             prompts: [{ text: "" }],
-            parameters: config.Parameters.map((x) => ({
+            parameters: config.Parameters.map((x): ChatAiAgentFormData["parameters"][number] => ({
                 name: x.Name,
-                value: "",
+                value: null,
                 type: x.Type ?? "Default",
-                sendToModel: x.SendToModel ?? true,
+                isSendToModel: x.SendToModel ?? true,
             })),
             isEnableDocumentExpiration: !isDocumentExpirationEnabled,
             isDocumentExpireInCustomizeEnabled: false,

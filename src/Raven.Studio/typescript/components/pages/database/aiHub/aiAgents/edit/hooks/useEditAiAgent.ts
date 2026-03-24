@@ -74,6 +74,24 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         resolver: testAiAgentYupResolver,
     });
 
+    const generateTestParameters = () => {
+        testForm.setValue(
+            "parameters",
+            editForm.getValues().parameters.map((configParam): TestAiAgentFormData["parameters"][number] => {
+                const persistedParameter = testForm
+                    .getValues()
+                    .parameters.find((testParam) => testParam.name === configParam.name);
+
+                return {
+                    name: configParam.name,
+                    type: configParam.type,
+                    isSendToModel: persistedParameter?.isSendToModel ?? configParam.isSendToModel,
+                    value: persistedParameter?.value ?? null,
+                };
+            })
+        );
+    };
+
     const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
 
     const reloadEditForm = async () => {
@@ -98,5 +116,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         asyncGetEditDefaultValues,
         handleSubmit: editForm.handleSubmit(saveAgent),
         isEditAiAgent,
+        generateTestParameters,
     };
 }

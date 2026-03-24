@@ -82,7 +82,10 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                     )}
                 </div>
                 <div className="p-3 border-top border-secondary">
-                    <EditAiAgentFooter testForm={aiAgentEditor.testForm} editForm={aiAgentEditor.editForm} />
+                    <EditAiAgentFooter
+                        editForm={aiAgentEditor.editForm}
+                        generateTestParameters={aiAgentEditor.generateTestParameters}
+                    />
                 </div>
             </div>
             {isTestOpen && (
@@ -97,7 +100,11 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                     className="panel-bg-1 h-100 vstack"
                 >
                     <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                    <EditAiAgentTestPanel testForm={aiAgentEditor.testForm} editForm={aiAgentEditor.editForm} />
+                    <EditAiAgentTestPanel
+                        testForm={aiAgentEditor.testForm}
+                        editForm={aiAgentEditor.editForm}
+                        generateTestParameters={aiAgentEditor.generateTestParameters}
+                    />
                 </div>
             )}
         </div>

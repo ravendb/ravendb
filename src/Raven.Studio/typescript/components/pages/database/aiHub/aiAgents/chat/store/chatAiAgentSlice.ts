@@ -6,6 +6,7 @@ import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
 import document from "models/database/documents/document";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import { RunAiAgentRequestDto } from "commands/database/aiAgents/runAiAgentCommand";
 
@@ -221,35 +222,11 @@ function createParametersDto(
         formParameters.map((x) => [
             x.name,
             {
-                Value: mapParameterToType(x.value, x.type),
+                Value: aiAgentParametersUtils.mapParameterValueToType(x.value, x.type),
                 SendToModel: x.isSendToModel,
             },
         ])
     );
-}
-
-function mapParameterToType(
-    value: string,
-    type: Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType
-) {
-    switch (type) {
-        case "Number":
-            return Number(value);
-        case "Boolean":
-            return value === "true";
-        case "ArrayOfString":
-            return value.split(",").map((x) => x.trim());
-        case "ArrayOfNumber":
-            return value.split(",").map((x) => Number(x.trim()));
-        case "ArrayOfBoolean":
-            return value.split(",").map((x) => x.trim() === "true");
-        case "Null":
-            return null;
-        case "String":
-        case "Default":
-        default:
-            return value;
-    }
 }
 
 const getIsDocumentExpirationEnabled = createAsyncThunk(

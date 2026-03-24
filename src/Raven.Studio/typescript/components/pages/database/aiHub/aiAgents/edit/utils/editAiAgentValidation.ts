@@ -1,5 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
+
+type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
 
 export type AiAgentTrimmingMethod = "Tokens";
 
@@ -180,8 +183,16 @@ const testSchema = yup.object({
     parameters: yup.array().of(
         yup.object({
             name: yup.string().nullable(),
-            value: yup.string().nullable().required(),
-            type: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType>(),
+            value: aiAgentParametersUtils.createValueSchema(
+                yup
+                    .string()
+                    .nullable()
+                    .when("type", {
+                        is: (type: AiAgentParameterValueType) => type !== "Null",
+                        then: (schema) => schema.required(),
+                    })
+            ),
+            type: yup.string<AiAgentParameterValueType>(),
             isSendToModel: yup.boolean(),
         })
     ),

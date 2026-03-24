@@ -27,9 +27,14 @@ import { AiAgentToolCall } from "components/pages/database/aiHub/aiAgents/utils/
 interface EditAiAgentTestPanelProps {
     testForm: UseFormReturn<TestAiAgentFormData>;
     editForm: UseFormReturn<EditAiAgentFormData>;
+    generateTestParameters: () => void;
 }
 
-export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgentTestPanelProps) {
+export default function EditAiAgentTestPanel({
+    testForm,
+    editForm,
+    generateTestParameters,
+}: EditAiAgentTestPanelProps) {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const rawDataRef = useRef<ReactAce>(null);
@@ -53,7 +58,8 @@ export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgent
         testFormValues.parameters?.map((x) => x.name) ?? []
     );
 
-    const hasMissingParameters = messages.length > 0 && testFormValues.parameters.some((x) => !x.value);
+    const hasMissingParameters =
+        messages.length > 0 && testFormValues.parameters.some((x) => x.type !== "Null" && x.value == null);
 
     const isLoading = runTestState === "loading" || isWaitingForActionToolSubmit;
     const isTestDisabled = !hasLatestParameters || hasMissingParameters || isLoading;
@@ -107,19 +113,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm }: EditAiAgent
         dispatch(editAiAgentActions.testMessagesSet([]));
         dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(false));
         testForm.setValue("prompt", "");
-        testForm.setValue(
-            "parameters",
-            editFormValues.parameters.map((x) => {
-                const persistedParameter = testFormValues.parameters.find((y) => y.name === x.name);
-
-                return {
-                    name: x.name,
-                    type: x.type,
-                    isSendToModel: persistedParameter?.isSendToModel ?? x.isSendToModel,
-                    value: persistedParameter?.value ?? "",
-                };
-            })
-        );
+        generateTestParameters();
     };
 
     return (

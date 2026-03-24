@@ -1,12 +1,14 @@
 import classNames from "classnames";
-import { FormInput, FormSwitch } from "components/common/Form";
+import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Badge from "react-bootstrap/Badge";
 import { Control } from "react-hook-form";
 import { TestAiAgentFormData } from "../edit/utils/editAiAgentValidation";
 import { ChatAiAgentFormData } from "../chat/utils/chatAiAgentValidation";
-import assertUnreachable from "components/utils/assertUnreachable";
+import { SelectOption } from "components/common/select/Select";
+import InputGroup from "react-bootstrap/InputGroup";
+import { aiAgentParametersUtils } from "../utils/aiAgentParametersUtils";
 
 interface Parameter {
     name?: string;
@@ -67,8 +69,6 @@ interface ParameterItemProps {
 }
 
 function ParameterItem({ control, parameter, idx, panelClassName }: ParameterItemProps) {
-    const typeInfo = getParameterTypeInfo(parameter.type);
-
     if (parameter.type === "Null") {
         return null;
     }
@@ -89,39 +89,48 @@ function ParameterItem({ control, parameter, idx, panelClassName }: ParameterIte
                     Send to model
                 </FormSwitch>
             </div>
-            <FormInput
-                type={parameter.type === "Number" ? "number" : "text"}
-                control={control}
-                name={`parameters.${idx}.value`}
-                placeholder={`Enter a value for <${parameter.name}> ${typeInfo.exampleValue ? `(e.g. ${typeInfo.exampleValue})` : ""}`}
-                addon={typeInfo.label}
-            />
+            <ParameterItemInput control={control} parameter={parameter} idx={idx} />
         </div>
     );
 }
 
-interface ParameterTypeInfo {
-    label: string;
-    exampleValue?: string;
+interface ParameterItemInputProps {
+    control: Control<FormData>;
+    parameter: Parameter;
+    idx: number;
 }
 
-function getParameterTypeInfo(
-    type: Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType
-): ParameterTypeInfo {
-    switch (type) {
-        case "ArrayOfString":
-            return { label: "String[]", exampleValue: `["value1", "value2", "value3"]` };
-        case "ArrayOfNumber":
-            return { label: "Number[]", exampleValue: "[1, 2, 3]" };
-        case "ArrayOfBoolean":
-            return { label: "Boolean[]", exampleValue: "[true, false, true]" };
-        case "String":
-        case "Number":
-        case "Boolean":
-        case "Null":
-        case "Default":
-            return { label: type };
-        default:
-            assertUnreachable(type);
+function ParameterItemInput({ control, parameter, idx }: ParameterItemInputProps) {
+    const typeInfo = aiAgentParametersUtils.getParameterTypeInfo(parameter.type);
+
+    if (parameter.type === "Boolean") {
+        return (
+            <InputGroup>
+                <FormSelect
+                    control={control}
+                    name={`parameters.${idx}.value`}
+                    options={
+                        [
+                            { value: true, label: "True" },
+                            { value: false, label: "False" },
+                        ] satisfies SelectOption<boolean>[]
+                    }
+                    isClearable={false}
+                    isSearchable={false}
+                />
+                <InputGroup.Text>{typeInfo.label}</InputGroup.Text>
+            </InputGroup>
+        );
     }
+
+    return (
+        <FormInput
+            type={parameter.type === "Number" ? "number" : "text"}
+            control={control}
+            name={`parameters.${idx}.value`}
+            placeholder={`Enter a value for <${parameter.name}> ${typeInfo.exampleValue ? `(e.g. ${typeInfo.exampleValue})` : ""}`}
+            addon={typeInfo.label}
+        />
+    );
 }
+

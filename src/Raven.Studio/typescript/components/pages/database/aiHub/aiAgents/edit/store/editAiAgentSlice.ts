@@ -5,6 +5,7 @@ import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
@@ -121,13 +122,32 @@ const runTest = createAsyncThunk(
             Document: testDocument,
             RequestBody: undefined,
             CreationOptions: {
-                Parameters: Object.fromEntries(testFormValues.parameters.map((item) => [item.name, item.value])),
+                Parameters: createParametersDto(testDocument, testFormValues.parameters),
             },
         });
 
         return { result, configuration };
     }
 );
+
+function createParametersDto(
+    testDocument: documentDto,
+    formParameters: TestAiAgentFormData["parameters"]
+): Record<string, Raven.Client.Documents.AI.AiConversationParameter> {
+    if (testDocument) {
+        return null;
+    }
+
+    return Object.fromEntries(
+        formParameters.map((x) => [
+            x.name,
+            {
+                Value: aiAgentParametersUtils.mapParameterValueToType(x.value, x.type),
+                SendToModel: x.isSendToModel,
+            },
+        ])
+    );
+}
 
 const getAllIdentifiers = createAsyncThunk(
     editAiAgentSlice.name + "/getAllIdentifiers",
