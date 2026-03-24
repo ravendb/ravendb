@@ -89,10 +89,19 @@ namespace Corax.Pipeline.Parsing
         public static int ToLowercase(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             return tokens.Length == 1 
-                ? ToLowercaseSingleToken(source, tokens, ref dest, ref destTokens) 
+                ? ToLowercaseSingleToken<Default>(source, tokens, ref dest, ref destTokens) 
                 : ToLowercaseMultipleTokens(source, tokens, ref dest, ref destTokens);
         }
-
+        
+        public static int ToLowercasePre24423(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        {
+            return ToLowercaseSingleToken<Pre24423>(source, tokens, ref dest, ref destTokens);
+        }
+        
+        private interface IMode{ }
+        private record struct Pre24423 : IMode;
+        private record struct Default : IMode;
+        
         private static int ToLowercaseMultipleTokens(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
         {
             int destPos = 0;
@@ -129,9 +138,10 @@ namespace Corax.Pipeline.Parsing
             return source.Length;
         }
 
-        private static int ToLowercaseSingleToken(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        private static int ToLowercaseSingleToken<TMode>(ReadOnlySpan<byte> source, ReadOnlySpan<Token> tokens, ref Span<byte> dest, ref Span<Token> destTokens)
+        where TMode : IMode
         {
-            Debug.Assert(tokens.Length == 1);
+            Debug.Assert(typeof(TMode) == typeof(Pre24423) || tokens.Length == 1);
             nint sourcePos = 0;
             nint destPos = 0;
             nint len = source.Length;
@@ -213,9 +223,15 @@ namespace Corax.Pipeline.Parsing
                 tokens.CopyTo(destTokens);
 
             // We need to shrink the tokens and bytes output. 
-            destTokens = destTokens.Slice(0, 1);
-            destTokens[0].Length = (uint)destPos;
-            
+            if (typeof(TMode) == typeof(Default))
+            {
+                destTokens = destTokens.Slice(0, 1);
+                destTokens[0].Length = (uint)destPos;
+            }
+            else if (typeof(TMode) == typeof(Pre24423))
+            {
+                destTokens = destTokens.Slice(0, tokens.Length);
+            }
             
             dest = dest.Slice(0, (int)destPos);
 
