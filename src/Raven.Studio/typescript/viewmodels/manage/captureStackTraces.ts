@@ -606,7 +606,19 @@ class captureStackTraces extends viewModelBase {
             Results: captureStackTraces.reverseStacks(this.data.Results),
             Threads: this.data.Threads
         };
-        fileDownloader.downloadAsJson(dataCopy, "stacks.json");
+
+        // replace characters that are not allowed in file names and remove the milliseconds part from the end of the date to make it more readable
+        const utcDate = new Date().toISOString().replace(/[.:]/g, "-").replace(/-\d{3}Z/, "Z");
+
+        let fileName: string;
+        if (this.clusterWide()) {
+            fileName = "Cluster wide stack-traces " + utcDate + ".json";
+        } else {
+            const nodeTag = clusterTopologyManager.default.localNodeTag();
+            fileName = "Node " + (nodeTag || "unknown") + " stack-traces " + utcDate + ".json";
+        }
+        
+        fileDownloader.downloadAsJson(dataCopy, fileName);
     }
 
     fileSelected(fileInput: HTMLInputElement) {
