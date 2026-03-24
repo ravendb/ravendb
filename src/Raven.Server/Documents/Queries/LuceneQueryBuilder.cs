@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Exists:
                         return HandleExists(query, me, metadata, parameters);
                     case MethodType.When:
-                        return HandleWhen(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+                        return HandleWhen(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, exact, proximity, secondary, queryTime, buildSteps);
                     case MethodType.Exact:
                         return HandleExact(serverContext, documentsContext, query, me, metadata, index, parameters, analyzer, factories, queryTime);
                     case MethodType.Spatial_Within:
@@ -718,8 +718,7 @@ namespace Raven.Server.Documents.Queries
         }
         
         private static Lucene.Net.Search.Query HandleWhen(TransactionOperationContext serverContext, DocumentsOperationContext documentsContext, Query query, MethodExpression expression, QueryMetadata metadata, Index index,
-            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false,
-            List<string> buildSteps = null)
+            BlittableJsonReaderObject parameters, Analyzer analyzer, QueryBuilderFactories factories, bool exact = false, int? proximity = null, bool secondary = false, QueryTimeScope queryTime = null, List<string> buildSteps = null)
         {
             PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
@@ -727,7 +726,7 @@ namespace Raven.Server.Documents.Queries
             if (constantExpressionResult == false)
                 return new LuceneWhenQuery();
             
-            return ToLuceneQuery(serverContext, documentsContext, query, expression.Arguments[1], metadata, index, parameters, analyzer, factories, exact, proximity, secondary, buildSteps);
+            return ToLuceneQuery(serverContext, documentsContext, query, expression.Arguments[1], metadata, index, parameters, analyzer, factories, exact, proximity, secondary, queryTime, buildSteps);
         }
         
         private static Lucene.Net.Search.Query HandleExists(Query query,

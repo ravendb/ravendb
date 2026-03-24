@@ -23,7 +23,7 @@ public class RavenDB_26183 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
     public void Now_ReturnsDocumentsWithDateBeforeCurrentTime(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -44,6 +44,13 @@ public class RavenDB_26183 : RavenTestBase
                     .ToList();
 
                 Assert.Equal(2, employees.Count);
+                
+                var employeesWithWhenOperator = session.Advanced
+                    .RawQuery<Employee>("from Employees where when($p0 > 10, HiredAt <= now())")
+                    .WaitForNonStaleResults()
+                    .AddParameter("p0", 20)
+                    .ToList();
+                Assert.Equal(2, employeesWithWhenOperator.Count);
             }
         }
     }
@@ -70,6 +77,14 @@ public class RavenDB_26183 : RavenTestBase
                     .ToList();
 
                 Assert.Equal(2, employees.Count);
+                
+                var employeesWithWhenOperator = session.Advanced
+                    .RawQuery<Employee>("from Employees where when($p0 > 10, HiredAt < today())")
+                    .AddParameter("p0", 20)
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employeesWithWhenOperator.Count);
             }
         }
     }
