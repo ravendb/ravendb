@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Util;
 using Raven.Server.Dashboard;
 using Raven.Server.EventListener;
 using Raven.Server.Routing;
@@ -32,6 +35,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
             var threadIdsAsString = GetStringValuesQueryString("threadId", required: false);
             var includeStackObjects = GetBoolValueQueryString("includeStackObjects", required: false) ?? false;
+            var download = GetBoolValueQueryString("download", required: false) ?? false;
 
             var sp = Stopwatch.StartNew();
             var threadsUsage = new ThreadsUsage();
@@ -51,6 +55,16 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 var threadStats = threadsUsage.Calculate(threadIds: threadIdsAsString.Count == 0 ? null : threadIdsAsString.Select(int.Parse).ToHashSet());
                 result["Threads"] = JArray.FromObject(threadStats.List);
+
+                if (download)
+                {
+                    var nodeTag = ServerStore.NodeTag ?? "unknown";
+                    var utcDate = SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture);
+                    var fileName = $"Node {nodeTag} stack-traces {utcDate}.json";
+
+                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = "attachment; filename=" + Uri.EscapeDataString(fileName);
+                    HttpContext.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+                }
 
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
