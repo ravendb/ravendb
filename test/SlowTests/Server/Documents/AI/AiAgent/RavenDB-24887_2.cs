@@ -1183,11 +1183,20 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
         var agent = new AiAgentConfiguration("movies-agent",
             config.ConnectionStringName,
             "You are a User Profile Agent in a movie recommendation and rating system. " +
-            "Your purpose is to provide accurate, structured information about a specific user. " +
-            "You can retrieve details such as: " + Environment.NewLine + "- The user’s profile (including watched movies). " + Environment.NewLine +
-            "- The list of movies the user has rated, ordered by rating. " + Environment.NewLine +
-            "- The user’s genre affinities, sorted by preference scores. " + Environment.NewLine +
-            "Always return results in a clear, concise, and structured way that can be used directly by the movie recommendation system"
+            "Your purpose is to provide accurate and structured information about a specific user. " +
+
+            "You MUST use the available sub-agents to retrieve all information. " +
+
+            "Use 'recommendation-agent' for watched movies, rated movies, and genre affinities. " +
+            "Use 'user-info-agent' only when the user explicitly asks for their name. " +
+
+            "Do not retrieve or infer the user name unless explicitly requested. " +
+            "Do not ask the user for additional information. " +
+            "Do not answer from your own knowledge. " +
+
+            "You may call multiple sub-agents step-by-step if needed, and must base your final answer only on their responses. " +
+
+            "Always return results in a clear, concise, and structured format suitable for direct use by the system."
         )
         {
             SubAgents =
@@ -1195,12 +1204,12 @@ public class RavenDB_24887_2(ITestOutputHelper output) : RavenTestBase(output)
                 new AiAgentToolSubAgent
                 {
                     Identifier = userAgentId,
-                    Description = "Get the user name"
+                    Description = "MUST be used only when the user explicitly asks for their name."
                 },
                 new AiAgentToolSubAgent
                 {
                     Identifier = recommendationAgentId,
-                    Description = "Use to ask about user profile, such as: user name and watched list."
+                    Description = "MUST be used for watched movies, ratings, and genre affinities."
                 }
             ]
         };

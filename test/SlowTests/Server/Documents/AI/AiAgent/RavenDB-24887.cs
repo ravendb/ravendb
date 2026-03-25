@@ -225,7 +225,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
             return "Added to cart";
         });
 
-        chat.SetUserPrompt("Do you have a charger for a laptop in stock?");
+        chat.SetUserPrompt("Do you have any laptop chargers in stock? If yes, select a suitable default option without asking questions.");
         var result = await chat.RunAsync<Reply>();
         Assert.Equal(AiConversationResult.Done, result.Status);
         chat.SetUserPrompt("Add that to my cart.");

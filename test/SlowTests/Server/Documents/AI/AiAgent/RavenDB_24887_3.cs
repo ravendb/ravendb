@@ -436,8 +436,11 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
                 "rate-movie-agent",
                 config.ConnectionStringName,
                 "You are authorized ONLY to create movie-rating records for the current user. " +
-                "Use exclusively the 'RateMovie' tool for adding a movie rating. " +
-                "Do not attempt to change the user’s name or perform any unrelated action."
+                "You MUST call the 'RateMovie' tool to perform this action. " +
+                "Do NOT return a textual answer instead of calling the tool. " +
+                "If a rating is requested, ALWAYS call the tool. " +
+                "Never simulate or describe the action. " +
+                "After calling the tool, stop generating."
             )
             {
                 Actions = new List<AiAgentToolAction>()
@@ -525,7 +528,10 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
         {
             var userAgent0 = new AiAgentConfiguration("user-info-agent-0",
                 config.ConnectionStringName,
-                "You are a User Profile Agent on movies rating system."
+                "You are a User Profile Agent on a movies rating system. " +
+                "If the user requests multiple actions, you must execute all of them using the available tools. " +
+                "Do not ask for clarification if all required data is provided. " +
+                "Always prefer calling tools over returning a textual answer when actions are required."
             )
             {
                 SubAgents =
@@ -533,12 +539,15 @@ public class RavenDB_24887_3(ITestOutputHelper output) : RavenTestBase(output)
                     new AiAgentToolSubAgent
                     {
                         Identifier = rateOrChangeName,
-                        Description = "Use for adding movie rate for the current user you talking with OR changing user name (cannot ask for both at once) OR adding a movie to user watched list (can add one movie per request)"
+                        Description = "Use for performing user-related actions such as rating movies or changing user name. " +
+                                      "You may perform multiple actions in sequence if needed. " +
+                                      "Execute them step-by-step using the appropriate tools and do not ask the user to choose between actions if all required information is provided."
                     },
                     new AiAgentToolSubAgent
                     {
                         Identifier = addMovieToList,
-                        Description = "Use for adding a movie to user watched list (can add one movie per request). "
+                        Description = "Use for adding a movie to user watched list (can add one movie per request). " +
+                                      "You may call this tool multiple times if multiple movies need to be added."
                     }
                 ]
             };

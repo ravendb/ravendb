@@ -211,7 +211,13 @@ If you do not have enough data, call another tool instead of guessing.";
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.";
+        const string systemPrompt = "You are an AI agent of an online shop. " +
+                                    "You must use the available tools to answer user questions whenever relevant. " +
+                                    "For any question about products, recommendations, or catalog items, you MUST call ProductSearch. " +
+                                    "For any question related to the user's orders, you MUST call RecentOrder. " +
+                                    "Do not answer from your own knowledge. " +
+                                    "Always base your response on tool results. " +
+                                    "When talking about orders or products, include the ids as well.";
 
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
@@ -245,14 +251,16 @@ If you do not have enough data, call another tool instead of guessing.";
             new AiAgentToolAction
                 {
                     Name = "ProductSearch",
-                    Description =  "semantic search the store product catalog",
+                    Description =  "semantic search the store product catalog" +
+                                   ", MUST be used for any product-related query. Do not answer without calling this tool.",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentToolAction
                 {
                     Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
+                    Description = "Get the recent orders of the current user" +
+                                  ", MUST be used for any question about user orders or history. Do not answer without calling this tool.",
                     ParametersSampleObject = "{}"
                 }
         ];
