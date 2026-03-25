@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
+import moment = require("moment");
 import captureLocalStackTracesCommand = require("commands/maintenance/captureLocalStackTracesCommand");
 import captureClusterStackTracesCommand = require("commands/maintenance/captureClusterStackTracesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -607,8 +608,7 @@ class captureStackTraces extends viewModelBase {
             Threads: this.data.Threads
         };
 
-        // replace characters that are not allowed in file names and remove the milliseconds part from the end of the date to make it more readable
-        const utcDate = new Date().toISOString().replace(/[.:]/g, "-").replace(/-\d{3}Z/, "Z");
+        const utcDate = moment.utc().format('YYYY-MM-DD[T]HH-mm-ss[Z]');
 
         let fileName: string;
         if (this.clusterWide()) {

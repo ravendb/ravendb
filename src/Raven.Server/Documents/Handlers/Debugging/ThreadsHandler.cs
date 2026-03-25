@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 if (download)
                 {
                     var nodeTag = ServerStore.NodeTag ?? "unknown";
-                    var utcDate = SystemTime.UtcNow.ToString("yyyy-MM-dd HH-mm", CultureInfo.InvariantCulture);
+                    var utcDate = SystemTime.UtcNow.ToString("yyyy-MM-dd'T'HH-mm-ss'Z'", CultureInfo.InvariantCulture);
                     var fileName = $"Node {nodeTag} stack-traces {utcDate}.json";
 
                     HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = "attachment; filename=" + Uri.EscapeDataString(fileName);
