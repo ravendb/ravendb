@@ -207,18 +207,8 @@ export default class DatabasesService {
         return new saveRevisionsBinCleanerConfigurationCommand(...args).execute();
     }
 
-    async enforceRevisionsConfiguration(
-        databaseName: string,
-        includeForceCreated = false,
-        collections: string[] = null,
-        maxOpsPerSecond: number = null
-    ) {
-        return new enforceRevisionsConfigurationCommand(
-            databaseName,
-            includeForceCreated,
-            collections,
-            maxOpsPerSecond
-        ).execute();
+    async enforceRevisionsConfiguration(...args: ConstructorParameters<typeof enforceRevisionsConfigurationCommand>) {
+        return new enforceRevisionsConfigurationCommand(...args).execute();
     }
 
     async revertRevisions(databaseName: string, dto: Raven.Server.Documents.Revisions.RevertRevisionsRequest) {
