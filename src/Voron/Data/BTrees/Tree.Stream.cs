@@ -315,7 +315,7 @@ namespace Voron.Data.BTrees
                 var dataSize = (int)header->Info.TotalSize;
                 var dataPtr = inlineData + InlineStreamHeader.SizeOf + tagSize;
 
-                return new VoronStream(key.Clone(_tx.Allocator), dataPtr, dataSize, _llt);
+                return new UnmanagedVoronStream(dataPtr, dataSize);
             }
 
             var pieces = ReadTreeChunks(key, out var tree);

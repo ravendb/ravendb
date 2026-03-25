@@ -16,14 +16,8 @@ namespace Voron.Data
         private readonly bool _encrypted;
         private long _position;
         private int _index;
-        protected LowLevelTransaction Llt;
-        protected Page LastPage;
-
-        // Inline stream support: data stored directly in the tree node.
-        // The pointer is valid for the lifetime of the current transaction.
-        protected byte* InlineDataPtr;
-        private readonly int _inlineDataSize;
-        protected bool IsInline => InlineDataPtr != null;
+        internal LowLevelTransaction Llt;
+        internal Page LastPage;
 
         public override bool CanRead => true;
         public override bool CanSeek => true;
@@ -33,21 +27,6 @@ namespace Voron.Data
         public override string ToString()
         {
             return Name.ToString();
-        }
-
-        /// <summary>
-        /// Creates a VoronStream backed by inline data stored in a tree node.
-        /// The pointer must remain valid for the lifetime of the current transaction.
-        /// Call RefreshInlinePointer when switching transactions.
-        /// </summary>
-        public VoronStream(Slice name, byte* inlineDataPtr, int inlineDataSize, LowLevelTransaction llt)
-        {
-            Name = name;
-            InlineDataPtr = inlineDataPtr;
-            _inlineDataSize = inlineDataSize;
-            Length = inlineDataSize;
-            Llt = llt;
-            _position = 0;
         }
 
         public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
@@ -80,12 +59,6 @@ namespace Voron.Data
             }
             set
             {
-                if (IsInline)
-                {
-                    _position = Math.Min(value, _inlineDataSize);
-                    return;
-                }
-
                 if (value >= Length)
                 {
                     //Out of stream
@@ -123,13 +96,6 @@ namespace Voron.Data
 
         public override int ReadByte()
         {
-            if (IsInline)
-            {
-                if (_position >= _inlineDataSize)
-                    return -1;
-                return InlineDataPtr[_position++];
-            }
-
             var chunk = _chunksDetails[_index];
 
             if (_position - _chunksOffsets[_index] == chunk.ChunkSize)
@@ -153,21 +119,6 @@ namespace Voron.Data
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (IsInline)
-            {
-                var remaining = _inlineDataSize - (int)_position;
-                if (remaining <= 0)
-                    return 0;
-
-                var toRead = Math.Min(count, remaining);
-                fixed (byte* dst = buffer)
-                {
-                    Memory.Copy(dst + offset, InlineDataPtr + _position, toRead);
-                }
-                _position += toRead;
-                return toRead;
-            }
-
             var len = _chunksDetails[_index].ChunkSize;
 
             if (_position == _chunksOffsets[_index] + len)
@@ -262,6 +213,12 @@ namespace Voron.Data
         private static void ThrowWhenValueIsEqualOrLessZero(long position)
         {
             throw new ArgumentException($"Position {position} is not possible inside {nameof(VoronStream)}.");
+        }
+
+        internal void Reset()
+        {
+            Llt = null;
+            LastPage = default(Page);
         }
     }
 }
