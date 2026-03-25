@@ -283,5 +283,27 @@ namespace FastTests.Utils
             var result = offset.Apply(baseTime);
             Assert.Equal(new DateTime(2027, 7, 1, 0, 0, 0, DateTimeKind.Utc), result);
         }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseWithWhitespaceAfterSign()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("+ 1d", out var result));
+            Assert.Equal(1, result.Days);
+            Assert.False(result.IsNegative);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseWithMultipleSpaces()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("1y  6mo", out var result));
+            Assert.Equal(1, result.Years);
+            Assert.Equal(6, result.Months);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void FailsOnWhitespaceOnly()
+        {
+            Assert.False(TimeFunctionOffset.TryParse("   ", out _));
+        }
     }
 }

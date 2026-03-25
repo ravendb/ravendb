@@ -128,13 +128,7 @@ namespace Raven.Client.Documents.Session.Tokens
                         writer.Append(")");
                         return true;
                     case MethodsType.Today:
-                        writer.Append("today(");
-                        if (Options.Method.Parameters is { Length: > 0 })
-                        {
-                            writer.Append("$");
-                            writer.Append(Options.Method.Parameters[0]);
-                        }
-                        writer.Append(")");
+                        writer.Append("today()");
                         return true;
                     default:
                         throw new ArgumentOutOfRangeException();
