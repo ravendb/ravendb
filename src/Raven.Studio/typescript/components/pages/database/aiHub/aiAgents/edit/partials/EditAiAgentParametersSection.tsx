@@ -252,8 +252,7 @@ const typeOptions: SelectOption<Raven.Client.Documents.Operations.AI.Agents.AiAg
     { value: "Null", label: "Null" },
 ];
 
-const policyOptions: SelectOption<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameter.AiAgentParameterPolicy>[] =
-    [
-        { value: "Default", label: "Default" },
-        { value: "ForbidModelGeneration", label: "Forbid model generation" },
-    ];
+const policyOptions: SelectOption<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterPolicy>[] = [
+    { value: "Default", label: "Default" },
+    { value: "ForbidModelGeneration", label: "Forbid model generation" },
+];
