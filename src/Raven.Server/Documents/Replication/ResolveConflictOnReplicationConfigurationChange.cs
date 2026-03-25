@@ -357,9 +357,16 @@ namespace Raven.Server.Documents.Replication
             // we resolved the conflict on the fly, so we save the remote document as revisions
             if (incoming.Doc != null)
             {
-                _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc,
-                    incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
-                    NonPersistentDocumentFlags.FromResolver, incomingChangeVector, incoming.LastModified.Ticks);
+                try
+                {
+                    _database.DocumentsStorage.RevisionsStorage.Put(context, incoming.Id, incoming.Doc,
+                        incoming.Flags.Strip(DocumentFlags.FromClusterTransaction) | DocumentFlags.Conflicted | DocumentFlags.HasRevisions,
+                        NonPersistentDocumentFlags.FromResolver, incomingChangeVector, incoming.LastModified.Ticks);
+                }
+                catch (ArgumentException e)
+                {
+                    throw new ArgumentException($"Failed to put conflicted document revision for document '{id}' with change vector: {incoming.ChangeVector}, new change vector: {incomingChangeVector}", e);
+                }
             }
             else
             {
