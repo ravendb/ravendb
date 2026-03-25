@@ -12,7 +12,6 @@ using Voron.Impl.FreeSpace;
 using Voron.Impl.Journal;
 using Voron.Util.PFor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues;
 

@@ -8,7 +8,6 @@ using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Scratch;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues;
 

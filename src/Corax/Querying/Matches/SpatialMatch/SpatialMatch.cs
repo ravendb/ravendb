@@ -138,7 +138,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
 
         using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
 
-        _indexSearcher.GetEntryTermsReader(id, ref _lastPage, out var termsReader, existingKey);
+        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage, existingKey);
         while (termsReader.MoveNextSpatial())
         {
             if(termsReader.FieldRootPage != _fieldRootPage)

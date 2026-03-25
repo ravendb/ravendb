@@ -11,7 +11,6 @@ using Voron.Data.BTrees;
 using Voron.Impl.FileHeaders;
 using Voron.Impl.Journal;
 using Xunit;
-using Xunit.Abstractions;
 using Hashing = Sparrow.Hashing;
 
 namespace FastTests.Voron.SharedJournal;

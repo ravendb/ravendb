@@ -17,10 +17,6 @@ namespace Tests.Infrastructure
 
         public void Dispose()
         {
-            }
-            catch (Exception)
-            {
-            }
         }
     }
 }

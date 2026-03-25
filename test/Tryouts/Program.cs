@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Raven.Server.Utils;
+using SlowTests.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -26,7 +27,7 @@ public static class Program
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                await using (var test = new ChatCompletionClientTests(testOutputHelper))
+                await using (var test = new CRUD(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 

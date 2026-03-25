@@ -83,7 +83,7 @@ public struct PhraseMatch<TInner> : IQueryMatch
 
         for (var processingId = 0; processingId < matches.Length; ++processingId)
         {
-            _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, out var entryTermsReader, existingKey);
+            var entryTermsReader = _indexSearcher.GetEntryTermsReader(matches[processingId], ref p, existingKey);
             if (entryTermsReader.FindNextStored(_vectorRootPage) == false)
                 continue;
             
