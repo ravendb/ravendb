@@ -124,17 +124,17 @@ internal readonly struct TimeFunctionOffset
         consumed = 0;
 
         // Longest strings first to avoid greedy matching errors (e.g., 'm' matching 'month')
-        if (StartsWith(input, out consumed, "years", "year", "y")) unit = DateTimePrecision.Year;
-        else if (StartsWith(input, out consumed, "months", "month", "mo")) unit = DateTimePrecision.Month;
-        else if (StartsWith(input, out consumed, "days", "day", "d")) unit = DateTimePrecision.Day;
-        else if (StartsWith(input, out consumed, "hours", "hour", "h")) unit = DateTimePrecision.Hour;
-        else if (StartsWith(input, out consumed, "minutes", "minute", "min", "m")) unit = DateTimePrecision.Minute;
-        else if (StartsWith(input, out consumed, "seconds", "second", "sec", "s")) unit = DateTimePrecision.Second;
+        if (StartsWith(input, out consumed, ["years", "year", "y"])) unit = DateTimePrecision.Year;
+        else if (StartsWith(input, out consumed, ["months", "month", "mo"])) unit = DateTimePrecision.Month;
+        else if (StartsWith(input, out consumed, ["days", "day", "d"])) unit = DateTimePrecision.Day;
+        else if (StartsWith(input, out consumed, ["hours", "hour", "h"])) unit = DateTimePrecision.Hour;
+        else if (StartsWith(input, out consumed, ["minutes", "minute", "min", "m"])) unit = DateTimePrecision.Minute;
+        else if (StartsWith(input, out consumed, ["seconds", "second", "sec", "s"])) unit = DateTimePrecision.Second;
 
         return unit != DateTimePrecision.None;
     }
 
-    private static bool StartsWith(ReadOnlySpan<char> input, out int length, params string[] options)
+    private static bool StartsWith(ReadOnlySpan<char> input, out int length, ReadOnlySpan<string> options)
     {
         foreach (var opt in options)
         {
