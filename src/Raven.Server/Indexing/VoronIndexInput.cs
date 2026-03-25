@@ -6,6 +6,7 @@ using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions.Streams;
 using Voron;
+using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
@@ -35,7 +36,7 @@ namespace Raven.Server.Indexing
             return _name;
         }
 
-        internal static LuceneVoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string treeName)
+        internal static unsafe LuceneVoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string treeName)
         {
             if (transaction.IsWriteTransaction == false)
             {
@@ -60,6 +61,15 @@ namespace Raven.Server.Indexing
 
             using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
+                if (fileTree.IsInlineStream(fileName, out var inlineData, out _))
+                {
+                    var header = (Tree.InlineStreamHeader*)inlineData;
+                    var tagSize = header->Info.TagSize;
+                    var dataSize = (int)header->Info.TotalSize;
+                    var dataPtr = inlineData + Tree.InlineStreamHeader.SizeOf + tagSize;
+                    return new LuceneVoronStream(fileName.Clone(transaction.Allocator), treeName, dataPtr, dataSize, fileTree.Llt);
+                }
+
                 var details = fileTree.ReadTreeChunks(fileName, out var tree);
                 if (details == null)
                     throw new FileNotFoundException("Could not find index input", name);

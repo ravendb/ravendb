@@ -10,8 +10,16 @@ namespace Raven.Server.Indexing;
 
 public sealed class LuceneVoronStream : VoronStream
 {
+    private readonly string _treeName;
+
     public LuceneVoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt) : base(name, chunksDetails, llt)
     {
+        RegisterTransactionCleanup();
+    }
+
+    public unsafe LuceneVoronStream(Slice name, string treeName, byte* inlineDataPtr, int inlineDataSize, LowLevelTransaction llt) : base(name, inlineDataPtr, inlineDataSize, llt)
+    {
+        _treeName = treeName;
         RegisterTransactionCleanup();
     }
 
@@ -29,20 +37,32 @@ public sealed class LuceneVoronStream : VoronStream
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void UpdateCurrentTransaction(Transaction tx)
+    public unsafe void UpdateCurrentTransaction(Transaction tx)
     {
-        if (tx != null)
+        if (tx == null)
         {
-            if (Llt == tx.LowLevelTransaction)
-                return;
-
-            Llt = tx.LowLevelTransaction;
-            RegisterTransactionCleanup();
-            LastPage = default(Page);
-            return;
+            ThrowTransactionIsNull();
         }
 
-        ThrowTransactionIsNull();
+        if (Llt == tx.LowLevelTransaction)
+            return;
+
+        Llt = tx.LowLevelTransaction;
+        RegisterTransactionCleanup();
+        if (IsInline)
+        {
+            var tree = tx.ReadTree(_treeName);
+            byte* inlineData = null;
+            if (tree == null || tree.IsInlineStream(Name, out inlineData, out _) == false)
+                ThrowMissingInlineStream();
+            var header = (Tree.InlineStreamHeader*)inlineData;
+            InlineDataPtr = inlineData + Tree.InlineStreamHeader.SizeOf + header->Info.TagSize;
+        }
+        else
+        {
+            LastPage = default(Page);
+        }
+        return;
     }
 
     [DoesNotReturn]
@@ -50,4 +70,8 @@ public sealed class LuceneVoronStream : VoronStream
     {
         throw new ArgumentNullException("tx");
     }
+
+    [DoesNotReturn]
+    private void ThrowMissingInlineStream() =>
+        throw new InvalidOperationException($"Inline stream '{Name}' in tree '{_treeName}' not found after transaction refresh.");
 }

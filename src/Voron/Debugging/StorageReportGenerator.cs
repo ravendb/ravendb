@@ -580,7 +580,7 @@ namespace Voron.Debugging
             {
                 multiValues = CreateMultiValuesReport(tree);
             }
-            else if (state.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+            else if ((state.Flags & TreeFlags.Streams) == TreeFlags.Streams)
             {
                 streams = CreateStreamsReport(tree, includeDetails);
             }
@@ -653,12 +653,26 @@ namespace Voron.Debugging
                     if (info.HasValue == false)
                         continue;
 
-                    long numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
+                    long numberOfAllocatedPages;
+                    TreeReport chunksTreeReport;
 
-                    var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
+                    if (tree.IsInlineStream(it.CurrentKey, out _, out _))
+                    {
+                        // Inline stream — data is stored in the tree node, no overflow pages or FST
+                        numberOfAllocatedPages = 0;
+                        chunksTreeReport = new TreeReport();
+                    }
+                    else
+                    {
+                        numberOfAllocatedPages = VirtualPagerLegacyExtensions.GetNumberOfOverflowPages(info.Value.TotalSize + info.Value.TagSize + Tree.StreamInfo.SizeOf);
 
-                    if (chunksTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
-                        numberOfAllocatedPages += chunksTree.PageCount;
+                        var chunksTree = tree.GetStreamChunksTree(it.CurrentKey);
+
+                        if (chunksTree.Type == RootObjectType.FixedSizeTree) // only if large fst, embedded already counted in parent
+                            numberOfAllocatedPages += chunksTree.PageCount;
+
+                        chunksTreeReport = GetReport(chunksTree, false);
+                    }
 
                     var name = tag ?? it.CurrentKey.ToString();
 
@@ -669,7 +683,7 @@ namespace Voron.Debugging
                         Version = info.Value.Version,
                         NumberOfAllocatedPages = numberOfAllocatedPages,
                         AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
-                        ChunksTree = GetReport(chunksTree, false),
+                        ChunksTree = chunksTreeReport,
                     });
 
                     totalNumberOfAllocatedPages += numberOfAllocatedPages;

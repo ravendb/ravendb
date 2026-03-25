@@ -331,7 +331,7 @@ namespace Voron.Impl.Compaction
                                     transactionSize += value.Length;
                                 }
                             }
-                            else if (existingTree.State.Header.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+                            else if ((existingTree.State.Header.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                             {
                                 var tag = existingTree.GetStreamTag(key);
 
