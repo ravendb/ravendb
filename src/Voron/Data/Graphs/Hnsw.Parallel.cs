@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +7,6 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Utils;
-using Sparrow.Server.Utils.VxSort;
 using Voron.Data.Containers;
 using Voron.Util;
 using Array = System.Array;
@@ -371,11 +369,11 @@ public partial class Hnsw
 
             private sealed class FilterEdgesHeuristicWorker : WorkItem
             {
-                public UnmanagedSpan Src;
+                private UnmanagedSpan _src;
 
                 public void Reset(UnmanagedSpan src, int currentNodeIndex, int level)
                 {
-                    Src = src;
+                    _src = src;
                     CurrentNodeIndex = currentNodeIndex;
                     Level = level;
                 }
@@ -396,7 +394,7 @@ public partial class Hnsw
                     Debug.Assert(queue.Count is 0);
                     for (int i = 0; i < indexes.Count; i++)
                     {
-                        var distance = searchState.Distance(Src, vectors[i]);
+                        var distance = searchState.Distance(_src, vectors[i]);
                         // note that we use local indexes here!
                         queue.Enqueue(i, distance);
                     }
@@ -436,12 +434,12 @@ public partial class Hnsw
             }
             private sealed class ProcessEdgesWorker : WorkItem
             {
-                public UnmanagedSpan Vector;
+                private UnmanagedSpan _vector;
                 public float LowerBound;
 
                 public void Reset(UnmanagedSpan vector, float lowerBound, int currentNodeIndex, int level)
                 {
-                    Vector = vector;
+                    _vector = vector;
                     LowerBound = lowerBound;
                     CurrentNodeIndex = currentNodeIndex;
                     Level = level;
@@ -462,7 +460,7 @@ public partial class Hnsw
                         var nextIndex = indexes[i];
                         Debug.Assert(searchState.Nodes[nextIndex].EdgesPerLevel.Count > Level); 
                    
-                        float nextDist = -searchState.Distance(Vector, vectors[i]);
+                        float nextDist = -searchState.Distance(_vector, vectors[i]);
                         if (nearestEdgesQ.Count < numberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -514,12 +512,12 @@ public partial class Hnsw
 
             private sealed class FindNearestWorker : WorkItem
             {
-                public UnmanagedSpan From;
+                private UnmanagedSpan _from;
                 public float Distance;
 
                 public void Reset(UnmanagedSpan from, int currentNodeIndex, int level)
                 {
-                    From = from;
+                    _from = from;
                     Distance = float.MaxValue;
                     CurrentNodeIndex = currentNodeIndex;
                     Level = level;
@@ -534,7 +532,7 @@ public partial class Hnsw
                     for (var i = 0; i < indexes.Count; i++)
                     {
                         var edgeIdx = indexes[i];
-                        var curDist = searchState.Distance(From, vectors[i]);
+                        var curDist = searchState.Distance(_from, vectors[i]);
                         if (curDist >= Distance || double.IsNaN(curDist))
                             continue;
                         Distance = curDist;
