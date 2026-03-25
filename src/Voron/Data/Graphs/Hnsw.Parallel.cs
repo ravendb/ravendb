@@ -98,13 +98,27 @@ public partial class Hnsw
      *   so we won't cause a bottleneck in the thread pool.
      * * We tested using a dedicated thread pool, but those performed significantly worse than the 
      *   default .NET one. 
+     *
+     * # Allocation-free work item dispatch
+     *
+     * The WorkItem base class implements IThreadPoolWorkItem, which allows us to queue it directly to
+     * the .NET thread pool via ThreadPool.UnsafeQueueUserWorkItem without allocating a delegate or a
+     * Task. Each concrete worker (ProcessEdgesWorker, FilterEdgesHeuristicWorker, FindNearestWorker)
+     * is preallocated once per NodePlacement instance and stored in a field. The enumerators in
+     * Process(), FindGraphPlacementForNode(), NearestEdges(), etc. yield the *same* preallocated
+     * worker object repeatedly — mutating its state (CurrentNodeIndex, Level, Owner, etc.) before each
+     * yield return. This means no new work items are heap-allocated during the graph-building loop;
+     * the runner simply resets and re-queues the same objects. The trade-off is that a yielded WorkItem
+     * is only valid until the enumerator advances, but that is fine because the runner always consumes
+     * the item before calling MoveNext again.
      */
     public partial class Registration
     {
         private int _nextNodeIndex;
 
         public int MaxConcurrentBatches = 512;
-        void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
+
+        private void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
         {
             if (_searchState.TryGetLocationForNode(EntryPointId, out var entryPointNode) is false)
             {
