@@ -183,8 +183,25 @@ function mapBooleanToken(value: unknown): boolean {
     return typeof value === "boolean" ? value : value.toString().trim().toLowerCase() === "true";
 }
 
+function formatParameterValueForDisplay(value: unknown): string {
+    if (value === null) {
+        return "null";
+    }
+
+    if (typeof value === "string") {
+        return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+        return value.toString();
+    }
+
+    return JSON.stringify(value);
+}
+
 export const aiAgentParametersUtils = {
     createValueSchema,
+    formatParameterValueForDisplay,
     getParameterTypeInfo,
     mapParameterValueToType,
     validateParameterValue,

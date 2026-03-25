@@ -36,6 +36,18 @@ export class AiAgentStubs {
                                 AllowModelQueries: null,
                             },
                         },
+                        {
+                            Name: "TEST_parameters",
+                            Description: "Test",
+                            Query: "from @all_docs as doc\r\nselect {\r\n  anyParam: $anyParam,\r\n  stringParam: $stringParam,\r\n  numberParam: $numberParam,\r\n  numberArray: $numberArrayLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName,\r\n  boolParam: $boolParam,\r\n  stringArrayParam: $stringArrayParam,\r\n  boolArrayParam: $boolArrayParam,\r\n  nullParam: $nullParam,\r\n  testLLMParam_number: $testLLMParam_number,\r\n  testLLMParam_numberArray: $testLLMParam_numberArray\r\n}\r\nlimit 1\r\n",
+                            ParametersSampleObject:
+                                '{\n  "testLLMParam_string": "string",\n  "testLLMParam_stringArray": ["string1", "string2"],\n  "testLLMParam_number": 123,\n  "testLLMParam_numberArray": [1,2,3],\n  "testLLMParam_bool": true,\n  "testLLMParam_boolArray": [true, false]\n}',
+                            ParametersSchema: null,
+                            Options: {
+                                AllowModelQueries: null,
+                                AddToInitialContext: null,
+                            },
+                        },
                     ],
                     Actions: [
                         {
@@ -60,27 +72,28 @@ export class AiAgentStubs {
                     ],
                     Parameters: [
                         {
-                            Name: "company",
-                            Description: null,
+                            Name: "anyParam",
+                            Description: "Some long descritpion ",
+                            SendToModel: false,
                             Policy: "Default",
                             Type: "Default",
                         },
                         {
-                            Name: "LicenseId",
+                            Name: "stringParam",
                             Description: null,
                             SendToModel: false,
                             Policy: "Default",
                             Type: "String",
                         },
                         {
-                            Name: "RavenVersion",
+                            Name: "numberParam",
                             Description: "Currently used server version of RavenDB",
                             SendToModel: true,
                             Policy: "Default",
                             Type: "Number",
                         },
                         {
-                            Name: "NumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName",
+                            Name: "numberArrayLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName",
                             Description:
                                 "Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion \nSome long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion Some long descritpion ",
                             SendToModel: true,
@@ -128,17 +141,21 @@ export class AiAgentStubs {
         return new document({
             Agent: "first-agent",
             Parameters: {
-                LicenseId: {
-                    Value: "cee0a5b9-9da8-433d-a673-a689da5cdb14",
+                anyParam: {
+                    Value: "any value",
                     SendToModel: false,
                 },
-                RavenVersion: {
+                stringParam: {
+                    Value: "some string",
+                    SendToModel: false,
+                },
+                numberParam: {
                     Value: 7.1,
                     SendToModel: true,
                 },
-                NumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName:
+                numberArrayLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongNameNumbersVeryLongName:
                     {
-                        Value: [-0.00001, -553542, -3, 4.132231],
+                        Value: [1, 2, 3, 4],
                         SendToModel: true,
                     },
                 boolParam: {
@@ -185,6 +202,15 @@ export class AiAgentStubs {
                             function: {
                                 name: "QueryRecentCategories",
                                 arguments: "{}",
+                            },
+                        },
+                        {
+                            id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                            type: "function",
+                            function: {
+                                name: "TEST_parameters",
+                                arguments:
+                                    '{"testLLMParam_string":"7.1","testLLMParam_stringArray":["aa","bb"],"testLLMParam_number":7,"testLLMParam_numberArray":[1,2,3,4],"testLLMParam_bool":true,"testLLMParam_boolArray":[true,false]}',
                             },
                         },
                     ],

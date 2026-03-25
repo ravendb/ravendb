@@ -3,6 +3,7 @@ import { Icon } from "components/common/Icon";
 import Badge from "react-bootstrap/Badge";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
+import { aiAgentParametersUtils } from "../utils/aiAgentParametersUtils";
 
 interface AiAgentParametersDropdownProps {
     parameters: Record<string, string | Raven.Client.Documents.AI.AiConversationParameter>;
@@ -54,23 +55,24 @@ interface ParameterItemProps {
 function ParameterItem({ name, value, isLast }: ParameterItemProps) {
     const extractedValue = typeof value === "object" && "Value" in value ? value.Value : value;
 
+    // Default to true if not specified for backwards compatibility
+    const isSendToModel = typeof value === "object" && "SendToModel" in value ? (value.SendToModel ?? true) : true;
+    const sendToModelLabel = isSendToModel ? "Sent to model" : "Internal only";
+
+    const displayValue = aiAgentParametersUtils.formatParameterValueForDisplay(extractedValue);
+
     return (
         <div className="w-100">
-            <div className="hstack justify-content-between">
-                <Badge bg="primary" className="text-truncate me-2 fs-5" title={name} style={{ width: "150px" }} pill>
+            <div className="flex-grow-1 min-width-0 hstack gap-2 mb-1">
+                <div className="font-monospace text-truncate flex-grow-1" title={name}>
                     {name}
-                </Badge>
-                <div className="flex-grow-1">
-                    <Form.Control
-                        type="text"
-                        value={extractedValue}
-                        disabled
-                        className="text-truncate"
-                        title={extractedValue}
-                    />
                 </div>
+                <Badge bg={isSendToModel ? "success" : "secondary"} className="font-size-12" pill>
+                    {sendToModelLabel}
+                </Badge>
             </div>
-            {!isLast && <hr className="my-1" />}
+            <Form.Control type="text" value={displayValue} disabled className="text-truncate" title={displayValue} />
+            {!isLast && <hr className="my-2" />}
         </div>
     );
 }
