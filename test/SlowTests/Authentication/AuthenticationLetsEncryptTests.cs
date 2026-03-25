@@ -616,6 +616,8 @@ namespace SlowTests.Authentication
 
                     if (PlatformDetails.RunningOnMacOsx)
                     {
+                        // currently macOS finds it hard to setup secured cluster and to satisfy heartbeats in rate < 300ms.
+                        // from debugging investigation, it is between 200 < heartbeat < 500
                         settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "700";
                     }
                     customSettings.Add(settings);

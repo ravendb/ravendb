@@ -840,12 +840,14 @@ namespace Raven.Server.ServerWide
             {
                 // macOS AppleCrypto blocks exporting ephemeral private keys to PFX, 
                 // We validate the private key's presence directly in memory instead.
-                ValidatePrivateKeyOnMacOs("ValidateCertificateBeforeReplacement", certificate, out _);
+                ValidatePrivateKeyOnMacOs("ValidateCertificateBeforeReplacement", certificate, out var pk);
+                pk?.Dispose();
             }
             else
             {
                 // On Windows and Linux, proceed with the standard export-based validation
-                ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
+                ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out var pk);
+                pk?.Dispose();
             }
 
             ValidateServerKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);

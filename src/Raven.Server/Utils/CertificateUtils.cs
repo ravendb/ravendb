@@ -786,7 +786,11 @@ namespace Raven.Server.Utils
                 certificateWithPrivateKey = safeCertificate.CopyWithPrivateKey(ecdsa);
             else
                 throw new NotSupportedException($"Unsupported key type: {privateKey.GetType().Name}");
-
+            
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                safeCertificate.Dispose();
+            }
             // Build the complete certificate chain.
             using var chain = new X509Chain();
             chain.ChainPolicy.DisableCertificateDownloads = true;
