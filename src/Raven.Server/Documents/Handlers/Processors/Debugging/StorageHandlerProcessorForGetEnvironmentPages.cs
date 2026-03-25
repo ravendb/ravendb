@@ -14,6 +14,7 @@ using Raven.Server.Web.Http;
 using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
+using Voron.Impl.Paging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Debugging;
 
@@ -79,15 +80,108 @@ internal sealed class StorageHandlerProcessorForGetEnvironmentPages : AbstractSt
         {
             if (owners.ContainsKey(i) == false)
             {
-                var start = i;
-                while (i < totalPages)
+                using (var tx = env.Environment.ReadTransaction())
                 {
-                    if (owners.ContainsKey(i))
-                        break;
-                    i++;
+                    try
+                    {
+                        var page = tx.LowLevelTransaction.GetPage(i);
+
+                        // If it's RawData or Overflow, it's legitimate table data we just didn't trace.
+                        // Let's claim it!
+                        if (page.Flags.HasFlag(PageFlags.Overflow) || page.Flags.HasFlag(PageFlags.RawData))
+                        {
+                            string pageType = page.Flags.HasFlag(PageFlags.Overflow) ? "Overflow (Large Data)" : "RawData (Table Data)";
+                            owners[i] = $"Unmapped {pageType}";
+
+                            // If it's an overflow page, it likely spans multiple pages.
+                            // We should claim the subsequent pages dictated by the overflow size.
+                            if (page.Flags.HasFlag(PageFlags.Overflow))
+                            {
+                                var numberOfOverflowPages = Paging.GetNumberOfOverflowPages(page.OverflowSize);
+                                for (int overflowPage = 1; overflowPage < numberOfOverflowPages; ++overflowPage)
+                                {
+                                    // Advance our main loop index and claim the contiguous pages
+                                    i++;
+                                    owners[i] = "Overflow (Continuation)";
+                                }
+                            }
+                            continue; // It's owned now, so it's not a gap!
+                        }
+                    }
+                    catch
+                    {
+                        // If we can't read the page for some reason, let it fall through to become a gap
+                    }
+
+                    // If we get here, it's a TRUE gap (not RawData, not Overflow, and unowned)
+                    var start = i;
+                    while (i < totalPages)
+                    {
+                        if (owners.ContainsKey(i))
+                            break;
+
+                        // We should also check inside the while loop so we don't group 
+                        // valid unmapped RawData into a true gap block.
+                        try
+                        {
+                            var page = tx.LowLevelTransaction.GetPage(i);
+                            if (page.Flags.HasFlag(PageFlags.Overflow) || page.Flags.HasFlag(PageFlags.RawData))
+                                break;
+                        }
+                        catch { }
+
+                        i++;
+                    }
+                    gaps.Add((start, i));
                 }
-                gaps.Add((start, i));
             }
+        }
+
+        using (var tx = env.Environment.ReadTransaction())
+        {
+            // --- GAP ANALYSIS SNIPPET ---
+
+            var gapAnalysis = new Dictionary<string, int>();
+            var gapPageDetails = new Dictionary<long, string>(); // Optional: If you want to pass this to your renderer
+
+            foreach (var gap in gaps)
+            {
+                for (long pageNumber = gap.Start; pageNumber < gap.End; pageNumber++)
+                {
+                    try
+                    {
+                        // Grab the raw page from the low-level pager
+                        var page = tx.LowLevelTransaction.GetPage(pageNumber);
+
+                        // The Flags enum will tell you exactly what Voron thinks this page is
+                        var flags = page.Flags;
+
+                        string gapType = flags.ToString();
+
+                        // Track how many of each type we are missing
+                        if (gapAnalysis.ContainsKey(gapType))
+                            gapAnalysis[gapType]++;
+                        else
+                            gapAnalysis[gapType] = 1;
+
+                        // Keep track of the specific page details for your UI
+                        gapPageDetails[pageNumber] = $"Gap - {gapType}";
+                    }
+                    catch (Exception ex)
+                    {
+                        // Just in case we hit an unmapped or strictly locked region
+                        gapPageDetails[pageNumber] = $"Gap - Unreadable ({ex.Message})";
+                    }
+                }
+            }
+
+            // Quick debug output to your console/logger so you can see it immediately
+            foreach (var kvp in gapAnalysis)
+            {
+                Console.WriteLine($"VORON DEBUG: Found {kvp.Value} gap pages with flags: {kvp.Key}");
+            }
+
+            // --- END GAP ANALYSIS SNIPPET ---
         }
 
         var output = RequestHandler.GetEnumQueryString<OutputType>("output", required: false);
