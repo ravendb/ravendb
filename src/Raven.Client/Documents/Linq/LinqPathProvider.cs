@@ -420,10 +420,7 @@ namespace Raven.Client.Documents.Linq
                                         value = RavenDocumentQuery.Now();
                                     return true;
                                 case nameof(RavenQuery.Today):
-                                    if (mce.Arguments.Count > 0 && TryGetMethodArguments(mce, out var todayArgs))
-                                        value = RavenDocumentQuery.Today((string)todayArgs[0]);
-                                    else
-                                        value = RavenDocumentQuery.Today();
+                                    value = RavenDocumentQuery.Today();
                                     return true;
                             }
                         }

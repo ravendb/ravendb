@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Server.Documents.Queries;
 
-internal enum DateTimePrecision : byte
+internal enum DateTimePrecision
 {
     None = 0,
     Year = 1,
@@ -14,11 +14,6 @@ internal enum DateTimePrecision : byte
     Second = 6
 }
 
-/// <summary>
-/// Parses and applies time offsets for now()/today() RQL functions.
-/// Format: [+|-]NyNmoNdNhNmNs (e.g., "+1y7mo5d4h5m7s", "-1d", "1h30m")
-/// The result is floor-rounded to the smallest precision unit specified.
-/// </summary>
 internal readonly struct TimeFunctionOffset
 {
     public readonly int Years;
@@ -45,136 +40,125 @@ internal readonly struct TimeFunctionOffset
     public static bool TryParse(ReadOnlySpan<char> input, out TimeFunctionOffset result)
     {
         result = default;
-
-        if (input.IsEmpty)
-            return false;
+        input = input.Trim();
+        if (input.IsEmpty) return false;
 
         int pos = 0;
         bool isNegative = false;
 
-        // consume optional sign
-        if (input[pos] == '+')
-        {
-            pos++;
-        }
-        else if (input[pos] == '-')
+        // 1. Consume optional sign
+        if (input[pos] == '-')
         {
             isNegative = true;
             pos++;
         }
-
-        if (pos >= input.Length)
-            return false;
+        else if (input[pos] == '+')
+        {
+            pos++;
+        }
 
         int years = 0, months = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
-        var smallestUnit = DateTimePrecision.None;
-        bool hasAnyUnit = false;
+        DateTimePrecision lastUnit = DateTimePrecision.None;
 
         while (pos < input.Length)
         {
-            // parse numeric value
-            int numStart = pos;
-            int value = 0;
+            // Skip whitespace before numbers
+            while (pos < input.Length && char.IsWhiteSpace(input[pos])) pos++;
+            if (pos >= input.Length) break;
 
-            while (pos < input.Length && IsDigit(input[pos]))
+            // 2. Parse numeric value (stepping)
+            if (TryParseStep(input.Slice(pos), out long value, out int numConsumed) == false)
+                return false;
+
+            pos += numConsumed;
+
+            // Skip whitespace between number and unit
+            while (pos < input.Length && char.IsWhiteSpace(input[pos])) pos++;
+            if (pos >= input.Length) return false; // Digits without a unit suffix
+
+            // 3. Parse unit suffix
+            if (TryMatchUnit(input.Slice(pos), out DateTimePrecision currentUnit, out int unitConsumed) == false)
+                return false;
+
+            // 4. Enforce strict ordering (e.g., cannot have 'days' before 'years')
+            if (currentUnit <= lastUnit) return false;
+
+            switch (currentUnit)
             {
-                value = value * 10 + (input[pos] - '0');
-                pos++;
+                case DateTimePrecision.Year: years = (int)value; break;
+                case DateTimePrecision.Month: months = (int)value; break;
+                case DateTimePrecision.Day: days = (int)value; break;
+                case DateTimePrecision.Hour: hours = (int)value; break;
+                case DateTimePrecision.Minute: minutes = (int)value; break;
+                case DateTimePrecision.Second: seconds = (int)value; break;
             }
 
-            if (pos == numStart || pos >= input.Length)
-                return false; // no digits found or no unit suffix
-
-            // parse unit suffix
-            char unit = input[pos];
-            switch (unit)
-            {
-                case 'y':
-                case 'Y':
-                    years = value;
-                    pos++;
-                    if (smallestUnit < DateTimePrecision.Year)
-                        smallestUnit = DateTimePrecision.Year;
-                    break;
-
-                case 'm':
-                case 'M':
-                    // lookahead: 'mo' = months, bare 'm' = minutes
-                    if (pos + 1 < input.Length && (input[pos + 1] == 'o' || input[pos + 1] == 'O'))
-                    {
-                        months = value;
-                        pos += 2;
-                        if (smallestUnit < DateTimePrecision.Month)
-                            smallestUnit = DateTimePrecision.Month;
-                    }
-                    else
-                    {
-                        minutes = value;
-                        pos++;
-                        if (smallestUnit < DateTimePrecision.Minute)
-                            smallestUnit = DateTimePrecision.Minute;
-                    }
-                    break;
-
-                case 'd':
-                case 'D':
-                    days = value;
-                    pos++;
-                    if (smallestUnit < DateTimePrecision.Day)
-                        smallestUnit = DateTimePrecision.Day;
-                    break;
-
-                case 'h':
-                case 'H':
-                    hours = value;
-                    pos++;
-                    if (smallestUnit < DateTimePrecision.Hour)
-                        smallestUnit = DateTimePrecision.Hour;
-                    break;
-
-                case 's':
-                case 'S':
-                    seconds = value;
-                    pos++;
-                    if (smallestUnit < DateTimePrecision.Second)
-                        smallestUnit = DateTimePrecision.Second;
-                    break;
-
-                default:
-                    return false; // unknown unit
-            }
-
-            hasAnyUnit = true;
+            lastUnit = currentUnit;
+            pos += unitConsumed;
         }
 
-        if (hasAnyUnit == false)
-            return false;
+        if (lastUnit == DateTimePrecision.None) return false;
 
-        result = new TimeFunctionOffset(years, months, days, hours, minutes, seconds, isNegative, smallestUnit);
+        result = new TimeFunctionOffset(years, months, days, hours, minutes, seconds, isNegative, lastUnit);
         return true;
     }
 
-    /// <summary>
-    /// Applies the offset to the base time and floor-rounds to the smallest precision unit.
-    /// </summary>
+    private static bool TryParseStep(ReadOnlySpan<char> source, out long value, out int charsConsumed)
+    {
+        charsConsumed = 0;
+        while (charsConsumed < source.Length && char.IsDigit(source[charsConsumed]))
+            charsConsumed++;
+
+        if (charsConsumed == 0)
+        {
+            value = 0;
+            return false;
+        }
+
+        return long.TryParse(source.Slice(0, charsConsumed), out value);
+    }
+
+    private static bool TryMatchUnit(ReadOnlySpan<char> input, out DateTimePrecision unit, out int consumed)
+    {
+        unit = DateTimePrecision.None;
+        consumed = 0;
+
+        // Longest strings first to avoid greedy matching errors (e.g., 'm' matching 'month')
+        if (StartsWith(input, out consumed, "years", "year", "y")) unit = DateTimePrecision.Year;
+        else if (StartsWith(input, out consumed, "months", "month", "mo")) unit = DateTimePrecision.Month;
+        else if (StartsWith(input, out consumed, "days", "day", "d")) unit = DateTimePrecision.Day;
+        else if (StartsWith(input, out consumed, "hours", "hour", "h")) unit = DateTimePrecision.Hour;
+        else if (StartsWith(input, out consumed, "minutes", "minute", "min", "m")) unit = DateTimePrecision.Minute;
+        else if (StartsWith(input, out consumed, "seconds", "second", "sec", "s")) unit = DateTimePrecision.Second;
+
+        return unit != DateTimePrecision.None;
+    }
+
+    private static bool StartsWith(ReadOnlySpan<char> input, out int length, params string[] options)
+    {
+        foreach (var opt in options)
+        {
+            if (input.StartsWith(opt, StringComparison.OrdinalIgnoreCase))
+            {
+                length = opt.Length;
+                return true;
+            }
+        }
+        length = 0;
+        return false;
+    }
+
     public DateTime Apply(DateTime baseTime)
     {
         int sign = IsNegative ? -1 : 1;
-
         var result = baseTime;
 
-        if (Years != 0)
-            result = result.AddYears(Years * sign);
-        if (Months != 0)
-            result = result.AddMonths(Months * sign);
-        if (Days != 0)
-            result = result.AddDays(Days * sign);
-        if (Hours != 0)
-            result = result.AddHours(Hours * sign);
-        if (Minutes != 0)
-            result = result.AddMinutes(Minutes * sign);
-        if (Seconds != 0)
-            result = result.AddSeconds(Seconds * sign);
+        if (Years != 0) result = result.AddYears(Years * sign);
+        if (Months != 0) result = result.AddMonths(Months * sign);
+        if (Days != 0) result = result.AddDays(Days * sign);
+        if (Hours != 0) result = result.AddHours(Hours * sign);
+        if (Minutes != 0) result = result.AddMinutes(Minutes * sign);
+        if (Seconds != 0) result = result.AddSeconds(Seconds * sign);
 
         return FloorTo(result, SmallestUnit);
     }
@@ -193,7 +177,4 @@ internal readonly struct TimeFunctionOffset
             _ => dt
         };
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsDigit(char c) => (uint)(c - '0') <= 9;
 }

@@ -956,33 +956,6 @@ public class RavenDB_26183 : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Today_WithOffset_ReturnsCorrectDocuments(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddMonths(-2) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-5) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddMonths(2) });
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                // today('+1mo') adds 1 month, floors to month boundary
-                var employees = session.Advanced
-                    .RawQuery<Employee>("from Employees where HiredAt < today('+1mo')")
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.Equal(2, employees.Count);
-            }
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
     public void Now_WithParameterOffset_ReturnsCorrectDocuments(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -1026,32 +999,6 @@ public class RavenDB_26183 : RavenTestBase
             {
                 var employees = session.Advanced.DocumentQuery<Employee>()
                     .WhereLessThanOrEqual("HiredAt", RavenDocumentQuery.Now("+7d"))
-                    .WaitForNonStaleResults()
-                    .ToList();
-
-                Assert.Equal(2, employees.Count);
-            }
-        }
-    }
-
-    [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
-    public void Today_WithOffset_DocumentQuery_ReturnsCorrectDocuments(Options options)
-    {
-        using (var store = GetDocumentStore(options))
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddMonths(-2) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-5) });
-                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddMonths(2) });
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var employees = session.Advanced.DocumentQuery<Employee>()
-                    .WhereLessThan("HiredAt", RavenDocumentQuery.Today("+1mo"))
                     .WaitForNonStaleResults()
                     .ToList();
 

@@ -511,9 +511,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             _queryParameters = queryParameters;
         }
 
-        public ValueExpression ResolveTimeFunction(MethodExpression me, bool isNow)
+        public ValueExpression ResolveNow(MethodExpression me)
         {
-            var baseTime = isNow ? _now : _today;
             DateTime resolved;
 
             if (me.Arguments is { Count: 1 })
@@ -523,15 +522,22 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 if (string.IsNullOrEmpty(offsetString) || TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
                     throw new InvalidQueryException($"Invalid offset format for {me.Name.Value}().");
 
-                resolved = offset.Apply(baseTime);
+                resolved = offset.Apply(_now);
             }
             else
             {
-                resolved = baseTime;
+                resolved = _now;
             }
 
-            var token = $"__raven_{(isNow ? "now" : "today")}_{_counter++}";
+            var token = $"__raven_now_{_counter++}";
             ResolvedParameters.Add((token, resolved.GetDefaultRavenFormat(isUtc: true)));
+            return new ValueExpression(token, ValueTokenType.Parameter);
+        }
+
+        public ValueExpression ResolveToday()
+        {
+            var token = $"__raven_today_{_counter++}";
+            ResolvedParameters.Add((token, _today.GetDefaultRavenFormat(isUtc: true)));
             return new ValueExpression(token, ValueTokenType.Parameter);
         }
 
@@ -558,10 +564,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         switch (expr)
         {
             case MethodExpression me when me.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase):
-                return context.ResolveTimeFunction(me, isNow: true);
+                return context.ResolveNow(me);
 
             case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
-                return context.ResolveTimeFunction(me, isNow: false);
+                return context.ResolveToday();
 
             case BinaryExpression be:
                 var newLeft = ReplaceTimeBasedFunctions(be.Left, context);

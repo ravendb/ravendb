@@ -236,7 +236,17 @@ namespace Raven.Client.Documents.Queries
         /// to the smallest precision unit. Translates to the <c>now(offset)</c> RQL function.
         /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="RavenDocumentQuery.Now(string)"/> instead.
         /// </summary>
-        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1d", "-2h30m", "1y6mo").</param>
+        /// <param name="offset">
+        /// A duration string representing the time offset.
+        /// <para>
+        /// Format: <c>[+|-][n]y[n]mo[n]d[n]h[n]m[n]s</c>
+        /// </para>
+        /// <list type="bullet">
+        /// <item><description><c>y, mo, d</c>: Years, Months, Days</description></item>
+        /// <item><description><c>h, m, s</c>: Hours, Minutes, Seconds</description></item>
+        /// </list>
+        /// Examples: <c>"+1y6mo"</c>, <c>"-2h30m"</c>, <c>"15d"</c> (defaults to positive).
+        /// </param>
         /// <returns>The adjusted and rounded UTC date and time.</returns>
         /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
         public static DateTime Now(string offset)
@@ -255,18 +265,6 @@ namespace Raven.Client.Documents.Queries
             throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
         }
 
-        /// <summary>
-        /// Returns the start of the current UTC day (midnight) on the server, adjusted by the specified offset
-        /// and floor-rounded to the smallest precision unit. Translates to the <c>today(offset)</c> RQL function.
-        /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="RavenDocumentQuery.Today(string)"/> instead.
-        /// </summary>
-        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1mo", "-7d", "1y").</param>
-        /// <returns>The adjusted and rounded start of the UTC day.</returns>
-        /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>
-        public static DateTime Today(string offset)
-        {
-            throw new NotSupportedException("This method is here for strongly type support of server side call during Linq queries and should never be directly called");
-        }
 
         /// <summary>
         /// Includes a related document path in the query for loading. This method is for server-side LINQ query translation only.

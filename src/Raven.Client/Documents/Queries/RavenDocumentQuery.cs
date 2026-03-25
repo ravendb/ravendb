@@ -25,7 +25,17 @@ namespace Raven.Client.Documents.Queries
         /// Returns the current UTC date and time on the server, adjusted by the specified offset and floor-rounded
         /// to the smallest precision unit. Translates to the <c>now(offset)</c> RQL function.
         /// </summary>
-        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1d", "-2h30m", "1y6mo").</param>
+        /// <param name="offset">
+        /// A duration string representing the time offset.
+        /// <para>
+        /// Format: <c>[+|-][n]y[n]mo[n]d[n]h[n]m[n]s</c>
+        /// </para>
+        /// <list type="bullet">
+        /// <item><description><c>y, mo, d</c>: Years, Months, Days</description></item>
+        /// <item><description><c>h, m, s</c>: Hours, Minutes, Seconds</description></item>
+        /// </list>
+        /// Examples: <c>"+1y6mo"</c>, <c>"-2h30m"</c>, <c>"15d"</c> (defaults to positive).
+        /// </param>
         /// <example>
         /// <code>
         /// session.Advanced.DocumentQuery&lt;Order&gt;()
@@ -46,18 +56,6 @@ namespace Raven.Client.Documents.Queries
         /// </example>
         public static MethodCall Today() => Time.TodayInstance;
 
-        /// <summary>
-        /// Returns the start of the current UTC day (midnight) on the server, adjusted by the specified offset
-        /// and floor-rounded to the smallest precision unit. Translates to the <c>today(offset)</c> RQL function.
-        /// </summary>
-        /// <param name="offset">Offset string in the format [+|-]NyNmoNdNhNmNs (e.g., "+1mo", "-7d", "1y").</param>
-        /// <example>
-        /// <code>
-        /// session.Advanced.DocumentQuery&lt;Order&gt;()
-        ///     .WhereGreaterThanOrEqual(x => x.CreatedAt, RavenDocumentQuery.Today("-1mo"));
-        /// </code>
-        /// </example>
-        public static MethodCall Today(string offset) => new Time(WhereToken.MethodsType.Today, offset);
 
         /// <summary>
         /// Retrieves a compare exchange value by key for use in a query filter. Translates to the <c>cmpxchg()</c> RQL function.

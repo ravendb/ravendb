@@ -4292,11 +4292,10 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.TimeBasedOffsets is { Count: > 0 })
             {
-                foreach (var (offset, isNow) in q.TimeBasedOffsets)
+                foreach (var offset in q.TimeBasedOffsets)
                 {
-                    var baseTime = isNow ? queryTime.Now : queryTime.Today;
                     pos -= sizeof(long);
-                    *(long*)(indexEtagBytes + pos) = offset.Apply(baseTime).Ticks;
+                    *(long*)(indexEtagBytes + pos) = offset.Apply(queryTime.Now).Ticks;
                 }
             }
 

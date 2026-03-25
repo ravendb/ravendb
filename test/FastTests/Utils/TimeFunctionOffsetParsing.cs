@@ -100,13 +100,16 @@ namespace FastTests.Utils
         }
 
         [RavenFact(RavenTestCategory.Querying)]
-        public void SmallestUnit_CoarserUnitAfterFinerUnit()
+        public void StrictOrdering_RejectsOutOfOrder()
         {
-            // days after hours -> smallest is still hour (finer)
-            Assert.True(TimeFunctionOffset.TryParse("5h1d", out var result));
-            Assert.Equal(5, result.Hours);
-            Assert.Equal(1, result.Days);
-            Assert.Equal(DateTimePrecision.Hour, result.SmallestUnit);
+            // hours before days violates strict descending order
+            Assert.False(TimeFunctionOffset.TryParse("5h1d", out _));
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void StrictOrdering_RejectsDuplicateUnits()
+        {
+            Assert.False(TimeFunctionOffset.TryParse("1d2d", out _));
         }
 
         [RavenFact(RavenTestCategory.Querying)]
@@ -119,6 +122,55 @@ namespace FastTests.Utils
         }
 
         [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseReadableUnitNames()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("1year6months5days", out var result));
+            Assert.Equal(1, result.Years);
+            Assert.Equal(6, result.Months);
+            Assert.Equal(5, result.Days);
+            Assert.Equal(DateTimePrecision.Day, result.SmallestUnit);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseSingularUnitNames()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("1year1month1day1hour1minute1second", out var result));
+            Assert.Equal(1, result.Years);
+            Assert.Equal(1, result.Months);
+            Assert.Equal(1, result.Days);
+            Assert.Equal(1, result.Hours);
+            Assert.Equal(1, result.Minutes);
+            Assert.Equal(1, result.Seconds);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseShortAliases_MinSec()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("5min30sec", out var result));
+            Assert.Equal(5, result.Minutes);
+            Assert.Equal(30, result.Seconds);
+            Assert.Equal(DateTimePrecision.Second, result.SmallestUnit);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseWithWhitespace()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("1y 6mo 5d", out var result));
+            Assert.Equal(1, result.Years);
+            Assert.Equal(6, result.Months);
+            Assert.Equal(5, result.Days);
+            Assert.Equal(DateTimePrecision.Day, result.SmallestUnit);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CanParseWithLeadingTrailingWhitespace()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("  +1d  ", out var result));
+            Assert.Equal(1, result.Days);
+            Assert.False(result.IsNegative);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
         public void CaseInsensitiveUnits()
         {
             Assert.True(TimeFunctionOffset.TryParse("1Y2MO3D4H5M6S", out var result));
@@ -128,6 +180,14 @@ namespace FastTests.Utils
             Assert.Equal(4, result.Hours);
             Assert.Equal(5, result.Minutes);
             Assert.Equal(6, result.Seconds);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void CaseInsensitiveReadableNames()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("1Year 2Months", out var result));
+            Assert.Equal(1, result.Years);
+            Assert.Equal(2, result.Months);
         }
 
         [RavenFact(RavenTestCategory.Querying)]
@@ -213,6 +273,15 @@ namespace FastTests.Utils
             var baseTime = new DateTime(2026, 3, 22, 14, 30, 45, DateTimeKind.Utc);
             var result = offset.Apply(baseTime);
             Assert.Equal(new DateTime(2026, 3, 22, 14, 0, 0, DateTimeKind.Utc), result);
+        }
+
+        [RavenFact(RavenTestCategory.Querying)]
+        public void Apply_ReadableUnitsWithSpaces()
+        {
+            Assert.True(TimeFunctionOffset.TryParse("+1 year 6 months", out var offset));
+            var baseTime = new DateTime(2026, 1, 15, 14, 30, 45, DateTimeKind.Utc);
+            var result = offset.Apply(baseTime);
+            Assert.Equal(new DateTime(2027, 7, 1, 0, 0, 0, DateTimeKind.Utc), result);
         }
     }
 }
