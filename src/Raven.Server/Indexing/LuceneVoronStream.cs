@@ -81,8 +81,8 @@ public sealed unsafe class LuceneVoronStream
             // disposed LowLevelTransaction and its associated structures.
             // When the stream is reused, UpdateCurrentTransaction will set a fresh transaction.
             _llt = null;
-            _inlineStream.UpdatePtr(null);
-            _voronStream.Reset();
+            _inlineStream?.UpdatePtr(null);
+            _voronStream?.Reset();
         };
     }
 
