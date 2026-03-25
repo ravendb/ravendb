@@ -144,9 +144,9 @@ public partial class Hnsw
             private readonly LinkedListNode<int> _listNode = new(-1);
 
             // Pooled work items — reused across all yields to avoid per-yield heap allocations
-            private readonly ProcessEdgesWorker _processEdgesWorker = new() { Runner = runner };
-            private readonly FilterEdgesHeuristicWorker _filterEdgesWorker = new() { Runner = runner };
-            private readonly FindNearestWorker _findNearestWorker = new() { Runner = runner };
+            private readonly ProcessEdgesWorker _processEdgesWorker = new(runner);
+            private readonly FilterEdgesHeuristicWorker _filterEdgesWorker = new(runner);
+            private readonly FindNearestWorker _findNearestWorker = new(runner);
             
             private void ClearVisited()
             {
@@ -367,7 +367,7 @@ public partial class Hnsw
                 yield return _filterEdgesWorker;
             }
 
-            private sealed class FilterEdgesHeuristicWorker : WorkItem
+            private sealed class FilterEdgesHeuristicWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
                 private UnmanagedSpan _src;
 
@@ -432,7 +432,7 @@ public partial class Hnsw
                     queue.Clear();
                 }
             }
-            private sealed class ProcessEdgesWorker : WorkItem
+            private sealed class ProcessEdgesWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
                 private UnmanagedSpan _vector;
                 public float LowerBound;
@@ -510,7 +510,7 @@ public partial class Hnsw
                 _nearestIndexes.Reverse();
             }
 
-            private sealed class FindNearestWorker : WorkItem
+            private sealed class FindNearestWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
                 private UnmanagedSpan _from;
                 public float Distance;
@@ -782,10 +782,9 @@ public partial class Hnsw
             }
         }
         
-        private abstract class WorkItem : IThreadPoolWorkItem
+        private abstract class WorkItem(NodePlacementRunner runner) : IThreadPoolWorkItem
         {
             public NodePlacement Owner;
-            public NodePlacementRunner Runner;
             public IEnumerator<WorkItem> Iterator;
 
             protected abstract void DoWork();
@@ -795,11 +794,11 @@ public partial class Hnsw
                 try
                 {
                     DoWork();
-                    Runner.Enqueue(Iterator);
+                    runner.Enqueue(Iterator);
                 }
                 catch (Exception e)
                 {
-                    Runner.Error(Iterator, e);
+                    runner.Error(Iterator, e);
                 }
             }
 
