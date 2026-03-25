@@ -220,6 +220,10 @@ namespace Raven.Client
 
             internal const string DatabaseMissing = "Database-Missing";
 
+            internal const string CommandType = "Command-Type";
+
+            internal const string AttachmentStream = "AttachmentStream";
+
             internal class Encodings
             {
                 private Encodings()

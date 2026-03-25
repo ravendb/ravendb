@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Querying
 {

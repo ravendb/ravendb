@@ -14,7 +14,6 @@ using Sparrow.Json;
 using Sparrow.LowMemory;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Size = Sparrow.Size;
 
 namespace SlowTests.Bugs.Caching

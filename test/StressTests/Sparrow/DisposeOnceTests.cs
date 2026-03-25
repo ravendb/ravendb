@@ -10,7 +10,6 @@ using Sparrow.Platform;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Sparrow
 {
@@ -699,12 +698,12 @@ namespace StressTests.Sparrow
             });
 
             Assert.False(disposer.Disposed);
-            Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+            Assert.Throws<InvalidOperationException>( () => disposer.Dispose());
             Assert.Equal(counter, 1);
             Assert.True(disposer.Disposed);
 
             // Subsequent runs also throw, but don't run anything
-            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+            Assert.Throws<AggregateException>( () => disposer.Dispose());
             Assert.True(disposer.Disposed);
             Assert.Equal(counter, 1);
         }
@@ -746,7 +745,7 @@ namespace StressTests.Sparrow
             {
                 Assert.Equal(counter, i);
                 Assert.False(disposer.Disposed);
-                Assert.Throws(typeof(InvalidOperationException), () => disposer.Dispose());
+                Assert.Throws<InvalidOperationException>( () => disposer.Dispose());
                 Assert.False(disposer.Disposed);
             }
 
@@ -817,7 +816,7 @@ namespace StressTests.Sparrow
                     {
                         var task = new Task(() =>
                         {
-                            Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+                            Assert.Throws<AggregateException>( () => disposer.Dispose());
                             Assert.Equal(counter, 1);
 
                             if (Interlocked.Decrement(ref pendingAttempts) == 0)
@@ -934,7 +933,7 @@ namespace StressTests.Sparrow
                                 // will be run.
                                 //barrier.SignalAndWait();
 
-                                Assert.Throws(typeof(AggregateException), () => disposer.Dispose());
+                                Assert.Throws<AggregateException>( () => disposer.Dispose());
 
                                 if (Interlocked.Decrement(ref workItemsPending) == 0)
                                     // ReSharper disable once AccessToDisposedClosure

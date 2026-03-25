@@ -5,7 +5,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsOllamaConnectorForTesting>
 {
-    public const string Model = "phi:latest";
+    public const string Model = "nomic-embed-text:latest";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
 
     public EmbeddingsOllamaConnectorForTesting()
@@ -13,14 +13,14 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings, EnvironmentVariable);
 }
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
 {
-    public const string Model = "llama3.2:latest";
+    public const string Model = "qwen2.5:0.5b";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
 
     public GenAiOllamaConnectorForTesting()
@@ -28,7 +28,7 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
 
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat, EnvironmentVariable);
 }

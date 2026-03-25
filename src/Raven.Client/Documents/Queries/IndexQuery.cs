@@ -113,6 +113,12 @@ namespace Raven.Client.Documents.Queries
 
         public T QueryParameters { get; set; }
 
+        /// <summary>
+        /// User-defined query tag.
+        /// Sent to the server as the <c>tag</c> query-string parameter.
+        /// </summary>
+        public string Tag { get; set; }
+
         public ProjectionBehavior? ProjectionBehavior { get; set; }
 
         /// <summary>

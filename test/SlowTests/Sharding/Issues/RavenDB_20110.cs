@@ -12,7 +12,6 @@ using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues
 {

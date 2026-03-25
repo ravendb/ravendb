@@ -9,7 +9,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
 
@@ -216,8 +215,10 @@ namespace SlowTests.Core.Session
             {
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     Assert.False(session.Advanced.UseOptimisticConcurrency);
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     session.Store(new User { Id = entityId, Name = "User1" });
                     session.SaveChanges();

@@ -9,7 +9,6 @@ using Raven.Client.Util;
 using Raven.Server.Web.Authentication;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

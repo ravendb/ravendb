@@ -1,7 +1,7 @@
-﻿#if ALPHABETIC_TEST_RUN
+#if ALPHABETIC_TEST_RUN
 
-[assembly: Xunit.TestCaseOrderer("Tests.Infrastructure.AlphabeticTestsOrderer", "Tests.Infrastructure")]
-[assembly: Xunit.TestCollectionOrderer("Tests.Infrastructure.AlphabeticTestsOrderer", "Tests.Infrastructure")]
+[assembly: Xunit.TestCaseOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+[assembly: Xunit.TestCollectionOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
 
 #endif
 
@@ -9,11 +9,11 @@
 
 #if !ALPHABETIC_TEST_RUN
 
-    [assembly: Xunit.TestCaseOrderer("Tests.Infrastructure.AlphabeticTestsOrderer", "Tests.Infrastructure")]
-    [assembly: Xunit.TestCollectionOrderer("Tests.Infrastructure.AlphabeticTestsOrderer", "Tests.Infrastructure")]
+    [assembly: Xunit.TestCaseOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
+    [assembly: Xunit.TestCollectionOrderer(typeof(Tests.Infrastructure.AlphabeticTestsOrderer))]
 
 #endif
 
-[assembly: Xunit.TestFramework("Tests.Infrastructure.XunitExtensions.PerformanceTestFramework", "Tests.Infrastructure")]
+[assembly: Xunit.TestFramework(typeof(Tests.Infrastructure.XunitExtensions.PerformanceTestFramework))]
 
 #endif

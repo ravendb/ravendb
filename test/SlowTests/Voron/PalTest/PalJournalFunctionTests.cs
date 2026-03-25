@@ -7,7 +7,6 @@ using FastTests;
 using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.PalTest
 {

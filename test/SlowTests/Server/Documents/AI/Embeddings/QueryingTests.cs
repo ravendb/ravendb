@@ -11,7 +11,6 @@ using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 
@@ -397,7 +396,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
         }
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task WillFindUpdatedEmbeddingValues(Options options)
     {
@@ -439,7 +438,7 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public async Task MultiVectorSearchMinOnDuplicates(Options options)
     {

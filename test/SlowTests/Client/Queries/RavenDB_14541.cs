@@ -8,7 +8,6 @@ using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace SlowTests.Client.Queries

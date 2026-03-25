@@ -60,5 +60,8 @@
         Embedding_F32,
         Embedding_I8,
         Embedding_I1,
+
+        Now,
+        Today,
     }
 }

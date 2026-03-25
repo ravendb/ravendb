@@ -1,13 +1,18 @@
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure.ConnectionString;
+using Xunit;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
 public class RequiresMsSqlInlineData : DataAttribute
 {
+    public override bool SupportsDiscoveryEnumeration() => false;
+
     public RequiresMsSqlInlineData()
     {
         if (RavenTestHelper.SkipIntegrationTests)
@@ -23,8 +28,9 @@ public class RequiresMsSqlInlineData : DataAttribute
             Skip = "Test requires MsSQL database";
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        return new[] { new object[] { MigrationProvider.MsSQL } };
+        var result = new List<ITheoryDataRow> { new TheoryDataRow(new object[] { MigrationProvider.MsSQL }) };
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
     }
 }

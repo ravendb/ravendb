@@ -43,19 +43,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private bool _nullTermsMarkersLoaded;
     private bool _nonExistingTermsMarkersLoaded;
 
-    /// <summary>
-    /// When true no SIMD instruction will be used. Useful for checking that optimized algorithms behave in the same
-    /// way than reference algorithms. 
-    /// </summary>
-    public bool ForceNonAccelerated { get; set; }
-
-    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && !ForceNonAccelerated;
+    public bool IsAccelerated => AdvInstructionSet.IsAcceleratedVector256 && (_testingConfiguration?.IsAccelerated ?? true);
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
 
     private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
 
     private long? _lastEntryId;
+
+    /// <summary>
+    /// Used for testing purposes only.
+    /// </summary>
+    internal CoraxTestingConfiguration _testingConfiguration;
+    
+    public void SetTestingConfiguration(CoraxTestingConfiguration testingConfiguration) => _testingConfiguration = testingConfiguration;
 
     
     public long LastEntryId
@@ -130,17 +131,6 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         Init();
     }
 
-    private void Init()
-    {
-        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
-        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
-        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
-        _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
-        _transaction.TryGetLookupFor(Constants.IndexWriter.EntryIdToLocationSlice, out _entryIdToLocation);
-        _dictionaryId = GetDictionaryId(_transaction.LowLevelTransaction);
-        FieldCache = new FieldsCache(_transaction, _fieldsTree);
-    }
-
     private IndexSearcher(IndexFieldsMapping fieldsMapping)
     {
         if (fieldsMapping is null)
@@ -155,17 +145,26 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
     }
 
-    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
+    private void Init()
     {
-        PortableExceptions.ThrowIfNullOnDebug(existingKey);
-        
+        _fieldsTree = _transaction.ReadTree(Constants.IndexWriter.FieldsSlice);
+        _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
+        _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
+        _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
+        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+        _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
+        FieldCache = new FieldsCache(_transaction, _fieldsTree);
+    }
+    
+    public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
+    {
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
         ContainerEntryId loc = (ContainerEntryId)locLong;
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, existingKey);
+        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, key);
     }
 
     public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
@@ -543,18 +542,20 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId);
+    internal bool TryGetPostingListForNonExisting(in FieldMetadata field, out long postingListId) => TryGetPostingListForNonExisting(field.FieldName, out postingListId, out _);
     
-    private bool TryGetPostingListForNonExisting(Slice name, out long postingListId)
+    internal bool TryGetPostingListForNonExisting(Slice name, out long postingListId, out long termContainerId)
     {
         InitNonExistingPostingList();
         var result = _nonExistingPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;
+            termContainerId = -1;
             return false;
         }
         postingListId = result.Value.PostingListId;
+        termContainerId = result.Value.TermContainerId;
         return true;
     }
     
@@ -568,18 +569,21 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId);
+    internal bool TryGetPostingListForNull(in FieldMetadata field, out long postingListId) => TryGetPostingListForNull(field.FieldName, out postingListId, out _);
     
-    private bool TryGetPostingListForNull(Slice name, out long postingListId)
+    internal bool TryGetPostingListForNull(Slice name, out long postingListId, out long termContainerId)
     {
         InitNullPostingList();
         var result = _nullPostingListsTree?.ReadStructure<(long PostingListId, long TermContainerId)>(name);
         if (result == null)
         {
             postingListId = -1;
+            termContainerId = -1;
             return false;
         }
+        
         postingListId = result.Value.PostingListId;
+        termContainerId = result.Value.TermContainerId;
         return true;
     }
 
@@ -593,17 +597,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
         where TInner : IQueryMatch
     {
-        return new IncludeNullMatch<TInner>(this, inner, field, forward);
+        return new IncludeNullMatch<TInner>(this, inner, field, forward, nullFirsts);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward)
+    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
         where TInner : IQueryMatch
     {
-        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
+        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward, nullFirsts);
     }
 
     public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,11 @@ using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Client.Documents.AI;
 
+/// <summary>
+/// Fluent API for handling tool calls and running a conversation with an AI agent.
+/// Implementations allow registering handlers/receivers for tools, adding responses,
+/// setting the user prompt, and executing conversation turns.
+/// </summary>
 public interface IAiConversationOperations
 {
     /// <summary>
@@ -244,6 +250,22 @@ public interface IAiConversationOperations
     void AddUserPrompt(params IEnumerable<string> userPrompt);
 
     /// <summary>
+    /// Adds a file attachment as a stream to the conversation turn.
+    /// </summary>
+    /// <param name="name">The name of the attachment (e.g., ""monthly_budget.pdf").
+    /// A descriptive name is highly recommended as it helps the LLM understand the file's context and content.</param>
+    /// <param name="stream">The data stream of the file.</param>
+    /// <param name="contentType">The MIME media type of the attachment content (e.g. image/png).</param>
+    void AddAttachment(string name, Stream stream, string contentType);
+
+    /// <summary>
+    /// Copies an existing attachment from a document in RavenDB into the conversation context.
+    /// </summary>
+    /// <param name="sourceDocumentId">The ID of the document in RavenDB that contains the attachment.</param>
+    /// <param name="fileName">The name to assign to the file in the conversation context.</param>
+    void CopyAttachmentFrom(string sourceDocumentId, string fileName);
+
+    /// <summary>
     /// This is called if the model invoked an action that has no register handler using
     /// <see cref="Handle"/> or <see cref="Receive"/>. If there is no event handler for
     /// this event and an unexpected action is raised by the model, and exception will
@@ -254,12 +276,25 @@ public interface IAiConversationOperations
     event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 }
 
+/// <summary>
+/// Specifies how errors thrown by tool handlers/receivers should be handled.
+/// </summary>
 public enum AiHandleErrorStrategy
 {
+    /// <summary>
+    /// Convert the error to a textual message and send it back to the model as the tool response.
+    /// </summary>
     SendErrorsToModel,
+
+    /// <summary>
+    /// Throw the exception immediately to the caller instead of sending it to the model.
+    /// </summary>
     RaiseImmediately
 }
 
+/// <summary>
+/// Event arguments for <see cref="IAiConversationOperations.OnUnhandledAction"/>.
+/// </summary>
 public class UnhandledActionEventArgs
 {
     internal UnhandledActionEventArgs(IAiConversationOperations sender, AiAgentActionRequest action, CancellationToken token)
@@ -269,7 +304,18 @@ public class UnhandledActionEventArgs
         Token = token;
     }
 
+    /// <summary>
+    /// The sender that raised the event.
+    /// </summary>
     public IAiConversationOperations Sender { get; private set; }
+
+    /// <summary>
+    /// The action (tool call) requested by the AI model that requires handling.
+    /// </summary>
     public AiAgentActionRequest Action { get; private set; }
+
+    /// <summary>
+    /// Cancellation token associated with the current turn.
+    /// </summary>
     public CancellationToken Token { get; private set; }
 }

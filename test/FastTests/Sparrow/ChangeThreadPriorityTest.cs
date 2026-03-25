@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {

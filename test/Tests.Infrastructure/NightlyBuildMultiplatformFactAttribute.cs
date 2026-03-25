@@ -1,9 +1,11 @@
-﻿using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildMultiplatformFactAttribute : NightlyBuildFactAttribute
+    public class NightlyBuildMultiplatformFactAttribute : NightlyBuildFactAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         private string _skip;
 
         private readonly RavenPlatform _platform;
@@ -36,7 +38,7 @@ namespace Tests.Infrastructure
 
         public bool NightlyBuildOnly { get; set; }
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

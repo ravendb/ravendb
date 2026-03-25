@@ -13,7 +13,6 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

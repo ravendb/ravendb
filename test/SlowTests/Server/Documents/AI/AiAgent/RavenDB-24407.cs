@@ -13,7 +13,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
@@ -63,7 +62,22 @@ public class RavenDB_24407 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.";
+        const string systemPrompt = @"
+You are an AI shopping assistant for an online store.
+
+You MUST use the available tools to answer user questions whenever the information can be retrieved from them.
+
+Rules:
+- ALWAYS use the ""RecentOrder"" tool when the user asks about their orders or past purchases.
+- ALWAYS use the ""ProductSearch"" tool when suggesting products, alternatives, or recommendations.
+- DO NOT rely on your general knowledge for product suggestions when tools are available.
+- DO NOT invent products or details — only use real data returned from tools.
+- You may call multiple tools if needed before answering.
+- Only provide a final answer after you have gathered enough data using tools.
+
+When talking about orders or products, always include their IDs.
+
+If you do not have enough data, call another tool instead of guessing.";
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
         agent.Parameters.Add(new AiAgentParameter("company"));
@@ -75,7 +89,7 @@ public class RavenDB_24407 : RavenTestBase
                     Name = "ProductSearch",
                     Description =  "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query) limit 5",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\", \"cheese or similar products\"]}"
                 }
                 ,
                 new AiAgentToolQuery
@@ -197,7 +211,13 @@ public class RavenDB_24407 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        const string systemPrompt = "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.";
+        const string systemPrompt = "You are an AI agent of an online shop. " +
+                                    "You must use the available tools to answer user questions whenever relevant. " +
+                                    "For any question about products, recommendations, or catalog items, you MUST call ProductSearch. " +
+                                    "For any question related to the user's orders, you MUST call RecentOrder. " +
+                                    "Do not answer from your own knowledge. " +
+                                    "Always base your response on tool results. " +
+                                    "When talking about orders or products, include the ids as well.";
 
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
@@ -231,14 +251,16 @@ public class RavenDB_24407 : RavenTestBase
             new AiAgentToolAction
                 {
                     Name = "ProductSearch",
-                    Description =  "semantic search the store product catalog",
+                    Description =  "semantic search the store product catalog" +
+                                   ", MUST be used for any product-related query. Do not answer without calling this tool.",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentToolAction
                 {
                     Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
+                    Description = "Get the recent orders of the current user" +
+                                  ", MUST be used for any question about user orders or history. Do not answer without calling this tool.",
                     ParametersSampleObject = "{}"
                 }
         ];

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {

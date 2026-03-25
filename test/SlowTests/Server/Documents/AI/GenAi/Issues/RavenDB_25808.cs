@@ -13,7 +13,6 @@ using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Stats;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {
@@ -40,7 +39,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             config.Collection = "Posts";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
             config.Identifier = "posts-translation-v1-to-v2";
-            config.Version = 0;
+            config.Version = null;
             config.SampleObject = sampleObjectV1;
 
 
@@ -71,6 +70,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out Sparrow.Json.BlittableJsonReaderObject metadata));
                 Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out Sparrow.Json.BlittableJsonReaderObject hashesSection));
                 Assert.True(hashesSection.TryGet(config.Identifier, out Sparrow.Json.BlittableJsonReaderArray hashesArray));
+                Assert.NotNull(hashesArray);
 
                 originalHash = hashesArray.Last().ToString();
             }
@@ -94,8 +94,9 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
 
             config.SampleObject = sampleObjectV2;
 
-            //simulating older client cause the HashVersion is configured to None.
-            store.Maintenance.Send(new UpdateGenAiOperation(taskId, config)); // task will be re-enabled
+            var baselineUtc = DateTime.UtcNow;
+            //simulating older client cause the Version is configured to Null.
+            await store.Maintenance.SendAsync(new UpdateGenAiOperation(taskId, config)); // task will be re-enabled
 
             // ---- DIAGNOSTIC ASSERTION ----
             // Verify the server actually bumped the version to WithSampleObject BEFORE waiting for ETL.
@@ -105,7 +106,6 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             Assert.Equal(GenAiConfiguration.WithSampleObject, genAiTaskInfo.Configuration.Version);
 
             // ---- Touch doc without changing context (Body stays same) ----
-            var baselineUtc = DateTime.UtcNow;
             etlDone = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenSession())
@@ -219,7 +219,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
             await store.Maintenance.SendAsync(new ToggleOngoingTaskStateOperation(taskId, OngoingTaskType.GenAi, disable: true));
             await AssertWaitForTrueAsync(() => Task.FromResult(etlProcess.IsRunning == false));
 
-            store.Maintenance.Send(new UpdateGenAiOperation(taskId, config));
+            await store.Maintenance.SendAsync(new UpdateGenAiOperation(taskId, config));
 
             // ---- Touch doc without changing context (Body stays same) ----
             var baselineUtc = DateTime.UtcNow;
@@ -278,6 +278,40 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 Assert.NotNull(finalGenAiTaskInfo);
                 Assert.Equal(null, finalGenAiTaskInfo.Configuration.Version);
             }
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        public async Task ShouldBumpIntoV2InCaseOfAddGenAiOperation(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            // ---- Initial task config (V1) ----
+            var sampleObjectV1 = JsonConvert.SerializeObject(new
+            {
+                Translation = "translated text"
+            });
+
+            var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObjectV1);
+
+            config.Prompt = "Translate this text to Polish";
+            config.JsonSchema = schema;
+            config.UpdateScript = "this.TextInPolish = $output.Translation;";
+            config.Collection = "Posts";
+            config.GenAiTransformation = new GenAiTransformation
+            {
+                Script = "ai.genContext({ Text: this.Body });"
+            };
+            config.Identifier = "posts-translation-v1-to-v2";
+            config.Version = null;
+
+            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+            var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
+
+            var genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
+            Assert.NotNull(genAiTaskInfo);
+            Assert.Equal(GenAiConfiguration.WithSampleObject, genAiTaskInfo.Configuration.Version);
         }
     }
 }

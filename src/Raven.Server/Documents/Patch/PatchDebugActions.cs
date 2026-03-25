@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Patch
         public readonly DynamicJsonArray DeleteTimeSeries = new DynamicJsonArray();
         public readonly DynamicJsonArray RemoteAttachments = new DynamicJsonArray();
         public readonly DynamicJsonArray DeleteAttachment = new DynamicJsonArray();
+        public readonly DynamicJsonArray CopyAttachment = new DynamicJsonArray();
 
         public DynamicJsonValue GetDebugActions()
         {
@@ -36,7 +37,8 @@ namespace Raven.Server.Documents.Patch
                 [nameof(IncrementTimeSeries)] = new DynamicJsonArray(IncrementTimeSeries.Items),
                 [nameof(DeleteTimeSeries)] = new DynamicJsonArray(DeleteTimeSeries.Items),
                 [nameof(RemoteAttachments)] = new DynamicJsonArray(RemoteAttachments.Items),
-                [nameof(DeleteAttachment)] = new DynamicJsonArray(DeleteAttachment.Items)
+                [nameof(DeleteAttachment)] = new DynamicJsonArray(DeleteAttachment.Items),
+                [nameof(CopyAttachment)] = new DynamicJsonArray(CopyAttachment.Items)
             };
         }
 
@@ -56,6 +58,7 @@ namespace Raven.Server.Documents.Patch
             DeleteTimeSeries.Clear();
             RemoteAttachments.Clear();
             DeleteAttachment.Clear();
+            CopyAttachment.Clear();
         }
     }
 }

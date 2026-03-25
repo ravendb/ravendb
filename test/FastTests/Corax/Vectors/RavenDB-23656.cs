@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 

@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private string GetRemoteDocumentId(string localDocId)
         {
-            if (_transformation.DocumentIdPostfix != null)
+            if (string.IsNullOrEmpty(_transformation.DocumentIdPostfix) == false)
             {
                 if (localDocId.EndsWith("/"))
                 {

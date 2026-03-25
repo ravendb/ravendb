@@ -9,7 +9,6 @@ using Voron.Global;
 using Voron.Util;
 using Voron.Util.PFor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.PostingLists
 {

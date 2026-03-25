@@ -5,7 +5,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Utils

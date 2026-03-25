@@ -8,7 +8,6 @@ using Raven.Server.Utils;
 using SlowTests.Cluster;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Cluster
 {

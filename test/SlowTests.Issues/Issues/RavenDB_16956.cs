@@ -2,7 +2,6 @@
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 namespace SlowTests.Issues
 {
     public class RavenDB_16956 : RavenTestBase

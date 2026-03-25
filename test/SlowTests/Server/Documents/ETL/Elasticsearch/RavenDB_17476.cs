@@ -12,7 +12,6 @@ using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {

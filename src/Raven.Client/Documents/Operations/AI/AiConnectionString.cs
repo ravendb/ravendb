@@ -6,28 +6,68 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Represents a connection string for AI providers used by RavenDB features
+/// like text embeddings generation and chat completions. Exactly one concrete
+/// provider settings object should be configured (e.g. OpenAI, Azure OpenAI,
+/// Ollama, Google, Hugging Face, Mistral, or Embedded).
+/// </summary>
 public sealed class AiConnectionString : ConnectionString
 {
+    /// <summary>
+    /// A user-defined identifier for AI tasks associated with this connection string.
+    /// This is used when generating and reusing embeddings and other AI-related operations.
+    /// </summary>
     public string Identifier { get; set; }
 
+    /// <summary>
+    /// OpenAI provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public OpenAiSettings OpenAiSettings { get; set; }
 
+    /// <summary>
+    /// Azure OpenAI provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
 
+    /// <summary>
+    /// Ollama provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public OllamaSettings OllamaSettings { get; set; }
 
+    /// <summary>
+    /// Embedded (server-side ONNX) provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public EmbeddedSettings EmbeddedSettings { get; set; }
 
+    /// <summary>
+    /// Google AI provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public GoogleSettings GoogleSettings { get; set; }
 
+    /// <summary>
+    /// Hugging Face provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public HuggingFaceSettings HuggingFaceSettings { get; set; }
 
+    /// <summary>
+    /// Mistral AI provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public MistralAiSettings MistralAiSettings { get; set; }
-    
+
+    /// <summary>
+    /// Vertex AI provider configuration. Only one provider settings object may be set.
+    /// </summary>
     public VertexSettings VertexSettings { get; set; }
 
+    /// <summary>
+    /// The connection string type. Always <see cref="ConnectionStringType.Ai"/> for this class.
+    /// </summary>
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
+    /// <summary>
+    /// The AI model category used with this connection (e.g., embeddings or chat).
+    /// </summary>
     public AiModelType ModelType { get; set; }
 
     protected override void ValidateImpl(List<string> errors)
@@ -69,6 +109,13 @@ public sealed class AiConnectionString : ConnectionString
         return AiTaskIdentifierHelper.ValidateIdentifier(Identifier, out errors);
     }
 
+    /// <summary>
+    /// Compares this connection string with another and returns a set of flags describing
+    /// which aspects differ (e.g., model, endpoint, authentication). This can be used to
+    /// determine whether embeddings should be regenerated or configuration updated.
+    /// </summary>
+    /// <param name="newConnectionString">The connection string to compare with.</param>
+    /// <returns>A set of <see cref="AiSettingsCompareDifferences"/> flags describing differences.</returns>
     public AiSettingsCompareDifferences Compare(AiConnectionString newConnectionString)
     {
         if (newConnectionString == null)
@@ -130,6 +177,10 @@ public sealed class AiConnectionString : ConnectionString
         }
     }
 
+    /// <summary>
+    /// Returns the active AI provider based on which settings object is configured.
+    /// </summary>
+    /// <returns>The active <see cref="AiConnectorType"/> or <see cref="AiConnectorType.None"/> if none set.</returns>
     public AiConnectorType GetActiveProvider()
     {
         if (OpenAiSettings != null)
@@ -152,6 +203,12 @@ public sealed class AiConnectionString : ConnectionString
         return AiConnectorType.None;
     }
 
+    /// <summary>
+    /// Determines whether the specified <see cref="ConnectionString"/> is equal to the current instance,
+    /// including the active provider and its settings.
+    /// </summary>
+    /// <param name="connectionString">The other connection string to compare.</param>
+    /// <returns><c>true</c> if equal; otherwise, <c>false</c>.</returns>
     public override bool IsEqual(ConnectionString connectionString)
     {
         if (base.IsEqual(connectionString) == false)
@@ -187,6 +244,10 @@ public sealed class AiConnectionString : ConnectionString
         };
     }
 
+    /// <summary>
+    /// Converts the connection string and its configured provider settings to a JSON representation.
+    /// </summary>
+    /// <returns>A <see cref="DynamicJsonValue"/> containing the serialized configuration.</returns>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

@@ -1268,6 +1268,9 @@ public sealed partial class ClusterStateMachine
                 case OngoingTaskType.QueueEtl:
                     AssertQueueEtlLicenseLimits(databaseRecord, licenseStatus, context);
                     break;
+                case OngoingTaskType.SnowflakeEtl:
+                    AssertSnowflakeEtl(databaseRecord, licenseStatus, context);
+                    break;
                 case OngoingTaskType.Backup:
                     AssertPeriodicBackupLicenseLimits(databaseRecord, licenseStatus, context);
                     break;
@@ -1279,6 +1282,12 @@ public sealed partial class ClusterStateMachine
                     break;
                 case OngoingTaskType.QueueSink:
                     AssertQueueSink(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.EmbeddingsGeneration:
+                    AssertEmbeddingsGeneration(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.GenAi:
+                    AssertGenAi(databaseRecord, licenseStatus, context);
                     break;
                 default:
                     return;

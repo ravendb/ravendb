@@ -10,40 +10,13 @@
         }
     }
 
-    .parameters-table-wrapper {
-        border: 1px solid colors.$border-color-light-var;
-        border-radius: sizes.$border-radius-sm;
-        max-height: 220px;
-        overflow-y: auto;
+    .parameters-cards {
+        .parameter-summary {
+            min-width: 0;
 
-        table {
-            margin: 0;
-            background-color: colors.$input-bg-var;
-
-            thead {
-                position: sticky;
-                top: 0;
-                background-color: colors.$panel-bg-2-var;
-                z-index: 5;
-
-                th:not(:first-child) {
-                    border-left: 1px solid colors.$border-color-light-var;
-                }
-            }
-
-            tbody {
-                tr {
-                    border-top: 1px solid colors.$border-color-light-var;
-
-                    td {
-                        padding: 0;
-                        align-content: center;
-                    }
-
-                    td:not(:first-child) {
-                        border-left: 1px solid colors.$border-color-light-var;
-                    }
-                }
+            h4,
+            small {
+                max-width: 100%;
             }
         }
     }

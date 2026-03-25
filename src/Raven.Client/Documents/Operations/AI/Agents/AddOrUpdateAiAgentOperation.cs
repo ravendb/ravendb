@@ -9,17 +9,29 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
 {
+    /// <summary>
+    /// Creates or updates an AI agent configuration on the server.
+    /// </summary>
     public class AddOrUpdateAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
     {
         private readonly object _sampleObject;
         private readonly AiAgentConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="AddOrUpdateAiAgentOperation"/> with the specified <paramref name="configuration"/>.
+        /// </summary>
+        /// <param name="configuration">The agent configuration to store.</param>
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration)
         {
             ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="AddOrUpdateAiAgentOperation"/> with the specified <paramref name="configuration"/> and <paramref name="sampleObject"/>.
+        /// </summary>
+        /// <param name="configuration">The agent configuration to store.</param>
+        /// <param name="sampleObject">A sample object used by the server to infer the output schema.</param>
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration, object sampleObject) : this(configuration)
         {
             _sampleObject = sampleObject;
@@ -28,8 +40,20 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         private static bool HasNoSampleObjectOrSchema(AiAgentConfiguration configuration) => 
             string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject);
 
+        /// <summary>
+        /// Creates a new instance of <see cref="AddOrUpdateAiAgentOperation"/> with the specified <paramref name="configuration"/> and <paramref name="outputType"/>.
+        /// </summary>
+        /// <typeparam name="T">The schema sample type.</typeparam>
+        /// <param name="configuration">The agent configuration to store.</param>
+        /// <param name="outputType">A sample object used by the server to infer the output schema.</param>
         public static AddOrUpdateAiAgentOperation Create<T>(AiAgentConfiguration configuration, T outputType) => new(configuration, outputType);
 
+        /// <summary>
+        /// Creates the command to send to the server.
+        /// </summary>
+        /// <param name="conventions">Document conventions used for serialization.</param>
+        /// <param name="context">JSON operation context.</param>
+        /// <returns>The command instance.</returns>
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             if (_sampleObject != null && HasNoSampleObjectOrSchema(_configuration))

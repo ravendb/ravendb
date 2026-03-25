@@ -12,7 +12,6 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

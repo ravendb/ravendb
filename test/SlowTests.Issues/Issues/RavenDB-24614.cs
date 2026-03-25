@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +16,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAiConnectionString_WithInvalidIdentifier_ShouldThrowException(Options options, GenAiConfiguration configuration)
         {
             using var store = GetDocumentStore(options);
@@ -33,7 +32,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task AddGenAiEtl_WithInvalidIdentifier_ShouldThrowException(
             Options options, GenAiConfiguration configuration)
         {
@@ -52,7 +51,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.All)]
         public async Task AddEmbeddingEtl_WithInvalidIdentifier_ShouldThrowException(Options options, EmbeddingsGenerationConfiguration configuration)
         {
             using var store = GetDocumentStore(options);

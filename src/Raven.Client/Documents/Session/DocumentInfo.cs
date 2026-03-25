@@ -21,8 +21,8 @@ namespace Raven.Client.Documents.Session
         public string ChangeVector { get; set; }
 
         /// <summary>
-        /// A concurrency check will be forced on this entity 
-        /// even if UseOptimisticConcurrency is set to false
+        /// Controls whether a concurrency check is forced or disabled for this entity,
+        /// regardless of the session's <see cref="OptimisticConcurrencyMode"/> setting.
         /// </summary>
         public ConcurrencyCheckMode ConcurrencyCheckMode { get; set; }
 

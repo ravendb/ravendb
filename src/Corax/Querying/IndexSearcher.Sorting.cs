@@ -10,18 +10,18 @@ public unsafe partial class IndexSearcher
 {
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMatch OrderBy<TInner>(in TInner set, OrderMetadata metadata, int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
+    public SortingMatch OrderBy<TInner>(in TInner set, OrderMetadata metadata, bool nullFirst, int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
         where TInner : IQueryMatch
     {
-        return SortingMatch.Create(new SortingMatch<TInner>(this,  set, metadata, token, take));
+        return SortingMatch.Create(new SortingMatch<TInner>(this,  set, metadata, token, nullFirst, take));
     }
     
         
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public SortingMultiMatch OrderBy<TInner>(in TInner set, OrderMetadata[] metadata,
+    public SortingMultiMatch OrderBy<TInner>(in TInner set, OrderMetadata[] metadata, bool nullFirst,
         int take = Constants.IndexSearcher.TakeAll, in CancellationToken token = default)
         where TInner : IQueryMatch
     {
-        return SortingMultiMatch.Create(new SortingMultiMatch<TInner>(this,  set, metadata, take, token: token));
+        return SortingMultiMatch.Create(new SortingMultiMatch<TInner>(this,  set, metadata, nullFirst, take, token: token));
     }
 }

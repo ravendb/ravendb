@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {

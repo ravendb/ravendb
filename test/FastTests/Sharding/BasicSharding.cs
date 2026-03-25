@@ -12,7 +12,6 @@ using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sharding
 {

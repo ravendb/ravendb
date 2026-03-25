@@ -4,7 +4,6 @@ using FastTests;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 using Contact = SlowTests.Core.Utils.Entities.Contact;

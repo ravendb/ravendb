@@ -7,8 +7,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Util;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit;
 
 namespace SubscriptionFailover.Benchmark
 {
@@ -241,7 +240,7 @@ namespace SubscriptionFailover.Benchmark
     {
         public static void Main(string[] args)
         {
-            new SubscriptionFailoverBenchmark(new TestOutputHelper()).RunTest().Wait();
+            new SubscriptionFailoverBenchmark(new Xunit.v3.TestOutputHelper()).RunTest().Wait();
         }
     }
 }

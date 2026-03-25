@@ -1,6 +1,5 @@
 ﻿using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static FastTests.Server.Documents.Queries.DocumentQueryWithDefaultOperator;
 
 namespace FastTests.Server.Documents.Queries

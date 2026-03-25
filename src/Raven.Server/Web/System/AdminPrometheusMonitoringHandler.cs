@@ -12,6 +12,7 @@ using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Monitoring;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Sparrow;
 using Sparrow.LowMemory;
 
@@ -57,6 +58,7 @@ namespace Raven.Server.Web.System
             var skipDatabases = GetBoolValueQueryString("skipDatabasesMetrics", false) ?? false;
             var skipIndexes = GetBoolValueQueryString("skipIndexesMetrics", false) ?? false;
             var skipCollections = GetBoolValueQueryString("skipCollectionsMetrics", false) ?? false;
+            var includeGc = GetBoolValueQueryString("includeGcMetrics", false) ?? false;
 
             var provider = new MetricsProvider(Server);
 
@@ -66,7 +68,7 @@ namespace Raven.Server.Web.System
             
             if (skipServer == false)
             {
-                await WriteServerMetricsAsync(provider, responseStream);
+                await WriteServerMetricsAsync(provider, responseStream, includeGc);
             }
 
             if (skipDatabases == false)
@@ -85,7 +87,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WriteServerMetricsAsync(MetricsProvider provider, Stream responseStream)
+        private async Task WriteServerMetricsAsync(MetricsProvider provider, Stream responseStream, bool includeGc)
         {
             var serverMetrics = provider.CollectServerMetrics();
 
@@ -147,6 +149,12 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Unmanaged memory", "unmanaged_memory_bytes",
                         new Size(serverMetrics.Memory.UnmanagedMemoryInBytes, SizeUnit.Bytes).GetValue(SizeUnit.Bytes));
 
+                    // gc
+                    if (includeGc && serverMetrics.Gc.Any is GcInfoPayload.GcMemoryInfoMetrics gcMetrics)
+                    {
+                        WriteGcMetrics(writer, gcMetrics, "any");
+                    }
+
                     // network
                     WriteGaugeWithHelp(writer, "Number of active TCP connections", "network_tcp_active_connections", serverMetrics.Network.TcpActiveConnections);
                     WriteGaugeWithHelp(writer, "Number of concurrent requests", "network_concurrent_requests_count", serverMetrics.Network.ConcurrentRequestsCount);
@@ -194,6 +202,32 @@ namespace Raven.Server.Web.System
                 ms.Position = 0;
                 await ms.CopyToAsync(responseStream);
             }
+        }
+
+        private void WriteGcMetrics(StreamWriter writer, GcInfoPayload.GcMemoryInfoMetrics gcMetrics, string gcKind)
+        {
+            var tags = SerializeTags(new Dictionary<string, string> { { "gckind", gcKind } });
+
+            // HELP strings for the GC metrics below are based on the official .NET API documentation for System.GCMemoryInfo
+            // property descriptions, lightly adapted to match our Prometheus help style.
+            // https://learn.microsoft.com/en-us/dotnet/api/system.gcmemoryinfo
+
+            WriteGaugeWithHelp(writer, "Index of the last garbage collection.", "gc_index", gcMetrics.Index, tags);
+            WriteGaugeWithHelp(writer, "Generation collected by the last garbage collection.", "gc_generation", gcMetrics.Generation, tags);
+            WriteGaugeWithHelp(writer, "Whether the last garbage collection was compacting (1 = true, 0 = false).", "gc_compacted", gcMetrics.Compacted ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Whether the last garbage collection was concurrent (1 = true, 0 = false).", "gc_concurrent", gcMetrics.Concurrent ? 1 : 0, tags);
+            WriteGaugeWithHelp(writer, "Number of objects pending finalization observed during the last garbage collection.", "gc_finalization_pending_count", gcMetrics.FinalizationPendingCount, tags);
+            WriteGaugeWithHelp(writer, "Heap fragmentation in MB after the last garbage collection.", "gc_fragmented_mb", gcMetrics.FragmentedInMb, tags);
+            WriteGaugeWithHelp(writer, "Total GC heap size in MB after the last garbage collection.", "gc_heap_size_mb", gcMetrics.HeapSizeInMb, tags);
+            WriteGaugeWithHelp(writer, "High memory load threshold in MB at the time of the last garbage collection.", "gc_high_memory_load_threshold_mb", gcMetrics.HighMemoryLoadThresholdInMb, tags);
+            WriteGaugeWithHelp(writer, "Memory load in MB at the time of the last garbage collection.", "gc_memory_load_mb", gcMetrics.MemoryLoadInMb, tags);
+            WriteGaugeWithHelp(writer, "First GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_1_seconds", gcMetrics.GetPauseDurationSeconds(0), tags);
+            WriteGaugeWithHelp(writer, "Second GC pause duration in seconds recorded during the last garbage collection.", "gc_pause_durations_2_seconds", gcMetrics.GetPauseDurationSeconds(1), tags);
+            WriteGaugeWithHelp(writer, "Percentage of time spent paused for GC since the previous collection.", "gc_pause_time_percentage", gcMetrics.PauseTimePercentage, tags);
+            WriteGaugeWithHelp(writer, "Number of pinned objects observed during the last garbage collection.", "gc_pinned_objects_count", gcMetrics.PinnedObjectsCount, tags);
+            WriteGaugeWithHelp(writer, "Memory promoted during the last garbage collection in MB.", "gc_promoted_mb", gcMetrics.PromotedInMb, tags);
+            WriteGaugeWithHelp(writer, "Total available memory for the GC in MB at the time of the last garbage collection.", "gc_total_available_memory_mb", gcMetrics.TotalAvailableMemoryInMb, tags);
+            WriteGaugeWithHelp(writer, "Total committed managed heap size in MB after the last garbage collection.", "gc_total_committed_mb", gcMetrics.TotalCommittedInMb, tags);
         }
 
         private static double KiloBytesToBytes(long? input)

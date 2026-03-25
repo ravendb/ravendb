@@ -24,6 +24,42 @@
                             data-bind="options: filteredTypeDataTcp, selectedOptions: selectedTypeNamesTcp, optionsText: 'propertyName', optionsValue: 'propertyName'"></select>
                 </div>
             </div>
+            <div class="btn-group-label" data-label="Request Size">
+                <div class="dropdown" data-placement="top">
+                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span data-bind="text: requestSizeSummary"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu size-filter-dropdown padding padding-sm" data-bind="dropdownPanel: true">
+                        <div class="size-filter-form-group">
+                            <label>Min (bytes)</label>
+                            <input class="form-control" type="number" min="0" placeholder="Min" data-bind="textInput: requestSizeMin">
+                        </div>
+                        <div class="size-filter-form-group">
+                            <label>Max (bytes)</label>
+                            <input class="form-control" type="number" min="0" placeholder="Max" data-bind="textInput: requestSizeMax">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-group-label" data-label="Response Size">
+                <div class="dropdown" data-placement="top">
+                    <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span data-bind="text: responseSizeSummary"></span>
+                        <span class="caret"></span>
+                    </button>
+                    <div class="dropdown-menu size-filter-dropdown padding padding-sm" data-bind="dropdownPanel: true">
+                        <div class="size-filter-form-group">
+                            <label>Min (bytes)</label>
+                            <input class="form-control" type="number" min="0" placeholder="Min" data-bind="textInput: responseSizeMin">
+                        </div>
+                        <div class="size-filter-form-group">
+                            <label>Max (bytes)</label>
+                            <input class="form-control" type="number" min="0" placeholder="Max" data-bind="textInput: responseSizeMax">
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div id="trafficFilter">
                 <input class="form-control" placeholder="Filter" data-bind="textInput: filter">
             </div>

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
@@ -134,11 +133,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             return Encoding.UTF8.GetBytes(str.ToString());
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             _ctx.Dispose();
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

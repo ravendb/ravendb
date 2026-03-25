@@ -7,7 +7,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Encryption
 {

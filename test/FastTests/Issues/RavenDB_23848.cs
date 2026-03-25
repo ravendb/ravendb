@@ -1,7 +1,6 @@
 ﻿﻿using System.Collections.Generic;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 

@@ -44,7 +44,7 @@ namespace Raven.Server.ServerWide.Commands.ETL
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+            json[nameof(Configuration)] = Configuration.ToJson();
         }
     }
 

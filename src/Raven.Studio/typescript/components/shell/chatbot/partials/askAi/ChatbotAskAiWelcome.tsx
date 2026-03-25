@@ -1,12 +1,12 @@
 import { useAppSelector } from "components/store";
 import { chatbotSelectors } from "../../store/chatbotSlice";
 import { aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
-import { Icon } from "components/common/Icon";
+import AsciiLogo from "components/shell/chatbot/partials/askAi/iconAscii/IconAscii";
+import KeywordsSlider from "components/shell/chatbot/partials/askAi/ChatbotAskAiKeywordsSlider";
 
 export default function ChatbotAskAiWelcome() {
-    const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const messagesCount = useAppSelector(chatbotSelectors.messagesCount);
-
+    const consentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
     const isConsentSuccess = consentStatus.data === "Success";
 
     if (messagesCount > 0 || !isConsentSuccess) {
@@ -15,8 +15,11 @@ export default function ChatbotAskAiWelcome() {
 
     return (
         <div className="p-5 text-center">
-            <Icon icon="ask-ai" margin="m-0" size="lg" />
-            <h3 className="mt-1">Ask questions about RavenDB, queries, or errors</h3>
+            <AsciiLogo />
+            <div className="vstack gap-1">
+                <h3 className="mt-4 mb-0 fw-semibold">AI Assistant</h3>
+                <KeywordsSlider />
+            </div>
         </div>
     );
 }

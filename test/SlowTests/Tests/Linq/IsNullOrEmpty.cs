@@ -2,7 +2,6 @@
 using Xunit;
 using System.Linq;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {

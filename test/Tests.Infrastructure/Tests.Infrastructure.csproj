@@ -30,10 +30,10 @@
     <PackageReference Include="JunitXml.TestLogger" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="MongoDB.Driver" />
-    <PackageReference Include="xRetry" />
-    <PackageReference Include="xunit" />
-    <PackageReference Include="xunit.runner.utility" />
-    <PackageReference Include="XunitLogger" />
+    <PackageReference Include="xRetry.v3" />
+    <PackageReference Include="xunit.v3.assert" />
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.runner.utility" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />

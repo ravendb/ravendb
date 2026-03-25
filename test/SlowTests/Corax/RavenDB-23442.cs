@@ -10,7 +10,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Data.Graphs;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 

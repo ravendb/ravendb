@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -54,16 +55,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var index = result.Instance;
             queryContext.WithIndex(index);
 
-            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+            var queryTime = query.Metadata.HasTimeBasedFunction ? new QueryTimeScope() : null;
+
+            if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag(queryContext, query.Metadata);
+                var etag = index.GetIndexEtag(queryContext, query.Metadata, queryTime);
                 if (etag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                var queryResult = await index.Query(query, queryContext, token);
+                var queryResult = await index.Query(query, queryContext, token, queryTime);
                 queryResult.AutoIndexCreationRaftIndex = result.Index;
 
                 return queryResult;
@@ -144,17 +147,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public async Task<(long? Index, Index Instance)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
+        public Task<(long? Index, Index Instance)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
         {
             if (query.Metadata.AutoIndexName != null)
             {
                 var index = GetIndex(query.Metadata.AutoIndexName, throwIfNotExists: false);
 
                 if (index != null)
-                    return (null, index);
+                    return Task.FromResult<(long? Index, Index Instance)>((Index: null, Instance: index));
             }
 
-            return await CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
+            return CreateAutoIndexIfNeeded(query, createAutoIndexIfNoMatchIsFound, customStalenessWaitTimeout, token);
         }
 
         private async Task<(long? Index, Index Instance)> CreateAutoIndexIfNeeded(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound, TimeSpan? customStalenessWaitTimeout, CancellationToken token)
@@ -225,8 +228,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         continue;
                     
                     var embeddingsGenerationTaskIdentifier = new EmbeddingsGenerationTaskIdentifier(field.Vector.EmbeddingsGenerationTaskIdentifier);
-                    if (Database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(embeddingsGenerationTaskIdentifier) == false)
+
+                    if (Database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(embeddingsGenerationTaskIdentifier))
+                        continue;
+                    
+                    var taskConfiguration = Database.EtlLoader.EmbeddingsGenerationDestinations.SingleOrDefault(x => x.Identifier == field.Vector.EmbeddingsGenerationTaskIdentifier);
+
+                    if (taskConfiguration is null)
                         throw new InvalidQueryException($"Couldn't find Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier");
+                        
+                    if (taskConfiguration.Disabled)
+                        throw new InvalidQueryException($"Embeddings Generation task with '{field.Vector.EmbeddingsGenerationTaskIdentifier}' identifier is disabled, and cannot be used for querying");
                 }
             }
         }

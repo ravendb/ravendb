@@ -4,7 +4,6 @@ using System.Linq;
 using Tests.Infrastructure;
 using Voron.Data.PostingLists;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.PostingLists
 {

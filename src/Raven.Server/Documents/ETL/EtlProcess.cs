@@ -725,10 +725,11 @@ namespace Raven.Server.Documents.ETL
             _cts.Cancel();
 
             var longRunningWork = _longRunningWork;
-            _longRunningWork = null;
 
             if (longRunningWork != PoolOfThreads.LongRunningWork.Current) // prevent a deadlock
                 longRunningWork.Join(int.MaxValue);
+
+            _longRunningWork = null;
 
             OnProcessStopped();
         }

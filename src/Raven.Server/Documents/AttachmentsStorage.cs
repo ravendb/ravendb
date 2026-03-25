@@ -1098,7 +1098,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        public AttachmentDetailsServer CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType, bool extractCollectionName = false)
+        public AttachmentDetailsServer CopyAttachment(DocumentsOperationContext context, string documentId, string name, string destinationId, string destinationName, LazyStringValue changeVector, AttachmentType attachmentType, bool updateDocument = true, bool extractCollectionName = false)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentException("Argument cannot be null or whitespace.", nameof(documentId));
@@ -1116,7 +1116,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, updateDocument: updateDocument, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)

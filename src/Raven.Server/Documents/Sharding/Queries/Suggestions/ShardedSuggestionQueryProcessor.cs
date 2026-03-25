@@ -49,7 +49,7 @@ public sealed class ShardedSuggestionQueryProcessor : AbstractShardedQueryProces
                     }
                 }
 
-                var operation = new ShardedSuggestionQueryOperation(Query, fieldsWithOptions, Query.QueryParameters, Context, RequestHandler, commands, ExistingResultEtag?.ToString());
+                var operation = new ShardedSuggestionQueryOperation(Query, fieldsWithOptions, Query.QueryParameters, Context, RequestHandler, commands, ExistingResultEtag?.ToString(), QueryTime);
 
                 var shards = GetShardNumbers(commands);
 

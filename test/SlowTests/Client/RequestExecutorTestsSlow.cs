@@ -3,7 +3,6 @@ using FastTests;
 using FastTests.Client;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
@@ -18,7 +17,7 @@ namespace SlowTests.Client
         [InlineData(2, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest")]
         public async Task OnBeforeAfterAndFailRequest(int failCount, int clusterSize, params string[] expected)
         {
-            using (var test = new RequestExecutorTests(Output))
+            await using (var test = new RequestExecutorTests(Output))
             {
                 await test.OnBeforeAfterAndFailRequest(failCount, clusterSize, expected);
             }

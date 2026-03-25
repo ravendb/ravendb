@@ -7,7 +7,6 @@ using Voron;
 using Voron.Exceptions;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {

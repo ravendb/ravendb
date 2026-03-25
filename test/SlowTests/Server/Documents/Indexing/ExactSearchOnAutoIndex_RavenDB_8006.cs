@@ -9,7 +9,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Server.Documents.Indexing

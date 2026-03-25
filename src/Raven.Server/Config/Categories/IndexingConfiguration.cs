@@ -661,11 +661,23 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }
 
+        [Description("Expert: The threshold of filter match count for vector scanning instead approximate search.")]
+        [DefaultValue(1024)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Corax.VectorSearch.VectorSearchScanningThreshold", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public int CoraxVectorSearchScanningThreshold { get; set; }
+
         [Description("Use default search analyzer for dynamic fields if not set explicitly.")]
         [DefaultValue(false)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
+        
+        [Description("Corax: Null values appear first when sorting in ascending order.")]
+        [DefaultValue(true)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool NullFirst { get; protected set; }
         
         [Description("EXPERT: Disable shared journals between indexes.")]
         [DefaultValue(false)]

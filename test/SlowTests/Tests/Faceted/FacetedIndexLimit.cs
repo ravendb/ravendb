@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Faceted
 {

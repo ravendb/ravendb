@@ -5,7 +5,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues
 {

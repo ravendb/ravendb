@@ -4,7 +4,6 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions;
 

@@ -4,7 +4,6 @@ using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {
@@ -42,7 +41,7 @@ select timeseries(
 
                     var ex = Assert.Throws<RavenException>(() => query.First());
 
-                    Assert.Contains(@"Expected to get time period value but got 'tag'. 
+                    RavenTestHelper.AssertContainsRespectingNewLines(@"Expected to get time period value but got 'tag'. 
 Grouping by 'Tag' or Field is supported only as a second grouping-argument", ex.Message);
                 }
             }

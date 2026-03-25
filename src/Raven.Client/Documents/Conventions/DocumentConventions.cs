@@ -399,7 +399,9 @@ namespace Raven.Client.Documents.Conventions
         private Func<Type, string> _findClrTypeName;
         private Func<string, BlittableJsonReaderObject, string> _findClrType;
         private Func<string, Type> _resolveTypeFromClrTypeName;
-        private bool _useOptimisticConcurrency;
+        private OptimisticConcurrencyMode _optimisticConcurrencyMode;
+        private bool _useOptimisticConcurrencyWasSet;
+        private bool _optimisticConcurrencyModeWasSet;
         private bool _addIdFieldToDynamicObjects;
         private int _maxNumberOfRequestsPerSession;
 
@@ -820,15 +822,46 @@ namespace Raven.Client.Documents.Conventions
         }
 
         /// <summary>
-        ///     Whether UseOptimisticConcurrency is set to true by default for all opened sessions
+        ///     Configure the default optimistic concurrency mode for all sessions opened from this store.<br/>
+        ///     Sessions inherit this value unless overridden via <see cref="SessionOptions.OptimisticConcurrencyMode"/>.<br/>
+        ///     Cannot be mixed with the obsolete <see cref="UseOptimisticConcurrency"/> property.
         /// </summary>
-        public bool UseOptimisticConcurrency
+        public OptimisticConcurrencyMode OptimisticConcurrencyMode
         {
-            get => _useOptimisticConcurrency;
+            get => _optimisticConcurrencyMode;
             set
             {
                 AssertNotFrozen();
-                _useOptimisticConcurrency = value;
+#pragma warning disable CS0618
+                if (_useOptimisticConcurrencyWasSet)
+                    throw new InvalidOperationException($"{nameof(OptimisticConcurrencyMode)} cannot be set when {nameof(UseOptimisticConcurrency)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+#pragma warning restore CS0618
+
+                _optimisticConcurrencyModeWasSet = true;
+                _optimisticConcurrencyMode = value;
+            }
+        }
+
+        /// <summary>
+        ///     Gets or sets whether optimistic concurrency is enabled for all sessions by default.<br/>
+        ///     Setting to <c>true</c> maps to <see cref="OptimisticConcurrencyMode.Writes"/>;
+        ///     setting to <c>false</c> maps to <see cref="OptimisticConcurrencyMode.None"/>.<br/>
+        ///     Note: <see cref="OptimisticConcurrencyMode.WritesAndReads"/> cannot be represented by this property.
+        /// </summary>
+        [Obsolete("UseOptimisticConcurrency is obsolete and will be removed in the next major version. Please use " +
+                  nameof(OptimisticConcurrencyMode) + " instead.")]
+        public bool UseOptimisticConcurrency
+        {
+            get => _optimisticConcurrencyMode != OptimisticConcurrencyMode.None;
+            set
+            {
+                AssertNotFrozen();
+
+                if (_optimisticConcurrencyModeWasSet)
+                    throw new InvalidOperationException($"{nameof(UseOptimisticConcurrency)} cannot be set when {nameof(OptimisticConcurrencyMode)} was set. Please use {nameof(OptimisticConcurrencyMode)} instead of {nameof(UseOptimisticConcurrency)}.");
+
+                _useOptimisticConcurrencyWasSet = true;
+                _optimisticConcurrencyMode = value ? OptimisticConcurrencyMode.Writes : OptimisticConcurrencyMode.None;
             }
         }
 

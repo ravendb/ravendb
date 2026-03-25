@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                         }
                     }
 
-                    query = await IndexQueryServerSide.CreateAsync(HttpContext, start, pageSize, context, tracker, overrideQuery: overrideQuery);
+                    query = IndexQueryServerSide.Create(HttpContext, start, pageSize, context, tracker, overrideQuery: overrideQuery);
                 }
                 else
                 {

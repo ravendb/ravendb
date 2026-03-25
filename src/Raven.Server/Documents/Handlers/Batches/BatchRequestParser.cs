@@ -60,6 +60,14 @@ namespace Raven.Server.Documents.Handlers.Batches
             [JsonIgnore]
             public JsonPatchCommand JsonPatchCommand;
 
+            #region BatchTrackChanges
+
+            [JsonIgnore]
+            public BatchTrackChangesCommand BatchTrackChangesCommand;
+            public Dictionary<string, string> TrackedEntities;
+
+            #endregion BatchTrackChanges
+
             #region Attachment
 
             public string Name;
@@ -420,6 +428,15 @@ namespace Raven.Server.Documents.Handlers.Batches
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.JsonPatchCommands = JsonPatchCommand.Parse(jsonPatch);
+                        break;
+
+                    case CommandPropertyName.TrackedEntities:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        using (var trackedEntities = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
+                        {
+                            commandData.TrackedEntities = BatchTrackChangesCommand.Parse(trackedEntities);
+                        }
                         break;
 
                     case CommandPropertyName.TimeSeries:
@@ -791,8 +808,8 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             FromEtl,
 
-            JsonPatch
-
+            JsonPatch,
+            TrackedEntities
             // other properties are ignore (for legacy support)
 
         }
@@ -902,13 +919,15 @@ namespace Raven.Server.Documents.Handlers.Batches
                     if ("CreateIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
+                    if ("TrackedEntities"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.TrackedEntities;
+
                     return CommandPropertyName.NoSuchProperty;
 
                 case 16:
                     if ("RemoteParameters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.RemoteParameters;
                     return CommandPropertyName.NoSuchProperty;
-
                 case 20:
                     if ("OriginalChangeVector"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.OriginalChangeVector;
@@ -927,6 +946,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.JsonPatch;
 
                     return CommandPropertyName.NoSuchProperty;
+
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
@@ -1036,6 +1056,11 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 16:
                     if ("AttachmentDELETE"u8.IsEqualConstant(state.StringBuffer))
                         return CommandType.AttachmentDELETE;
+                    break;
+
+                case 17:
+                    if ("BatchTrackChanges"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandType.BatchTrackChanges;
                     break;
 
                 case 18:

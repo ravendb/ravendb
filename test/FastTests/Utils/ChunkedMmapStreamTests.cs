@@ -7,7 +7,6 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Voron.Util;
-using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {

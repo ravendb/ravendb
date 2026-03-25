@@ -21,7 +21,6 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Server.Web.System.DatabasesDebugHandler;
 
 namespace SlowTests.Server.Replication

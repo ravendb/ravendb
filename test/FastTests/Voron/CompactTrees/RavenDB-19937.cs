@@ -2,7 +2,6 @@ using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.CompactTrees;
 

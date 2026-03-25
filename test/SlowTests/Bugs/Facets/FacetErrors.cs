@@ -6,7 +6,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Facets
 {

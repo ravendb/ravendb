@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.IO;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.ServerWide;
@@ -20,6 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         public override async Task WriteResponseStream(DocumentsOperationContext context, DocumentsTransaction tx, Attachment attachment, OperationCancelToken token)
         {
             var stream = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, attachment.Base64Hash);
+
             if (stream == null)
             {
                 tx.Dispose(); // we are reading from remote, we can dispose the transaction

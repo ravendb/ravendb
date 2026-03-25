@@ -47,7 +47,6 @@ using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.Entities;
 using Employee = Orders.Employee;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.ETL
 {

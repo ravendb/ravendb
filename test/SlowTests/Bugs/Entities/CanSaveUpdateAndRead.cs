@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Entities
 {

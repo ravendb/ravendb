@@ -14,7 +14,6 @@ using Raven.Server.Utils;
 using Sparrow.Server.Platform;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

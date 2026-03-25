@@ -10,7 +10,6 @@ using FastTests.Voron;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
-using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
 using IndexSearcher = Corax.Querying.IndexSearcher;
@@ -40,7 +39,7 @@ namespace FastTests.Corax
                 var concat = searcher.And(allEntries, match1);
 
                 var match = searcher.OrderBy(concat,
-                    new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer));
+                    new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false), nullFirst: true);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];

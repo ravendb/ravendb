@@ -13,7 +13,6 @@ using Raven.Server.Extensions;
 using Tests.Infrastructure;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

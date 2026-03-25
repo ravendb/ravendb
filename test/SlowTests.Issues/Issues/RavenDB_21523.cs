@@ -17,7 +17,6 @@ using Sparrow.Utils;
 using Tests.Infrastructure;
 using Voron.Impl.Backup;
 using Xunit;
-using Xunit.Abstractions;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Issues;

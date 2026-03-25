@@ -1,38 +1,26 @@
-﻿using System.Collections.Generic;
-using System.Threading;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Tests.Infrastructure.TestMetrics;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure.XunitExtensions
 {
-    public class PerformanceTestCollectionRunner : XunitTestCollectionRunner 
+    public class PerformanceTestCollectionRunner : XunitTestCollectionRunner
     {
-        private readonly TestResourceSnapshotWriter _testResourceSnapshotWriter;
-        private readonly bool _resourceSnapshotEnabled;
-
-        public PerformanceTestCollectionRunner(ITestCollection testCollection,
-            IEnumerable<IXunitTestCase> testCases,
-            IMessageSink diagnosticMessageSink,
-            IMessageBus messageBus,
-            ITestCaseOrderer testCaseOrderer,
-            ExceptionAggregator aggregator,
-            CancellationTokenSource cancellationTokenSource, 
-            TestResourceSnapshotWriter testResourceSnapshotWriter, in bool resourceSnapshotEnabled) : 
-            base(testCollection,
-                 testCases,
-                 diagnosticMessageSink,
-                 messageBus,
-                 testCaseOrderer,
-                 aggregator,
-                 cancellationTokenSource)
+        protected override ValueTask<RunSummary> RunTestClass(
+            XunitTestCollectionRunnerContext ctxt,
+            IXunitTestClass testClass,
+            IReadOnlyCollection<IXunitTestCase> testCases)
         {
-            _testResourceSnapshotWriter = testResourceSnapshotWriter;
-            _resourceSnapshotEnabled = resourceSnapshotEnabled;
+            var runner = new PerformanceTestClassRunner();
+            return runner.Run(
+                testClass,
+                testCases,
+                ctxt.ExplicitOption,
+                ctxt.MessageBus,
+                ctxt.TestCaseOrderer,
+                ctxt.Aggregator,
+                ctxt.CancellationTokenSource,
+                ctxt.CollectionFixtureMappings);
         }
-
-        protected override Task<RunSummary> RunTestClassAsync(ITestClass testClass, IReflectionTypeInfo @class, IEnumerable<IXunitTestCase> testCases)
-            => new PerformanceTestClassRunner(testClass, @class, testCases, DiagnosticMessageSink, MessageBus, TestCaseOrderer, new ExceptionAggregator(Aggregator), CancellationTokenSource, CollectionFixtureMappings, _testResourceSnapshotWriter, _resourceSnapshotEnabled).RunAsync();
     }
 }

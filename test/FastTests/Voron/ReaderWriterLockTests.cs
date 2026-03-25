@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron

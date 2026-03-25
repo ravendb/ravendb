@@ -12,7 +12,6 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading.Tasks;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;

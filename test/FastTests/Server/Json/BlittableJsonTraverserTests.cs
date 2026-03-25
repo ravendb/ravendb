@@ -1,9 +1,9 @@
 ﻿﻿﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Json
@@ -355,7 +355,7 @@ namespace FastTests.Server.Json
             return doc;
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             foreach (var docReader in _docs)
             {
@@ -364,7 +364,7 @@ namespace FastTests.Server.Json
 
             _ctx.Dispose();
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

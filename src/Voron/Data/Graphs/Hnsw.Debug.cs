@@ -154,12 +154,14 @@ table, th, td {
 
 </style><body>");
 
-            var path = new NativeList<int>();
-            path.EnsureCapacityFor(llt.Allocator, searchState.Options.MaxLevel +1);
-            var edges = new NativeList<int>();
-            edges.EnsureCapacityFor(llt.Allocator, 16);
+            var path = new ContextBoundNativeList<int>(llt.Allocator, searchState.Options.MaxLevel + 1);
+            var edges = new ContextBoundNativeList<int>(llt.Allocator, 16);
             searchState.SearchNearestAcrossLevels(vector, -1, searchState.Options.MaxLevel,  ref path);
-            searchState.NearestEdges(path[0], -1, vector, 0, 8, ref edges, SearchState.NearestEdgesFlags.StartingPointAsEdge);
+            using var search = searchState.NearestSearch(path[0], new Memory<byte>(vector.ToArray()), 0, 8, edges, SearchState.NearestEdgesFlags.StartingPointAsEdge, false);
+            using var it = search.Search().GetEnumerator();
+            it.MoveNext();
+            search.TryGetCurrentCandidates(out edges);
+            
             
             for (int level = searchState.Options.MaxLevel - 1; level >= 0; level--)
             {
@@ -175,8 +177,8 @@ table, th, td {
 
                     var dist = searchState.Distance(vector, -1, nodeIdx);
                     var isPath = path[level] == nodeIdx ? "path" : "";
-                    var isResult =  level == 0 && edges.Items.Contains(nodeIdx) ? "result": "";
-                    var nextId = level == 0 ? (edges.Items.Contains(nodeIdx) ?"***": "") : $"N_{path[level - 1]}_{level - 1}";
+                    var isResult =  level == 0 && edges.Inner.Items.Contains(nodeIdx) ? "result": "";
+                    var nextId = level == 0 ? (edges.Inner.Items.Contains(nodeIdx) ?"***": "") : $"N_{path[level - 1]}_{level - 1}";
                     f.WriteLine($"<td> <table id='N_{j}_{level}'><tr><th class='{isPath} {isResult}'>N_{j}_{level} - {GetEntryId(llt,n.PostingListId)}</th>" +
                                 $"<th>{n.EdgesPerLevel[level].Count}</th><th>{dist} (<a href='#{nextId}'>{nextId}</a>)</th></tr><tr>");
                     foreach (var to in n.EdgesPerLevel[level])

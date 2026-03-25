@@ -9,7 +9,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -719,21 +718,19 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(new Options
             {
-                ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString()
+                ModifyDatabaseRecord = record =>
+                {
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ThrottlingTimeInterval)] = "1000";
+                    record.Settings[RavenConfiguration.GetKey(x => x.Indexing.MapBatchSize)] = 128.ToString();
+                }
             }))
             {
-                var indexDef = new Companies_ByName();
-                indexDef.Execute(store);
-                string indexName;
-
                 using (var session = store.OpenSession())
                 {
                     session.Query<Company>()
                         .Statistics(out var stats)
                         .Where(x => x.Name == "___")
                         .ToList();
-
-                    indexName = stats.IndexName;
                 }
 
                 using (var bulk = store.BulkInsert())
@@ -745,7 +742,6 @@ namespace SlowTests.Issues
                 }
 
                 var database = Databases.GetDocumentDatabaseInstanceFor(store).Result;
-                database.IndexStore.GetIndex(indexName).ForTestingPurposesOnly().CallDuringFinallyOfExecuteIndexing(() => Thread.Sleep(1));
                 Indexes.WaitForIndexing(store);
 
                 var iq = new IndexQuery { Query = $"from companies as c where c != null update {{ c.Name = 'Name2' }}" };
@@ -762,12 +758,16 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var count = session.Query<Company, Companies_ByName>().Count(x => x.Name == "Name2");
-                     Assert.NotEqual(NumberOfCompanies, count);
+                    var count = session.Query<Company>()
+                        .Statistics(out var stats)
+                        .Count(x => x.Name == "Name2");
+
+                    Assert.StartsWith("Auto/", stats.IndexName);
+                    Assert.True(stats.IsStale);
+                    Assert.NotEqual(NumberOfCompanies, count);
                 }
             }
         }
-
 
         /****************DELETE************************/
         [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]

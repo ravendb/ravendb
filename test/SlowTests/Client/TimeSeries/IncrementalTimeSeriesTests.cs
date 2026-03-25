@@ -15,7 +15,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries
 {

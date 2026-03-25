@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using Raven.Client.Util;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class NightlyBuildTheoryAttribute : TheoryAttribute
+    public class NightlyBuildTheoryAttribute : TheoryAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         internal static bool Force = false; // set to true if you want to force the tests to run
 
         internal static bool IsNightlyBuild = Force;
@@ -52,7 +54,7 @@ namespace Tests.Infrastructure
             IsNightlyBuild = now.Hour >= startHourUtc || now.Hour <= endHourUtc;
         }
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

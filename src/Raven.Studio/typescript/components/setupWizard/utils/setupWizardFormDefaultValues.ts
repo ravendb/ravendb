@@ -19,6 +19,7 @@ export const setupWizardFormDefaultValues: SetupWizardFormData = {
         key: "",
         licenseInfo: null,
         licenseTypeToGenerate: null,
+        licenseStatus: null,
         firstName: "",
         lastName: "",
         email: "",

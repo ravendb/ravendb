@@ -5,7 +5,6 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
@@ -77,15 +76,15 @@ namespace SlowTests.MailingList
 
                 var definition = store.Maintenance.Send(new GetIndexOperation(new StudentDtos_ByEmailDomain().IndexName));
 
-                Assert.Equal(@"docs.StudentDtos.Select(studentDto => new {
+                RavenTestHelper.AssertEqualRespectingNewLines(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.Email,
     Postcode = studentDto.ZipCode
-})".Replace("\r\n", Environment.NewLine), definition.Maps.First());
+})", definition.Maps.First());
 
-                Assert.NotEqual(@"docs.StudentDtos.Select(studentDto => new {
+                RavenTestHelper.AssertNotEqualRespectingNewLines(@"docs.StudentDtos.Select(studentDto => new {
     Email = studentDto.EmailAddress,
     Postcode = studentDto.ZipCode
-})".Replace("\r\n", Environment.NewLine), definition.Maps.First());
+})", definition.Maps.First());
             }
         }
     }

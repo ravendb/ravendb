@@ -8,7 +8,6 @@ using Raven.Embedded;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tools.Issues;
 

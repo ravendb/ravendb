@@ -1,9 +1,11 @@
-﻿using System;
+using System;
 
 namespace Tests.Infrastructure
 {
-    public class RavenMultiLicenseRequiredFactAttribute : RavenFactAttribute
+    public class RavenMultiLicenseRequiredFactAttribute : RavenFactAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         private static readonly bool RavenLicense;
         private static readonly bool RavenLicenseDeveloper;
         private static readonly bool RavenLicenseCommunity;
@@ -37,7 +39,7 @@ namespace Tests.Infrastructure
 
         public RavenArchitecture Architecture { get; set; } = RavenArchitecture.All;
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

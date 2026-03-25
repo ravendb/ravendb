@@ -13,7 +13,6 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
@@ -197,7 +196,7 @@ public class FacetIndexingRepro : StorageTest
             {
                 var searcher = new IndexSearcher(rtx, fields);
                 var field = FieldMetadata.Build(fields.GetByFieldId(i).FieldName, default, i, default, default);
-                var sort = searcher.OrderBy(searcher.AllEntries(), new OrderMetadata(field, true, MatchCompareFieldType.Sequence));
+                var sort = searcher.OrderBy(searcher.AllEntries(), new OrderMetadata(field, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false), nullFirst: true);
                 while (sort.Fill(matches) != 0)
                 {
                 }

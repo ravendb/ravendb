@@ -183,6 +183,14 @@ class trafficWatch extends viewModelBase {
     
     onlyErrors = ko.observable<boolean>(false);
 
+    requestSizeMin = ko.observable<number>();
+    requestSizeMax = ko.observable<number>();
+    responseSizeMin = ko.observable<number>();
+    responseSizeMax = ko.observable<number>();
+
+    requestSizeSummary: KnockoutComputed<string>;
+    responseSizeSummary: KnockoutComputed<string>;
+
     adminLogsUrl = appUrl.forAdminLogs() + "?highlightTrafficWatch=true"
 
     stats = {
@@ -216,6 +224,14 @@ class trafficWatch extends viewModelBase {
         
         this.selectedTypeNamesHttp.subscribe(() => this.refresh());
         this.selectedTypeNamesTcp.subscribe(() => this.refresh());
+        
+        this.requestSizeMin.throttle(500).subscribe(() => this.refresh());
+        this.requestSizeMax.throttle(500).subscribe(() => this.refresh());
+        this.responseSizeMin.throttle(500).subscribe(() => this.refresh());
+        this.responseSizeMax.throttle(500).subscribe(() => this.refresh());
+
+        this.requestSizeSummary = ko.pureComputed(() => trafficWatch.formatSizeRangeSummary(this.requestSizeMin(), this.requestSizeMax()));
+        this.responseSizeSummary = ko.pureComputed(() => trafficWatch.formatSizeRangeSummary(this.responseSizeMin(), this.responseSizeMax()));
     }
     
     activate(args: any) {
@@ -303,7 +319,17 @@ class trafficWatch extends viewModelBase {
             const typeMatch = _.includes(this.selectedTypeNamesHttp(), item.Type);
             const statusMatch = !this.onlyErrors() || item.ResponseStatusCode >= 400;
 
-            return textFilterMatch && typeMatch && statusMatch;
+            const reqMin = trafficWatch.parseNumberFilter(this.requestSizeMin());
+            const reqMax = trafficWatch.parseNumberFilter(this.requestSizeMax());
+            const resMin = trafficWatch.parseNumberFilter(this.responseSizeMin());
+            const resMax = trafficWatch.parseNumberFilter(this.responseSizeMax());
+
+            const requestSizeMatch = (reqMin == null || item.RequestSizeInBytes >= reqMin) &&
+                                     (reqMax == null || item.RequestSizeInBytes <= reqMax);
+            const responseSizeMatch = (resMin == null || item.ResponseSizeInBytes >= resMin) &&
+                                      (resMax == null || item.ResponseSizeInBytes <= resMax);
+
+            return textFilterMatch && typeMatch && statusMatch && requestSizeMatch && responseSizeMatch;
         }
         
         if (trafficWatch.isTcpItem(item)) {
@@ -331,6 +357,22 @@ class trafficWatch extends viewModelBase {
     
     private static isPostgresItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is TrafficWatchPostgresChange {
         return item.TrafficWatchType === "Postgres";
+    }
+
+    private static parseNumberFilter(value: any): number | null {
+        if (value == null || value === "") {
+            return null;
+        }
+        const num = Number(value);
+        return isNaN(num) ? null : num;
+    }
+
+    private static formatSizeRangeSummary(minVal: any, maxVal: any): string {
+        const min = trafficWatch.parseNumberFilter(minVal);
+        const max = trafficWatch.parseNumberFilter(maxVal);
+        const minText = min != null ? generalUtils.formatBytesToSize(min) : "0";
+        const maxText = max != null ? generalUtils.formatBytesToSize(max) : "\u221E";
+        return minText + " - " + maxText;
     }
 
     private updateStats(): void {
@@ -640,8 +682,13 @@ class trafficWatch extends viewModelBase {
         const filterUsingTypeTcp = this.selectedTypeNamesTcp().length !== this.filteredTypeDataTcp.length;
         
         const filterUsingStatus = this.onlyErrors();
+
+        const filterUsingSize = trafficWatch.parseNumberFilter(this.requestSizeMin()) != null ||
+                                trafficWatch.parseNumberFilter(this.requestSizeMax()) != null ||
+                                trafficWatch.parseNumberFilter(this.responseSizeMin()) != null ||
+                                trafficWatch.parseNumberFilter(this.responseSizeMax()) != null;
         
-        if (textFilterDefined || filterUsingTypeHttp || filterUsingTypeTcp || filterUsingStatus) {
+        if (textFilterDefined || filterUsingTypeHttp || filterUsingTypeTcp || filterUsingStatus || filterUsingSize) {
             this.filteredData = this.allData.filter(item => this.matchesFilters(item));
             this.isDataFiltered(true);
         } else {

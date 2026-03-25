@@ -11,7 +11,6 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.ETL;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

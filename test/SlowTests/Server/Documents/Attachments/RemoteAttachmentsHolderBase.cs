@@ -11,7 +11,6 @@ using Raven.Client.Extensions;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments;
 

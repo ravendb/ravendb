@@ -23,7 +23,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace SlowTests.Server.Documents.Revisions

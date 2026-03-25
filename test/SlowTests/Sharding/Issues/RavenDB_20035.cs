@@ -2,7 +2,6 @@
 using Orders;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues;
 

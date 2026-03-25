@@ -30,7 +30,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using Company = Raven.Tests.Core.Utils.Entities.Company;
 using Employee = Raven.Tests.Core.Utils.Entities.Employee;
 

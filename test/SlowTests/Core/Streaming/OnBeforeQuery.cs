@@ -8,7 +8,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Streaming
 {

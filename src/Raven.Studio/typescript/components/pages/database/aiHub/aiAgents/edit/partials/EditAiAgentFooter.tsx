@@ -3,26 +3,18 @@ import Button from "react-bootstrap/Button";
 import { useAppDispatch } from "components/store";
 import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { UseFormReturn, useWatch } from "react-hook-form";
-import { EditAiAgentFormData, TestAiAgentFormData } from "../utils/editAiAgentValidation";
+import { UseFormReturn } from "react-hook-form";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface EditAiAgentFooterProps {
-    testForm: UseFormReturn<TestAiAgentFormData>;
     editForm: UseFormReturn<EditAiAgentFormData>;
+    generateTestParameters: () => void;
 }
 
-export default function EditAiAgentFooter({ testForm, editForm }: EditAiAgentFooterProps) {
+export default function EditAiAgentFooter({ editForm, generateTestParameters }: EditAiAgentFooterProps) {
     const dispatch = useAppDispatch();
-
-    const editFormValues = useWatch({
-        control: editForm.control,
-    });
-
-    const testFormValues = useWatch({
-        control: testForm.control,
-    });
 
     const { forCurrentDatabase } = useAppUrls();
 
@@ -32,13 +24,7 @@ export default function EditAiAgentFooter({ testForm, editForm }: EditAiAgentFoo
             return;
         }
 
-        testForm.setValue(
-            "parameters",
-            editFormValues.parameters.map((x) => ({
-                name: x.name,
-                value: testFormValues.parameters.find((y) => y.name === x.name)?.value ?? "",
-            }))
-        );
+        generateTestParameters();
         dispatch(editAiAgentActions.isTestOpenSet(true));
     };
 

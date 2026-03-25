@@ -1,11 +1,13 @@
-﻿using Xunit;
-using Xunit.Sdk;
+using System.Collections.Generic;
+using Xunit;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
-[TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
-public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
+public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
     private string _skip;
     public readonly RavenTestCategory Category;
 
@@ -13,6 +15,9 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
     {
         Category = category;
     }
+
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits() =>
+        XunitExtensions.RavenTraitHelper.GetTraitsFor(Category);
 
     public bool LicenseRequired { get; set; }
 
@@ -67,7 +72,7 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
         set => Requires = value ? Requires | RavenServiceRequirement.Snowflake : Requires & ~RavenServiceRequirement.Snowflake;
     }
 
-    public override string Skip
+    public new string Skip
     {
         get
         {

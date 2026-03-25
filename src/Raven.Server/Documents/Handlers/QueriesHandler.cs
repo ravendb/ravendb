@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Queries;
 using Raven.Server.Routing;
@@ -10,15 +11,25 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task Post()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post))
+            var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Post);
+            try
+            {
+                processor.IndexQuery = await processor.ReadIndexQueryForPost();
                 await processor.ExecuteAsync();
+            }
+            catch (Exception e)
+            {
+                processor.ProcessQueryException(e);
+                throw;
+            }
         }
 
         [RavenAction("/databases/*/queries", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-                await processor.ExecuteAsync();
+            var processor = new DatabaseQueriesHandlerProcessorForGet(this, HttpMethod.Get);
+            processor.LoadIndexQueryForGet();
+            return processor.ExecuteWithExceptionHandling(processor.ExecuteAsync()).AsTask();
         }
 
         [RavenAction("/databases/*/queries", "PATCH", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]

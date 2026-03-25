@@ -6,7 +6,7 @@ using System.Text;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Voron.Tables
 {

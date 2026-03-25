@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
 {

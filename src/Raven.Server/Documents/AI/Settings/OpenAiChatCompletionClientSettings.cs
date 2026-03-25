@@ -31,15 +31,21 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
         var error = OpenAiErrorHolder.Deserializer(content).error;
 
         var errorType = ErrorType.Unknown;
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        switch (response.StatusCode)
         {
-            errorType = error.type switch
-            {
-                "insufficient_quota" => ErrorType.InsufficientQuota,
-                "requests" => ErrorType.TooManyRequests,
-                "tokens" => ErrorType.TooManyTokens,
-                _ => ErrorType.Other429
-            };
+            case HttpStatusCode.BadRequest:
+                if (error.code == "context_length_exceeded" && error.type == "invalid_request_error")
+                    errorType = ErrorType.TooManyTokens;
+                break;
+            case HttpStatusCode.TooManyRequests:
+                errorType = error.type switch
+                {
+                    "insufficient_quota" => ErrorType.InsufficientQuota,
+                    "requests" => ErrorType.TooManyRequests,
+                    "tokens" => ErrorType.TooManyTokens,
+                    _ => ErrorType.Other429
+                };
+                break;
         }
 
         return new AiError
@@ -47,6 +53,26 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
             ErrorType = errorType,
             Message = error.message
         };
+    }
+
+    public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
+    {
+        if (_settings.ReasoningEffort.HasValue)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName("reasoning_effort");
+            writer.WriteString(_settings.ReasoningEffort.Value.ToString().ToLower());
+        }
+        if (_settings.Seed.HasValue)
+        {
+            // Use a fixed seed to make sampling more reproducible across runs.
+            // This helps stabilize tests. Combined with reasoning_effort="minimal"
+            // it further reduces the probability of flaky responses.
+            writer.WriteComma();
+            writer.WritePropertyName("seed");
+            writer.WriteInteger(_settings.Seed.Value);
+        }
+        base.HandleCompletionRequestPayload(writer);
     }
 
     private class OpenAiErrorHolder
@@ -60,5 +86,6 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     {
         public string type { get; set; }
         public string message { get; set; }
+        public string code { get; set; }
     }
 }

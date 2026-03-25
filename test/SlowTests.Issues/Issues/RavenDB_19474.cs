@@ -3,7 +3,6 @@ using System;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading;
 using System;
 using Tests.Infrastructure;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FastTests;
 using Newtonsoft.Json;
@@ -6,7 +6,7 @@ using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.MailingList
 {

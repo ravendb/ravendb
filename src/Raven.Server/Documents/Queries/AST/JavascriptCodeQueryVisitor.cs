@@ -102,8 +102,19 @@ namespace Raven.Server.Documents.Queries.AST
             _sb.Append(")");
         }
 
+        private static void AssertMethodSupported(MethodExpression expr)
+        {
+            if (expr.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase) ||
+                expr.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new NotSupportedException($"'{expr.Name.Value}()' function is not supported in filter or subscription expressions");
+            }
+        }
+
         public override void VisitMethod(MethodExpression expr)
         {
+            AssertMethodSupported(expr);
+
             if (expr.Name.Value.Equals("startswith", StringComparison.OrdinalIgnoreCase))
             {
                 if (expr.Arguments.Count != 2)

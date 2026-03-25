@@ -5,7 +5,6 @@ using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

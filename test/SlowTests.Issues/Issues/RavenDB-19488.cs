@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using FastTests;
 using Tests.Infrastructure;
 

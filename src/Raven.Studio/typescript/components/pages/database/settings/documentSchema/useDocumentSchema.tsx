@@ -67,9 +67,9 @@ export const useDocumentSchema = () => {
     const handleNewSchemaSubmit = (id: string, data: DocumentSchemaFormData) => {
         return tryHandleSubmit(async () => {
             const newItem = documentSchemaUtils.mapToDocumentSchemaValidatorConfigDto(data);
+            await asyncSaveValidators.execute([...validators.filter((v) => v.Name !== newItem.Name), newItem]);
             dispatch(documentSchemaActions.draftRemoved(id));
             dispatch(documentSchemaActions.validatorAdded(newItem));
-            await asyncSaveValidators.execute([...validators.filter((v) => v.Name !== newItem.Name), newItem]);
         });
     };
 

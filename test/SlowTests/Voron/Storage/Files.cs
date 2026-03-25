@@ -1,9 +1,9 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {
@@ -57,11 +57,11 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             IOExtensions.DeleteDirectory(DataDir + "Temp");
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

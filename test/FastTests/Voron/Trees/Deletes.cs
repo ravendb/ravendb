@@ -7,7 +7,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Global;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Trees

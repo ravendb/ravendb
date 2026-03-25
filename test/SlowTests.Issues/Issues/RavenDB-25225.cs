@@ -21,7 +21,6 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace SlowTests.Issues

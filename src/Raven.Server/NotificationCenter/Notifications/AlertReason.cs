@@ -106,5 +106,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         RemoteAttachmentsConfigurationNotValid = 69,
         
         SchemaValidationConfiguration_Error = 70,
+
+        GcThreadContention = 71
     }
 }

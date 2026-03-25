@@ -3,7 +3,6 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs

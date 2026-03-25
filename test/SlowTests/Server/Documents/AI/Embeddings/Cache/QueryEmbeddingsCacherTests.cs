@@ -20,7 +20,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings.Cache;
 

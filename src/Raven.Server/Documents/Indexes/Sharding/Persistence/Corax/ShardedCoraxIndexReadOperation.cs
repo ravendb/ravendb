@@ -25,6 +25,8 @@ namespace Raven.Server.Documents.Indexes.Sharding.Persistence.Corax;
 
 public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 {
+    public override bool IsSharded => true;
+
     public ShardedCoraxIndexReadOperation(Index index, RavenLogger logger, Transaction readTransaction, QueryBuilderFactories queryBuilderFactories,
         IndexFieldsMapping fieldsMapping, IndexQueryServerSide query) : base(index, logger, readTransaction, queryBuilderFactories, fieldsMapping, query)
     {
@@ -98,30 +100,36 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
             switch (orderByField.OrderingType)
             {
                 case OrderByFieldType.Long:
-                    long l = long.MaxValue;
+                    long? l = null;
                     while (reader.FindNext(fieldRootPage))
                     {
-                        l = long.Min(l, reader.CurrentLong);
+                        if (reader.IsNull || reader.IsNonExisting)
+                            continue;
+                        l = l.HasValue ? long.Min(l.Value, reader.CurrentLong) : reader.CurrentLong;
                     }
+                    
                     result.AddLongOrderByField(l);
                     break;
                 case OrderByFieldType.Double:
-                    double d = double.MaxValue;
+                    double? d = null;
                     while (reader.FindNext(fieldRootPage))
                     {
-                        d = double.Min(d, reader.CurrentDouble);
+                        if (reader.IsNull || reader.IsNonExisting)
+                            continue;
+                        d = d.HasValue ? double.Min(d.Value, reader.CurrentDouble) : reader.CurrentDouble;
                     }
                     result.AddDoubleOrderByField(d);
                     break;
                 case OrderByFieldType.Distance:
                 {
-                    double m = double.MaxValue;
+                    double? m = null;
                     while (reader.FindNextSpatial(fieldRootPage))
                     {
+                        if (reader.IsNull || reader.IsNonExisting)
+                            continue;
                         var coordinates = (reader.Latitude, reader.Longitude);
-                     
                         var distance = SpatialUtils.GetGeoDistance(in coordinates, (orderByFieldMetadata.Point.X, orderByFieldMetadata.Point.Y), orderByFieldMetadata.Round, orderByFieldMetadata.Units);
-                        m = double.Min(m, distance);
+                        m = m.HasValue ? double.Min(m.Value, distance) : distance;
                     }
 
                     result.AddDoubleOrderByField(m);

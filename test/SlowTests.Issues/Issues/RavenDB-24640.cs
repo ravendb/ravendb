@@ -10,7 +10,6 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -37,7 +36,9 @@ namespace SlowTests.Issues
                     s.Conventions.PreserveDocumentPropertiesNotFoundOnModel = true;
                     s.Conventions.IdentityPartsSeparator = '-';
                     s.Conventions.MaxNumberOfRequestsPerSession = int.MaxValue;
+#pragma warning disable CS0618 // Type or member is obsolete
                     s.Conventions.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                 }
             }))
             {

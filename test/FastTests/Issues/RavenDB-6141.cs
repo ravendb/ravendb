@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
@@ -6,7 +7,6 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
@@ -143,12 +143,12 @@ namespace FastTests.Issues
             Assert.False(new PathSetting("Items/").FullPath.EndsWith(@"/"));
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             if (Directory.Exists(_emptySettingsDir))
                 IOExtensions.DeleteDirectory(_emptySettingsDir);
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

@@ -8,7 +8,6 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Assert = Xunit.Assert;
-using Xunit.Abstractions;
 
 namespace SlowTests.ExtensionPoints
 {

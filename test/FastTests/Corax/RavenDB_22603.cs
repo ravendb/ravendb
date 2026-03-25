@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -15,7 +16,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -579,9 +579,9 @@ public class RavenDB_22603_Primitive : StorageTest
 
     private record Entry(string Id, string Name, string Color, long Number);
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
         _knownFields?.Dispose();
     }
 }

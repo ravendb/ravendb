@@ -1,7 +1,6 @@
 using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
-using Xunit.Abstractions;
 
 using Tests.Infrastructure;
 namespace SlowTests.Issues
@@ -31,7 +30,9 @@ namespace SlowTests.Issues
 
                 using (var s2 = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     s2.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     var u2 = s2.Load<User>("users/1-A");
 

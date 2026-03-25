@@ -9,7 +9,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

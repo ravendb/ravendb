@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
 
             json[nameof(CustomPartitionValue)] = CustomPartitionValue;
             json[nameof(RunFrequency)] = RunFrequency;
-            json[nameof(OlapTables)] = new DynamicJsonArray(OlapTables.Select(x => x.ToJson()));
+            json[nameof(OlapTables)] = OlapTables != null ? new DynamicJsonArray(OlapTables.Select(x => x.ToJson())) : null;
 
             return json;
         }

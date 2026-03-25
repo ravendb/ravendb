@@ -6,7 +6,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {

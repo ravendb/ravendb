@@ -339,6 +339,20 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.WithTag(string tag)
+        {
+            WithTag(tag);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IRawDocumentQuery<T> IQueryBase<T, IRawDocumentQuery<T>>.WithTag(string tag)
+        {
+            WithTag(tag);
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IQueryBase<T, IDocumentQuery<T>>.Timings(out QueryTimings timings)
         {
             IncludeTimings(out timings);
@@ -1126,6 +1140,7 @@ namespace Raven.Client.Documents.Session
                 QueryHighlightings = QueryHighlightings,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
+                QueryTag = QueryTag,
                 ProjectionBehavior = queryData?.ProjectionBehavior ?? ProjectionBehavior,
                 QueryTimings = QueryTimings,
                 Explanations = Explanations,

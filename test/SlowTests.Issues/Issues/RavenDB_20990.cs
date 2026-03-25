@@ -4,7 +4,6 @@ using FastTests;
 using Orders;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client.Exceptions;
 
 namespace SlowTests.Issues

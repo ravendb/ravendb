@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
-using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
+using Xunit.v3;
 
 namespace BenchmarkTests.Utils
 {
@@ -10,36 +9,42 @@ namespace BenchmarkTests.Utils
     {
         private static readonly string InitTestName = $"{typeof(Init).FullName}.{nameof(Init.Initialize)}";
 
-        public IEnumerable<TTestCase> OrderTestCases<TTestCase>(IEnumerable<TTestCase> testCases) where TTestCase : ITestCase
+        public IReadOnlyCollection<TTestCase> OrderTestCases<TTestCase>(IReadOnlyCollection<TTestCase> testCases) where TTestCase : ITestCase
         {
-            var initTest = testCases.SingleOrDefault(x => x.DisplayName == InitTestName);
+            var result = new List<TTestCase>();
+            var initTest = testCases.SingleOrDefault(x => x.TestCaseDisplayName == InitTestName);
 
             if (initTest != null)
-                yield return initTest;
+                result.Add(initTest);
 
-            foreach (var test in testCases.OrderBy(x => x.DisplayName))
+            foreach (var test in testCases.OrderBy(x => x.TestCaseDisplayName))
             {
-                if (test.DisplayName == initTest?.DisplayName)
+                if (test.TestCaseDisplayName == initTest?.TestCaseDisplayName)
                     continue;
 
-                yield return test;
+                result.Add(test);
             }
+
+            return result;
         }
 
-        public IEnumerable<ITestCollection> OrderTestCollections(IEnumerable<ITestCollection> testCollections)
+        public IReadOnlyCollection<TTestCollection> OrderTestCollections<TTestCollection>(IReadOnlyCollection<TTestCollection> testCollections) where TTestCollection : ITestCollection
         {
-            var initCollection = testCollections.SingleOrDefault(x => x.DisplayName == nameof(Init));
+            var result = new List<TTestCollection>();
+            var initCollection = testCollections.SingleOrDefault(x => x.TestCollectionDisplayName == nameof(Init));
 
             if (initCollection != null)
-                yield return initCollection;
+                result.Add(initCollection);
 
-            foreach (var collection in testCollections.OrderBy(x => x.DisplayName))
+            foreach (var collection in testCollections.OrderBy(x => x.TestCollectionDisplayName))
             {
-                if (collection.DisplayName == initCollection?.DisplayName)
+                if (collection.TestCollectionDisplayName == initCollection?.TestCollectionDisplayName)
                     continue;
 
-                yield return collection;
+                result.Add(collection);
             }
+
+            return result;
         }
     }
 }

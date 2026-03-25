@@ -77,10 +77,11 @@ namespace Raven.Server.Documents.Sharding.Queries
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Handle continuation token in streaming");
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Missing scope usage");
 
-            var documentsComparer = string.IsNullOrEmpty(_debug) ? GetComparer(Query) : ConstantComparer.Instance;
+            Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> documentsComparer = string.IsNullOrEmpty(_debug) 
+                ? ComparerCreator
+                : (_, _, _) => ConstantComparer.Instance;
 
             var commands = GetOperationCommands(null);
-
             var op = new ShardedStreamQueryOperation(RequestHandler.HttpContext, () =>
             {
                 IDisposable returnToContextPool = RequestHandler.ContextPool.AllocateOperationContext(out JsonOperationContext ctx);

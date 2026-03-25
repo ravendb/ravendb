@@ -25,6 +25,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     private JsonOperationContext.MemoryBuffer _memoryBuffer;
     private JsonOperationContext.MemoryBuffer _backgroundMemoryBuffer;
     private bool _isInitialWrite = true;
+    private bool _isCompressionEnabled;
+
     internal DateTime LastFlushToStream { get; private set; }
 
     private Stream _requestBodyStream;
@@ -61,6 +63,19 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 
                         await WriteToStreamAsync(_currentWriteStream, _requestBodyStream, _memoryBuffer).ConfigureAwait(false);
                         await _requestBodyStream.FlushAsync(_token).ConfigureAwait(false);
+
+                        // Must dispose the compression stream (e.g. GZipStream) to write
+                        // final compression footer bytes. Without this, the compressed
+                        // data is incomplete and the server cannot decompress it.
+                        // On .NET Framework, GZipStream.Flush() is a no-op, so Dispose
+                        // is the only way to finalize the compressed stream.
+                        // Only dispose when compression is enabled — the compression
+                        // streams are created with leaveOpen: true, so this finalizes
+                        // the compressor without closing the underlying HTTP stream.
+                        // Without compression, _requestBodyStream IS the HTTP stream,
+                        // and disposing it would cause an ObjectDisposedException.
+                        if (_isCompressionEnabled)
+                            _requestBodyStream.Dispose();
                     }
                 }
                 finally
@@ -126,11 +141,12 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
         return WriteToStreamAsync(src, dst, _memoryBuffer);
     }
 
-    protected Task WriteToRequestStreamAsync(Stream src)
+    protected async Task WriteToRequestStreamAsync(Stream src)
     {
-        return WriteToStreamAsync(src, _requestBodyStream, _memoryBuffer);
+        await _asyncWrite.ConfigureAwait(false);
+        await WriteToStreamAsync(src, _requestBodyStream, _memoryBuffer).ConfigureAwait(false);
     }
-
+    
     private async Task WriteToStreamAsync(Stream src, Stream dst, JsonOperationContext.MemoryBuffer buffer, bool forceDstFlush = false)
     {
         src.Seek(0, SeekOrigin.Begin);
@@ -158,6 +174,8 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
 
         if (compressionLevel != CompressionLevel.NoCompression)
         {
+            _isCompressionEnabled = true;
+
             switch (compressionAlgorithm)
             {
                 case HttpCompressionAlgorithm.Gzip:
@@ -186,10 +204,5 @@ internal abstract class BulkInsertWriterBase : IAsyncDisposable
     public virtual async ValueTask DisposeAsync()
     {
         await _disposeOnce.DisposeAsync().ConfigureAwait(false);
-    }
-
-    public void DisposeRequestStream()
-    {
-        _requestBodyStream?.Dispose();
     }
 }

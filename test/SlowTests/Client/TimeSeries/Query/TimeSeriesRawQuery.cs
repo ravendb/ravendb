@@ -13,7 +13,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Sparrow.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Client.TimeSeries.Query

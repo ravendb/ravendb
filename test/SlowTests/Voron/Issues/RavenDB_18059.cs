@@ -10,7 +10,6 @@ using Voron.Impl.Backup;
 using Voron.Impl.Journal;
 using Voron.Util.Settings;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues;
 

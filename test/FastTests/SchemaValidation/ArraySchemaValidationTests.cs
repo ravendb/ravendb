@@ -4,7 +4,6 @@ using Raven.Server.Documents.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.SchemaValidation;
 

@@ -16,14 +16,13 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi;
 
 public class GenAiStats(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiStats_ShouldReport_ModelCallStats(Options options, GenAiConfiguration configuration)
     {
         using var store = GetDocumentStore();
@@ -142,7 +141,7 @@ for(const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiStats_Should_Report_TransformationStats(Options options, GenAiConfiguration configuration)
     {
         using var store = GetDocumentStore();
@@ -222,7 +221,7 @@ for(const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiStats_ShouldReport_UpdatePhaseStats(Options options, GenAiConfiguration configuration)
     {
         using var store = GetDocumentStore();
@@ -310,7 +309,7 @@ for(const comment of this.Comments)
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiStats_ShouldReport_ModelErrorStats(Options options, GenAiConfiguration configuration)
     {
         using var store = GetDocumentStore();
@@ -384,7 +383,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiStats_ShouldReport_UpdateFailuresStats(Options options, GenAiConfiguration configuration)
     {
         using var store = GetDocumentStore();

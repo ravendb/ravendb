@@ -8,7 +8,6 @@ using Raven.Server.Documents.Replication;
 using Sparrow.Server.Logging;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Replication
 {

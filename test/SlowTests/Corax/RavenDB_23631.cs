@@ -8,7 +8,6 @@ using FastTests.Voron;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 

@@ -109,6 +109,7 @@ namespace Raven.Server.Web.System
         private static readonly string[] ExtensionsToSkipCompression = {
             ".png",
             ".jpg",
+            ".webp",
             ".gif",
             ".ico",
             ".svg",
@@ -135,6 +136,7 @@ namespace Raven.Server.Web.System
             {".map", "text/javascript; charset=utf-8"},
             {".ico", "image/vnd.microsoft.icon"},
             {".jpg", "image/jpeg"},
+            {".webp", "image/webp"},
             {".gif", "image/gif"},
             {".png", "image/png"},
             {".xap", "application/x-silverlight-2"},

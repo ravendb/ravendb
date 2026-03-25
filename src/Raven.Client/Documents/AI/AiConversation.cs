@@ -10,6 +10,8 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow.Json;
+using System.IO;
+using Raven.Client.Documents.Commands.Batches;
 
 namespace Raven.Client.Documents.AI;
 
@@ -25,6 +27,8 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
+    private readonly List<ICommandData> _attachmentsCommands = new();
+    
     public string ChangeVector => _changeVector;
 
     private delegate Task HandleActionDelegate(JsonOperationContext context, AiAgentActionRequest actionRequest, CancellationToken token);
@@ -42,6 +46,24 @@ internal class AiConversation : IAiConversationOperations
         _conversationId = conversationId;
         _options = options;
         _changeVector = changeVector;
+    }
+    
+    public void AddAttachment(string name, Stream stream, string contentType)
+    {
+        if (stream == null)
+            throw new ArgumentNullException(nameof(stream));
+
+        var attachmentName = name;
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: string.Empty));
+    }
+
+    public void CopyAttachmentFrom(string sourceDocumentId, string fileName)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
+        ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
+        ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
+
+        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
@@ -271,15 +293,14 @@ internal class AiConversation : IAiConversationOperations
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
             _actionRequests != null &&
             // otherwise, we already went to the server and have nothing new to tell it, so we are done
-            _promptParts.Count == 0 && _actionResponses.Count == 0)
+            _promptParts.Count == 0 && _actionResponses.Count == 0 && _attachmentsCommands.Count == 0)
         {
             return new AiAnswer<TAnswer>
             {
                 Status = AiConversationResult.Done
             };
         }
-
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -307,10 +328,11 @@ internal class AiConversation : IAiConversationOperations
             _promptParts.Clear();
             _actionResponses.Clear();
             _artificialActions.Clear();
+            _attachmentsCommands.Clear();
         }
     }
 
-    private class AiActionContext<TActionParametersSchema>
+    internal class AiActionContext<TActionParametersSchema>
         where TActionParametersSchema : class
     {
         private readonly AiConversation _conversation;
@@ -354,7 +376,7 @@ internal class AiConversation : IAiConversationOperations
             }
         }
 
-        private static string CreateErrorMessageForLlm(Exception e)
+        internal static string CreateErrorMessageForLlm(Exception e)
         {
             var sb = new StringBuilder();
             var currentException = e;

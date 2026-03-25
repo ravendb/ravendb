@@ -3,7 +3,6 @@ using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {

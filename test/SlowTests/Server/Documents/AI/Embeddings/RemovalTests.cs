@@ -3,7 +3,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

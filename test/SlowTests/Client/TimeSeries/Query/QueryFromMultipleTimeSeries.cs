@@ -12,7 +12,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Query
 {

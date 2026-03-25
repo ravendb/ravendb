@@ -2,7 +2,6 @@
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -40,7 +39,9 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     session.Store(aggregate);
                     session.SaveChanges();
                 }
@@ -58,7 +59,9 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     session.Store(root); session.SaveChanges();
                 }
 
@@ -70,7 +73,9 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var query = session
                         .Include("Bridge.Aggregates")
                         .Load<Root>("roots/1-A");
@@ -80,7 +85,9 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var query = session
                         .Include("Bridge.Aggregates")
                         .Load<Root>("roots/1-A");
@@ -92,7 +99,9 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var query = session
                         .Include("Bridge.Aggregates")
                         .Load<Root>("roots/1-A");

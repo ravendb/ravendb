@@ -8,7 +8,6 @@ using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Patching
 {

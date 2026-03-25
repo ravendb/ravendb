@@ -12,7 +12,7 @@ public class EmbeddingsHuggingFaceConnectorForTesting : AbstractEmbeddingsConnec
     {
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.HuggingFace);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.HuggingFace;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

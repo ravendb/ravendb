@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {
@@ -147,7 +146,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var identifier = (await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance)).Identifier;
             var chat = store.AI.Conversation(identifier, "chats/", creationOptions: null);
             chat.SetUserPrompt("what goes well with my cheese for recent orders?");
-            var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None));
+            var e = await Assert.ThrowsAsync<MissingAiAgentParameterException>(() => chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
 

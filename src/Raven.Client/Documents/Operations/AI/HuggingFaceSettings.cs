@@ -5,6 +5,12 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public sealed class HuggingFaceSettings : AbstractAiSettings
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="HuggingFaceSettings"/> with the specified API key, model, and optional endpoint.
+    /// </summary>
+    /// <param name="apiKey">The API key required for accessing the Hugging Face service.</param>
+    /// <param name="model">The name of the Hugging Face model.</param>
+    /// <param name="endpoint">The optional endpoint for the service.</param>
     public HuggingFaceSettings(string apiKey, string model, string endpoint = null)
     {
         Model = model;
@@ -12,6 +18,9 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
         ApiKey = apiKey;
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="HuggingFaceSettings"/>.
+    /// </summary>
     public HuggingFaceSettings()
     {
         // deserialization
@@ -23,7 +32,7 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
     public string Model { get; set; }
 
     /// <summary>
-    /// The endpoint for the text embedding generation service. If not specified, the default endpoint will be used.
+    /// The endpoint for the service. If not specified, the default endpoint will be used.
     /// </summary>
     public string Endpoint { get; set; }
 
@@ -60,6 +69,9 @@ public sealed class HuggingFaceSettings : AbstractAiSettings
         return differences;
     }
 
+    /// <summary>
+    /// Converts the settings into a JSON representation.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

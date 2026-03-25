@@ -160,3 +160,4 @@ src/Raven.Pal/test-runner
 
 .claude/
 src/.cache/
+src/Raven.Server/embeddings/

@@ -10,7 +10,6 @@ using Raven.Server.Documents.Handlers.AI.Agents;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
@@ -32,8 +31,14 @@ public class RavenDB_24984 : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, "your whole purpose is to run the tool called 'MyTool'. When you finish," +
-                                                                                                " set Answer to exactly the last tool value as plain text, with no other text")
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
+            "Your whole purpose is to repeatedly call the tool 'MyTool'. " +
+            "After each call, you receive a numeric value. " +
+
+            "If you stop for any reason (including reaching iteration limits), " +
+            "you MUST return the last tool value as the Answer. " +
+
+            "Answer must be exactly the last tool value as plain text, with no additional text.")
         {
             Identifier = "shopping-assistant",
             Actions =
@@ -107,7 +112,6 @@ public class RavenDB_24984 : RavenTestBase
         Assert.Equal(AiConversationResult.Done, result.Status);
 
         var lastToolResult = lastNumber - 1;
-        Console.WriteLine(result.Answer.Answer);
         Assert.Equal(lastToolResult.ToString(), result.Answer.Answer);
         Assert.Equal(maxModelIterationsPerCall, lastToolResult);
 

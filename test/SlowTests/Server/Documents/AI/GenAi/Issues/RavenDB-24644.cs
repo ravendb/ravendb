@@ -14,7 +14,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
 {
@@ -47,11 +46,10 @@ ai.genContext({}).withPdf(pdf);
         private const string ThirdItemId = "Doc/3"; //different collection to test that it won't be processed
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
-            Data = new object[] { true })]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single,
-            Data = new object[] { false })]
-
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single,
+            Data = [true])]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single,
+            Data = [false])]
         public async Task SelectivePdfDescriptionTransformWhenSomeAttachmentsAreMissing(Options options, GenAiConfiguration config, bool withNullAttachments)
         {
             using var store = GetDocumentStore(options);
@@ -76,7 +74,7 @@ ai.genContext({}).withPdf(pdf);
 
             config.EnableTracing = true;
 
-            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+            var taskName = (await store.Maintenance.SendAsync(new AddGenAiOperation(config))).Identifier;
 
             var marker = new PdfDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
 
@@ -121,7 +119,7 @@ ai.genContext({}).withPdf(pdf);
 
             try
             {
-                await AssertHashes(store, withNullAttachments);
+                await AssertHashes(store, withNullAttachments, taskName);
             }
             catch (Exception e)
             {
@@ -129,7 +127,7 @@ ai.genContext({}).withPdf(pdf);
                 sb.Append("[");
                 using (var session = store.OpenAsyncSession())
                 {
-                    var docs = await session.Advanced.LoadStartingWithAsync<dynamic>("openai-aiintegrationtask/");
+                    var docs = await session.Advanced.LoadStartingWithAsync<dynamic>(taskName + "/");
                     foreach (var d in docs)
                     {
                         sb.AppendLine(d + ",");
@@ -140,7 +138,7 @@ ai.genContext({}).withPdf(pdf);
             }
         }
 
-        private static async Task<string> GetHash<T>(DocumentStore store, string id)
+        private static async Task<string> GetHash<T>(DocumentStore store, string id, string taskName)
         {
             using var session = store.OpenAsyncSession();
 
@@ -153,7 +151,7 @@ ai.genContext({}).withPdf(pdf);
             if (hashesSectionObj is not MetadataAsDictionary hashesSection)
                 return null;
 
-            if (hashesSection.TryGetValue("openai-aiintegrationtask", out object hashesObj) == false)
+            if (hashesSection.TryGetValue(taskName, out object hashesObj) == false)
                 return null;
 
             if (hashesObj is not IEnumerable<object> hashesArray)
@@ -164,10 +162,10 @@ ai.genContext({}).withPdf(pdf);
             return firstHash as string;
         }
 
-        private async Task AssertHashes(DocumentStore store, bool withNullAttachments)
+        private async Task AssertHashes(DocumentStore store, bool withNullAttachments, string taskName)
         {
-            var oldHash1 = await GetHash<Item>(store, FirstItemId);
-            var oldHash2 = await GetHash<Item>(store, SecondItemId);
+            var oldHash1 = await GetHash<Item>(store, FirstItemId, taskName);
+            var oldHash2 = await GetHash<Item>(store, SecondItemId, taskName);
 
             Assert.NotNull(oldHash1);
             if (withNullAttachments)
@@ -193,8 +191,8 @@ ai.genContext({}).withPdf(pdf);
             string hash1 = string.Empty, hash2 = string.Empty;
             await WaitForAssertionAsync(async () =>
             {
-                hash1 = await GetHash<Item>(store, FirstItemId);
-                hash2 = await GetHash<Item>(store, SecondItemId);
+                hash1 = await GetHash<Item>(store, FirstItemId, taskName);
+                hash2 = await GetHash<Item>(store, SecondItemId, taskName);
 
                 Assert.NotNull(hash1);
                 Assert.False(hash2 == null, $"oldHash1={oldHash1}, oldHash2={oldHash2}, hash1={hash1}, hash2={hash2}");
@@ -214,7 +212,7 @@ ai.genContext({}).withPdf(pdf);
 
             await WaitForAssertionAsync(async () =>
             {
-                var newHash1 = await GetHash<Item>(store, FirstItemId);
+                var newHash1 = await GetHash<Item>(store, FirstItemId, taskName);
                 if (withNullAttachments)
                     Assert.NotEqual(hash1, newHash1);
                 else

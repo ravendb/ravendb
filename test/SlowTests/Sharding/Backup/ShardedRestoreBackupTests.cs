@@ -34,7 +34,6 @@ using Sparrow.Platform;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace SlowTests.Sharding.Backup

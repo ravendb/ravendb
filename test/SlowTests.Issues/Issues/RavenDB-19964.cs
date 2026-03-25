@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

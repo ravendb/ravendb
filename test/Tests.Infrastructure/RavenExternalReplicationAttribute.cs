@@ -1,6 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
+using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
@@ -28,8 +32,9 @@ public class RavenExternalReplicationAttribute : RavenDataAttributeBase
         _data = data;
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
+        var result = new List<ITheoryDataRow>();
         foreach (var (dstDatabaseMode, dstOptions) in RavenDataAttribute.GetOptions(_destination))
         {
             foreach (var (srcDatabaseMode, srcOptions) in RavenDataAttribute.GetOptions(_source))
@@ -39,13 +44,14 @@ public class RavenExternalReplicationAttribute : RavenDataAttributeBase
                 {
                     if (_data == null || _data.Length == 0)
                     {
-                        yield return new object[] { srcOptions, dstOptions };
+                        result.Add(new TheoryDataRow(srcOptions, dstOptions));
                         continue;
                     }
 
-                    yield return new object[] { srcOptions, dstOptions }.Concat(_data).ToArray();
+                    result.Add(new TheoryDataRow(new object[] { srcOptions, dstOptions }.Concat(_data).ToArray()));
                 }
             }
         }
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
     }
 }

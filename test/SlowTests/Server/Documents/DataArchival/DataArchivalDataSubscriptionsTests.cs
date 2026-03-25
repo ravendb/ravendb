@@ -30,7 +30,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.DataArchival;
 

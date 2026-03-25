@@ -18,6 +18,8 @@ import ChatbotAskAiMessageFollowUpQuestions from "./askAi/ChatbotAskAiMessageFol
 import { TextShimmer } from "components/common/TextShimmer";
 import { Icon } from "components/common/Icon";
 import copyToClipboard from "common/copyToClipboard";
+import "./ChatbotMessages.scss";
+import classNames from "classnames";
 
 export default function ChatbotMessages() {
     const messagesRef = useRef<HTMLDivElement>(null);
@@ -96,7 +98,7 @@ function AgentMessage({ message }: AgentMessageProps) {
     const isLastMessage = useAppSelector((state) => chatbotSelectors.isLastMessage(state, message.id));
 
     return (
-        <div style={{ minHeight: isLastMessage ? "-webkit-fill-available" : "unset" }}>
+        <div className="text-break" style={{ minHeight: isLastMessage ? "-webkit-fill-available" : "unset" }}>
             <AgentMessageBody message={message} />
         </div>
     );
@@ -131,7 +133,12 @@ function AgentMessageBody({ message }: AgentMessageProps) {
     }
 
     if (message.state === "ConsentRequired") {
-        return <AiAssistantConsentStatusChecker onConsentGiven={() => dispatch(chatbotActions.retryRunChat())} />;
+        return (
+            <AiAssistantConsentStatusChecker
+                onConsentGiven={() => dispatch(chatbotActions.retryRunChat())}
+                hasAsciiIcon
+            />
+        );
     }
 
     if (message.state === "RequestTooLarge" || message.state === "Aborted" || message.state === "InternalError") {
@@ -176,7 +183,20 @@ function AgentMessageBody({ message }: AgentMessageProps) {
 
     return (
         <div>
-            <div className="text-muted pb-1">
+            <div className="hstack text-muted gap-1 pb-1">
+                <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 1024 1024"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className={classNames(message.thinkingTimeInMs === null ? "thinking-icon" : "")}
+                >
+                    <path
+                        d="M463.439 145.43C473.744 118.58 503.859 105.167 530.722 115.472C544.507 120.764 555.384 131.658 560.677 145.43L643.666 361.237C647.066 370.036 654.011 376.981 662.809 380.381L877.366 462.929C898.335 470.701 912.184 490.777 911.998 513.133C911.678 534.303 898.469 553.144 878.672 560.676L662.861 643.662C654.063 647.062 647.117 654.008 643.718 662.806L560.663 878.668C558.023 885.597 554.004 891.714 548.986 896.754C539.408 906.376 526.198 912.071 512.041 912.001C490.471 912.107 471.101 898.828 463.422 878.672L380.432 662.864C377.033 654.066 370.087 647.12 361.289 643.721L145.426 560.666C118.578 550.36 105.167 520.242 115.472 493.38C119.157 483.782 125.56 475.596 133.757 469.72C134.004 469.543 134.251 469.366 134.501 469.193C134.891 468.924 135.283 468.658 135.68 468.4C138.722 466.419 141.986 464.745 145.43 463.422L361.237 380.436C363.46 379.577 365.56 378.486 367.518 377.202H367.525C373.32 373.403 377.844 367.864 380.384 361.289L463.439 145.43Z"
+                        fill="currentColor"
+                    />
+                </svg>
                 {message.thinkingTimeInMs != null ? (
                     <span>Thought for {moment.duration(message.thinkingTimeInMs).asSeconds().toFixed(2)}s</span>
                 ) : (

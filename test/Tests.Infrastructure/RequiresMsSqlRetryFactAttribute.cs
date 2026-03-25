@@ -1,13 +1,13 @@
 ﻿using System;
 using Tests.Infrastructure.ConnectionString;
-using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure;
 
 public class RequiresMsSqlRetryFactAttribute : RetryFactAttribute
 {
-    public RequiresMsSqlRetryFactAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-        : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+    public RequiresMsSqlRetryFactAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0)
+        : base(maxRetries, delayBetweenRetriesMs)
     {
         if (RavenTestHelper.SkipIntegrationTests)
         {

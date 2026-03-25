@@ -17,7 +17,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using LogLevel = Sparrow.Logging.LogLevel;
 
 namespace SlowTests.Tools.SparrowTests;

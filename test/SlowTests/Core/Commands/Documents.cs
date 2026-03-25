@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client;
@@ -12,7 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Extensions;
 using Tests.Infrastructure;
-using xRetry;
+using xRetry.v3;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

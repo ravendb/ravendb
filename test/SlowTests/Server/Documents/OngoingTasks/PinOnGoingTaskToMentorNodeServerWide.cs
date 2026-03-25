@@ -7,7 +7,6 @@ using Raven.Client.ServerWide.Operations.OngoingTasks;
 using SlowTests.Server.Documents.Replication;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.OngoingTasks;
 

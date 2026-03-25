@@ -2,7 +2,6 @@ using System;
 using FastTests;
 using Xunit;
 using System.Linq;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing

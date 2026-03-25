@@ -16,7 +16,6 @@ using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

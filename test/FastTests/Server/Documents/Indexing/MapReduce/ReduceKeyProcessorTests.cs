@@ -9,7 +9,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Threading;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce

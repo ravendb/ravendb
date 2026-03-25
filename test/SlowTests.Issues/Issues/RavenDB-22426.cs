@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

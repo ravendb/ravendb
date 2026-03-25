@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -16,6 +18,12 @@ public class AiAgentConfiguration : IDynamicJson
         // for serialization purposes
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AiAgentConfiguration"/> with the specified name, connection string, and system prompt.
+    /// </summary>
+    /// <param name="name">The name of the AI agent configuration.</param>
+    /// <param name="connectionStringName">The name of the connection string used to connect to the AI provider.</param>
+    /// <param name="systemPrompt">The prompt that guides the behavior and purpose of the AI agent.</param>
     public AiAgentConfiguration(string name, string connectionStringName, string systemPrompt)
     {
         ValidationMethods.AssertNotNullOrEmpty(name, nameof(Name));
@@ -83,6 +91,20 @@ public class AiAgentConfiguration : IDynamicJson
     /// </summary>
     public List<AiAgentToolAction> Actions { get; set; } = [];
 
+
+    /// <summary>
+    /// Server side sub-agents that the model can also call. Those sub-agents will be invoked and managed as part of the
+    /// agent run, including running their own queries, etc. Parameters for the sub-agents will be inherited from the
+    /// root agent.
+    ///
+    /// Handle("attendance-agent/SendEmail", ...);
+    /// Handle("benefits-agent/SendEmail", ...);
+    /// Handle("benefits-agent/friendly-agent/SendEmail", ...);
+    /// 
+    /// If there is an action defined in the sub-agent, it will return all the way to the client code for handling.
+    /// </summary>
+    public List<AiAgentToolSubAgent> SubAgents { get; set; } = [];
+
     /// <summary>
     /// The required parameters that are used in the agent's queries and actions.
     /// Which has to be provided by the user each time we start a new chat.
@@ -138,6 +160,23 @@ public class AiAgentConfiguration : IDynamicJson
         return null;
     }
 
+    internal AiAgentToolSubAgent FindSubAgent(string identifier)
+    {
+        if (SubAgents?.Count > 0 == false)
+            return null;
+
+        foreach (AiAgentToolSubAgent tool in SubAgents)
+        {
+            if (tool.Identifier == identifier)
+                return tool;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Serializes the configuration to a JSON structure.
+    /// </summary>
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -150,10 +189,33 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(SampleObject)] = SampleObject,
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
+            [nameof(SubAgents)] = SubAgents != null ? new DynamicJsonArray(SubAgents) : null,
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
             [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall,
             [nameof(Disabled)] = Disabled,
         };
+    }
+
+    public DynamicJsonValue ToAuditJson()
+    {
+        return ToJson();
+    }
+
+    internal void AppendCapabilities(StringBuilder sb)
+    {
+        sb.AppendLine("Capabilities:");
+        foreach (var q in Queries ?? [])
+        {
+            sb.Append("- ").Append(q.Name).Append(" - ").AppendLine(q.Description);
+        }
+        foreach (var q in SubAgents ?? [])
+        {
+            sb.Append("- ").Append(q.Identifier).Append(" - ").AppendLine(q.Description);
+        }
+        foreach (var q in Actions ?? [])
+        {
+            sb.Append("- ").Append(q.Name).Append(" - ").AppendLine(q.Description);
+        }
     }
 }

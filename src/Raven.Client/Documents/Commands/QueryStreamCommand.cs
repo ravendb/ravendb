@@ -38,6 +38,8 @@ namespace Raven.Client.Documents.Commands
             };
 
             url = $"{node.Url}/databases/{node.Database}/streams/queries";
+            if (string.IsNullOrWhiteSpace(_indexQuery.Tag) == false)
+                url += "?tag=" + Uri.EscapeDataString(_indexQuery.Tag);
             return request;
         }
 

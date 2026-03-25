@@ -10,7 +10,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing

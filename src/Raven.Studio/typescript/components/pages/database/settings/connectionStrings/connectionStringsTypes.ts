@@ -148,6 +148,7 @@ export interface AiConnection extends ConnectionBase {
         apiKey?: string;
         model?: string;
         dimensions?: number;
+        endpoint?: string;
         embeddingsMaxConcurrentBatches?: number;
     };
     huggingFaceSettings?: {

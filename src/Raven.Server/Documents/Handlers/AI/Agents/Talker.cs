@@ -18,15 +18,15 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
 
     public AiUsage AiUsage;
     public ChatCompletionClient Client;
+    public ConversationDocument Document => document;
 
     public void Init()
     {
         document.EnsureInitialized();
 
         _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
-        _tools = ConversationDocument.GenerateTools(context, configuration);
-
         Client = handler.CreateClient();
+        _tools = Client.GenerateTools(context, configuration, handler);
     }
 
     public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments)

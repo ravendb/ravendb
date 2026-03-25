@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Queue;
 
@@ -130,9 +129,9 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         }
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
         CleanupExchangesAndQueues();
     }
 }

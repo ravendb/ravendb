@@ -20,7 +20,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Olap
 {

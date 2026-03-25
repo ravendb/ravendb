@@ -21,7 +21,6 @@ using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace StressTests.Client.TimeSeries

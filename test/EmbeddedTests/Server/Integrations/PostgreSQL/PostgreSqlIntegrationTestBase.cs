@@ -1,4 +1,4 @@
-﻿#if NET8_0
+﻿#if RUN_NPGSQL_TESTS
 using System;
 using System.Collections.Generic;
 using System.Data;

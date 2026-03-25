@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Bugs.Indexing

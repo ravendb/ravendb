@@ -10,6 +10,7 @@ using Raven.Client.Properties;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Debugging;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
@@ -83,12 +84,7 @@ namespace Raven.Server.Web.System
         [MethodImpl(MethodImplOptions.Synchronized)]
         private static void Execute(string args, int processId, string output)
         {
-            var ravenDebugExec = Path.Combine(AppContext.BaseDirectory,
-                PlatformDetails.RunningOnPosix ? "Raven.Debug" : "Raven.Debug.exe"
-            );
-
-            if (File.Exists(ravenDebugExec) == false)
-                throw new FileNotFoundException($"Could not find debugger tool at '{ravenDebugExec}'");
+            var ravenDebugExec = RavenDebugExecUtils.GetRavenDebugExecPath();
 
             var sb = new StringBuilder($"{args} --pid {processId} --output {CommandLineArgumentEscaper.EscapeSingleArg(output)}");
 

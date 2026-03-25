@@ -3,7 +3,6 @@ using System.Linq;
 using Newtonsoft.Json.Linq;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
 
 using FastTests;
 using Raven.Client.Documents.Commands.Batches;

@@ -3,7 +3,6 @@ using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Client.TimeSeries.Issues

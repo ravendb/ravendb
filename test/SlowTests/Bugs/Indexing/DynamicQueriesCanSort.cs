@@ -1,7 +1,6 @@
 using FastTests;
 using Xunit;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.Indexing
 {

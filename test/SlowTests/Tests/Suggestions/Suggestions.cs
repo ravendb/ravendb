@@ -7,7 +7,6 @@ using Raven.Client.Documents.Queries.Suggestions;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Suggestions
 {

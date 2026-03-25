@@ -3,7 +3,6 @@ using FastTests;
 using SlowTests.Cluster;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Cluster
 {
@@ -16,7 +15,7 @@ namespace StressTests.Cluster
         [RavenMultiplatformFact(RavenTestCategory.ClusterTransactions, RavenArchitecture.AllX64)]
         public async Task ParallelClusterTransactions()
         {
-            using (var test = new ParallelClusterTransactionsTests(Output))
+            await using (var test = new ParallelClusterTransactionsTests(Output))
             {
                 await test.ParallelClusterTransactions(7);
             }

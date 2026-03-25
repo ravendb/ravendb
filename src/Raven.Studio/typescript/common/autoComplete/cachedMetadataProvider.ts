@@ -7,7 +7,8 @@ class cachedMetadataProvider implements queryCompleterProviders {
     private cachedCollections: Promise<string[]> = undefined;
     private cachedIndexFields: Map<string, Promise<string[]>> = new Map<string, Promise<string[]>>();
     private cachedCollectionFields: Map<string, Map<string, Promise<dictionary<string>>>> = new Map<string, Map<string, Promise<dictionary<string>>>>();
-    
+    private cachedAiTasks: Promise<Record<string, Record<string, string[]>>> = undefined;
+
     constructor(parent: queryCompleterProviders) {
         this.parent = parent;
     }
@@ -71,6 +72,18 @@ class cachedMetadataProvider implements queryCompleterProviders {
             });
             
             await this.indexNames(callback);
+        }
+    }
+
+    async aiTasks(callback: (data: Record<string, Record<string, string[]>>) => void) {
+        if (this.cachedAiTasks) {
+            const data = await this.cachedAiTasks;
+            callback(data);
+        } else {
+            this.cachedAiTasks = new Promise<Record<string, Record<string, string[]>>>(resolve => {
+                this.parent.aiTasks(resolve);
+            });
+            await this.aiTasks(callback);
         }
     }
 }

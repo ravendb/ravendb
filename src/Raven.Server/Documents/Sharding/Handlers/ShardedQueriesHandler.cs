@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 using Raven.Server.Routing;
@@ -10,15 +11,25 @@ namespace Raven.Server.Documents.Sharding.Handlers
         [RavenShardedAction("/databases/*/queries", "POST")]
         public async Task Post()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post))
+            var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Post);
+            try
+            {
+                processor.IndexQuery = await processor.ReadIndexQueryForPost();
                 await processor.ExecuteAsync();
+            }
+            catch (Exception e)
+            {
+                processor.ProcessQueryException(e);
+                throw;
+            }
         }
 
         [RavenShardedAction("/databases/*/queries", "GET")]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get))
-                await processor.ExecuteAsync();
+            var processor = new ShardedQueriesHandlerProcessorForGet(this, HttpMethod.Get);
+            processor.LoadIndexQueryForGet();
+            return processor.ExecuteWithExceptionHandling(processor.ExecuteAsync()).AsTask();
         }
 
         [RavenShardedAction("/databases/*/queries", "PATCH")]

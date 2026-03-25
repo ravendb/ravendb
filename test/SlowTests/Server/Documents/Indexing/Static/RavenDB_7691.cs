@@ -8,7 +8,6 @@ using Raven.Client.Exceptions;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing.Static
 {

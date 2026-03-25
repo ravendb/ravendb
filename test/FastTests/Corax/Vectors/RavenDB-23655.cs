@@ -11,7 +11,6 @@ using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 

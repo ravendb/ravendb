@@ -8,12 +8,12 @@ namespace Corax.Querying.Matches.SortingMatches;
 internal static class HeapSorterBuilder
 {
     public static unsafe NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer> BuildCompoundCompactKeySorter<TSecondaryComparer>(Span<int> documents,
-        Span<UnmanagedSpan> terms, bool descending, TSecondaryComparer secondaryCmp)
+        Span<UnmanagedSpan> terms, bool descending, TSecondaryComparer secondaryCmp, bool nullFirst)
         where TSecondaryComparer : IComparer<int>
     {
         static int Ascending(ref NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
         {
-            var cmp = CompactKeyComparer.Compare(termA, termB);
+            var cmp = CompactKeyComparer.Compare(termA, termB, sorter._nullResult);
             return cmp == 0 ? 
                 sorter.SecondaryComparer.Compare(posA, posB) 
                 : cmp;
@@ -22,20 +22,20 @@ internal static class HeapSorterBuilder
         static int Descending(ref NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer> sorter, UnmanagedSpan termA, int posA, UnmanagedSpan termB, int posB)
         {
             //In first comparer we control the order of parameters, however secondary comparer (and it's inners have to be wrapped in Descending<>)
-            var cmp = CompactKeyComparer.Compare(termB, termA);
+            var cmp = CompactKeyComparer.Compare(termB, termA, sorter._nullResult);
             return cmp == 0 ? 
                 sorter.SecondaryComparer.Compare(posA, posB) 
                 : cmp;
         }
 
         var sorter = new NumericalMaxHeapSorter<UnmanagedSpan, TSecondaryComparer>();
-        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, secondaryCmp);
+        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, secondaryCmp, nullFirst);
         return sorter;
     }
 
 
     public static unsafe TextualMaxHeapSorter<SkipSecondaryComparer> BuildSingleAlphanumericalSorter(Span<int> documents, Span<ByteString> terms,
-        ByteStringContext allocator, bool descending)
+        ByteStringContext allocator, bool descending, bool nullFirst)
     {
         static int CompareAlphanumericalAscending(ref TextualMaxHeapSorter<SkipSecondaryComparer> sorter, ReadOnlySpan<byte> termA, int posA, ReadOnlySpan<byte> termB,
             int posB)
@@ -50,12 +50,12 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new TextualMaxHeapSorter<SkipSecondaryComparer>();
-        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, default);
+        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, default, nullFirst);
         return sorter;
     }
 
     public static unsafe TextualMaxHeapSorter<TSecondaryCmp> BuildCompoundAlphanumericalSorter<TSecondaryCmp>(Span<int> documents, Span<ByteString> terms,
-        ByteStringContext allocator, bool descending, TSecondaryCmp secondaryCmp) where TSecondaryCmp : IComparer<int>
+        ByteStringContext allocator, bool descending, TSecondaryCmp secondaryCmp, bool nullFirst) where TSecondaryCmp : IComparer<int>
     {
         static int CompareAlphanumericalAscending(ref TextualMaxHeapSorter<TSecondaryCmp> sorter, ReadOnlySpan<byte> termA, int posA, ReadOnlySpan<byte> termB, int posB)
         {
@@ -71,12 +71,12 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new TextualMaxHeapSorter<TSecondaryCmp>();
-        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, secondaryCmp);
+        sorter.Init(documents, terms, allocator, descending, descending ? &CompareAlphanumericalDescending : &CompareAlphanumericalAscending, secondaryCmp, nullFirst);
         return sorter;
     }
 
     public static unsafe NumericalMaxHeapSorter<TTermType, SkipSecondaryComparer> BuildSingleNumericalSorter<TTermType>(Span<int> documents, Span<TTermType> terms,
-        bool descending) where TTermType : unmanaged, IComparable
+        bool descending, bool nullFirst) where TTermType : unmanaged, IComparable
     {
         static int Ascending(ref NumericalMaxHeapSorter<TTermType, SkipSecondaryComparer> sorter, TTermType termA, int posA, TTermType termB, int posB)
         {
@@ -89,12 +89,12 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new NumericalMaxHeapSorter<TTermType, SkipSecondaryComparer>();
-        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, default);
+        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, default, nullFirst);
         return sorter;
     }
 
     public static unsafe NumericalMaxHeapSorter<TTermType, TSecondaryCmp> BuildCompoundNumericalSorter<TTermType, TSecondaryCmp>(Span<int> documents,
-        Span<TTermType> terms, bool descending, TSecondaryCmp secondaryCmp)
+        Span<TTermType> terms, bool descending, TSecondaryCmp secondaryCmp, bool nullFirst)
         where TSecondaryCmp : IComparer<int>
         where TTermType : unmanaged, IComparable
     {
@@ -115,7 +115,7 @@ internal static class HeapSorterBuilder
         }
 
         var sorter = new NumericalMaxHeapSorter<TTermType, TSecondaryCmp>();
-        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, secondaryCmp);
+        sorter.Init(documents, terms, null, descending, descending ? &Descending : &Ascending, secondaryCmp, nullFirst);
         return sorter;
     }
 

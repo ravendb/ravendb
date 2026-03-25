@@ -2,7 +2,6 @@ using System.IO;
 using System.Text;
 using FastTests;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

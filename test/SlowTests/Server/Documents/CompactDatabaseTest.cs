@@ -12,7 +12,6 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Voron.Compaction;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents
 {

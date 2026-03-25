@@ -146,6 +146,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected bool DisableCaching;
 
+        protected string QueryTag;
+
         protected ProjectionBehavior? ProjectionBehavior;
 
         public bool IsDistinct => SelectTokens.First?.Value is DistinctToken;
@@ -355,6 +357,18 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("The parameter " + name + " was already added");
 
             QueryParameters[name] = value;
+        }
+
+        /// <summary>
+        /// Sets a user-defined tag on the query request.
+        /// </summary>
+        /// <param name="tag">User-defined query tag.</param>
+        public void WithTag(string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag))
+                throw new ArgumentException("Query tag cannot be null or whitespace.", nameof(tag));
+
+            QueryTag = tag;
         }
 
         /// <inheritdoc cref="IDocumentQuery{T}.GroupBy(string,string[])"/>
@@ -658,6 +672,11 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                     token = WhereToken.Create(op, whereParams.FieldName, null,
                         new WhereToken.WhereOptions(WhereToken.MethodsType.CmpXchg, args, mc.AccessPath, whereParams.Exact));
                 }
+                else if (mc is RavenDocumentQuery.Time dtmc)
+                {
+                    token = WhereToken.Create(op, whereParams.FieldName, null,
+                        new WhereToken.WhereOptions(dtmc.MethodType, args, mc.AccessPath, whereParams.Exact));
+                }
                 else
                 {
                     throw new ArgumentException($"Unknown method {type}");
@@ -839,6 +858,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.GreaterThan, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "*"
                 : TransformValue(new WhereParams
@@ -862,6 +885,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.GreaterThanOrEqual, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "*"
                 : TransformValue(new WhereParams
@@ -885,6 +912,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.LessThan, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "NULL"
                 : TransformValue(new WhereParams
@@ -908,6 +939,10 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var tokens = GetCurrentWhereTokens();
             AppendOperatorIfNeeded(tokens);
             NegateIfNeeded(tokens, fieldName);
+
+            if (IfValueIsMethod(WhereOperator.LessThanOrEqual, new WhereParams { FieldName = fieldName, Value = value, Exact = exact }, tokens))
+                return;
+
             var parameter = AddQueryParameter(value == null
                 ? "NULL"
                 : TransformValue(new WhereParams
@@ -1274,6 +1309,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 WaitForNonStaleResultsTimeout = Timeout,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
+                Tag = QueryTag,
                 ProjectionBehavior = ProjectionBehavior,
                 SkipStatistics = QueryStats.RequestedByUser == false
             };

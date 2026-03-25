@@ -10,7 +10,6 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {

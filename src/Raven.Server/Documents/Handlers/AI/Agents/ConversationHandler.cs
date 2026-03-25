@@ -4,20 +4,26 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Newtonsoft.Json;
+using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
+using Raven.Server.Extensions;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -27,23 +33,27 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using GetRequest = Raven.Client.Documents.Commands.MultiGet.GetRequest;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class ConversationHandler(ServerStore server, DocumentDatabase database)
+public partial class ConversationHandler(ServerStore server, DocumentDatabase database)
 {
+    internal static Action<string, AiUsage> OnUpdateUsage;
+
     public const int DefaultMaxModelIterationsPerCall = 16;
     private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
     private const int DefaultMaxTokensAfterSummarization = 1024;
+    private const string QueryVirtualSubConversationId = "_QueryTools_";
 
     protected ConversationDocument _document;
     private string _conversationId;
-    private RequestBody _request;
+    protected RequestBody _request;
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
-    private int _maxModelIterationsPerCall;
-
+    protected int _maxModelIterationsPerCall;
+    internal List<string> _persistedAttachmentsNames;
     public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
@@ -52,7 +62,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
-        _maxModelIterationsPerCall = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+        _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
     }
 
     protected virtual async Task InitializeDocument(DocumentsOperationContext context)
@@ -74,30 +84,31 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 };
             }
 
-            if (RequestBody.HasUserPrompt(_request.Content) == false)
+            if (RequestBody.HasUserPrompt(_request.Content) == false && _request.Attachments is { Count: > 0 } == false && _request.AttachmentCommands?.ParsedCommands is {Count: > 0} == false)
             {
                 throw new InvalidOperationException(
                     $"Cannot start a new conversation '{_conversationId}' without a user prompt.");
             }
 
+            ValidateParameterValues(_request.Parameters);
             _document = new ConversationDocument(agentId, _request.Parameters);
+            _document.Id = await GetDocumentIdAsync();
 
             if (_request.CreationOptions.ExpirationInSec.HasValue)
             {
                 _document.Expires = TimeSpan.FromSeconds(_request.CreationOptions.ExpirationInSec.Value);
             }
 
-            _document.Initialize(context, _configuration);
-            if (_document.InitialQueries(context, _configuration) is { } queries)
+            _document.Initialize(context, _configuration, resetRemainingToolIterations: true, _maxModelIterationsPerCall);
+            if (_document.InitialOperations(context, _configuration) is { } queries)
             {
                 // run initial tool calls...
-                await HandleQueryToolCallsAsync(context, queries);
+                await HandleQueryAndAgentCallsAsync(context, queries);
             }
         }
         else
         {
-            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _configuration);
-
+            _document = ConversationDocument.ToDocument(_conversationId, conversation.Data, _maxModelIterationsPerCall);
             if (_document.Agent != agentId)
             {
                 throw new InvalidOperationException(
@@ -119,7 +130,214 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 _document.ChangeVector = conversation.ChangeVector;
             }
         }
+
+        if (_request.AttachmentCommands?.ParsedCommands is { Count: >0})
+        {
+            using var it = _request.AttachmentCommands.AttachmentStreams?.GetEnumerator() ?? default;
+            foreach (var cmd in _request.AttachmentCommands.ParsedCommands)
+            {
+                switch (cmd.Type)
+                {
+                    case CommandType.AttachmentCOPY:
+                        cmd.DestinationId = _document.Id;
+                        ConversationHandlerAttachments.RetrieveAndAddAttachment(database, context, _request, _conversationId, cmd.Name, cmd.Id);
+                        break;
+                    case CommandType.AttachmentPUT:
+                        cmd.Id = _document.Id;
+                        if (it.MoveNext() == false) 
+                            throw new InvalidOperationException($"Missing attachment stream for '{cmd.Name}' in conversation '{_conversationId}'.");
+
+                        it.Current.Stream.Position =0;
+
+                        ConversationHandlerAttachments.AddPutAttachmentFromStream(_request, it.Current.Stream, cmd.Name, cmd.ContentType);
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"{cmd.Type} is not supported");
+                }
+            }
+        }
+        _persistedAttachmentsNames = ConversationHandlerAttachments.GetConversationPersistedAttachmentsNames(database, context, _document.Id);
     }
+
+    private void ValidateParameterValues(BlittableJsonReaderObject requestParameters)
+    {
+        // Validate that the provided parameter values match the expected types in the configuration.
+
+        if (_configuration.Parameters == null || requestParameters == null)
+            return;
+
+        foreach (var configParam in _configuration.Parameters)
+        {
+            if (requestParameters.TryGetMember(configParam.Name, out object value) == false)
+                continue;
+
+            value = GetAiConversationParameter(configParam.Name, value).Value;
+            var expectedType = configParam.Type;
+
+            if (expectedType == AiAgentParameterValueType.Default)
+                continue;
+
+            if (value is BlittableJsonReaderArray { Length: 0 })
+            {
+                if (expectedType is not (AiAgentParameterValueType.ArrayOfString or 
+                                            AiAgentParameterValueType.ArrayOfBoolean or 
+                                            AiAgentParameterValueType.ArrayOfNumber))
+                    throw new InvalidCastException(
+                        $"Parameter '{configParam.Name}' has invalid type. " +
+                        $"Expected: {expectedType}, " +
+                        $"Actual: Array (Empty), " +
+                        $"Value: {value}");
+
+                continue;
+            }
+
+            if (GetValueType(value, out var actualType, out var unsupportedType) == false)
+                throw new InvalidCastException(
+                    $"Parameter '{configParam.Name}' has unsupported type. " +
+                    $"Actual: {unsupportedType}");
+
+            if (actualType != expectedType)
+                throw new InvalidCastException(
+                    $"Parameter '{configParam.Name}' has invalid type. " +
+                    $"Expected: {expectedType}, " +
+                    $"Actual: {actualType}, " +
+                    $"Value: {value}");
+        }
+    }
+
+    private static bool GetValueType(object value, out AiAgentParameterValueType type, out string unsupportedType)
+    {
+        type = default;
+        unsupportedType = null;
+
+        switch (value)
+        {
+            case null:
+                type = AiAgentParameterValueType.Null;
+                return true;
+            case string:
+            case LazyStringValue:
+            case LazyCompressedStringValue:
+                type = AiAgentParameterValueType.String;
+                return true;
+
+            case int:
+            case long:
+            case float:
+            case double:
+            case decimal:
+            case LazyNumberValue:
+            case byte:
+            case short:
+            case sbyte:
+            case ushort:
+            case uint:
+            case ulong:
+                type = AiAgentParameterValueType.Number;
+                return true;
+
+            case bool:
+                type = AiAgentParameterValueType.Boolean;
+                return true;
+
+            case BlittableJsonReaderArray array:
+                bool first = true;
+                var elementType = AiAgentParameterValueType.Default;
+
+                // make sure all elements have the same type
+                // make sure all elements have a valid type
+                foreach (var element in array)
+                {
+                    if (GetValueType(element, out var curType, out var elementUnsupportedType) == false)
+                    {
+                        unsupportedType = $"Array contains an element of unsupported type '{elementUnsupportedType}'.";
+                        return false;
+                    }
+
+                    if (curType is AiAgentParameterValueType.ArrayOfBoolean or AiAgentParameterValueType.ArrayOfNumber or AiAgentParameterValueType.ArrayOfString)
+                    {
+                        unsupportedType = "Array of arrays.";
+                        return false;
+                    }
+
+                    if (first)
+                    {
+                        first = false;
+                        elementType = curType;
+                        continue;
+                    }
+
+                    if (elementType != curType)
+                    {
+                        unsupportedType = $"Array of mixed element types: '{elementType}' and '{curType}'.";
+                        return false;
+                    }
+                }
+
+                type = elementType switch
+                {
+                    AiAgentParameterValueType.String => AiAgentParameterValueType.ArrayOfString,
+                    AiAgentParameterValueType.Number => AiAgentParameterValueType.ArrayOfNumber,
+                    AiAgentParameterValueType.Boolean => AiAgentParameterValueType.ArrayOfBoolean,
+                    _ => default
+                };
+
+                if (type == default)
+                {
+                    unsupportedType = $"Array of unsupported element type '{elementType}'.";
+                    return false;
+                }
+
+                return true;
+            case BlittableJsonReaderObject:
+                unsupportedType = "Object";
+                return false;
+            default:
+                unsupportedType = value.GetType().Name;
+                return false;
+        }
+    }
+
+    public static AiConversationParameter GetAiConversationParameter(string paramName, object paramValue)
+    {
+        var sendToModel = true; // At the conversation level
+        var realValue = paramValue;
+        if (paramValue is BlittableJsonReaderObject obj)
+        {
+            // Backward compatibility:
+            // * Old payload format:
+            // {
+            //     "maxBudgetNis": 3500
+            // }
+            // * New payload format:
+            // {
+            //     "maxBudgetNis": {
+            //         "value": 3500,
+            //         "sendToModel": true
+            //     }
+            // }
+            // If the parameter is not an object with a "value" field, we assume it's the old format and use the value directly.
+
+            if (obj.TryGetMember(nameof(AiConversationParameter.Value), out realValue) == false)
+            {
+                // Should never reach here - Object parameters are not supported
+                throw new InvalidCastException(
+                    $"Parameter '{paramName}' has unsupported type. " +
+                    $"Actual: Object");
+            }
+            if (obj.TryGet(nameof(AiConversationParameter.SendToModel), out sendToModel) == false)
+                sendToModel = true; //default
+        }
+
+        return new AiConversationParameter
+        {
+            Value = realValue,
+            SendToModel = sendToModel
+        };
+    }
+
+
 
     private ChatCompletionClient _client;
 
@@ -134,7 +352,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return _client = ChatCompletionClient.CreateChatCompletionClient(database.DocumentsStorage.ContextPool, connection);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> StreamingTalkAsync(
+    public static int GetMaxModelIterationsPerCall(RequestBody body, AiAgentConfiguration configuration)
+        => body.CreationOptions.MaxModelIterationsPerCall ?? configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+
+    public async Task<AiInternalConversationResult> StreamingTalkAsync(
         JsonOperationContext context,
         string firstStreamPropertyPath,
         Func<Memory<byte>, Task> streaming,
@@ -144,7 +365,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         return await RunInternalAsync(context, talker, token);
     }
         
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> TalkAsync(
+    public async Task<AiInternalConversationResult> TalkAsync(
         JsonOperationContext context,
         CancellationToken token = default)
     {
@@ -154,11 +375,15 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
     private TimeSpan _elapsed;
 
-    private async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> RunInternalAsync(
+    private async Task<AiInternalConversationResult> RunInternalAsync(
         JsonOperationContext context,
         Talker talker, CancellationToken token)
     {
         talker.Init();
+        var toolsIterations = 0;
+
+        // Resolve deferred attachments before talking to the model
+        await ResolveDeferredAttachmentsAsync(_request.Attachments, token);
 
         AiResponse r = default;
         List<BlittableJsonReaderObject> historyDocs = default;
@@ -166,16 +391,28 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         var sw = Stopwatch.StartNew();
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
+        bool isFirstIteration = true;
         while (shouldContinueConversation)
         {
-            using var request = talker.CreateCompletionRequest(_request.Attachments);
+            var attachments = _request.Attachments ?? new List<AiAttachment>();
 
-            r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
+            database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
+
+            using var request = talker.CreateCompletionRequest(attachments);
             
+            r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
+
             var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
+            //we want that message only on when we upload an attachment and not when the internal tool is called.
+            if (isFirstIteration && _request.AttachmentCommands?.ParsedCommands.Count > 0)
+            {
+                AddMessageWithAttachmentsName(context, isFirstIteration);
+            }
+            isFirstIteration = false;
 
             _document.AddMessage(context, r.Message, currentTurnUsage);
             _document.UpdateUsage(talker.AiUsage);
+            OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
 
             if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
             {
@@ -193,6 +430,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 }
             }
 
+            toolsIterations++;
             if (r.Type is AiResponseType.Result)
             {
                 _document.RemainingToolIterations = _maxModelIterationsPerCall;
@@ -200,10 +438,16 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
             else
             {
-                await HandleQueryToolCallsAsync(context, r.ToolCalls);
+                var iterations = await HandleQueryAndAgentCallsAsync(context, r.ToolCalls);
+                toolsIterations += iterations;
                 if (TryGetUserTools(context, r.ToolCalls))
                 {
                     shouldContinueConversation = false;
+                }
+                else
+                {
+                    //should close the tool calls that were handled internally
+                    HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
                 }
             }
 
@@ -227,13 +471,48 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             database.NotificationCenter.Add(
                 ExceededTokenThresholdDetails.CreateAlert(pendingAlertDetails, database.Name));
         }
-        return (r.Result, talker.AiUsage);
+
+        return new AiInternalConversationResult
+        {
+            Response = r.Result,
+            Usage = talker.AiUsage,
+            ToolsIterations = toolsIterations,
+        };
+    }
+
+    private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
+    {
+        var attachmentNames = string.Join(", ", _request.AttachmentCommands.ParsedCommands.Select(c => c.Name));
+        _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+            [ChatCompletionClient.Constants.ResponseFields.Content] = $"[Attachments: {attachmentNames}]"
+        }, "user/attachments-msg"), usage: null); // usage: null
+    }
+
+    private void HandleInternalSystemActions(JsonOperationContext context, List<AiAgentActionRequest> toolCalls)
+    {
+        if (ConversationHandlerAttachments.NeedsReadTransactionForInternalActions(toolCalls) == false)
+            return;
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docContext))
+        using (docContext.OpenReadTransaction())
+        {
+            ConversationHandlerAttachments.HandleInternalSystemActions(database, context, docContext, _document, _request, _conversationId, toolCalls);
+        }
     }
 
     private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiUsage aiUsage, CancellationToken token)
     {
         var reduction = _configuration.ChatTrimming;
         if (reduction == null || _document.OpenActionCalls.Count > 0)
+            return null;
+
+        // do not use reduction if attachments are being added in the current request.
+        // Attachments cause single-turn spike in token usage.
+        // which usually trigger chat reduction that is not needed
+        // as the raw file data is not persisted on the messages we send to the LLM.
+        if (_request.AttachmentCommands?.ParsedCommands.Count > 0)
             return null;
 
         TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
@@ -312,7 +591,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }, "system/summary/final/msg"));
 
         var usage = new AiUsage();
-        var tools = ConversationDocument.GenerateTools(context, configuration);
+        var tools = client.GenerateTools(context, configuration, this);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
         var result = await client.CompleteAsync(context, request, usage, token);
 
@@ -321,8 +600,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
 
         oldChat.Messages.Clear();
 
-        oldChat.Initialize(context, configuration, resetRemainingToolIterations: false);
-
+        oldChat.Initialize(context, configuration, resetRemainingToolIterations: false, _maxModelIterationsPerCall);
         oldChat.AddMessage(context,
             context.ReadObject(
                 new DynamicJsonValue
@@ -333,6 +611,8 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
                 "system/msg"), usage);
 
         oldChat.UpdateUsage(usage);
+        OnUpdateUsage?.Invoke($"summary/{database.Name}", usage);
+
         oldChat.CurrentUsage = new AiUsage();
     }
 
@@ -340,14 +620,27 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
     {
         foreach (var call in toolCalls)
         {
-            if (_configuration.FindAction(call.Name) == null)
+            if (FindToolFrom(_configuration, call.Name) is not AiAgentToolAction)
                 continue;
 
-            _document.OpenActionCalls.Add(call.Id,
-                new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, _document.Parameters).ToString() });
+            _document.OpenActionCalls.Add(call.Id, new AiAgentActionRequest
+            {
+                ToolId = call.Id,
+                Name = call.Name,
+                Arguments = CreateParameters(context, call, _document.Parameters).ToString(),
+                Type = AiAgentActionRequestType.UserAction
+            });
         }
 
-        return _document.OpenActionCalls.Count > 0;
+        foreach (var openActionCall in _document.OpenActionCalls)
+        {
+            if (openActionCall.Value.IsInternalToolCall() == false)
+            {
+                return true; //we have at least one user tool to handle
+            }
+        }
+        // no user tools to handle - all were internal system actions/ there are no actions
+        return false;
     }
 
     public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
@@ -363,10 +656,10 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             // Important: we *override* any parameter from the model with the user provided values
             // to ensure the safety & security of this feature. Model cannot override those values, period.
             parameters.GetPropertyByIndex(i, ref prop);
-            args.Modifications[prop.Name] = prop.Value;
+            args.Modifications[prop.Name] = GetAiConversationParameter(prop.Name, prop.Value).Value;
         }
 
-        return args;
+        return context.ReadObject(args, "args");
     }
 
     public AiConnectionString GetAiConnectionString()
@@ -380,86 +673,29 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
     }
 
-    public async Task HandleQueryToolCallsAsync(JsonOperationContext context, List<AiToolCall> toolCalls)
+    public Task<int> HandleQueryAndAgentCallsAsync(JsonOperationContext context, List<AiToolCall> toolCalls)
     {
         if (toolCalls == null || toolCalls.Count == 0)
-            return;
+            return Task.FromResult(0);
 
-        DynamicJsonArray reqs = [];
-        List<string> toolCallsIds = [];
-        var queryUrl = $"/databases/{database.Name}/queries";
+        Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs = [];
         foreach (var call in toolCalls)
         {
-            var q = _configuration.FindQuery(call.Name);
-            if (q is null)
-                continue;
-
-            toolCallsIds.Add(call.Id);
-            reqs.Add(new DynamicJsonValue
+            switch (FindToolFrom(_configuration, call.Name))
             {
-                [nameof(GetRequest.Url)] = queryUrl,
-                [nameof(GetRequest.Query)] = null,
-                [nameof(GetRequest.Method)] = "POST",
-                [nameof(GetRequest.Content)] = new DynamicJsonValue
-                {
-                    [nameof(IndexQuery.Query)] = q.Query,
-                    [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, _document.Parameters)
-                }
-            });
-        }
-
-        if (reqs.Count == 0)
-            return;
-
-        var multiGetHandler = new MultiGetHandler();
-        multiGetHandler.Init(new RequestHandlerContext
-        {
-            Database = database,
-            RavenServer = server.Server,
-            HttpContext = new DefaultHttpContext()
-        });
-
-        multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
-
-        using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
-        using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
-        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
-        {
-            await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
-            memoryStream.Position = 0;
-
-            if (TrafficWatchManager.HasRegisteredClients)
-                RavenServerStartup.LogTrafficWatch(multiGetHandler.HttpContext, elapsedMilliseconds: 0, database.Name);
-
-            using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
-            if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
-                throw new InvalidOperationException("Missing Results from multi-get reply");
-
-            for (int i = 0; i < results.Length; i++)
-            {
-                var queryResponse = (BlittableJsonReaderObject)results[i];
-                if (queryResponse.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
-                    throw new InvalidOperationException("Missing status code");
-                if (queryResponse.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject queryResponseResult) is false)
-                    throw new InvalidOperationException("Missing Result from query request output");
-
-                if (statusCode != 200)
-                    throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
-
-                if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
-                    throw new InvalidOperationException("Missing Results from query output");
-
-                RemoveNonEssentialFieldsFromMetadata(queryResult);
-
-                _document.AddMessage(context, context.ReadObject(
-                    new DynamicJsonValue
-                    {
-                        ["tool_call_id"] = toolCallsIds[i],
-                        ["role"] = "tool",
-                        ["content"] = queryResult.Clone().ToString()
-                    }, "tool-call/response"), usage: null);
+                case AiAgentToolQuery q:
+                    BuildQueryRequest(context, _document, reqs, q, call);
+                    break;
+                case AiAgentToolSubAgent agent:
+                    BuildAgentRequest(context, _document, call, agent, reqs);
+                    break;
             }
         }
+
+        if (reqs.Count is 0)
+            return Task.FromResult(0);
+
+        return ExecuteSubAgentAndQueryRequestsAsync(context, reqs);
     }
 
     private static void RemoveNonEssentialFieldsFromMetadata(BlittableJsonReaderArray queryResult)
@@ -482,41 +718,134 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }
     }
 
+    private void BuildQueryRequest(JsonOperationContext context, ConversationDocument document, Dictionary<string, List<(AiToolCall, DynamicJsonValue)>> reqs, AiAgentToolQuery q, AiToolCall call)
+    {
+        reqs.GetOrAdd(QueryVirtualSubConversationId).Add((call, new DynamicJsonValue
+            {
+                [nameof(GetRequest.Url)] = $"/databases/{database.Name}/queries",
+                [nameof(GetRequest.Query)] = null,
+                [nameof(GetRequest.Method)] = "POST",
+                [nameof(GetRequest.Content)] = new DynamicJsonValue
+                {
+                    [nameof(IndexQuery.Query)] = q.Query,
+                    [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, document.Parameters)
+                }
+            }));
+    }
+
+    private object FindToolFrom(AiAgentConfiguration self, string name)
+    {
+        var query = self.FindQuery(name);
+        if (query != null)
+            return query;
+
+        var subAgent = self.FindSubAgent(name);
+        if (subAgent != null)
+            return subAgent;
+
+        var action = self.FindAction(name);
+        return action;
+    }
+
+    public AiAgentConfiguration GetAiAgentConfiguration(string identifier)
+    {
+        using (server.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+        using (ctx.OpenReadTransaction())
+        using (var record = server.Cluster.ReadRawDatabaseRecord(ctx, database.Name))
+        {
+            if (record.TryGetAiAgent(identifier, out var configuration) == false)
+                throw new ArgumentException($"AI Agent '{identifier}' doesn't exists");
+
+            return configuration;
+        }
+    }
+
+
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
-        if (_conversationId[^1] == '|')
-        {
-            var r = await server.GenerateClusterIdentityAsync(_conversationId, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
-            _conversationId = r.ClusterId;
-        }
-
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
-        var cmd = new PutConversationCommand(_conversationId, _document, historyDocs, changeVectorLsv, _configuration, database);
+        var cmd = new PutConversationCommand(_document, historyDocs, changeVectorLsv, _configuration, database)
+        {
+            Attachments = _request.AttachmentCommands
+        };
         await database.TxMerger.Enqueue(cmd);
         _document.ChangeVector = cmd.PutResult.ChangeVector;
         return cmd.PutResult.Id;
     }
 
+    private async Task<string> GetDocumentIdAsync()
+    {
+        var id = _conversationId;
+        if (id[^1] == '|')
+        {
+            var r = await server.GenerateClusterIdentityAsync(id, database.IdentityPartsSeparator, database.Name, _raftId ?? Guid.NewGuid().ToString());
+            id = r.ClusterId;
+        }
+
+        return database.DocumentsStorage.DocumentPut.BuildDocumentId(id, database.DocumentsStorage.GenerateNextEtag(), out _);
+    }
 
     private async Task<bool> TryHandleActionResponses(JsonOperationContext context)
     {
         var hasActionResponse = _request.ActionResponses is { Length: > 0 } ;
-        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) || 
-                            _request.ArtificialActions is { Length: > 0 }; // equivalent to user prompt, since it is both tool & response in one shot
+        var hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
+                            _request.ArtificialActions is { Length: > 0 } || // equivalent to user prompt, since it is both tool & response in one shot
+                            _request.Attachments is { Count: > 0 }; // Attachments-only request counts as enough "user input" (no text prompt required) to advance with the conversation.
 
         if (hasActionResponse && hasUserPrompt)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' with open action calls and user prompt.");
+
+        Dictionary<string, SubAgentActionResponse> subAgentsActions = null;
 
         if (_request.ActionResponses != null)
         {
             foreach (BlittableJsonReaderObject tool in _request.ActionResponses)
             {
                 var t = JsonDeserializationClient.ActionResponse(tool);
-                if (_document.OpenActionCalls.Remove(t.ToolId) == false)
-                    throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
+                var split = t.ToolId.Split('$', 2); // split by first '$'
+                var rootToolId = split[0];
 
-                _document.AddToolResponse(context, t.ToolId, t.Content);
+                if (_document.OpenActionCalls.TryGetValue(rootToolId, out var action) == false)
+                    throw new InvalidOperationException($"{rootToolId} is an unknown action ID for conversation '{_conversationId}'");
+
+                if (action.IsInternalToolCall())
+                {
+                    continue;
+                }
+
+                if (action.SubConversationId == null)
+                {
+                    if (_document.OpenActionCalls.Remove(t.ToolId) == false)
+                        throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{_conversationId}'");
+
+                    _document.AddMessage(context, context.ReadObject(
+                        new DynamicJsonValue
+                        {
+                            [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = t.ToolId,
+                            [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                            [ChatCompletionClient.Constants.ResponseFields.Content] = t.Content
+                        },
+                        "user/tool"), usage: null);
+                }
+                else
+                {
+                    var childToolId = split[1];
+                    Debug.Assert(action.Type == AiAgentActionRequestType.SubAgent, "action.Type != AiAgentActionRequestType.SubAgent");
+
+                    subAgentsActions ??= new Dictionary<string, SubAgentActionResponse>();
+
+                    // Aggregate sub-agent responses per root tool call (one group per sub-agent call).
+                    var subAgent = GetOrAddSubAgentsActionResponses(subAgentsActions, action, rootToolId); // get or add from subAgentsActions
+
+                    subAgent.Responses.Add(new AiAgentActionResponse
+                    {
+                        ToolId = childToolId, // sub call ID
+                        Content = t.Content,
+                    });
+                }
             }
+
+            await HandleSubAgentCalls(context, subAgentsActions);
         }
 
         if (_request.ArtificialActions != null)
@@ -532,16 +861,26 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
             }
         }
 
-        if (_document.OpenActionCalls.Count > 0)
+        if (_document.OpenActionCalls.Any(x => x.Value.Type != AiAgentActionRequestType.SubAgent) || _childUserCalls.Count > 0)
         {
-            // We have pending tool-call results from the user;
-            // skip reduction - persist the document now without history,
-            // ensuring we can recover if TalkAsync fails.
-            await TryPersistAsync(context, historyDocs: null);
-            return false;
+            Debug.Assert(_document.OpenActionCalls.Any(x => x.Value.Type == AiAgentActionRequestType.SubAgent) == _childUserCalls.Count > 0,
+                "_document.OpenActionCalls.Any(x => x.Value.Type == AiAgentActionRequestType.SubAgent) != _childUserCalls.Count > 0");
+           
+            foreach (var openCall in _document.OpenActionCalls.Values)
+            {
+                if (openCall.IsInternalToolCall() == false)
+                {
+                    // We have pending tool-call results from the user;
+                    // skip reduction - persist the document now without history,
+                    // ensuring we can recover if TalkAsync fails.
+                    await TryPersistAsync(context, historyDocs: null);
+                    return false;
+                }
+            }
+            HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
         }
 
-        if (hasActionResponse == false && hasUserPrompt == false)
+        if (hasActionResponse == false && hasUserPrompt == false && _request.Attachments == null)
             throw new InvalidOperationException($"Cannot have a conversation '{_conversationId}' without open action calls or user prompt.");
 
 
@@ -549,27 +888,215 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         {
             _document.AddMessage(context, context.ReadObject(new DynamicJsonValue
             {
-                ["role"] = "user",
-                ["content"] = _request.Content
+                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.ResponseFields.Content] = _request.Content
             }, "user/msg"), usage: null);
         }
 
         return true;
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleRequest(
+    private string GetToolResultContent(BlittableJsonReaderArray result)
+    {
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext clone))
+        {
+            RemoveNonEssentialFieldsFromMetadata(result);
+            return result.Clone(clone).ToString();
+        }
+    }
+
+    private async Task<int> ExecuteSubAgentAndQueryRequestsAsync(JsonOperationContext context, Dictionary<string, List<(AiToolCall Call, DynamicJsonValue Req)>> reqs)
+    {
+        List<Task<SubConversationResult>> tasks = [];
+        foreach (var (conversationId, conversationReqs) in reqs)
+        {
+            _document.SubConversationIds.Add(conversationId);
+            tasks.Add(ExecuteSingleSubConversationToolCallsAsync(conversationId, conversationReqs));
+        }
+
+        try
+        {
+            await Task.WhenAll(tasks);
+        }
+        catch
+        {
+            // explicitly ignoring this, since we'll handle the error after this
+        }
+
+        List<Exception> exceptions = new();
+        var toolsIterations = 0;
+        foreach (var t in tasks)
+        {
+            try
+            {
+                var r = await t;
+                toolsIterations += r.ToolsIterations;
+                using (r.Disposable)
+                {
+                    foreach (var m in r.Messages)
+                    {
+                        _document.AddMessage(context, m.Clone(context), usage: null);
+                    }
+
+                    foreach (var callId in r.OpenToolCallsToRemove)
+                    {
+                        _document.OpenActionCalls.Remove(callId, out _);
+                    }
+
+                    foreach (var (key, value) in r.ChildUserCalls)
+                    {
+                        AddChildrenUserCall(_childUserCalls, key, value);
+                        _document.Messages.Add(context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleInternalValue,
+                                [ChatCompletionClient.Constants.ResponseFields.Type] = "sub-agent-action-call",
+                                [ChatCompletionClient.Constants.ResponseFields.Content] = $"[sub-agent called action-tool '{value.Name}']",
+                                [ChatCompletionClient.Constants.ResponseFields.ToolName] = value.Name,
+                                [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = value.SubConversationId,
+                            }, "tool-call/sub-agent-action-tool"));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+            }
+        }
+
+        if (exceptions.Count > 0)
+            throw new AggregateException(exceptions).ExtractSingleInnerException();
+
+        _document.RemainingToolIterations = int.Max(_document.RemainingToolIterations - toolsIterations, 0);
+        return toolsIterations;
+    }
+
+    private async Task<SubConversationResult> ExecuteSingleSubConversationToolCallsAsync(string conversationId, List<(AiToolCall Call, DynamicJsonValue Req)> requests)
+    {
+        IDisposable disposable = null;
+
+        try
+        {
+            disposable = database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context);
+
+            var result = new SubConversationResult(disposable);
+
+            await foreach (var (getRequestResult, i) in ExecuteMultiRequestsAsync(context, new DynamicJsonArray(requests.Select(x => x.Req))))
+            {
+                var currentCall = requests[i].Call;
+                var toolCall = FindToolFrom(_configuration, currentCall.Name);
+                if (toolCall == null)
+                    throw new InvalidOperationException($"Ai-Agent has no tool in name '{currentCall.Name}'");
+
+                switch (toolCall)
+                {
+                    case AiAgentToolSubAgent:
+                        try
+                        {
+                            var subAgentResult = getRequestResult.Invoke();
+                            if (TryCloseSubAgentCall(context, conversationId, subAgentResult, currentCall, result) == false)
+                                return result;
+                        }
+                        catch (MissingAiAgentParameterException)
+                        {
+                            // Missing parameter detected in sub-agent execution
+                            throw;
+                        }
+                        catch (Exception e)
+                        {
+                            result.Messages.Add(context.ReadObject(
+                                    new DynamicJsonValue
+                                    {
+                                        [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = currentCall.Id,
+                                        [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                                        [ChatCompletionClient.Constants.ResponseFields.Content] = "Error has been occurred during the tool call execution: " + AiConversation.AiActionContext<object>.CreateErrorMessageForLlm(e),
+                                        [ChatCompletionClient.Constants.ResponseFields.SubConversationId] = conversationId,
+                                    }, "tool-call/response"));
+                            result.OpenToolCallsToRemove.Add(currentCall.Id);
+                        }
+                        break;
+                    case AiAgentToolQuery:
+                        var requestResult = getRequestResult.Invoke();
+                        if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                            throw new InvalidOperationException($"Query output is missing the '{nameof(QueryResult.Results)}' field. (Query - Id: {currentCall.Id}, Name: {currentCall.Name})");
+
+                        result.Messages.Add(context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                [ChatCompletionClient.Constants.ResponseFields.ToolCallId] = currentCall.Id,
+                                [ChatCompletionClient.Constants.ResponseFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleToolValue,
+                                [ChatCompletionClient.Constants.ResponseFields.Content] = GetToolResultContent(queryResult)
+                            }, "tool-call/response"));
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Type mismatch for tool '{currentCall.Name}' in sub-conversation '{conversationId}'. " +
+                            $"Expected type: '{nameof(AiAgentToolSubAgent)}' or '{nameof(AiAgentToolQuery)}', Actual type: '{toolCall.GetType().Name}'.");
+                }
+            }
+
+            return result;
+        }
+        catch
+        {
+            disposable?.Dispose();
+            throw;
+        }
+    }
+
+    private async IAsyncEnumerable<(Func<BlittableJsonReaderObject>, int)> ExecuteMultiRequestsAsync(JsonOperationContext context, DynamicJsonArray reqs)
+    {
+        var multiGetHandler = new MultiGetHandler();
+        multiGetHandler.Init(new RequestHandlerContext
+        {
+            Database = database,
+            RavenServer = server.Server,
+            HttpContext = new DefaultHttpContext()
+        });
+
+        multiGetHandler.HttpContext.Features.Set<IHttpAuthenticationFeature>(Authentication);
+
+        using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
+        using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
+        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+        {
+            await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
+            memoryStream.Position = 0;
+            using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
+            if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
+                throw new InvalidOperationException("Missing Results from multi-get reply");
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                var response = (BlittableJsonReaderObject)results[i];
+                if (response.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
+                    throw new InvalidOperationException("Missing status code");
+                if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
+                    throw new InvalidOperationException("Missing Result from query request output");
+
+                yield return (() =>
+                {
+                    if (statusCode != 200)
+                        throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
+                    return requestResult;
+                }, i);
+            }
+        }
+    }
+
+    public async Task<AiInternalConversationResult> HandleRequest(
         DocumentsOperationContext context,
         CancellationToken token)
     {
         await InitializeDocument(context);
 
         if (await TryHandleActionResponses(context) is false)
-            return default;
+            return AiInternalConversationResult.Default;
 
         return await TalkAsync(context, token: token);
     }
 
-    public async Task<(BlittableJsonReaderObject Response, AiUsage Usage)> HandleStreamingRequest(
+    public async Task<AiInternalConversationResult> HandleStreamingRequest(
         DocumentsOperationContext context,
         Stream outputStream,
         string streamPropertyPath,
@@ -578,7 +1105,7 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         await InitializeDocument(context);
 
         if (await TryHandleActionResponses(context) is false)
-            return default;
+            return AiInternalConversationResult.Default;
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>
@@ -590,6 +1117,26 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         }, token: token);
     }
 
+    private async Task ResolveDeferredAttachmentsAsync(List<AiAttachment> attachments, CancellationToken token)
+    {
+        if (attachments == null)
+            return;
+
+        var remote = database.DocumentsStorage.AttachmentsStorage.RemoteAttachmentsStorage;
+
+        foreach (var attachment in attachments)
+        {
+            if (attachment.Source == AiAttachmentSource.Deferred)
+            {
+                var sw = Stopwatch.StartNew();
+                // Resolve the attachment data asynchronously
+                attachment.Data = await remote.GetAttachmentDataAsBase64Async(attachment.RemoteStorageId, attachment.Data, attachment.Type, token);
+                attachment.DownloadDurationInMs = sw.ElapsedMilliseconds;
+                attachment.Source = AiAttachmentSource.FromAttachment;
+            }
+        }
+    }
+
     private static readonly string SummarizationOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new SummarizationSampleObject()));
 
     private class SummarizationSampleObject
@@ -597,17 +1144,41 @@ internal class ConversationHandler(ServerStore server, DocumentDatabase database
         public string Answer = "Summary of the following chat messages history";
     }
 
-    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
+    public virtual DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
     {
         return new DynamicJsonValue
         {
             [nameof(ConversationResult<object>.ConversationId)] = _conversationId,
             [nameof(ConversationResult<object>.ChangeVector)] = _document.ChangeVector,
             [nameof(ConversationResult<object>.Response)] = response,
-            [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(_document.OpenActionCalls.Select(t => t.Value.ToJson())),
+            [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(GetUserActions()),
             [nameof(ConversationResult<object>.TotalUsage)] = _document.TotalUsage.ToJson(),
             [nameof(ConversationResult<object>.Usage)] = _document.CurrentUsage.ToJson(),
-            [nameof(ConversationResult<object>.Elapsed)] = _elapsed
+            [nameof(ConversationResult<object>.Elapsed)] = _elapsed,
+            [nameof(ConversationResult<object>.ToolsIterations)] = toolsIterations
         };
+    }
+
+    private IEnumerable<DynamicJsonValue> GetUserActions()
+    {
+        foreach (var action in _childUserCalls)
+        {
+            action.Value.ToolId = $"{action.Value.ToolId}${action.Key}";
+            yield return action.Value.ToJson();
+        }
+
+        foreach (var action in _document.OpenActionCalls)
+        {
+            if (action.Value.IsInternalToolCall())
+                continue;
+
+            if (action.Value.Type == AiAgentActionRequestType.SubAgent)
+                continue;
+
+            // replace with the actual tool call ID
+            // for non-sub-agent user actions, it is identical
+            action.Value.ToolId = action.Key;
+            yield return action.Value.ToJson();
+        }
     }
 }

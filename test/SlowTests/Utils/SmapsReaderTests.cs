@@ -8,7 +8,6 @@ using Sparrow;
 using Sparrow.Server.Platform.Posix;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Utils
 {

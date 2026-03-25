@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 
 namespace FastTests.Server.Documents.PeriodicBackup

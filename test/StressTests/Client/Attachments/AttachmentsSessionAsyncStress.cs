@@ -2,7 +2,6 @@
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
@@ -17,7 +16,7 @@ namespace StressTests.Client.Attachments
         [InlineData(1_000_000)]
         public async Task PutLotOfAttachments(int count)
         {
-            using (var stress = new AttachmentsSessionAsync(Output))
+            await using (var stress = new AttachmentsSessionAsync(Output))
             {
                 await stress.PutLotOfAttachments(count);
             }
@@ -27,7 +26,7 @@ namespace StressTests.Client.Attachments
         [InlineData(50_000)]
         public async Task PutLotOfAttachments32(int count)
         {
-            using (var stress = new AttachmentsSessionAsync(Output))
+            await using (var stress = new AttachmentsSessionAsync(Output))
             {
                 await stress.PutLotOfAttachments(count);
             }

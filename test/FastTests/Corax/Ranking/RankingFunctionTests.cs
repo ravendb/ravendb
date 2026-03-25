@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Analyzers;
 using Corax.Querying;
@@ -14,7 +15,6 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -195,11 +195,11 @@ public class RankingFunctionTests : StorageTest
         indexWriter.Commit();
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         _context.Dispose();
         _mapping.Dispose();
-        base.Dispose();
+        await base.DisposeAsync();
     }
 
     private class EntryData

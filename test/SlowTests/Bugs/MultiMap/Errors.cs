@@ -4,7 +4,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs.MultiMap
 {
@@ -31,7 +30,7 @@ namespace SlowTests.Bugs.MultiMap
                                                             Name = "test"
                                                         }})));
 
-                Assert.Contains(@"Map and Reduce functions of a index must return identical types.
+                RavenTestHelper.AssertContainsRespectingNewLines(@"Map and Reduce functions of a index must return identical types.
 Baseline function		: from user in docs.Users select new { user.Username }
 Non matching function	: from post in docs.Posts select new { post.Title }
 
@@ -60,7 +59,7 @@ Additional fields		: Title", exception.Message);
                                                             Name = "test"
                                                         }})));
 
-                Assert.Contains(@"Map and Reduce functions of a index must return identical types.
+                RavenTestHelper.AssertContainsRespectingNewLines(@"Map and Reduce functions of a index must return identical types.
 Baseline function		: from user in docs.Users select new { user.Title }
 Non matching function	: from result in results group result by result.Title into g select new { Title = g.Key, Count = 1 }
 

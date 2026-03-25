@@ -6,7 +6,6 @@ using SharpCompress.Compressors.Deflate;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Xunit;
-using Xunit.Abstractions;
 using Encoding = System.Text.Encoding;
 
 namespace StressTests.Corax.Bugs;

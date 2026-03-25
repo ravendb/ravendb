@@ -2,7 +2,6 @@
 using Voron;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {

@@ -230,6 +230,14 @@ function execute(doc, args){
 
         public bool HasOrderByRandom;
 
+        public bool HasNow;
+
+        public bool HasToday;
+
+        public bool HasTimeBasedFunction => HasNow || HasToday;
+
+        public bool HasNonDeterministicFunction => HasOrderByRandom || HasNow;
+
         public DateTime CreatedAt;
 
         public DateTime LastQueriedAt;
@@ -1190,7 +1198,22 @@ function execute(doc, args){
                 {
                     var visitor = new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText);
                     visitor.HandleSpatial("spatial.distance", me.Arguments, withoutAlias: true, parameters);
-                    fieldName = new QueryFieldName(firstArgME.GetText(null), true);
+                    
+                    var stringFieldName = $"{firstArgME.Name}({string.Join(", ", firstArgME.Arguments.Select(GetParameterForDistance))})";
+                    
+                    fieldName = new QueryFieldName(stringFieldName, true);
+
+                    string GetParameterForDistance(QueryExpression argument)
+                    {
+                        if (argument is FieldExpression fe)
+                        {
+                            return ShouldStripAlias(fe) 
+                                ? fe.GetText(null) 
+                                : fe.GetTextWithAlias(null);
+                        }
+                        
+                        return argument.GetText(null);
+                    }
                 }
                 else
                 {
@@ -2187,6 +2210,12 @@ function execute(doc, args){
                                 throw new InvalidQueryException($"Method cmpxchg() expects value token as second argument, got {rme.Arguments[0]} type", QueryText, parameters);
 
                             _metadata.HasCmpXchg = true;
+                            break;
+                        case MethodType.Now:
+                            _metadata.HasNow = true;
+                            break;
+                        case MethodType.Today:
+                            _metadata.HasToday = true;
                             break;
                     }
                 }

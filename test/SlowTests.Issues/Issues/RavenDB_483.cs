@@ -7,7 +7,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -69,10 +68,10 @@ namespace SlowTests.Issues
                 Map = persons => from p in persons select new { DateTime = (DateTime?)null }
             }.ToIndexDefinition(DocumentConventions.Default);
 
-            var expected = LinuxTestUtils.Dos2Unix(@"docs.People.Select(p => new {
+            var expected = @"docs.People.Select(p => new {
     DateTime = ((DateTime ? ) null)
-})");
-            Assert.Equal(expected, indexDefinition.Maps.First());
+})";
+            RavenTestHelper.AssertEqualRespectingNewLines(expected, indexDefinition.Maps.First());
         }
     }
 }

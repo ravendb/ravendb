@@ -8,7 +8,6 @@ using Voron.Global;
 using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Voron.Issues;
 

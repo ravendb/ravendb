@@ -1,123 +1,98 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using Tests.Infrastructure.TestMetrics;
 using Xunit;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure.XunitExtensions
 {
     public class PerformanceTestClassRunner : XunitTestClassRunner
     {
         private static readonly TimeSpan TestExecutionSnapshotInterval = TimeSpan.FromMilliseconds(100);
-        
-        private readonly ITestClass _testClass;
-        private readonly TestResourceSnapshotWriter _testResourceSnapshotWriter;
-        private readonly bool _resourceSnapshotEnabled;
 
-        public PerformanceTestClassRunner(
-            ITestClass testClass, 
-            IReflectionTypeInfo @class, 
-            IEnumerable<IXunitTestCase> testCases, 
-            IMessageSink diagnosticMessageSink, 
-            IMessageBus messageBus, 
-            ITestCaseOrderer testCaseOrderer, 
-            ExceptionAggregator aggregator, 
-            CancellationTokenSource cancellationTokenSource, 
-            IDictionary<Type, object> collectionFixtureMappings,
-            TestResourceSnapshotWriter testResourceSnapshotWriter, 
-            in bool resourceSnapshotEnabled) : base(testClass, @class, testCases, diagnosticMessageSink, messageBus, testCaseOrderer, aggregator, cancellationTokenSource, collectionFixtureMappings)
+        protected override ValueTask<bool> OnTestClassStarting(XunitTestClassRunnerContext ctxt)
         {
-            _testClass = testClass;
-            _testResourceSnapshotWriter = testResourceSnapshotWriter;
-            _resourceSnapshotEnabled = resourceSnapshotEnabled;
+            if (PerformanceTestState.ResourceSnapshotEnabled)
+                PerformanceTestState.Writer?.WriteResourceSnapshot(TestStage.TestClassStarted, ctxt.TestClass);
+
+            return base.OnTestClassStarting(ctxt);
         }
 
-        protected override Task AfterTestClassStartingAsync()
+        protected override ValueTask<bool> OnTestClassFinished(XunitTestClassRunnerContext ctxt, RunSummary summary)
         {
-            if (_resourceSnapshotEnabled)
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassStarted, _testClass);
-            
-            return base.AfterTestClassStartingAsync();
+            if (PerformanceTestState.ResourceSnapshotEnabled)
+                PerformanceTestState.Writer?.WriteResourceSnapshot(TestStage.TestClassEnded, ctxt.TestClass);
+
+            return base.OnTestClassFinished(ctxt, summary);
         }
 
-        protected override Task BeforeTestClassFinishedAsync()
+        protected override async ValueTask<RunSummary> RunTestMethod(
+            XunitTestClassRunnerContext ctxt,
+            IXunitTestMethod testMethod,
+            IReadOnlyCollection<IXunitTestCase> testCases,
+            object[] constructorArguments)
         {
-            if (_resourceSnapshotEnabled)
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestClassEnded, _testClass);
+            var enabled = PerformanceTestState.ResourceSnapshotEnabled;
+            var writer = PerformanceTestState.Writer;
+            var skipTestResourceSnapshot = !enabled || IsTheory(testMethod);
 
-            return base.BeforeTestClassFinishedAsync();
-        }
-
-        protected override Task<RunSummary> RunTestMethodAsync(ITestMethod testMethod, IReflectionMethodInfo method, IEnumerable<IXunitTestCase> testCases, object[] constructorArguments)
-        {
-            var skipTestResourceSnapshot = _resourceSnapshotEnabled == false || IsTheory(testMethod);
-            
             Timer executionSamplingTimer = null;
             var isExecutionSamplingEnabled = IsTestExecutionSamplingEnabled();
 
-            if (skipTestResourceSnapshot == false)
+            if (!skipTestResourceSnapshot && writer != null)
             {
                 if (isExecutionSamplingEnabled)
-                    executionSamplingTimer = new Timer(WriteTestExecutionSnapshot, testMethod, TestExecutionSnapshotInterval, TestExecutionSnapshotInterval);
-                
-                _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestStarted, testMethod);
+                    executionSamplingTimer = new Timer(
+                        state => writer.WriteResourceSnapshot(TestStage.TestExecution, (IXunitTestMethod)state),
+                        testMethod,
+                        TestExecutionSnapshotInterval,
+                        TestExecutionSnapshotInterval);
+
+                writer.WriteResourceSnapshot(TestStage.TestStarted, testMethod);
             }
 
-            return base.RunTestMethodAsync(testMethod, method, testCases, constructorArguments)
-                .ContinueWith(t =>
-                {
-                    var runSummary = t.Result;
+            var runSummary = await base.RunTestMethod(ctxt, testMethod, testCases, constructorArguments);
 
-                    if (skipTestResourceSnapshot)
-                        return runSummary;
-                    
-                    executionSamplingTimer?.Dispose();
-                    
-                    var testResult = GetTestResult(runSummary);
-                    _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedBeforeGc, testMethod, testResult);
-                
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    GC.WaitForPendingFinalizers();
+            if (!skipTestResourceSnapshot && writer != null)
+            {
+                executionSamplingTimer?.Dispose();
 
-                    _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestEndedAfterGc, testMethod, testResult);
+                var testResult = GetTestResult(runSummary);
+                writer.WriteResourceSnapshot(TestStage.TestEndedBeforeGc, testMethod, testResult);
 
-                    return runSummary;
-                });
+                GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+
+                writer.WriteResourceSnapshot(TestStage.TestEndedAfterGc, testMethod, testResult);
+            }
+
+            return runSummary;
         }
 
         private static readonly Type TheoryType = typeof(TheoryAttribute);
 
-        private static bool IsTheory(ITestMethod testMethod)
+        private static bool IsTheory(IXunitTestMethod testMethod)
         {
-            var theoryAttributes = testMethod.Method.GetCustomAttributes(TheoryType); //this will also return all attributes assignable to TheoryAttribute
-            return theoryAttributes.Any();
+            return testMethod.Method.GetCustomAttributes(TheoryType, true).Length > 0;
         }
 
         private static bool IsTestExecutionSamplingEnabled()
             => bool.TryParse(Environment.GetEnvironmentVariable("TEST_RESOURCE_ANALYZER_SAMPLING"), out var value) && value;
 
-        private static TestResult GetTestResult(RunSummary runSummary)
+        private static TestMetrics.TestResult GetTestResult(RunSummary runSummary)
         {
             if (runSummary.Failed > 0)
-                return TestResult.Fail;
+                return TestMetrics.TestResult.Fail;
 
             return AllTestsWereSkipped(runSummary)
-                ? TestResult.Skipped
-                : TestResult.Success;
+                ? TestMetrics.TestResult.Skipped
+                : TestMetrics.TestResult.Success;
         }
-        
-        private static bool AllTestsWereSkipped(RunSummary runSummary) => runSummary.Skipped == runSummary.Total;
 
-        private void WriteTestExecutionSnapshot(object timerState)
-        {
-            var testMethod = timerState as ITestMethod;
-            _testResourceSnapshotWriter.WriteResourceSnapshot(TestStage.TestExecution, testMethod);
-        }
+        private static bool AllTestsWereSkipped(RunSummary runSummary) => runSummary.Skipped == runSummary.Total;
     }
 }

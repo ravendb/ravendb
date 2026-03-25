@@ -11,7 +11,6 @@ using Voron.Data.PostingLists;
 using Voron.Util;
 using Voron.Util.PFor;
 using Xunit;
-using Xunit.Abstractions;
 namespace SlowTests.Voron.Issues;
 
 public unsafe class RavenDB_25839(ITestOutputHelper output) : StorageTest(output)

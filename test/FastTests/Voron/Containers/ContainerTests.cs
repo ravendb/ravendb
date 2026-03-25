@@ -7,7 +7,6 @@ using Voron.Data.Containers;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Containers
 {

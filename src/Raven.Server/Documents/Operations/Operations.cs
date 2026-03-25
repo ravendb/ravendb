@@ -2,10 +2,13 @@
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Changes;
+using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Operations
 {
@@ -17,14 +20,21 @@ namespace Raven.Server.Documents.Operations
                 : TimeSpan.FromDays(2))
         {
         }
+
+        private RavenLogger _logger;
+        protected override RavenLogger GetLogger() => _logger ??= RavenLogManager.Instance.GetLoggerForServer<ServerOperations>();
     }
 
     public sealed class DatabaseOperations : Operations
     {
+        private readonly DocumentDatabase _database;
         public DatabaseOperations(DocumentDatabase database)
             : base(database.Name, database.ConfigurationStorage.OperationsStorage, database.NotificationCenter, database.Changes, database.Is32Bits ? TimeSpan.FromHours(12) : TimeSpan.FromDays(2))
         {
+            _database = database ?? throw new ArgumentNullException(nameof(database));
         }
+
+        protected override RavenLogger GetLogger() => _database.Loggers.GetLogger<DatabaseOperations>();
     }
 
     public abstract class Operations : AbstractOperations<Operation>

@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax;
 

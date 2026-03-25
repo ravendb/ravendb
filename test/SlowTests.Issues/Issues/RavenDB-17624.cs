@@ -7,7 +7,6 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Tests.Infrastructure;
 using Sparrow.Server;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace SlowTests.Issues

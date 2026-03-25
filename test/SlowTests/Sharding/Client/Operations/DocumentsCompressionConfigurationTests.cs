@@ -7,7 +7,6 @@ using Raven.Server.Documents.Commands.DocumentsCompression;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Client.Operations
 {

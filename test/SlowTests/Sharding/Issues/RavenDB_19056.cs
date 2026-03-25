@@ -5,7 +5,6 @@ using Raven.Client.Exceptions.Sharding;
 using SlowTests.Server.Documents.Indexing.MapReduce;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues;
 

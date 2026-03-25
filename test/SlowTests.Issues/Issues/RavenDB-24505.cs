@@ -10,7 +10,6 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Commands;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable SKEXP0001
 
 namespace SlowTests.Issues

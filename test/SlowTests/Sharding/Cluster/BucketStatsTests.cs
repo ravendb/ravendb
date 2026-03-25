@@ -21,7 +21,6 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster
 {

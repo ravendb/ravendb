@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -121,12 +121,12 @@ namespace SlowTests.Issues
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             if (Interlocked.Decrement(ref _numberOfTestsToDispose) <= 0)
                 BooleanQuery.MaxClauseCount = InitialMaxClauseCount;
 
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

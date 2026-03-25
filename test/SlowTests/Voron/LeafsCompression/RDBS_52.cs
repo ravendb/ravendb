@@ -3,7 +3,6 @@ using FastTests.Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Voron.LeafsCompression

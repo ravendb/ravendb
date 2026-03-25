@@ -49,7 +49,7 @@ public sealed class SnowflakeEtlConfiguration : EtlConfiguration<SnowflakeConnec
         var result = base.ToJson();
 
         result[nameof(CommandTimeout)] = CommandTimeout;
-        result[nameof(SnowflakeTables)] = new DynamicJsonArray(SnowflakeTables.Select(x => x.ToJson()));
+        result[nameof(SnowflakeTables)] = SnowflakeTables != null ? new DynamicJsonArray(SnowflakeTables.Select(x => x.ToJson())) : null;
 
         return result;
     }

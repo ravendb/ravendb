@@ -5,7 +5,6 @@ using Sparrow.Platform;
 using Sparrow.Server.LowMemory;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues;
 

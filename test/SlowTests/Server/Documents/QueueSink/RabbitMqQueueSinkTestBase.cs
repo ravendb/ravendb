@@ -3,8 +3,8 @@ using RabbitMQ.Client;
 using System;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
-using Xunit.Abstractions;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -83,9 +83,9 @@ public abstract class RabbitMqQueueSinkTestBase : QueueSinkTestBase
         }
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
         CleanupQueues();
     }
 }

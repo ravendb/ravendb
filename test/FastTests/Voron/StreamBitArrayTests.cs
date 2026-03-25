@@ -3,7 +3,6 @@ using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Voron.Impl.FreeSpace;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {

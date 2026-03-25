@@ -6,7 +6,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {

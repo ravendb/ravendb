@@ -5,10 +5,13 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Base configuration for OpenAI-compatible providers (OpenAI, Azure OpenAI),
+/// including common fields like API key, endpoint, model and embedding dimensions.
+/// </summary>
 public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 {
     protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null, double? temperature = null)
-
     {
         ApiKey = apiKey;
         Endpoint = endpoint;
@@ -46,6 +49,7 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// </summary>
     public string Model { get; set; }
 
+
     /// <summary>
     /// The number of dimensions that the model should use.
     /// </summary>
@@ -62,9 +66,6 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
-
-        if (string.IsNullOrWhiteSpace(Endpoint))
-            errors.Add($"Value of `{nameof(Endpoint)}` field cannot be empty.");
 
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");

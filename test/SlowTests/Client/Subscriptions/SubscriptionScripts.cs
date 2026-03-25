@@ -7,7 +7,6 @@ using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {

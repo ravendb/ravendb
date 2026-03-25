@@ -27,7 +27,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 
@@ -483,7 +482,7 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         var serializer = (JsonSerializer)store.Conventions.Serialization.CreateSerializer();
         {
             using var session = store.OpenAsyncSession();
-            var coraxQuery = GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues);
+            var coraxQuery = await GetCoraxQuery(self, query(session), index, context, serializer, mapping, factories, hasMultipleValues);
 
             if (hasMultipleValues == false)
                 Assert.IsType<TExpectedForSingleValues>(coraxQuery);
@@ -581,11 +580,11 @@ public class StreamingOptimization_QueryBuilder(ITestOutputHelper output) : Rave
         }
     }
 
-    private static IQueryMatch GetCoraxQuery(RavenTestBase self,
+    private static async Task<IQueryMatch> GetCoraxQuery(RavenTestBase self,
         IndexQuery indexQuery, Index index, JsonOperationContext context, JsonSerializer jsonSerializer, IndexFieldsMapping mapping,
         QueryBuilderFactories queryBuilderFactories, bool hasMultipleTermsInField)
     {
-        using var env = new EnvTest(self.Output);
+        await using var env = new EnvTest(TestContext.Current?.TestOutputHelper);
         env.Init(mapping, hasMultipleTermsInField);
         using (var writer = new BlittableJsonWriter(context))
         {

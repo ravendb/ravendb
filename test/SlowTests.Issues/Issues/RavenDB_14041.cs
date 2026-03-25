@@ -1,8 +1,8 @@
-﻿using System.IO;
+using System.IO;
 using Raven.Client.Documents.Commands.Batches;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues
 {

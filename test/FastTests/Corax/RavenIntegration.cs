@@ -11,7 +11,6 @@ using Raven.Client.Documents.Queries.Timings;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 

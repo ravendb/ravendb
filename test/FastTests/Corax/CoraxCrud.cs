@@ -11,7 +11,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -115,7 +114,7 @@ public class CoraxCrud : StorageTest
             using var indexSearcher = new IndexSearcher(Env, fields);
             
             var match = indexSearcher.TermQuery("Content", "oren", hasBoost: true);
-            var sort = indexSearcher.OrderBy(match, new OrderMetadata(true, MatchCompareFieldType.Score));
+            var sort = indexSearcher.OrderBy(match, new OrderMetadata(true, MatchCompareFieldType.Score), nullFirst: true);
             Assert.Equal(2, sort.Fill(ids));
             Assert.Equal("users/2", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[0]));
             Assert.Equal("users/1", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[1]));

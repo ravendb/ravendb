@@ -9,8 +9,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Adds a GenAI task to a database.
+/// </summary>
 public class AddGenAiOperation(GenAiConfiguration configuration, StartingPointChangeVector startingPoint = null) : IMaintenanceOperation<AddGenAiOperationResult>
 {
+    /// <summary>
+    /// Creates the command to send to the server.
+    /// </summary>
     public RavenCommand<AddGenAiOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new AddGenAiCommand(conventions, configuration, startingPoint);

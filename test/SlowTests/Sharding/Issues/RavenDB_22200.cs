@@ -15,7 +15,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues
 {

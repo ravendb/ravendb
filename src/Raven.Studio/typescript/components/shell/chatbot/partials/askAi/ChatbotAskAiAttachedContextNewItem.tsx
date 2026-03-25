@@ -200,11 +200,16 @@ function DocumentIdTab() {
 
     const asyncGetDocumentIds = useAsyncDebounce(
         async () => {
-            if (!databaseName || !idPrefix) {
+            if (!databaseName) {
                 return [];
             }
 
             try {
+                if (!idPrefix) {
+                    const lastModifiedDocs = await databasesService.getDocumentsPreview(databaseName, 0, 10, undefined);
+                    return lastModifiedDocs.items.map((x) => x.getId());
+                }
+
                 const results = await databasesService.getDocumentsMetadataByIDPrefix(idPrefix, 10, databaseName);
                 return results.map((x) => x["@metadata"]["@id"]);
             } catch {

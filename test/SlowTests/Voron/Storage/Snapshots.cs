@@ -1,7 +1,6 @@
 ﻿using System.IO;
 using System.Text;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Storage

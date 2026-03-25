@@ -9,7 +9,6 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace RachisTests
 {

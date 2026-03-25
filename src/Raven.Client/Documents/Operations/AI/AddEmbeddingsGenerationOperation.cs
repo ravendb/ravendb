@@ -9,8 +9,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Adds an embeddings generation ETL task to a database.
+/// </summary>
 public class AddEmbeddingsGenerationOperation(EmbeddingsGenerationConfiguration configuration) : IMaintenanceOperation<AddEmbeddingsGenerationOperationResult>
 {
+    /// <summary>
+    /// Creates the command to send to the server.
+    /// </summary>
     public RavenCommand<AddEmbeddingsGenerationOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new AddEmbeddingsGenerationCommand(conventions, configuration);

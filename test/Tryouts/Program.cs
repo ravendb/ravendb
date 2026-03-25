@@ -15,7 +15,7 @@ public static class Program
 {
     static Program()
     {
-        XunitLogging.RedirectStreams = false;
+        // XunitLogging removed in xUnit v3 migration
     }
 
     public static async Task Main(string[] args)
@@ -25,9 +25,8 @@ public static class Program
         for (int i = 0; i < 1000; i++)
             try
             {
-                Console.WriteLine(i);
-                using (ConsoleTestOutputHelper testOutputHelper = new())
-                using (var test = new CRUD(testOutputHelper))
+                using (var testOutputHelper = new ConsoleTestOutputHelper())
+                await using (var test = new ChatCompletionClientTests(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
 

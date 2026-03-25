@@ -12,7 +12,6 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
 

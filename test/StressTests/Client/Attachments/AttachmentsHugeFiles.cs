@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http.Features;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Client.Attachments
 {
@@ -23,7 +22,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles(Output))
+                await using (var stress = new AttachmentsBigFiles(Output))
                 {
                     stress.SetServerDisposeTimeout(5 * 60_000);
                     await stress.BatchRequestWithLongMultiPartSections(size, hash, encrypted);
@@ -44,7 +43,7 @@ namespace StressTests.Client.Attachments
         {
             try
             {
-                using (var stress = new AttachmentsBigFiles(Output))
+                await using (var stress = new AttachmentsBigFiles(Output))
                 {
                     stress.SetServerDisposeTimeout(5 * 60_000);
                     await stress.SupportHugeAttachment(size, hash, encrypted);

@@ -15,7 +15,6 @@ using SlowTests.Server.Documents.AI.GenAi;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace StressTests.Server.Documents.AI.GenAi;

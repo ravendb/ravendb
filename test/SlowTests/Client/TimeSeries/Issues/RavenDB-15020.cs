@@ -10,7 +10,6 @@ using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
 
 namespace SlowTests.Client.TimeSeries.Issues

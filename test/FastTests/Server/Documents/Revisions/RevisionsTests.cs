@@ -20,7 +20,6 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Revisions
 {

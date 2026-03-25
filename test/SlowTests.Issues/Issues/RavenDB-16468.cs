@@ -8,7 +8,6 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

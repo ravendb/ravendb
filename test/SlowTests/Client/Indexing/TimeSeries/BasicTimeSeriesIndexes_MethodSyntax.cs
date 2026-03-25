@@ -9,7 +9,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {

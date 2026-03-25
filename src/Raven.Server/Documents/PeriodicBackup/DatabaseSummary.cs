@@ -19,5 +19,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         public long IdentitiesCount { get; set; }
 
         public long TimeSeriesSegmentsCount { get; set; }
+
+        public long TimeSeriesDeletedRangesCount { get; set; }
     }
 }

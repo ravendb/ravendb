@@ -9,7 +9,6 @@ using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

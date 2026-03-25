@@ -24,7 +24,7 @@ public sealed class ShardedQueryOperation : AbstractShardedQueryOperation<Sharde
 {
     private readonly IndexQueryServerSide _query;
     private readonly bool _isDistinctQuery;
-    private readonly IComparer<BlittableJsonReaderObject> _sortingComparer;
+    private readonly Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> _sortingComparerCreator;
     private readonly HashSet<int> _alreadySeenProjections;
     private HashSet<string> _timeSeriesFieldNames;
 
@@ -33,12 +33,13 @@ public sealed class ShardedQueryOperation : AbstractShardedQueryOperation<Sharde
         TransactionOperationContext context,
         ShardedDatabaseRequestHandler requestHandler,
         Dictionary<int, ShardedQueryCommand> queryCommands,
-        [NotNull] IComparer<BlittableJsonReaderObject> sortingComparer,
-        string expectedEtag)
-        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
+        [NotNull] Func<ShardedDatabaseContext, string, IndexQueryServerSide, IComparer<BlittableJsonReaderObject>> sortingComparerCreator,
+        string expectedEtag,
+        DateTime? timeBasedQueryTime = null)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag, timeBasedQueryTime)
     {
         _query = query ?? throw new ArgumentNullException(nameof(query));
-        _sortingComparer = sortingComparer ?? throw new ArgumentNullException(nameof(sortingComparer));
+        _sortingComparerCreator = sortingComparerCreator ?? throw new ArgumentNullException(nameof(sortingComparerCreator));
 
         if (query.Metadata.IsDistinct && isProjectionFromMapReduceIndex == false)
         {
@@ -154,7 +155,8 @@ public sealed class ShardedQueryOperation : AbstractShardedQueryOperation<Sharde
             result.TimeSeriesFields = _timeSeriesFieldNames.ToList();
 
         // all the results from each command are already ordered
-        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(_sortingComparer))
+        var comparer = _sortingComparerCreator(DatabaseContext, result.IndexName, _query);
+        using (var mergedEnumerator = new MergedEnumerator<BlittableJsonReaderObject>(comparer))
         {
             foreach (var (shardNumber, cmdResult) in results)
             {

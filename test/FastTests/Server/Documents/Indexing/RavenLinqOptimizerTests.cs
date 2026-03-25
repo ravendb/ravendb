@@ -4,7 +4,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
@@ -415,7 +414,7 @@ where docBarSomeDictionaryItem.Item1 != docBarSomeOtherDictionaryItem.Item2
             var result = OptimizeExpression(code);
             Assert.IsType<ForEachStatementSyntax>(result);
 
-            Assert.Equal(optimized, result.ToFullString());
+            RavenTestHelper.AssertEqualRespectingNewLines(optimized, result.ToFullString());
         }
 
         private static SyntaxNode OptimizeExpression(string str)

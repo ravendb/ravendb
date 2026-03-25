@@ -9,7 +9,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Integrations.PostgreSQL;
 

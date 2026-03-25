@@ -5,7 +5,6 @@ using Tests.Infrastructure;
 using Voron.Data.PostingLists;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 

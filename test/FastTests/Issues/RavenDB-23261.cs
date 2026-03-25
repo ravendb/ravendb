@@ -2,7 +2,6 @@
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

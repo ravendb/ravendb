@@ -296,7 +296,7 @@ public partial class IndexWriter
             ExactInsert(field, value, InserterMode.ExactInsert, forceExactInsert: true);
         }
 
-        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value)
+        public void WriteVector(int fieldId, string path, ReadOnlySpan<byte> value, Random random = null)
         {
             if (value.Length <= 0)
                 return; // we don't index missing / empty vectors 
@@ -304,9 +304,9 @@ public partial class IndexWriter
 
             PortableExceptions.ThrowIfNot<InvalidOperationException>(field.HasVector, $"Field ({fieldId} , '{field.Name}') didn't have vector options but tried to write a vector. Vector length: {value.Length}");
 
-            var vectorWriter = field.GetVectorIndexer(_parent._transaction.LowLevelTransaction, value.Length);
+            var vectorWriter = field.GetVectorIndexer(_parent._transaction.LowLevelTransaction, value.Length, random);
             var vectorHash = vectorWriter.Register((long)_entryId, value);
-
+            
             //We're storing the vector hash for removal purposes
             RegisterTerm(field, vectorHash.ToSpan(), StoredFieldType.Raw);
         }

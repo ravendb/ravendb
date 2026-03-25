@@ -29,6 +29,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     private ByteStringContext _allocator;
     public bool IsDescending;
     public TSecondaryComparer SecondaryComparer;
+    internal bool _nullFirst;
 
 
     /// <summary>
@@ -39,8 +40,9 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     private delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> _compare;
 
     public void Init(Span<int> documents, Span<ByteString> terms, ByteStringContext allocator, bool descending,
-        delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> compare, TSecondaryComparer secondaryCmp)
+        delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> compare, TSecondaryComparer secondaryCmp, bool nullFirst)
     {
+        _nullFirst = nullFirst;
         IsDescending = descending;
         _allocator = allocator;
         _documents = documents;
@@ -155,18 +157,36 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     /// <param name="results">Destination of sorted results</param>
     /// <param name="scoreDestination">Destination of scores (sorted)</param>
     /// <param name="scores">An array with scores associated with batchResults</param>
-    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores)
+    /// <param name="nullIndexes">Positions in batchResults that have null terms and were excluded from the heap</param>
+    public void Fill(Span<long> batchResults, ref ContextBoundNativeList<long> results, ref ContextBoundNativeList<float> scoreDestination, Span<float> scores, ContextBoundNativeList<int> nullIndexes)
     {
+        Debug.Assert(results.Count == 0, "Results should be empty");
         ValidateMaxHeapStructure();
-        var start = results.Count;
-        results.EnsureCapacityFor(_heapSize);
-        int documentsToReturn = _heapSize;
+        
+        int nullCount = nullIndexes.HasContext ? nullIndexes.Count : 0;
+        int startNullLength = 0;
 
+        var writeNullFirst = nullCount > 0
+                                    && (IsDescending && _nullFirst == false // null last, but we're sorting descending 
+                                        || (IsDescending == false && _nullFirst)); //ascending, null first
+        
+        if (writeNullFirst)
+        {
+            // HeapCapacity is the official limit what Fill should return.
+            var nullsToWrite = Math.Min(nullCount, _heapCapacity); // We could have more nulls than we can write. Let's write as much as we can.
+            AppendNulls(batchResults, ref results, ref scoreDestination, scores, nullIndexes, nullsToWrite);
+            startNullLength = nullsToWrite;
+            
+            if (startNullLength == _heapCapacity)
+                return; // We filled the limit with nulls. We're done.
+        }
+        
         var exposeScore = scoreDestination.HasContext && scores.IsEmpty == false;
         if (exposeScore)
             scoreDestination.EnsureCapacityFor(_heapSize);
         
-        while (documentsToReturn > 0)
+        results.EnsureCapacityFor(_heapSize);
+        while (_heapSize > 0)
         {
             results.AddUnsafe(batchResults[_documents[0]]);
             
@@ -174,10 +194,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
                 scoreDestination.AddUnsafe(scores[_documents[0]]);
             
             RemoveMax();
-            documentsToReturn--;
         }
-
-        Debug.Assert(_heapSize == 0, "_heapSize == 0");
         
         // When we sort a max-heap by repeatedly extracting the maximum value (at index 0), the result is in reverse order (locally - in the heap).
         // Note that we're not dealing with all documents, but only up to heapSize.
@@ -185,10 +202,46 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         // (which is the minimum in the case of descending sorting) to decide if a document
         // should replace the max element in the heap (and then find the new maximum).
         // Reversing the elements is done via Span<T>.Reverse, which is a vectorized operation.
-        results.ToSpan().Slice(start).Reverse();
+        // When nulls were prepended, skip over them so they remain at the front.
+        results.ToSpan().Slice(startNullLength).Reverse();
         if (exposeScore)
-            scoreDestination.ToSpan().Slice(start).Reverse();
+            scoreDestination.ToSpan().Slice(startNullLength).Reverse();
+
+        if (writeNullFirst)
+        {
+            //We've max-heap. Internal comparer controls Descending/Ascending. We had to take out all elements from heap to reverse them, however,
+            // we still need to respect the count. So let's shrink it to the official limit.
+            results.Shrink(_heapCapacity);
+            if (exposeScore)
+                scoreDestination.Shrink(_heapCapacity); 
+        } 
+        else if (nullCount > 0 && results.Count < _heapCapacity) // We need to write nulls at the end, and we still have space for doing it. If we don't have enough space, it means we've been paging, and we're in the "middle" page.
+        {
+            AppendNulls(batchResults, ref results, ref scoreDestination, scores, nullIndexes, Math.Min(_heapCapacity - results.Count, nullCount));
+        }
     }
+
+    private void AppendNulls(Span<long> batchResults, ref ContextBoundNativeList<long> results,
+        ref ContextBoundNativeList<float> scoreDestination, Span<float> scores,
+        ContextBoundNativeList<int> nullIndexes, int nullCount)
+    {
+        if (typeof(TSecondaryComparer) != typeof(HeapSorterBuilder.SkipSecondaryComparer))
+            nullIndexes.ToSpan().Sort(SecondaryComparer);
+
+        var exposeScore = scoreDestination.HasContext && scores.IsEmpty == false;
+        results.EnsureCapacityFor(nullCount);
+        if (exposeScore)
+            scoreDestination.EnsureCapacityFor(nullCount);
+
+        var nullSpan = nullIndexes.ToSpan();
+        for (int i = 0; i < nullCount; i++)
+        {
+            results.AddUnsafe(batchResults[nullSpan[i]]);
+            if (exposeScore)
+                scoreDestination.AddUnsafe(scores[nullSpan[i]]);
+        }
+    }
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int Parent(int idX) => (idX - 1) / 2;

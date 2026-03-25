@@ -13,7 +13,6 @@ using Raven.Server.ServerWide.Commands;
 using StressTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
@@ -27,8 +26,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(2)]
         public async Task ServerWideBackupShouldBackupIdleDatabaseStress(int rounds)
         {
-            // ReSharper disable once UseAwaitUsing
-            using var stress = new RavenDB_14292(Output);
+            await using var stress = new RavenDB_14292(Output);
             await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
         }
 
@@ -36,8 +34,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(5)]
         public async Task ServerWideBackupShouldBackupIdleDatabaseStressNightly(int rounds)
         {
-            // ReSharper disable once UseAwaitUsing
-            using var stress = new RavenDB_14292(Output);
+            await using var stress = new RavenDB_14292(Output);
             await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
         }
 

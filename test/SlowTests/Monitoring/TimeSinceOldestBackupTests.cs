@@ -7,7 +7,6 @@ using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Monitoring
 {

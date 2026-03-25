@@ -12,7 +12,6 @@ using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.GenAi;
 

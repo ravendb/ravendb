@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -26,7 +26,7 @@ namespace SlowTests.Issues
                               """;
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Counters)]
-        public async void TombstoneAfterCounterDeletionWithEtl()
+        public async Task TombstoneAfterCounterDeletionWithEtl()
         {
             var (src, _, _) = Etl.CreateSrcDestAndAddEtl("Users", script);
 
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
-        public async void TombstoneAfterTsDeletionWithEtl()
+        public async Task TombstoneAfterTsDeletionWithEtl()
         {
             var (src, _, _) = Etl.CreateSrcDestAndAddEtl("Users", script);
 

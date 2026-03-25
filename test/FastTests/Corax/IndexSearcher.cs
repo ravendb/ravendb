@@ -11,6 +11,7 @@ using Corax.Mappings;
 using Corax.Pipeline;
 using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
+using Corax.Querying.Matches.SortingMatches;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
@@ -21,7 +22,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 using VoronConstants = Voron.Global.Constants;
@@ -116,15 +116,15 @@ namespace FastTests.Corax
 
                 var term0 = entry1.Content.OrderBy(x => x).First();
                 var term1 = entry2.Content.OrderBy(x => x).First();
-                
-                
-                var cmp = reader.Compare(ids[0], ids[1]);
+
+                var nullResults = -1;
+                var cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[1]), nullResults);
                 Assert.Equal(string.Compare(term0, term1, StringComparison.Ordinal),Math.Sign(cmp));
-                cmp = reader.Compare(ids[1], ids[0]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[0]), nullResults);
                 Assert.Equal(string.Compare(term1, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = reader.Compare(ids[0], ids[0]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[0]), reader.GetTerm(ids[0]), nullResults);
                 Assert.Equal(string.Compare(term0, term0, StringComparison.Ordinal), Math.Sign(cmp));
-                cmp = reader.Compare(ids[1], ids[1]);
+                cmp = CompactKeyComparer.Compare(reader.GetTerm(ids[1]), reader.GetTerm(ids[1]), nullResults);
                 Assert.Equal(string.Compare(term1, term1, StringComparison.Ordinal), Math.Sign(cmp));
             }
         }
@@ -938,10 +938,10 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, take: 16);
+                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullFirst: true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -963,10 +963,10 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata);
+                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
 
                 Span<long> ids = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids));
@@ -1028,10 +1028,10 @@ namespace FastTests.Corax
 
             using var searcher = new IndexSearcher(Env, CreateKnownFields(bsc));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
-            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence);
+            OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata);
+                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1047,7 +1047,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, take: 16);
+                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullFirst: true);
 
                 Span<long> ids1 = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids1));

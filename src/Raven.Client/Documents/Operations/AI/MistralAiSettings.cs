@@ -3,6 +3,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Mistral AI settings.
+/// </summary>
 public sealed class MistralAiSettings : AbstractAiSettings
 {
     public MistralAiSettings()
@@ -10,6 +13,12 @@ public sealed class MistralAiSettings : AbstractAiSettings
         // deserialization
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="MistralAiSettings"/> with the specified model, API key, and endpoint.
+    /// </summary>
+    /// <param name="model">The model ID for the Mistral AI service.</param>
+    /// <param name="apiKey">The API key required for accessing the Mistral AI service.</param>
+    /// <param name="endpoint">The endpoint for the Mistral AI service.</param>
     public MistralAiSettings(string model, string apiKey, string endpoint)
     {
         Model = model;
@@ -63,6 +72,9 @@ public sealed class MistralAiSettings : AbstractAiSettings
         return differences;
     }
 
+    /// <summary>
+    /// Serializes the settings to a JSON structure.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

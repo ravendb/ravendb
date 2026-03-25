@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
-import { SetupWizardFormData } from "../setupWizardValidation";
+import { LicenseTypeToGenerate, SetupWizardFormData } from "../setupWizardValidation";
 import { Icon } from "components/common/Icon";
 import SetupWizardClickableCard from "../partials/SetupWizardClickableCard";
 import Button from "react-bootstrap/Button";
@@ -25,17 +25,21 @@ export function SetupWizardSecurityStep() {
         licenseKeyStep: { key, licenseInfo },
     } = useWatch({ control });
 
+    const isLetsEncryptDisabled = !key;
+    const isSecureRecommended = !!key && licenseInfo?.licenseType !== "Developer";
+
+    const handleGoToGenerateLicense = (licenseType: LicenseTypeToGenerate) => {
+        reportEvent(setupWizardGA4Prefixes.securityStep, "go-to-generate-license", licenseType);
+        setValue("licenseKeyStep.licenseTypeToGenerate", licenseType);
+        setValue("securityStep", setupWizardFormDefaultValues["securityStep"]);
+        setValue("currentStep", "License key");
+    };
+
     useEffect(() => {
-        if (isSecureDisabled) {
-            setValue("securityStep.securityOption", "none");
-        }
         if (isSecureRecommended) {
             setValue("securityStep.securityOption", "letsEncrypt");
         }
     }, []);
-
-    const isSecureDisabled = !key;
-    const isSecureRecommended = !!key && licenseInfo?.licenseType !== "Developer";
 
     return (
         <div>
@@ -65,13 +69,27 @@ export function SetupWizardSecurityStep() {
                 <ConditionalPopover
                     className="w-100"
                     conditions={{
-                        isActive: isSecureDisabled,
+                        isActive: isLetsEncryptDisabled,
                         message: (
                             <div>
-                                Secure setup methods are not available without a license. If you&#39;d like to use one
-                                of the secure options, you can go back to <b>License Key</b> step and insert an existing
-                                license or generate a free <b className="text-info">Community</b> or{" "}
-                                <b className="text-developer">Developer</b> license.
+                                Let&#39;s Encrypt is not available without a license. Go back to the <b>License Key</b>{" "}
+                                step and insert an existing license or generate a free{" "}
+                                <Button
+                                    variant="link"
+                                    className="text-info p-0 text-decoration-underline"
+                                    onClick={() => handleGoToGenerateLicense("community")}
+                                >
+                                    Community
+                                </Button>{" "}
+                                or{" "}
+                                <Button
+                                    variant="link"
+                                    className="text-developer p-0 text-decoration-underline"
+                                    onClick={() => handleGoToGenerateLicense("developer")}
+                                >
+                                    Developer
+                                </Button>{" "}
+                                license to use this option.
                             </div>
                         ),
                     }}
@@ -88,7 +106,7 @@ export function SetupWizardSecurityStep() {
                             });
                             reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "letsEncrypt");
                         }}
-                        isDisabled={isSecureDisabled}
+                        isDisabled={isLetsEncryptDisabled}
                         popoverMessage={
                             <ul className="mb-0 ps-3">
                                 <li>
@@ -107,48 +125,32 @@ export function SetupWizardSecurityStep() {
                         }
                     />
                 </ConditionalPopover>
-                <ConditionalPopover
-                    className="w-100"
-                    conditions={{
-                        isActive: isSecureDisabled,
-                        message: (
-                            <div>
-                                Secure setup methods are not available without a license. If you&#39;d like to use one
-                                of the secure options, you can go back to <b>License Key</b> step and insert an existing
-                                license or generate a free <b className="text-info">Community</b> or{" "}
-                                <b className="text-developer">Developer</b> license.
-                            </div>
-                        ),
+                <SetupWizardClickableCard
+                    className="mt-2 w-100"
+                    icon="certificate"
+                    title="Provide your own certificate"
+                    description="Ideal for secure corporate setups with manual certificate management"
+                    isSelected={securityOption === "ownCertificate"}
+                    onClick={() => {
+                        setValue("securityStep.securityOption", "ownCertificate", {
+                            shouldDirty: true,
+                        });
+                        reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "ownCertificate");
                     }}
-                >
-                    <SetupWizardClickableCard
-                        className="mt-2 w-100"
-                        icon="certificate"
-                        title="Provide your own certificate"
-                        description="Ideal for secure corporate setups with manual certificate management"
-                        isSelected={securityOption === "ownCertificate"}
-                        onClick={() => {
-                            setValue("securityStep.securityOption", "ownCertificate", {
-                                shouldDirty: true,
-                            });
-                            reportEvent(setupWizardGA4Prefixes.securityStep, "select-option", "ownCertificate");
-                        }}
-                        isDisabled={isSecureDisabled}
-                        popoverMessage={
-                            <ul className="mb-0 ps-3">
-                                <li>
-                                    Use this when you need to provide a custom SSL/TLS certificate, often to comply with
-                                    corporate security policies or integrate with an internal certificate authority.
-                                </li>
-                                <li className="mt-1">
-                                    Recommended for <b>production environments</b> where certificates are managed
-                                    manually or by external infrastructure, and full control over certificate management
-                                    and trust configuration is required.
-                                </li>
-                            </ul>
-                        }
-                    />
-                </ConditionalPopover>
+                    popoverMessage={
+                        <ul className="mb-0 ps-3">
+                            <li>
+                                Use this when you need to provide a custom SSL/TLS certificate, often to comply with
+                                corporate security policies or integrate with an internal certificate authority.
+                            </li>
+                            <li className="mt-1">
+                                Recommended for <b>production environments</b> where certificates are managed manually
+                                or by external infrastructure, and full control over certificate management and trust
+                                configuration is required.
+                            </li>
+                        </ul>
+                    }
+                />
             </div>
             <div className="my-4">
                 <h5 className="mb-1">
@@ -193,13 +195,15 @@ export function SetupWizardSecurityStepFooter() {
 
     const {
         securityStep: { securityOption, isLetsEncryptAgreementAccepted },
-        licenseKeyStep: { licenseInfo },
+        licenseKeyStep: { key, licenseInfo },
     } = useWatch({ control });
 
-    const asyncGetLetsEncryptAgreement = useAsync(
-        () => setupWizardService.getLetsEncryptAgreement(licenseInfo.userDomainsWithIps.email[0] ?? ""),
-        []
-    );
+    const asyncGetLetsEncryptAgreement = useAsync(async () => {
+        if (!key) {
+            return null;
+        }
+        return setupWizardService.getLetsEncryptAgreement(licenseInfo?.userDomainsWithIps?.email?.[0] ?? "");
+    }, []);
 
     const handleBack = () => {
         reportEvent(setupWizardGA4Prefixes.securityStep, "back");

@@ -5,7 +5,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

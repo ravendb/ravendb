@@ -50,11 +50,11 @@ export default function DocumentSchemaAboutView() {
                                     Inserting documents via <i>patch by query</i> - the operation stops when an invalid
                                     document is encountered.
                                 </li>
-                                <li>Reverting revisions - invalid documents produced by the revert are rejected.</li>
-                                <li>Importing database - import stops when an invalid document is encountered.</li>
+                                <li>Importing a database - invalid documents are skipped.</li>
                                 <li>
-                                    RavenDB ETL task - If the task generates documents that are invalid for the
-                                    destination database, the task is automatically paused until the issue is resolved.
+                                    RavenDB ETL task - if the task generates documents that are invalid for the
+                                    destination database, the entire batch is rejected, and the task enters a retry loop
+                                    until the issue is resolved.
                                 </li>
                             </ul>
                         </li>
@@ -76,7 +76,15 @@ export default function DocumentSchemaAboutView() {
                             </ul>
                         </li>
                         <li className="mt-2">
-                            Once defined, you can enable or disable schema validation per collection from this view.
+                            Once schemas are defined, you can enable or disable schema validation per collection or
+                            globally for all collections from this view.
+                        </li>
+                        <li className="mt-2">
+                            Note: You cannot revert documents to previous revisions if a validation schema is defined
+                            and enabled for their collection.
+                        </li>
+                        <li className="mt-2">
+                            To test a JSON Schema without saving it, use the <strong>Schema Playground</strong>.
                         </li>
                     </ul>
                 </div>

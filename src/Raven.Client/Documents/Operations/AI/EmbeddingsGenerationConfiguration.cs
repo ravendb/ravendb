@@ -10,27 +10,60 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// ETL configuration for generating vector embeddings from documents in a collection.
+/// </summary>
 public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationConfiguration
 {
+    /// <summary>
+    /// The identifier used to group and track embeddings tasks associated with this configuration.
+    /// </summary>
     public string Identifier { get; set; }
-
+    /// <inheritdoc />
     public override string GetDestination() => Identifier;
+    /// <inheritdoc />
     public override string GetDefaultTaskName() => Identifier;
 
+    /// <summary>
+    /// The ETL type. Always <see cref="EtlType.EmbeddingsGeneration"/> for this configuration.
+    /// </summary>
     public override EtlType EtlType => EtlType.EmbeddingsGeneration;
 
+    /// <summary>
+    /// The source collection on which the embeddings ETL will operate.
+    /// </summary>
     public string Collection { get; set; }
 
+    /// <summary>
+    /// Path-based configuration describing where to extract text and how to chunk it.
+    /// Mutually exclusive with providing a custom <see cref="EmbeddingsTransformation"/> script.
+    /// </summary>
     public List<EmbeddingPathConfiguration> EmbeddingsPathConfigurations { get; set; }
 
+    /// <summary>
+    /// Custom transformation that generates embeddings via JavaScript. If provided,
+    /// it is used instead of <see cref="EmbeddingsPathConfigurations"/>.
+    /// </summary>
     public EmbeddingsTransformation EmbeddingsTransformation { get; set; }
-    
+
+    /// <summary>
+    /// The embedding vector type or quantization setting to use for storage.
+    /// </summary>
     public VectorEmbeddingType Quantization { get; set; }
-    
+
+    /// <summary>
+    /// Chunking behavior used when splitting query text for vector search.
+    /// </summary>
     public ChunkingOptions ChunkingOptionsForQuerying { get; set; }
 
+    /// <summary>
+    /// Time-to-live for cached embeddings generated from documents.
+    /// </summary>
     public TimeSpan EmbeddingsCacheExpiration { get; set; } = TimeSpan.FromDays(90);
 
+    /// <summary>
+    /// Time-to-live for cached embeddings generated for querying.
+    /// </summary>
     public TimeSpan EmbeddingsCacheForQueryingExpiration { get; set; } = TimeSpan.FromDays(14);
 
     private const string PathsTransformationName = "embeddings-from-paths";
@@ -40,6 +73,9 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
 
     private List<Transformation> _transforms;
 
+    /// <summary>
+    /// Not supported for embeddings ETL; use <see cref="EmbeddingsTransformation"/> or <see cref="EmbeddingsPathConfigurations"/>.
+    /// </summary>
     [JsonDeserializationIgnore]
     [JsonIgnore]
     [Obsolete($"{nameof(EmbeddingsGenerationConfiguration)} doesn't support multiple transformations. Please use {nameof(EmbeddingsTransformation)} property instead.")]
@@ -75,6 +111,9 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         }
     }
 
+    /// <summary>
+    /// Validates the configuration and optionally its connection/name/identifier.
+    /// </summary>
     public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<AiConnectionString> existingConfiguration = null)
     {
         if (validateConnection && Initialized == false)
@@ -143,11 +182,17 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         return errors.Count == 0;
     }
 
+    /// <summary>
+    /// Indicates whether the underlying provider connection uses HTTPS or other encrypted transport.
+    /// </summary>
     public override bool UsingEncryptedCommunicationChannel()
     {
         return Connection?.UsingEncryptedCommunicationChannel() ?? false;
     }
 
+    /// <summary>
+    /// Serializes this configuration to JSON.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

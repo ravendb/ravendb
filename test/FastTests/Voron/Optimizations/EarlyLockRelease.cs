@@ -4,7 +4,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Voron.Data.Tables;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace FastTests.Voron.Optimizations
 {

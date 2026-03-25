@@ -21,7 +21,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
-using Xunit.Abstractions;
 using Confluent.Kafka.Admin;
 using Raven.Client.Exceptions;
 
@@ -552,9 +551,9 @@ output('test: ' + this.Id)
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             CleanupTopics();
         }
     }

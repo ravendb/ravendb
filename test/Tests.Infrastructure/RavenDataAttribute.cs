@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Config;
+using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
@@ -24,15 +28,20 @@ public enum RavenDatabaseMode : byte
 
 public class RavenDataWithRandomSeedAttribute(params object[] data) : RavenDataAttribute(data)
 {
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override async ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        foreach (var current in base.GetData(testMethod))
+        var baseResult = await base.GetData(testMethod, disposalTracker);
+        var result = new List<ITheoryDataRow>();
+        foreach (var current in baseResult)
         {
-            var parametersWithRandomSeed = new object[current.Length + 1];
-            Array.Copy(current, parametersWithRandomSeed, current.Length);
+            var currentData = current.GetData();
+            var parametersWithRandomSeed = new object[currentData.Length + 1];
+            Array.Copy(currentData, parametersWithRandomSeed, currentData.Length);
             parametersWithRandomSeed[^1] = Random.Shared.Next();
-            yield return parametersWithRandomSeed;
+            result.Add(new TheoryDataRow(parametersWithRandomSeed));
         }
+
+        return result;
     }
 }
 
@@ -50,11 +59,12 @@ public class RavenDataAttribute : RavenDataAttributeBase
 
     public RavenDataAttribute(params object[] data)
     {
-        Data = data;
+        Data = data ?? [null];
     }
 
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
+    public override ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
+        var result = new List<ITheoryDataRow>();
         foreach (var (databaseMode, options) in GetOptions(DatabaseMode))
         {
             foreach (var (_, o) in FillOptions(options, SearchEngineMode))
@@ -71,10 +81,11 @@ public class RavenDataAttribute : RavenDataAttributeBase
                     for (var i = 1; i < array.Length; i++)
                         array[i] = Data[i - 1];
 
-                    yield return array;
+                    result.Add(new TheoryDataRow(array));
                 }
             }
         }
+        return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
     }
 
     internal static IEnumerable<(RavenDatabaseMode Mode, RavenTestBase.Options)> GetOptions(RavenDatabaseMode mode)

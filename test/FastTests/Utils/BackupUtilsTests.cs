@@ -4,7 +4,6 @@ using NCrontab.Advanced.Exceptions;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {

@@ -2,18 +2,20 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using FastTests;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
@@ -176,6 +178,63 @@ namespace SlowTests.Client.Attachments
             }
         }
 
+        
+        [RavenRetryTheory(RavenTestCategory.BulkInsert)]
+        [RavenDataWithRandomSeed(DatabaseMode = RavenDatabaseMode.All)]
+        public async Task BulkStoreAttachmentsWhileBulkStoringBigDocs(Options options, int seed)
+        {
+            const int propSize = 16 * JsonOperationContext.MemoryBuffer.DefaultSize;
+            const int count = 16;
+            const int attachmentSize = propSize;
+            const string attachmentName = "attachmentname";
+            var suffix = (options.DatabaseMode & RavenDatabaseMode.Sharded) != 0 ? "$somesuffix" : "";
+            
+            var rnd = new Random(seed);
+
+            using var store = GetDocumentStore(options);
+            var streams = new Dictionary<string, MemoryStream>();
+            await using (var bulkInsert = store.BulkInsert())
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    var id = $"user/{i}{suffix}";
+                    bulkInsert.Store(new TestObj { Prop = GenerateRandomString() }, id);
+                    var attachmentsBulkInsert = bulkInsert.AttachmentsFor(id);
+                        
+                    var bArr = new byte[attachmentSize];
+                    rnd.NextBytes(bArr);
+                        
+                    var stream = new MemoryStream(bArr);
+                    await attachmentsBulkInsert.StoreAsync(attachmentName, stream);
+
+                    stream.Position = 0;
+                    streams[id] = stream;
+                }
+            }
+
+            var tester = store.ForSessionTesting();
+
+            await tester.AssertAllAsync((_, session) =>
+            {
+                var attachmentRequests = streams.Select(x => new AttachmentRequest(x.Key, attachmentName));
+                var attachmentsEnumerator = session.Advanced.Attachments.Get(attachmentRequests);
+
+                while (attachmentsEnumerator.MoveNext())
+                {
+                    Assert.NotNull(attachmentsEnumerator.Current != null);
+                    Assert.True(AttachmentsStreamTests.CompareStreams(attachmentsEnumerator.Current.Stream, streams[attachmentsEnumerator.Current.Details.DocumentId]));
+                }
+            });
+
+            return;
+
+            static StringSegment GenerateRandomString()
+            {
+                var bytes = RandomNumberGenerator.GetBytes((propSize + 1) / 2);
+                var hex = Convert.ToHexString(bytes);
+                return new StringSegment(hex, 0, propSize);
+            }
+        }
 
         [RavenTheory(RavenTestCategory.BulkInsert)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
@@ -356,6 +415,12 @@ namespace SlowTests.Client.Attachments
                     Assert.Equal(ConflictStatus.Update, cvStatus);
                 }
             }
+        }
+
+        class TestObj
+        {
+            public string Id { get; set; }
+            public StringSegment Prop { get; set; }
         }
     }
 }

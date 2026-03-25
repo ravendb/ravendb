@@ -1,11 +1,11 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using OpenTelemetry.Exporter;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 
 namespace SlowTests.Issues;

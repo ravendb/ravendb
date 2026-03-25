@@ -5,7 +5,6 @@ using Orders;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.ElasticSearch
 {

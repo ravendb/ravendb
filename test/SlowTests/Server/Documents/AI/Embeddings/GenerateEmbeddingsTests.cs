@@ -19,7 +19,6 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 
@@ -930,7 +929,7 @@ Console.WriteLine(""Hello, World!"");";
         }
     }
 
-    [RavenFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl)]
+    [RavenMultiplatformFact(RavenTestCategory.Ai | RavenTestCategory.Vector | RavenTestCategory.Etl, RavenArchitecture.AllX64)]
     public async Task QuantizationOfEmbeddingsInTwoTasks()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

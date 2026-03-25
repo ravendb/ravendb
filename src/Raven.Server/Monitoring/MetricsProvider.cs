@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
@@ -49,6 +50,7 @@ public sealed class MetricsProvider
         result.Backup = GetBackupMetrics();
         result.Cpu = GetCpuMetrics();
         result.Memory = GetMemoryMetrics();
+        result.Gc = GetGcMetrics();
         result.Network = GetNetworkMetrics();
         result.License = GetLicenseMetrics();
         result.Disk = GetDiskMetrics();
@@ -161,6 +163,60 @@ public sealed class MetricsProvider
         result.UnmanagedMemoryInBytes = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes();
 
         return result;
+    }
+    private GcMetrics GetGcMetrics()
+    {
+        var result = new GcMetrics();
+
+        var info = GC.GetGCMemoryInfo(GCKind.Any);
+        if (info.Index == 0)
+            return result;
+
+        result.Any = new GcInfoPayload.GcMemoryInfoMetrics
+        {
+            Index = info.Index,
+            Generation = info.Generation,
+            Compacted = info.Compacted,
+            Concurrent = info.Concurrent,
+            FinalizationPendingCount = info.FinalizationPendingCount,
+            FragmentedInMb = new Size(info.FragmentedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            HeapSizeInMb = new Size(info.HeapSizeBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            HighMemoryLoadThresholdInMb = new Size(info.HighMemoryLoadThresholdBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            MemoryLoadInMb = new Size(info.MemoryLoadBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            PauseTimePercentage = info.PauseTimePercentage,
+            PinnedObjectsCount = info.PinnedObjectsCount,
+            PromotedInMb = new Size(info.PromotedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            TotalAvailableMemoryInMb = new Size(info.TotalAvailableMemoryBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            TotalCommittedInMb = new Size(info.TotalCommittedBytes, SizeUnit.Bytes).GetValue(SizeUnit.Megabytes),
+            TotalHeapSizeAfterBytes = info.HeapSizeBytes,
+            PauseDurationsInMs =
+            [
+                info.PauseDurations.Length > 0 ? info.PauseDurations[0].TotalMilliseconds : 0,
+                info.PauseDurations.Length > 1 ? info.PauseDurations[1].TotalMilliseconds : 0
+            ],
+            Gen0HeapSize = GetGenerationInfoSize(info, 0),
+            Gen1HeapSize = GetGenerationInfoSize(info, 1),
+            Gen2HeapSize = GetGenerationInfoSize(info, 2),
+            LargeObjectHeapSize = GetGenerationInfoSize(info, 3),
+            PinnedObjectHeapSize = GetGenerationInfoSize(info, 4)
+        };
+
+        return result;
+    }
+
+    private static GcInfoPayload.GenerationInfoSize GetGenerationInfoSize(GCMemoryInfo info, int index)
+    {
+        var generationInfo = info.GenerationInfo;
+        if (generationInfo.IsEmpty || generationInfo.Length <= index)
+            return null;
+
+        return new GcInfoPayload.GenerationInfoSize
+        {
+            SizeBeforeBytes = generationInfo[index].SizeBeforeBytes,
+            SizeAfterBytes = generationInfo[index].SizeAfterBytes,
+            FragmentationBeforeBytes = generationInfo[index].FragmentationBeforeBytes,
+            FragmentationAfterBytes = generationInfo[index].FragmentationAfterBytes
+        };
     }
 
     private LicenseMetrics GetLicenseMetrics()

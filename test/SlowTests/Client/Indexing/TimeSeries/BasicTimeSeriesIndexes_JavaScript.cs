@@ -13,7 +13,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Tests.Infrastructure.Operations;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Indexing.TimeSeries
 {

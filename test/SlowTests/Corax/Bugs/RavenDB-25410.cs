@@ -12,7 +12,6 @@ using Sparrow;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Corax.Bugs;
 
@@ -57,13 +56,13 @@ public class RavenDB_25410(ITestOutputHelper output) : StorageTest(output)
             IQueryMatch sortingMatch;
             if (multiSort)
             {
-                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence)]);
+                var q = indexSearcher.OrderBy(dummyMatch, [new OrderMetadata(true, MatchCompareFieldType.Score), new OrderMetadata(mapping.GetByFieldId(0).Metadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false)], nullFirst: true);
                 q.SetSortingDataTransfer(transfer);
                 sortingMatch = q;
             }
             else
             {
-                var q = indexSearcher.OrderBy(dummyMatch, new OrderMetadata(true, MatchCompareFieldType.Score));
+                var q = indexSearcher.OrderBy(dummyMatch, new OrderMetadata(true, MatchCompareFieldType.Score), nullFirst: true);
                 q.SetScoreAndDistanceBuffer(transfer);
                 sortingMatch = q;
             }

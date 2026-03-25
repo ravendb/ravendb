@@ -5,7 +5,6 @@ using SlowTests.Utils;
 using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.SparrowTests;
 

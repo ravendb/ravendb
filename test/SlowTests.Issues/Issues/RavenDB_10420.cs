@@ -10,7 +10,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

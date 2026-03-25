@@ -4,7 +4,6 @@ using FastTests.Voron;
 using Sparrow.Platform;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues

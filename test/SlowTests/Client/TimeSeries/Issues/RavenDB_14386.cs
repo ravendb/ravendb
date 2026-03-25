@@ -2,7 +2,6 @@ using System;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents;
 using System.Collections.Generic;

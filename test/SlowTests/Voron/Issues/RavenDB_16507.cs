@@ -5,7 +5,6 @@ using Tests.Infrastructure;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {

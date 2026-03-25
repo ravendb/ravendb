@@ -32,7 +32,7 @@ export function GlobalPauseIndexingConfirm(props: GlobalPauseIndexingConfirmProp
                 </div>
                 <div className="text-center lead">You&apos;re about to pause indexing until restart</div>
             </Modal.Header>
-            <Modal.Body className="vstack gap-4">
+            <Modal.Body className="vstack gap-4 pt-0">
                 <p>
                     Are you sure you want to pause indexing until the server restarts? This will affect both existing
                     indexes and any new indexes created in this database during that time.

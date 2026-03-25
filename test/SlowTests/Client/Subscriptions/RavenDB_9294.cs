@@ -7,7 +7,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {

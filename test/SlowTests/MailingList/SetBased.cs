@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
@@ -38,7 +37,7 @@ namespace SlowTests.MailingList
             {
                 using (var commands = store.Commands())
                 {
-                    var json = commands.ParseJson(LinuxTestUtils.Dos2Unix(@"{
+                    var json = commands.ParseJson(@"{
    'Privilege':[
       {
          'Level':'Silver',
@@ -55,7 +54,7 @@ namespace SlowTests.MailingList
    ],
    'MiddleName':'asdfasdfasdf',
    'FirstName':'asdfasdfasdf'
-}"));
+}");
 
                     commands.Put("patrons/1", null, json, new Dictionary<string, object>
                     {

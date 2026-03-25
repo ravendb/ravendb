@@ -77,6 +77,11 @@ Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
     value: 1000,
 });
 
+Object.defineProperty(HTMLElement.prototype, "scrollTo", {
+    configurable: true,
+    value: jest.fn(),
+});
+
 if (!window.ResizeObserver) {
   window.ResizeObserver = ROP.ResizeObserver;
 }

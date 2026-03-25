@@ -19,12 +19,14 @@ namespace Raven.Client.Documents.Commands
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
         private readonly bool _ignoreLimit;
+        private readonly string _tag;
 
         protected AbstractQueryCommand(IndexQueryBase<TParameters> indexQuery, bool canCache, bool metadataOnly, bool indexEntriesOnly, bool ignoreLimit, TimeSpan globalHttpClientTimeout)
         {
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
             _ignoreLimit = ignoreLimit;
+            _tag = indexQuery.Tag;
 
             if (indexQuery.WaitForNonStaleResultsTimeout.HasValue && indexQuery.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
             {
@@ -69,6 +71,9 @@ namespace Raven.Client.Documents.Commands
 
             if (_ignoreLimit)
                 path.Append("&ignoreLimit=true");
+
+            if (string.IsNullOrWhiteSpace(_tag) == false)
+                path.Append("&tag=").Append(Uri.EscapeDataString(_tag));
 
             var request = new HttpRequestMessage
             {

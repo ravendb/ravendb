@@ -4,7 +4,6 @@ using System.IO;
 using Tests.Infrastructure;
 using Voron.Impl.Scratch;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Storage
 {

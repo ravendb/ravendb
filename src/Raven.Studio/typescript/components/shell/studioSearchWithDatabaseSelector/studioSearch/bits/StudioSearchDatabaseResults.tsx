@@ -29,7 +29,7 @@ export default function StudioSearchDatabaseResults(props: {
         );
     }
 
-    if (!props.searchQuery) {
+    if (!searchQuery) {
         return (
             <Dropdown.Item disabled className="studio-search__database-col__group pt-0">
                 <EmptySet compact>

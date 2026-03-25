@@ -5,7 +5,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

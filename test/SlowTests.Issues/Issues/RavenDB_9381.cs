@@ -2,7 +2,6 @@ using FastTests.Voron;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Indexing;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

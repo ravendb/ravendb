@@ -5,7 +5,6 @@ using Raven.Client.Documents.Session.TimeSeries;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.TimeSeries.Issues;
 

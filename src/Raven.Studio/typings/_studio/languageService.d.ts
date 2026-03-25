@@ -42,10 +42,15 @@ type MetadataRequestListIndexes = {
     type: "indexes";
 }
 
+type MetadataRequestListAiTasks = {
+    type: "aiTasks";
+}
+
 type MetadataRequestPayload = MetadataRequestListCollections 
     | MetadataRequestListIndexes 
     | MetadataRequestListCollectionFields
-    | MetadataRequestListIndexFields;
+    | MetadataRequestListIndexFields
+    | MetadataRequestListAiTasks;
 
 type LanguageServiceRequest = LanguageServiceSyntaxRequest | LanguageServiceAutoCompleteRequest | LanguageServiceMetadataRequest;
 
@@ -82,9 +87,14 @@ type MetadataResponseIndexFields = {
     fields: string[];
 }
 
+type MetadataResponseAiTasks = {
+    data: Record<string, Record<string, string[]>>;
+}
+
 type MetadataResponsePayload = MetadataResponseCollections 
     | MetadataResponseIndexes 
     | MetadataResponseIndexFields 
-    | MetadataResponseCollectionFields;
+    | MetadataResponseCollectionFields
+    | MetadataResponseAiTasks;
 
 type LanguageServiceResponse = LanguageServiceSyntaxResponse | LanguageServiceAutoCompleteResponse | LanguageServiceMetadataResponse;

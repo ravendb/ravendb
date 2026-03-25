@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Client.TimeSeries.Issues
 {

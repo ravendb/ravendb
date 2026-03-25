@@ -8,7 +8,6 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server

@@ -10,34 +10,81 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// ETL configuration for running GenAI processing (chat/completions) over documents in a collection.
+/// </summary>
 public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 {
+    /// <inheritdoc />
     public override string GetDestination() => Identifier;
+    /// <inheritdoc />
     public override string GetDefaultTaskName() => Identifier;
 
+    /// <summary>
+    /// The identifier used to group and track GenAI tasks associated with this configuration.
+    /// </summary>
     public string Identifier { get; set; }
-    public string Collection { get; set; }
-    
-    public override EtlType EtlType => EtlType.GenAi;
-    public override bool UsingEncryptedCommunicationChannel() => Connection?.UsingEncryptedCommunicationChannel() ?? false;
 
+    /// <summary>
+    /// The source collection on which the GenAI ETL will operate.
+    /// </summary>
+    public string Collection { get; set; }
+
+    /// <summary>
+    /// The ETL type. Always <see cref="EtlType.GenAi"/> for this configuration.
+    /// </summary>
+    public override EtlType EtlType => EtlType.GenAi;
+    /// <summary>
+    /// Indicates whether the underlying provider connection uses HTTPS or other encrypted transport.
+    /// </summary>
+    public override bool UsingEncryptedCommunicationChannel() => Connection?.UsingEncryptedCommunicationChannel() ?? false;
+    /// <summary>
+    /// Generates a normalized identifier from the configuration name.
+    /// </summary>
     public string GenerateIdentifier() => EmbeddingsGenerationConfiguration.GenerateIdentifier(Name);
 
+    /// <summary>
+    /// The transformation script/settings used to perform the GenAI processing.
+    /// </summary>
     public GenAiTransformation GenAiTransformation { get; set; }
 
+    /// <summary>
+    /// The prompt template sent to the model.
+    /// </summary>
     public string Prompt { get; set; }
-    
+
     //TODO: Make this JSON objects? 
+    /// <summary>
+    /// The JSON schema for the model output. Either this or <see cref="SampleObject"/> must be provided.
+    /// </summary>
     public string JsonSchema { get; set; }
+    /// <summary>
+    /// A sample object demonstrating the expected output shape. Either this or <see cref="JsonSchema"/> must be provided.
+    /// </summary>
     public string SampleObject { get; set; }
+    /// <summary>
+    /// JavaScript update function that applies results back to documents.
+    /// </summary>
     public string UpdateScript { get; set; }
 
+    /// <summary>
+    /// The maximum number of documents processed concurrently by the task.
+    /// </summary>
     public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
 
+    /// <summary>
+    /// Database-side tools: predefined queries that are being executed to fetch data directly during processing.
+    /// </summary>
     public List<AiAgentToolQuery> Queries { get; set; } = [];
 
+    /// <summary>
+    /// Enables detailed tracing for the GenAI task.
+    /// </summary>
     public bool EnableTracing { get; set; }
 
+    /// <summary>
+    /// The expiration time, in seconds, for the results of the GenAI processing.
+    /// </summary>
     public int? ExpirationInSec { get; set; }
 
     private List<Transformation> _transforms;
@@ -47,6 +94,9 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     internal readonly string TransformationName = "GenAi-transform-script";
     internal const int WithSampleObject = 1;
 
+    /// <summary>
+    /// Not supported for GenAI; use <see cref="GenAiTransformation"/> instead.
+    /// </summary>
     [JsonDeserializationIgnore]
     [JsonIgnore]
     [Obsolete($"{nameof(GenAiConfiguration)} doesn't support multiple transformations. Please use {nameof(GenAiTransformation)} property instead.")]
@@ -72,6 +122,9 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         }
     }
 
+    /// <summary>
+    /// Validates the configuration and optionally its connection/name/identifier.
+    /// </summary>
     public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true, EtlConfiguration<AiConnectionString> existingConfiguration = null)
     {
         if (validateConnection && Initialized == false)
@@ -162,6 +215,9 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     [ForceJsonSerialization]
     internal int? Version;
 
+    /// <summary>
+    /// Serializes this configuration to JSON structure.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();

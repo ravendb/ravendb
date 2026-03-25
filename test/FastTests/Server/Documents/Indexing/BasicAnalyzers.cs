@@ -26,7 +26,6 @@ using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Tests.Infrastructure;
 

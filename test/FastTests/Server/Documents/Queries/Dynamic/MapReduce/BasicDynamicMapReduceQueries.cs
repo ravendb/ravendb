@@ -11,7 +11,6 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce

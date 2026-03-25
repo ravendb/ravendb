@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 
         public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            return new GetRequest
+            var request = new GetRequest
             {
                 CanCacheAggressively = _queryOperation.IndexQuery.DisableCaching == false && _queryOperation.IndexQuery.WaitForNonStaleResults == false,
                 Url = "/queries",
@@ -31,6 +31,11 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 Query = $"?queryHash={_queryOperation.IndexQuery.GetQueryHash(ctx, _session.Conventions, _session.JsonSerializer)}",
                 Content = new IndexQueryContent(_session.Conventions, _queryOperation.IndexQuery)
             };
+
+            if (string.IsNullOrWhiteSpace(_queryOperation.IndexQuery.Tag) == false)
+                request.Query += $"&tag={Uri.EscapeDataString(_queryOperation.IndexQuery.Tag)}";
+
+            return request;
         }
 
         public object Result { get; set; }

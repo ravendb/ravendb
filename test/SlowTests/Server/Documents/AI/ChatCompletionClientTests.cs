@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
@@ -18,7 +19,6 @@ using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI;
 
@@ -54,7 +54,7 @@ public class ChatCompletionClientTests : RavenTestBase
 }";
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.vLLM | RavenAiIntegration.Ollama | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAiClientSanityTest(Options options, GenAiConfiguration configuration)
     {
         using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests())))
@@ -162,7 +162,7 @@ public class ChatCompletionClientTests : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.vLLM | RavenAiIntegration.Ollama | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     public async Task OtherErrors(Options options, GenAiConfiguration configuration)
     {
         const string prompt = "Check if the following blog post comment is spam or not";
@@ -184,6 +184,19 @@ public class ChatCompletionClientTests : RavenTestBase
             configuration.Connection.OpenAiSettings.ApiKey = 
                 configuration.Connection.OpenAiSettings.ApiKey
                     .Substring(0, configuration.Connection.OpenAiSettings.ApiKey.Length - 3); // back to the original api key
+        }
+
+        if (aiType == AiConnectorType.Google)
+        {
+            configuration.Connection.GoogleSettings.ApiKey += "xyz"; // wrong api key
+            using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
+            {
+                var ex = await Assert.ThrowsAsync<UnsuccessfulAiRequestException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
+                Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+            }
+            configuration.Connection.GoogleSettings.ApiKey =
+                configuration.Connection.GoogleSettings.ApiKey
+                    .Substring(0, configuration.Connection.GoogleSettings.ApiKey.Length - 3); // back to the original api key
         }
 
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
@@ -225,6 +238,10 @@ public class ChatCompletionClientTests : RavenTestBase
             case AiConnectorType.Ollama:
                 configuration.Connection.OllamaSettings.Uri = "https://google.com/v5";
                 break;
+            case AiConnectorType.Google:
+                configuration.Connection.GoogleSettings.ApiKey = "a";
+                configuration.Connection.GoogleSettings.Endpoint = "https://google.com/v5";
+                break;
             default:
                 throw new NotSupportedException($"The specified model (\"{aiType}\") is not supported.");
         }
@@ -243,7 +260,7 @@ public class ChatCompletionClientTests : RavenTestBase
                  <p><b>404.</b> <ins>That's an error.</ins>
                  <p>The requested URL <code>/v1/chat/completions</code> was not found on this server.  <ins>That's all we know.</ins>
              */
-            await Assert.ThrowsAsync<InvalidDataException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
+            await Assert.ThrowsAsync<UnexpectedResponseException>(() => client.TestCompleteAsync(prompt, context, defaultJsonSchema, default));
         }
 
 
@@ -259,6 +276,10 @@ public class ChatCompletionClientTests : RavenTestBase
                     oldModel = configuration.Connection.OllamaSettings.Model;
                     configuration.Connection.OllamaSettings.Model = model;
                     break;
+                case AiConnectorType.Google:
+                    oldModel = configuration.Connection.GoogleSettings.Model;
+                    configuration.Connection.GoogleSettings.Model = model;
+                    break;
                 default:
                     throw new NotSupportedException($"The specified model (\"{aiType}\") is not supported.");
             }
@@ -266,7 +287,7 @@ public class ChatCompletionClientTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     // Ollama Doesn't refuse
     public async Task RefuseToAnswer(Options options, GenAiConfiguration configuration)
     {
@@ -361,6 +382,10 @@ public class ChatCompletionClientTests : RavenTestBase
         // so we don't know the exact structure of an annotation yet.
         [JsonProperty("annotations")]
         public List<object> Annotations { get; set; }
+
+        // can get this from Google
+        [JsonProperty("extra_content")] 
+        public JObject ExtraContent { get; set; }
     }
 }
 

@@ -1,6 +1,6 @@
 ﻿using System;
 using Tests.Infrastructure.ConnectionString;
-using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure;
 
@@ -14,8 +14,7 @@ public class RequiresKafkaRetryFactAttribute : RetryFactAttribute
     }
 
     public RequiresKafkaRetryFactAttribute(int maxRetries = 3,
-        int delayBetweenRetriesMs = 1000,
-        params Type[] skipOnExceptions) : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+        int delayBetweenRetriesMs = 1000) : base(maxRetries, delayBetweenRetriesMs)
     {
         if (RavenTestHelper.SkipIntegrationTests)
         {

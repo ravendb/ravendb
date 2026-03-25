@@ -1,18 +1,20 @@
-﻿using System;
+using System;
 using Tests.Infrastructure.ConnectionString;
-using xRetry;
+using xRetry.v3;
 
 namespace Tests.Infrastructure;
 
-public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute
+public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFactAttribute
 {
-    public RequiresMsSqlRetryTheoryAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
-        : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
+    public RequiresMsSqlRetryTheoryAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0)
+        : base(maxRetries, delayBetweenRetriesMs)
     {
 
     }
 
-    public override string Skip
+    public new string Skip
     {
         get
         {

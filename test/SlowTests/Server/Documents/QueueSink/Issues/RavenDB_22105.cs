@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using RabbitMQ.Client;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.QueueSink.Issues;
 

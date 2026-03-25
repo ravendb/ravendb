@@ -77,6 +77,56 @@
             .icon-cancel {
                 font-size: 0.875em;
             }
+
+            .chatbot-request-size-indicator {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+
+                svg {
+                    display: block;
+                    width: 100%;
+                    height: 100%;
+                    transform: rotate(-90deg);
+                    transform-origin: center;
+                    transform-box: fill-box;
+                }
+
+                .track {
+                    fill: none;
+                    stroke: colors.$border-color-light-var;
+                    stroke-width: 4;
+                }
+
+                .value {
+                    fill: none;
+                    stroke-width: 4;
+                    stroke-linecap: round;
+                    transition: stroke-dasharray 0.2s ease;
+                }
+
+                &.warning {
+                    .value {
+                        stroke: colors.$warning-var;
+                    }
+                }
+
+                &.error {
+                    .value {
+                        stroke: colors.$danger-var;
+                    }
+                }
+            }
+
+            .chatbot-request-size-wrapper {
+                display: inline-flex;
+                align-items: center;
+                gap: sizes.$gutter-xxs;
+            }
+
+            .chatbot-request-size-value {
+                font-size: 11px;
+            }
         }
     }
 

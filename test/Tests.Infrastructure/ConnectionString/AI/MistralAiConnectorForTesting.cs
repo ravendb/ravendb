@@ -13,7 +13,7 @@ public class EmbeddingsMistralAiConnectorForTesting : AbstractEmbeddingsConnecto
     {
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.MistralAi);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.MistralAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {

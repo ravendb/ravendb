@@ -12,7 +12,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tools.Server.Documents.Migration
 {

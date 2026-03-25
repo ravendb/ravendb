@@ -6,7 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Tests.Infrastructure
 {

@@ -4,7 +4,6 @@ using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.CompactTrees;
 

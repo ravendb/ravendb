@@ -23,7 +23,32 @@
         width: 220px;
     }
     
+    .btn-group-label:before {
+        white-space: nowrap;
+    }
     
+    .size-filter-dropdown {
+        min-width: 180px;
+        
+        .size-filter-form-group {
+            margin-bottom: 8px;
+            
+            &:last-child {
+                margin-bottom: 0;
+            }
+            
+            label {
+                font-size: 12px;
+                margin-bottom: 4px;
+                display: block;
+            }
+            
+            input.form-control {
+                height: 30px;
+                font-size: 12px;
+            }
+        }
+    }
     
     .dropdown {
         .dropdown-menu.stats-menu {

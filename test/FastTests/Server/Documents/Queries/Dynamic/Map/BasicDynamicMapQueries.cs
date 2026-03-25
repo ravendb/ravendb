@@ -8,7 +8,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure.Entities;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 

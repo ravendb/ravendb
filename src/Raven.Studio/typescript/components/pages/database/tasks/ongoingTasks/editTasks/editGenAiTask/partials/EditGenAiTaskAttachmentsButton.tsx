@@ -138,7 +138,12 @@ const getAttachmentsColumns = (availableWidthInPx: number): ColumnDef<GenAiAiAtt
         {
             accessorKey: "Data",
             cell: CellWithCopyWrapper,
-            size: getSize(40),
+            size: getSize(30),
+        },
+        {
+            accessorKey: "RemoteStorageId",
+            cell: CellValueWrapper,
+            size: getSize(10),
         },
     ];
 };

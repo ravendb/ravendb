@@ -16,7 +16,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Vectors;
 
@@ -50,16 +49,16 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             var metadata = mapping.GetByFieldId(1).Metadata;
             Span<long> ids = stackalloc long[16];
 
-            var querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[0]), 0.75f, 16, false, true);
+            var querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[0]), 0.75f, 16, false, true, null, scanningThreshold: 0);
 
             var read = querySingle.Fill(ids);
             Assert.Equal(2, read);
 
-            querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[2]), 0.75f, 16, false, true);
+            querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[2]), 0.75f, 16, false, true, null, scanningThreshold: 0);
             read = querySingle.Fill(ids);
             Assert.Equal(2, read);
 
-            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true);
+            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true, null, 0);
             read = combinedQuery.Fill(ids);
             Assert.Equal(4, read);
         }
@@ -69,7 +68,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             var metadata = mapping.GetByFieldId(1).Metadata;
             Span<long> ids = stackalloc long[1];
 
-            var querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[0]), 0.75f, 16, false, true);
+            var querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[0]), 0.75f, 16, false, true, null, scanningThreshold: 0);
 
             List<long> idsReturned = new();
             var read = querySingle.Fill(ids);
@@ -82,7 +81,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             Assert.Distinct(idsReturned);
 
 
-            querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[2]), 0.75f, 16, false, true);
+            querySingle = indexSearcher.VectorSearch(metadata, getVector(Vectors[2]), 0.75f, 16, false, true, null, scanningThreshold: 0);
             read = querySingle.Fill(ids);
             Assert.Equal(1, read);
             idsReturned.Add(ids[0]);
@@ -92,7 +91,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             Assert.Distinct(idsReturned);
             idsReturned.Clear();
 
-            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true);
+            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(Vectors[0]), getVector(Vectors[2]) }, 0.75f, 16, false, true, null, 0);
 
             //first
             read = combinedQuery.Fill(ids);
@@ -162,23 +161,23 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             var metadata = mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true);
             Span<long> ids = stackalloc long[16];
             Span<float> scores = stackalloc float[16];
-
-            var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false);
-
+            
+            var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false, filterQuery: null, scanningThreshold: 0);
+            
             var read = query.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal(new long[] { 1L, 2L, 3L }, ids[..3]);
-            query.Score(ids[..3], scores[..3], 0f);
+            query.Score(ids[..3], scores[..3], 1f);
             Assert.Equal(scores[0], 0.96f, 0.01); // doc 1
             Assert.Equal(scores[1], 1f, 0.01); // doc 2
             Assert.Equal(scores[2], 0.92f, 0.01); // doc3
 
 
-            query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, true);
+            query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, true, filterQuery: null, scanningThreshold: 0);
             read = query.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal((long)sourceIds[1], ids[0]);
-            query.Score(ids[..3], scores[..3], 0f);
+            query.Score(ids[..3], scores[..3], 1f);
             Assert.True(scores[0] > scores[1]);
             Assert.True(scores[1] > scores[2]);
         }
@@ -188,7 +187,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
         {
             var metadata = mapping.GetByFieldId(1).Metadata.ChangeScoringMode(true);
 
-            var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false);
+            var query = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[1]), getVector([-1f, -1f]) }, 0.75f, 16, false, false, filterQuery: null, scanningThreshold: 0);
 
             Span<long> toAndWith = stackalloc long[16];
             toAndWith[0] = 1L;
@@ -248,7 +247,7 @@ public class MultiVectorSearch(ITestOutputHelper output) : StorageTest(output)
             var metadata = mapping.GetByFieldId(1).Metadata;
             Span<long> ids = stackalloc long[16];
 
-            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[0]), getVector(vectors[2]) }, 0.0f, 16, false, true);
+            var combinedQuery = indexSearcher.MultiVectorSearch(metadata, new[] { getVector(vectors[0]), getVector(vectors[2]) }, 0.0f, 16, false, true, filterQuery: null, scanningThreshold: 0);
             var read = combinedQuery.Fill(ids);
             Assert.Equal(3, read);
             Assert.Equal(ids[2], 2);

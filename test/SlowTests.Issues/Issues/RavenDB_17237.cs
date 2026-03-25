@@ -9,9 +9,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Tests.Infrastructure;
-using xRetry;
+using xRetry.v3;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

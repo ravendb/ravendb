@@ -1,5 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
+
+type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
 
 export type AiAgentTrimmingMethod = "Tokens";
 
@@ -54,6 +57,9 @@ const editSchema = yup.object({
                 ),
             description: yup.string().nullable(),
             isSendToModel: yup.boolean(),
+            policy: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterPolicy>(),
+            type: yup.string<Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType>(),
+            isEditing: yup.boolean(),
         })
     ),
 
@@ -153,6 +159,14 @@ const editSchema = yup.object({
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
         })
         .nullable(),
+
+    subAgents: yup.array().of(
+        yup.object({
+            identifier: yup.string().required(),
+            description: yup.string().required(),
+            isEditing: yup.boolean(),
+        })
+    ),
 });
 
 function getIsToolNameUnique(value: string, ctx: yup.TestContext<EditAiAgentValidationContext>): boolean {
@@ -169,7 +183,17 @@ const testSchema = yup.object({
     parameters: yup.array().of(
         yup.object({
             name: yup.string().nullable(),
-            value: yup.string().nullable().required(),
+            value: aiAgentParametersUtils.createValueSchema(
+                yup
+                    .string()
+                    .nullable()
+                    .when("type", {
+                        is: (type: AiAgentParameterValueType) => type !== "Null",
+                        then: (schema) => schema.required(),
+                    })
+            ),
+            type: yup.string<AiAgentParameterValueType>(),
+            isSendToModel: yup.boolean(),
         })
     ),
 });

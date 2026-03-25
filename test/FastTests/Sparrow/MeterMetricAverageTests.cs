@@ -2,7 +2,6 @@ using System;
 using Raven.Server.Utils.Metrics;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
