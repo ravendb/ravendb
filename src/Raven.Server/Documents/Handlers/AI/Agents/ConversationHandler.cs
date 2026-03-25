@@ -730,23 +730,16 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
     private object FindToolFrom(AiAgentConfiguration self, string name)
     {
-        foreach (AiAgentToolQuery query in self.Queries ?? [])
-        {
-            if (query.Name == name)
-                return query;
-        }
+        var query = self.FindQuery(name);
+        if (query != null)
+            return query;
 
         var subAgent = self.FindSubAgent(name);
         if (subAgent != null)
             return subAgent;
 
-        foreach (AiAgentToolAction action in self.Actions ?? [])
-        {
-            if (action.Name == name)
-                return action;
-        }
-
-        return null;
+        var action = self.FindAction(name);
+        return action;
     }
 
     public AiAgentConfiguration GetAiAgentConfiguration(string identifier)

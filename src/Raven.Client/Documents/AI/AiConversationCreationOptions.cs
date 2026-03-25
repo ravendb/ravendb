@@ -69,8 +69,26 @@ public class AiConversationCreationOptions : IDynamicJson
     }
 }
 
+/// <summary>
+/// Optional configuration for a conversation parameter.
+/// Allows controlling how the parameter is handled when sent to the model.
+/// </summary>
 public class AiConversationParameterOptions
 {
+    /// <summary>
+    /// Determines whether the parameter should be sent to the model.
+    /// 
+    /// The parameter will be included in the model input only if:
+    /// <list type="bullet">
+    /// <item><description>This flag is set to <c>true</c>.</description></item>
+    /// <item><description>The parameter is also allowed by the agent configuration.</description></item>
+    /// </list>
+    /// 
+    /// When set to <c>false</c>, the parameter remains available for internal use
+    /// (e.g., queries, actions, or sub-agents) but is not exposed to the model.
+    /// 
+    /// Default is <c>true</c>.
+    /// </summary>
     public bool SendToModel { get; set; } = true;
 }
 
