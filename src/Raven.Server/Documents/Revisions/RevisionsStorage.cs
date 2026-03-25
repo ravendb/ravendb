@@ -2414,10 +2414,14 @@ namespace Raven.Server.Documents.Revisions
                     {
                         // this protects against ourselves, if we already reverted the document
                         var current = documentsStorage.GetDocumentOrTombstone(context, document.Id, DocumentFields.Default, throwOnConflict: false);
-                        var currentEtag = current.Document?.Etag ?? current.Tombstone?.Etag ?? 0;
-                        var currentflags = current.Document?.Flags ?? current.Tombstone?.Flags ?? DocumentFlags.None;
-                        if (currentEtag > _etagBarrier.Value && currentflags.HasFlag(DocumentFlags.Reverted))
-                            continue;
+                        using (current.Document)
+                        using (current.Tombstone)
+                        {
+                            var currentEtag = current.Document?.Etag ?? current.Tombstone?.Etag ?? 0;
+                            var currentFlags = current.Document?.Flags ?? current.Tombstone?.Flags ?? DocumentFlags.None;
+                            if (currentEtag > _etagBarrier.Value && currentFlags.HasFlag(DocumentFlags.Reverted))
+                                continue;
+                        }
                     }
 
                     _token.ThrowIfCancellationRequested();
@@ -2508,17 +2512,17 @@ namespace Raven.Server.Documents.Revisions
         internal sealed class RevertDocumentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RevertDocumentsCommand>
         {
             public readonly List<Document> List;
-            private readonly long? _etagBarrier;
+            public readonly long? EtagBarrier;
 
             public RevertDocumentsCommandDto(List<Document> list, long? etagBarrier)
             {
                 List = list;
-                _etagBarrier = etagBarrier;
+                EtagBarrier = etagBarrier;
             }
 
             public RevertDocumentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new RevertDocumentsCommand(List, _etagBarrier, OperationCancelToken.None);
+                return new RevertDocumentsCommand(List, EtagBarrier, OperationCancelToken.None);
             }
         }
 

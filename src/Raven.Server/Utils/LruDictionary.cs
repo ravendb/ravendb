@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Utils;
+﻿using System;
+
+namespace Raven.Server.Utils;
 
 using System.Collections.Generic;
 
@@ -10,6 +12,9 @@ public sealed class LruDictionary<TKey, TValue> where TKey : notnull
 
     public LruDictionary(int maxCapacity)
     {
+        if (maxCapacity <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxCapacity), "Max capacity must be greater than zero.");
+
         _maxCapacity = maxCapacity;
         _cache = new Dictionary<TKey, (LinkedListNode<TKey> Node, TValue Value)>(maxCapacity);
         _list = new LinkedList<TKey>();
