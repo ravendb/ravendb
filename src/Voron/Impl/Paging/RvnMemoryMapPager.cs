@@ -1,18 +1,20 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Exceptions;
 using Sparrow.Server.Meters;
 using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
-using Sparrow.Utils;
 using Voron.Global;
 using Voron.Util.Settings;
 using static Sparrow.Server.Platform.Pal;
 using static Sparrow.Server.Platform.PalDefinitions;
 using static Sparrow.Server.Platform.PalFlags;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Impl.Paging
 {
@@ -249,5 +251,59 @@ namespace Voron.Impl.Paging
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Unable to un-protect page range for '{FileName.FullPath}'. start={new IntPtr(start).ToInt64():X}, size={size}, ProtectRange = Unprotect, errorCode={errorCode}");
         }
+
+        /// <summary>
+        /// Calls posix_fadvise(POSIX_FADV_SEQUENTIAL) on the underlying mmap file descriptor.
+        /// This sets a per-fd, adaptively-growing read-ahead window in the kernel that is
+        /// NOT bounded by the global read_ahead_kb device parameter.  During journal recovery
+        /// (a fully sequential read) the kernel will issue progressively larger I/Os instead
+        /// of being capped at read_ahead_kb bytes per request — reducing IOPS without touching
+        /// any global tuning knobs.
+        ///
+        /// The fd is read directly from the PAL-internal map_file_handle struct:
+        ///     struct map_file_handle { int fd; const char* path; int flags; }
+        /// fd is at offset 0, so *(int*)handle gives the descriptor.
+        ///
+        /// Only meaningful on Linux; macOS lacks posix_fadvise and is not affected by
+        /// read_ahead_kb.  Errors are silently ignored — this is a best-effort hint.
+        /// </summary>
+        public void TrySetSequentialScanHint()
+        {
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                return;
+
+            if (_handle.IsInvalid || _handle.IsClosed)
+                return;
+
+            // fd is the first field of map_file_handle at offset 0.
+            var fd = *(int*)_handle.DangerousGetHandle();
+            if (fd < 0)
+                return;
+
+            PosixFadvise(fd, 0, 0, PosixFadviseSequential);
+        }
+
+        // posix_fadvise(2): returns errno directly on error — SetLastError = false is correct.
+        [DllImport("libc", EntryPoint = "posix_fadvise", SetLastError = false)]
+        private static extern int PosixFadvise(int fd, long offset, long len, int advice);
+
+        private const int PosixFadviseSequential = 2; // POSIX_FADV_SEQUENTIAL, same on all Linux arches
+
+        public void TryDropFromPageCacheHint()
+        {
+            if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                return;
+
+            if (_handle.IsInvalid || _handle.IsClosed)
+                return;
+
+            var fd = *(int*)_handle.DangerousGetHandle();
+            if (fd < 0)
+                return;
+
+            PosixFadvise(fd, 0, 0, PosixFadviseDoNotNeed);
+        }
+
+        private const int PosixFadviseDoNotNeed = 4; // POSIX_FADV_DONTNEED, same on all Linux arches
     }
 }

@@ -932,7 +932,8 @@ namespace Voron
                     // regardless of the read_ahead_kb kernel setting (which may be tuned low
                     // for random-access production workloads).
                     var posixJournalPager = new RvnMemoryMapPager(this, path);
-                    posixJournalPager.TryPrefetchingWholeFile();
+                    posixJournalPager.TrySetSequentialScanHint();
+                    //posixJournalPager.TryPrefetchingWholeFile();
                     return posixJournalPager;
                 }
 

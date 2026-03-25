@@ -87,7 +87,7 @@ namespace Voron.Impl.Journal
             // next chunk into the page cache while we process the current transaction.
             // This decouples journal recovery throughput from the kernel's read_ahead_kb
             // setting (which may be tuned very low for random-access production workloads).
-            PrefetchJournalAhead();
+            //PrefetchJournalAhead();
             
             TransactionHeaderPageInfo* pageInfoPtr;
             byte* outputPage;
@@ -771,6 +771,9 @@ namespace Voron.Impl.Journal
                 BeforeCommitFinalization?.Invoke(this);
             }
             OnDispose?.Invoke(this);
+
+            if (_journalPager is RvnMemoryMapPager rvnPager)
+                rvnPager.TryDropFromPageCacheHint();
         }
 
         private static int GetNumberOfPagesFor(long size)
