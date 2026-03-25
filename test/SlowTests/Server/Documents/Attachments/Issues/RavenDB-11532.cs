@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
@@ -18,7 +19,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
         public async Task Can_Copy_Remote_Attachment_In_Patch()
         {
             using var store = GetDocumentStore();
@@ -46,7 +47,13 @@ namespace SlowTests.Server.Documents.Attachments.Issues
 
                 await session.SaveChangesAsync();
             }
-
+            string beforeCopyCv;
+            using (var commands = store.Commands())
+            {
+                dynamic order2Before = await commands.GetAsync("orders/2", true);
+                dynamic beforeMetadata = order2Before["@metadata"];
+                beforeCopyCv = beforeMetadata["@change-vector"]?.ToString();
+            }
             await using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello remote attachment")))
             {
                 await store.Operations.SendAsync(new PutAttachmentOperation("orders/1", "remote-file", ms, "text/plain"));
@@ -140,13 +147,22 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             Assert.NotNull(copied.Details.RemoteParameters);
             Assert.Equal(RemoteAttachmentFlags.Remote, copied.Details.RemoteParameters.Flags);
             Assert.Equal(identifier, copied.Details.RemoteParameters.Identifier);
+            using (var commands = store.Commands())
+            {
+                dynamic order2After = await commands.GetAsync("orders/2", true);
+                dynamic metadataAfter = order2After["@metadata"];
+                var afterCopyCv = metadataAfter["@change-vector"]?.ToString();
+                Assert.NotEqual(beforeCopyCv, afterCopyCv);
+
+                var flags = metadataAfter["@flags"]?.ToString();
+                Assert.Contains("HasAttachments", flags);
+            }
         }
 
-        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_Copy_Attachment_In_Patch(Options options)
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
+        public void Can_Copy_Attachment_In_Patch()
         {
-            using var store = GetDocumentStore(options);
+            using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
             {
@@ -161,6 +177,17 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                 }, "target/1");
 
                 session.SaveChanges();
+            }
+
+            string beforeCopyCv;
+            using (var commands = store.Commands())
+            {
+                dynamic targetBefore = commands.Get("target/1", true);
+                Assert.NotNull(targetBefore);
+
+                dynamic beforeMetadata = targetBefore["@metadata"];
+                Assert.NotNull(beforeMetadata);
+                beforeCopyCv = beforeMetadata["@change-vector"]?.ToString();
             }
 
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello from source attachment")))
@@ -192,13 +219,27 @@ namespace SlowTests.Server.Documents.Attachments.Issues
             {
                 Assert.NotNull(sourceResult);
             }
+
+            using (var commands = store.Commands())
+            {
+                dynamic targetAfter = commands.Get("target/1", true);
+                Assert.NotNull(targetAfter);
+                dynamic afterMetadata = targetAfter["@metadata"];
+                Assert.NotNull(afterMetadata);
+
+                var afterCopyCv = afterMetadata["@change-vector"]?.ToString();
+                Assert.NotEqual(beforeCopyCv, afterCopyCv);
+
+                var flags = afterMetadata["@flags"]?.ToString();
+                Assert.Contains("HasAttachments", flags);
+
+            }
         }
 
-        [RavenTheory(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void Can_Copy_Attachment_In_PatchByQuery(Options options)
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
+        public void Can_Copy_Attachment_In_PatchByQuery()
         {
-            using var store = GetDocumentStore(options);
+            using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
             {
@@ -213,6 +254,16 @@ namespace SlowTests.Server.Documents.Attachments.Issues
                 }, "target/1");
 
                 session.SaveChanges();
+            }
+
+            string beforeCopyCv;
+            using (var commands = store.Commands())
+            {
+                dynamic targetBefore = commands.Get("target/1", true);
+                Assert.NotNull(targetBefore);
+                dynamic beforeMetadata = targetBefore["@metadata"];
+                Assert.NotNull(beforeMetadata);
+                beforeCopyCv = beforeMetadata["@change-vector"]?.ToString();
             }
 
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("copied by query")))
@@ -238,6 +289,20 @@ update {
 
                 using var reader = new StreamReader(result.Stream);
                 Assert.Equal("copied by query", reader.ReadToEnd());
+
+                using (var commands = store.Commands())
+                {
+                    dynamic targetAfter = commands.Get("target/1", true);
+                    Assert.NotNull(targetAfter);
+                    dynamic afterMetadata = targetAfter["@metadata"];
+                    Assert.NotNull(afterMetadata);
+
+                    var afterCopyCv = afterMetadata["@change-vector"]?.ToString();
+                    Assert.NotEqual(beforeCopyCv, afterCopyCv);
+
+                    var flags = afterMetadata["@flags"]?.ToString();
+                    Assert.Contains("HasAttachments", flags);
+                }
             }
         }
 

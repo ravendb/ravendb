@@ -26,7 +26,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Exceptions.Sharding;
-using Raven.Client.Extensions;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static.Spatial;
@@ -949,7 +948,7 @@ namespace Raven.Server.Documents.Patch
 
                 if (DebugMode)
                 {
-                    DebugActions.PutAttachment.Add(new DynamicJsonValue
+                    DebugActions.CopyAttachment.Add(new DynamicJsonValue
                     {
                         ["SourceDocId"] = sourceId,
                         ["SourceName"] = sourceName,
