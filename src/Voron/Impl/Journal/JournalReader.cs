@@ -1,4 +1,4 @@
-﻿using Sparrow;
+using Sparrow;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -82,6 +82,12 @@ namespace Voron.Impl.Journal
             var transactionSizeIn4Kb = GetTransactionSizeIn4Kb(current);
 
             _readAt4Kb += transactionSizeIn4Kb;
+
+            // Issue a forward-looking prefetch on the journal pager so the OS loads the
+            // next chunk into the page cache while we process the current transaction.
+            // This decouples journal recovery throughput from the kernel's read_ahead_kb
+            // setting (which may be tuned very low for random-access production workloads).
+            PrefetchJournalAhead();
             
             TransactionHeaderPageInfo* pageInfoPtr;
             byte* outputPage;
@@ -775,6 +781,31 @@ namespace Voron.Impl.Journal
         private static long GetNumberOf4KbFor(long size)
         {
             return checked(size / (4 * Constants.Size.Kilobyte) + (size % (4 * Constants.Size.Kilobyte) == 0 ? 0 : 1));
+        }
+
+        /// <summary>
+        /// Prefetch the next 1 MB of journal data ahead of the current read position using
+        /// madvise(MADV_WILLNEED). This tells the OS to asynchronously load upcoming journal
+        /// pages into the page cache while we process the current transaction, ensuring that
+        /// sequential journal recovery throughput is not constrained by a low read_ahead_kb
+        /// kernel setting (which may be tuned for random-access production workloads).
+        /// </summary>
+        private void PrefetchJournalAhead()
+        {
+            const int pageTo4KbRatio = Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte);
+            // 1 MB look-ahead expressed in 8 KB Voron pages
+            const int prefetchAheadPages = (1 * Constants.Size.Megabyte) / Constants.Storage.PageSize;
+
+            var remaining4Kb = _journalPagerNumberOfAllocated4Kb - _readAt4Kb;
+            if (remaining4Kb <= 0)
+                return;
+
+            var pageNumber = _readAt4Kb / pageTo4KbRatio;
+            var pagesToPrefetch = (int)Math.Min(prefetchAheadPages, remaining4Kb / pageTo4KbRatio);
+            if (pagesToPrefetch <= 0)
+                return;
+
+            _journalPager.MaybePrefetchMemory(pageNumber, pagesToPrefetch);
         }
 
         Dictionary<AbstractPager, TransactionState> IPagerLevelTransactionState.PagerTransactionState32Bits { get; set; }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -926,7 +926,14 @@ namespace Voron
                 {
                     if (RunningOn32Bits)
                         return new Posix32BitsMemoryMapPager(this, path);
-                    return new RvnMemoryMapPager(this, path);
+
+                    // We know we'll be reading the entire journal sequentially during recovery.
+                    // Prefetch the whole file upfront so the OS loads it into page cache
+                    // regardless of the read_ahead_kb kernel setting (which may be tuned low
+                    // for random-access production workloads).
+                    var posixJournalPager = new RvnMemoryMapPager(this, path);
+                    posixJournalPager.TryPrefetchingWholeFile();
+                    return posixJournalPager;
                 }
 
                 if (RunningOn32Bits)
