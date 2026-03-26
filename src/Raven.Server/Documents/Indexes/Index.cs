@@ -4290,9 +4290,9 @@ namespace Raven.Server.Documents.Indexes
                 *(long*)(indexEtagBytes + pos) = queryTime.Today.Ticks;
             }
 
-            if (q.TimeBasedOffsets is { Count: > 0 })
+            if (q.NowOffsets is { Count: > 0 })
             {
-                foreach (var offset in q.TimeBasedOffsets)
+                foreach (var offset in q.NowOffsets)
                 {
                     pos -= sizeof(long);
                     *(long*)(indexEtagBytes + pos) = offset.Apply(queryTime.Now).Ticks;
@@ -4347,8 +4347,8 @@ namespace Raven.Server.Documents.Indexes
             if (q.HasToday)
                 length += sizeof(long);
 
-            if (q.TimeBasedOffsets is { Count: > 0 })
-                length += sizeof(long) * q.TimeBasedOffsets.Count;
+            if (q.NowOffsets is { Count: > 0 })
+                length += sizeof(long) * q.NowOffsets.Count;
 
             return length;
         }

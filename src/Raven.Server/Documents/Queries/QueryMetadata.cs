@@ -237,9 +237,9 @@ function execute(doc, args){
         /// <summary>
         /// Parsed offsets from now('+1h') calls. Used for ETag computation.
         /// </summary>
-        internal List<TimeFunctionOffset> TimeBasedOffsets;
+        internal List<TimeFunctionOffset> NowOffsets;
 
-        public bool HasTimeBasedFunction => HasNow || HasToday || TimeBasedOffsets is { Count: > 0 };
+        public bool HasTimeBasedFunction => HasNow || HasToday || NowOffsets is { Count: > 0 };
 
         public bool HasNonDeterministicFunction => HasOrderByRandom || HasNow;
 
@@ -310,8 +310,8 @@ function execute(doc, args){
             {
                 if (TimeFunctionOffset.TryParse(ve.Token.Value.AsSpan(), out var offset))
                 {
-                    TimeBasedOffsets ??= new List<TimeFunctionOffset>();
-                    TimeBasedOffsets.Add(offset);
+                    NowOffsets ??= new List<TimeFunctionOffset>();
+                    NowOffsets.Add(offset);
                     return;
                 }
             }
