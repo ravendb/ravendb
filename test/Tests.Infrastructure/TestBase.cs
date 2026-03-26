@@ -128,9 +128,9 @@ namespace FastTests
             //DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
             //DefaultHttpProtocols = HttpProtocols.Http2;
 
-            Console.WriteLine($"Default HTTP Compression Algorithm: {DocumentConventions.DefaultHttpCompressionAlgorithm}");
-            Console.WriteLine($"Default HTTP Pooled Connection Idle Timeout: {DocumentConventions.DefaultHttpPooledConnectionIdleTimeout}");
-            Console.WriteLine($"Default HTTP Version Policy: {DocumentConventions.DefaultHttpVersionPolicy}");
+            Console.Error.WriteLine($"Default HTTP Compression Algorithm: {DocumentConventions.DefaultHttpCompressionAlgorithm}");
+            Console.Error.WriteLine($"Default HTTP Pooled Connection Idle Timeout: {DocumentConventions.DefaultHttpPooledConnectionIdleTimeout}");
+            Console.Error.WriteLine($"Default HTTP Version Policy: {DocumentConventions.DefaultHttpVersionPolicy}");
 
             Lucene.Net.Util.UnmanagedStringArray.Segment.AllocateMemory = (size, _) => NativeMemory.AllocateMemory(size);
             Lucene.Net.Util.UnmanagedStringArray.Segment.FreeMemory = (ptr, size, _) => NativeMemory.Free(ptr, size);
@@ -146,7 +146,7 @@ namespace FastTests
 
             IOExtensions.AfterGc += (s, x) =>
             {
-                Console.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
+                Console.Error.WriteLine($"Execution of GC due to IO failure on path '{x.Path}' took {x.Duration} (attempt: {x.Attempt})");
             };
 
             ConversationHandler.OnUpdateUsage += (sender, usage) =>
@@ -336,7 +336,7 @@ namespace FastTests
                 if (leakedServer.Key.Disposed)
                     continue;
 
-                Console.WriteLine($"[ Leak!! ] The test {leakedServer.Value} leaks a server.");
+                Console.Error.WriteLine($"[ Leak!! ] The test {leakedServer.Value} leaks a server.");
             }
         }
 
@@ -385,13 +385,13 @@ namespace FastTests
                                         .AppendLine(databaseName);
                                 }
 
-                                Console.WriteLine(sb.ToString());
+                                Console.Error.WriteLine(sb.ToString());
                             }
                         }
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
+                        Console.Error.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
                     }
 
                     if (AiTokensPerDatabase.IsEmpty == false)
@@ -412,7 +412,7 @@ namespace FastTests
 
                         sb.AppendLine($"Total tokens: {totalTokens}");
 
-                        Console.WriteLine(sb.ToString());
+                        Console.Error.WriteLine(sb.ToString());
                     }
 
                     DisposeServer(copyGlobalServer);
@@ -429,7 +429,7 @@ namespace FastTests
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Console.Error.WriteLine(e);
             }
             finally
             {
