@@ -4214,7 +4214,7 @@ namespace Raven.Server.Documents.Indexes
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
 
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, q, length, indexEtagBytes, queryTime);
+            UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(queryContext, q, length, indexEtagBytes, queryTime);
 
             unchecked
             {
@@ -4254,14 +4254,14 @@ namespace Raven.Server.Documents.Indexes
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes, queryTime);
+            UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(queryContext, query, length, indexEtagBytes, queryTime);
 
             var writePos = indexEtagBytes + minLength;
 
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext, referencedCollectionsDict, collectionsWithCompareExchangeReferences);
         }
 
-        private static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes, QueryTimeScope queryTime = null)
+        private static unsafe void UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes, QueryTimeScope queryTime = null)
         {
             if (q == null)
                 return;
