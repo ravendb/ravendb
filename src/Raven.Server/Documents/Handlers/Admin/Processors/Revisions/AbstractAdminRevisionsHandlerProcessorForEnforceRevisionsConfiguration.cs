@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
     internal abstract class AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<TRequestHandler, TOperationContext, TOperationParameters> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TOperationContext : JsonOperationContext
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
-        where TOperationParameters : IRevisionsOperationParameters
+        where TOperationParameters : RevisionsOperationParameters
     {
         protected OperationType _operationType;
         public abstract string Description { get; }

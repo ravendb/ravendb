@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -63,8 +65,8 @@ namespace SlowTests.Server.Documents.Revisions
 
             using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
             {
-                var result = (RevertResult)await database.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                    token: token, collections: collections);
+                var result = (RevertResult)await database.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                    new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
             }
 
             using (var session = store.OpenAsyncSession())
@@ -148,8 +150,8 @@ namespace SlowTests.Server.Documents.Revisions
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        collections, token);
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                        new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -216,8 +218,8 @@ namespace SlowTests.Server.Documents.Revisions
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        collections, token);
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                        new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -273,8 +275,8 @@ namespace SlowTests.Server.Documents.Revisions
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        collections, token);
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                        new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -345,8 +347,8 @@ namespace SlowTests.Server.Documents.Revisions
                 RevertResult result;
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
-                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        collections, token);
+                    result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                        new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -406,8 +408,8 @@ namespace SlowTests.Server.Documents.Revisions
 
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None)) 
                 { 
-                    var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(last, TimeSpan.FromMinutes(60), onProgress: null,
-                        collections, token);
+                    var result = (RevertResult)await db.DocumentsStorage.RevisionsStorage.RevertRevisions(
+                        new RevertRevisionsRequest { Time = last, WindowInSec = (long)TimeSpan.FromMinutes(60).TotalSeconds, Collections = collections.ToArray() }, onProgress: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession())

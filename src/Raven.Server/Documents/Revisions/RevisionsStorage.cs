@@ -1737,35 +1737,34 @@ namespace Raven.Server.Documents.Revisions
 
         public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return EnforceConfigurationAsync(onProgress, includeForceCreated: true, null, token: token);
+            return EnforceConfigurationAsync(onProgress, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true }, token);
         }
 
         public Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress, bool includeForceCreated, OperationCancelToken token)
         {
-            return EnforceConfigurationAsync(onProgress, includeForceCreated, null, token: token);
+            return EnforceConfigurationAsync(onProgress, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = includeForceCreated }, token);
         }
 
         public async Task<IOperationResult> EnforceConfigurationAsync(Action<IOperationProgress> onProgress,
-           bool includeForceCreated, // include ForceCreated revisions on deletion in case of no revisions configuration (only conflict revisions config is exist).
-           HashSet<string> collections,
-           OperationCancelToken token)
+            EnforceRevisionsConfigurationOperation.Parameters parameters,
+            OperationCancelToken token)
         {
             var result = new EnforceConfigurationResult();
             await PerformRevisionsOperationAsync(onProgress, result,
-                (ids, res, tk) => new EnforceRevisionConfigurationCommand(this, ids, res, includeForceCreated, tk),
-                collections, token);
+                (ids, res, tk) => new EnforceRevisionConfigurationCommand(this, ids, res, parameters.IncludeForceCreated, tk),
+                parameters, token);
 
             return result;
         }
 
         public async Task<IOperationResult> AdoptOrphanedAsync(Action<IOperationProgress> onProgress,
-            HashSet<string> collections,
+            AdoptOrphanedRevisionsOperation.Parameters parameters,
             OperationCancelToken token)
         {
             var result = new AdoptOrphanedRevisionsResult();
             await PerformRevisionsOperationAsync(onProgress, result,
                 (ids, res, tk) => new AdoptOrphanedRevisionsCommand(this, ids, result, tk),
-                collections: collections, token);
+                parameters, token);
 
             return result;
         }
@@ -1788,32 +1787,38 @@ namespace Raven.Server.Documents.Revisions
             Action<IOperationProgress> onProgress,
             TOperationResult result,
             Func<List<string>, TOperationResult, OperationCancelToken, RevisionsScanningOperationCommand<TOperationResult>> createCommand,
-            HashSet<string> collections,
+            RevisionsOperationParameters operationParameters,
             OperationCancelToken token) where TOperationResult : OperationResult
         {
+            var databaseName = _database.Name;
+            var nodeTag = _database.ServerStore.NodeTag;
+            operationParameters.Validate(databaseName, nodeTag);
+
+            var (collections, startFromEtag, etagBarrier) = operationParameters.Resolve(databaseName, _documentsStorage.GenerateNextEtag);
             if (collections == null)
             {
-                collections = new HashSet<string>() { null };
+                // null means - all revisions
+                collections = [null];
             }
             else
             {
-                if (collections.Comparer?.Equals(StringComparer.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
-
                 foreach (var collection in collections)
                 {
                     if (string.IsNullOrEmpty(collection))
                         throw new InvalidOperationException("There is no collection with name which is empty string or 'null'.");
                 }
             }
-
             var parameters = new Parameters
             {
                 Before = DateTime.MinValue,
                 MinimalDate = DateTime.MinValue,
-                EtagBarrier = _documentsStorage.GenerateNextEtag(),
-                OnProgress = onProgress
+                EtagBarrier = etagBarrier,
+                OnProgress = onProgress,
+                LastScannedEtag = startFromEtag
             };
+
+            result.EtagBarriersUsed[databaseName] = etagBarrier;
+            result.NodeTags[databaseName] = nodeTag;
 
             var ids = new List<string>();
             var sw = Stopwatch.StartNew();
@@ -1823,7 +1828,12 @@ namespace Raven.Server.Documents.Revisions
 
             foreach (var collection in collections)
             {
+                // we need to reset the last scanned etag for each collection.
                 await PerformRevisionsOperationOnSingleCollectionAsync(collection, ids, sw, createCommand, result, parameters, token);
+
+                var previous = result.LastProcessedEtags.GetValueOrDefault(databaseName, 0);
+                result.LastProcessedEtags[databaseName] = Math.Max(previous, parameters.LastScannedEtag);
+                parameters.LastScannedEtag = etagBarrier;
             }
         }
 
@@ -1834,7 +1844,6 @@ namespace Raven.Server.Documents.Revisions
             Parameters parameters, OperationCancelToken token)
             where TOperationResult : OperationResult
         {
-            parameters.LastScannedEtag = parameters.EtagBarrier;
             var hasMore = true;
             while (hasMore)
             {
@@ -2166,7 +2175,7 @@ namespace Raven.Server.Documents.Revisions
 
         public Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            return RevertRevisions(before, window, onProgress, collections: null, token);
+            return RevertRevisions(new RevertRevisionsRequest { Time = before, WindowInSec = (long)window.TotalSeconds }, onProgress, token);
         }
 
         public Task RevertDocumentsToRevisionsAsync(Dictionary<string, string> idToChangeVector, OperationCancelToken token)
@@ -2177,53 +2186,46 @@ namespace Raven.Server.Documents.Revisions
             return _database.TxMerger.Enqueue(new RevertDocumentsCommand(idToChangeVector, token));
         }
 
-        public async Task<IOperationResult> RevertRevisions(DateTime before, TimeSpan window, Action<IOperationProgress> onProgress, HashSet<string> collections, OperationCancelToken token)
+        public async Task<IOperationResult> RevertRevisions(RevertRevisionsRequest request, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
-            var result = new RevertResult();
-            var etagBarrier = _documentsStorage.GenerateNextEtag(); // every change after this etag, will _not_ be reverted.
-            var minimalDate = before.Add(-window); // since the documents/revisions are not sorted by date, stop searching if we reached this date.
+            var databaseName = _database.Name;
+            var nodeTag = _database.ServerStore.NodeTag;
+            request.Validate(databaseName, _database.ServerStore.NodeTag);
 
-            if (collections == null) // revert all collections
+            var before = request.Time;
+            var window = TimeSpan.FromSeconds(request.WindowInSec);
+            var (collections, startFromEtag, etagBarrier) = request.Resolve(databaseName, _documentsStorage.GenerateNextEtag);
+            var result = new RevertResult();
+            result.EtagBarriersUsed[databaseName] = etagBarrier;
+            result.NodeTags[databaseName] = nodeTag;
+
+            var parameters = new Parameters
+            {
+                Before = before,
+                MinimalDate = before.Add(-window), // since the documents/revisions are not sorted by date, stop searching if we reached this date.
+                EtagBarrier = etagBarrier,
+                OnProgress = onProgress,
+                LastScannedEtag = startFromEtag
+            };
+
+            collections ??= [null]; // revert all collections
+
+            foreach (var collection in collections)
             {
                 var list = new List<Document>();
-                await RevertRevisionsInternal(list, collection: null, before, minimalDate, etagBarrier, onProgress, result, token);
-            }
-            else
-            {
-                if (collections.Comparer != null && collections.Comparer.Equals(StringComparer.OrdinalIgnoreCase) == false)
-                {
-                    throw new InvalidOperationException("'collections' hashset must have an 'OrdinalIgnoreCase' comparer");
-                }
-                foreach (var collection in collections)
-                {
-                    var list = new List<Document>();
-                    if (collection == null)
-                    {
-                        var msg = "Tried to revert revisions in collection that is null";
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info(msg);
-                        result.WarnAboutFailedCollection(msg);
-                        continue;
-                    }
+            
+                await RevertRevisionsInternal(list, collection, parameters, onProgress, result, token);
 
-                    await RevertRevisionsInternal(list, collection, before, minimalDate, etagBarrier, onProgress, result, token);
-                }
+                var current = result.LastProcessedEtags.TryGetValue(databaseName, out var existing) ? existing : 0;
+                result.LastProcessedEtags[databaseName] = Math.Max(current, parameters.LastScannedEtag);
+                parameters.LastScannedEtag = etagBarrier;
             }
 
             return result;
         }
 
-        private async Task RevertRevisionsInternal(List<Document> list, string collection, DateTime before, DateTime minimalDate, long etagBarrier, Action<IOperationProgress> onProgress, RevertResult result, OperationCancelToken token)
+        private async Task RevertRevisionsInternal(List<Document> list, string collection, Parameters parameters, Action<IOperationProgress> onProgress, RevertResult result, OperationCancelToken token)
         {
-            var parameters = new Parameters
-            {
-                Before = before,
-                MinimalDate = minimalDate,
-                EtagBarrier = etagBarrier,
-                OnProgress = onProgress,
-                LastScannedEtag = etagBarrier
-            };
-
             // send initial progress
             parameters.OnProgress?.Invoke(result);
 

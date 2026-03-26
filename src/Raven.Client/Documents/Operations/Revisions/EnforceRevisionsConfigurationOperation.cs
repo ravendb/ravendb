@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
@@ -22,19 +22,13 @@ namespace Raven.Client.Documents.Operations.Revisions
         /// Parameters for the <see cref="EnforceRevisionsConfigurationOperation"/>, 
         /// allowing specification of whether to include force-created revisions and target specific collections.
         /// </summary>
-        public sealed class Parameters : IRevisionsOperationParameters
+        public sealed class Parameters : RevisionsOperationParameters
         {
             /// <summary>
             /// Gets or sets a value indicating whether to include force-created revisions.
             /// For more information, visit <a href="https://ravendb.net/docs/article-page/6.2/csharp/document-extensions/revisions/overview#force-revision-creation">here</a>.
             /// </summary>
             public bool IncludeForceCreated { get; set; } = false;
-
-            /// <summary>
-            /// Gets or sets the collections to which the enforcement should apply. 
-            /// If <c>null</c>, the operation will apply to all collections in the database.
-            /// </summary>
-            public string[] Collections { get; set; } = null;
         }
 
         /// <summary>
@@ -83,6 +77,8 @@ namespace Raven.Client.Documents.Operations.Revisions
                     .Append("/databases/")
                     .Append(node.Database)
                     .Append("/admin/revisions/config/enforce");
+
+                SelectedNodeTag = _parameters.GetNodeTag(node.Database);
 
                 url = pathBuilder.ToString();
 

@@ -67,7 +67,7 @@ public class RavenDB_21934 : RavenTestBase
 
         var db = await Databases.GetDocumentDatabaseInstanceFor(store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, true, collections, token: token);
+            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true, Collections = collections.ToArray() }, token);
 
         using (var session = store.OpenAsyncSession())
         {

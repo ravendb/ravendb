@@ -56,7 +56,7 @@ public class RavenDB_21780 : ClusterTestBase
         // enforce
         var db = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
         using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
-            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Users" }, token: token);
+            await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true, Collections = new[] { "Users" } }, token);
 
 
         using (var session = store.OpenAsyncSession())
