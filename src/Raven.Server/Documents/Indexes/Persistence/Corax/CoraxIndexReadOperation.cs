@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                     Page page = default;
                     foreach (var id in distinctIds)
                     {
-                        var reader = _searcher.GetEntryTermsReader(id, ref page, existingKey);
+                        _searcher.GetEntryTermsReader(id, ref page, out var reader, existingKey);
 
                         var key = _documentIdReader.GetTermFor(id);
                         var retrieverInput = new RetrieverInput(_searcher, _fieldsMapping, reader, key, _index.IndexFieldsPersistence.HasTimeValues);
@@ -753,7 +753,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                         var key = _documentIdReader.GetTermFor(indexEntryId);
 
-                        var entryTermsReader = IndexSearcher.GetEntryTermsReader(indexEntryId, ref page, existingKey);
+                        IndexSearcher.GetEntryTermsReader(indexEntryId, ref page, out var entryTermsReader, existingKey);
                         var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, in entryTermsReader, key, _index.IndexFieldsPersistence.HasTimeValues, documentScore, documentDistance);
 
                         var filterResult = queryFilter.Apply(ref retrieverInput, key);
@@ -1243,7 +1243,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
                     }
 
-                    var termsReader = IndexSearcher.GetEntryTermsReader(hit, ref page, existingKey);
+                    IndexSearcher.GetEntryTermsReader(hit, ref page, out var termsReader, existingKey);
                     var retrieverInput = new RetrieverInput(IndexSearcher, _fieldMappings, termsReader, id, _index.IndexFieldsPersistence.HasTimeValues);
                     var result = retriever.Get(ref retrieverInput, token);
 
@@ -1313,7 +1313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         continue;
 
                     token.ThrowIfCancellationRequested();
-                    var reader = IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page, existingKey);
+                    IndexSearcher.GetEntryTermsReader(coraxInternalEntryId, ref page, out var reader, existingKey);
                     var id = _documentIdReader.GetTermFor(coraxInternalEntryId);
 
                     var dynamicJsonValue = coraxEntryReader.GetDocument(ref reader);

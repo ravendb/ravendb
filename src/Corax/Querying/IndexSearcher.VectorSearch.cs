@@ -14,6 +14,7 @@ using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Graphs;
 using Voron.Data.Lookups;
+using Voron.Impl;
 using Voron.Util;
 
 namespace Corax.Querying;
@@ -65,6 +66,7 @@ public partial class IndexSearcher
             private readonly HashSet<long> _returnedDocuments = new();
             private Page p = default;
             private CompactKey _key;
+            private LowLevelTransaction.CompactKeyScope _keyScope;
             private long _start = 1;
             private long _end = 0;
             private readonly CompactTree _vectorsByHash;
@@ -76,8 +78,8 @@ public partial class IndexSearcher
                 _indexSearcher = indexSearcher;
                 _filterResults = filterResults;
                 _random = random ?? Random.Shared;
-                _key = new();
-                _key.Initialize(indexSearcher._transaction.LowLevelTransaction);
+                _keyScope = indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out _key);
+
                 var searchState = new Hnsw.SearchState(indexSearcher.Transaction.LowLevelTransaction, metadata.FieldName);
                 _vectorsByHash = indexSearcher._transaction.CompactTreeFor(Hnsw.VectorsIdByHashSlice);
                 _nodesByVectorId = searchState.NodeIdsByVectorId;
@@ -102,7 +104,7 @@ public partial class IndexSearcher
                     _filterResults.Add(idX);
                 _current = -1;
                 _isDone = true;
-                _key.Dispose();
+                _keyScope.Dispose();
             }
 
             public bool MoveNext()
@@ -131,7 +133,8 @@ public partial class IndexSearcher
 
                     _returnedDocuments.Add(it.Current);
                     _filterResults.Remove(it.Current);
-                    var entryTermsReader = _indexSearcher.GetEntryTermsReader(it.Current, ref p, _key);
+
+                    _indexSearcher.GetEntryTermsReader(it.Current, ref p, out var entryTermsReader, _key);
                     bool found = false;
                     while (entryTermsReader.FindNextStored(_vectorRootPage))
                     {
@@ -197,9 +200,11 @@ public partial class IndexSearcher
             // Ideally, each node represents only a single document.
             Page p = default;
             var it = filterResults.GetIterator(0);
+            using var _ = indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
+
             while (it.MoveNext())
             {
-                var entryTermsReader = indexSearcher.GetEntryTermsReader(it.Current, ref p);
+                indexSearcher.GetEntryTermsReader(it.Current, ref p, out var entryTermsReader, existingKey);
                 while (entryTermsReader.FindNextStored(vectorRootPage))
                 {
                     var vectorHash = entryTermsReader.StoredField.Value;

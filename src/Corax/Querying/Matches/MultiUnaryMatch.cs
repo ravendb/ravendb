@@ -473,7 +473,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
             int currentMatchesIdx = 0;
             for (int docIdx = 0; docIdx < read; ++docIdx)
             {
-                var reader = _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage, existingKey);
+                _searcher.GetEntryTermsReader(workingBuffer[docIdx], ref lastPage, out var reader, existingKey);
                 
                 var documentMatched = true;
                 

@@ -186,7 +186,7 @@ public sealed class CoraxIndexFacetedReadOperation : IndexFacetReadOperationBase
         {
             for (int docId = 0; docId < read; docId++)
             {
-                var reader = _indexSearcher.GetEntryTermsReader(ids[docId], ref page, existingKey);
+                _indexSearcher.GetEntryTermsReader(ids[docId], ref page, out var reader, existingKey);
                 foreach (var result in results)
                 {
                     token.ThrowIfCancellationRequested();

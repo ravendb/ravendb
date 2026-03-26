@@ -137,8 +137,8 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         _alreadyReturned ??= new HashSet<long>();
 
         using var _ = _indexSearcher.Transaction.LowLevelTransaction.AcquireCompactKey(out var existingKey);
-
-        var termsReader = _indexSearcher.GetEntryTermsReader(id, ref _lastPage, existingKey);
+        _indexSearcher.GetEntryTermsReader(id, ref _lastPage, out var termsReader, existingKey);
+        
         while (termsReader.MoveNextSpatial())
         {
             if(termsReader.FieldRootPage != _fieldRootPage)

@@ -151,20 +151,22 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _entriesToTermsTree = _transaction.ReadTree(Constants.IndexWriter.EntriesToTermsSlice);
         _metadataTree = _transaction.ReadTree(Constants.IndexMetadataSlice);
         _multipleTermsInField = _transaction.ReadTree(Constants.IndexWriter.MultipleTermsInField);
-        _entryIdToLocation = _transaction.LookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice);
+        _transaction.TryGetLookupFor<Int64LookupKey>(Constants.IndexWriter.EntryIdToLocationSlice, out _entryIdToLocation);
         _dictionaryId = CompactTree.GetDictionaryId(_transaction.LowLevelTransaction);
         FieldCache = new FieldsCache(_transaction, _fieldsTree);
     }
     
-    public EntryTermsReader GetEntryTermsReader(long id, ref Page p, CompactKey key = null)
+    public void GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader, CompactKey existingKey)
     {
+        PortableExceptions.ThrowIfNullOnDebug(existingKey);
+        
         if (_entryIdToLocation.TryGetValue(id, out var locLong) == false)
             throw new InvalidOperationException("Unable to find entry id: " + id);
 
         InitializeSpecialTermsMarkers();
         ContainerEntryId loc = (ContainerEntryId)locLong;
         var item = Container.MaybeGetFromSamePage(_transaction.LowLevelTransaction, ref p, loc);
-        return new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, key);
+        reader = new EntryTermsReader(_transaction.LowLevelTransaction, _nullTermsMarkers, _nonExistingTermsMarkers, item.Address, item.Length, _dictionaryId, _vectorFieldsMarkers, existingKey);
     }
 
     public LowLevelTransaction.CompactKeyScope GetEntryTermsReader(long id, ref Page p, out EntryTermsReader reader)
