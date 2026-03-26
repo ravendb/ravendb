@@ -9,7 +9,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "../utils/chatAiAgentValidation";
 
@@ -78,6 +78,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
         return {
             prompts: [{ text: "" }],
+            attachments: [],
             parameters: config.Parameters.map((x): ChatAiAgentFormData["parameters"][number] => ({
                 name: x.Name,
                 value: null,
@@ -106,18 +107,11 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         chatForm.reset(result);
     };
 
-    const { control, handleSubmit, setValue } = chatForm;
-
-    const promptsFieldsArray = useFieldArray({
-        control,
-        name: "prompts",
-    });
-
-    const formValues = useWatch({
-        control,
-    });
+    const { getValues, handleSubmit, setValue } = chatForm;
 
     const runChat = async (toolCallParameters?: AiAgentToolCall[]) => {
+        const formValues = getValues();
+
         await dispatch(
             chatAiAgentActions.runChat({
                 databaseName,
@@ -128,10 +122,13 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         ).unwrap();
 
         setValue("prompts", [{ text: "" }]);
+        setValue("attachments", []);
     };
 
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
+            const formValues = getValues();
+
             if (
                 queryParams?.conversationId == null &&
                 isDocumentExpirationEnabled.status === "success" &&
@@ -169,7 +166,6 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         handleSubmit,
         runChat,
         asyncGetDefaultValues,
-        promptsFieldsArray,
     };
 }
 

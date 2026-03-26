@@ -4,7 +4,7 @@ import { FormInput } from "components/common/Form";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { useFormContext, useWatch, UseFieldArrayReturn } from "react-hook-form";
+import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
 import AiAgentMessages from "../../partials/AiAgentMessages";
 import AiAgentParametersField from "../../partials/AiAgentParametersField";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
@@ -17,22 +17,17 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppUrls } from "components/hooks/useAppUrls";
 import "./ChatAiAgentFormBody.scss";
 import ChatAiAgentPromptActions from "./ChatAiAgentPromptActions";
+import ChatAiAgentPromptAttachments from "components/pages/database/aiHub/aiAgents/chat/partials/ChatAiAgentPromptAttachments";
+import ChatAiAgentAttachmentsDropzone from "components/pages/database/aiHub/aiAgents/chat/partials/ChatAiAgentAttachmentsDropzone";
 
 interface ChatAiAgentFormBodyProps {
     height: number;
     handleSend: () => Promise<void>;
     runChat: (toolCallParameters?: AiAgentToolCall[]) => Promise<void>;
     isHistory: boolean;
-    promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
 }
 
-export default function ChatAiAgentFormBody({
-    height,
-    handleSend,
-    runChat,
-    isHistory,
-    promptsFieldsArray,
-}: ChatAiAgentFormBodyProps) {
+export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHistory }: ChatAiAgentFormBodyProps) {
     const dispatch = useAppDispatch();
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
@@ -54,8 +49,19 @@ export default function ChatAiAgentFormBody({
 
     const { control, handleSubmit, formState } = useFormContext<ChatAiAgentFormData>();
 
-    const formValues = useWatch({
+    const formParameters = useWatch({
         control,
+        name: "parameters",
+    });
+
+    const promptsFieldsArray = useFieldArray({
+        control,
+        name: "prompts",
+    });
+
+    const attachmentsFieldsArray = useFieldArray({
+        control,
+        name: "attachments",
     });
 
     // Scroll to the bottom of the test panel when new messages are added and set hasScroll
@@ -85,7 +91,7 @@ export default function ChatAiAgentFormBody({
 
     const isPromptDisabled =
         isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
-    const hasPromptErrors = formState.errors.prompts?.length > 0;
+    const hasPromptErrors = !!formState.errors.prompts;
 
     return (
         <>
@@ -104,7 +110,7 @@ export default function ChatAiAgentFormBody({
                             <hr />
                             <AiAgentParametersField
                                 control={control}
-                                value={formValues.parameters}
+                                value={formParameters}
                                 panelClassName="panel-bg-1"
                             />
                         </div>
@@ -158,11 +164,13 @@ export default function ChatAiAgentFormBody({
                                 .
                             </RichAlert>
                         )}
+                        <ChatAiAgentAttachmentsDropzone attachmentsFieldsArray={attachmentsFieldsArray} />
                         <div
                             className={classNames("prompt-wrapper", {
                                 "border-danger": hasPromptErrors,
                             })}
                         >
+                            <ChatAiAgentPromptAttachments attachmentsFieldsArray={attachmentsFieldsArray} />
                             <FormInput
                                 type="textarea"
                                 as="textarea"
@@ -184,6 +192,7 @@ export default function ChatAiAgentFormBody({
                                 isPromptDisabled={isPromptDisabled}
                                 isLoading={isLoading}
                                 hasPromptErrors={hasPromptErrors}
+                                attachmentsFieldsArray={attachmentsFieldsArray}
                             />
                         </div>
                     </div>

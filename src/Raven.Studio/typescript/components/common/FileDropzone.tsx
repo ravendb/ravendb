@@ -45,7 +45,7 @@ export default function FileDropzone({
             return;
         }
 
-        if (validExtensions.some((ext) => !files.some((file) => file.name.endsWith(`.${ext}`)))) {
+        if (files.some((file) => !validExtensions.includes(genUtils.getFileExtension(file.name)))) {
             setError(`File type is not supported`);
             handleSetFiles([]);
             return;

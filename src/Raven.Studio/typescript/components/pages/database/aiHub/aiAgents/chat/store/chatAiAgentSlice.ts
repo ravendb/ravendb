@@ -10,7 +10,9 @@ import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import { RunAiAgentRequestDto } from "commands/database/aiAgents/runAiAgentCommand";
 
-interface EditAiAgentState {
+type NewAttachmentTab = { tab: "source" } | { tab: "document" } | { tab: "documentAttachments"; documentId: string };
+
+interface ChatAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
     document: loadableData<documentDto>;
     runChatState: loadStatus;
@@ -23,9 +25,10 @@ interface EditAiAgentState {
     isDocumentDeleted: boolean;
     isDocumentChanged: boolean;
     activePromptIndex: number;
+    newAttachmentTab: NewAttachmentTab;
 }
 
-const initialState: EditAiAgentState = {
+const initialState: ChatAiAgentState = {
     config: createIdleState(),
     document: createIdleState(),
     runChatState: "idle",
@@ -38,6 +41,7 @@ const initialState: EditAiAgentState = {
     isDocumentDeleted: false,
     isDocumentChanged: false,
     activePromptIndex: 0,
+    newAttachmentTab: null,
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -70,6 +74,9 @@ export const chatAiAgentSlice = createSlice({
         },
         activePromptIndexSet: (state, action: PayloadAction<number>) => {
             state.activePromptIndex = action.payload;
+        },
+        newAttachmentTabSet: (state, action: PayloadAction<NewAttachmentTab>) => {
+            state.newAttachmentTab = action.payload;
         },
         reset: () => initialState,
     },
@@ -171,6 +178,7 @@ const runChat = createAsyncThunk(
                     Content: x.arguments,
                 })),
                 AttachmentCommands: null,
+                attachments: formValues.attachments,
                 CreationOptions: {
                     Parameters: createParametersDto(conversationId, formValues.parameters),
                     ExpirationInSec:
@@ -199,17 +207,16 @@ function createUserPromptDto(
         return null;
     }
 
-    if (!prompts?.length) {
-        throw new Error("Prompt is required");
-    }
+    const validPrompts = prompts?.filter((x) => x?.text?.trim()) ?? [];
 
-    if (prompts.length > 1) {
-        return prompts.map((x) => ({ type: "text", text: x.text }));
+    if (validPrompts.length > 1) {
+        return validPrompts.map((x) => ({ type: "text", text: x.text.trim() }));
     }
 
     return prompts[0].text;
 }
 
+// TODO ask shahar
 function createParametersDto(
     conversationId: string,
     formParameters: ChatAiAgentFormData["parameters"]
@@ -265,4 +272,5 @@ export const chatAiAgentSelectors = {
     isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
     isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,
     activePromptIndex: (state: RootState) => state.chatAiAgent.activePromptIndex,
+    newAttachmentTab: (state: RootState) => state.chatAiAgent.newAttachmentTab,
 };
