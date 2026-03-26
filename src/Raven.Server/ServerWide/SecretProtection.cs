@@ -376,9 +376,17 @@ namespace Raven.Server.ServerWide
             SetupProgressAndResult progress = null)
         {
             ValidateExpiration(source, loadedCertificate, licenseType, progress: progress);
-
-            ValidatePrivateKey(source, password, rawBytes, out var privateKey, progress);
-
+            
+            AsymmetricAlgorithm privateKey = null;
+            if (PlatformDetails.RunningOnMacOsx)
+            {
+                ValidatePrivateKeyOnMacOs(source, loadedCertificate, out privateKey);
+            }
+            else
+            {
+                ValidatePrivateKey(source, password, rawBytes, out privateKey, progress);
+            }
+            
             ValidateServerKeyUsages(source, loadedCertificate, validateCertKeyUsages, progress);
             return privateKey;
         }
@@ -820,8 +828,16 @@ namespace Raven.Server.ServerWide
 
                 ValidateExpiration(path, loadedCertificate, licenseType, throwOnExpired: false);
 
-                ValidatePrivateKey(path, password, rawData, out var privateKey);
-
+                AsymmetricAlgorithm privateKey = null;
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    ValidatePrivateKeyOnMacOs(path, loadedCertificate, out privateKey);
+                }
+                else
+                {
+                    ValidatePrivateKey(path, password, rawData, out privateKey);
+                }
+                
                 ValidateServerKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
 
                 return (loadedCertificate, privateKey);
@@ -862,13 +878,7 @@ namespace Raven.Server.ServerWide
             // or if the key extraction failed/returned null, throw the exact expected exception.
             if (certificate.HasPrivateKey == false || pk == null)
             {
-                var msg = "Unable to find the private key in the provided certificate from " + source;
-
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg);
-                progress?.AddInfo(msg);
-        
-                throw new CryptographicException(msg);
+                ThrowCryptographicException(source, progress);
             }
         }
 
@@ -882,13 +892,17 @@ namespace Raven.Server.ServerWide
 
             if (pk == null)
             {
-                var msg = "Unable to find the private key in the provided certificate from " + source;
-
-                if (Logger.IsOperationsEnabled)
-                    Logger.Operations(msg);
-                progress?.AddInfo(msg);
-                throw new CryptographicException(msg);
+                ThrowCryptographicException(source, progress);
             }
+        }
+
+        private static void ThrowCryptographicException(string source, SetupProgressAndResult progress = null)
+        {
+            string msg = "Unable to find the private key in the provided certificate from " + source;
+            if (Logger.IsOperationsEnabled)
+                Logger.Operations(msg);
+            progress?.AddInfo(msg);
+            throw new CryptographicException(msg);
         }
 
 

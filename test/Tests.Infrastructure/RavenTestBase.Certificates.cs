@@ -83,7 +83,7 @@ public partial class RavenTestBase
 
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? (
                 PlatformDetails.RunningOnMacOsx 
-                ? "https://127.0.0.1:0" 
+                ? "https://localhost:0" 
                 : $"https://{Environment.MachineName}:0");
 
             _parent.DoNotReuseServer(customSettings);
@@ -161,6 +161,7 @@ public partial class RavenTestBase
                 }
 
                 X509Certificate2 serverCertificate;
+                AsymmetricAlgorithm pk = null;
                 try
                 {
                     serverCertificate = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
@@ -169,8 +170,14 @@ public partial class RavenTestBase
                 {
                     throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
-
-                SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    SecretProtection.ValidatePrivateKeyOnMacOs(serverCertificatePath,serverCertificate, out pk);
+                }
+                else
+                {
+                    SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out pk);
+                }
                 SecretProtection.ValidateServerKeyUsages(serverCertificatePath, serverCertificate, validateKeyUsages: true);
 
                 string serverCertificateForCommunicationPath;
@@ -213,7 +220,8 @@ public partial class RavenTestBase
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk, ekuSuffix, gen);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk, ekuSuffix, gen);
                 var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk, ekuSuffix, gen);
-
+                
+                pk?.Dispose();
                 return new TestCertificatesHolder(serverCertificatePath, serverCertificateForCommunicationPath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
 

@@ -280,7 +280,7 @@ exit 129";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{certArgs}";
-                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://127.0.0.1:0" : "https://" + Environment.MachineName + ":0";
+                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://localhost:0" : "https://" + Environment.MachineName + ":0";
 
                 script = "#!/bin/bash\ncat \"$1\"";
                 File.WriteAllText(scriptPath, script);
@@ -398,7 +398,7 @@ exit 0";
                 await File.WriteAllTextAsync(scriptPath, script);
             }
 
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://127.0.0.1:0" : "https://" + Environment.MachineName + ":0";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://localhost:0" : "https://" + Environment.MachineName + ":0";
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = certProcess.exe;
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = certProcess.certArgs;
