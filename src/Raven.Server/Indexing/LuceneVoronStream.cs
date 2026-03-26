@@ -31,7 +31,6 @@ public sealed unsafe class LuceneVoronStream
         _name = name;
         _voronStream = new VoronStream(chunksDetails, llt);
         Stream = _voronStream;
-        _name = name;
         _llt = llt;
         RegisterTransactionCleanup();
     }
@@ -90,8 +89,7 @@ public sealed unsafe class LuceneVoronStream
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void UpdateCurrentTransaction(Transaction tx)
     {
-        if (tx == null)
-            ThrowTransactionIsNull();
+        ArgumentNullException.ThrowIfNull(tx);
 
         if (_llt == tx.LowLevelTransaction)
             return;
@@ -113,12 +111,6 @@ public sealed unsafe class LuceneVoronStream
             _voronStream.Llt = tx.LowLevelTransaction;
             _voronStream.LastPage = default(Page);
         }
-    }
-
-    [DoesNotReturn]
-    private static void ThrowTransactionIsNull()
-    {
-        throw new ArgumentNullException("tx");
     }
 
     [DoesNotReturn]
