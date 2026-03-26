@@ -7,7 +7,6 @@ using FastTests;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

@@ -11,7 +11,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {

@@ -2,7 +2,6 @@
 using Voron;
 using Voron.Exceptions;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Storage

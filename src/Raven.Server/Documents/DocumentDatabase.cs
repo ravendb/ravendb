@@ -71,11 +71,12 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Jint;
-using Raven.Server.Documents.AI;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.SchemaValidation;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Rachis;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -1371,7 +1372,8 @@ namespace Raven.Server.Documents
                     CompareExchangeCount = ServerStore.Cluster.GetNumberOfCompareExchange(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     CompareExchangeTombstonesCount = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     IdentitiesCount = ServerStore.Cluster.GetNumberOfIdentities(transactionContext, DocumentsStorage.DocumentDatabase.Name),
-                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext)
+                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext),
+                    TimeSeriesDeletedRangesCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(documentsContext)
                 };
             }
         }
@@ -2338,6 +2340,10 @@ namespace Raven.Server.Documents
 
             internal int BulkInsert_StreamReadTimeout;
             internal Action BulkInsert_OnHeartBeat;
+
+            internal Action<ConversationDocument> BeforeAiAgentTalk;
+
+            internal Func<AiAgentConfiguration, LazyStringValue, bool> ShouldAiAgentAddMutualParameterForSubAgentReq;
         }
     }
 

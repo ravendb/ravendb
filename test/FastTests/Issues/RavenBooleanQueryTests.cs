@@ -4,7 +4,6 @@ using Raven.Server.Documents.Queries.AST;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Query = Lucene.Net.Search.Query;
 
 namespace FastTests.Issues;

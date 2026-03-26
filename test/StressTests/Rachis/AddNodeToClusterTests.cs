@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Rachis
 {
@@ -15,7 +14,7 @@ namespace StressTests.Rachis
         [InlineData(true)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
-            using (var store = new RachisTests.AddNodeToClusterTests(Output))
+            await using (var store = new RachisTests.AddNodeToClusterTests(Output))
             {
                 await store.ReAddMemberNode(withManyCompareExchange);
             }

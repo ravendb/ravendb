@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

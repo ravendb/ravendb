@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using Raven.Client.Documents;
 using Raven.Server;
 using Tests.Infrastructure.Operations;
-using XunitLogger;
+using Xunit;
 
 namespace Tests.Infrastructure.Utils
 {
@@ -11,7 +11,7 @@ namespace Tests.Infrastructure.Utils
     {
         private const string DestinationDirectory = "debug_packages";
 
-        public static void DownloadAndSave(RavenServer ravenServer, Context testContext)
+        public static void DownloadAndSave(RavenServer ravenServer, ITestContext testContext)
         {
             using (var documentStore = InitDocumentStore(ravenServer))
             {
@@ -25,7 +25,7 @@ namespace Tests.Infrastructure.Utils
             => new DocumentStore { Urls = new[] { ravenServer.WebUrl }, Certificate = ravenServer.Certificate?.ClientCertificate }
                 .Initialize();
 
-        private static void SaveDebugPackage(Context testContext, ClusterDebugInfoPackageResult operationResult)
+        private static void SaveDebugPackage(ITestContext testContext, ClusterDebugInfoPackageResult operationResult)
         {
             if (Directory.Exists(DestinationDirectory) == false)
                 Directory.CreateDirectory(DestinationDirectory);
@@ -41,17 +41,19 @@ namespace Tests.Infrastructure.Utils
             LogDebugPackageSaved(testContext, outputPath);
         }
 
-        private static string GetDebugPackageName(Context testContext)
+        private static string GetDebugPackageName(ITestContext testContext)
         {
-            return $"{testContext.MethodName}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}.zip";
+            var methodName = (testContext?.TestMethod as Xunit.v3.IXunitTestMethod)?.Method?.Name ?? "UnknownMethod";
+            return $"{methodName}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}.zip";
         }
 
-        private static void LogDebugPackageSaved(Context testContext, string outputPath)
+        private static void LogDebugPackageSaved(ITestContext testContext, string outputPath)
         {
             var fullPath = Path.GetFullPath(outputPath);
-            var message = $"Saved debug package for {testContext.Test.DisplayName} in {fullPath}";
+            var displayName = testContext?.Test?.TestDisplayName ?? "Unknown";
+            var message = $"Saved debug package for {displayName} in {fullPath}";
 
-            testContext.TestOutput.WriteLine(message);
+            testContext?.TestOutputHelper?.WriteLine(message);
         }
     }
 }

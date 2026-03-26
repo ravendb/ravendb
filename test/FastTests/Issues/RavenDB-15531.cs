@@ -1,6 +1,5 @@
 ﻿using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Linq;
 using Raven.Client.Documents.Session;
 

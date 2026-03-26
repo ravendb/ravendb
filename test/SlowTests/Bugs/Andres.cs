@@ -5,7 +5,6 @@ using System.Linq;
 using Xunit;
 using FastTests;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
 {

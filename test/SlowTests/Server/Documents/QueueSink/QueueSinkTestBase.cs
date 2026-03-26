@@ -17,7 +17,6 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 using QueueSinkConfiguration = Raven.Client.Documents.Operations.QueueSink.QueueSinkConfiguration;
 
 namespace SlowTests.Server.Documents.QueueSink

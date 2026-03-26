@@ -1,13 +1,16 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using Tests.Infrastructure.ConnectionString;
+using Tests.Infrastructure.XunitExtensions;
 using Xunit;
-using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
-[TraitDiscoverer("Tests.Infrastructure.XunitExtensions.RavenTraitDiscoverer", "Tests.Infrastructure")]
-public class RavenFactAttribute : FactAttribute, ITraitAttribute
+public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
     public readonly RavenTestCategory Category;
     private string _skip;
 
@@ -15,6 +18,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     {
         Category = category;
     }
+
+    public IReadOnlyCollection<KeyValuePair<string, string>> GetTraits() =>
+        RavenTraitHelper.GetTraitsFor(Category);
 
     public bool LicenseRequired { get; set; }
 
@@ -83,13 +89,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         set => Requires = value ? Requires | RavenServiceRequirement.Azure : Requires & ~RavenServiceRequirement.Azure;
     }
 
-    public override string Skip
+    public new string Skip
     {
-        get
-        {
-            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires);
-        }
-
+        get => ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires);
         set => _skip = value;
     }
 
@@ -135,7 +137,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         return null;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
+    private static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired)
     {
         if (skip != null)
             return skip;

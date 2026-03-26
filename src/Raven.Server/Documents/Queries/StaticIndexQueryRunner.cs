@@ -26,16 +26,18 @@ namespace Raven.Server.Documents.Queries
 
             queryContext.WithIndex(index);
 
-            if (query.Metadata.HasOrderByRandom == false && existingResultEtag.HasValue)
+            var queryTime = query.Metadata.HasTimeBasedFunction ? new QueryTimeScope() : null;
+
+            if (query.Metadata.HasNonDeterministicFunction == false && existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag(queryContext, query.Metadata);
+                var etag = index.GetIndexEtag(queryContext, query.Metadata, queryTime);
                 if (etag == existingResultEtag)
                     return DocumentQueryResult.NotModifiedResult;
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await index.Query(query, queryContext, token);
+                return await index.Query(query, queryContext, token, queryTime);
             }
         }
 
@@ -93,16 +95,18 @@ namespace Raven.Server.Documents.Queries
 
             queryContext.WithIndex(index);
 
+            var queryTime = query.Metadata.HasTimeBasedFunction ? new QueryTimeScope() : null;
+
             if (existingResultEtag.HasValue)
             {
-                var etag = index.GetIndexEtag(queryContext, query.Metadata) ^ fq.FacetsEtag;
+                var etag = index.GetIndexEtag(queryContext, query.Metadata, queryTime) ^ fq.FacetsEtag;
                 if (etag == existingResultEtag)
                     return FacetedQueryResult.NotModifiedResult;
             }
 
             using (QueryRunner.MarkQueryAsRunning(index.Name, query, token))
             {
-                return await index.FacetedQuery(fq, queryContext, token);
+                return await index.FacetedQuery(fq, queryContext, token, queryTime);
             }
         }
 

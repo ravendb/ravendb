@@ -1,7 +1,9 @@
-﻿namespace Tests.Infrastructure
+namespace Tests.Infrastructure
 {
-    public class NightlyBuildMultiplatformTheoryAttribute : NightlyBuildTheoryAttribute
+    public class NightlyBuildMultiplatformTheoryAttribute : NightlyBuildTheoryAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         private readonly RavenPlatform _platform;
         private readonly RavenArchitecture _architecture;
         private readonly RavenIntrinsics _intrinsics;
@@ -30,7 +32,7 @@
 
         public bool LicenseRequired { get; set; }
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

@@ -14,8 +14,8 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Raven.Server.SqlMigration.Schema;
 using Tests.Infrastructure.ConnectionString;
-using Xunit.Abstractions;
 using DisposableAction = Raven.Client.Util.DisposableAction;
+using Xunit;
 
 namespace Tests.Infrastructure
 {

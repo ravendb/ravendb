@@ -29,13 +29,13 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
-        var body = JsonDeserializationServer.AiAgentTestRequest(options);
-        var req = body.RequestBody;
+        var request = JsonDeserializationServer.AiAgentTestRequest(options);
+        var body = request.RequestBody;
 
-        AiAgentHelpers.AddDefaultValues(body.Configuration, RequestHandler.Configuration.Ai);
-        AddOrUpdateAiAgentCommand.ValidateConfiguration(context, body.Configuration);
+        AiAgentHelpers.AddDefaultValues(request.Configuration, RequestHandler.Configuration.Ai);
+        AddOrUpdateAiAgentCommand.ValidateConfiguration(context, request.Configuration);
 
-        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, body)
+        var handler = new TestConversationHandler(ServerStore, RequestHandler.Database, request)
         {
             Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
         };
@@ -43,7 +43,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         if (ServerStore.LicenseManager.LicenseStatus.HasAiAgent == false)
             throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
 
-        await ExecuteInternalAsync(handler, context, body.Configuration, "TestConversation", req, changeVector: null, streaming: streaming, token: token);
+        await ExecuteInternalAsync(handler, context, request.Configuration, "TestConversation", body, changeVector: null, streaming: streaming, token: token);
     }
 
     public class TestConversationHandler(ServerStore server, DocumentDatabase database, AiAgentTestRequest request) : ConversationHandler(server, database)
@@ -54,9 +54,9 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             return Task.FromResult("test");
         }
 
-        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response)
+        public override DynamicJsonValue GetConversationResponse(JsonOperationContext context, BlittableJsonReaderObject response, int toolsIterations)
         {
-            var r = base.GetConversationResponse(context, response);
+            var r = base.GetConversationResponse(context, response, toolsIterations);
             r["Document"] = _document.ToBlittable(context);
             return r;
         }
@@ -69,7 +69,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
                 return;
             }
 
-            _document = ConversationDocument.ToDocument("TestConversation", request.Document, request.Configuration);
+            _document = ConversationDocument.ToDocument("TestConversation", request.Document, _maxModelIterationsPerCall);
         }
     }
 

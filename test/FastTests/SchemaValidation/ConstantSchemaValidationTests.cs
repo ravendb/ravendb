@@ -1,10 +1,11 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Documents.SchemaValidation;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
@@ -84,6 +85,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateDoubleConstant()
     {
+        using IDisposable culture = CultureHelper.EnsureInvariantCulture();
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {

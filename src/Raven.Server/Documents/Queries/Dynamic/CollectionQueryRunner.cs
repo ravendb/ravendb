@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             resultToFill.TotalResults = numberOfDocuments;
-            
+
             if (hasCmpXchg)
                 buffer[bufferSize - 1] = Database.CompareExchangeStorage.GetLastCompareExchangeIndex(context.Server);
 

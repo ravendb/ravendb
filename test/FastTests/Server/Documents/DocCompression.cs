@@ -13,7 +13,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents
 {

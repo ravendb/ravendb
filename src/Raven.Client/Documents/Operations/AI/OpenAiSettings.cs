@@ -4,14 +4,18 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.Documents.Operations.AI;
 
 /// <summary>
-/// The configuration for the OpenAI API client.
+/// Configuration for the OpenAI API client.
 /// </summary>
 public sealed class OpenAiSettings : OpenAiBaseSettings
 {
-    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)
+    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, 
+        string projectId = null, int? dimensions = null, double? temperature = null,
+        OpenAiReasoningEffort? reasoningEffort = null, int? seed = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
         OrganizationId = organizationId;
         ProjectId = projectId;
+        ReasoningEffort = reasoningEffort;
+        Seed = seed;
     }
 
     public OpenAiSettings()
@@ -22,7 +26,7 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     private static readonly Uri OpenAiBaseUri = new Uri("https://api.openai.com/");
     public override Uri GetBaseEndpointUri()
     {
-        var uri = base.GetBaseEndpointUri();
+        var uri = string.IsNullOrEmpty(Endpoint) ? OpenAiBaseUri : base.GetBaseEndpointUri();
         var uriBuilder = new UriBuilder(uri);
 
         if (uri.Equals(OpenAiBaseUri))
@@ -50,6 +54,34 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     /// </summary>
     public string ProjectId { get; set; }
 
+    /// <summary>
+    /// Controls the reasoning depth used by supported models (such as GPT-5 family).
+    /// Lower values reduce the amount of internal reasoning performed by the model,
+    /// which may improve latency and reduce variability in responses.
+    /// 
+    /// Supported values typically include:
+    /// <list type="bullet">
+    /// <item><description><c>minimal</c> - minimal reasoning, fastest responses.</description></item>
+    /// <item><description><c>low</c> - limited reasoning.</description></item>
+    /// <item><description><c>medium</c> - default reasoning level.</description></item>
+    /// <item><description><c>high</c> - deeper reasoning, potentially slower responses.</description></item>
+    /// </list>
+    /// 
+    /// Note that this setting reduces the likelihood of non-deterministic behavior,
+    /// but does not guarantee fully deterministic responses.
+    /// </summary>
+    public OpenAiReasoningEffort? ReasoningEffort { get; set; }
+
+    /// <summary>
+    /// Optional seed used to make the model's sampling more reproducible across requests.
+    /// When provided, identical inputs and configuration may produce the same outputs
+    /// more consistently across runs.
+    ///
+    /// This improves response stability (for example in automated tests),
+    /// but does not guarantee fully deterministic results due to internal model behavior.
+    /// </summary>
+    public int? Seed { get; set; }
+
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not OpenAiSettings openAiSettings)
@@ -74,6 +106,25 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
         if (string.IsNullOrWhiteSpace(ProjectId) == false)
             json[nameof(ProjectId)] = ProjectId;
 
+        if (ReasoningEffort.HasValue)
+            json[nameof(ReasoningEffort)] = ReasoningEffort;
+
+        if (Seed.HasValue)
+            json[nameof(Seed)] = Seed.Value;
+
         return json;
     }
+}
+
+/// <summary>
+/// Specifies the reasoning effort level used by supported models.
+/// Controls how much internal reasoning the model performs,
+/// affecting latency and response variability.
+/// </summary>
+public enum OpenAiReasoningEffort
+{
+    Minimal,
+    Low,
+    Medium,
+    High
 }

@@ -7,7 +7,6 @@ using Raven.Client.Extensions.Streams;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {

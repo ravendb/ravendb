@@ -5,7 +5,6 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.PostingLists;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron;
 

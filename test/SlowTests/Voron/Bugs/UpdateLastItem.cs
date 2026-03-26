@@ -1,7 +1,6 @@
 ﻿using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Bugs
 {

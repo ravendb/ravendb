@@ -8,14 +8,13 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
 
 public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -41,7 +40,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
     }
     
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanStreamResults_WithTools(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -88,6 +87,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
             sb.Append(s);
             return Task.CompletedTask;
         }, CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, result.Status);
         Assert.Equal(result.Answer.Answer, sb.ToString());
     }
 }

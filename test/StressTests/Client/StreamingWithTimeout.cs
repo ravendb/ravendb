@@ -5,7 +5,7 @@ using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
+#pragma warning disable CS0618 // Type or member is obsolete
 
 namespace StressTests.Client
 {

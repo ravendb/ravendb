@@ -4,6 +4,7 @@
     {
         public const string Text = "text";
         public const string Type = "type";
+        public const string Image = "image";
     }
 
     internal class AiMessagePromptTypes

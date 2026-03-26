@@ -6,7 +6,6 @@ using Raven.Client.Documents.Replication;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Replication
 {

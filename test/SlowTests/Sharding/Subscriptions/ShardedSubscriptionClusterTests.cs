@@ -13,7 +13,6 @@ using Sparrow.Collections;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Subscriptions
 {

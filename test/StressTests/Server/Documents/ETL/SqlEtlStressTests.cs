@@ -3,7 +3,6 @@ using FastTests;
 using SlowTests.Server.Documents.ETL.SQL;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.ETL
 {

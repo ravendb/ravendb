@@ -27,11 +27,9 @@ public sealed class ShardedIndexEntriesQueryProcessor : ShardedQueryProcessorBas
 
     public override async Task<ShardedIndexEntriesQueryResult> ExecuteShardedOperations(QueryTimingsScope scope)
     {
-        var documentsComparer = GetComparer(Query);
-
         var commands = GetOperationCommands(scope: null);
 
-        var operation = new ShardedIndexEntriesQueryOperation(Query, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
+        var operation = new ShardedIndexEntriesQueryOperation(Query, Context, RequestHandler, commands, ComparerCreator, ExistingResultEtag?.ToString(), QueryTime);
         int[] shards = GetShardNumbers(commands);
         var shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
 

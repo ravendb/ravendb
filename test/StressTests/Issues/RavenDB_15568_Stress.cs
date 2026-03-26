@@ -1,7 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 using static SlowTests.Issues.RavenDB_15568;
+using Xunit;
 
 namespace StressTests.Issues
 {

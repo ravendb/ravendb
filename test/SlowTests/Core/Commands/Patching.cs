@@ -5,7 +5,6 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Post = SlowTests.Core.Utils.Entities.Post;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Commands
 {

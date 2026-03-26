@@ -14,7 +14,6 @@ using Raven.Server.Documents.AI;
 using SlowTests.Server.Documents.AI.GenAi;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static SlowTests.Server.Documents.AI.AiAgent.AiAgentClientApiBasics;
 
 namespace SlowTests.Server.Documents.AI.AiAgent

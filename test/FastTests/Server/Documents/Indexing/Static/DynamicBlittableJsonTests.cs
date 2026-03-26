@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -9,7 +10,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Indexing.Static
 {
@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             };
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             try
             {
@@ -101,7 +101,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
             finally
             {
-                base.Dispose();
+                await base.DisposeAsync();
             }
         }
     }

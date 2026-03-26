@@ -9,7 +9,6 @@ using Raven.Client.Documents.Queries.Facets;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

@@ -25,7 +25,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
 namespace SlowTests.Client.Subscriptions

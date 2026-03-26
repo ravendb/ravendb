@@ -1,6 +1,6 @@
+using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Corax.Bugs;
 
@@ -12,9 +12,9 @@ public class CompactTreeAddAndRemove : NoDisposalNoOutputNeeded
 
     [RavenTheory(RavenTestCategory.Voron)]
     [InlineData("repro-4.log.gz")]
-    public void AddAndRemoveValues(string filename)
+    public async Task AddAndRemoveValues(string filename)
     {
-        using var testClass = new SlowTests.Corax.Bugs.CompactTreeAddAndRemove(Output);
+        await using var testClass = new SlowTests.Corax.Bugs.CompactTreeAddAndRemove(Output);
         testClass.AddAndRemoveValues(filename);
     }
 }

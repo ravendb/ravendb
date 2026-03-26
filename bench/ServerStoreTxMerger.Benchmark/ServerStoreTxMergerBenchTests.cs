@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 using Raven.Server.Rachis;
 
 namespace ServerStoreTxMerger.Benchmark;

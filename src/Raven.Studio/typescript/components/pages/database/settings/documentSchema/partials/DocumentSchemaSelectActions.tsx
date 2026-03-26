@@ -88,10 +88,6 @@ export default function DocumentSchemaSelectActions() {
                 Disabled: disabled,
             }));
 
-            updatedValidators.forEach((validator) => {
-                dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator }));
-            });
-
             const allUpdatedValidators = allValidators.map((validator) => {
                 const updatedValidator = updatedValidators.find((uv) => uv.Name === validator.Name);
                 return updatedValidator || validator;
@@ -101,6 +97,10 @@ export default function DocumentSchemaSelectActions() {
                 databaseName,
                 documentSchemaUtils.mapToSchemaValidationConfigurationDto(allUpdatedValidators, isGlobalDisabled)
             );
+
+            updatedValidators.forEach((validator) => {
+                dispatch(documentSchemaActions.validatorEdited({ originalName: validator.Name, validator }));
+            });
 
             dispatch(documentSchemaActions.validatorsSaved());
         } finally {
@@ -149,13 +149,12 @@ export default function DocumentSchemaSelectActions() {
             setIsTogglingGlobalStatusTrue();
             reportEvent("document-schema", disabled ? "global-disable" : "global-enable");
 
-            dispatch(documentSchemaActions.isGlobalDisabledToggled(disabled));
-
             await databasesService.saveSchemaValidation(
                 databaseName,
                 documentSchemaUtils.mapToSchemaValidationConfigurationDto(allValidators, disabled)
             );
 
+            dispatch(documentSchemaActions.isGlobalDisabledToggled(disabled));
             dispatch(documentSchemaActions.validatorsSaved());
         } finally {
             setIsTogglingGlobalStatusFalse();
@@ -251,6 +250,7 @@ export default function DocumentSchemaSelectActions() {
                                 disabled: !hasSchemaValidation,
                             })}
                             href={urls.documentSchemaPlayground()}
+                            title="Open the playground to test sample schemas against existing documents"
                         >
                             <Icon icon="rocket" />
                             Schema Playground

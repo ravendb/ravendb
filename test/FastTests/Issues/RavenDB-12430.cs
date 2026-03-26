@@ -5,7 +5,6 @@ using Sparrow.Json;
 using Tests.Infrastructure.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {

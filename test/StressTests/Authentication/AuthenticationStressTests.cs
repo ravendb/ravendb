@@ -12,7 +12,6 @@ using Raven.Server.Routing;
 using SlowTests.Authentication;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Authentication
 {

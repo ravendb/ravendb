@@ -22,7 +22,6 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Rolling

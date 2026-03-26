@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.WebSockets;
@@ -13,7 +13,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Cluster
 {

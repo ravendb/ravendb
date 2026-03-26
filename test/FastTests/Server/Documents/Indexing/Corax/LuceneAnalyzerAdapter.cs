@@ -6,7 +6,6 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Version = Lucene.Net.Util.Version;
 
 namespace FastTests.Server.Documents.Indexing.Corax

@@ -17,7 +17,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {

@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
             json[nameof(BrokerType)] = BrokerType;
             json[nameof(SkipAutomaticQueueDeclaration)] = SkipAutomaticQueueDeclaration;
-            json[nameof(Queues)] = new DynamicJsonArray(Queues.Select(x => x.ToJson()));
+            json[nameof(Queues)] = Queues != null ? new DynamicJsonArray(Queues.Select(x => x.ToJson())) : null;
 
             return json;
         }

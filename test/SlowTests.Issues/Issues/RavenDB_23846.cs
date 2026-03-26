@@ -18,7 +18,6 @@ using Sparrow;
 using Sparrow.Backups;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using BackupConfiguration = Raven.Server.Config.Categories.BackupConfiguration;
 using S3StorageClass = Raven.Client.Documents.Operations.Backups.S3StorageClass;
 
@@ -40,7 +39,7 @@ public class RavenDB_23846 : RestoreFromS3TestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding, Requires = RavenServiceRequirement.Aws)]
     public async Task CanBackupAndRestoreWithIntelligentTieringSharding()
     {
         var s3Settings = GetS3Settings();

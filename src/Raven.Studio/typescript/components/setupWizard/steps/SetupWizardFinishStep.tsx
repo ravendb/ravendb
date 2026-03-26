@@ -884,6 +884,7 @@ function CertInstallationConfirm({ onCancel, onConfirm }: CertInstallationConfir
     const { reportEvent } = useEventsCollector();
 
     const browser = genUtils.getBrowser();
+    const [activeTab, setActiveTab] = useState(browser);
     const docsLink = useRavenLink({
         hash: "VD4R8E",
     });
@@ -899,7 +900,11 @@ function CertInstallationConfirm({ onCancel, onConfirm }: CertInstallationConfir
                     <NumberedListItem stepKey={1}>
                         <h4>Recognize certificate in your browser</h4>
                         <div className="browser-tab-container">
-                            <Tab.Container id="summary-tabs" defaultActiveKey={browser}>
+                            <Tab.Container
+                                id="summary-tabs"
+                                activeKey={activeTab}
+                                onSelect={(key: Browser) => setActiveTab(key)}
+                            >
                                 <Nav className="mb-2">
                                     <Nav.Item className="flex-grow">
                                         <Nav.Link eventKey="Chrome" className="chrome-tab">
@@ -965,11 +970,13 @@ function CertInstallationConfirm({ onCancel, onConfirm }: CertInstallationConfir
                             Once you proceed with restart, pick your newly installed certificate from the list of
                             available certificates.
                         </p>
-                        <p className="mb-0">
-                            If Chrome doesn’t let you choose a certificate and instead you get a RavenDB authentication
-                            error, please try again in the Incognito mode (or close all instances of Chrome). It can
-                            happen because the browser caches the client certificates.
-                        </p>
+                        {activeTab === "Chrome" && (
+                            <p className="mb-0">
+                                If Chrome doesn&apos;t let you choose a certificate and instead you get a RavenDB
+                                authentication error, please try again in the Incognito mode (or close all instances of
+                                Chrome). It can happen because the browser caches the client certificates.
+                            </p>
+                        )}
                     </NumberedListItem>
                 </NumberedList>
             </Modal.Body>

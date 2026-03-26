@@ -9,7 +9,6 @@ using Raven.Server.SqlMigration;
 using Raven.Server.SqlMigration.Model;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Migration
 {

@@ -1,3 +1,4 @@
+import "./ChatbotAskAiAttachedContext.scss";
 import { useAppDispatch } from "components/store";
 import { chatbotActions, ChatbotAttachedContext } from "../../store/chatbotSlice";
 import { Icon } from "components/common/Icon";
@@ -11,6 +12,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import genUtils from "common/generalUtils";
 import ChatbotAskAiAttachedContextNewItem from "components/shell/chatbot/partials/askAi/ChatbotAskAiAttachedContextNewItem";
 import Button from "react-bootstrap/Button";
+import Code from "components/common/Code";
 
 interface ChatbotAskAiAttachedContextProps {
     attachedContexts: ChatbotAttachedContext[];
@@ -55,6 +57,10 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     const canRemove = item.type !== "View" && !isReadOnly;
     const canInclude = item.state === "excluded" && !isReadOnly;
 
+    const hasSizeWaring = sizeInBytes > 1024; // 1KB size warning threshold
+    const hasConfidentialData = item.type === "QueryResult";
+    const hasAdditionalInfo = hasConfidentialData || hasSizeWaring;
+
     const { value: isHovering, setValue: setIsHovering } = useBoolean(false);
 
     const getIconColor = (): ThemeColor => {
@@ -91,57 +97,60 @@ function Item({ item, isReadOnly = false }: ContextItemProps) {
     };
 
     return (
-        <PopoverWithHoverWrapper
-            message={<TooltipContent sizeInBytes={sizeInBytes} type={item.type} />}
-            wrapperClassName="mw-100"
+        <div
+            className={classNames(
+                "attached-context hstack rounded-1 border border-color-light lh-base text-truncate bg-faded-primary",
+                {
+                    "cursor-pointer hover-filter opacity-50": canInclude,
+                }
+            )}
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
         >
-            <div
-                className={classNames(
-                    "attached-context hstack rounded-1 border border-color-light lh-base text-truncate",
-                    {
-                        "cursor-pointer hover-filter opacity-50": canInclude,
-                    }
-                )}
-                onMouseEnter={() => setIsHovering(true)}
-                onMouseLeave={() => setIsHovering(false)}
-                style={{
-                    padding: "1px 4.3px",
-                    fontSize: "0.875em",
-                    height: "22px",
-                    maxWidth: "128px",
-                }}
-                onClick={() => dispatch(chatbotActions.attachedContextIncluded(item.id))}
-            >
-                <Icon icon={getIconName()} color={getIconColor()} />
-                <span className="text-truncate text-body" title={item.label}>
-                    {item.label}
-                </span>
-                {sizeInBytes > 1024 && <Icon icon="warning" color="warning" margin="ms-1" />}
-                {canRemove && (
-                    <Button
-                        variant="link"
-                        className="text-muted p-0 hover-filter"
-                        onClick={() => dispatch(chatbotActions.attachedContextRemoved(item.id))}
-                        size="xs"
-                    >
-                        <Icon icon="cancel" margin="ms-1" size="xs" title="Remove context" />
-                    </Button>
-                )}
-            </div>
-        </PopoverWithHoverWrapper>
+            <PopoverWithHoverWrapper message={<LabelTooltipContent item={item} />} wrapperClassName="mw-100">
+                <div
+                    className={classNames("context-label rounded-1 hstack", {
+                        "border-end border-color-light": hasAdditionalInfo,
+                    })}
+                >
+                    <Icon icon={getIconName()} color={getIconColor()} />
+                    <span className="text-truncate text-body">{item.label}</span>
+                    {canRemove && (
+                        <Button
+                            variant="link"
+                            className="text-muted p-0 hover-filter"
+                            onClick={() => dispatch(chatbotActions.attachedContextRemoved(item.id))}
+                            size="xs"
+                        >
+                            <Icon icon="cancel" margin="ms-1" size="xs" title="Remove context" />
+                        </Button>
+                    )}
+                </div>
+            </PopoverWithHoverWrapper>
+            {hasAdditionalInfo && (
+                <div className="context-additional-info bg-faded-primary hstack text-body rounded-1 gap-1">
+                    {hasConfidentialData && (
+                        <PopoverWithHoverWrapper message="This content may contain confidential data.">
+                            <Icon icon="shield" color="primary" margin="m-0" size="xs" />
+                        </PopoverWithHoverWrapper>
+                    )}
+                    {hasSizeWaring && <span>{genUtils.formatBytesToSize(sizeInBytes)}</span>}
+                </div>
+            )}
+        </div>
     );
 }
 
-interface TooltipContentProps {
-    type: ChatbotAttachedContext["type"];
-    sizeInBytes: number;
-}
-
-function TooltipContent({ type, sizeInBytes }: TooltipContentProps) {
+function LabelTooltipContent({ item }: { item: ChatbotAttachedContext }) {
     return (
         <>
-            <div className="fw-bold">{tooltipTitles[type]}</div>
-            <div>Size: {genUtils.formatBytesToSize(sizeInBytes)}</div>
+            <div className="fw-bold">{tooltipTitles[item.type]}</div>
+            {item.type === "QueryResult" ? (
+                <Code code={item.query} language="rql" isActionsHidden={true} className="mt-1" />
+            ) : (
+                <div className="word-break">{item.label}</div>
+            )}
         </>
     );
 }

@@ -19,7 +19,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.BucketMigration
 {
@@ -166,9 +165,14 @@ namespace SlowTests.Sharding.BucketMigration
 
                 var shard = await Sharding.GetShardNumberForAsync(store, "users/1");
                 var wrongShard = ShardingTestBase.GetNextSortedShardNumber((await Sharding.GetShardingConfigurationAsync(store)).Shards, shard);
+                Raven.Client.ServerWide.DatabaseTopology dbTopology = null;
+                Assert.True(await WaitForValueAsync(async () =>
+                {
+                    var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
+                    dbTopology = record.Sharding.Shards[wrongShard];
+                    return dbTopology.Members.Count > 0;
+                }, true, 30_000), string.Join(", ", dbTopology));
 
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(dbName));
-                var dbTopology = record.Sharding.Shards[wrongShard];
                 var serverTag = dbTopology.Members[0];
                 var server = nodes.Single(n => n.ServerStore.NodeTag == serverTag);
 

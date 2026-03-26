@@ -7,7 +7,7 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import {
@@ -36,6 +36,7 @@ export default function useEditAiAgent(queryParams: QueryParams) {
     // Set connection strings view context on mount and reset store on unmount
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("aiTask"));
+        dispatch(editAiAgentActions.getAllIdentifiers(databaseName));
 
         return () => {
             dispatch(editAiAgentActions.reset());
@@ -65,12 +66,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
             ),
     });
 
-    const editFormValues = useWatch({
-        control: editForm.control,
-    });
-
-    const allQueriesNames = editFormValues.queries?.map((x) => x.name) ?? [];
-
     const testForm = useForm<TestAiAgentFormData>({
         defaultValues: {
             prompt: "",
@@ -78,6 +73,24 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         },
         resolver: testAiAgentYupResolver,
     });
+
+    const generateTestParameters = () => {
+        testForm.setValue(
+            "parameters",
+            editForm.getValues().parameters.map((configParam): TestAiAgentFormData["parameters"][number] => {
+                const persistedParameter = testForm
+                    .getValues()
+                    .parameters.find((testParam) => testParam.name === configParam.name);
+
+                return {
+                    name: configParam.name,
+                    type: configParam.type,
+                    isSendToModel: persistedParameter?.isSendToModel ?? configParam.isSendToModel,
+                    value: persistedParameter?.value ?? null,
+                };
+            })
+        );
+    };
 
     const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
 
@@ -101,8 +114,8 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         testForm,
         reloadEditForm,
         asyncGetEditDefaultValues,
-        allQueriesNames,
         handleSubmit: editForm.handleSubmit(saveAgent),
         isEditAiAgent,
+        generateTestParameters,
     };
 }

@@ -5,7 +5,6 @@ using Raven.Client.Exceptions;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Client.Exceptions.ClusterTransactionConcurrencyException.ViolationOnType;
 
 namespace SlowTests.Issues
@@ -122,8 +121,10 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 using (var session2 = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
                     session2.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     var o1 = session.Load<Document>("objects/1");
                     var o2 = session.Load<Document>("objects/2");

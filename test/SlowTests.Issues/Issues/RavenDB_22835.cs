@@ -22,7 +22,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using static Raven.Server.Documents.CountersStorage;
 
 namespace SlowTests.Issues

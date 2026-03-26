@@ -56,6 +56,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQueryCustomization IDocumentQueryCustomization.WithTag(string tag)
+        {
+            WithTag(tag);
+            return this;
+        }
+
+        /// <inheritdoc />
         public IDocumentQueryCustomization Timings(out QueryTimings timings)
         {
             IncludeTimings(out timings);

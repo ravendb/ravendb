@@ -9,7 +9,6 @@ using Raven.Server.Documents.Subscriptions.Stats;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

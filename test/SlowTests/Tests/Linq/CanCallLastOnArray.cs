@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
@@ -79,10 +78,10 @@ namespace SlowTests.Tests.Linq
         {
             var indexDefinition = new Students_ByEmailDomain().CreateIndexDefinition();
 
-            Assert.Equal(@"docs.Students.Select(student => new {
+            RavenTestHelper.AssertEqualRespectingNewLines(@"docs.Students.Select(student => new {
     EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split('@', System.StringSplitOptions.None)),
     Count = 1
-})".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
+})", indexDefinition.Maps.First());
 
             Assert.NotEqual(@"docs.Students.Select(student => new {
     EmailDomain = student.Email.Split(new char[] {

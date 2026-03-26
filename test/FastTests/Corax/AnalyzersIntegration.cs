@@ -2,7 +2,6 @@
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Corax;

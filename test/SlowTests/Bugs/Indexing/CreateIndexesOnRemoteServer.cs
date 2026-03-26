@@ -4,8 +4,8 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
+using Xunit;
 
 namespace SlowTests.Bugs.Indexing
 {

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Voron;
 using Xunit;
 using Constants = Voron.Global.Constants;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.FixedSize

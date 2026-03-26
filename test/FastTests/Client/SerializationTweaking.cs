@@ -2,7 +2,6 @@ using System;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace FastTests.Client
 {

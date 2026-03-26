@@ -11,7 +11,6 @@ using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Monitoring.Snmp.Providers;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 

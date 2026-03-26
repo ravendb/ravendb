@@ -17,7 +17,6 @@ using Tests.Infrastructure.Entities;
 using Tests.Infrastructure.Extensions;
 using Xunit;
 using Employee = Orders.Employee;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.ETL.Raven
 {
@@ -137,7 +136,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
                 }
 
                 var timeout = 30_000;
-                WaitForValue(() =>
+                var loaded = WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
@@ -145,6 +144,8 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         return docs.Length;
                     }
                 }, expectedVal: 2, timeout);
+
+                Assert.Equal(2, loaded);
 
                 string secondaryId;
                 using (var session = dest.OpenSession())
@@ -166,16 +167,22 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     session.SaveChanges();
                 }
 
+                bool existsMain = false, existsSecondary = false;
+
                 var etlReachedDestination = WaitForValue(() =>
                 {
                     using (var session = dest.OpenSession())
                     {
-                        return session.Advanced.Exists("users/1-A,Chicago") == false &&
-                               session.Advanced.Exists(secondaryId) == false;
+                        existsMain = session.Advanced.Exists("users/1-A,Chicago");
+                        existsSecondary = session.Advanced.Exists(secondaryId);
+
+                        return existsMain == false &&
+                               existsSecondary == false;
                     }
                 }, true, timeout);
-                
-                Assert.True(etlReachedDestination, await AddDebugInfo(src, dest, srcDbMode, dstDbMode));
+
+                Assert.True(etlReachedDestination,
+                    await AddDebugInfo(src, dest, srcDbMode, dstDbMode, existsMain, existsSecondary));
 
                 using (var session = dest.OpenSession())
                 {
@@ -190,7 +197,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             }
         }
 
-        private async Task<string> AddDebugInfo(IDocumentStore src, IDocumentStore dest, RavenDatabaseMode srcDbMode, RavenDatabaseMode destDbMode)
+        private async Task<string> AddDebugInfo(IDocumentStore src, IDocumentStore dest, RavenDatabaseMode srcDbMode, RavenDatabaseMode destDbMode, bool existsMain, bool existsSecondary)
         {
             var etlDebugInfo = await Etl.GetEtlDebugInfo(src.Database, TimeSpan.FromMilliseconds(30_000), srcDbMode);
             var sb = new StringBuilder().AppendLine(etlDebugInfo);
@@ -219,6 +226,32 @@ namespace SlowTests.Server.Documents.ETL.Raven
                         .Append(string.Join(',', ids))
                         .Append(']');
                 }
+            }
+
+            sb.AppendLine();
+            sb.AppendLine($"exists main: {existsMain}, exists secondary: {existsSecondary}");
+
+            using (var session = dest.OpenSession())
+            {
+                var prefixDocs = session.Advanced.LoadStartingWith<object>("users/1-A");
+                var prefixIds = prefixDocs
+                    .Select(x => session.Advanced.GetDocumentId(x))
+                    .Where(x => x != null)
+                    .OrderBy(x => x)
+                    .ToList();
+
+                var users2Docs = session.Advanced
+                    .RawQuery<object>("from Users2 where startsWith(id(), 'users/1-A/')")
+                    .ToList();
+
+                var users2Ids = users2Docs
+                    .Select(x => session.Advanced.GetDocumentId(x))
+                    .Where(x => x != null)
+                    .OrderBy(x => x)
+                    .ToList();
+
+                sb.AppendLine("Remaining destination docs by LoadStartingWith: [" + string.Join(", ", prefixIds) + "]");
+                sb.Append("Remaining destination docs by Users2 query: [" + string.Join(", ", users2Ids) + "]");
             }
 
             return sb.ToString();

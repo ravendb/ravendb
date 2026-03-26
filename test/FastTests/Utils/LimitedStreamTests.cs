@@ -6,7 +6,6 @@ using FastTests.Voron.Util;
 using Raven.Client.Documents.Operations.Attachments;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {

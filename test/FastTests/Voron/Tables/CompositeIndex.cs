@@ -3,7 +3,6 @@ using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {

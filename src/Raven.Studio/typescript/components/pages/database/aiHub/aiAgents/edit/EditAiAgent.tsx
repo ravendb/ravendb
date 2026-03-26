@@ -16,6 +16,7 @@ import { LoadError } from "components/common/LoadError";
 import useEditAiAgent from "./hooks/useEditAiAgent";
 import useResizableWidth from "components/hooks/useResizableWidth";
 import ColumnResize from "components/common/ColumnResize";
+import EditAiAgentSubAgentsSection from "components/pages/database/aiHub/aiAgents/edit/partials/EditAiAgentSubAgentsSection";
 
 interface QueryParams {
     id: string;
@@ -75,12 +76,16 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                             <EditAiAgentBasicSection isEditAiAgent={aiAgentEditor.isEditAiAgent} />
                             <EditAiAgentParametersSection />
                             <EditAiAgentToolsSection />
+                            <EditAiAgentSubAgentsSection />
                             <EditAiAgentTrimmingSection />
                         </>
                     )}
                 </div>
                 <div className="p-3 border-top border-secondary">
-                    <EditAiAgentFooter testForm={aiAgentEditor.testForm} editForm={aiAgentEditor.editForm} />
+                    <EditAiAgentFooter
+                        editForm={aiAgentEditor.editForm}
+                        generateTestParameters={aiAgentEditor.generateTestParameters}
+                    />
                 </div>
             </div>
             {isTestOpen && (
@@ -98,7 +103,7 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
                     <EditAiAgentTestPanel
                         testForm={aiAgentEditor.testForm}
                         editForm={aiAgentEditor.editForm}
-                        allQueriesNames={aiAgentEditor.allQueriesNames}
+                        generateTestParameters={aiAgentEditor.generateTestParameters}
                     />
                 </div>
             )}

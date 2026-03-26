@@ -1,65 +1,95 @@
 using System;
+using System.Collections.Generic;
 using Corax.Querying.Matches.Meta;
 using Sparrow.Extensions;
-using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
-public abstract class CoraxBooleanQueryBase : IQueryMatch
+public abstract class CoraxBooleanQueryBase(CoraxQueryBuilder.Parameters parameters) : IQueryMatch, ICoraxClause
 {
-    public abstract IQueryMatch Materialize();
-    public float? Boosting;
-    protected readonly IndexSearcher IndexSearcher;
-    protected readonly CoraxQueryBuilder.Parameters _parameters;
-    protected bool _hasBinary;
-    public bool HasBinary => _hasBinary;
-    public DuplicatesOccurrence DuplicatesOccurrenceStatus => throw new InvalidOperationException($"{nameof(DuplicatesOccurrenceStatus)} should never be used in {nameof(CoraxBooleanQueryBase)}");
+    public bool HasBoosting => Boosting.HasValue;
 
-    protected CoraxBooleanQueryBase(IndexSearcher indexSearcher, CoraxQueryBuilder.Parameters parameters)
-    {
-        IndexSearcher = indexSearcher;
-        _parameters = parameters;
-    }
+    protected List<IQueryMatch> ComplexMatches;
+    protected List<CoraxBooleanItem> QueryStack;
+    protected List<CoraxVectorItem> VectorStack;
 
-    protected IQueryMatch TransformCoraxBooleanItemIntoQueryMatch(CoraxBooleanItem leftmostClause)
+    protected CoraxBooleanQueryBase Add(IQueryMatch item)
     {
-        if (leftmostClause.Operation is UnaryMatchOperation.Between)
+        switch (item)
         {
-            return (leftmostClause.Term, leftmostClause.Term2) switch
-            {
-                (long l, long l2) => IndexSearcher.BetweenQuery(leftmostClause.Field, l, l2, leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, token: _parameters.Token),
-                (double d, double d2) => IndexSearcher.BetweenQuery(leftmostClause.Field, d, d2, leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, token: _parameters.Token),
-                (string s, string s2) => IndexSearcher.BetweenQuery(leftmostClause.Field, s, s2, leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, token: _parameters.Token),
-                (long l, double d) => IndexSearcher.BetweenQuery(leftmostClause.Field, Convert.ToDouble(l), d, leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, token: _parameters.Token),
-                (double d, long l) => IndexSearcher.BetweenQuery(leftmostClause.Field, d, Convert.ToDouble(l), leftSide: leftmostClause.BetweenLeft, rightSide: leftmostClause.BetweenRight, token: _parameters.Token), _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
-            };
+            case CoraxOrQueries moq:
+                _parameters.BuildSteps?.Add($"Adding CoraxOrQueries to query.");
+                AddComplexMatch(moq.Materialize());
+                break;
+            case CoraxAndQueries caq:
+                _parameters.BuildSteps?.Add($"Adding CoraxAndQueries to query.");
+                AddComplexMatch(caq.Materialize());
+                break;
+            case CoraxVectorItem cvi:
+                AddCoraxVectorItem(cvi);
+                break;
+            case CoraxBooleanItem cbi:
+                AddCoraxBooleanItem(cbi);
+                break;
+            default:
+                AddComplexMatch(item);
+                break;
         }
 
-        return (leftmostClause.Operation, leftmostClause.Term) switch
-        {
-            (UnaryMatchOperation.LessThan, long l) => IndexSearcher.LessThanQuery(leftmostClause.Field, l, token: _parameters.Token),
-            (UnaryMatchOperation.LessThan, double d) => IndexSearcher.LessThanQuery(leftmostClause.Field, d, token: _parameters.Token),
-            (UnaryMatchOperation.LessThan, string s) => IndexSearcher.LessThanQuery(leftmostClause.Field, s, token: _parameters.Token),
-
-            (UnaryMatchOperation.LessThanOrEqual, long l) => IndexSearcher.LessThanOrEqualsQuery(leftmostClause.Field, l, token: _parameters.Token),
-            (UnaryMatchOperation.LessThanOrEqual, double d) => IndexSearcher.LessThanOrEqualsQuery(leftmostClause.Field, d, token: _parameters.Token),
-            (UnaryMatchOperation.LessThanOrEqual, string s) => IndexSearcher.LessThanOrEqualsQuery(leftmostClause.Field, s, token: _parameters.Token),
-
-            (UnaryMatchOperation.GreaterThan, long l) => IndexSearcher.GreaterThanQuery(leftmostClause.Field, l, token: _parameters.Token),
-            (UnaryMatchOperation.GreaterThan, double d) => IndexSearcher.GreaterThanQuery(leftmostClause.Field, d, token: _parameters.Token),
-            (UnaryMatchOperation.GreaterThan, string s) => IndexSearcher.GreaterThanQuery(leftmostClause.Field, s, token: _parameters.Token),
-
-            (UnaryMatchOperation.GreaterThanOrEqual, long l) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, l, token: _parameters.Token),
-            (UnaryMatchOperation.GreaterThanOrEqual, double d) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, d, token: _parameters.Token),
-            (UnaryMatchOperation.GreaterThanOrEqual, string s) => IndexSearcher.GreatThanOrEqualsQuery(leftmostClause.Field, s, token: _parameters.Token),
-            
-            (UnaryMatchOperation.NotEquals, long l) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, l), token: _parameters.Token),
-            (UnaryMatchOperation.NotEquals, double d) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, d), token: _parameters.Token),
-            (UnaryMatchOperation.NotEquals, string s) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, s), token: _parameters.Token),
-            (UnaryMatchOperation.NotEquals, null) => IndexSearcher.AndNot(IndexSearcher.ExistsQuery(leftmostClause.Field), IndexSearcher.TermQuery(leftmostClause.Field, null), token: _parameters.Token),
-            _ => throw new InvalidOperationException($"UnaryMatchOperation {leftmostClause.Operation} is not supported for type {leftmostClause.Term.GetType()}")
-        };
+        return this;
     }
+
+    private void AddCoraxVectorItem(CoraxVectorItem item)
+    {
+        _parameters.BuildSteps?.Add($"Adding CoraxVectorItem to query.");
+        VectorStack ??= new();
+        VectorStack.Add(item);
+    }
+
+    private void AddComplexMatch(IQueryMatch item)
+    {
+        _parameters.BuildSteps?.Add($"Adding {item.GetType().Name} to query.");
+        ComplexMatches ??= new();
+        ComplexMatches.Add(item);
+    }
+
+    protected abstract void AddCoraxBooleanItem(CoraxBooleanItem item);
+
+
+    public abstract IQueryMatch Materialize();
+    public float? Boosting { get; set; }
+    protected readonly CoraxQueryBuilder.Parameters _parameters = parameters;
+    protected bool _hasBinary;
+    public bool HasBinary => _hasBinary;
+
+
+    protected bool EqualsScoreFunctions(CoraxBooleanQueryBase other)
+    {
+        if (Boosting is null && other.Boosting is null) return true;
+        if (Boosting is null || other.Boosting is null) return false;
+
+        return Boosting.Value.AlmostEquals(other.Boosting.Value);
+    }
+
+    protected bool EqualsScoreFunctions(CoraxVectorItem other)
+    {
+        if (Boosting is null && other.Boosting is null) return true;
+        if (Boosting is null || other.Boosting is null) return false;
+
+        return Boosting.Value.AlmostEquals(other.Boosting.Value);
+    }
+
+    protected bool EqualsScoreFunctions(CoraxBooleanItem other)
+    {
+        if (Boosting is null && other.Boosting is null) return true;
+        if (Boosting is null || other.Boosting is null) return false;
+
+        return Boosting.Value.AlmostEquals(other.Boosting.Value);
+    }
+
+    #region IQueryMatchRelaxation
+
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => throw new InvalidOperationException($"{nameof(DuplicatesOccurrenceStatus)} should never be used in {nameof(CoraxBooleanQueryBase)}");
 
     public bool IsBoosting => false;
 
@@ -75,19 +105,6 @@ public abstract class CoraxBooleanQueryBase : IQueryMatch
     public void Score(Span<long> matches, Span<float> scores, float boostFactor) => throw new InvalidOperationException(QueryMatchUsageException);
     public QueryInspectionNode Inspect() => throw new InvalidOperationException(QueryMatchUsageException);
 
-    protected bool EqualsScoreFunctions(CoraxBooleanQueryBase other)
-    {
-        if (Boosting is null && other.Boosting is null) return true;
-        if (Boosting is null || other.Boosting is null) return false;
-        
-        return Boosting.Value.AlmostEquals(other.Boosting.Value);
-    }
-    
-    protected bool EqualsScoreFunctions(CoraxBooleanItem other)
-    {
-        if (Boosting is null && other.Boosting is null) return true;
-        if (Boosting is null || other.Boosting is null) return false;
-        
-        return Boosting.Value.AlmostEquals(other.Boosting.Value);
-    }
+    #endregion
+
 }

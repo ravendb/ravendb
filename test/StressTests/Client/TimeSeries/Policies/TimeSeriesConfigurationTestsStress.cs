@@ -10,7 +10,6 @@ using SlowTests.Client.TimeSeries.Replication;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Client.TimeSeries.Policies
 {

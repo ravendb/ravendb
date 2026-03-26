@@ -13,7 +13,6 @@ using Sparrow.Utils;
 using Xunit;
 using Voron.Impl.Backup;
 using Voron.Util.Settings;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Voron.Backups

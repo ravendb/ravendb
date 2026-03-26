@@ -7,7 +7,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace InterversionTests
 {

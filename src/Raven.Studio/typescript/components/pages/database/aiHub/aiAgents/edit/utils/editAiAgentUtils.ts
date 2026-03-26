@@ -27,6 +27,7 @@ function mapFromDto(
                 maxTokensBeforeSummarization: null,
                 maxTokensAfterSummarization: null,
             },
+            subAgents: [],
         };
     }
 
@@ -43,7 +44,10 @@ function mapFromDto(
             dto.Parameters?.map((x) => ({
                 name: x.Name,
                 description: x.Description,
-                isSendToModel: x.SendToModel ?? true, // the default value on the server is true
+                isSendToModel: x.SendToModel ?? true,
+                policy: x.Policy ?? "Default",
+                type: x.Type ?? "Default",
+                isEditing: false,
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({
@@ -78,6 +82,12 @@ function mapFromDto(
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
         },
+        subAgents:
+            dto.SubAgents?.map((x) => ({
+                identifier: x.Identifier,
+                description: x.Description,
+                isEditing: false,
+            })) ?? [],
     };
 }
 
@@ -107,6 +117,8 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Name: x.name,
                 Description: x.description,
                 SendToModel: x.isSendToModel,
+                Policy: x.policy,
+                Type: x.type,
             })) ?? [],
         Queries:
             formData.queries?.map((x) => ({
@@ -157,6 +169,11 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                       //           : null,
                   }
                 : null,
+        SubAgents:
+            formData.subAgents?.map((x) => ({
+                Identifier: x.identifier,
+                Description: x.description,
+            })) ?? [],
     };
 }
 

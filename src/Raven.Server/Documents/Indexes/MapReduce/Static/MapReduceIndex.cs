@@ -461,14 +461,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return GetEntriesFields(staticEntries);
         }
 
-        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
+        protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale, QueryTimeScope queryTime = null)
         {
             if (_handleReferences == null && _handleCompareExchangeReferences == null)
-                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale);
+                return base.CalculateIndexEtag(queryContext, indexContext, query, isStale, queryTime);
 
             return CalculateIndexEtagWithReferences(
                 _handleReferences, _handleCompareExchangeReferences, queryContext,
-                indexContext, query, isStale, _referencedCollections, _compiled);
+                indexContext, query, isStale, _referencedCollections, _compiled, queryTime);
         }
 
         protected override IndexingState GetIndexingStateInternal(QueryOperationContext queryContext, TransactionOperationContext indexContext)

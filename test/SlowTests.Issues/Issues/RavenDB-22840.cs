@@ -13,7 +13,6 @@ using Sparrow;
 using Sparrow.Global;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 public class RavenDB_22840 : ReplicationTestBase

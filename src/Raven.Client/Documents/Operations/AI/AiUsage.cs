@@ -4,12 +4,20 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Tracks token usage for AI operations (prompt, completion, total and cached tokens).
+/// </summary>
 public class AiUsage : IDynamicJson
 {
+    /// <summary>Total number of tokens used in prompts.</summary>
     public long PromptTokens { get; set; }
+    /// <summary>Total number of tokens produced by completions.</summary>
     public long CompletionTokens { get; set; }
+    /// <summary>Total number of tokens used (prompt + completion).</summary>
     public long TotalTokens { get; set; }
+    /// <summary>Number of tokens served from cache (e.g., embeddings cache), if available.</summary>
     public long CachedTokens { get; set; }
+    /// <summary>The part of the completion tokens used for reasoning by the model.</summary>
     public long ReasoningTokens { get; set; }
 
     internal void UpdateFrom(BlittableJsonReaderObject json)
@@ -37,6 +45,9 @@ public class AiUsage : IDynamicJson
         }
     }
 
+    /// <summary>
+    /// Serializes the usage counters to JSON structure.
+    /// </summary>
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

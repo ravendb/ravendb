@@ -17,7 +17,6 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {

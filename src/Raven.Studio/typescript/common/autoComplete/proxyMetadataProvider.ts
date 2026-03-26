@@ -45,6 +45,14 @@ export class proxyMetadataProvider implements queryCompleterProviders {
         this.pendingMessages.set(id, (payload: MetadataResponseIndexes) => callback(payload.names));
     }
 
+    aiTasks(callback: (data: Record<string, Record<string, string[]>>) => void): void {
+        const id = this.sender({
+            type: "aiTasks"
+        });
+
+        this.pendingMessages.set(id, (payload: MetadataResponseAiTasks) => callback(payload.data));
+    }
+
     onResponse(id: number, response: MetadataResponsePayload) {
         const callback = this.pendingMessages.get(id);
         try {

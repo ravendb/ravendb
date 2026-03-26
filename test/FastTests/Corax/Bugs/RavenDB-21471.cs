@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using Corax.Querying.Matches.Meta;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs
 {

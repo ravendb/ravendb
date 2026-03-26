@@ -93,6 +93,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                 return Task.FromResult(SuggestionQueryResult.NotModifiedResult);
         }
 
+        // Suggestion queries don't use time-based functions, no need to pass queryTime
         return index.SuggestionQuery(query, queryContext, token);
     }
 

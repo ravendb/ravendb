@@ -75,7 +75,7 @@ namespace Raven.Client.Documents.Session.Operations
         public void LogQuery()
         {
             if (Logger.IsDebugEnabled)
-                Logger.Debug($"Executing query '{_indexQuery.Query}' on index '{_indexName}' in '{_session.StoreIdentifier}'");
+                Logger.Debug($"Executing query '{_indexQuery.Query}' on index '{_indexName}' in '{_session.StoreIdentifier}'{(string.IsNullOrWhiteSpace(_indexQuery.Tag) ? string.Empty : $" with tag '{_indexQuery.Tag}'")}");
         }
 
         public IDisposable EnterQueryContext()

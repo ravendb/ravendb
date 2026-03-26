@@ -10,6 +10,9 @@ import { IndexSharedInfo } from "components/models/indexes";
 import IndexUtils from "components/utils/IndexUtils";
 import RichAlert from "components/common/RichAlert";
 import Modal from "components/common/Modal";
+import classNames from "classnames";
+import Accordion from "react-bootstrap/Accordion";
+import Badge from "react-bootstrap/Badge";
 
 interface ConfirmResetIndexesProps {
     indexes: IndexSharedInfo[];
@@ -63,6 +66,7 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
 
     const sideBySideWarning = getSideBySideWarning();
     const indexNamesToReset = getIndexNamesToReset();
+    const defaultActiveKey = ["0"];
 
     const [selectedActionContexts, setSelectedActionContexts] = useState<DatabaseActionContexts[]>(allActionContexts);
 
@@ -72,41 +76,69 @@ export function ConfirmResetIndexes(props: ConfirmResetIndexesProps) {
     };
 
     return (
-        <Modal show onHide={closeConfirm} contentClassName="modal-border bulge-warning">
-            <Modal.Header className="vstack gap-4" onCloseClick={closeConfirm}>
-                <Icon icon="index" color="warning" addon="reset-index" className="fs-1" margin="m-0" />
-                <div className="lead">
-                    You&apos;re about to <span className="text-warning">reset</span> following{" "}
-                    {indexNamesToReset.length === 1 ? "index" : `indexes`}
-                </div>
+        <Modal show onHide={closeConfirm} contentClassName="modal-border bulge-warning" size="lg">
+            <Modal.Header className="hstack pb-2 mb-0" onCloseClick={closeConfirm}>
+                <div className="text-center lead">Confirm Reset Operation</div>
             </Modal.Header>
-            <Modal.Body className="vstack gap-4">
-                <ul className="overflow-auto" style={{ maxHeight: "200px" }}>
-                    {indexNamesToReset.map((indexName) => (
-                        <li key={indexName}>{indexName}</li>
-                    ))}
-                </ul>
-                {sideBySideWarning && <RichAlert variant="warning">{sideBySideWarning}</RichAlert>}
-                <RichAlert variant="warning">
-                    <div>
-                        <strong>Reset</strong> will remove all existing indexed data
-                        {ActionContextUtils.showContextSelector(allActionContexts) ? (
-                            <span> from the selected context.</span>
-                        ) : (
-                            <span> from node {allActionContexts[0].nodeTag}.</span>
-                        )}
-                        <br />
-                        All items matched by the index definition will be re-indexed.
+            <Modal.Body className="vstack gap-4 pt-0">
+                <div className="vstack gap-2">
+                    <Accordion
+                        className="bs5 accordion-inside-modal"
+                        alwaysOpen
+                        flush
+                        defaultActiveKey={defaultActiveKey}
+                    >
+                        <Accordion.Item eventKey="0">
+                            <Accordion.Header>
+                                Indexes to <strong className="text-warning margin-left-xxxs">Reset</strong>{" "}
+                                <Badge className="ms-1 px-1 align-self-center rounded-circle" bg="secondary">
+                                    {indexNamesToReset.length}
+                                </Badge>
+                            </Accordion.Header>
+                            <Accordion.Collapse unmountOnExit mountOnEnter eventKey="0">
+                                <Accordion.Body className="pb-2 pt-0 overflow-scroll" style={{ maxHeight: "160px" }}>
+                                    <div className="vstack gap-1">
+                                        {indexNamesToReset.map((indexName) => (
+                                            <div key={indexName} className="d-flex">
+                                                <div
+                                                    className={classNames(
+                                                        "bg-secondary rounded-pill px-2 py-1 d-flex me-2 align-self-start"
+                                                    )}
+                                                >
+                                                    <Icon icon="index" margin="m-0" />
+                                                </div>
+                                                <div className="word-break align-self-center">{indexName}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Accordion.Body>
+                            </Accordion.Collapse>
+                        </Accordion.Item>
+                    </Accordion>
+                    <div className="vstack gap-1">
+                        {sideBySideWarning && <RichAlert variant="warning">{sideBySideWarning}</RichAlert>}
+                        <RichAlert variant="warning">
+                            <div>
+                                <strong>Reset</strong> will remove all existing indexed data
+                                {ActionContextUtils.showContextSelector(allActionContexts) ? (
+                                    <span> from the selected context.</span>
+                                ) : (
+                                    <span> from node {allActionContexts[0].nodeTag}.</span>
+                                )}
+                                <br />
+                                <span>All items matched by the index definition will be re-indexed.</span>
+                            </div>
+                        </RichAlert>
+                        <RichAlert variant="info">
+                            <strong>Reset mode: </strong>
+                            {mode === "InPlace" && <span>In place</span>}
+                            {mode === "SideBySide" && <span>Side by side</span>}
+                        </RichAlert>
                     </div>
-                </RichAlert>
-                <RichAlert variant="info">
-                    <strong>Reset mode: </strong>
-                    {mode === "InPlace" && <span>In place</span>}
-                    {mode === "SideBySide" && <span>Side by side</span>}
-                </RichAlert>
+                </div>
                 {ActionContextUtils.showContextSelector(allActionContexts) && (
                     <div>
-                        <h4>Select context</h4>
+                        <h4 className="fw-light mb-1">Select context</h4>
                         <MultipleDatabaseLocationSelector
                             allActionContexts={allActionContexts}
                             selectedActionContexts={selectedActionContexts}

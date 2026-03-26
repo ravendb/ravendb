@@ -20,7 +20,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Replication.Incoming;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Replication
 {

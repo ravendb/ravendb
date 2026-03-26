@@ -82,6 +82,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </remarks>
         public AiAgentHistoryConfiguration History { get; set; }
 
+        /// <summary>
+        /// Serializes the configuration to a JSON structure.
+        /// </summary>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -154,6 +157,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </value>
         public long? MaxTokensAfterSummarization { get; set; }
 
+        /// <summary>
+        /// Converts the summarization configuration into a JSON representation.
+        /// </summary>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -188,6 +194,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </summary>
         public int MessagesLengthAfterTruncate { get; set; } = DefaultMessagesLengthBeforeTruncate / 2;
 
+        /// <summary>
+        /// Converts the truncation configuration into a JSON representation.
+        /// </summary>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -234,6 +243,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </remarks>
         public int? HistoryExpirationInSec { get; set; }
 
+        /// <summary>
+        /// Converts the history configuration into a JSON representation.
+        /// </summary>
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

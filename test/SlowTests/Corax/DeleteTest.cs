@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Indexing;
 using Corax.Mappings;
@@ -16,7 +17,6 @@ using Voron;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
 using Xunit;
-using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -186,10 +186,10 @@ public class DeleteTest : StorageTest
         public T Content { get; set; }
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         _bsc.Dispose();
         _analyzers?.Dispose();
-        base.Dispose();
+        await base.DisposeAsync();
     }
 }

@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using SlowTests.Server.Documents.Indexing.Static;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Indexing
 {
@@ -24,7 +23,7 @@ namespace SlowTests.Server.Documents.Indexing
         [MemberData(nameof(Data))]// reduce key tree with depth 3
         public async Task Auto_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {
-            using (var test = new CollisionsOfReduceKeyHashes(Output))
+            await using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
                 await test.Auto_index_should_produce_multiple_outputs(data);
             }
@@ -33,7 +32,7 @@ namespace SlowTests.Server.Documents.Indexing
         [MemberData(nameof(Data))]// reduce key tree with depth 3
         public async Task Static_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {
-            using (var test = new CollisionsOfReduceKeyHashes(Output))
+            await using (var test = new CollisionsOfReduceKeyHashes(Output))
             {
                 await test.Static_index_should_produce_multiple_outputs(data);
             }

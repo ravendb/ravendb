@@ -4,7 +4,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.DatabaseSettings
 {

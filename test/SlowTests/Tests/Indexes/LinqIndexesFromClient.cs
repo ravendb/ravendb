@@ -17,7 +17,6 @@ using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static FastTests.Server.Documents.Indexing.Lucene.LuceneDocumentConverterTests;
 
 namespace SlowTests.Tests.Indexes
@@ -133,7 +132,7 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine) }
             };
 
-            Assert.True(original.Maps.SetEquals(generated.Maps));
+            RavenTestHelper.AssertSetEqualsRespectingNewLines(original.Maps, generated.Maps);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -158,7 +157,7 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine) }
             };
 
-            Assert.True(original.Maps.SetEquals(generated.Maps));
+            RavenTestHelper.AssertSetEqualsRespectingNewLines(original.Maps, generated.Maps);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -184,8 +183,8 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine) }
             };
 
-            Assert.True(original.Maps.SetEquals(generated.Maps));
-            Assert.Equal(original, generated);
+            RavenTestHelper.AssertSetEqualsRespectingNewLines(original.Maps, generated.Maps);
+            RavenTestHelper.AssertEqualRespectingNewLines(original.Reduce, generated.Reduce);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -210,8 +209,8 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine) }
             };
 
-            Assert.True(original.Maps.SetEquals(generated.Maps));
-            Assert.Equal(original, generated);
+            RavenTestHelper.AssertSetEqualsRespectingNewLines(original.Maps, generated.Maps);
+            RavenTestHelper.AssertEqualRespectingNewLines(original.Reduce, generated.Reduce);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -256,8 +255,8 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine)
             };
 
-            Assert.True(original.Maps.SetEquals(generated.Maps));
-            Assert.Equal(original.Reduce, generated.Reduce);
+            RavenTestHelper.AssertSetEqualsRespectingNewLines(original.Maps, generated.Maps);
+            RavenTestHelper.AssertEqualRespectingNewLines(original.Reduce, generated.Reduce);
         }
 
         private void Convert_map_reduce_query_with_map_(Expression<Func<IEnumerable<User>, IEnumerable>> mapExpression, string expectedIndexString)
@@ -280,8 +279,8 @@ namespace SlowTests.Tests.Indexes
 })".Replace("\r\n", Environment.NewLine)
             };
 
-            Assert.Equal(expectedIndexString, generated.Maps.First());
-            Assert.Equal(original.Reduce, generated.Reduce);
+            RavenTestHelper.AssertEqualRespectingNewLines(expectedIndexString, generated.Maps.First());
+            RavenTestHelper.AssertEqualRespectingNewLines(original.Reduce, generated.Reduce);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]

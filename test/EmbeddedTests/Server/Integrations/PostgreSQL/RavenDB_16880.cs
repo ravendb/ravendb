@@ -1,4 +1,4 @@
-﻿#if NET8_0
+﻿#if RUN_NPGSQL_TESTS
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
+#pragma warning disable xUnit1051
 
 namespace EmbeddedTests.Server.Integrations.PostgreSQL
 {

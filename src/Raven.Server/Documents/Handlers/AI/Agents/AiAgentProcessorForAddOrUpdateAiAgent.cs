@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands.AI;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -41,7 +40,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, cfg, RequestHandler.GetRaftRequestIdFromQuery()),
             token.Token);
 
-        RequestHandler.LogTaskToAudit($"Add/Update AI Agent '{cfg.Identifier}'", r.Index, options);
+        RequestHandler.LogTaskToAudit(Web.RequestHandler.AddOrUpdateAiAgentConfiguration, r.Index, options);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

@@ -1244,7 +1244,7 @@ class query extends shardViewModelBase {
                         const isAiAssistantDisabled = aiAssistantSlice.aiAssistantSelectors.isDisabled(storeState);
 
                         if (!isAiAssistantDisabled) {
-                            const errorMessage = request.responseJSON?.Message;
+                            const errorMessage = request.status === 404 ? "Index was not found" : request.responseJSON?.Message;
                             const isQueryErrorInContext = chatbotSlice.chatbotSelectors.attachedContexts(storeState)
                                 .find((x) => x.type === "QueryError" && x.query === criteriaForFetcher.queryText());
                             

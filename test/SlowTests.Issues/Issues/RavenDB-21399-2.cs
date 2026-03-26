@@ -7,7 +7,6 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 using Random = System.Random;
 
 namespace SlowTests.Issues;

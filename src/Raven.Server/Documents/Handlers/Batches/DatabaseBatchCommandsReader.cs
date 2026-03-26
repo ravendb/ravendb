@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Batches.Commands;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -35,6 +36,11 @@ public sealed class DatabaseBatchCommandsReader : AbstractBatchCommandsReader<Me
         attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, input, attachmentStream.Stream, token);
         await attachmentStream.Stream.FlushAsync(token);
         AttachmentStreams.Add(attachmentStream);
+    }
+
+    protected override void CreateBatchTrackChangesCommand(BatchRequestParser.CommandData commandData)
+    {
+        commandData.BatchTrackChangesCommand = new BatchTrackChangesCommand(commandData.TrackedEntities);
     }
 
     public override async ValueTask<MergedBatchCommand> GetCommandAsync(DocumentsOperationContext context)

@@ -8,7 +8,6 @@ using Sparrow.Server.Platform;
 using Voron;
 using Xunit;
 using Voron.Impl.Paging;
-using Xunit.Abstractions;
 using Voron.Global;
 
 namespace SlowTests.Voron

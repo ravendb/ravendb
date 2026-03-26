@@ -56,7 +56,7 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
 
         public GenerationInfoSize PinnedObjectHeapSize { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
@@ -67,12 +67,50 @@ public class GcInfoPayload : AbstractClusterDashboardNotification
                 [nameof(PauseTimePercentage)] = PauseTimePercentage,
                 [nameof(PauseDurationsInMs)] = PauseDurationsInMs,
                 [nameof(TotalHeapSizeAfterBytes)] = TotalHeapSizeAfterBytes,
-                [nameof(Gen0HeapSize)] = Gen0HeapSize.ToJson(),
-                [nameof(Gen1HeapSize)] = Gen1HeapSize.ToJson(),
-                [nameof(Gen2HeapSize)] = Gen2HeapSize.ToJson(),
-                [nameof(LargeObjectHeapSize)] = LargeObjectHeapSize.ToJson(),
-                [nameof(PinnedObjectHeapSize)] = PinnedObjectHeapSize.ToJson(),
+                [nameof(Gen0HeapSize)] = Gen0HeapSize?.ToJson(),
+                [nameof(Gen1HeapSize)] = Gen1HeapSize?.ToJson(),
+                [nameof(Gen2HeapSize)] = Gen2HeapSize?.ToJson(),
+                [nameof(LargeObjectHeapSize)] = LargeObjectHeapSize?.ToJson(),
+                [nameof(PinnedObjectHeapSize)] = PinnedObjectHeapSize?.ToJson(),
             };
+        }
+    }
+
+    public sealed class GcMemoryInfoMetrics : GcMemoryInfo
+    {
+        public long FinalizationPendingCount { get; set; }
+        public long FragmentedInMb { get; set; }
+        public long HeapSizeInMb { get; set; }
+        public long HighMemoryLoadThresholdInMb { get; set; }
+        public long MemoryLoadInMb { get; set; }
+        public long PinnedObjectsCount { get; set; }
+        public long PromotedInMb { get; set; }
+        public long TotalAvailableMemoryInMb { get; set; }
+        public long TotalCommittedInMb { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var djv = base.ToJson();
+
+            djv[nameof(FinalizationPendingCount)] = FinalizationPendingCount;
+            djv[nameof(FragmentedInMb)] = FragmentedInMb;
+            djv[nameof(HeapSizeInMb)] = HeapSizeInMb;
+            djv[nameof(HighMemoryLoadThresholdInMb)] = HighMemoryLoadThresholdInMb;
+            djv[nameof(MemoryLoadInMb)] = MemoryLoadInMb;
+            djv[nameof(PinnedObjectsCount)] = PinnedObjectsCount;
+            djv[nameof(PromotedInMb)] = PromotedInMb;
+            djv[nameof(TotalAvailableMemoryInMb)] = TotalAvailableMemoryInMb;
+            djv[nameof(TotalCommittedInMb)] = TotalCommittedInMb;
+
+            return djv;
+        }
+
+        public double? GetPauseDurationSeconds(int index)
+        {
+            if (PauseDurationsInMs == null || PauseDurationsInMs.Count <= index)
+                return null;
+
+            return PauseDurationsInMs[index] / 1000d;
         }
     }
 

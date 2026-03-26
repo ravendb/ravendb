@@ -400,17 +400,26 @@ namespace Raven.Client.Documents.Linq
                     {
                         if (TryUnwrapImplicitOperatorIfNeeded(expression, out var newExpression))
                             return GetValueFromExpressionWithoutConversion(newExpression, out value);
-
-                        if (mce.Method.DeclaringType == typeof(RavenQuery) &&
-                            mce.Method.Name == nameof(RavenQuery.CmpXchg))
+                        
+                        if (mce.Method.DeclaringType == typeof(RavenQuery))
                         {
-                            if (TryGetMethodArguments(mce, out var args) == false)
+                            switch (mce.Method.Name)
                             {
-                                value = null;
-                                return false;
+                                case nameof(RavenQuery.CmpXchg):
+                                    if (TryGetMethodArguments(mce, out var args) == false)
+                                    {
+                                        value = null;
+                                        return false;
+                                    }
+                                    value = RavenDocumentQuery.CmpXchg((string)args[0]);
+                                    return true;
+                                case nameof(RavenQuery.Now):
+                                    value = RavenDocumentQuery.Now();
+                                    return true;
+                                case nameof(RavenQuery.Today):
+                                    value = RavenDocumentQuery.Today();
+                                    return true;
                             }
-                            value = CmpXchg.Value((string)args[0]);
-                            return true;
                         }
                     }
                     value = Expression.Lambda(expression).Compile().DynamicInvoke();
@@ -594,6 +603,16 @@ namespace Raven.Client.Documents.Linq
         public static bool IsCompareExchangeCall(MethodCallExpression mce)
         {
             return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.CmpXchg);
+        }
+
+        public static bool IsNowCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Now);
+        }
+
+        public static bool IsTodayCall(MethodCallExpression mce)
+        {
+            return mce.Method.DeclaringType == typeof(RavenQuery) && mce.Method.Name == nameof(RavenQuery.Today);
         }
 
         public static bool IsTimeSeriesCall(MethodCallExpression mce)

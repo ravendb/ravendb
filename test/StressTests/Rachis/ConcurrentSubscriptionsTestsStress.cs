@@ -5,7 +5,6 @@ using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 // ReSharper disable ClassNeverInstantiated.Local
 // ReSharper disable CollectionNeverUpdated.Local

@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 // ReSharper disable MemberCanBePrivate.Local

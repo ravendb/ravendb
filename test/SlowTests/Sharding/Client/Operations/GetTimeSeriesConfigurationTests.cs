@@ -7,7 +7,6 @@ using Sparrow;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Client.Operations
 {

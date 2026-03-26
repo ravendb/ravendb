@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Threading;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace Tests.Infrastructure;
 
@@ -19,7 +19,7 @@ public class DisableParallelTestBase : ReplicationTestBase
         ConcurrentTestsSemaphore = new SemaphoreSlim(1, 1);
     }
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         
@@ -27,11 +27,13 @@ public class DisableParallelTestBase : ReplicationTestBase
         _concurrentTestsSemaphoreTaken.Raise();
     }
 
-    public override void Dispose()
+    public override ValueTask DisposeAsync()
     {
-        base.Dispose();
-
+        // Release the DisableParallel semaphore before calling base.DisposeAsync(),
+        // which handles the main cleanup chain and the parallel semaphore.
         if (_concurrentTestsSemaphoreTaken.Lower())
             ConcurrentTestsSemaphore.Release();
+
+        return base.DisposeAsync();
     }
 }

@@ -7,7 +7,6 @@ using Raven.Client.Exceptions.Sharding;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Indexes
 {

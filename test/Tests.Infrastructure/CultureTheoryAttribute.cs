@@ -1,10 +1,12 @@
-﻿using System;
+using System;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class CultureTheoryAttribute : TheoryAttribute
+    public class CultureTheoryAttribute : TheoryAttribute, Xunit.v3.IFactAttribute
     {
+        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+
         private readonly bool _enable;
 
         public CultureTheoryAttribute()
@@ -14,7 +16,7 @@ namespace Tests.Infrastructure
                 _enable = false;
         }
 
-        public override string Skip
+        public new string Skip
         {
             get
             {

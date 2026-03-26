@@ -6,7 +6,6 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.FileHeaders;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {

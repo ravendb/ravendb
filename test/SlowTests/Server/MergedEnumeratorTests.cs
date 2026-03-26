@@ -6,7 +6,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.Senders;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server
 {

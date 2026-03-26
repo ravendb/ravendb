@@ -13,7 +13,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Views
 {

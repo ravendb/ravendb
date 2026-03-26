@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Operations.ETL.ElasticSearch
         {
             var json = base.ToJson();
 
-            json[nameof(ElasticIndexes)] = new DynamicJsonArray(ElasticIndexes.Select(x => x.ToJson()));
+            json[nameof(ElasticIndexes)] = ElasticIndexes != null ? new DynamicJsonArray(ElasticIndexes.Select(x => x.ToJson())) : null;
 
             return json;
         }

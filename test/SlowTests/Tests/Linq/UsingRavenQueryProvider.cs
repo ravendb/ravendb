@@ -9,7 +9,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Linq
 {
@@ -157,12 +156,12 @@ namespace SlowTests.Tests.Linq
                     Assert.Equal("James", singleItem.Name);
 
                     //A default query should return for results, so Single() should throw
-                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).Single());
+                    Assert.Throws<InvalidOperationException>( () => session.Query<User>(indexName).Single());
                     //A query of age = 30 should return for 2 results, so Single() should throw
-                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).Single(x => x.Age == 30));
+                    Assert.Throws<InvalidOperationException>( () => session.Query<User>(indexName).Single(x => x.Age == 30));
 
                     //A query of age = 30 should return for 2 results, so SingleOrDefault() should also throw
-                    Assert.Throws(typeof(InvalidOperationException), () => session.Query<User>(indexName).SingleOrDefault(x => x.Age == 30));
+                    Assert.Throws<InvalidOperationException>( () => session.Query<User>(indexName).SingleOrDefault(x => x.Age == 30));
 
                     //A query of age = 75 should return for NO results, so SingleOrDefault() should return a default value
                     var singleOrDefaultItem = session.Query<User>(indexName)

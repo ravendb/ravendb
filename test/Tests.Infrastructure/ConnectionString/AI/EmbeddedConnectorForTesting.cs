@@ -5,7 +5,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public class EmbeddedConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddedConnectorForTesting>
 {
-    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Embedded);
+    public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Embedded;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => new() { EmbeddedSettings = new EmbeddedSettings(), ModelType = AiModelType.TextEmbeddings };
 }

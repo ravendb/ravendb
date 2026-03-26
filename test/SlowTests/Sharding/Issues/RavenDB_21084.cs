@@ -4,7 +4,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues;
 

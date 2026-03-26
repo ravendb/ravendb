@@ -7,7 +7,6 @@ using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 public class RavenDB_22230 : RavenTestBase

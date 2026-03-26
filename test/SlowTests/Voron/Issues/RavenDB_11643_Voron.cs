@@ -5,7 +5,6 @@ using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron.Issues
 {

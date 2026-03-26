@@ -20,7 +20,6 @@ using Raven.Server.Documents.Indexes.VectorSearch;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace Tests.Infrastructure;
 
@@ -223,9 +222,9 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         }
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         _allocator?.Dispose();
-        base.Dispose();
+        await base.DisposeAsync();
     }
 }

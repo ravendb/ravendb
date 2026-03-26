@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Corax.Indexing;
+using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
 using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
@@ -31,6 +32,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
+    private readonly bool _nullFirst;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly int _take;
     private const int NotStarted = -1;
@@ -48,12 +50,13 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
     
-    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
+    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, bool nullFirst, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _cancellationToken = cancellationToken;
+        _nullFirst = nullFirst;
         _take = take;
         _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);
@@ -198,12 +201,14 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 return 0;
 
             const int IndexSortingThreshold = 4096;
+            var forceUsingOnlyIndex = match._searcher._testingConfiguration is { ForceSortingUsingIndex: true };
+
             if (typeof(TDirection) == typeof(RandomDirection))
             {
                 SortByRandom(ref match, allMatches);
             }
-            else if (typeof(TDirection) == typeof(NoIterationOptimization) || 
-                match.TotalResults < IndexSortingThreshold)
+            else if (forceUsingOnlyIndex == false && (typeof(TDirection) == typeof(NoIterationOptimization) ||
+                      match.TotalResults < IndexSortingThreshold))
             {
                 SortResults<TEntryComparer>(ref match, allMatches);
             }
@@ -260,6 +265,8 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private TDirection _termsIt;
         private readonly long _min;
         private readonly long _max;
+        private readonly bool _nullFirst;
+        private readonly bool _isForward;
         private readonly Querying.IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
 
@@ -274,12 +281,18 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private readonly PageLocator _pageLocator;
         private bool _hasSmallListReader;
 
+        private long _nonExistingPostingListId;
+        private bool _nonExistingPostingListRead;
+        private long _nullPostingListId;
+        private bool _nullPostingListRead;
 
-        public SortedIndexReader(LowLevelTransaction llt, Querying.IndexSearcher searcher, TDirection it, long min, long max)
+        public SortedIndexReader(LowLevelTransaction llt, Querying.IndexSearcher searcher, TDirection it, FieldMetadata metadata, long min, long max, bool nullFirst, bool isForward)
         {
             _termsIt = it;
             _min = min;
             _max = max;
+            _nullFirst = nullFirst;
+            _isForward = isForward;
             _termsIt.Reset();
             _llt = llt;
             _searcher = searcher;
@@ -292,6 +305,9 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _containerItemsScope = llt.Allocator.Allocate(BufferSize * sizeof(UnmanagedSpan), out bs);
             _containerItems = (UnmanagedSpan*)bs.Ptr;
             _pageLocator = llt.PageLocator;
+
+            _nonExistingPostingListRead = searcher.TryGetPostingListForNonExisting(metadata, out _nonExistingPostingListId) == false;
+            _nullPostingListRead = searcher.TryGetPostingListForNull(metadata, out _nullPostingListId) == false;
         }
 
 
@@ -363,9 +379,21 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _smallPostListIds.Clear();
             _bufferIdx = 0;
             _bufferCount = 0;
-            _bufferCount = _termsIt.Fill(new Span<long>(_itBuffer, BufferSize));
+            
+            bool nullsFirst = _isForward ? _nullFirst : !_nullFirst;
+            var buffer = new Span<long>(_itBuffer, BufferSize);
+            if (nullsFirst)
+                LoadNonExistingAndNullIntoBuffer(buffer);
+            
+            
+            _bufferCount += _termsIt.Fill(buffer.Slice(_bufferCount));
             if (_bufferCount == 0)
-                return;
+            {
+                if (nullsFirst || (_nonExistingPostingListRead && _nullPostingListRead))
+                    return;
+                
+                LoadNonExistingAndNullIntoBuffer(buffer);
+            }
             
             for (int i = 0; i < _bufferCount; i++)
             {
@@ -382,6 +410,25 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 return;
 
             Container.GetAll(_llt, _smallPostListIds.ToSpan(), new Span<UnmanagedSpan>(_containerItems, _smallPostListIds.Count), long.MinValue, _pageLocator);
+
+            
+        }
+        
+        void LoadNonExistingAndNullIntoBuffer(Span<long> buffer)
+        {
+            if (_nonExistingPostingListRead == false)
+            {
+                buffer[_bufferCount] = _nonExistingPostingListId;
+                _nonExistingPostingListRead = true;
+                _bufferCount += 1;
+            }
+                
+            if (_nullPostingListRead == false)
+            {
+                buffer[_bufferCount] = _nullPostingListId;
+                _nullPostingListRead = true;
+                _bufferCount += 1;
+            }
         }
 
         private void ReadLargePostingList(Span<long> sortedIds, ref int currentIdx)
@@ -436,10 +483,11 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
 
         var totalRead = 0;
         var reader = GetReader(ref match, allMatches[0], allMatches[^1]);
+        var forceUsingOnlyIndex = match._searcher._testingConfiguration is { ForceSortingUsingIndex: true };
         while (match._results.Count < maxResults)
         {
             match._cancellationToken.ThrowIfCancellationRequested();
-            if (totalRead > allMatches.Length * 2)
+            if (forceUsingOnlyIndex == false && totalRead > allMatches.Length * 2)
             {
                 // We may have _already_ matched some items, in which case they show up as negative 
                 // numbers in the matches (since we want to filter them), we need to pass the matches to the 
@@ -502,21 +550,21 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 typeof(TDirection) == typeof(Lookup<CompactTree.CompactKeyLookup>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.IterateValues<TDirection>(), min, max);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.IterateValues<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
             }
 
             if (typeof(TDirection) == typeof(Lookup<Int64LookupKey>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<Int64LookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetLongTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
             }
 
             if (typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetDoubleTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), min, max);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
             }
 
             throw new NotSupportedException(typeof(TDirection).FullName);

@@ -6,7 +6,6 @@ using Raven.Client.Documents.Queries.Facets;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Camera = SlowTests.Core.Utils.Entities.Camera;
 namespace SlowTests.Issues
 {

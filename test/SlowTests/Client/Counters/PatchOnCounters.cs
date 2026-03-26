@@ -6,7 +6,6 @@ using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {

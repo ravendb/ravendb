@@ -13,7 +13,7 @@ using IndexSearcher = Corax.Querying.IndexSearcher;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 
-public struct CoraxBooleanItem : IQueryMatch
+public struct CoraxBooleanItem : IQueryMatch, ICoraxClause
 {
     public readonly FieldMetadata Field;
     public readonly object Term;
@@ -24,7 +24,6 @@ public struct CoraxBooleanItem : IQueryMatch
     public readonly UnaryMatchOperation BetweenRight;
     private readonly IndexSearcher _indexSearcher;
     public bool IsBoosting => Boosting.HasValue;
-    public float? Boosting;
     public long Count { get; }
 
     /// <summary>
@@ -96,11 +95,7 @@ public struct CoraxBooleanItem : IQueryMatch
                           && QueryBuilderHelper.TryGetTime(index, term, out timeTicks);
         term = isTimeValue ? timeTicks : term;
         
-        var cbi = new CoraxBooleanItem(indexSearcher, field, term, operation);
-        
-        return field.HasBoost 
-            ? cbi.Materialize(ref streamingOptimization) 
-            : cbi;
+        return new CoraxBooleanItem(indexSearcher, field, term, operation);
     }
 
     public static IQueryMatch BuildBetween(IndexSearcher indexSearcher, Index index, FieldMetadata field, object leftValue, object rightValue,
@@ -208,6 +203,8 @@ public struct CoraxBooleanItem : IQueryMatch
     
     public IQueryMatch Materialize(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
     {
+        IQueryMatch baseMatch;
+
         if (Operation is UnaryMatchOperation.Equals or UnaryMatchOperation.NotEquals)
         {
             IQueryMatch match = Term switch
@@ -219,33 +216,10 @@ public struct CoraxBooleanItem : IQueryMatch
                 
             if (Operation is UnaryMatchOperation.NotEquals)
                 match = _indexSearcher.AndNot(_indexSearcher.AllEntries(), match);
-
-            return match;
+                
+            return Boosting is null ? match : _indexSearcher.Boost(match, Boosting.Value);
         }
 
-        return MaterializeRangeOrBetween(ref streamingOptimization);
-    }
-
-    /// <summary>
-    /// Materializes only the term match for NotEquals operations, without wrapping in AllEntries.
-    /// This allows the caller to optimize And(X, AndNot(AllEntries, term)) to AndNot(X, term).
-    /// Should only be called when IsNegated is true.
-    /// </summary>
-    public IQueryMatch MaterializeNegatedTermMatch()
-    {
-        Debug.Assert(Operation is UnaryMatchOperation.NotEquals, "MaterializeNegatedTermMatch should only be called for NotEquals operations");
-
-        return Term switch
-        {
-            long l => _indexSearcher.TermQuery(Field, l),
-            double d => _indexSearcher.TermQuery(Field, d),
-            _ => _indexSearcher.TermQuery(Field, TermAsString)
-        };
-    }
-
-    private IQueryMatch MaterializeRangeOrBetween(ref CoraxQueryBuilder.StreamingOptimization streamingOptimization)
-    {
-        IQueryMatch baseMatch;
         bool streamingEnabled = streamingOptimization.SkipOrderByClause;
         bool forwardIterator = (streamingOptimization is {SkipOrderByClause: true, Forward: false}) == false;
         
@@ -285,7 +259,9 @@ public struct CoraxBooleanItem : IQueryMatch
             };
         }
 
-        return baseMatch;
+        return Boosting is null 
+            ? baseMatch
+            : _indexSearcher.Boost(baseMatch, Boosting.Value);
     }
 
     public SkipSortingResult AttemptToSkipSorting() => throw new InvalidOperationException(IQueryMatchUsageException);
@@ -318,11 +294,5 @@ public struct CoraxBooleanItem : IQueryMatch
                $"Operation: '{Operation}'{Environment.NewLine}";
     }
 
-    public static bool CanBeMergedForAnd(CoraxBooleanItem lhsBq, CoraxBooleanItem rhsBq)
-    {
-        if (lhsBq.Boosting == null && rhsBq.Boosting == null) return true;
-        if (lhsBq.Boosting == null || rhsBq.Boosting == null) return false;
-
-        return rhsBq.Boosting.Value.AlmostEquals(lhsBq.Boosting.Value);
-    }
+    public float? Boosting { get; set; }
 }

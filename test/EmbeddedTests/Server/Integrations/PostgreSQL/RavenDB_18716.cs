@@ -1,6 +1,7 @@
-#if NET8_0
+#if RUN_NPGSQL_TESTS
 using System.Threading.Tasks;
 using Xunit;
+#pragma warning disable xUnit1051
 
 namespace EmbeddedTests.Server.Integrations.PostgreSQL;
 

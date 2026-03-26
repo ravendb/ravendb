@@ -8,7 +8,6 @@ using Xunit;
 using Address = SlowTests.Core.Utils.Entities.Address;
 using Post = SlowTests.Core.Utils.Entities.Post;
 using User = SlowTests.Core.Utils.Entities.User;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Querying
 {

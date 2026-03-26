@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch.Enumerators
         private bool Filter()
         {
             var tombstone = _tombstones.Current;
-            return tombstone.Type != Tombstone.TombstoneType.Document || tombstone.Flags.Contain(DocumentFlags.Artificial);
+            return tombstone.Type != Tombstone.TombstoneType.Document || (tombstone.Flags.Contain(DocumentFlags.Artificial) && tombstone.Flags.Contain(DocumentFlags.FromResharding));
         }
     }
 }

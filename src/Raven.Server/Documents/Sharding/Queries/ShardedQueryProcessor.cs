@@ -42,7 +42,6 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
     {
         using (var queryScope = scope?.For(nameof(QueryTimingsScope.Names.Query)))
         {
-            var documentsComparer = GetComparer(Query);
             ShardedQueryOperation operation;
             ShardedReadResult<ShardedQueryResult> shardedReadResult;
 
@@ -50,7 +49,7 @@ public sealed class ShardedQueryProcessor : ShardedQueryProcessorBase<ShardedQue
             {
                 var commands = GetOperationCommands(executeScope);
 
-                operation = new ShardedQueryOperation(Query, IsProjectionFromMapReduceIndex, Context, RequestHandler, commands, documentsComparer, ExistingResultEtag?.ToString());
+                operation = new ShardedQueryOperation(Query, IsProjectionFromMapReduceIndex, Context, RequestHandler, commands, ComparerCreator, ExistingResultEtag?.ToString(), QueryTime);
                 int[] shards = GetShardNumbers(commands);
                 shardedReadResult = await RequestHandler.ShardExecutor.ExecuteParallelForShardsAsync(shards, operation, Token);
             }

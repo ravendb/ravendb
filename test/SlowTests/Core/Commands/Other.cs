@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Xunit.Abstractions;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;

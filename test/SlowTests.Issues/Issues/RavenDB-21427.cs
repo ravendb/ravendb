@@ -47,7 +47,6 @@ using Sparrow;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Transformation = Raven.Client.Documents.Operations.ETL.Transformation;
 
 namespace SlowTests.Issues

@@ -10,7 +10,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Extensions;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 using Xunit;
 

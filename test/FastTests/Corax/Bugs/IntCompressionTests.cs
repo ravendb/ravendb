@@ -8,7 +8,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Util.PFor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs
 {

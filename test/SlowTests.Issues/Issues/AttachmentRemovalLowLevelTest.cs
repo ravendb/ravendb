@@ -1,8 +1,8 @@
-﻿using System.IO;
+using System.IO;
 using FastTests;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Issues;
 

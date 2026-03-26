@@ -41,6 +41,38 @@ public class JsonOperationContextBuffer<T> : AbstractBuffer<T>
         _buffer = newBuffer;
     }
 
+    public unsafe int Append(int alreadySeen, UnmanagedWriteBuffer buffer)
+    {
+        // alreadySeen is bytes offset - the number of bytes that have already been seen in the buffer. We need to append the remaining bytes.
+        if (alreadySeen < 0)
+            throw new ArgumentOutOfRangeException(nameof(alreadySeen));
+
+        if (alreadySeen >= buffer.SizeInBytes)
+            return 0;
+
+        var bytesToAdd = buffer.SizeInBytes - alreadySeen;
+
+        var elementSize = Unsafe.SizeOf<T>();
+
+        if (bytesToAdd % elementSize != 0)
+            throw new InvalidOperationException(
+                $"Cannot append {bytesToAdd} bytes — not aligned to element size {elementSize}.");
+
+        var elementsToAdd = bytesToAdd / elementSize;
+
+        CheckAndGrow(Length + elementsToAdd);
+
+        buffer.CopyTo(
+            start: alreadySeen,
+            pointer: _buffer.Address + Length * elementSize);
+
+        Length += elementsToAdd;
+
+        return bytesToAdd;
+    }
+
+    public Memory<byte> AsMemory() => _buffer.AsMemory()[..Length];
+
     public override void Dispose()
     {
         if (_buffer != null)

@@ -3,7 +3,6 @@ using System.Linq;
 using FastTests;
 using Sparrow;
 using Xunit;
-using Xunit.Abstractions;
 
 using Tests.Infrastructure;
 namespace SlowTests.Client.TimeSeries.Issues

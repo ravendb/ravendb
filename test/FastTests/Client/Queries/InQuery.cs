@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Linq;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Client.Queries

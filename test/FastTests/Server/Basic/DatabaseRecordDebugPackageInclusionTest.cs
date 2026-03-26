@@ -4,7 +4,6 @@ using Amqp.Framing;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Handlers.Debugging;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Basic

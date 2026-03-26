@@ -19,6 +19,7 @@ namespace Corax.Querying.Matches
         private readonly ByteStringContext _ctx;
         private readonly Querying.IndexSearcher _indexSearcher;
         private TInner _inner;
+        private bool _disposed;
 
         public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
         
@@ -64,12 +65,14 @@ namespace Corax.Querying.Matches
 
         public MemoizationMatch Replay()
         {
+            Debug.Assert(_disposed == false);
             _replayCounter++;
             return MemoizationMatch.Create(new MemoizationMatch<TInner>(this));
         }
 
         public Span<long> FillAndRetrieve()
         {
+            Debug.Assert(_disposed == false);
             if (_bufferEndIdx < 0)
                 InitializeInner();
 
@@ -202,7 +205,13 @@ namespace Corax.Querying.Matches
 
         public void Dispose()
         {
+            if (_disposed)
+                return;
+            
+            _disposed = true;
             _bufferScope.Dispose();
+            _bufferScope = default;
+            _bufferHolder = default;
         }
     }
 }

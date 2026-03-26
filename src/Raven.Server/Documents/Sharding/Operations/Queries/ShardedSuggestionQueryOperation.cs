@@ -24,8 +24,9 @@ public sealed class ShardedSuggestionQueryOperation : AbstractShardedQueryOperat
     private readonly BlittableJsonReaderObject _queryParameters;
 
     public ShardedSuggestionQueryOperation(IndexQueryServerSide query, Dictionary<string, SuggestionField> fieldsWithOptions, BlittableJsonReaderObject queryParameters,
-        TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
-        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
+        TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler, Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag,
+        DateTime? timeBasedQueryTime = null)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag, timeBasedQueryTime)
     {
         _fieldsWithOptions = fieldsWithOptions;
         _queryParameters = queryParameters;

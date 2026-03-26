@@ -3,7 +3,6 @@ using System.Net.Sockets;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

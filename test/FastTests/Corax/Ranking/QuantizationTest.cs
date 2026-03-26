@@ -9,7 +9,6 @@ using System.Runtime.Intrinsics.X86;
 using Corax.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Ranking;
 

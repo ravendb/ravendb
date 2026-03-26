@@ -350,6 +350,9 @@ namespace Raven.Server.Web.Studio
                     case AiConnectorType.OpenAi:
                         settings = new OpenAiChatCompletionClientSettings(request.OpenAiSettings);
                         break;
+                    case AiConnectorType.Google:
+                        settings = new GoogleChatCompletionClientSettings(request.GoogleSettings);
+                        break;
                     case AiConnectorType.AzureOpenAi:
                         settings = new AzureOpenAiChatCompletionClientSettings(request.AzureOpenAiSettings);
                         break;
@@ -377,6 +380,8 @@ namespace Raven.Server.Web.Studio
             public OpenAiSettings OpenAiSettings { get; set; }
 
             public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
+
+            public GoogleSettings GoogleSettings { get; set; }
         }
 
         [RavenAction("/studio-tasks/convert-to-json-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]

@@ -3,7 +3,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Util.Conversion;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {

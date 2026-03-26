@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.ETL
             throw new InvalidOperationException(message);
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             using (ReturnMainRun)
             using (_behaviorFunctionsRun)

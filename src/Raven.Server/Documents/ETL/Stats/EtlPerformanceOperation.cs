@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.ETL.Stats
         public EtlPerformanceOperation(TimeSpan duration)
         {
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
-            Operations = new EtlPerformanceOperation[0];
+            Operations = [];
         }
 
         public string Name { get; set; }

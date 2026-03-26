@@ -12,7 +12,6 @@ using Raven.Server.Documents.Indexes.Static.Spatial;
 using Spatial4n.Context.Nts;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tests.Spatial
 {

@@ -1,17 +1,15 @@
 ﻿#pragma warning disable SKEXP0070
-using System.Collections.Generic;
+using System;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public sealed class GoogleSettings : AbstractAiSettings
+public sealed class GoogleSettings : OpenAiBaseSettings
 {
-    public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null, int? dimensions = null)
+    public GoogleSettings(string model, string apiKey, string endpoint = null, GoogleAIVersion? aiVersion = null, int? dimensions = null, double? temperature = null) :
+        base(apiKey, endpoint, model, dimensions, temperature)
     {
-        Model = model;
-        ApiKey = apiKey;
         AiVersion = aiVersion;
-        Dimensions = dimensions;
     }
 
     public GoogleSettings()
@@ -19,48 +17,18 @@ public sealed class GoogleSettings : AbstractAiSettings
         // deserialization
     }
 
-    /// <summary>The model that should be used.</summary>
-    public string Model { get; set; }
-
-    /// <summary>The API key to use to authenticate with the service.</summary>
-    public string ApiKey { get; set; }
-
     /// <summary>The version of Google AI to use.</summary>
     public GoogleAIVersion? AiVersion { get; set; }
-
-    /// <summary>
-    /// The number of dimensions that the model should use.
-    /// </summary>
-    public int? Dimensions { get; set; }
-
-    public override void ValidateFields(List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(Model))
-            errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
-
-        if (string.IsNullOrWhiteSpace(ApiKey))
-            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
-
-        if (Dimensions is <= 0)
-            errors.Add($"Value of `{nameof(Dimensions)}` field must be positive.");
-    }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
     {
         if (other is not GoogleSettings googleSettings)
             return AiSettingsCompareDifferences.All;
 
-        var differences = AiSettingsCompareDifferences.None;
+        var differences = base.Compare(other);
 
-        if (Model != googleSettings.Model ||
-            AiVersion != googleSettings.AiVersion)
+        if (AiVersion != googleSettings.AiVersion)
             differences |= AiSettingsCompareDifferences.ModelArchitecture;
-
-        if (ApiKey != googleSettings.ApiKey)
-            differences |= AiSettingsCompareDifferences.AuthenticationSettings;
-
-        if (Dimensions != googleSettings.Dimensions)
-            differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
 
         return differences;
     }
@@ -68,16 +36,18 @@ public sealed class GoogleSettings : AbstractAiSettings
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
-        json[nameof(Model)] = Model;
-        json[nameof(ApiKey)] = ApiKey;
-
         if (AiVersion != null)
             json[nameof(AiVersion)] = AiVersion.Value.ToString("G"); // Explicitly convert to string to avoid enum serialization
 
-        if (Dimensions.HasValue)
-            json[nameof(Dimensions)] = Dimensions.Value;
-
         return json;
+    }
+
+    public override Uri GetBaseEndpointUri()
+    {
+        if (string.IsNullOrEmpty(Endpoint) == false)
+            return base.GetBaseEndpointUri();
+
+        return new Uri("https://generativelanguage.googleapis.com/");
     }
 }
 

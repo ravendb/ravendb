@@ -4,7 +4,7 @@ using BenchmarkTests.Utils;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
-using Xunit.Abstractions;
+#pragma warning disable xUnit1051
 
 namespace BenchmarkTests.Storing
 {

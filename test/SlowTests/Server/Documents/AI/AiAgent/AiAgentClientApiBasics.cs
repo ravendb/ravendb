@@ -12,7 +12,6 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
@@ -48,7 +47,6 @@ public class AiAgentClientApiBasics : RavenTestBase
     public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config, bool sendSchema)
     {
         using var store = GetDocumentStore(options);
-
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         using var session = store.OpenAsyncSession();
@@ -220,7 +218,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         // Allowed, as we can add tool responses to an existing chat running it
         // Assert.Throws<InvalidOperationException>(() => chat.AddToolResponse("foo", "bar"));
 
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AnswerSchema>());
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<AnswerSchema>());
         Assert.Contains("Cannot start a new conversation", e.Message);
 
         chat.SetUserPrompt("what goes well with my cheese?");
@@ -235,12 +233,12 @@ public class AiAgentClientApiBasics : RavenTestBase
         Assert.Equal(0, chat.RequiredActions().ToList().Count);
 
         chat.AddActionResponse("foo","bar");
-        e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AnswerSchema>(CancellationToken.None));
+        e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<AnswerSchema>(CancellationToken.None));
         Assert.Contains("foo is an unknown action ID", e.Message);
 
         chat.SetUserPrompt("what goes well with my cheese?");
         chat.AddActionResponse("foo","bar");
-        e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AnswerSchema>(CancellationToken.None));
+        e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<AnswerSchema>(CancellationToken.None));
         Assert.Contains($"Cannot have a conversation '{chat.Id}' with open action calls and user prompt", e.Message);
 
         chat.SetUserPrompt("what cheese goes well with italian food?");

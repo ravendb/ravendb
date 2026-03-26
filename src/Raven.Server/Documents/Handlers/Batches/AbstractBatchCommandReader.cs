@@ -52,6 +52,8 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
         BatchRequestParser = batchRequestParser;
     }
 
+    protected abstract void CreateBatchTrackChangesCommand(BatchRequestParser.CommandData commandData);
+
     private void AddIdentity(JsonOperationContext ctx, ref BatchRequestParser.CommandData command, int index)
     {
         Identities ??= new List<string>();
@@ -175,6 +177,11 @@ public abstract class AbstractBatchCommandsReader<TBatchCommand, TOperationConte
                         commandData.JsonPatchCommands,
                         commandData.ReturnDocument,
                         context);
+                }
+
+                if (commandData.Type == CommandType.BatchTrackChanges)
+                {
+                    CreateBatchTrackChangesCommand(commandData);
                 }
 
                 if (commandData.Type == CommandType.BatchPATCH)

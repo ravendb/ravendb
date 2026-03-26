@@ -2,7 +2,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
@@ -30,7 +29,9 @@ namespace SlowTests.MailingList
                 Indexes.WaitForIndexing(store);
                 using (var session = store.OpenSession())
                 {
+#pragma warning disable CS0618 // Type or member is obsolete
                     session.Advanced.UseOptimisticConcurrency = true;
+#pragma warning restore CS0618 // Type or member is obsolete
                     var foos = session.Query<SectionData>().ToList();
 
                     foreach (var sectionData in foos)

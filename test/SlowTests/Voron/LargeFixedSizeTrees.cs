@@ -9,7 +9,6 @@ using Voron;
 using Voron.Data.Fixed;
 using Voron.Util.Conversion;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {

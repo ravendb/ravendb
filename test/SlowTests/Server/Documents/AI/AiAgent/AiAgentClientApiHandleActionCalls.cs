@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
 
@@ -18,7 +17,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     {
     }
 
-    private const string ProductSearch = nameof(ProductSearch);
+    internal const string ProductSearch = nameof(ProductSearch);
     internal const string RecentOrder = nameof(RecentOrder);
     private class Sample
     {
@@ -112,7 +111,30 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        var agent = BuildAgent(config.ConnectionStringName);
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
+            @"You are an AI agent of an online shop.
+
+You MUST follow these rules strictly:
+
+1. When the user explicitly instructs to use the tool with a specific query (e.g. 'look for X'), you MUST call the tool with EXACTLY that query.
+2. DO NOT expand, rephrase, or generate alternatives to the query.
+3. DO NOT add synonyms, related terms, or multiple queries.
+4. The 'query' parameter MUST contain ONLY the exact text provided by the user.
+5. Only use the tool when explicitly requested or when needed to search products.
+
+If the user says: look for 'salt'
+You MUST call the tool with:
+{ \""query\"": [\""salt\""] }
+
+Deviation from these rules is not allowed.");
+
+        agent.Actions =
+        [
+            new AiAgentToolAction(ProductSearch,"semantic search the store product catalog")
+            {
+                ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+            }
+        ];
 
         var r  = await store.AI.CreateAgentAsync(agent, new
         {
@@ -158,6 +180,15 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
             "chats/123",
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"),
             string.Empty);
+
+        chat.Handle(RecentOrder, (object query) =>
+        {
+            return "done";
+        });
+        chat.Handle(ProductSearch, (object query) =>
+        {
+            return "done";
+        });
 
         chat.SetUserPrompt("hi");
         var run = await chat.RunAsync<Sample>();

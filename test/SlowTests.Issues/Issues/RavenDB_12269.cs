@@ -10,7 +10,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.LowMemory;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

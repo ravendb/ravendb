@@ -11,7 +11,6 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.ScriptedPatching
 {

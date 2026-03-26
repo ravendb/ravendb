@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Server.Rachis;
@@ -136,7 +136,7 @@ public class ServerStoreTxMergerBenchRealClusterTests
     [IterationCleanup(Targets = new[] { nameof(ClusterTest) })]
     public void AfterTest()
     {
-        _tests?.Dispose();
+        _tests?.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
 }
@@ -340,7 +340,7 @@ public class ActualClusterTests : ClusterTestBase
         await _leader.ServerStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Index);
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
         var dbName = _store.Database;
         var results = _store
@@ -362,6 +362,6 @@ public class ActualClusterTests : ClusterTestBase
         _store.Dispose();
         _store = null;
         _leader = null;
-        base.Dispose();
+        await base.DisposeAsync();
     }
 }

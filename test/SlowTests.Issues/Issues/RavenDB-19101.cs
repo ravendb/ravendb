@@ -9,7 +9,6 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using HttpMethod = System.Net.Http.HttpMethod;
 
 namespace SlowTests.Issues;

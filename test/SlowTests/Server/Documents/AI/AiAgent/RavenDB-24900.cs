@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {
@@ -101,7 +100,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             });
             
 
-            chat.SetUserPrompt("what kind of milk do you have?");
+            chat.SetUserPrompt("Call ProductSearch tool to figure out what kind of milk do you have?");
 
             var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Equal(AiConversationResult.ActionRequired, result.Status);
@@ -111,7 +110,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         private static AiAgentConfiguration CreateShoppingAssistant(string connectionStringName)
         {
             return new AiAgentConfiguration("shopping assistant", connectionStringName,
-                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.")
+                "You are an AI agent of an online shop. " +
+                "You must use the ProductSearch tool whenever the user asks about products, availability, or catalog items. " +
+                "Do not answer from your own knowledge. " +
+                "Always call the ProductSearch tool first and base your response only on its results. " +
+                "When talking about orders or products, include the ids as well.")
             {
                 SampleObject = "{\"Answer\": \"The answer for the user's question\"}", 
                 Actions = [

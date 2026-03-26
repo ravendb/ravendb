@@ -11,7 +11,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {

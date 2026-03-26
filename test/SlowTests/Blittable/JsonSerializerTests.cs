@@ -11,7 +11,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using BlittableJsonConverter = Raven.Server.Json.Converters.BlittableJsonConverter;
 
 namespace SlowTests.Blittable

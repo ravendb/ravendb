@@ -7,7 +7,6 @@ using Raven.Embedded;
 using Raven.TestDriver;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace LicenseTests;
 

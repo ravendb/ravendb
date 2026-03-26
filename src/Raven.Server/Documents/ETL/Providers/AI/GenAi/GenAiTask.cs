@@ -22,6 +22,7 @@ using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers.AI.Agents;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
@@ -161,7 +162,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             exceptions = SendToModel(results, context, scope, cts.Token);
         }
 
-        ApplyUpdateScript(context, results, scope);
+        ApplyUpdateScript(results, scope);
 
         if (exceptions?.Count > 0)
         {
@@ -180,12 +181,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return results.Count;
     }
 
-    private List<Exception> SendToModel(List<GenAiResultItem> items, DocumentsOperationContext context, GenAiStatsScope scope, CancellationToken batchToken)
+    private List<Exception> SendToModel(List<GenAiResultItem> items, JsonOperationContext context, GenAiStatsScope scope, CancellationToken batchToken)
     {
         using (var statsScope = scope.For(GenAiOperations.LoadToModel))
         {
-            context.CloseTransaction();
-
             List<Task<GenAiHandlerResult>> tasks = [];
             Task[] executingTasks = new Task[Math.Max(1, _maxConcurrency)];
             Array.Fill(executingTasks, Task.CompletedTask);
@@ -217,7 +216,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 handler.Initialize(agentConfiguration, $"{Configuration.Identifier}/{item.DocumentId}/", new RequestBody
                 {
-                    Parameters = item.ContextOutput.Context,
+                    Parameters = item.ContextOutput.Context.CloneOnTheSameContext(), // we need that to be a root blittable, so we can use the concurrent read method
                     CreationOptions = new AiConversationCreationOptions
                     {
                         ExpirationInSec = Configuration.ExpirationInSec
@@ -257,7 +256,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private AiAgentConfiguration CreateAgentConfiguration(DocumentsOperationContext context, GenAiResultItem item)
+    private AiAgentConfiguration CreateAgentConfiguration(JsonOperationContext context, GenAiResultItem item)
     {
         var agentParameters = new List<AiAgentParameter>();
         var contextObjPropNames = item.ContextOutput.Context.GetPropertyNames();
@@ -279,10 +278,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return agentConfiguration;
     }
 
-    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, DocumentsOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
+    private List<Exception> ProcessModelResults(List<GenAiResultItem> items, JsonOperationContext context, List<Task<GenAiHandlerResult>> tasks, GenAiStatsScope statsScope)
     {
         List<Exception> exceptions = null;
 
+        var resolvedAttachmentDurationInMs = 0L;
         for (int index = 0; index < tasks.Count; index++)
         {
             var task = tasks[index];
@@ -313,10 +313,23 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             statsScope.Usage.PromptTokens += result.Usage.PromptTokens;
             statsScope.Usage.TotalTokens += result.Usage.TotalTokens;
 
+            var currentResolvedAttachmentDurationInMs = item.ContextOutput.Attachments?.Sum(a => a.DownloadDurationInMs) ?? 0;
+            // Max aggregation is used. The tasks are run in parallel so we pick the longest of all of them.
+            resolvedAttachmentDurationInMs = Math.Max(resolvedAttachmentDurationInMs, currentResolvedAttachmentDurationInMs);
+
             if (Configuration.TestMode)
             {
                 item.ModelOutput.Usage = result.Usage;
                 item.ModelOutput.ConversationDocument = context.Sync.ReadForMemory(result.ConversationDocument, item.DocumentId);
+            }
+        }
+
+        if (resolvedAttachmentDurationInMs > 0)
+        {
+            using (var scope = statsScope.For(GenAiOperations.LoadToModelRemoteAttachments))
+            {
+                // Use explicit set for the duration, that overrides the scoped time measurement.
+                scope.Duration = TimeSpan.FromMilliseconds(resolvedAttachmentDurationInMs);
             }
         }
 
@@ -366,10 +379,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results, GenAiStatsScope scope)
+    private void ApplyUpdateScript(List<GenAiResultItem> results, GenAiStatsScope scope)
     {
         PatchRequest req = new(Configuration.UpdateScript, PatchRequestType.GenAi);
-        var cmd = new GenAiBatchPatchCommand(context, results, req, Configuration.Identifier, Logger, Statistics, scope);
+        var cmd = new GenAiBatchPatchCommand(results, req, Configuration.Identifier, Logger, Statistics, scope);
 
         Database.TxMerger.EnqueueSync(cmd);
     }
@@ -571,7 +584,18 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 if (attachment == null)
                     throw new InvalidOperationException($"The document '{item.DocumentId}' has no attachment with name '{genAtt.Name}' from type '{genAtt.Type}' anymore");
                 
-                genAtt.Data = GenAiScriptTransformer.GetAttachmentDataAsBase64(attachment, genAtt.Type);
+                if (attachment.Stream != null)
+                {
+                    // The stream is there. Materialize it as.
+                    genAtt.Data = GenAiScriptTransformer.GetAttachmentDataAsBase64(attachment.Stream, genAtt.Type);
+                }
+                // The last resort, check for the remote parameters and process as deferred.
+                else if (attachment.RemoteParameters.IsRemoteStorageAttachment())
+                {
+                    genAtt.Source = AiAttachmentSource.Deferred;
+                    genAtt.Data = attachment.Base64Hash.ToString();
+                    genAtt.RemoteStorageId = attachment.RemoteParameters.Identifier;
+                }
             }
         }
     }

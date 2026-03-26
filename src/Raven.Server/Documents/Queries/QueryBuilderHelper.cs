@@ -21,6 +21,7 @@ using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Spatial4n.Shapes;
@@ -601,7 +602,7 @@ public static class QueryBuilderHelper
         return false;
     }
 
-    internal static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, AbstractCompareExchangeStorage compareExchangeStorage, MethodExpression method, BlittableJsonReaderObject parameters)
+    internal static QueryExpression EvaluateMethod(Query query, QueryMetadata metadata, TransactionOperationContext serverContext, AbstractCompareExchangeStorage compareExchangeStorage, MethodExpression method, BlittableJsonReaderObject parameters, QueryTimeScope queryTime = null)
     {
         var methodType = QueryMethod.GetMethodType(method.Name.Value);
 
@@ -619,6 +620,16 @@ public static class QueryBuilderHelper
                     return new ValueExpression(string.Empty, ValueTokenType.Null);
 
                 return new ValueExpression(value.ToString(), ValueTokenType.String);
+
+            case MethodType.Now:
+                if (method.Arguments is { Count: > 0 })
+                    throw new InvalidQueryException("Method now() expects zero arguments.", query.QueryText, parameters);
+                return new ValueExpression(queryTime.Now.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
+
+            case MethodType.Today:
+                if (method.Arguments is { Count: > 0 })
+                    throw new InvalidQueryException("Method today() expects zero arguments.", query.QueryText, parameters);
+                return new ValueExpression(queryTime.Today.GetDefaultRavenFormat(isUtc: true), ValueTokenType.String);
         }
 
         throw new ArgumentException($"Unknown method {method.Name}");

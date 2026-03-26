@@ -10,6 +10,11 @@ namespace Raven.Client.Documents.Operations.AI;
 /// </summary>
 public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="OllamaSettings"/> with the specified URI and model.
+    /// </summary>
+    /// <param name="uri">The URI of the Ollama API.</param>
+    /// <param name="model">The model to be used.</param>
     public OllamaSettings(string uri, string model)
     {
         Uri = uri;
@@ -82,6 +87,9 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
         return differences;
     }
 
+    /// <summary>
+    /// Serializes the settings to JSON structure.
+    /// </summary>
     public override DynamicJsonValue ToJson()
     {
         var json = base.ToJson();
@@ -93,7 +101,14 @@ public sealed class OllamaSettings : AbstractAiSettings, IAiSettings
         return json;
     }
 
+    /// <summary>
+    /// Returns <see langword="null"/> as Ollama typically does not require an API key for local deployments.
+    /// </summary>
     public string ApiKey => null;
+
+    /// <summary>
+    /// The endpoint URI for the Ollama service.
+    /// </summary>
     public string Endpoint => Uri;
     public Uri GetBaseEndpointUri() => new Uri(Endpoint);
 }

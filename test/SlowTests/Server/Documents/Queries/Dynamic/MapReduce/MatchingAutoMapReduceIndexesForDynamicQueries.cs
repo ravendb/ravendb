@@ -12,7 +12,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
@@ -392,7 +391,7 @@ select Name, count()"), DefaultAutoIndexingEngineType);
             return _documentDatabase.IndexStore.GetIndex(name);
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             try
             {
@@ -400,7 +399,7 @@ select Name, count()"), DefaultAutoIndexingEngineType);
             }
             finally
             {
-                base.Dispose();
+                await base.DisposeAsync();
             }
         }
     }

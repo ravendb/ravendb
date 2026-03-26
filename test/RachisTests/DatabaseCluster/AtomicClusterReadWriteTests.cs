@@ -29,7 +29,6 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Directory = System.IO.Directory;
 

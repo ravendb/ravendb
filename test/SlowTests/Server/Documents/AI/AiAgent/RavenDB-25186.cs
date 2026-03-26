@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -11,7 +12,6 @@ using Raven.Server.Documents.Handlers.AI.Agents;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {
@@ -25,12 +25,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [true, true, true])]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [false, false, false])]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = [null, true, true])]
-        public async Task SendToModelVariants(Options options, GenAiConfiguration configuration, bool? exposed, bool expectEcho, bool expectRaw)
+        public async Task SendToModelVariants(Options options, GenAiConfiguration configuration, bool? sendToModel, bool expectEcho, bool expectRaw)
         {
             using var store = GetDocumentStore(options);
             await PutConn(store, configuration);
 
-            var agent = CreateShoppingAssistant(configuration.ConnectionStringName, exposed);
+            var agent = CreateShoppingAssistant(configuration.ConnectionStringName, sendToModel);
             var agentId = (await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance)).Identifier;
 
             var chat = store.AI.Conversation(agentId, "chats/",
@@ -41,9 +41,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.Equal(AiConversationResult.Done, result.Status);
 
             await AssertConversationAsync(store, chat.Id,
-                expectEcho: expectEcho,
-                expectRawValueLeak: expectRaw,
-                expectParamStored: true);
+                shouldProjectParams: expectEcho,
+                shouldProjectCompanyParam: expectRaw);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -69,65 +68,66 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var s = store.OpenAsyncSession();
             var conv = await s.LoadAsync<BlittableJsonReaderObject>(chat.Id);
 
-            Assert.True(conv.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject p));
-            Assert.True(p.TryGet("company", out string company));
-            Assert.True(p.TryGet("userId", out string userId));
-            Assert.Equal("companies/90-A", company);
-            Assert.Equal("users/1-A", userId);
+            Assert.True(conv.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject parameters));
+            Assert.True(parameters.TryGet("company", out BlittableJsonReaderObject companyAiConversationValue));
+            Assert.True(companyAiConversationValue.TryGet("Value", out string companyValue));
+            Assert.Equal("companies/90-A", companyValue);
 
-            Assert.True(conv.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray msgs));
-            var content = string.Join("\n", msgs.Items.Select(i =>
-            {
+
+            Assert.True(parameters.TryGet("userId", out BlittableJsonReaderObject userIdAiConversationValue));
+            Assert.True(userIdAiConversationValue.TryGet("Value", out string userIdValue));
+            Assert.Equal("users/1-A", userIdValue);
+
+            Assert.True(conv.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
+            var messagesContents = messages.Items.Select(i => {
                 var o = (BlittableJsonReaderObject)i;
                 return o.TryGet("content", out string c) ? c : null;
-            }).Where(x => x != null));
+            }).Where(x => x != null).ToList();
 
-            Assert.Contains("AI Agent Parameters:", content);
-            Assert.Contains("company = companies/90-A", content);
-            Assert.DoesNotContain("userId =", content);
-            Assert.DoesNotContain("users/1-A", content);
+            Assert.True(messagesContents.Any(msg => msg.Contains("AI Agent Parameters:")));
+            Assert.True(messagesContents.Any(msg => msg.Contains("company = companies/90-A")));
+            Assert.False(messagesContents.Any(msg => msg.Contains("userId =")));
+            Assert.False(messagesContents.Any(msg => msg.Contains("users/1-A")));
         }
 
         private static async Task PutConn(IDocumentStore store, GenAiConfiguration cfg) =>
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(cfg.Connection));
 
         private static async Task AssertConversationAsync(IDocumentStore store, string id,
-            bool expectEcho, bool expectRawValueLeak, bool expectParamStored)
+            bool shouldProjectParams, bool shouldProjectCompanyParam)
         {
-            using var s = store.OpenAsyncSession();
-            var conv = await s.LoadAsync<BlittableJsonReaderObject>(id);
-            Assert.NotNull(conv);
-
-            Assert.True(conv.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject convParams));
-            var hasParam = convParams.TryGet("company", out string companyValue);
-            Assert.Equal(expectParamStored, hasParam);
-            if (expectParamStored)
+            using (var session = store.OpenAsyncSession())
+            {
+                var chat = await session.LoadAsync<BlittableJsonReaderObject>(id);
+                Assert.True(chat.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject parameters));
+                Assert.True(parameters.TryGet("company", out BlittableJsonReaderObject companyAiConversationValue));
+                Assert.True(companyAiConversationValue.TryGet("Value", out string companyValue));
                 Assert.Equal("companies/90-A", companyValue);
 
-            Assert.True(conv.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray msgs));
-            var content = string.Join("\n", msgs.Items.Select(i =>
-            {
-                var o = (BlittableJsonReaderObject)i;
-                return o.TryGet("content", out string c) ? c : null;
-            }).Where(x => x != null));
+                Assert.True(chat.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages));
+                var messagesContents = messages.Items.Select(i =>
+                {
+                    var o = (BlittableJsonReaderObject)i;
+                    return o.TryGet("content", out string c) ? c : null;
+                }).Where(x => x != null).ToList();
 
-            var echoed = content.Contains("AI Agent Parameters:");
-            var leaked = content.Contains("companies/90-A");
+                var parametersProjectedInMessages = messagesContents.Any(msg => msg.Contains("AI Agent Parameters:"));
+                var companyParameterProjectedInMessages = messagesContents.Any(msg => msg.Contains("companies/90-A"));
 
-            Assert.Equal(expectEcho, echoed);
-            Assert.Equal(expectRawValueLeak, leaked);
+                Assert.Equal(shouldProjectParams, parametersProjectedInMessages);
+                Assert.Equal(shouldProjectCompanyParam, companyParameterProjectedInMessages);
+            }
         }
 
-        private static AiAgentConfiguration CreateShoppingAssistant(string csName, bool? exposed)
+        private static AiAgentConfiguration CreateShoppingAssistant(string csName, bool? sendToModel)
         {
             var agent = new AiAgentConfiguration("shopping assistant", csName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            if (exposed.HasValue == false)
+            if (sendToModel.HasValue == false)
                 agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id"));
             else
-                agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id", exposed.Value));
-
+                agent.Parameters.Add(new AiAgentParameter("company", "Tenant company id", sendToModel.Value));
 
             agent.Queries =
             [

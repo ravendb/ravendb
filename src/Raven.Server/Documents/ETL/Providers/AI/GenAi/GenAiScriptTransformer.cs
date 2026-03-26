@@ -3,6 +3,7 @@ using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -14,6 +15,7 @@ using Jint.Native.Object;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
@@ -104,6 +106,12 @@ var ai = new AI();
     {
         _configuration = configuration;
         _stats = stats.For(EtlOperations.Transform, start: false);
+    }
+
+    public override void Dispose()
+    {
+        Context.CloseTransaction();
+        base.Dispose();
     }
 
     public override void Initialize(bool debugMode)
@@ -226,6 +234,7 @@ var ai = new AI();
                         var attachmentObj = current.AsObject();
                         var reference = attachmentObj.GetOwnProperty("data").Value;
                         var data = string.Empty;
+                        string remoteStorageId = null;
                         string type = attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString();
                         string filename = "unknown.name";
                         var source = AiAttachmentSource.FromAttachment;
@@ -239,9 +248,17 @@ var ai = new AI();
                             {
                                 source = AiAttachmentSource.NotFound;
                             }
-                            else
+                            else if (attachment.Stream != null)
                             {
-                                data = DocumentScript.DebugMode ? GetAttachmentPreview(attachment, type) : GetAttachmentDataAsBase64(attachment, type);
+                                // The stream is there. Materialize it as.
+                                data = DocumentScript.DebugMode ? GetAttachmentPreview(attachment, type) : GetAttachmentDataAsBase64(attachment.Stream, type);
+                            }
+                            // The last resort, check for the remote parameters and process as deferred.
+                            else if (attachment.RemoteParameters.IsRemoteStorageAttachment())
+                            {
+                                source = AiAttachmentSource.Deferred;
+                                data = attachment.Base64Hash.ToString(); // Will be resolved later
+                                remoteStorageId = attachment.RemoteParameters.Identifier;
                             }
                         }
                         else
@@ -253,7 +270,7 @@ var ai = new AI();
                                 throw new InvalidOperationException($"Attachment must be loaded or base64 string (on type {type})");
                         }
 
-                        result.Attachments.Add(new AiAttachment(filename, type, source, data));
+                        result.Attachments.Add(new AiAttachment(filename, type, source, data, remoteStorageId));
                     }
                 }
                 _currentRun.Add(result);
@@ -285,17 +302,17 @@ var ai = new AI();
         return $"[Hash:'{attachment.Base64Hash}']";
     }
 
-    public static string GetAttachmentDataAsBase64(Attachment attachment, string type)
+    public static string GetAttachmentDataAsBase64(Stream stream, string type)
     {
         using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
         if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
         {
-            attachment.Stream.CopyTo(memoryStream);
+            stream.CopyTo(memoryStream);
         }
         else // anything but text is using BASE64
         {
             using var transform = new ToBase64Transform();
-            using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
+            using var cryptoStream = new CryptoStream(stream, transform, CryptoStreamMode.Read);
             cryptoStream.CopyTo(memoryStream);
         }
 

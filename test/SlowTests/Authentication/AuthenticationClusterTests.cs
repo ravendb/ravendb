@@ -29,7 +29,6 @@ using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Authentication

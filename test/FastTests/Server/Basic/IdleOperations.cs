@@ -7,7 +7,6 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Web.System;
 using Sparrow;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Basic

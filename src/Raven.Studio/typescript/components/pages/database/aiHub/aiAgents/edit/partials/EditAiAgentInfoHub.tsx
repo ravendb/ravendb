@@ -24,14 +24,14 @@ export default function EditAiAgentInfoHub() {
                         <li>
                             <strong>Connection string</strong> - Specifies the AI provider and the LLM of your choice.
                         </li>
-                        <li>
+                        <li className="mt-1">
                             <strong>Response structure</strong> - Define the expected format of the agent’s replies.
                         </li>
-                        <li>
+                        <li className="mt-1">
                             <strong>Chat storage</strong> - Configure the documents that store chat conversations.
                             <br /> You can optionally enable trimming or summarization of their content.
                         </li>
-                        <li>
+                        <li className="mt-1">
                             <strong>Tools</strong> - Tools are a controlled way to pass context to the LLM:
                             <ul>
                                 <li className="mt-1">
@@ -45,6 +45,11 @@ export default function EditAiAgentInfoHub() {
                                     instructed by the LLM in response to user prompts.
                                 </li>
                             </ul>
+                        </li>
+                        <li className="mt-1">
+                            <strong>Sub-agents</strong> - Assign other AI agents that this agent can delegate
+                            specialized tasks to. The sub-agent runs its own tools (queries, actions) and returns its
+                            response to the parent agent.
                         </li>
                     </ul>
                 </div>

@@ -1,7 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
@@ -32,7 +31,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(7, 3, false, "\\E/G\\../..\\O\\R/..\\..")]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
-            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
+            await using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
                 await test.can_delete_backups_by_date(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental, suffix);
             }
@@ -57,7 +56,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
+            await using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
                 await test.can_delete_backups_by_date_s3(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }
@@ -82,7 +81,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(70, 13, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
-            using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
+            await using (var test = new SlowTests.Server.Documents.PeriodicBackup.Retention(Output))
             {
                 await test.can_delete_backups_by_date_azure(backupAgeInSeconds, numberOfBackupsToCreate, checkIncremental);
             }

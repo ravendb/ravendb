@@ -7,7 +7,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Sharding;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues;
 

@@ -12,12 +12,14 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private readonly bool _forward;
+    private readonly bool _nullFirsts;
     private bool _hasLeftNonExisting;
     private bool _innerEnd = false;
     private PostingList.Iterator _postingListIterator;
-    public IncludeNonExistingMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward)
+    public IncludeNonExistingMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward, bool nullFirsts)
     {
         _forward = forward;
+        _nullFirsts = nullFirsts;
         _inner = inner;
         
         _hasLeftNonExisting = searcher.TryGetPostingListForNonExisting(in field, out var postingListId);
@@ -42,12 +44,14 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Fill(Span<long> matches)
     {
-        return _forward ? 
-            ForwardStreaming(matches) 
-            : BackwardStreaming(matches);
+        bool nullsFirst = _forward ? _nullFirsts : !_nullFirsts;
+        
+        return nullsFirst 
+            ? NullFirstStreaming(matches) 
+            : NullLastStreaming(matches);
     }
 
-    private int BackwardStreaming(Span<long> matches)
+    private int NullLastStreaming(Span<long> matches)
     {
         int read;
         if (_innerEnd == false)
@@ -62,7 +66,7 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
         return read;
     }
 
-    private int ForwardStreaming(Span<long> matches)
+    private int NullFirstStreaming(Span<long> matches)
     {
         if (FetchNonExisting(matches, out int read))
         {

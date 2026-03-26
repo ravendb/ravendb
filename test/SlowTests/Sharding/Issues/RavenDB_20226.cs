@@ -7,7 +7,6 @@ using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Issues;
 

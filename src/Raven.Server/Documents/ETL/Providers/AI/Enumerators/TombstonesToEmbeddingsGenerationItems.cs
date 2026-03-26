@@ -37,7 +37,7 @@ public sealed class TombstonesToEmbeddingsGenerationItems : IEnumerator<Embeddin
     private bool Filter(EmbeddingsGenerationItem _)
     {
         var tombstone = _tombstones.Current;
-        if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+        if (tombstone.Flags.Contain(DocumentFlags.Artificial) && tombstone.Flags.Contain(DocumentFlags.FromResharding))
             return true;
 
         if (_allDocs == false)

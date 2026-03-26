@@ -7,7 +7,6 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Voron
 {

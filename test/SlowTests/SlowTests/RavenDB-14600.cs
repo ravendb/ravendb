@@ -7,7 +7,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Order = Tests.Infrastructure.Entities.Order;
 
 namespace SlowTests.SlowTests

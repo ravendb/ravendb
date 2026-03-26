@@ -1,7 +1,7 @@
 ﻿using System.Net.Http;
+using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -44,7 +44,7 @@ namespace SlowTests.Issues
             Assert.True(response.IsSuccessStatusCode, url);
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             try
             {
@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             }
             finally
             {
-                base.Dispose();
+                await base.DisposeAsync();
             }
         }
     }

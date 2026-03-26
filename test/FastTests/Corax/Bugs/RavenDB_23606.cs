@@ -7,7 +7,6 @@ using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 

@@ -11,7 +11,6 @@ using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Util.PFor;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 

@@ -9,7 +9,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 

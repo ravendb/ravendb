@@ -114,10 +114,19 @@ namespace Raven.Client.Documents.Session
         string StoreIdentifier { get; }
 
         /// <summary>
+        ///     Gets or sets the optimistic concurrency mode for the session.<br/>
+        ///     Cannot be mixed with the obsolete <c>UseOptimisticConcurrency</c> property in the same session.
+        /// </summary>
+        /// <seealso cref="OptimisticConcurrencyMode"/>
+        OptimisticConcurrencyMode OptimisticConcurrencyMode { get; set; }
+
+        /// <summary>
         ///     Gets or sets a value indicating whether the session should use optimistic concurrency.
         ///     When set to <c>true</c>, a check is made so that a change made behind the session back would fail
         ///     and raise <see cref="ConcurrencyException" />.
         /// </summary>
+        [Obsolete("UseOptimisticConcurrency is obsolete and will be removed in the next major version. Please use " +
+                  nameof(OptimisticConcurrencyMode) + " instead.")]
         bool UseOptimisticConcurrency { get; set; }
 
         /// <summary>

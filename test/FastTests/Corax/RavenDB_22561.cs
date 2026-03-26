@@ -11,7 +11,6 @@ using Sparrow.Threading;
 using Tests.Infrastructure;
 using Voron.Util;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
@@ -45,7 +44,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
         {
             var indexes = new int[pageSize].AsSpan();
             var terms = new long[pageSize].AsSpan();
-            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleNumericalSorter(indexes, terms, false);
+            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleNumericalSorter(indexes, terms, false, nullFirst: true);
 
             for (var docPos = 0; docPos < size; ++docPos)
                 sorter.Insert(docPos, table[docPos]);
@@ -80,7 +79,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
             var indexes = new int[pageSize].AsSpan();
             var terms = new long[pageSize].AsSpan();
             var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildCompoundNumericalSorter(indexes, terms, false,
-                new TestLongComparable(secondTable));
+                new TestLongComparable(secondTable), nullFirst: true);
 
             for (var docPos = 0; docPos < size; ++docPos)
                 sorter.Insert(docPos, table[docPos]);
@@ -97,6 +96,53 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
         public int Compare(int x, int y)
         {
             return table[x].CompareTo(table[y]);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Corax)]
+    [InlineData(true, false)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(false, true)]
+    public void CanHeapSortNullPagingString(bool nullFirst, bool descending)
+    {
+        string[] expectedOrder = (nullFirst, descending) switch
+        {
+            (true, false) => [null, null, "aaa", "bbb", "ccc"],
+            (true, true) => ["ccc", "bbb", "aaa", null, null],
+            (false, false) => ["aaa", "bbb", "ccc", null, null],
+            (false, true) => [null, null, "ccc", "bbb", "aaa"],
+        };
+
+        string[] sourceData = [null, null, "aaa", "bbb", "ccc"];
+        int totalSize = sourceData.Length;
+        var positions = Enumerable.Range(0, totalSize).Select(x => (long)x).ToArray();
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+
+        for (int take = 1; take <= expectedOrder.Length; take++)
+        {
+            var indexes = new int[take].AsSpan();
+            var terms = new ByteString[take].AsSpan();
+            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder
+                .BuildSingleAlphanumericalSorter(indexes, terms, bsc, descending, nullFirst);
+
+            var nullIndexes = new ContextBoundNativeList<int>(bsc);
+            for (int docPos = 0; docPos < totalSize; ++docPos)
+            {
+                if (sourceData[docPos] == null)
+                    nullIndexes.Add(docPos);
+                else
+                    sorter.Insert(docPos, Encodings.Utf8.GetBytes(sourceData[docPos]));
+            }
+
+            ContextBoundNativeList<long> result = new(bsc);
+            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty, nullIndexes);
+
+            var actual = result.ToSpan().ToArray().Select(pos => sourceData[(int)pos]).ToArray();
+            Assert.Equal(expectedOrder.Take(take), actual);
+
+            result.Dispose();
+            nullIndexes.Dispose();
         }
     }
 
@@ -122,13 +168,13 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
         {
             var indexes = new int[pageSize].AsSpan();
             var terms = new ByteString[pageSize].AsSpan();
-            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleAlphanumericalSorter(indexes, terms, bsc, false);
+            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleAlphanumericalSorter(indexes, terms, bsc, false, true);
 
             for (var docPos = 0; docPos < size; ++docPos)
                 sorter.Insert(docPos, Encodings.Utf8.GetBytes(sourceData[docPos]));
 
             ContextBoundNativeList<long> result = new ContextBoundNativeList<long>(bsc);
-            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty);
+            sorter.Fill(positions, ref result, ref _scorePlaceHolder, Span<float>.Empty, default);
 
             var expectedOrder = sourceData.OrderBy(x => x, AlphaNumericFieldComparator.StringAlphanumComparer.Instance).Take(pageSize).ToArray();
             List<string> orderFromSorter = new();

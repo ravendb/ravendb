@@ -4,7 +4,6 @@ using FastTests;
 using FastTests.Utils;
 using Orders;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

@@ -1,8 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.MailingList
 {

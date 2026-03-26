@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Xunit.Abstractions;
 
 using FastTests;
 using Tests.Infrastructure;

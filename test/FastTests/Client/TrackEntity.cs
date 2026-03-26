@@ -6,7 +6,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace FastTests.Client
 {

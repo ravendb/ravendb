@@ -8,7 +8,6 @@ using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace RachisTests;
 

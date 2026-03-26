@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Reflection;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 using Xunit;
 using Newtonsoft.Json.Serialization;

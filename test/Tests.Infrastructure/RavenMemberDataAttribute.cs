@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Raven.Client.Util;
 using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 namespace Tests.Infrastructure;
 
@@ -13,26 +16,21 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.Single;
 
     public object[] Data { get; set; } = null;
-    
+
     public RavenMemberDataAttribute(string memberName, params object[] parameters) : base(memberName, parameters)
     {
     }
 
-    protected override object[] ConvertDataItem(MethodInfo testMethod, object item)
+    public override bool SupportsDiscoveryEnumeration() => false;
+
+    public override async ValueTask<IReadOnlyCollection<ITheoryDataRow>> GetData(MethodInfo testMethod, DisposalTracker disposalTracker)
     {
-        if (item == null)
-            return null;
+        var baseData = await base.GetData(testMethod, disposalTracker);
+        var result = new List<ITheoryDataRow>();
 
-        var array = item as object[];
-        if (array == null)
-            throw new ArgumentException($"Property {MemberName} on {MemberType ?? testMethod.DeclaringType} yielded an item that is not an object[]");
-
-        return array;
-    }
-
-    public override IEnumerable<object[]> GetData(MethodInfo testMethod)
-    {
-        foreach (var item in base.GetData(testMethod))
+        foreach (var row in baseData)
+        {
+            var item = row.GetData();
             foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
             {
                 foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
@@ -55,10 +53,13 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
                         for (var i = item.Length + 1; i < array.Length; i++)
                             array[i] = Data[i - 1];
 
-                        yield return array;
+                        result.Add(new TheoryDataRow(array));
                     }
                 }
             }
+        }
+
+        return result;
     }
 
     private IDisposable SkipIfNeeded(RavenDatabaseMode databaseMode)

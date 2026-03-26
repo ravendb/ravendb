@@ -11,7 +11,6 @@ using Voron;
 using Voron.Global;
 using Voron.Impl.Paging;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents
 {

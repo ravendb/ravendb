@@ -3,6 +3,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
+/// <summary>
+/// Tool query execution options.
+/// </summary>
 public class AiAgentToolQueryOptions : IDynamicJson
 {
     /// <summary>
@@ -24,6 +27,9 @@ public class AiAgentToolQueryOptions : IDynamicJson
     /// </summary>
     public bool? AddToInitialContext { get; set; }
 
+    /// <summary>
+    /// Serializes the tool query options to a JSON structure.
+    /// </summary>
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

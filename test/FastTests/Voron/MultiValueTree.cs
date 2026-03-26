@@ -8,7 +8,6 @@ using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {

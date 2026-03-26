@@ -22,7 +22,6 @@ using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Xunit;
-using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
 using Tests.Infrastructure;
 

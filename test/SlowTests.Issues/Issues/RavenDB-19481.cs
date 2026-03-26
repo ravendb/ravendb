@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,8 +13,8 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 using Assert = Xunit.Assert;
+using Xunit;
 
 namespace SlowTests.Issues
 {

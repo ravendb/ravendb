@@ -56,8 +56,9 @@ export class FakeMetadataProvider implements queryCompleterProviders {
     
     private collectionStubs = stubCollectionFields();
     private indexStubs = stubIndexFields();
+    private aiTaskStubs: Record<string, Record<string, string[]>> = {};
     
-    public constructor(overrides?: { indexes?: Record<string, string[]>, collections?: Record<string, Record<string, Record<string, string>>> }) {
+    public constructor(overrides?: { indexes?: Record<string, string[]>, collections?: Record<string, Record<string, Record<string, string>>>, aiTasks?: Record<string, Record<string, string[]>> }) {
         if (overrides?.indexes) {
             this.indexStubs = new Map<string, string[]>(Object.entries(overrides.indexes ?? []));
         }
@@ -67,6 +68,9 @@ export class FakeMetadataProvider implements queryCompleterProviders {
                 map.set(key, new Map<string, dictionary<string>>(Object.entries(value ?? [])));
             }
             this.collectionStubs = map;
+        }
+        if (overrides?.aiTasks) {
+            this.aiTaskStubs = overrides.aiTasks;
         }
     }
     
@@ -94,5 +98,9 @@ export class FakeMetadataProvider implements queryCompleterProviders {
         } else {
             callback([]);
         }
+    }
+
+    aiTasks(callback: (data: Record<string, Record<string, string[]>>) => void): void {
+        callback(this.aiTaskStubs);
     }
 }

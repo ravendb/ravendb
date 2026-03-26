@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.AI;
 using Sparrow.Json.Parsing;
+using Raven.Client.Documents.Commands.Batches;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
@@ -12,6 +13,8 @@ internal class ConversionRequestBody : IDynamicJson
 
     public IEnumerable<ContentPart> UserPrompt { get; set; }
     public AiConversationCreationOptions CreationOptions { get; set; }
+    public List<ICommandData> AttachmentCommands { get; set; }
+
     public DynamicJsonValue ToJson()
     {
         var json = new DynamicJsonValue

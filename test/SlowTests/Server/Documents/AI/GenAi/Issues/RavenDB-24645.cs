@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Server.Documents.AI.GenAi.Issues
@@ -21,7 +20,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
         public record ImageDescription(string Description, bool SafeForWork, string[] Tags);
 
         private const string NonEmptyAnswerHint =
-            " ;Always provide a valid structured response matching the schema (if you have no answer or an empty answer - please return default values instead)";
+            " ;Always provide a valid structured response matching the schema do not return an empty answer";
 
         private const string FormatScript = @"
 ai.genContext({})
@@ -187,7 +186,11 @@ ai.genContext({})
             Assert.False(await etl.WaitAsync(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
+            if (config.Connection.OpenAiSettings != null)
+                Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
+
+            if (config.Connection.GoogleSettings != null)
+                Assert.True(ValidateErrorNotification(db, "Unable to process input image"));
         }
 
         private static Stream GetEmbeddedImgStream(string format)

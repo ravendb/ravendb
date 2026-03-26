@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Linq;
 
 namespace SlowTests.Core.ScriptedPatching;

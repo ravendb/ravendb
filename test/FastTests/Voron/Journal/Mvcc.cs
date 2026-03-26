@@ -4,7 +4,6 @@ using Xunit;
 using Voron;
 using System.Linq;
 using Voron.Global;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Journal
 {

@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly Transaction _tx;
 
         private NestedMapResultsSection _nestedSection;
+        private bool _initializedTree = false;
 
         public MapResultsStorageType Type { get; private set; }
 
@@ -54,15 +55,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
         }
 
-        private readonly HashSet<string> _alreadyInitializedTrees = new HashSet<string>();
-
         private void InitializeTree(bool create)
         {
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
             Tree = create ? _tx.CreateTree(treeName, flags: options) : _tx.ReadTree(treeName);
 
-            if (_alreadyInitializedTrees.Contains(treeName) == false)
+            if (_initializedTree == false)
             {
                 Tree.PageModified += (page, flags) =>
                 {
@@ -82,7 +81,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     ModifiedPages.Remove(page);
                 };
 
-                _alreadyInitializedTrees.Add(treeName);
+                _initializedTree = true;
             }
         }
 

@@ -46,6 +46,12 @@ public interface IQueryBase<T, out TSelf>
     TSelf NoCaching();
 
     /// <summary>
+    ///     Sets a user-defined tag on the query request.
+    /// </summary>
+    /// <param name="tag">User-defined query tag.</param>
+    TSelf WithTag(string tag);
+
+    /// <summary>
     ///     Disables tracking for queried entities by Raven's Unit of Work.
     ///     Usage of this option will prevent holding query results in memory.
     /// </summary>

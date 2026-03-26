@@ -5,7 +5,6 @@ using FastTests;
 using Sparrow.Server.Utils.VxSort;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 using static SlowTests.SparrowTests.VxSort.DataGeneration;
 using DataGenerator = System.Func<(int[] data, int[] sortedData)>;

@@ -5,7 +5,6 @@ using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 
 namespace FastTests.Client;
 

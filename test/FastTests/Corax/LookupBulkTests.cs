@@ -6,7 +6,6 @@ using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Voron.Data.Lookups;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 

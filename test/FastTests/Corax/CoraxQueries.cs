@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Corax;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -11,7 +12,6 @@ using FastTests.Voron;
 using Sparrow;
 using Sparrow.Server;
 using Voron;
-using Xunit.Abstractions;
 using Xunit;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -425,9 +425,9 @@ namespace FastTests.Corax
             public string TextualValue { get; set; }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
-            base.Dispose();
+            await base.DisposeAsync();
             _knownFields?.Dispose();
         }
     }

@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Runtime.CompilerServices;
 using Sparrow;
 using Voron.Data.BTrees;
 using Voron.Impl;
 
 namespace Voron.Data
 {
-    public sealed unsafe class VoronStream : Stream
+    public unsafe class VoronStream : Stream
     {
         public Slice Name { get; }
 
@@ -17,12 +16,13 @@ namespace Voron.Data
         private readonly bool _encrypted;
         private long _position;
         private int _index;
-        private LowLevelTransaction _llt;
-        
+        protected LowLevelTransaction Llt;
+        protected Page LastPage;
+
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => false;
-        public override long Length { get; }
+        public sealed override long Length { get; }
 
         public override string ToString()
         {
@@ -32,14 +32,15 @@ namespace Voron.Data
         public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
         {
             Name = name;
-
             _chunksDetails = chunksDetails;
             _chunksOffsets = new long[_chunksDetails.Length];
 
             _index = 0;
-            _llt = llt;
-            _encrypted = _llt.Environment.Options.Encryption.IsEnabled && _llt.Transaction.IsWriteTransaction == false;
-            _lastPage = default(Page);
+
+            Llt = llt;
+
+            _encrypted = Llt.Environment.Options.Encryption.IsEnabled && Llt.Transaction.IsWriteTransaction == false;
+            LastPage = default(Page);
             _position = 0;
 
             for (int index = 0; index < _chunksDetails.Length; index++)
@@ -48,28 +49,6 @@ namespace Voron.Data
                 _chunksOffsets[index] = Length;
                 Length += cd.ChunkSize;
             }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void UpdateCurrentTransaction(Transaction tx)
-        {
-            if (tx != null)
-            {
-                if (_llt == tx.LowLevelTransaction)
-                    return;
-
-                _llt = tx.LowLevelTransaction;
-                _lastPage = default(Page);
-                return;
-            }
-
-            ThrowTransactionIsNull();            
-        }
-
-        [DoesNotReturn]
-        private void ThrowTransactionIsNull()
-        {
-            throw new ArgumentNullException("tx");
         }
 
         public override long Position
@@ -115,8 +94,6 @@ namespace Voron.Data
             }
         }
 
-        private Page _lastPage;
-
         public override int ReadByte()
         {
             var chunk = _chunksDetails[_index];
@@ -137,7 +114,7 @@ namespace Voron.Data
 
             var pos = _position - _chunksOffsets[_index];
             _position++; //move ptr
-            return _lastPage.DataPointer[pos];
+            return LastPage.DataPointer[pos];
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -169,7 +146,7 @@ namespace Voron.Data
             var pos = _position - _chunksOffsets[_index];
             fixed (byte* dst = buffer)
             {
-                Memory.Copy(dst + offset, _lastPage.DataPointer + pos, count);
+                Memory.Copy(dst + offset, LastPage.DataPointer + pos, count);
             }
 
             //move ptr
@@ -179,22 +156,22 @@ namespace Voron.Data
 
         private void UpdateLastPageIfNeeded(long pageNumber)
         {
-            if (_lastPage.IsValid && _lastPage.PageNumber == pageNumber)
+            if (LastPage.IsValid && LastPage.PageNumber == pageNumber)
                 return;
 
             if (_encrypted == false)
             {
-                _lastPage = _llt.GetPage(pageNumber);
+                LastPage = Llt.GetPage(pageNumber);
                 return;
             }
 
-            if (_lastPage.IsValid)
+            if (LastPage.IsValid)
             {
                 // the last page won't be needed anymore, we'll try to release it
-                _llt.TryReleasePage(_lastPage.PageNumber);
+                Llt.TryReleasePage(LastPage.PageNumber);
             }
 
-            _lastPage = _llt.GetPageWithoutCache(pageNumber);
+            LastPage = Llt.GetPageWithoutCache(pageNumber);
         }
 
         public override long Seek(long offset, SeekOrigin origin)

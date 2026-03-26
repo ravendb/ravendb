@@ -7,7 +7,6 @@ using Lucene.Net.Store;
 using Raven.Client.Extensions.Streams;
 using Raven.Server.Documents.Indexes;
 using Voron;
-using Voron.Data;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
@@ -19,7 +18,7 @@ namespace Raven.Server.Indexing
         private readonly LuceneVoronDirectory _directory;
         private readonly string _name;
         private readonly string _tree;
-        private VoronStream _stream;
+        private LuceneVoronStream _stream;
 
         private bool _isOriginal = true;
 
@@ -37,7 +36,7 @@ namespace Raven.Server.Indexing
             return _name;
         }
 
-        internal static VoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string tree)
+        internal static LuceneVoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string treeName)
         {
             if (transaction.IsWriteTransaction == false)
             {
@@ -50,23 +49,23 @@ namespace Raven.Server.Indexing
                             // we don't dispose here explicitly, the fileName needs to be
                             // alive as long as the transaction is
                             Slice.From(transaction.Allocator, name, out Slice fileName);
-                            return new VoronStream(fileName, details, transaction.LowLevelTransaction);
+                            return new LuceneVoronStream(fileName, details, transaction.LowLevelTransaction);
                         }
                     }
                 }
             }
 
-            var fileTree = transaction.ReadTree(tree);
+            var fileTree = transaction.ReadTree(treeName);
             if (fileTree == null)
-                throw new FileNotFoundException($"Could not find '{tree}' tree for index input", name);
+                throw new FileNotFoundException($"Could not find '{treeName}' tree for index input", name);
 
             using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
-                var stream = fileTree.ReadStream(fileName);
-                if (stream == null)
+                var details = fileTree.ReadTreeChunks(fileName, out var tree);
+                if (details == null)
                     throw new FileNotFoundException("Could not find index input", name);
 
-                return stream;
+                return new LuceneVoronStream(tree.Name, details, fileTree.Llt);
             }
         }
         

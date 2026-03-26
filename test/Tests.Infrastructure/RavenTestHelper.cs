@@ -28,9 +28,11 @@ namespace Tests.Infrastructure
     {
         public static readonly bool IsRunningOnCI;
         public static readonly bool SkipIntegrationTests;
+        public static readonly bool SkipAiIntegrationTests;
         public static bool RunTestsWithDocsCompression;
 
         public const string SkipIntegrationMessage = "Skipping integration tests.";
+        public const string SkipAiIntegrationMessage = "Skipping AI integration tests.";
 
         public static readonly ParallelOptions DefaultParallelOptions = new ParallelOptions
         {
@@ -41,6 +43,7 @@ namespace Tests.Infrastructure
         {
             bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_IS_RUNNING_ON_CI"), out IsRunningOnCI);
             bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SKIP_INTEGRATION_TESTS"), out SkipIntegrationTests);
+            bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_SKIP_AI_INTEGRATION_TESTS"), out SkipAiIntegrationTests);
             bool.TryParse(Environment.GetEnvironmentVariable("RAVEN_DOCS_COMPRESSION_TESTS"), out RunTestsWithDocsCompression);
         }
 
@@ -183,11 +186,25 @@ namespace Tests.Infrastructure
             }
         }
 
+        public static void AssertSetEqualsRespectingNewLines(HashSet<string> set1, HashSet<string> set2)
+        {
+            var convertedSet1 = set1.Select(ConvertRespectingNewLines).ToHashSet();
+            var convertedSet2 = set2.Select(ConvertRespectingNewLines).ToHashSet();
+            Assert.True(convertedSet1.SetEquals(convertedSet2));
+        }
+
         public static void AssertEqualRespectingNewLines(string expected, string actual)
         {
             var convertedExpected = ConvertRespectingNewLines(expected);
             var convertedActual = ConvertRespectingNewLines(actual);
             Assert.Equal(convertedExpected, convertedActual);
+        }
+
+        public static void AssertNotEqualRespectingNewLines(string expected, string actual)
+        {
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+            Assert.NotEqual(convertedExpected, convertedActual);
         }
 
         public static void AssertStartsWithRespectingNewLines(string expected, string actual)

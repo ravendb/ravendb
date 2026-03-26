@@ -20,7 +20,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client
 {
@@ -2438,8 +2437,11 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                                 select u;
                     var q = session.Advanced
                         .DocumentQuery<User>()
+#pragma warning disable CS0618 // Type or member is obsolete
                         .WhereEquals("Name", CmpXchg.Value("Hera"))
                         .WhereEquals("LastName", CmpXchg.Value("Tom"));
+#pragma warning restore CS0618 // Type or member is obsolete
+
 
                     Assert.Equal("from 'Users' where Name = cmpxchg($p0) and LastName = cmpxchg($p1)", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());
@@ -2465,6 +2467,36 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     queryResult = session.Advanced.RawQuery<User>(rql).ToList();
                     Assert.Equal(1, queryResult.Count);
                     Assert.Equal("Zeus", queryResult[0].Name);
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task QueryCompareExchangeWhere_UsingRavenDocumentQuery(Options options)
+        {
+            using (var store = GetDocumentStore(options))
+            {
+                await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>("Hera", "Zeus", 0));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "Zeus", LastName = "Olympian" }, "users/1");
+                    session.Store(new User { Name = "Jerry", LastName = "Mouse" }, "users/2");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var q = session.Advanced
+                        .DocumentQuery<User>()
+                        .WhereEquals("Name", RavenDocumentQuery.CmpXchg("Hera"));
+
+                    Assert.Equal("from 'Users' where Name = cmpxchg($p0)", q.ToString());
+
+                    var results = q.ToList();
+                    Assert.Equal(1, results.Count);
+                    Assert.Equal("Zeus", results[0].Name);
                 }
             }
         }
@@ -2498,7 +2530,9 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
                     var query = from u in session.Query<User>()
                                 where u.Name == RavenQuery.CmpXchg<Linked>("ActiveUser").Next.Next.Name
                                 select u;
+#pragma warning disable CS0618 // Type or member is obsolete
                     var q = session.Advanced.DocumentQuery<User>().WhereEquals("Name", CmpXchg.Value("ActiveUser"));
+#pragma warning restore CS0618 // Type or member is obsolete
 
                     Assert.Equal("from 'Users' where Name = cmpxchg($p0).Next.Next.Name", query.ToString());
                     Assert.Equal(q.ToString(), query.ToString());

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -6,7 +6,7 @@ using CsvHelper;
 using Raven.Server.Utils.Cpu;
 using Sparrow;
 using Sparrow.Server.LowMemory;
-using Xunit.Abstractions;
+using Xunit.v3;
 
 namespace Tests.Infrastructure.TestMetrics
 {
@@ -15,7 +15,7 @@ namespace Tests.Infrastructure.TestMetrics
         private readonly TestResourcesAnalyzerMetricCacher _metricCacher;
         private readonly CsvWriter _csvWriter;
         private readonly object _syncObject = new object();
-        
+
         public TestResourceSnapshotWriter(string filename = null)
         {
             lock (_syncObject)
@@ -24,7 +24,7 @@ namespace Tests.Infrastructure.TestMetrics
                 _metricCacher = new TestResourcesAnalyzerMetricCacher(cpuUsageCalculator);
 
                 filename ??= $"TestResources_{DateTime.UtcNow:dd_MM_yyyy_HH_mm_ss}.csv";
-                
+
                 var file = File.OpenWrite(filename);
 
                 file.Position = 0;
@@ -35,30 +35,30 @@ namespace Tests.Infrastructure.TestMetrics
             }
         }
 
-        public void WriteResourceSnapshot(TestStage testStage, ITestAssembly testAssembly)
+        public void WriteResourceSnapshot(TestStage testStage, IXunitTestAssembly testAssembly)
         {
             var snapshot = GetTestResourceSnapshot(testStage, testAssembly.Assembly);
             Write(snapshot);
         }
 
-        public void WriteResourceSnapshot(TestStage testStage, ITestClass testClass)
+        public void WriteResourceSnapshot(TestStage testStage, IXunitTestClass testClass)
         {
             var snapshot = GetTestResourceSnapshot(testStage, testClass.Class.Assembly);
             snapshot.ClassName = testClass.Class.Name;
-            
+
             Write(snapshot);
         }
 
-        public void WriteResourceSnapshot(TestStage testStage, ITestMethod testMethod, TestResult? testResult = null)
+        public void WriteResourceSnapshot(TestStage testStage, IXunitTestMethod testMethod, TestResult? testResult = null)
         {
             var testClass = testMethod.TestClass.Class;
 
             var snapshot = GetTestResourceSnapshot(testStage, testClass.Assembly);
-            
+
             snapshot.ClassName = testClass.Name;
             snapshot.MethodName = testMethod.Method.Name;
             snapshot.TestResult = testResult;
-            
+
             Write(snapshot);
         }
 
@@ -71,11 +71,11 @@ namespace Tests.Infrastructure.TestMetrics
             }
         }
 
-        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, IAssemblyInfo assemblyInfo)
+        private TestResourceSnapshot GetTestResourceSnapshot(TestStage testStage, Assembly assembly)
         {
             var timeStamp = DateTime.UtcNow;
-            var assemblyName = GetAssemblyShortName(assemblyInfo);
-            
+            var assemblyName = assembly.GetName().Name;
+
             var cpuUsage = _metricCacher.GetCpuUsage();
             var memoryInfo = _metricCacher.GetMemoryInfoExtended();
             var tcpConnections = TcpStatisticsProvider.GetConnections();
@@ -104,50 +104,44 @@ namespace Tests.Infrastructure.TestMetrics
             return snapshot;
         }
 
-        private static string GetAssemblyShortName(IAssemblyInfo assemblyInfo)
-        {
-            var assemblyName = new AssemblyName(assemblyInfo.Name);
-            return assemblyName.Name;
-        }
-
         public class TestResourceSnapshot
         {
             public TestStage TestStage { get; set; }
-            
+
             public string AssemblyName { get; set; }
-            
+
             public string ClassName { get; set; }
-            
+
             public string MethodName { get; set; }
 
             public TestResult? TestResult { get; set; }
-            
+
             public string Timestamp { get; set; }
-            
+
             public long MachineCpuUsage { get; set; }
-            
+
             public long ProcessCpuUsage { get; set; }
-            
+
             public long ProcessMemoryUsageInMb { get; set; }
-            
+
             public long TotalMemoryInMb { get; set; }
-            
+
             public long AvailableMemoryInMb { get; set; }
-            
+
             public long TotalCommittableMemoryInMb { get; set; }
-            
+
             public long CurrentCommitChargeInMb { get; set; }
-            
+
             public long SharedCleanMemoryInMb { get; set; }
-            
+
             public long TotalScratchAllocatedMemory { get; set; }
-            
+
             public long TotalDirtyMemory { get; set; }
-            
+
             public bool IsHighDirty { get; set; }
-            
+
             public long CurrentIpv4Connections { get; set; }
-            
+
             public long CurrentIpv6Connections { get; set; }
         }
 

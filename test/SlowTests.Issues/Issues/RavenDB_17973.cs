@@ -5,7 +5,6 @@ using Raven.Client.Documents;
 using SlowTests.Core.Utils.Indexes;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using TShirt = SlowTests.Core.Utils.Entities.TShirt;
 using TShirtType = SlowTests.Core.Utils.Entities.TShirtType;
 

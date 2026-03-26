@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Text;
 using FastTests;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

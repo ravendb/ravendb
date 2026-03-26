@@ -9,7 +9,6 @@ using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Client.Subscriptions
 {
@@ -129,7 +128,7 @@ namespace SlowTests.Client.Subscriptions
                 {
                     thread.Start();
 
-                    Assert.Throws(typeof(AggregateException), () => subscirptionLifetimeTask.Wait(_reasonableWaitTime));
+                    Assert.Throws<AggregateException>( () => subscirptionLifetimeTask.Wait(_reasonableWaitTime));
 
                     Assert.True(subscirptionLifetimeTask.IsFaulted);
 
@@ -180,7 +179,7 @@ namespace SlowTests.Client.Subscriptions
                 await store.Subscriptions.DeleteAsync(subscriptionId);
                 beforeAckMre.Set();
 
-                Assert.Throws(typeof(AggregateException), () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
+                Assert.Throws<AggregateException>( () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
 
                 Assert.True(subscriptionLifetimeTask.IsFaulted);
             }

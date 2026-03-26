@@ -31,6 +31,7 @@ using Raven.Server.ServerWide.Sharding;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Extensions;
 using Sparrow.Utils;
 using Voron;
 
@@ -38,7 +39,9 @@ namespace Raven.Server.Documents.Sharding.Queries;
 
 public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombinedResult> where TCommand : RavenCommand<TResult>
 {
-    const string LimitToken = "__raven_limit";
+    private const string LimitToken = "__raven_limit";
+    private const string NowToken = "__raven_now";
+    private const string TodayToken = "__raven_today";
 
     private Dictionary<int, BlittableJsonReaderObject> _queryTemplates;
     private Dictionary<int, TCommand> _commands;
@@ -46,6 +49,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
     private readonly bool _ignoreLimit;
     private readonly string _raftUniqueRequestId;
     private HashSet<int> _filteredShardIndexes;
+    protected DateTime? QueryTime;
 
     protected readonly TransactionOperationContext Context;
     protected readonly ShardedDatabaseRequestHandler RequestHandler;
@@ -439,6 +443,43 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
+        if (queryChanges.HasFlag(QueryChanges.RewriteTimeBasedFunctions))
+        {
+            // In sharded queries, each shard resolves now()/today() independently, which can lead to
+            // slightly different values across shards. We resolve them once on the orchestrator and
+            // replace the function calls with query parameters to ensure consistency.
+            var usedFunctions = TimeBasedFunction.None;
+
+            if (clone.Where != null)
+                clone.Where = ReplaceTimeBasedFunctions(clone.Where, ref usedFunctions);
+
+            if (clone.Filter != null)
+                clone.Filter = ReplaceTimeBasedFunctions(clone.Filter, ref usedFunctions);
+
+            if (usedFunctions != TimeBasedFunction.None)
+            {
+                var now = DateTime.UtcNow;
+                QueryTime = now;
+
+                DynamicJsonValue modifiedArgs;
+                if (queryTemplate.TryGet(nameof(IndexQuery.QueryParameters), out BlittableJsonReaderObject args) && args != null)
+                {
+                    modifiedArgs = new DynamicJsonValue(args);
+                    args.Modifications = modifiedArgs;
+                }
+                else
+                {
+                    modifications[nameof(IndexQuery.QueryParameters)] = modifiedArgs = new DynamicJsonValue();
+                }
+
+                if (usedFunctions.HasFlag(TimeBasedFunction.Now))
+                    modifiedArgs[NowToken] = now.GetDefaultRavenFormat(isUtc: true);
+
+                if (usedFunctions.HasFlag(TimeBasedFunction.Today))
+                    modifiedArgs[TodayToken] = now.Date.GetDefaultRavenFormat(isUtc: true);
+            }
+        }
+
         modifications[nameof(IndexQuery.Query)] = clone.ToString();
 
         queryTemplate.Modifications = modifications;
@@ -454,6 +495,74 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             modifications.Remove(nameof(IndexQueryServerSide.PageSize));
 
             queryChanges &= ~QueryChanges.RewriteForPaging;
+        }
+    }
+
+    private static QueryExpression ReplaceTimeBasedFunctions(QueryExpression expr, ref TimeBasedFunction usedFunctions)
+    {
+        switch (expr)
+        {
+            case MethodExpression me when me.Name.Value.Equals("now", StringComparison.OrdinalIgnoreCase):
+                usedFunctions |= TimeBasedFunction.Now;
+                return new ValueExpression(NowToken, ValueTokenType.Parameter);
+
+            case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
+                usedFunctions |= TimeBasedFunction.Today;
+                return new ValueExpression(TodayToken, ValueTokenType.Parameter);
+
+            case BinaryExpression be:
+                var newLeft = ReplaceTimeBasedFunctions(be.Left, ref usedFunctions);
+                var newRight = ReplaceTimeBasedFunctions(be.Right, ref usedFunctions);
+
+                if (ReferenceEquals(newLeft, be.Left) && ReferenceEquals(newRight, be.Right))
+                    return be;
+
+                return new BinaryExpression(newLeft, newRight, be.Operator) { Parenthesis = be.Parenthesis };
+
+            case NegatedExpression ne:
+                var newInner = ReplaceTimeBasedFunctions(ne.Expression, ref usedFunctions);
+
+                if (ReferenceEquals(newInner, ne.Expression))
+                    return ne;
+
+                return new NegatedExpression(newInner);
+
+            case MethodExpression me:
+                var changed = false;
+                var newArgs = new List<QueryExpression>(me.Arguments.Count);
+
+                foreach (var arg in me.Arguments)
+                {
+                    var newArg = ReplaceTimeBasedFunctions(arg, ref usedFunctions);
+                    if (ReferenceEquals(newArg, arg) == false)
+                        changed = true;
+                    newArgs.Add(newArg);
+                }
+
+                if (changed == false)
+                    return me;
+
+                return new MethodExpression(me.Name, newArgs);
+
+            case InExpression ie:
+                var valuesChanged = false;
+                var newValues = new List<QueryExpression>(ie.Values.Count);
+
+                foreach (var val in ie.Values)
+                {
+                    var newVal = ReplaceTimeBasedFunctions(val, ref usedFunctions);
+                    if (ReferenceEquals(newVal, val) == false)
+                        valuesChanged = true;
+                    newValues.Add(newVal);
+                }
+
+                if (valuesChanged == false)
+                    return ie;
+
+                return new InExpression(ie.Source, newValues, ie.All);
+
+            default:
+                return expr;
         }
     }
 
@@ -582,6 +691,9 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 }
             }
         }
+
+        if (indexQuery.Metadata.HasTimeBasedFunction)
+            queryChanges |= QueryChanges.RewriteTimeBasedFunctions;
 
         return queryChanges;
     }
@@ -835,7 +947,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
     }
 
-    protected IComparer<BlittableJsonReaderObject> GetComparer(IndexQueryServerSide query)
+    protected IComparer<BlittableJsonReaderObject> ComparerCreator(ShardedDatabaseContext databaseContext, string indexName, IndexQueryServerSide query)
     {
         var queryType = GetQueryType();
 
@@ -846,7 +958,10 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             return ConstantComparer.Instance;
 
         if (query.Metadata.OrderBy?.Length > 0)
-            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom);
+        {
+            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var nullFirst, out var acceptMissing);
+            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, nullFirst, acceptMissing);
+        }
 
         if (queryType == QueryType.IndexEntries)
             return ConstantComparer.Instance;
@@ -876,7 +991,16 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         RewriteForFilterInMapReduce = 1 << 3,
         RewriteForLimitWithOrderByInMapReduce = 1 << 4,
         UpdateOrderByFieldsInMapReduce = 1 << 5,
-        UseCachedOrderByFieldsInMapReduce = 1 << 6
+        UseCachedOrderByFieldsInMapReduce = 1 << 6,
+        RewriteTimeBasedFunctions = 1 << 7
+    }
+
+    [Flags]
+    private enum TimeBasedFunction
+    {
+        None = 0,
+        Now = 1 << 0,
+        Today = 1 << 1
     }
 
     protected enum QueryType

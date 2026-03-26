@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

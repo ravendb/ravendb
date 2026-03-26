@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Amazon.SQS;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Util;
-using Xunit.Abstractions;
+using Xunit;
 
 namespace SlowTests.Server.Documents.ETL.Queue.AmazonSqs;
 
@@ -116,9 +117,9 @@ output('test output')";
         return queueClient;
     }
 
-    public override void Dispose()
+    public override async ValueTask DisposeAsync()
     {
-        base.Dispose();
+        await base.DisposeAsync();
         CleanupQueues();
     }
 }

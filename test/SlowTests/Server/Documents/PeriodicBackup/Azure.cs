@@ -12,7 +12,6 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {

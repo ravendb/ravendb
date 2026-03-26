@@ -6,7 +6,6 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 

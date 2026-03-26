@@ -2,34 +2,21 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import ReactAce from "react-ace";
-import useUniqueId from "components/hooks/useUniqueId";
-import Accordion from "react-bootstrap/Accordion";
-import IconName from "typings/server/icons";
 import { Control, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
-import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
-import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
-import VirtualTable from "components/common/virtualTable/VirtualTable";
-import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
-import { aiAgentsUtils } from "../utils/aiAgentsUtils";
-import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import genUtils from "common/generalUtils";
 import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
-import useToolQueryDetails from "../hooks/useToolQueryDetails";
 import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
-
-type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
-type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
+import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSubmittedActionTool";
+import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
     parametersFromUser?: Record<string, string>;
@@ -37,8 +24,6 @@ interface AiAgentMessagesProps {
 
 export default function AiAgentMessages({
     messages,
-    toolQueries,
-    toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
     parametersFromUser,
@@ -46,12 +31,10 @@ export default function AiAgentMessages({
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
             {messages.map((message) => (
-                <AiAgentMessage
+                <AiAgentMessageComponent
                     key={message.id}
                     message={message}
                     allMessages={messages}
-                    toolQueries={toolQueries}
-                    toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
                     setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
                     parametersFromUser={parametersFromUser}
@@ -64,108 +47,33 @@ export default function AiAgentMessages({
 interface AiAgentMessageProps {
     message: AiAgentMessage;
     allMessages: AiAgentMessage[];
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
     parametersFromUser?: Record<string, string>;
 }
 
-function AiAgentMessage({
+function AiAgentMessageComponent({
     message,
     allMessages,
-    toolQueries,
-    toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
     parametersFromUser,
 }: AiAgentMessageProps) {
-    const toolName = allMessages
-        .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
-        ?.toolCalls.find((x) => x.id === message.toolCallId)?.name;
-
-    const isActionTool = !!(toolName && toolActions.some((x) => x.Name === toolName));
-
     return (
         <div>
             {message.role === "system" && <SystemMessage message={message} />}
-            {isActionTool && <ToolMessage message={message} type="action" />}
-            {message.role === "user" && (
-                <UserMessage message={message} toolQueries={toolQueries} toolActions={toolActions} />
-            )}
+            {message.role === "user" && <UserMessage message={message} />}
             {message.role === "assistant" && (
                 <AgentMessage
                     agentMessage={message}
                     allMessages={allMessages}
-                    toolQueries={toolQueries}
-                    toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
                     setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
                     parametersFromUser={parametersFromUser}
                 />
             )}
-        </div>
-    );
-}
-
-interface ToolMessageProps {
-    message: AiAgentMessage;
-    type: "action" | "query";
-}
-
-function ToolMessage({ message, type }: ToolMessageProps) {
-    const aceRef = useRef<ReactAce>(null);
-
-    const toolName = message.toolName;
-
-    const isTable = message.content.startsWith("[") && message.content.endsWith("]") && message.content.length > 2;
-    const tableData = useMemo(
-        () => (isTable ? JSON.parse(message.content).map((x: any) => new document(x)) : []),
-        [message.content, isTable]
-    );
-    const contentMode = aceEditorUtils.getAceEditorMode(message.content);
-
-    const { columnDefs } = useDocumentColumnsProvider({
-        documents: tableData,
-        availableWidth: window.innerWidth,
-        hasCheckbox: false,
-        hasPreview: false,
-        hasFlags: true,
-    });
-
-    const table = useReactTable({
-        data: tableData,
-        columns: columnDefs,
-        columnResizeMode: "onChange",
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-    });
-
-    return (
-        <div className="bg-faded-primary p-2 border-radius-xs border border-primary w-100">
-            {type === "query" && <div className="text-emphasis">Query tool result</div>}
-            {type === "action" && toolName && (
-                <div className="hstack justify-content-between mb-1">
-                    <div>
-                        Response from action tool: <strong>{toolName}</strong>
-                    </div>
-                    <Badge bg="primary" pill>
-                        <Icon icon="check" /> Submitted
-                    </Badge>{" "}
-                </div>
-            )}
-            {isTable ? (
-                <VirtualTable table={table} heightInPx={300} className="border border-secondary" />
-            ) : (
-                <AceEditor
-                    aceRef={aceRef}
-                    defaultValue={message.content}
-                    readOnly
-                    mode={contentMode}
-                    height="150px"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
-                />
+            {message.role === "submitted-action-tool" && (
+                <AiAgentSubmittedActionTool content={message.content} toolName={message.toolName} />
             )}
         </div>
     );
@@ -194,11 +102,9 @@ function SystemMessage({ message }: SystemMessageProps) {
 
 interface UserMessageProps {
     message: AiAgentMessage;
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
 }
 
-function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
+function UserMessage({ message }: UserMessageProps) {
     const getMessageContent = (): string | { type: "text"; text: string }[] => {
         try {
             return JSON.parse(message.content);
@@ -208,15 +114,8 @@ function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
     };
 
     const messageContent = getMessageContent();
-
     const isContentString = typeof messageContent === "string";
     const isContentArray = Array.isArray(messageContent);
-
-    const isMessageWithParameters = isContentString && messageContent.startsWith("AI Agent Parameters:");
-
-    if (isMessageWithParameters) {
-        return null;
-    }
 
     return (
         <div className="pt-3">
@@ -241,18 +140,6 @@ function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
                             </div>
                         )}
                     </div>
-                    {message.toolCalls?.length > 0 && (
-                        <div className="vstack gap-2">
-                            {message.toolCalls.map((toolCall) => (
-                                <ToolCall
-                                    key={toolCall.id}
-                                    toolCall={toolCall}
-                                    toolQueries={toolQueries}
-                                    toolActions={toolActions}
-                                />
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -262,8 +149,6 @@ function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
 interface AgentMessageProps {
     agentMessage: AiAgentMessage;
     allMessages: AiAgentMessage[];
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
     handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
     parametersFromUser?: Record<string, string>;
@@ -272,8 +157,6 @@ interface AgentMessageProps {
 function AgentMessage({
     agentMessage,
     allMessages,
-    toolQueries,
-    toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
     parametersFromUser,
@@ -302,10 +185,10 @@ function AgentMessage({
 
     const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
     const isLastItem = agentMessageIndex === allMessages.length - 1;
-    const isToolAction = agentMessage.toolCalls?.some((x) => toolActions?.some((y) => y.Name === x.name));
+    const hasActionTool = agentMessage.toolCalls?.some((x) => x.type === "action");
 
     const isRequireParameters =
-        isLastItem && isToolAction && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
+        isLastItem && hasActionTool && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
 
     useEffect(() => {
         setIsWaitingForActionToolSubmit(isRequireParameters);
@@ -368,11 +251,9 @@ function AgentMessage({
                     {agentMessage.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {agentMessage.toolCalls.map((toolCall) => (
-                                <ToolCall
+                                <AiAgentToolTranscript
                                     key={toolCall.id}
                                     toolCall={toolCall}
-                                    toolQueries={toolQueries}
-                                    toolActions={toolActions}
                                     parametersFromUser={parametersFromUser}
                                 />
                             ))}
@@ -384,7 +265,7 @@ function AgentMessage({
                 <div className="hstack justify-content-end mt-2">
                     <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
                         {parametersFieldsArray.fields.map((field, idx) => (
-                            <ParameterField key={field.id} idx={idx} name={field.name} control={control} />
+                            <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
                         ))}
                         <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
                             <Icon icon="check" />
@@ -397,13 +278,13 @@ function AgentMessage({
     );
 }
 
-interface ParameterFieldProps {
+interface ActionToolParameterFieldProps {
     idx: number;
     name: string;
     control: Control<{ parameters: AiAgentToolCall[] }>;
 }
 
-function ParameterField({ idx, name, control }: ParameterFieldProps) {
+function ActionToolParameterField({ idx, name, control }: ActionToolParameterFieldProps) {
     const aceRef = useRef<ReactAce>(null);
 
     return (
@@ -418,164 +299,11 @@ function ParameterField({ idx, name, control }: ParameterFieldProps) {
                 mode="text"
                 height="150px"
                 actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
-                placeholder={idx === 0 ? parameterFieldPlaceholder : ""}
+                placeholder={idx === 0 ? actionToolParameterFieldPlaceholder : ""}
             />
         </FormGroup>
     );
 }
 
-const parameterFieldPlaceholder = `Provide a free-text response to the LLM after completing the requested action, e.g.:
+const actionToolParameterFieldPlaceholder = `Provide a free-text response to the LLM after completing the requested action, e.g.:
 The issue has been forwarded to the support team.`;
-
-interface ToolCallProps {
-    toolCall: AiAgentToolCall;
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
-    parametersFromUser?: Record<string, string>;
-}
-
-function ToolCall({ toolCall, toolQueries, toolActions, parametersFromUser }: ToolCallProps) {
-    const id = useUniqueId("tool-call");
-
-    const toolQuery = toolQueries?.find((x) => x.Name === toolCall.name);
-    const toolAction = toolActions?.find((x) => x.Name === toolCall.name);
-
-    const icon: IconName = toolQuery ? "query" : "force";
-    const label = toolQuery ? "Query tool:" : "Action tool:";
-
-    return (
-        <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-1">
-            <Accordion.Item eventKey={id} className="panel-bg-1">
-                <Accordion.Header>
-                    <div className="hstack gap-2">
-                        <div className="p-1 rounded-1 bg-faded-primary border border-primary">
-                            <Icon icon={icon} color="primary" margin="m-0" />
-                        </div>
-                        <div className="text-truncate">
-                            {label} {toolCall.name}
-                        </div>
-                    </div>
-                </Accordion.Header>
-                <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
-                    <Accordion.Body className="panel-bg-1 rounded-2">
-                        <ToolCallBody
-                            tool={toolQuery ?? toolAction}
-                            toolCall={toolCall}
-                            parametersFromUser={parametersFromUser}
-                        />
-                    </Accordion.Body>
-                </Accordion.Collapse>
-            </Accordion.Item>
-        </Accordion>
-    );
-}
-
-interface ToolCallBodyProps {
-    tool: ToolQuery | ToolAction;
-    toolCall: AiAgentToolCall;
-    parametersFromUser?: Record<string, string>;
-}
-
-function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps) {
-    const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
-    const argumentsMode = aceEditorUtils.getAceEditorMode(prettifiedArguments);
-
-    const id = useUniqueId("tool-call-details");
-
-    return (
-        <div className="vstack gap-2">
-            {tool && (
-                <Accordion className="tool-call-details border border-secondary rounded-2 panel-bg-2">
-                    <Accordion.Item eventKey={id} className="panel-bg-2">
-                        <Accordion.Header className="p-1">
-                            <Icon icon="settings" />
-                            See details
-                        </Accordion.Header>
-                        <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
-                            <Accordion.Body className="panel-bg-2 rounded-2 pt-0">
-                                {tool.Description && (
-                                    <div>
-                                        <small className="text-muted">Description</small>
-                                        <div>{tool.Description}</div>
-                                        <hr className="my-1" />
-                                    </div>
-                                )}
-                                {tool.ParametersSchema && (
-                                    <div>
-                                        <small className="text-muted">Parameters schema</small>
-                                        <AceEditor
-                                            defaultValue={tool.ParametersSchema}
-                                            readOnly
-                                            mode="json"
-                                            height="100px"
-                                        />
-                                    </div>
-                                )}
-                                {"Query" in tool && tool.Query && (
-                                    <ToolDetailsQuery
-                                        queryText={tool.Query}
-                                        parametersFromUser={parametersFromUser}
-                                        parametersFromModel={toolCall.arguments}
-                                    />
-                                )}
-                            </Accordion.Body>
-                        </Accordion.Collapse>
-                    </Accordion.Item>
-                </Accordion>
-            )}
-            <div>
-                <small className="text-muted">Parameters filled by LLM</small>
-                <AceEditor
-                    defaultValue={prettifiedArguments}
-                    readOnly
-                    mode={argumentsMode}
-                    height={aceEditorUtils.getAceEditorHeight(prettifiedArguments)}
-                />
-            </div>
-            {toolCall?.queryToolResult && <ToolMessage message={toolCall.queryToolResult} type="query" />}
-        </div>
-    );
-}
-
-function ToolDetailsQuery({
-    queryText,
-    parametersFromUser,
-    parametersFromModel,
-}: {
-    queryText: string;
-    parametersFromUser?: Record<string, string>;
-    parametersFromModel?: string;
-}) {
-    const rqlLanguageService = useRqlLanguageService();
-
-    const { linkToQuery, queryWithParameters } = useToolQueryDetails({
-        queryText,
-        parametersFromUser,
-        parametersFromModel,
-    });
-
-    return (
-        <div>
-            <div className="d-flex justify-content-between mb-1 align-items-end">
-                <small className="text-muted">Query</small>
-                <Button
-                    variant="info"
-                    className="rounded-pill"
-                    onClick={linkToQuery}
-                    title="Click to test this query in the Studio's Query View"
-                    size="sm"
-                >
-                    <Icon icon="rocket" />
-                    Test query
-                </Button>
-            </div>
-            <AceEditor
-                defaultValue={queryWithParameters}
-                readOnly
-                mode="rql"
-                height={aceEditorUtils.getAceEditorHeight(queryWithParameters, { maxLineCount: 8 })}
-                languageService={rqlLanguageService}
-            />
-        </div>
-    );
-}

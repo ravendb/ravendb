@@ -2,7 +2,6 @@ using Tests.Infrastructure;
 using System.IO;
 using Xunit;
 using Voron.Debugging;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.Optimizations
 {

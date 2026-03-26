@@ -20,8 +20,8 @@ public sealed class ShardedFacetedQueryOperation : AbstractShardedQueryOperation
     private readonly Dictionary<string, FacetOptions> _facetOptions;
 
     public ShardedFacetedQueryOperation(IndexQueryServerSide query, Dictionary<string, FacetOptions> facetOptions, TransactionOperationContext context, ShardedDatabaseRequestHandler requestHandler,
-        Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag)
-        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag)
+        Dictionary<int, ShardedQueryCommand> queryCommands, string expectedEtag, DateTime? timeBasedQueryTime = null)
+        : base(query.Metadata, queryCommands, context, requestHandler, expectedEtag, timeBasedQueryTime)
     {
         _facetOptions = facetOptions;
     }

@@ -35,11 +35,11 @@ void TestRecall(string path)
     var annDistances = new float[resultsCount];
     var ennMatches = new long[resultsCount];
     var ennDistances = new float[resultsCount];
-
     long results = 0;
     foreach (var file in Files)
     {
         using var txr = env.ReadTransaction();
+        using var _ = Slice.From(txr.Allocator, "wiki", out var wikiTreeName);
         var fullPath = Path.Combine(Path.GetTempPath(), "Vector.Benchmark", file);
 
         foreach (var (ids, vectors) in YieldVectors(fullPath))
@@ -48,11 +48,11 @@ void TestRecall(string path)
             {
                 var vector = new Span<float>(vectors, i * 768, 768);
                 
-                using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, "wiki", 10, MemoryMarshal.AsBytes(vector), 0f);
-                using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, "wiki", 64, MemoryMarshal.AsBytes(vector), 0f);
+                using var enn = Hnsw.ExactNearest(txr.LowLevelTransaction, wikiTreeName, 10, MemoryMarshal.AsBytes(vector).ToArray(), 0f, false);
+                using var ann = Hnsw.ApproximateNearest(txr.LowLevelTransaction, wikiTreeName, 64, MemoryMarshal.AsBytes(vector).ToArray(), 0f, false);
 
-                var aRead = ann.Fill(annMatches, annDistances);
-                var eRead = enn.Fill(ennMatches, ennDistances);
+                var aRead = ann.Fill(annMatches, annDistances, null);
+                var eRead = enn.Fill(ennMatches, ennDistances, null);
                 if (aRead != eRead)
                 {
                     Console.WriteLine("Mismatch in read count?");

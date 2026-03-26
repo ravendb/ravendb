@@ -573,6 +573,7 @@ interface queryCompleterProviders {
     collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
     collections: (callback: (collectionNames: string[]) => void) => void;
     indexNames: (callback: (indexNames: string[]) => void) => void;
+    aiTasks: (callback: (data: Record<string, Record<string, string[]>>) => void) => void;
 }
 
 type rqlQueryType = "Select" | "Update";

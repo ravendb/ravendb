@@ -65,6 +65,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             Result.CompareExchangeTombstones.ReadCount += summary.CompareExchangeTombstonesCount;
             Result.Identities.ReadCount += summary.IdentitiesCount;
             Result.TimeSeries.ReadCount += summary.TimeSeriesSegmentsCount;
+            Result.TimeSeriesDeletedRanges.ReadCount += summary.TimeSeriesDeletedRangesCount;
 
             Result.AddInfo($"Successfully restored {Result.SnapshotRestore.ReadCount} files during snapshot restore, took: {_sw.ElapsedMilliseconds:#,#;;0}ms");
             Progress.Invoke(Result.Progress);

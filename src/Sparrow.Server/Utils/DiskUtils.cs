@@ -113,15 +113,18 @@ namespace Sparrow.Server.Utils
             {
                 fixed (byte* buffer = byteArray)
                 {
-                    var result = Syscall.readlink(path, buffer, LinuxMaxPath);
-                    if (result == -1)
+                    // realpath resolves all symlinks (including intermediate path components),
+                    // handles relative paths, and returns the canonical absolute path.
+                    // This is needed to correctly identify the mount point when the path
+                    // contains symlinks in intermediate components (e.g. /var/lib/ravendb -> /mnt/disk2/ravendb).
+                    var result = Syscall.realpath(path, buffer);
+                    if (result == IntPtr.Zero)
                     {
-                        // not a symbolic link
+                        // failed to resolve - fall back to original path
                         return path;
                     }
 
-                    var realPath = Encoding.UTF8.GetString(byteArray, 0, result);
-                    return realPath;
+                    return Marshal.PtrToStringUTF8(result);
                 }
             }
             finally

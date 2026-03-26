@@ -2,10 +2,10 @@
 using Corax.Utils;
 using FastTests;
 using Sparrow.Server;
+using Sparrow.Server.Collections;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace StressTests.Corax;
 

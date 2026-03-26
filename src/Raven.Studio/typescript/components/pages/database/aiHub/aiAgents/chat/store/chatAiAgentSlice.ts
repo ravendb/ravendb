@@ -1,11 +1,12 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
 import document from "models/database/documents/document";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import { RunAiAgentRequestDto } from "commands/database/aiAgents/runAiAgentCommand";
 
@@ -93,14 +94,10 @@ export const chatAiAgentSlice = createSlice({
                 state.document = createSuccessState(action.payload);
                 state.isDocumentChanged = false;
 
-                const messages: AiAgentMessage[] = action.payload.Messages.map((x: AiAgentDocMessage) =>
-                    aiAgentsUtils.mapMessageFromDoc(x)
-                );
-
-                state.messages = aiAgentsUtils.mergeToolResults(
-                    messages,
-                    state.config.data?.Queries.map((x) => x.Name) ?? []
-                );
+                state.messages = aiAgentsUtils.mapMessagesFromDoc({
+                    docMessages: action.payload.Messages,
+                    config: state.config.data,
+                });
             })
             .addCase(runChat.pending, (state) => {
                 state.runChatState = "loading";
@@ -167,17 +164,15 @@ const runChat = createAsyncThunk(
         const result = await services.aiAgentService.runAiAgent(
             databaseName,
             {
-                UserPrompt: getUserPrompt(toolCallParameters?.length ?? 0, formValues.prompts),
+                UserPrompt: createUserPromptDto(toolCallParameters?.length ?? 0, formValues.prompts),
                 ArtificialActions: [],
                 ActionResponses: toolCallParameters?.map((x) => ({
                     ToolId: x.id,
                     Content: x.arguments,
                 })),
+                AttachmentCommands: null,
                 CreationOptions: {
-                    Parameters:
-                        conversationId == null
-                            ? Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value]))
-                            : null,
+                    Parameters: createParametersDto(conversationId, formValues.parameters),
                     ExpirationInSec:
                         (isDocumentExpirationEnabled || formValues.isEnableDocumentExpiration) &&
                         formValues.isDocumentExpireInCustomizeEnabled
@@ -189,13 +184,14 @@ const runChat = createAsyncThunk(
             conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix,
             changeVector
         );
+
         dispatch(chatAiAgentActions.activePromptIndexSet(0));
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
     }
 );
 
-function getUserPrompt(
+function createUserPromptDto(
     toolCallParametersCount: number,
     prompts: ChatAiAgentFormData["prompts"]
 ): RunAiAgentRequestDto["UserPrompt"] {
@@ -212,6 +208,25 @@ function getUserPrompt(
     }
 
     return prompts[0].text;
+}
+
+function createParametersDto(
+    conversationId: string,
+    formParameters: ChatAiAgentFormData["parameters"]
+): Record<string, Raven.Client.Documents.AI.AiConversationParameter> {
+    if (conversationId) {
+        return null;
+    }
+
+    return Object.fromEntries(
+        formParameters.map((x) => [
+            x.name,
+            {
+                Value: aiAgentParametersUtils.mapParameterValueToType(x.value, x.type),
+                SendToModel: x.isSendToModel,
+            },
+        ])
+    );
 }
 
 const getIsDocumentExpirationEnabled = createAsyncThunk(

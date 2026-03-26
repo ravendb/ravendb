@@ -5,7 +5,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Xunit;
-using Xunit.Abstractions;
 
 using Tests.Infrastructure;
 namespace SlowTests.Issues

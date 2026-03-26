@@ -1,6 +1,5 @@
 using FastTests.Voron.Tables;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace SlowTests.Issues

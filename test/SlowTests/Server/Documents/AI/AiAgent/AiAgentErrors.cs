@@ -10,11 +10,9 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
 
@@ -41,7 +39,7 @@ public class AiAgentErrors : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadParameters(Options options, GenAiConfiguration config)
     {
         const string agentParametersSampleObject = "{\"name\": [\"the name you search by\"]}"; // valid parameter: "{\"name\": \"the name you search by\"}" (not array)
@@ -73,13 +71,13 @@ public class AiAgentErrors : RavenTestBase
         // Raven.Client.Exceptions.InvalidQueryException: Parameter value '["Shahar"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
-        var e = await Assert.ThrowsAsync<InvalidQueryException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadQuery(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -110,7 +108,7 @@ public class AiAgentErrors : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadIndexQuery(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -144,7 +142,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: System.ArgumentException: The field 'Name1' is not indexed in 'Customers/ByName',
 
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("The field 'Name1' is not indexed in 'Customers/ByName'", e.Message);
     }
@@ -163,12 +161,23 @@ public class AiAgentErrors : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadApiKey(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
 
-        config.Connection.OpenAiSettings.ApiKey = "xyz"; // wrong api key
+        if (config.Connection.OpenAiSettings != null)
+        {
+            config.Connection.OpenAiSettings.ApiKey = "xyz"; // wrong api key
+        }
+        else if (config.Connection.GoogleSettings != null)
+        {
+            config.Connection.GoogleSettings.ApiKey = "xyz"; // wrong api key
+        }
+        else
+        {
+            throw new InvalidOperationException("Unknown provider");
+        }
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -194,17 +203,42 @@ public class AiAgentErrors : RavenTestBase
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: Incorrect API key provided
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
-        Assert.Contains("Incorrect API key provided", e.Message);
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var provider = config.Connection.GetActiveProvider();
+        switch (provider)
+        {
+            case AiConnectorType.OpenAi:
+                Assert.Contains("Incorrect API key provided", e.Message);
+                break;
+            case AiConnectorType.Google:
+                Assert.Contains("API key not valid.", e.Message);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown provider '{provider}'");
+        }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task BadModel(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
 
-        config.Connection.OpenAiSettings.Model += "xyz"; // wrong model
+        var model = string.Empty;
+        if (config.Connection.OpenAiSettings != null)
+        {
+            config.Connection.OpenAiSettings.Model += "xyz"; // wrong model
+            model = config.Connection.OpenAiSettings.Model;
+        }
+        else if (config.Connection.GoogleSettings != null)
+        {
+            config.Connection.GoogleSettings.Model += "xyz";
+            model = config.Connection.GoogleSettings.Model;
+        }
+        else
+        {
+            throw new InvalidOperationException("Unknown provider");
+        }
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -238,18 +272,41 @@ public class AiAgentErrors : RavenTestBase
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: The model `gpt-4oxyz` does not exist or you do not have access to it
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
-        Assert.Contains($"The model `{config.Connection.OpenAiSettings.Model}` does not exist or you do not have access to it", e.Message);
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var p = Assert.IsAssignableFrom<OpenAiBaseSettings>(config.Connection.GetActiveProviderInstance());
+        switch (p)
+        {
+            case OpenAiSettings:
+                Assert.Contains($"The model `{p.Model}` does not exist or you do not have access to it", e.Message);
+                break;
+            case GoogleSettings:
+                Assert.Contains($"models/{p.Model} is not found", e.Message);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown provider '{p.GetType().Name}'");
+        }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task WrongUrl(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
 
-        config.Connection.OpenAiSettings.ApiKey = "abc";
-        config.Connection.OpenAiSettings.Endpoint = "https://google.com/v5"; // wrong url
+        if (config.Connection.OpenAiSettings != null)
+        {
+            config.Connection.OpenAiSettings.ApiKey = "abc";
+            config.Connection.OpenAiSettings.Endpoint = "https://google.com/v5"; // wrong url
+        }
+        else if (config.Connection.GoogleSettings != null)
+        {
+            config.Connection.GoogleSettings.ApiKey = "abc";
+            config.Connection.GoogleSettings.Endpoint = "https://google.com/v5"; // wrong url
+        }
+        else
+        {
+            throw new InvalidOperationException("Unknown provider");
+        }
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -276,7 +333,7 @@ public class AiAgentErrors : RavenTestBase
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: System.IO.InvalidDataException:  Cannot have a '<' in this position at  (1,2) ...
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<AiException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         RavenTestHelper.AssertContainsRespectingNewLines("Received an unrecognized response from the server.\r\nStatus Code: NotFound\r\nResponse:\r\nStatusCode: 404, ReasonPhrase: 'Not Found'", e.Message);
     }
@@ -317,7 +374,7 @@ public class AiAgentErrors : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.Google, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task RefusedChat(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

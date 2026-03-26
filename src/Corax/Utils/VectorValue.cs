@@ -19,6 +19,11 @@ public struct VectorValue : IDisposable
         return _memory.Span.Slice(0, _length);
     }
 
+    public Memory<byte> GetEmbeddingMemory()
+    {
+        return _memory.Slice(0, _length);
+    }
+
     public VectorValue()
     {
     }

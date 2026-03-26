@@ -146,7 +146,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
             result[nameof(ForceQueryRecompile)] = ForceQueryRecompile;
             result[nameof(QuoteTables)] = QuoteTables;
             result[nameof(CommandTimeout)] = CommandTimeout;
-            result[nameof(SqlTables)] = new DynamicJsonArray(SqlTables.Select(x => x.ToJson()));
+            result[nameof(SqlTables)] = SqlTables != null ? new DynamicJsonArray(SqlTables.Select(x => x.ToJson())) : null;
 
             return result;
         }

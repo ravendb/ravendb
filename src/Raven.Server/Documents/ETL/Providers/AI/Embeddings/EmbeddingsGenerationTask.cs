@@ -148,8 +148,8 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                     batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
                         embeddingItem.Fields);
                 }
-                // We only wait for embeddings generation here, documents creation (and update) is done in the background
-                // https://issues.hibernatingrhinos.com/issue/RavenDB-24062
+                
+                // Wait for embeddings generation and storage of embeddings cache documents 
                 batch.WaitForGenerationAsync().GetAwaiter().GetResult();
                 storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
                 storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
@@ -159,9 +159,11 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
             {
                 batch.Delete(embeddingItem.DocumentId);
             }
+            
             using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
             {
-                batch.StoreResults().GetAwaiter().GetResult();
+                // Start storing embedding documents and wait for them to be stored
+                batch.StoreDocumentEmbeddingsAsync().GetAwaiter().GetResult();
                 
                 storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
                 storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;

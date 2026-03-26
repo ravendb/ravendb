@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent
 {
@@ -21,7 +20,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ParametersAreKeySensitive(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -35,7 +34,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             chat.SetUserPrompt("what are my recent orders?");
 
-            var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
+            var ex = await Assert.ThrowsAsync<MissingAiAgentParameterException>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
             Assert.Contains("Parameter 'company' is missing", ex.Message);
         }
 
@@ -86,7 +85,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.vLLM, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task ShouldThrowWhenConversationIdIsDocumentId(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);

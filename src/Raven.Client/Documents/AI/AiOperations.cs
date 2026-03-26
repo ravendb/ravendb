@@ -91,6 +91,26 @@ public class AiOperations
     }
 
     /// <summary>
+    /// Asynchronously deletes an AI agent from the database.
+    /// </summary>
+    /// <param name="agentId">The ID of the AI agent to delete.</param>
+    /// <returns>The result of the delete operation.</returns>
+    public Task<AiAgentConfigurationResult> DeleteAgentAsync(string agentId, CancellationToken token = default)
+    {
+        return _executor.SendAsync(new DeleteAiAgentOperation(agentId), token);
+    }
+
+    /// <summary>
+    /// Deletes an AI agent from the database.
+    /// </summary>
+    /// <param name="agentId">The ID of the AI agent to delete.</param>
+    /// <returns>The result of the delete operation.</returns>
+    public AiAgentConfigurationResult DeleteAgent(string agentId)
+    {
+        return AsyncHelpers.RunSync(() => DeleteAgentAsync(agentId));
+    }
+
+    /// <summary>
     /// Retrieves the AI agent configuration for a specific agent asynchronously.
     /// </summary>
     /// <param name="agentId">The ID of the AI agent to retrieve.</param>

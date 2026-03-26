@@ -18,10 +18,12 @@ using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Config;
@@ -847,6 +849,7 @@ namespace Raven.Server.Documents.Patch
                 var obj = new JsObject(ScriptEngine);
                 obj.SetClfFunc("remote", (thisObj, values) => RemoteAttachments(thisObj.Get("doc"), thisObj.Get("name"), values));
                 obj.SetClfFunc("delete", (thisObj, values) => DeleteAttachment(thisObj.Get("doc"), thisObj.Get("name")));
+                obj.SetClfFunc("copyFrom", (thisObj, values) => CopyAttachment(thisObj.Get("doc"), thisObj.Get("name"), values));
                 obj.FastSetDataProperty("doc", args[0]);
                 obj.FastSetDataProperty("name", args[1]);
 
@@ -907,6 +910,55 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 return JsValue.Undefined;
+            }
+
+            private JsValue CopyAttachment(JsValue targetDocument, JsValue targetName, JsValue[] args)
+            {
+                const string signature = "attachments(doc, name).copyFrom(sourceDoc, sourceName)";
+                AssertValidDatabaseContext(signature);
+
+                if (args.Length != 2)
+                    throw new ArgumentException($"{signature}: This method requires 2 arguments but was called with {args.Length}");
+
+                var targetId = GetIdFromArg(targetDocument, signature);
+                var destinationName = GetStringArg(targetName, signature, "name");
+
+                var sourceId = GetIdFromArg(args[0], signature);
+                var sourceName = GetStringArg(args[1], signature, "sourceName");
+
+                try
+                {
+                    _database.DocumentsStorage.AttachmentsStorage.CopyAttachment(
+                        _docsCtx,
+                        sourceId,
+                        sourceName,
+                        targetId,
+                        destinationName,
+                        changeVector: null,
+                        attachmentType: AttachmentType.Document,
+                        updateDocument: false);
+                }
+                catch (AttachmentDoesNotExistException)
+                {
+                    return JsBoolean.False;
+                }
+
+                DocumentAttachmentsToUpdate ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                DocumentAttachmentsToUpdate.Add(targetId);
+
+                if (DebugMode)
+                {
+                    DebugActions.CopyAttachment.Add(new DynamicJsonValue
+                    {
+                        ["SourceDocId"] = sourceId,
+                        ["SourceName"] = sourceName,
+                        ["DestinationDocId"] = targetId,
+                        ["DestinationName"] = destinationName,
+                        ["Exists"] = true
+                    });
+                }
+
+                return JsBoolean.True;
             }
 
             private void GenericSortTwoElementArray(JsValue[] args, [CallerMemberName] string caller = null)

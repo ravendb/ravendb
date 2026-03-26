@@ -10,6 +10,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Embedded;
 using Sparrow.Json.Parsing;
 using Xunit;
+#pragma warning disable xUnit1051
 
 namespace EmbeddedTests
 {

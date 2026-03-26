@@ -1,5 +1,6 @@
 ﻿using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 
@@ -15,6 +16,7 @@ namespace Raven.Server.Utils.Monitoring
         public BackupMetrics Backup { get; set; }
         public CpuMetrics Cpu { get; set; }
         public MemoryMetrics Memory { get; set; }
+        public GcMetrics Gc { get; set; }
         public DiskMetrics Disk { get; set; }
         public LicenseMetrics License { get; set; }
         public NetworkMetrics Network { get; set; }
@@ -34,6 +36,7 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Backup)] = Backup.ToJson(),
                 [nameof(Cpu)] = Cpu.ToJson(),
                 [nameof(Memory)] = Memory.ToJson(),
+                [nameof(Gc)] = Gc.ToJson(),
                 [nameof(Disk)] = Disk.ToJson(),
                 [nameof(License)] = License.ToJson(),
                 [nameof(Network)] = Network.ToJson(),
@@ -134,6 +137,18 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(AvailableMemoryForProcessingInMb)] = AvailableMemoryForProcessingInMb,
                 [nameof(ManagedMemoryInBytes)] = ManagedMemoryInBytes,
                 [nameof(UnmanagedMemoryInBytes)] = UnmanagedMemoryInBytes
+            };
+        }
+    }
+    public sealed class GcMetrics
+    {
+        public GcInfoPayload.GcMemoryInfo Any { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(Any)] = Any?.ToJson()
             };
         }
     }

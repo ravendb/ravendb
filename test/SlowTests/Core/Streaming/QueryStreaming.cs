@@ -14,7 +14,6 @@ using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Core.Streaming
 {

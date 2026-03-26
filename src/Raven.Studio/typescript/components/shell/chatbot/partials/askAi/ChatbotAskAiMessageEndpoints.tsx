@@ -284,11 +284,11 @@ export default function ChatbotAskAiMessageEndpoints({
                 Retrieve endpoints
             </div>
             <div className="p-2">
-                <div className="vstack gap-1">
+                <ul className="tree">
                     {endpoints.map((endpoint) => (
                         <EndpointItem key={endpoint.url} endpoint={endpoint} />
                     ))}
-                </div>
+                </ul>
                 {userActionState === "waiting" ? (
                     <div className="retrieve-endpoints-actions hstack justify-content-between mt-2">
                         <Button
@@ -370,43 +370,54 @@ function EndpointItem({ endpoint }: EndpointItemProps) {
         regex.test(urlObject.pathname)
     );
 
-    return (
-        <div>
-            <div className="hstack w-100 gap-1">
-                <span className="text-nowrap">
-                    <EndpointItemStateIcon state={endpoint.state} />
-                    GET
-                </span>
-                <a href={endpoint.url} target="_blank" className="text-truncate no-decor" title={endpoint.url}>
-                    {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
-                </a>
-                {endpoint.resultSizeInBytes != null && (
-                    <ConditionalPopover
-                        conditions={{
-                            isActive: endpoint.isRequestTooLarge,
-                            message: "Request too large to process",
-                        }}
-                        className="ms-auto"
-                    >
-                        <Badge className="text-nowrap" bg={endpoint.isRequestTooLarge ? "danger" : "secondary"} pill>
-                            {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
-                        </Badge>
-                    </ConditionalPopover>
-                )}
-            </div>
-            {urlWithParamToDisplay?.paramToDisplay && (
+    const paramIds = urlWithParamToDisplay?.paramToDisplay
+        ? urlObject.searchParams.getAll(urlWithParamToDisplay.paramToDisplay)
+        : [];
+    const hasParams = paramIds.length > 0;
+
+    const content = (
+        <div className="hstack w-100 gap-1 d-inline-flex align-items-center">
+            <span className="text-nowrap">
+                <EndpointItemStateIcon state={endpoint.state} />
+                <span className="font-monospace fw-semibold font-size-12">GET</span>
+            </span>
+            <a href={endpoint.url} target="_blank" className="text-truncate no-decor" title={endpoint.url}>
+                {urlWithParamToDisplay ? urlObject.pathname : endpoint.url}
+            </a>
+            {endpoint.resultSizeInBytes != null && (
+                <ConditionalPopover
+                    conditions={{
+                        isActive: endpoint.isRequestTooLarge,
+                        message: "Request too large to process",
+                    }}
+                    className="ms-auto"
+                >
+                    <Badge className="text-nowrap" bg={endpoint.isRequestTooLarge ? "danger" : "secondary"} pill>
+                        {genUtils.formatBytesToSize(endpoint.resultSizeInBytes)}
+                    </Badge>
+                </ConditionalPopover>
+            )}
+        </div>
+    );
+
+    if (hasParams) {
+        return (
+            <li className="branch">
+                {content}
                 <ul>
-                    {urlObject.searchParams.getAll(urlWithParamToDisplay.paramToDisplay).map((id) => (
-                        <li key={id}>
+                    {paramIds.map((id) => (
+                        <li key={id} className="leaf">
                             <span className="d-block text-truncate" title={id}>
                                 {id}
                             </span>
                         </li>
                     ))}
                 </ul>
-            )}
-        </div>
-    );
+            </li>
+        );
+    }
+
+    return <li className="leaf">{content}</li>;
 }
 
 function EndpointItemStateIcon({ state }: Pick<ChatbotEndpointItem, "state">) {
@@ -422,7 +433,7 @@ function EndpointItemStateIcon({ state }: Pick<ChatbotEndpointItem, "state">) {
             return <Icon icon="cancel" />;
         case "waiting":
         default:
-            return <span className="me-1">-</span>;
+            return null;
     }
 }
 

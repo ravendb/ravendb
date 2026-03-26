@@ -1,5 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
+
+type AiAgentParameterValueType = Raven.Client.Documents.Operations.AI.Agents.AiAgentParameterValueType;
 
 const schema = yup.object({
     prompts: yup.array().of(
@@ -10,13 +13,15 @@ const schema = yup.object({
     parameters: yup.array().of(
         yup.object({
             name: yup.string().nullable(),
-            value: yup
-                .string()
-                .nullable()
-                .when("$areParametersRequired", {
-                    is: true,
+            value: aiAgentParametersUtils
+                .createValueSchema(yup.string().nullable())
+                .when(["$areParametersRequired", "type"], {
+                    is: (areParametersRequired: boolean, type: AiAgentParameterValueType) =>
+                        areParametersRequired && type !== "Null",
                     then: (schema) => schema.required(),
                 }),
+            type: yup.string<AiAgentParameterValueType>(),
+            isSendToModel: yup.boolean(),
         })
     ),
 

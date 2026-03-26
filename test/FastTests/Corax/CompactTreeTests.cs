@@ -1,10 +1,10 @@
+using System;
 using System.Collections.Generic;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
@@ -221,7 +221,106 @@ public class CompactTreeTests(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(1898, value);
         }
     }
+    
+    [RavenFact(RavenTestCategory.Voron)]
+    public void TestSeekForBackwardIteratorUsingMultiplePagesDouble()
+    {
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.LookupFor<DoubleLookupKey>("test");
 
+            for (int i = 0; i < 5_000; i += 2)
+            {
+                tree.Add(new DoubleLookupKey(i), i);
+            }
+            
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.LookupFor<DoubleLookupKey>("test");
+            
+            // 4998 4996 ... 2 0
+            var it = tree.Iterate<Lookup<DoubleLookupKey>.BackwardIterator>();
+
+            var numberOfPages = tree.AllPages().Count;
+            
+            Assert.Equal(5, numberOfPages);
+
+            bool moveNext;
+            long value;
+            
+            it.Reset();
+            it.Seek<DoubleLookupKey>(2);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(2, value);
+            
+            it.Reset();
+            it.Seek<DoubleLookupKey>(1900);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(1900, value);
+            
+            it.Reset();
+            it.Seek<DoubleLookupKey>(3);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(2, value);
+            
+            it.Reset();
+            it.Seek<DoubleLookupKey>(1899);
+            moveNext = it.MoveNext(out value);
+            Assert.True(moveNext);
+            Assert.Equal(1898, value);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void TestIterateValuesStringBackward()
+    {
+        List<(string, long)> order = new();
+        using (var wtx = Env.WriteTransaction())
+        {
+            var tree = wtx.CompactTreeFor("test");
+
+            for (int i = 0; i < 5_000; i += 1)
+            {
+                var str = $"{i:000000}";
+                order.Add((str, i));
+                tree.Add(str, i);
+            }
+            
+            wtx.Commit();
+        }
+
+        using (var rtx = Env.ReadTransaction())
+        {
+            var tree = rtx.CompactTreeFor("test");
+            
+            // 4998 4996 ... 2 0
+            var backwardIterator = tree.IterateValues<Lookup<CompactTree.CompactKeyLookup>.BackwardIterator>();
+            backwardIterator.Reset();
+
+            Span<long> values = stackalloc long[16];
+            while (backwardIterator.Fill(values) is var read and > 0)
+            {
+                var toCheck = values[..read];
+
+                for (int i = 0; i < read; i++)
+                {
+                    var current = toCheck[i];
+                    var expected = order[^1];
+                    Assert.Equal(expected.Item2, current);
+                    order.RemoveAt(order.Count - 1);
+                }
+            }
+            
+            Assert.Empty(order);
+        }
+    }
+    
     [RavenFact(RavenTestCategory.Voron)]
     public void CanProperlyResetIterator()
     {

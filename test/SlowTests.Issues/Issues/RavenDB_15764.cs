@@ -3,7 +3,6 @@ using Newtonsoft.Json.Linq;
 using Sparrow.Extensions;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

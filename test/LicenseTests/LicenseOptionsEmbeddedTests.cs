@@ -116,7 +116,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_InvalidLicense_SystemEnvironmentVariableLicense_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
                 StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -139,7 +139,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_InvalidLicense_ServerOptionLicense_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -161,7 +161,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
     public void VerifyLicense_EnforceTrue_InvalidLicense_SystemEnvironmentVariableLicensePath_ShouldThrow()
     {
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -182,7 +182,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     [RavenFact(RavenTestCategory.Embedded | RavenTestCategory.Licensing)]
     public void VerifyLicense_EnforceTrue_InvalidLicense_ServerOptionLicensePath_ShouldThrow()
     {
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out _));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -204,7 +204,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_NoLicense_SystemEnvironmentVariableLicense_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
                 StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, license: null, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -227,7 +227,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_NoLicense_ServerOptionLicense_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, license: null, LicenseSource.ServerOption, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -250,7 +250,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_NoLicense_SystemEnvironmentVariableLicensePath_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, license: null, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicensePathConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -273,7 +273,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     public void VerifyLicense_EnforceTrue_NoLicense_ServerOptionLicensePath_ShouldThrow()
     {
         ServerOptions options = null;
-        var exception = Assert.Throws(typeof(AggregateException), () =>
+        var exception = Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, license: null, LicenseSource.ServerOption, LicenseOptionTestHelper.LicensePathConfigurationKey, out options));
 
         var expectedMessageBuilder = new LicenseVerificationErrorBuilderForTestingPurposes();
@@ -298,7 +298,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
         var sw = Stopwatch.StartNew();
 
         ServerOptions options = null;
-        Assert.Throws(typeof(AggregateException), () =>
+        Assert.Throws<AggregateException>( () =>
             StartEmbeddedServerLicenseOptionTest(throwOnInvalidOrMissingLicense: true, LicenseOptionTestHelper.InvalidLicense, LicenseSource.EnvironmentVariable, LicenseOptionTestHelper.LicenseConfigurationKey, out options));
 
         Assert.True(sw.ElapsedMilliseconds < options.MaxServerStartupTimeDuration.TotalMilliseconds,

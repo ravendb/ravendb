@@ -36,11 +36,15 @@ export default function useToolQueryDetails({
         return matches.map((x) => ({ key: x, value: parametersFromUser?.[x] })).filter((x) => x.value);
     };
 
-    const getArgumentFormattedValue = (value: string): string => {
-        if (typeof value === "number") {
-            return value;
+    const getArgumentFormattedValue = (
+        value: string | Raven.Client.Documents.AI.AiConversationParameter
+    ): string | number => {
+        const extractedValue = typeof value === "object" && "Value" in value ? value.Value : value;
+
+        if (typeof extractedValue === "number") {
+            return extractedValue;
         }
-        return JSON.stringify(value);
+        return JSON.stringify(extractedValue);
     };
 
     const getQueryWithParameters = (): string => {

@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import d3 = require("d3");
+import moment = require("moment");
 import captureLocalStackTracesCommand = require("commands/maintenance/captureLocalStackTracesCommand");
 import captureClusterStackTracesCommand = require("commands/maintenance/captureClusterStackTracesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -606,7 +607,18 @@ class captureStackTraces extends viewModelBase {
             Results: captureStackTraces.reverseStacks(this.data.Results),
             Threads: this.data.Threads
         };
-        fileDownloader.downloadAsJson(dataCopy, "stacks.json");
+
+        const utcDate = moment.utc().format('YYYY-MM-DD[T]HH-mm-ss[Z]');
+
+        let fileName: string;
+        if (this.clusterWide()) {
+            fileName = "Cluster wide stack-traces " + utcDate + ".json";
+        } else {
+            const nodeTag = clusterTopologyManager.default.localNodeTag();
+            fileName = "Node " + (nodeTag || "unknown") + " stack-traces " + utcDate + ".json";
+        }
+        
+        fileDownloader.downloadAsJson(dataCopy, fileName);
     }
 
     fileSelected(fileInput: HTMLInputElement) {

@@ -8,7 +8,6 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Cluster
 {

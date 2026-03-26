@@ -13,7 +13,6 @@ using Raven.Server.Config;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
-using Xunit.Abstractions;
 using VectorEmbeddingType = Raven.Client.Documents.Indexes.Vector.VectorEmbeddingType;
 
 namespace FastTests.Corax.Vectors;

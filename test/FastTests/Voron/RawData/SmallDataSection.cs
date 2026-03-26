@@ -9,7 +9,6 @@ using Sparrow;
 using Tests.Infrastructure;
 using Voron.Data.RawData;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Voron.RawData
 {

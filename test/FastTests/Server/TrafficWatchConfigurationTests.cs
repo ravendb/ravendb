@@ -4,7 +4,6 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Sparrow;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server

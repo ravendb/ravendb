@@ -4,8 +4,8 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
 using Tests.Infrastructure;
-using Xunit.Abstractions;
 using Assert = Xunit.Assert;
+using Xunit;
 
 namespace SlowTests.Issues;
 

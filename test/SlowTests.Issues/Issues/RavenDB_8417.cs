@@ -4,7 +4,6 @@ using Orders;
 using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Linq;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

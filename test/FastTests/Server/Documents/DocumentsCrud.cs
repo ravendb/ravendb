@@ -8,7 +8,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
-using Xunit.Abstractions;
 using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents
@@ -587,10 +586,10 @@ namespace FastTests.Server.Documents
             }
         }
 
-        public override void Dispose()
+        public override async ValueTask DisposeAsync()
         {
             _disposeDatabase?.Dispose();
-            base.Dispose();
+            await base.DisposeAsync();
         }
     }
 }

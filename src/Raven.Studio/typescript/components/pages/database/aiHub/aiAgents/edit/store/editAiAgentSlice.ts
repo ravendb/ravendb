@@ -5,6 +5,7 @@ import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
+import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
@@ -15,6 +16,7 @@ interface EditAiAgentState {
     testDocument: documentDto;
     runTestState: loadStatus;
     isWaitingForActionToolSubmit: boolean;
+    allIdentifiers?: string[];
 }
 
 const initialState: EditAiAgentState = {
@@ -26,6 +28,7 @@ const initialState: EditAiAgentState = {
     testDocument: null,
     runTestState: "idle",
     isWaitingForActionToolSubmit: false,
+    allIdentifiers: [],
 };
 
 export const editAiAgentSlice = createSlice({
@@ -66,9 +69,15 @@ export const editAiAgentSlice = createSlice({
             state.runTestState = "success";
             state.testDocument = action.payload.result.Document;
 
-            const messages = action.payload.result.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
+            const { result, configuration } = action.payload;
 
-            state.testMessages = aiAgentsUtils.mergeToolResults(messages, action.payload.allQueriesNames);
+            state.testMessages = aiAgentsUtils.mapMessagesFromDoc({
+                docMessages: result.Document.Messages,
+                config: configuration,
+            });
+        });
+        builder.addCase(getAllIdentifiers.fulfilled, (state, action) => {
+            state.allIdentifiers = action.payload;
         });
     },
 });
@@ -92,11 +101,13 @@ const runTest = createAsyncThunk(
             configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
             testFormValues: TestAiAgentFormData;
             toolCallParameters?: AiAgentToolCall[];
-            allQueriesNames: string[];
         },
         { getState }
-    ): Promise<{ result: AiAgentRunResult; allQueriesNames: string[] }> => {
-        const { databaseName, configuration, testFormValues, toolCallParameters, allQueriesNames } = payload;
+    ): Promise<{
+        result: AiAgentRunResult;
+        configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
+    }> => {
+        const { databaseName, configuration, testFormValues, toolCallParameters } = payload;
 
         const state = getState() as RootState;
         const testDocument = state.editAiAgent.testDocument;
@@ -111,16 +122,48 @@ const runTest = createAsyncThunk(
             Document: testDocument,
             RequestBody: undefined,
             CreationOptions: {
-                Parameters: Object.fromEntries(testFormValues.parameters.map((item) => [item.name, item.value])),
+                Parameters: createParametersDto(testDocument, testFormValues.parameters),
             },
         });
 
-        return { result, allQueriesNames };
+        return { result, configuration };
+    }
+);
+
+function createParametersDto(
+    testDocument: documentDto,
+    formParameters: TestAiAgentFormData["parameters"]
+): Record<string, Raven.Client.Documents.AI.AiConversationParameter> {
+    if (testDocument) {
+        return null;
+    }
+
+    return Object.fromEntries(
+        formParameters.map((x) => [
+            x.name,
+            {
+                Value: aiAgentParametersUtils.mapParameterValueToType(x.value, x.type),
+                SendToModel: x.isSendToModel,
+            },
+        ])
+    );
+}
+
+const getAllIdentifiers = createAsyncThunk(
+    editAiAgentSlice.name + "/getAllIdentifiers",
+    async (databaseName: string): Promise<string[]> => {
+        const result = await services.aiAgentService.getAiAgents(databaseName);
+        if (!result) {
+            return [];
+        }
+
+        return result.AiAgents.map((agent) => agent.Identifier);
     }
 );
 
 export const editAiAgentActions = {
     ...editAiAgentSlice.actions,
+    getAllIdentifiers,
     getIsDocumentExpirationEnabled,
     runTest,
 };
@@ -134,4 +177,5 @@ export const editAiAgentSelectors = {
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
     runTestState: (state: RootState) => state.editAiAgent.runTestState,
     isWaitingForActionToolSubmit: (state: RootState) => state.editAiAgent.isWaitingForActionToolSubmit,
+    allIdentifiers: (state: RootState) => state.editAiAgent.allIdentifiers,
 };

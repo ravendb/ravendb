@@ -5,7 +5,6 @@ using Raven.Client.Documents.Linq.Indexing;
 using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Corax.Bugs;
 

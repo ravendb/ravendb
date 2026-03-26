@@ -6,7 +6,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.AI.AiAgent;
 
@@ -25,6 +24,8 @@ public class RavenDB_24883 : RavenTestBase
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var agent = AiAgentClientApiHandleActionCalls.BuildAgent(config.ConnectionStringName);
+        agent.Actions.RemoveAll(a => a.Name == AiAgentClientApiHandleActionCalls.ProductSearch);
+
         var r  = await store.AI.CreateAgentAsync(agent, new 
         {
             Answer = "the answer"

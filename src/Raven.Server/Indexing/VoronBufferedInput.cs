@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
 using Raven.Client.Extensions.Streams;
-using Voron.Data;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing;
@@ -18,7 +17,7 @@ public sealed class VoronBufferedInput : BufferedIndexInput
     private readonly LuceneVoronDirectory _directory;
     private readonly string _name;
     private readonly string _tree;
-    private VoronStream _stream;
+    private LuceneVoronStream _stream;
     private bool _isDisposed = false;
 
     private bool _isOriginal = true;

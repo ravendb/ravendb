@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Commands;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

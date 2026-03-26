@@ -6,7 +6,6 @@ using Voron.Data.RawData;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Xunit;
-using Xunit.Abstractions;
 
 using Tests.Infrastructure;
 namespace SlowTests.Issues

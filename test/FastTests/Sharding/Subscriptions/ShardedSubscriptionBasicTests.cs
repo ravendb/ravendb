@@ -17,7 +17,6 @@ using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests.Sharding.Subscriptions
 {

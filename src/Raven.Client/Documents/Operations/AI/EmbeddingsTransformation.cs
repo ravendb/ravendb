@@ -4,14 +4,23 @@ using System.Text.RegularExpressions;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Describes a JavaScript transformation used to generate embeddings from documents.
+/// </summary>
 public class EmbeddingsTransformation
 {
     internal const string GenerateEmbeddingsFunctionName = "embeddings.generate";
 
     private static readonly Regex EmbeddingsGenerateRegex = new Regex(GenerateEmbeddingsFunctionName, RegexOptions.Compiled);
 
+    /// <summary>
+    /// The JavaScript script that calls <c>embeddings.generate(...)</c> to produce vector embeddings.
+    /// </summary>
     public string Script { get; set; }
 
+    /// <summary>
+    /// Chunking behavior to apply to the text prior to generating embeddings.
+    /// </summary>
     public ChunkingOptions ChunkingOptions { get; set; } = new() { ChunkingMethod = ChunkingMethod.PlainTextSplit, MaxTokensPerChunk = 256 };
 
     internal void Validate(List<string> errors)
@@ -21,6 +30,9 @@ public class EmbeddingsTransformation
         ChunkingOptions.Validate(GenerateEmbeddingsFunctionName, errors);
     }
 
+    /// <summary>
+    /// Validates that the script contains at least one call to <c>embeddings.generate</c>.
+    /// </summary>
     private void ValidateScript(List<string> errors)
     {
         var match = EmbeddingsGenerateRegex.Match(Script);

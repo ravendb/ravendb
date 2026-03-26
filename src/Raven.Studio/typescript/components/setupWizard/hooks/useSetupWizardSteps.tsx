@@ -55,7 +55,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Setup method",
-            description: "Choose your setup method",
+            description: getSetupMethodDescription(setupMethod),
             component: <SetupWizardSetupMethodStep />,
             footer: <SetupWizardSetupMethodStepFooter />,
             isCurrent: currentStep === "Setup method",
@@ -64,7 +64,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Use setup package",
-            description: "Use setup package",
+            description: "Continue setup from existing package",
             component: <SetupWizardUsePackageStep />,
             footer: <SetupWizardUsePackageStepFooter />,
             isCurrent: currentStep === "Use setup package",
@@ -82,7 +82,7 @@ export function useSetupWizardSteps({
         },
         {
             title: "Security",
-            description: "Choose a security option",
+            description: getSecurityOptionDescription(securityOption),
             component: <SetupWizardSecurityStep />,
             footer: <SetupWizardSecurityStepFooter />,
             isCurrent: currentStep === "Security",
@@ -150,3 +150,29 @@ export function useSetupWizardSteps({
 
     return steps.filter((x) => x.isAvailable);
 }
+
+const getSetupMethodDescription = (setupMethod: SetupWizardSetupMethod) => {
+    switch (setupMethod) {
+        case "newCluster":
+            return "Set up new cluster";
+        case "createPackage":
+            return "Create package for external setup";
+        case "usePackage":
+            return "Use setup package";
+        default:
+            return "Choose your setup method";
+    }
+};
+
+const getSecurityOptionDescription = (securityOption: SetupWizardSecurityOption) => {
+    switch (securityOption) {
+        case "letsEncrypt":
+            return "Generate Let's Encrypt certificate";
+        case "ownCertificate":
+            return "Provide your own certificate";
+        case "none":
+            return "Don't use certificate";
+        default:
+            return "Choose a security option";
+    }
+};

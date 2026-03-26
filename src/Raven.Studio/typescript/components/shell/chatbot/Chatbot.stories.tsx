@@ -4,6 +4,7 @@ import Chatbot from "./Chatbot";
 import { mockStore } from "test/mocks/store/MockStore";
 import { ChatbotStubs } from "test/stubs/ChatbotStubs";
 import { ChatbotUserActionState } from "components/shell/chatbot/store/chatbotSlice";
+import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 
 export default {
     title: "Shell/Chatbot",
@@ -15,6 +16,7 @@ function commonInit() {
 
     license.with_License();
     cluster.with_ClientVersion("7.2");
+    cluster.with_ServerVersion();
     aiAssistant.with_consent("Success");
     chatbot.with_isOpen(true);
     chatbot.with_isAlwaysAllowEndpointCalls(false);
@@ -90,6 +92,36 @@ export const Endpoints: StoryObj<{ actionState: ChatbotUserActionState }> = {
                 "denied",
                 "error",
             ] satisfies ChatbotUserActionState[],
+        },
+    },
+};
+
+export const Empty: StoryObj = {
+    render: () => {
+        commonInit();
+
+        return <ChatbotInLayout />;
+    },
+};
+
+export const NoConsent: StoryObj<{ consent: CheckConsentAiAssistantResultDto["Status"] }> = {
+    render: (args) => {
+        const { chatbot, aiAssistant, license, cluster } = mockStore;
+
+        license.with_License();
+        cluster.with_ClientVersion("7.2");
+        aiAssistant.with_consent(args.consent);
+        chatbot.with_isOpen(true);
+
+        return <ChatbotInLayout />;
+    },
+    args: {
+        consent: "ConsentRequired",
+    },
+    argTypes: {
+        consent: {
+            control: { type: "radio" },
+            options: ["ConsentRequired", "InvalidCredentials"] satisfies CheckConsentAiAssistantResultDto["Status"][],
         },
     },
 };

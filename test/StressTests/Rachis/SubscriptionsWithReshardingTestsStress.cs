@@ -13,7 +13,6 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using static SlowTests.Sharding.Cluster.SubscriptionsWithReshardingTests;
 
 // ReSharper disable ClassNeverInstantiated.Local

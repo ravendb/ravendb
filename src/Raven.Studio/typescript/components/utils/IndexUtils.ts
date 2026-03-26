@@ -73,6 +73,19 @@ export default class IndexUtils {
         }
     }
 
+    static formatActionLockMode(lockMode: IndexLockMode) {
+        switch (lockMode) {
+            case "LockedIgnore":
+                return "Lock (ignore)";
+            case "LockedError":
+                return "Lock (error)";
+            case "Unlock":
+                return "Unlock";
+            default:
+                assertUnreachable(lockMode);
+        }
+    }
+
     static getLockIcon(lockMode: IndexLockMode): IconName {
         switch (lockMode) {
             case "Unlock":

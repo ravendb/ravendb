@@ -345,6 +345,7 @@ class shell extends viewModelBase {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             .done(
                 (
+                    // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     [license]: [LicenseStatus],
                     // eslint-disable-next-line @typescript-eslint/no-unused-vars
                     [topology]: [Raven.Server.NotificationCenter.Notifications.Server.ClusterTopologyChanged],

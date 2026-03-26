@@ -12,7 +12,6 @@ using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Tests.Infrastructure.Utils;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {

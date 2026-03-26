@@ -6,7 +6,6 @@ using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Client.TimeSeries.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Tools.RecoveryTests
 {

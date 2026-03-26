@@ -11,7 +11,6 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Sharding.Cluster
 {
@@ -87,7 +86,7 @@ namespace SlowTests.Sharding.Cluster
                         var topology = res.Sharding.Shards[SrcShard];
 
                         return topology.Members.Contains(bringBackNode);
-                    }, true, timeout: 30_000);
+                    }, true, timeout: 70_000);
                     Assert.True(added, $"didn't revive node {bringBackNode} on time");
 
                     SrcShard = destShard;
@@ -127,7 +126,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                     return record.Sharding.BucketMigrations.Count == 0;
-                }, expectedVal: true, timeout: 15000);
+                }, expectedVal: true, timeout: 15_000);
 
                 Assert.True(finished, "The migration didn't finish in time.");
             }

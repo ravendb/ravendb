@@ -8,7 +8,6 @@ using FastTests;
 using Sparrow.Server.Utils.DiskStatsGetter;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Monitoring
 {

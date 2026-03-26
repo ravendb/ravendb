@@ -2,7 +2,6 @@
 using FastTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Revisions
 {

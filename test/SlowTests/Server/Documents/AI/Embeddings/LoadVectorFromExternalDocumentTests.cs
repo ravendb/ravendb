@@ -11,20 +11,19 @@ using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using System.Threading.Tasks;
 
 namespace SlowTests.Server.Documents.AI.Embeddings;
 
 public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : EmbeddingsGenerationTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexSingleVectorGeneratedByEtlForDifferentDocument() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByName>();
     
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexSingleVectorGeneratedByEtlForDifferentDocumentExplicitCollectionName() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByNameExplicitCollection>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexSingleVectorGeneratedByEtlForDifferentDocumentJs() => await CanIndexSingleVectorGeneratedByEtlBase<IndexByNameJs>();
 
     private async Task CanIndexSingleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
@@ -110,13 +109,13 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["sdklfjklsadjkl;assdjaskll"], dtoId);
     }
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexMultipleVectorGeneratedByEtlForDifferentDocumentExplicitCollectionName() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesExplicitCollection>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexMultipleVectorGeneratedByEtlForDifferentDocument() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNames>();
     
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexMultipleVectorGeneratedByEtlForDifferentDocumentJs() => await CanIndexMultipleVectorGeneratedByEtlBase<IndexByNamesJs>();
 
     private async Task CanIndexMultipleVectorGeneratedByEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
@@ -198,13 +197,13 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
         AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Names", ["sdklfjklsadjkl;assdjaskll"], dtoId);
     }
     
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexVectorFromTwoDifferentEtlExplicitCollectionName() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsExplicitCollection>();
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexVectorFromTwoDifferentEtl() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFields>();
     
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public async Task CanIndexVectorFromTwoDifferentEtlJs() => await CanIndexVectorFromTwoDifferentEtlBase<IndexByFieldTwoFieldsJs>();
 
     private async Task CanIndexVectorFromTwoDifferentEtlBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()
@@ -297,10 +296,10 @@ public class LoadVectorFromExternalDocumentTests(ITestOutputHelper output) : Emb
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config2.Identifier), new AiConnectionStringIdentifier(connectionString2.Identifier), "Names", ["Jimmy"], id);
     }
 
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public Task CanLoadVectorsFromTwoDifferentCollections() => CanLoadVectorsFromTwoDifferentCollectionsBase<IndexByNamesFromCurrentAndDifferentCollection>();
     
-    [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenMultiplatformFact(RavenTestCategory.Etl | RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
     public Task CanLoadVectorsFromTwoDifferentCollectionJs() => CanLoadVectorsFromTwoDifferentCollectionsBase<IndexByNamesFromCurrentAndDifferentCollectionJs>();
     
     private async Task CanLoadVectorsFromTwoDifferentCollectionsBase<TIndex>() where TIndex : AbstractIndexCreationTask, new()

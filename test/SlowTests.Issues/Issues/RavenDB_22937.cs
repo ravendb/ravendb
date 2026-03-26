@@ -8,7 +8,6 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
 using Xunit;
-using Xunit.Abstractions;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.Analyzers;
 using Raven.Client.Documents.Operations.Backups;

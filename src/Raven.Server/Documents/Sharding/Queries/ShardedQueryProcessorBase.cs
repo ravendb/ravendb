@@ -91,8 +91,10 @@ public abstract class ShardedQueryProcessorBase<TCombinedResult> : AbstractShard
             var orderByFields = Query.Metadata.CachedOrderBy ?? Query.Metadata.OrderBy;
             if (orderByFields?.Length > 0)
             {
+                DocumentsComparer.RetrieveConfigurationForDocumentsComparer(RequestHandler.DatabaseContext, result.IndexName, out var nullFirst, out bool acceptMissing);
+                
                 // apply ordering after the re-reduce of a map-reduce index
-                result.Results.Sort(new DocumentsComparer(orderByFields, extractFromData: true, Query.Metadata.HasOrderByRandom));
+                result.Results.Sort(new DocumentsComparer(orderByFields, extractFromData: true, Query.Metadata.HasOrderByRandom, nullFirst, acceptMissing));
             }
         }
     }
