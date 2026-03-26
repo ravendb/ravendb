@@ -4,22 +4,17 @@ using Parquet;
 using Voron;
 using Voron.Data.Graphs;
 
-string[] Files = [
-                 "train-00000-of-00004-1a1932c9ca1c7152.parquet",
-                 "train-00001-of-00004-f4a4f5540ade14b4.parquet",
-                 "train-00002-of-00004-ff770df3ab420d14.parquet",
-                 "train-00003-of-00004-85b3dbbc960e92ec.parquet"
-             ];
+string[] files = ["wikipedia-22-12-simple-embeddings_train.parquet",];
+
 var dbPath = Path.GetFullPath("vectors");
 if (Directory.Exists(dbPath))
 {
     Directory.Delete(dbPath, true);
 }
 
-var sp = Stopwatch.StartNew();
 await ImportData(dbPath);
-Console.WriteLine(sp.Elapsed);
-sp.Restart();
+
+var sp = Stopwatch.StartNew();
 TestRecall(dbPath);
 Console.WriteLine(sp.Elapsed);
 
@@ -36,7 +31,7 @@ void TestRecall(string path)
     var ennMatches = new long[resultsCount];
     var ennDistances = new float[resultsCount];
     long results = 0;
-    foreach (var file in Files)
+    foreach (var file in files)
     {
         using var txr = env.ReadTransaction();
         using var _ = Slice.From(txr.Allocator, "wiki", out var wikiTreeName);
@@ -84,13 +79,15 @@ async Task ImportData(string path)
     Console.WriteLine(options.BasePath.FullPath);
     using var env = new StorageEnvironment(options);
 
+    TimeSpan import = TimeSpan.Zero;
+    
     using (var txw = env.WriteTransaction())
     {
         Hnsw.Create(txw.LowLevelTransaction, "wiki", 768 * 4, 12, 40, VectorEmbeddingType.Single);
         txw.Commit();
     }
 
-    foreach (var file in Files)
+    foreach (var file in files)
     {
         var fullPath = Path.Combine(Path.GetTempPath(), "Vector.Benchmark", file);
         if (File.Exists(fullPath) is false)
@@ -101,6 +98,7 @@ async Task ImportData(string path)
         foreach (var (ids, vectors) in YieldVectors(fullPath))
         {
             var batch = Stopwatch.StartNew();
+            
             using (var txw = env.WriteTransaction())
             {
                 using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "wiki"))
@@ -115,11 +113,15 @@ async Task ImportData(string path)
                 }
                 txw.Commit();
             }
-            Console.WriteLine($" * {ids.Length:N0} - {batch.Elapsed}");
+
+            var elapsed = batch.Elapsed;
+            Console.WriteLine($" * {ids.Length:N0} - {elapsed}");
+            import += elapsed;
         }
     }
+    
+    Console.WriteLine($"Import took: {import}");
 }
-
 
 static IEnumerable<(int[], float[])> YieldVectors(string filePath)
 {
@@ -138,14 +140,17 @@ static IEnumerable<(int[], float[])> YieldVectors(string filePath)
 
 static async Task DownloadFile(string fullPath)
 {
-    const string url = "https://huggingface.co/datasets/Cohere/wikipedia-22-12-simple-embeddings/resolve/main/data/";
+    const string url = "https://hub.oxen.ai/api/repos/Cohere/wikipedia-22-12-simple-embeddings/file/main/";
 
     Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
     using (HttpClient client = new())
     {
         client.Timeout = TimeSpan.FromHours(1); // Set timeout to a reasonable value for large files
+        
+        string path = url + Path.GetFileName(fullPath);
+        var request = new HttpRequestMessage(HttpMethod.Get, path);
 
-        using (var response = await client.GetAsync(url + Path.GetFileName(fullPath), HttpCompletionOption.ResponseHeadersRead))
+        using (var response = await client.GetAsync(path, HttpCompletionOption.ResponseHeadersRead))
         {
             response.EnsureSuccessStatusCode();
 
