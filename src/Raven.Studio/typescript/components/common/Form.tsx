@@ -21,7 +21,7 @@ import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
 import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
-import DatePicker from "./DatePicker";
+import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
 import PathSelector, { PathSelectorProps, PathSelectorStateRef } from "components/common/pathSelector/PathSelector";
 import { OmitIndexSignature } from "components/utils/common";
@@ -523,7 +523,7 @@ export function FormDurationPicker<
 export function FormDatePicker<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->(props: FormElementProps<TFieldValues, TName> & Omit<ComponentProps<typeof DatePicker>, "onChange"> & AddonProps) {
+>(props: FormElementProps<TFieldValues, TName> & DatePickerProps & AddonProps) {
     const { name, control, defaultValue, rules, shouldUnregister, addon, ...rest } = props;
 
     const {
@@ -538,17 +538,19 @@ export function FormDatePicker<
         shouldUnregister,
     });
 
+    const datePickerProps: DatePickerProps = {
+        ...rest,
+        selected: value,
+        onChange,
+        isInvalid: invalid,
+        disabled: formState.isSubmitting || rest.disabled,
+    };
+
     return (
         <div className="position-relative flex-grow-1 z-2">
             <div className="d-flex flex-grow-1">
                 <InputGroup>
-                    <DatePicker
-                        selected={value}
-                        onChange={onChange}
-                        isInvalid={invalid}
-                        disabled={formState.isSubmitting}
-                        {...rest}
-                    />
+                    <DatePicker {...datePickerProps} />
                     {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
                 </InputGroup>
             </div>
