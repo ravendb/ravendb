@@ -212,7 +212,6 @@ function createUserPromptDto(
     return prompts[0].text;
 }
 
-// TODO ask shahar
 function createParametersDto(
     conversationId: string,
     formParameters: ChatAiAgentFormData["parameters"]
