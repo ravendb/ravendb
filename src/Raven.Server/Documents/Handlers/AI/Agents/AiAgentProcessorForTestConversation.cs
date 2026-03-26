@@ -55,6 +55,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
     {
         private Dictionary<string, BlittableJsonReaderObject> _documents;
         private DocumentsOperationContext _documentsContext;
+        private readonly DocumentDatabase _database = database;
 
         protected override DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
         {
@@ -63,19 +64,16 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             // and allows us to safely update only this scope in `UpdateDocuments`.
             var relevantDocuments = _documents.Where(kvp => IsSelfOrChild(conversationId, kvp.Key)).ToDictionary();
 
+            var baseJson = base.CreateAgentRequest(agent, conversationId, prompt, actionResponses, creationOptions);
+            var content = (DynamicJsonValue)baseJson[nameof(GetRequest.Content)];
+            content[nameof(AiAgentTestRequest.Configuration)] = GetAiAgentConfiguration(agent).ToJson();
+            content[nameof(AiAgentTestRequest.Documents)] = DynamicJsonValue.Convert(relevantDocuments);
             return new DynamicJsonValue
             {
-                [nameof(GetRequest.Url)] = $"/databases/{database.Name}/ai/agent/test",
+                [nameof(GetRequest.Url)] = $"/databases/{_database.Name}/ai/agent/test",
                 [nameof(GetRequest.Query)] = new StringBuilder("?").Append("conversationId=").Append(Uri.EscapeDataString(conversationId)).ToString(),
                 [nameof(GetRequest.Method)] = "POST",
-                [nameof(GetRequest.Content)] = new DynamicJsonValue
-                {
-                    [nameof(AiAgentTestRequest.UserPrompt)] = prompt,
-                    [nameof(AiAgentTestRequest.Configuration)] = GetAiAgentConfiguration(agent).ToJson(),
-                    [nameof(AiAgentTestRequest.ActionResponses)] = actionResponses,
-                    [nameof(AiAgentTestRequest.CreationOptions)] = creationOptions,
-                    [nameof(AiAgentTestRequest.Documents)] = DynamicJsonValue.Convert(relevantDocuments)
-                }
+                [nameof(GetRequest.Content)] = content
             };
         }
 
