@@ -321,10 +321,16 @@ namespace Voron.Data.BTrees
             var pieces = ReadTreeChunks(key, out var tree);
             if (pieces == null)
                 return null;
-            return new VoronStream(tree.Name, pieces, _llt);
+            return new VoronStream(pieces, _llt);
         }
 
-        internal bool IsInlineStream(Slice key, out byte* data, out int dataSize)
+        public bool IsInlineStream(string key, out byte* data, out int dataSize)
+        {
+            using (Slice.From(_tx.Allocator, key, out Slice str))
+                return IsInlineStream(str, out data, out dataSize);
+        }
+
+        public bool IsInlineStream(Slice key, out byte* data, out int dataSize)
         {
             data = null;
             dataSize = 0;

@@ -21,22 +21,23 @@ public sealed unsafe class LuceneVoronStream
 
     private readonly VoronStream _voronStream;     // non-null when chunk-based
     private readonly UnmanagedVoronStream _inlineStream;  // non-null when inline
-    private readonly Slice _name;
     private readonly string _treeName;
+    private readonly string _name;
     private LowLevelTransaction _llt;
 
     /// <summary>Chunk-based stream constructor.</summary>
-    public LuceneVoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
+    public LuceneVoronStream(string name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
     {
         _name = name;
-        _voronStream = new VoronStream(name, chunksDetails, llt);
+        _voronStream = new VoronStream(chunksDetails, llt);
         Stream = _voronStream;
+        _name = name;
         _llt = llt;
         RegisterTransactionCleanup();
     }
 
     /// <summary>Inline (unmanaged pointer) stream constructor.</summary>
-    public LuceneVoronStream(Slice name, string treeName, byte* inlineDataPtr, int inlineDataSize, LowLevelTransaction llt)
+    public LuceneVoronStream(string name, string treeName, byte* inlineDataPtr, int inlineDataSize, LowLevelTransaction llt)
     {
         _name = name;
         _treeName = treeName;

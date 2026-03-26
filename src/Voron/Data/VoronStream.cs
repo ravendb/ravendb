@@ -9,8 +9,6 @@ namespace Voron.Data
 {
     public unsafe class VoronStream : Stream
     {
-        public Slice Name { get; }
-
         private readonly Tree.ChunkDetails[] _chunksDetails;
         private readonly long[] _chunksOffsets;
         private readonly bool _encrypted;
@@ -24,14 +22,8 @@ namespace Voron.Data
         public override bool CanWrite => false;
         public sealed override long Length { get; }
 
-        public override string ToString()
+        public VoronStream(Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
         {
-            return Name.ToString();
-        }
-
-        public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
-        {
-            Name = name;
             _chunksDetails = chunksDetails;
             _chunksOffsets = new long[_chunksDetails.Length];
 

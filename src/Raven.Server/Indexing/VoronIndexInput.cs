@@ -46,10 +46,7 @@ namespace Raven.Server.Indexing
                     {
                         if (files.ChunksByName.TryGetValue(name, out var details))
                         {
-                            // we don't dispose here explicitly, the fileName needs to be
-                            // alive as long as the transaction is
-                            Slice.From(transaction.Allocator, name, out Slice fileName);
-                            return new LuceneVoronStream(fileName, details, transaction.LowLevelTransaction);
+                           return new LuceneVoronStream(name, details, transaction.LowLevelTransaction);
                         }
                     }
                 }
@@ -67,14 +64,14 @@ namespace Raven.Server.Indexing
                     var tagSize = header->Info.TagSize;
                     var dataSize = (int)header->Info.TotalSize;
                     var dataPtr = inlineData + Tree.InlineStreamHeader.SizeOf + tagSize;
-                    return new LuceneVoronStream(fileName.Clone(transaction.Allocator), treeName, dataPtr, dataSize, fileTree.Llt);
+                    return new LuceneVoronStream(name, treeName, dataPtr, dataSize, fileTree.Llt);
                 }
 
                 var details = fileTree.ReadTreeChunks(fileName, out var tree);
                 if (details == null)
                     throw new FileNotFoundException("Could not find index input", name);
 
-                return new LuceneVoronStream(tree.Name, details, fileTree.Llt);
+                return new LuceneVoronStream(name, details, fileTree.Llt);
             }
         }
         
