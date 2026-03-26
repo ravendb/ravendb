@@ -66,7 +66,7 @@ namespace FastTests
 
         private static RavenServer _globalServer;
 
-        private static long TotalAiTokensUsed;
+        private static readonly ConcurrentDictionary<string, long> AiTokensPerDatabase = new(StringComparer.OrdinalIgnoreCase);
 
         protected static bool IsGlobalServer(RavenServer server)
         {
@@ -155,9 +155,7 @@ namespace FastTests
                 if (usage == null)
                     return;
 
-                var value = Interlocked.Add(ref TotalAiTokensUsed, usage.TotalTokens);
-
-                Console.WriteLine($"Total AI tokens used across all tests: {value} (delta: {usage.TotalTokens}, database: {sender})");
+                AiTokensPerDatabase.AddOrUpdate(sender ?? string.Empty, _ => usage.TotalTokens, (_, l) => l + usage.TotalTokens);
             };
 
             LowMemoryNotification.Instance.SupportsCompactionOfLargeObjectHeap = true;
@@ -395,6 +393,27 @@ namespace FastTests
                     catch (Exception e)
                     {
                         Console.WriteLine($"Could not retrieve list of non-deleted databases. Exception: {e}");
+                    }
+
+                    if (AiTokensPerDatabase.IsEmpty == false)
+                    {
+                        var sb = new StringBuilder();
+                        sb.AppendLine("List of AI tokens used per database:");
+                        var totalTokens = 0L;
+                        foreach (var kvp in AiTokensPerDatabase.OrderByDescending(x => x.Value))
+                        {
+                            totalTokens += kvp.Value;
+
+                            sb
+                                .Append("- ")
+                                .Append(kvp.Key)
+                                .Append(": ")
+                                .AppendLine(kvp.Value.ToString());
+                        }
+
+                        sb.AppendLine($"Total tokens: {totalTokens}");
+
+                        Console.WriteLine(sb.ToString());
                     }
 
                     DisposeServer(copyGlobalServer);
