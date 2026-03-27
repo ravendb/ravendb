@@ -321,6 +321,10 @@
     background-color: transparent;
 }
 
+.react-datepicker__day--keyboard-selected {
+    background-color: colors.$panel-bg-2-var;
+}
+
 .react-datepicker__time-container .react-datepicker__time {
     position: relative;
     background: white;
