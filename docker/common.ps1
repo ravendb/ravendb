@@ -135,7 +135,6 @@ function GetImageTagsForManifest {
         "${repo}:8.0-ubuntu-latest",
         "${repo}:8.0-ubuntu-arm32v7-latest",
         "${repo}:8.0-ubuntu-arm64v8-latest",
-        "${repo}:8.0-windows-1809-latest",
         "${repo}:8.0-windows-ltsc2022-latest"
     )
 }
