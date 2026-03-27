@@ -38,6 +38,7 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         PullReplicationAsHub,
         PullReplicationAsSink,
         QueueSink,
+        CdcSink,
         EmbeddingsGeneration,
         GenAi
     }
@@ -567,11 +568,11 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
         }
 
         public QueueSinkConfiguration Configuration { get; set; }
-        
+
         public QueueBrokerType BrokerType { get; set; }
-        
+
         public string ConnectionStringName { get; set; }
-        
+
         public string Url { get; set; }
 
         public override DynamicJsonValue ToJson()
@@ -581,6 +582,31 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(BrokerType)] = BrokerType;
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Url)] = Url;
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
+            return json;
+        }
+    }
+
+    public class OngoingTaskCdcSink : OngoingTask
+    {
+        public OngoingTaskCdcSink()
+        {
+            TaskType = OngoingTaskType.CdcSink;
+        }
+
+        public CdcSink.CdcSinkConfiguration Configuration { get; set; }
+
+        public string ConnectionStringName { get; set; }
+
+        public string FactoryName { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+
+            json[nameof(ConnectionStringName)] = ConnectionStringName;
+            json[nameof(FactoryName)] = FactoryName;
             json[nameof(Configuration)] = Configuration?.ToJson();
 
             return json;

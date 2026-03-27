@@ -19,6 +19,7 @@ namespace Raven.Server.Documents.Patch
         EtlBehaviorFunctions,
         QueueEtl,
         QueueSink,
+        CdcSink,
         SnowflakeEtl,
         EmbeddingsGeneration,
         GenAi
@@ -89,6 +90,7 @@ namespace Raven.Server.Documents.Patch
                 case PatchRequestType.QueueEtl:
                 case PatchRequestType.SnowflakeEtl:
                 case PatchRequestType.QueueSink:
+                case PatchRequestType.CdcSink:
                 // modify and return the document
                 case PatchRequestType.Patch:
                 case PatchRequestType.GenAi:

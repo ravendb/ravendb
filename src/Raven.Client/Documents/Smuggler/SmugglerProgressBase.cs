@@ -143,6 +143,8 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
         public bool QueueSinksUpdated { get; set; }
 
+        public bool CdcSinksUpdated { get; set; }
+
         public bool IndexesHistoryUpdated { get; set; }
 
         public override DynamicJsonValue ToJson()

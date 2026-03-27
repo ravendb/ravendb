@@ -20,6 +20,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -943,6 +944,29 @@ namespace Raven.Server.ServerWide
                 }
 
                 return _queueSinks;
+            }
+        }
+
+        private List<CdcSinkConfiguration> _cdcSinks;
+
+        public List<CdcSinkConfiguration> CdcSinks
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.CdcSinks;
+
+                if (_cdcSinks == null)
+                {
+                    _cdcSinks = new List<CdcSinkConfiguration>();
+                    if (_record.TryGet(nameof(DatabaseRecord.CdcSinks), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _cdcSinks.Add(JsonDeserializationCluster.CdcSinkConfiguration(element));
+                    }
+                }
+
+                return _cdcSinks;
             }
         }
 

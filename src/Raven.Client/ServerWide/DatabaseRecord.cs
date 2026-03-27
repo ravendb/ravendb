@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -147,7 +148,9 @@ namespace Raven.Client.ServerWide
         public List<QueueEtlConfiguration> QueueEtls = [];
         
         public List<QueueSinkConfiguration> QueueSinks = [];
-        
+
+        public List<CdcSinkConfiguration> CdcSinks = [];
+
         public List<SnowflakeEtlConfiguration> SnowflakeEtls = [];
         
         public List<EmbeddingsGenerationConfiguration> EmbeddingsGenerations = [];

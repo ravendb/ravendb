@@ -136,6 +136,9 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Queue Sink")]
         QueueSink,
 
+        [Description("CDC Sink")]
+        CdcSink,
+
         [Description("Data Archival")]
         DataArchival,
 

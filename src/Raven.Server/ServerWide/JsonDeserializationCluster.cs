@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -33,6 +34,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -158,6 +160,8 @@ namespace Raven.Server.ServerWide
         
         public static readonly Func<BlittableJsonReaderObject, QueueSinkConfiguration> QueueSinkConfiguration = GenerateJsonDeserializationRoutine<QueueSinkConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, CdcSinkConfiguration> CdcSinkConfiguration = GenerateJsonDeserializationRoutine<CdcSinkConfiguration>();
+
         public static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
         public static readonly Func<BlittableJsonReaderObject, InstallUpdatedServerCertificateCommand> InstallUpdatedServerCertificateCommand = GenerateJsonDeserializationRoutine<InstallUpdatedServerCertificateCommand>();
@@ -256,6 +260,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddElasticSearchEtlCommand)] = GenerateJsonDeserializationRoutine<AddElasticSearchEtlCommand>(),
             [nameof(AddQueueEtlCommand)] = GenerateJsonDeserializationRoutine<AddQueueEtlCommand>(),
             [nameof(AddQueueSinkCommand)] = GenerateJsonDeserializationRoutine<AddQueueSinkCommand>(),
+            [nameof(AddCdcSinkCommand)] = GenerateJsonDeserializationRoutine<AddCdcSinkCommand>(),
             [nameof(AddSnowflakeEtlCommand)] = GenerateJsonDeserializationRoutine<AddSnowflakeEtlCommand>(),
             [nameof(AddEmbeddingsGenerationCommand)] = GenerateJsonDeserializationRoutine<AddEmbeddingsGenerationCommand>(),
             [nameof(AddGenAiCommand)] = GenerateJsonDeserializationRoutine<AddGenAiCommand>(),
@@ -319,6 +324,9 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateQueueSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkCommand>(),
             [nameof(UpdateQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateQueueSinkProcessStateCommand>(),
             [nameof(RemoveQueueSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveQueueSinkProcessStateCommand>(),
+            [nameof(UpdateCdcSinkCommand)] = GenerateJsonDeserializationRoutine<UpdateCdcSinkCommand>(),
+            [nameof(UpdateCdcSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<UpdateCdcSinkProcessStateCommand>(),
+            [nameof(RemoveCdcSinkProcessStateCommand)] = GenerateJsonDeserializationRoutine<RemoveCdcSinkProcessStateCommand>(),
             [nameof(UpdateResponsibleNodeForTasksCommand)] = GenerateJsonDeserializationRoutine<UpdateResponsibleNodeForTasksCommand>(),
             [nameof(AddPrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<AddPrefixedShardingSettingCommand>(),
             [nameof(DeletePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<DeletePrefixedShardingSettingCommand>(),

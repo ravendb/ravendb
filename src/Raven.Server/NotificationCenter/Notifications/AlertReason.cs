@@ -107,6 +107,12 @@ namespace Raven.Server.NotificationCenter.Notifications
         
         SchemaValidationConfiguration_Error = 70,
 
-        GcThreadContention = 71
+        GcThreadContention = 71,
+
+        CdcSink_Error = 72,
+        CdcSink_Warning = 73,
+        CdcSink_ScriptError = 74,
+        CdcSink_ConsumeError = 75,
+        CdcSink_ConsumerCreationError = 76
     }
 }
