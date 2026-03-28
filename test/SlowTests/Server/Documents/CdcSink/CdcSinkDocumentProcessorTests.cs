@@ -210,7 +210,7 @@ public class CdcSinkDocumentProcessorTests
     }
 
     [Fact]
-    public void UnknownTable_ReturnsNull()
+    public void UnknownTable_Throws()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
@@ -222,8 +222,8 @@ public class CdcSinkDocumentProcessorTests
             Data = new Dictionary<string, object> { { "id", 1 } }
         };
 
-        var result = processor.ProcessRow(row);
-        Assert.Null(result);
+        var ex = Assert.Throws<InvalidOperationException>(() => processor.ProcessRow(row));
+        Assert.Contains("nonexistent_table", ex.Message);
     }
 
     [Fact]

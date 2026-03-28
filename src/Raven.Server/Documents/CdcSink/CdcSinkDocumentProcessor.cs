@@ -7,17 +7,11 @@ using Sparrow.Json.Parsing;
 namespace Raven.Server.Documents.CdcSink;
 
 /// <summary>
-/// Core CDC row routing and processing engine.
-/// Stateless — takes configuration, builds lookup indexes, and processes individual rows
-/// into document operations (put, delete, embedded modify).
+/// Routes CDC rows to per-table processors and produces document operations.
 /// </summary>
 public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
-
-    /// <summary>
-    /// Lookup: "schema.tableName" (lowercase) → CdcSinkTableProcessor.
-    /// </summary>
     private readonly Dictionary<string, CdcSinkTableProcessor> _tableIndex;
 
     public CdcSinkDocumentProcessor(CdcSinkConfiguration config)
@@ -120,16 +114,12 @@ public class CdcSinkDocumentProcessor
         }
     }
 
-    /// <summary>
-    /// Process a single CDC row into a document operation.
-    /// </summary>
-    /// <returns>The operation to perform, or null if the table is not in the configuration.</returns>
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row)
     {
         var key = MakeKey(row.TableSchema, row.TableName);
 
         if (_tableIndex.TryGetValue(key, out var processor) == false)
-            return null; // Unknown table, skip
+            throw new InvalidOperationException($"Received CDC row for table '{key}' which is not configured in the CDC Sink task.");
 
         if (processor.IsRoot)
             return ProcessRootRow(row, processor);
@@ -143,7 +133,9 @@ public class CdcSinkDocumentProcessor
         var documentId = processor.GenerateDocumentId(row.Data, config.PrimaryKeyColumns);
 
         if (documentId == null)
-            return null; // Can't generate ID without PK values
+            throw new InvalidOperationException(
+                $"Cannot generate document ID for table '{config.SourceTableSchema}.{config.SourceTableName}': " +
+                $"one or more primary key columns ({string.Join(", ", config.PrimaryKeyColumns)}) are missing or null in the CDC row.");
 
         if (row.Operation == CdcSinkOperation.Delete)
         {
@@ -157,13 +149,9 @@ public class CdcSinkDocumentProcessor
             };
         }
 
-        // Upsert: build the document from column mappings
         var mappedData = processor.MapColumns(row.Data, config.ColumnsMapping);
-
-        // Apply linked table references (FK → document ID)
         processor.ApplyLinks(mappedData, row.Data);
 
-        // Set metadata
         mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
         {
             [Constants.Documents.Metadata.Collection] = config.Name,
@@ -182,13 +170,12 @@ public class CdcSinkDocumentProcessor
 
     private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor)
     {
-        // Compute the parent (root) document ID from the row's FK values
         var parentDocumentId = processor.GetParentDocumentId(row.Data);
 
         if (parentDocumentId == null)
-            return null; // Can't determine parent without FK values
-
-        // Map columns for the embedded item
+            throw new InvalidOperationException(
+                $"Cannot determine parent document ID for embedded table '{processor.EmbeddedConfig.SourceTableSchema}.{processor.EmbeddedConfig.SourceTableName}': " +
+                $"root join columns ({string.Join(", ", processor.RootJoinColumns)}) are missing or null in the CDC row.");
         var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.ColumnsMapping);
 
         return new CdcSinkDocumentOp

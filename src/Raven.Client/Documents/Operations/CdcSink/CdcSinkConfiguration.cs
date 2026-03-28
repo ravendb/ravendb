@@ -211,66 +211,96 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     private static bool HasTableConfigChanged(CdcSinkTableConfig local, CdcSinkTableConfig remote)
     {
-        if (string.Equals(local.SourceTableSchema, remote.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false)
+        if (local.SourceTableSchema != remote.SourceTableSchema)
             return true;
 
-        if (string.Equals(local.SourceTableName, remote.SourceTableName, StringComparison.OrdinalIgnoreCase) == false)
+        if (local.SourceTableName != remote.SourceTableName)
             return true;
 
-        if (string.Equals(local.Patch, remote.Patch, StringComparison.Ordinal) == false)
+        if (local.Patch != remote.Patch)
             return true;
 
-        if (DictionariesEqual(local.ColumnsMapping, remote.ColumnsMapping) == false)
+        if (local.ColumnsMapping.Count != remote.ColumnsMapping.Count ||
+            local.ColumnsMapping.Any(kvp => remote.ColumnsMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
             return true;
 
-        if (DictionariesEqual(local.AttachmentNameMapping, remote.AttachmentNameMapping) == false)
+        if (local.AttachmentNameMapping.Count != remote.AttachmentNameMapping.Count ||
+            local.AttachmentNameMapping.Any(kvp => remote.AttachmentNameMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
             return true;
 
-        if (ListsEqual(local.PrimaryKeyColumns, remote.PrimaryKeyColumns) == false)
+        if (local.PrimaryKeyColumns.SequenceEqual(remote.PrimaryKeyColumns) == false)
             return true;
 
-        // Compare embedded and linked tables by count — detailed comparison would require
-        // recursive structural comparison. Count change is sufficient to trigger reload.
-        if ((local.EmbeddedTables?.Count ?? 0) != (remote.EmbeddedTables?.Count ?? 0))
+        if (HaveEmbeddedTablesChanged(local.EmbeddedTables, remote.EmbeddedTables))
             return true;
 
-        if ((local.LinkedTables?.Count ?? 0) != (remote.LinkedTables?.Count ?? 0))
+        if (HaveLinkedTablesChanged(local.LinkedTables, remote.LinkedTables))
             return true;
 
         return false;
     }
 
-    private static bool DictionariesEqual(Dictionary<string, string> a, Dictionary<string, string> b)
+    private static bool HaveEmbeddedTablesChanged(List<CdcSinkEmbeddedTableConfig> local, List<CdcSinkEmbeddedTableConfig> remote)
     {
-        if (a == null && b == null)
+        if ((local?.Count ?? 0) != (remote?.Count ?? 0))
             return true;
-        if (a == null || b == null)
-            return false;
-        if (a.Count != b.Count)
+
+        if (local == null)
             return false;
 
-        foreach (var kvp in a)
+        for (int i = 0; i < local.Count; i++)
         {
-            if (b.TryGetValue(kvp.Key, out var value) == false || value != kvp.Value)
-                return false;
+            var l = local[i];
+            var r = remote[i];
+
+            if (l.SourceTableSchema != r.SourceTableSchema ||
+                l.SourceTableName != r.SourceTableName ||
+                l.PropertyName != r.PropertyName ||
+                l.Patch != r.Patch ||
+                l.Type != r.Type)
+                return true;
+
+            if (l.PrimaryKeyColumns.SequenceEqual(r.PrimaryKeyColumns) == false)
+                return true;
+
+            if (l.JoinColumns.SequenceEqual(r.JoinColumns) == false)
+                return true;
+
+            if (l.ColumnsMapping.Count != r.ColumnsMapping.Count ||
+                l.ColumnsMapping.Any(kvp => r.ColumnsMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
+                return true;
+
+            if (HaveEmbeddedTablesChanged(l.EmbeddedTables, r.EmbeddedTables))
+                return true;
         }
-        return true;
+
+        return false;
     }
 
-    private static bool ListsEqual(List<string> a, List<string> b)
+    private static bool HaveLinkedTablesChanged(List<CdcSinkLinkedTableConfig> local, List<CdcSinkLinkedTableConfig> remote)
     {
-        if (a == null && b == null)
+        if ((local?.Count ?? 0) != (remote?.Count ?? 0))
             return true;
-        if (a == null || b == null)
-            return false;
-        if (a.Count != b.Count)
+
+        if (local == null)
             return false;
 
-        for (int i = 0; i < a.Count; i++)
+        for (int i = 0; i < local.Count; i++)
         {
-            if (a[i] != b[i])
-                return false;
+            var l = local[i];
+            var r = remote[i];
+
+            if (l.SourceTableSchema != r.SourceTableSchema ||
+                l.SourceTableName != r.SourceTableName ||
+                l.PropertyName != r.PropertyName ||
+                l.LinkedCollectionName != r.LinkedCollectionName ||
+                l.Type != r.Type)
+                return true;
+
+            if (l.JoinColumns.SequenceEqual(r.JoinColumns) == false)
+                return true;
         }
-        return true;
+
+        return false;
     }
 }

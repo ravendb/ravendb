@@ -10,7 +10,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.CdcSink.Handlers;
 
@@ -40,14 +39,12 @@ public class CdcSinkHandler : DatabaseRequestHandler
         {
             var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkVerify");
 
-            if (bodyJson.TryGet(nameof(CdcSinkConfiguration.ConnectionStringName), out string connectionStringName) == false ||
+            if (bodyJson.TryGet(nameof(CdcSinkVerifyRequest.ConnectionStringName), out string connectionStringName) == false ||
                 string.IsNullOrEmpty(connectionStringName))
             {
-                HttpContext.Response.StatusCode = 400;
-                return;
+                ThrowRequiredPropertyNameInRequest(nameof(CdcSinkVerifyRequest.ConnectionStringName));
             }
 
-            // Look up the connection string from the database record
             var databaseRecord = Database.ReadDatabaseRecord();
             if (databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString) == false)
             {
@@ -61,23 +58,25 @@ public class CdcSinkHandler : DatabaseRequestHandler
                 return;
             }
 
-            // Find the CDC Sink configuration for this connection string (if it exists)
-            var cdcConfig = databaseRecord.CdcSinks?.Find(x =>
-                string.Equals(x.ConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase));
-
-            if (cdcConfig == null)
+            // Extract optional table names from request for table-level checks
+            List<string> tableNames = null;
+            if (bodyJson.TryGet(nameof(CdcSinkVerifyRequest.TableNames), out BlittableJsonReaderArray tablesArray) && tablesArray != null)
             {
-                cdcConfig = new CdcSinkConfiguration
-                {
-                    Name = "verify",
-                    ConnectionStringName = connectionStringName,
-                    Tables = new List<CdcSinkTableConfig>()
-                };
+                tableNames = new List<string>();
+                foreach (var item in tablesArray)
+                    tableNames.Add(item.ToString());
             }
 
-            cdcConfig.Initialize(sqlConnectionString);
-
-            var result = await CdcSinkSourceVerifier.VerifyAsync(sqlConnectionString, cdcConfig);
+            CdcSinkVerificationResult result;
+            try
+            {
+                result = await CdcSinkSourceVerifier.VerifyAsync(sqlConnectionString, tableNames);
+            }
+            catch (Exception e)
+            {
+                result = new CdcSinkVerificationResult();
+                result.Errors.Add($"Verification failed: {e}");
+            }
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -135,4 +134,10 @@ public class CdcSinkHandler : DatabaseRequestHandler
 
         return sinks;
     }
+}
+
+public class CdcSinkVerifyRequest
+{
+    public string ConnectionStringName { get; set; }
+    public List<string> TableNames { get; set; }
 }

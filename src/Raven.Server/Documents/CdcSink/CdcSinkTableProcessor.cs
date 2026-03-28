@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using Raven.Client.Documents.Operations.CdcSink;
 using Sparrow.Json.Parsing;
 
@@ -8,10 +8,12 @@ namespace Raven.Server.Documents.CdcSink;
 
 /// <summary>
 /// Per-table processing context. Allocated once when building the <see cref="CdcSinkDocumentProcessor"/>
-/// and reused for all rows of the same table. Avoids per-row allocations for table metadata.
+/// and reused for all rows of the same table.
 /// </summary>
 public class CdcSinkTableProcessor
 {
+    private readonly StringBuilder _sb = new();
+
     /// <summary>
     /// The root table configuration this processor belongs to.
     /// </summary>
@@ -45,25 +47,26 @@ public class CdcSinkTableProcessor
     public List<string> RootJoinColumns { get; init; }
 
     /// <summary>
-    /// Generate a document ID from row data, using primary key values.
-    /// Format: "{CollectionName}/{pk1}/{pk2}"
+    /// Generate a document ID from row data using primary key values.
+    /// Format: "{CollectionName}/{pk1}/{pk2}/..."
     /// </summary>
     public string GenerateDocumentId(Dictionary<string, object> rowData, List<string> pkColumns)
     {
-        var pkValues = new object[pkColumns.Count];
+        _sb.Clear();
+        _sb.Append(CollectionName);
+
         for (int i = 0; i < pkColumns.Count; i++)
         {
             if (rowData.TryGetValue(pkColumns[i], out var val) == false || val == null)
                 return null;
-            pkValues[i] = val;
+
+            _sb.Append('/');
+            _sb.Append(val);
         }
 
-        return CollectionName + "/" + string.Join("/", pkValues);
+        return _sb.ToString();
     }
 
-    /// <summary>
-    /// For embedded tables: compute the parent document ID from the row's FK values.
-    /// </summary>
     public string GetParentDocumentId(Dictionary<string, object> rowData)
     {
         if (RootJoinColumns == null || RootJoinColumns.Count == 0)
@@ -72,9 +75,6 @@ public class CdcSinkTableProcessor
         return GenerateDocumentId(rowData, RootJoinColumns);
     }
 
-    /// <summary>
-    /// Apply column mapping to the raw row data, producing a DynamicJsonValue with renamed properties.
-    /// </summary>
     public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, Dictionary<string, string> columnsMapping)
     {
         var result = new DynamicJsonValue();
@@ -82,14 +82,33 @@ public class CdcSinkTableProcessor
         {
             if (rowData.TryGetValue(mapping.Key, out var value))
             {
-                result[mapping.Value] = ConvertValue(value);
+                result[mapping.Value] = value switch
+                {
+                    null or DBNull => null,
+                    byte[] bytes => Convert.ToBase64String(bytes),
+                    Guid guid => guid.ToString(),
+                    _ => value
+                };
             }
         }
         return result;
     }
 
     /// <summary>
-    /// Apply linked table references to the document.
+    /// Resolves FK columns in the row to document ID references in the target collection.
+    /// For example, if the row has customer_id=42 and there's a linked table config pointing
+    /// to collection "Customers", this writes "Customer": "Customers/42" into the document.
+    /// Only Value (single document ID) links are supported.
+    /// </summary>
+    /// <summary>
+    /// Resolves FK columns in the row to document ID references in the target collection.
+    ///
+    /// Given a row with FK columns (e.g., customer_id=42) and a linked table config
+    /// pointing to collection "Customers", writes the property as a document ID reference:
+    ///   Before: { "customer_id": 42, "CompanyName": "Acme" }
+    ///   After:  { "customer_id": 42, "CompanyName": "Acme", "Customer": "Customers/42" }
+    ///
+    /// If any FK column is null, the link property is set to null.
     /// </summary>
     public void ApplyLinks(DynamicJsonValue doc, Dictionary<string, object> rowData)
     {
@@ -98,37 +117,25 @@ public class CdcSinkTableProcessor
 
         foreach (var linked in RootConfig.LinkedTables)
         {
-            var fkValues = linked.JoinColumns
-                .Select(col => rowData.TryGetValue(col, out var v) ? v : null)
-                .ToArray();
-
-            if (fkValues.Any(v => v == null))
-            {
-                doc[linked.PropertyName] = null;
+            if (linked.Type != CdcSinkRelationType.Value)
                 continue;
-            }
 
-            var linkedId = linked.LinkedCollectionName + "/" + string.Join("/", fkValues);
+            _sb.Clear();
+            _sb.Append(linked.LinkedCollectionName);
 
-            if (linked.Type == CdcSinkRelationType.Value)
+            bool hasNull = false;
+            for (int i = 0; i < linked.JoinColumns.Count; i++)
             {
-                doc[linked.PropertyName] = linkedId;
+                if (rowData.TryGetValue(linked.JoinColumns[i], out var v) == false || v == null || v is DBNull)
+                {
+                    hasNull = true;
+                    break;
+                }
+                _sb.Append('/');
+                _sb.Append(v);
             }
-            // Array links would require querying the source DB, which we don't do in CDC.
-            // For now, only Value links are supported.
+
+            doc[linked.PropertyName] = hasNull ? null : _sb.ToString();
         }
-    }
-
-    private static object ConvertValue(object value)
-    {
-        if (value == null || value is DBNull)
-            return null;
-
-        return value switch
-        {
-            byte[] bytes => System.Convert.ToBase64String(bytes),
-            Guid guid => guid.ToString(),
-            _ => value
-        };
     }
 }

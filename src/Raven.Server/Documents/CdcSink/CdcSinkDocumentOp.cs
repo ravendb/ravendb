@@ -35,9 +35,8 @@ public class CdcSinkDocumentOp
     public DynamicJsonValue MappedData { get; set; }
 
     /// <summary>
-    /// The raw row data with ALL columns from the CDC message (original SQL column names).
-    /// This is the original dictionary from the CDC row — no conversion needed since we already have it.
-    /// Used for $row access in JS patches (includes unmapped columns).
+    /// All columns from the CDC row (original SQL column names, including unmapped ones).
+    /// Used for $row access in JS patches.
     /// </summary>
     public Dictionary<string, object> RawData { get; set; }
 
