@@ -1,0 +1,481 @@
+<div class="content-margin edit-cdc-sink-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
+    <div class="align-items-center justify-content-between d-flex gap-2 margin-bottom-md padding-top-xs">
+        <div class="flex-horizontal gap-2">
+            <i class="icon-sql"></i>
+            <h2 data-bind="text: $root.isAddingNewCdcSinkTask() ? `New CDC Sink` : `Edit CDC Sink`" class="mb-0"></h2>
+            <span class="badge license-restricted-badge enterprise" data-bind="if: !hasCdcSink">Enterprise</span>
+        </div>
+        <div class="flex-end margin-right-xs" data-bind="react: infoHubView"></div>
+    </div>
+    <div class="row flex-row">
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <form class="flex-form" data-bind="submit: saveCdcSink" autocomplete="off">
+                <div class="flex-header">
+                    <button type="submit" class="btn btn-primary" data-bind="disable: $root.spinners.save() || !$root.dirtyFlag().isDirty(), css: { 'btn-spinner': $root.spinners.save }">
+                        <i class="icon-save"></i><span>Save</span>
+                    </button>
+                    <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View">
+                        <i class="icon-cancel"></i><span>Cancel</span>
+                    </button>
+                </div>
+                <div class="panel" data-bind="css: { 'pe-none item-disabled': !hasCdcSink }">
+                    <div class="panel-body" data-bind="with: editedCdcSink">
+                        <div class="form-group margin-top">
+                            <label for="taskName" class="control-label">Task Name</label>
+                            <div class="flex-grow">
+                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the CDC Sink task (optional)" data-bind="textInput: taskName">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Task State</label>
+                            <div class="flex-grow">
+                                <button type="button" class="btn btn-block dropdown-toggle text-left" data-toggle="dropdown" aria-expanded="false">
+                                    <span data-bind="text: stateText()"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Enabled')"><span>Enabled</span></a></li>
+                                    <li><a href="#" data-bind="click: _.partial($root.setState, 'Disabled')"><span>Disabled</span></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">&nbsp;</label>
+                            <div class="toggle" data-placement="right" data-toggle="tooltip"
+                                 data-bind="attr: { title: $root.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task' }"
+                                 data-animation="true">
+                                <input id="responsibleNode" type="checkbox" data-bind="checked: manualChooseMentor, disable: $root.isSharded()">
+                                <label for="responsibleNode">Set responsible node</label>
+                            </div>
+                        </div>
+                        <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
+                            <label class="control-label">Connection String</label>
+                            <div class="flex-grow">
+                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                        data-bind="disable: $root.sqlConnectionStringsDetails().length === 0,
+                                                   attr: { 'title': $root.sqlConnectionStringsDetails().length === 0 ? 'No SQL connection strings were defined' : 'Select a SQL connection string' }">
+                                    <span data-bind="text: connectionStringName() || 'Select a SQL connection string'"></span>
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                </button>
+                                <ul class="dropdown-menu"
+                                    data-bind="foreach: $root.sqlConnectionStringsDetails">
+                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
+                                        <a href="#">
+                                            <div class="row">
+                                                <strong class="col-xs-6" data-bind="text: $data.Name"></strong>
+                                            </div>
+                                        </a>
+                                    </li>
+                                </ul>
+                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
+                            </div>
+                        </div>
+                        <div class="panel-addon" data-bind="visible: $root.sqlConnectionStringsDetails().length === 0">
+                            <div class="padding bg-warning text-warning small">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;No SQL connection strings have been defined yet
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Schema Discovery and Verify Source Buttons -->
+                    <div class="panel-body" data-bind="visible: editedCdcSink() && editedCdcSink().connectionStringName()">
+                        <div class="flex-horizontal gap-2 margin-bottom">
+                            <button type="button" class="btn btn-info"
+                                    data-bind="click: fetchSchema, disable: !canFetchSchema(), css: { 'btn-spinner': spinners.fetchSchema }">
+                                <i class="icon-table"></i>
+                                <span>Fetch Schema</span>
+                            </button>
+                            <button type="button" class="btn btn-default"
+                                    data-bind="click: verifySource, disable: !canVerifySource(), css: { 'btn-spinner': spinners.verify }">
+                                <i class="icon-check"></i>
+                                <span>Verify Source</span>
+                            </button>
+                        </div>
+
+                        <!-- Verify Result -->
+                        <div data-bind="if: verifyResult">
+                            <div data-bind="with: verifyResult">
+                                <div data-bind="if: Success" class="bg-success padding padding-sm small margin-bottom">
+                                    <i class="icon-check"></i>&nbsp;Source database verification passed successfully.
+                                </div>
+                                <div data-bind="if: !Success">
+                                    <div class="bg-danger padding padding-sm small margin-bottom">
+                                        <i class="icon-danger"></i>&nbsp;Source database verification failed.
+                                    </div>
+                                    <div data-bind="if: Errors && Errors.length > 0">
+                                        <ul class="text-danger small margin-bottom">
+                                            <!-- ko foreach: Errors -->
+                                            <li data-bind="text: $data"></li>
+                                            <!-- /ko -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div data-bind="if: Warnings && Warnings.length > 0">
+                                    <ul class="text-warning small margin-bottom">
+                                        <!-- ko foreach: Warnings -->
+                                        <li data-bind="text: $data"></li>
+                                        <!-- /ko -->
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schema Discovery Panel -->
+                <div data-bind="visible: schemaFetched">
+                    <div class="flex-header">
+                        <div class="flex-row margin-top">
+                            <h3>Discovered Tables <span class="badge" data-bind="text: discoveredTables().length"></span></h3>
+                            <button type="button" class="btn btn-success pull-right"
+                                    data-bind="click: applySelectedTables, disable: selectedTablesCount() === 0"
+                                    title="Apply selected tables to the task configuration">
+                                <i class="icon-check"></i>
+                                <span>Apply Selected (<span data-bind="text: selectedTablesCount"></span>)</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="scroll" style="max-height: 400px; overflow-y: auto;" data-bind="css: { 'pe-none item-disabled': !hasCdcSink }">
+                        <div class="etl-list">
+                            <div data-bind="if: discoveredTables().length === 0">
+                                <div class="text-center text-muted padding">
+                                    <i class="icon-lg icon-empty-set"></i>
+                                    <h4 class="margin-top margin-top-sm">No tables were discovered in the source database.</h4>
+                                </div>
+                            </div>
+                            <div data-bind="foreach: discoveredTables">
+                                <div class="panel panel-hover item"
+                                     data-bind="css: { active: $data === $root.selectedDiscoveredTable() },
+                                                click: $root.selectDiscoveredTableForPreview">
+                                    <div class="padding padding-sm">
+                                        <div class="flex-horizontal">
+                                            <div class="checkbox margin-right" style="margin-top: 0; margin-bottom: 0;">
+                                                <input type="checkbox" data-bind="checked: isSelected, click: function() { return true; }, clickBubble: false" />
+                                                <label data-bind="click: _.partial($root.toggleTableSelection, $data), clickBubble: false"></label>
+                                            </div>
+                                            <div class="flex-grow info">
+                                                <div class="transformer-name">
+                                                    <span data-bind="text: displayName"></span>
+                                                    <span class="text-muted small margin-left" data-bind="text: '-> ' + name()"></span>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    <span data-bind="text: columns().length + ' columns'"></span>
+                                                    <!-- ko if: primaryKeyColumns().length > 0 -->
+                                                    <span class="margin-left">
+                                                        PK: <span data-bind="text: primaryKeyColumns().join(', ')"></span>
+                                                    </span>
+                                                    <!-- /ko -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configured Tables (when schema not fetched or after apply) -->
+                <div data-bind="visible: !schemaFetched()">
+                    <div class="flex-header" data-bind="css: { 'pe-none item-disabled': !hasCdcSink }">
+                        <div class="flex-row margin-top">
+                            <h3>Tables</h3>
+                            <button type="button" id="addNewTable" data-bind="click: addNewTable, disable: editedCdcSink().showEditTableArea" class="btn btn-info pull-right">
+                                <i class="icon-plus"></i><span>Add Table</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="scroll" data-bind="css: { 'pe-none item-disabled': !hasCdcSink }">
+                        <div class="etl-list" id="tablesList" data-bind="with: editedCdcSink">
+                            <div data-bind="if: tables().length === 0 && !editedTableSandbox()">
+                                <div class="text-center text-muted">
+                                    <i class="icon-lg icon-empty-set"></i>
+                                    <h3 class="margin-top margin-top-sm"
+                                        data-bind="css: { 'text-danger': !tables.isValid() && tables.isModified() }">No tables have been configured.
+                                    </h3>
+                                </div>
+                            </div>
+                            <div data-bind="foreach: tables">
+                                <div class="panel panel-hover item" data-bind="css: { active: $data === $parent.tableSelectedForEdit() }">
+                                    <div class="padding padding-sm">
+                                        <div class="flex-horizontal">
+                                            <div class="flex-grow info">
+                                                <div class="transformer-name" title="Collection name">
+                                                    <span data-bind="text: name"></span>
+                                                    <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                                </div>
+                                                <div class="queues">
+                                                    Source:
+                                                    <span class="sink-queues" title="Source Table">
+                                                        <span data-bind="text: sourceTableSchema() ? sourceTableSchema() + '.' + sourceTableName() : sourceTableName()"></span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="actions">
+                                                <button data-bind="click: $parent.editTable.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit table config"></i></button>
+                                                <button data-bind="click: $root.removeTable" class="btn btn-danger"><i class="icon-trash" title="Delete table config"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Applied Tables (after schema was applied) -->
+                <div data-bind="visible: schemaFetched() && editedCdcSink().tables().length > 0">
+                    <div class="flex-header margin-top">
+                        <h3>Configured Tables <span class="badge" data-bind="text: editedCdcSink().tables().length"></span></h3>
+                    </div>
+                    <div class="scroll" style="max-height: 300px; overflow-y: auto;">
+                        <div class="etl-list" data-bind="with: editedCdcSink">
+                            <div data-bind="foreach: tables">
+                                <div class="panel panel-hover item" data-bind="css: { active: $data === $parent.tableSelectedForEdit() }">
+                                    <div class="padding padding-sm">
+                                        <div class="flex-horizontal">
+                                            <div class="flex-grow info">
+                                                <div class="transformer-name" title="Collection name">
+                                                    <span data-bind="text: name"></span>
+                                                    <span class="text-warning" data-bind="visible: dirtyFlag().isDirty">*</span>
+                                                </div>
+                                                <div class="queues">
+                                                    Source:
+                                                    <span class="sink-queues" title="Source Table">
+                                                        <span data-bind="text: sourceTableSchema() ? sourceTableSchema() + '.' + sourceTableName() : sourceTableName()"></span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="actions">
+                                                <button data-bind="click: $parent.editTable.bind($parent, $data)" class="btn btn-default"><i class="icon-edit" title="Edit table config"></i></button>
+                                                <button data-bind="click: $root.removeTable" class="btn btn-danger"><i class="icon-trash" title="Delete table config"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col-xs-12 col-lg-6 flex-vertical">
+            <!-- Column Mapping Preview for Discovered Table -->
+            <div data-bind="visible: schemaFetched() && selectedDiscoveredTable()">
+                <div class="panel padding" data-bind="with: selectedDiscoveredTable">
+                    <h4>
+                        Column Mapping: <strong data-bind="text: displayName"></strong>
+                        <span class="text-muted small"> -> <span data-bind="text: name"></span></span>
+                    </h4>
+                    <div class="form-group margin-top">
+                        <label><strong>Collection Name:</strong></label>
+                        <input type="text" class="form-control" placeholder="RavenDB collection name"
+                               data-bind="textInput: name" />
+                    </div>
+                    <div data-bind="if: columns().length > 0" class="margin-top">
+                        <table class="table table-condensed table-striped">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;"></th>
+                                    <th>SQL Column</th>
+                                    <th>Type</th>
+                                    <th>Property Name</th>
+                                </tr>
+                            </thead>
+                            <tbody data-bind="foreach: columns">
+                                <tr>
+                                    <td>
+                                        <!-- ko if: isPrimaryKey -->
+                                        <i class="icon-key text-warning" title="Primary Key"></i>
+                                        <!-- /ko -->
+                                    </td>
+                                    <td>
+                                        <span data-bind="text: sqlColumnName"></span>
+                                    </td>
+                                    <td>
+                                        <span class="label label-default" data-bind="text: sqlColumnType"></span>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control input-sm"
+                                               data-bind="textInput: propertyName"
+                                               placeholder="Property name" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div data-bind="if: columns().length === 0" class="text-muted text-center padding">
+                        No columns discovered for this table.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Edit Area (manual mode) -->
+            <div data-bind="with: editedCdcSink()">
+                <div class="flex-grow" data-bind="if: showEditTableArea">
+                    <div id="editTransform" class="panel padding" data-bind="css: { 'pe-none item-disabled': !$root.hasCdcSink }">
+                        <div data-bind="with: editedTableSandbox">
+                            <div class="flex-horizontal margin-bottom" data-bind="validationElement: name">
+                                <label class="control-label"><strong>Collection Name:</strong></label>
+                                <div class="flex-grow margin-left">
+                                    <input type="text" class="form-control" placeholder="Enter RavenDB collection name (e.g. Orders)" autocomplete="off"
+                                           data-bind="textInput: name, disable: $root.enableTestArea() || !isNew()" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-4">
+                                    <div class="form-group" data-bind="validationElement: sourceTableName">
+                                        <label><strong>Source Schema:</strong></label>
+                                        <input type="text" class="form-control" placeholder="public" autocomplete="off"
+                                               data-bind="textInput: sourceTableSchema" />
+                                    </div>
+                                </div>
+                                <div class="col-xs-8">
+                                    <div class="form-group" data-bind="validationElement: sourceTableName">
+                                        <label><strong>Source Table:</strong></label>
+                                        <input type="text" class="form-control" placeholder="Enter SQL table name (e.g. orders)" autocomplete="off"
+                                               data-bind="textInput: sourceTableName" />
+                                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: sourceTableName">
+                                            <div class="help-block" data-bind="validationMessage: sourceTableName"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Column Mappings in edit mode -->
+                            <div data-bind="if: columns().length > 0">
+                                <label><strong>Column Mappings:</strong></label>
+                                <table class="table table-condensed table-striped margin-bottom">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 30px;"></th>
+                                            <th>SQL Column</th>
+                                            <th>Type</th>
+                                            <th>Property Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody data-bind="foreach: columns">
+                                        <tr>
+                                            <td>
+                                                <!-- ko if: isPrimaryKey -->
+                                                <i class="icon-key text-warning" title="Primary Key"></i>
+                                                <!-- /ko -->
+                                            </td>
+                                            <td><span data-bind="text: sqlColumnName"></span></td>
+                                            <td><span class="label label-default" data-bind="text: sqlColumnType"></span></td>
+                                            <td>
+                                                <input type="text" class="form-control input-sm"
+                                                       data-bind="textInput: propertyName" />
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <label><strong>JavaScript Patch (optional):</strong></label>
+                            <small class="text-muted d-block margin-bottom-sm">Access all CDC row columns via <code>$row</code>. Example: <code>this.FullAddress = $row.ShipAddress + ', ' + $row.ShipCity;</code></small>
+                            <div data-bind="validationElement: patch">
+                                <pre class="form-control editor"
+                                     data-bind="aceEditor: { code: patch, fontSize: '14px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patch" style="height: 200px;"></pre>
+                            </div>
+                            <div class="flex-horizontal margin-top">
+                                <div data-bind="visible: !$root.enableTestArea()">
+                                    <button class="btn btn-success" data-bind="click: $root.saveEditedTable, attr: { title : (isNew() ? 'Add' : 'Update') + ' this table' }">
+                                        <i class="icon-tick"></i> <span data-bind="text: isNew() ? 'Add' : 'Update'"></span>
+                                    </button>
+                                    <button title="Cancel" class="btn btn-default" data-bind="click: $root.cancelEditedTable"><i class="icon-cancel"></i> <span>Cancel</span></button>
+                                </div>
+                                <div class="flex-separator"></div>
+                                <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea, visible: !$root.enableTestArea()" title="Click to open the test area">
+                                    <i class="icon-rocket"></i> <span>Test patch</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="js-test-area" data-bind="collapse: $root.enableTestArea()">
+                        <div class="panel" data-bind="css: { 'pe-none item-disabled': !$root.hasCdcSink }">
+                            <div class="panel-body flex-form" data-bind="with: $root.test">
+                                <label>
+                                    <strong>CDC Message: </strong> <br /><small class="text-muted">(JSON format - represents the raw CDC row data)</small>
+                                </label>
+                                <div data-bind="validationElement: messageText" style="height: 200px" class="margin-bottom">
+                                    <pre id="docEditor" class="form-control"
+                                         data-bind="aceEditor: { code: messageText, fontSize:'16px', lang: 'ace/mode/json' }, validationElement: messageText, validationOptions: { errorsAsTitle: false },"></pre>
+                                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: messageText">
+                                        <div class="help-block" data-bind="validationMessage: messageText"></div>
+                                    </div>
+                                </div>
+                                <div class="flex-horizontal">
+                                    <div class="flex-separator"></div>
+                                    <button type="button" class="btn btn-primary margin-right margin-right-sm" data-bind="click: runTest, css: { 'btn-spinner': spinners.test }, disable: spinners.test()">
+                                        <i class="icon-rocket"></i>
+                                        <span>Test</span>
+                                    </button>
+                                    <button type="button" class="btn btn-info" data-bind="click: $root.toggleTestArea">
+                                        <i class="icon-cancel"></i> <span>Close Test Area</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="test-container flex-grow flex-vertical" data-bind="with: test">
+        <div class="absolute-center text-center" data-bind="visible: !testAlreadyExecuted()">
+            <i class="icon-info icon-xl"></i>
+            Enter <strong>CDC Message</strong> used for test and click <strong>Test</strong> button
+        </div>
+        <div class="tabs" data-bind="css: { 'pe-none item-disabled': !$root.hasCdcSink }">
+            <ul class="nav nav-tabs" role="tablist">
+                <li role="presentation" data-bind="visible: testAlreadyExecuted" class="active">
+                    <a href="#testResultsModified" role="tab" data-toggle="tab">
+                        <i class="icon-export"></i><span>Put</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.modifiedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsLoaded" role="tab" data-toggle="tab">
+                        <i class="icon-import"></i><span>Loaded</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.loadedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: testAlreadyExecuted">
+                    <a href="#testResultsDeleted" role="tab" data-toggle="tab">
+                        <i class="icon-trash"></i><span>Deleted</span>
+                        <span class="label label-primary margin-left-xxs" data-bind="text: actions.deletedCount() || ''"></span>
+                    </a>
+                </li>
+                <li role="presentation" data-bind="visible: debugOutput().length">
+                    <a href="#debugOutput" role="tab" data-toggle="tab">
+                        <i class="icon-administrator-js-console"></i><span>Debug output</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="tab-content flex-grow" data-bind="css: { 'pe-none item-disabled': !$root.hasCdcSink }">
+            <div role="tabpanel" class="tab-pane fade in active margin-bottom" id="testResultsModified">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsModifiedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsLoaded">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsLoadedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade margin-bottom" id="testResultsDeleted">
+                <div data-bind="with: actions">
+                    <div data-bind="compose: $root.patchDebugActionsDeletedView"></div>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="debugOutput">
+                <pre class="absolute-fill" data-bind="text: debugOutput().join('\r\n')"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="backdrop" data-bind="click: $root.toggleTestArea"></div>

@@ -21,7 +21,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 
             foreach (var sinkProcess in sink.Value)
             {
-                processes.TryAdd(sinkProcess.Table.Name, new CdcSinkProcessAndPerformanceStatsList(sinkProcess));
+                processes.TryAdd(sinkProcess.Name, new CdcSinkProcessAndPerformanceStatsList(sinkProcess));
             }
         }
 
@@ -52,7 +52,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 
                         perfStats.Add(new CdcSinkProcessPerformanceStats
                         {
-                            ScriptName = process.Table.Name,
+                            ScriptName = process.Name,
                             Performance = process.GetPerformanceStats()
                         });
 
@@ -113,7 +113,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 
                     processesStats.Add(new CdcSinkProcessPerformanceStats
                     {
-                        ScriptName = cdcSink.Table.Name,
+                        ScriptName = cdcSink.Name,
                         Performance = itemsToSend.Select(item => item.ToPerformanceLiveStatsWithDetails()).ToArray()
                     });
 
@@ -144,7 +144,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
         if (_perCdcSinkProcessStats.TryGetValue(cdcSink.Configuration.Name, out var processes) == false)
             return;
 
-        processes.TryRemove(cdcSink.Table.Name, out _);
+        processes.TryRemove(cdcSink.Name, out _);
     }
 
     private void ProcessAdded(CdcSinkProcess cdcSink)
@@ -152,7 +152,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
         if (_perCdcSinkProcessStats.TryGetValue(cdcSink.Configuration.Name, out var processes) == false)
             return;
 
-        processes.TryAdd(cdcSink.Table.Name, new CdcSinkProcessAndPerformanceStatsList(cdcSink));
+        processes.TryAdd(cdcSink.Name, new CdcSinkProcessAndPerformanceStatsList(cdcSink));
     }
 
     private void BatchCompleted((string ConfigurationName, string TransformationName, CdcSinkProcessStatistics Statistics) change)
@@ -167,7 +167,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
             var processes = Database.CdcSinkLoader.Processes;
 
             var cdcSink = processes.FirstOrDefault(x => x.Configuration.Name.Equals(change.ConfigurationName, StringComparison.OrdinalIgnoreCase) &&
-                                                        x.Table.Name.Equals(change.TransformationName, StringComparison.OrdinalIgnoreCase));
+                                                        x.Name.Equals(change.TransformationName, StringComparison.OrdinalIgnoreCase));
 
             if (cdcSink == null)
                 return;

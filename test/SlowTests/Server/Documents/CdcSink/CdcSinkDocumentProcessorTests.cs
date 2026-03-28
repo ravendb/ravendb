@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink;

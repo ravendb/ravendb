@@ -124,6 +124,10 @@ class getOngoingTaskInfoCommand<T extends Raven.Client.Documents.Operations.Ongo
     static forQueueSink(db: database | string, taskId: number) {
         return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink>(db, "QueueSink", null, taskId);
     }
+
+    static forCdcSink(db: database | string, taskId: number) {
+        return new getOngoingTaskInfoCommand<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>(db, "CdcSink", null, taskId);
+    }
 }
 
 export = getOngoingTaskInfoCommand; 

@@ -933,11 +933,30 @@ interface TimeSeriesOperation extends Raven.Client.Documents.Operations.TimeSeri
 type StudioTaskType = "Replication" | "PullReplicationAsHub" | "PullReplicationAsSink" | "Backup" | "Subscription" |
     "RavenEtl" | "SqlEtl" | "SnowflakeEtl" | "OlapEtl" | "ElasticSearchEtl" | 
     "KafkaQueueEtl" | "RabbitQueueEtl" | "AzureQueueStorageQueueEtl" | "AmazonSqsQueueEtl" |
-    "KafkaQueueSink" | "RabbitQueueSink" | "EmbeddingsGeneration" | "GenAi";
+    "KafkaQueueSink" | "RabbitQueueSink" | "CdcSink" | "EmbeddingsGeneration" | "GenAi";
 
 type StudioEtlType = "Raven" | "Sql" | "Snowflake" | "Olap" | "ElasticSearch" | "Kafka" | "RabbitMQ" | "AzureQueueStorage" | "AmazonSqs" | "EmbeddingsGeneration" | "GenAi";
 
 type StudioQueueSinkType = "KafkaQueueSink" | "RabbitQueueSink";
+
+declare module Raven.Client.Documents.Operations.OngoingTasks {
+    interface OngoingTaskCdcSink extends Raven.Client.Documents.Operations.OngoingTasks.OngoingTask {
+        Configuration: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
+        ConnectionStringName: string;
+        FactoryName: string;
+    }
+}
+
+declare module Raven.Server.Documents.CdcSink.Test {
+    interface TestCdcSinkScript {
+        Configuration: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
+        Message: string;
+    }
+    interface TestCdcSinkScriptResult {
+        Actions: any;
+        DebugOutput: Array<string>;
+    }
+}
 
 type FilterOngoingTaskType = Raven.Client.Documents.Operations.ETL.EtlType  | Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType | "Subscription" | "Replication";
 

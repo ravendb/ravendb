@@ -128,16 +128,13 @@ public class CdcSinkLoader : IDisposable
             if (whoseTaskIsIt != _serverStore.NodeTag)
                 continue;
 
-            foreach (var table in config.Tables)
-            {
-                var process = CreateProcess(table, config, _database);
-                if (process != null)
-                    yield return process;
-            }
+            var process = CreateProcess(config, _database);
+            if (process != null)
+                yield return process;
         }
     }
 
-    protected virtual CdcSinkProcess CreateProcess(CdcSinkTableConfig table, CdcSinkConfiguration configuration, DocumentDatabase database)
+    protected virtual CdcSinkProcess CreateProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
     {
         return null;
     }

@@ -212,7 +212,7 @@ namespace Raven.Server.Documents
                 _hasClusterTransaction = new ManualResetEventSlim(false);
                 CountersRepairTask = new CountersRepairTask(this, DatabaseShutdown);
                 QueueSinkLoader = new QueueSinkLoader(this, serverStore);
-                CdcSinkLoader = new CdcSinkLoader(this, serverStore);
+                CdcSinkLoader = new PostgresCdcSinkLoader(this, serverStore);
                 _proxyRequestExecutor = CreateRequestExecutor();
                 _serverStore.Server.ServerCertificateChanged += OnCertificateChange;
             }

@@ -121,7 +121,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
             sinks = Database.CdcSinkLoader.Processes
                 .GroupBy(x => x.Configuration.Name)
                 .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Table.Name).ToList());
+                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Name).ToList());
         }
         else
         {
@@ -129,7 +129,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
                 .Where(x => names.Contains(x.Configuration.Name, StringComparer.OrdinalIgnoreCase) || names.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
                 .GroupBy(x => x.Configuration.Name)
                 .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Table.Name).ToList());
+                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Name).ToList());
         }
 
         return sinks;
