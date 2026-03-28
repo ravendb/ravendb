@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -129,6 +130,29 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, document);
+
+        if (rootPut != null)
+            StoreAttachments(context, documentId, rootPut);
+    }
+
+    private void StoreAttachments(DocumentsOperationContext context, string documentId, CdcSinkDocumentOp op)
+    {
+        var attachmentMapping = op.Processor.RootConfig.AttachmentNameMapping;
+        if (attachmentMapping == null || attachmentMapping.Count == 0)
+            return;
+
+        foreach (var (sqlColumn, attachmentName) in attachmentMapping)
+        {
+            if (op.RawData.TryGetValue(sqlColumn, out var value) == false || value is not byte[] bytes)
+                continue;
+
+            var hash = AttachmentsStorageHelper.CalculateHash(bytes);
+            using var stream = new MemoryStream(bytes);
+
+            _database.DocumentsStorage.AttachmentsStorage.PutAttachment(
+                context, documentId, attachmentName, "application/octet-stream",
+                hash, bytes.Length, remoteParams: null, stream: stream);
+        }
     }
 
     private BlittableJsonReaderObject ApplyEmbeddedOperation(

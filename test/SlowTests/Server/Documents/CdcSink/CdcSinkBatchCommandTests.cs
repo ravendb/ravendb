@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.CdcSink.Commands;
@@ -744,6 +747,94 @@ namespace SlowTests.Server.Documents.CdcSink
                 // The bad document should NOT have been saved
                 var badDoc = session.Load<dynamic>("Products/99");
                 Assert.Null(badDoc);
+            }
+        }
+
+        [Fact]
+        public async Task BinaryToAttachment()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var fileContent = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }; // %PDF-1.4
+
+            var config = new CdcSinkTableConfig
+            {
+                Name = "Documents",
+                SourceTableSchema = "public",
+                SourceTableName = "documents",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                AttachmentNameMapping = new Dictionary<string, string>
+                {
+                    { "content", "FileContent" }
+                },
+                PrimaryKeyColumns = new List<string> { "id" }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = config,
+                CollectionName = "Documents",
+                IsRoot = true
+            };
+
+            var mappedData = new DynamicJsonValue
+            {
+                ["Id"] = 1,
+                ["Name"] = "doc.pdf",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Documents"
+                }
+            };
+
+            var rawData = new Dictionary<string, object>
+            {
+                { "id", 1 },
+                { "name", "doc.pdf" },
+                { "content", fileContent }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Documents/1", mappedData, rawData, processor)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Documents/1");
+                Assert.NotNull(doc);
+
+                // Document should have Id and Name properties
+                doc.Data.TryGet("Id", out long id);
+                Assert.Equal(1L, id);
+                doc.Data.TryGet("Name", out string name);
+                Assert.Equal("doc.pdf", name);
+
+                // Document should NOT have the binary column as a property
+                Assert.False(doc.Data.TryGet("FileContent", out object _),
+                    "Binary column mapped as attachment should not appear as a document property");
+
+                // Attachment should exist on the document
+                var attachment = database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                    readCtx, "Documents/1", "FileContent", AttachmentType.Document, changeVector: null);
+                Assert.NotNull(attachment);
+                Assert.Equal("FileContent", attachment.Name);
+                Assert.Equal("application/octet-stream", attachment.ContentType);
+
+                // Verify the attachment content matches
+                using var memoryStream = new MemoryStream();
+                attachment.Stream.CopyTo(memoryStream);
+                var storedBytes = memoryStream.ToArray();
+                Assert.Equal(fileContent, storedBytes);
             }
         }
     }
