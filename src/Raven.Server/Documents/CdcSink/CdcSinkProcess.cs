@@ -59,14 +59,14 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private ICdcSinkConsumer _consumer;
 
-    protected CdcSinkProcess(CdcSinkConfiguration configuration, CdcSinkScript script, DocumentDatabase database)
+    protected CdcSinkProcess(CdcSinkConfiguration configuration, CdcSinkTableConfig table, DocumentDatabase database)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
         Logger = database.Loggers.GetLogger(GetType());
         Database = database;
         Configuration = configuration;
-        Script = script;
-        Name = $"{Configuration.Name}/{Script.Name}";
+        Table = table;
+        Name = $"{Configuration.Name}/{Table.Name}";
         Statistics = new CdcSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
     }
 
@@ -82,7 +82,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public CdcSinkConfiguration Configuration { get; }
 
-    public CdcSinkScript Script { get; }
+    public CdcSinkTableConfig Table { get; }
 
     public TimeSpan? FallbackTime { get; protected set; }
 
@@ -253,7 +253,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                         {
                             try
                             {
-                                var command = new BatchCdcSinkScriptCommand(Script.Script, messages, scriptProcessingScope, Statistics, Logger);
+                                var command = new BatchCdcSinkScriptCommand(Table.Patch, messages, scriptProcessingScope, Statistics, Logger);
 
                                 Database.TxMerger.EnqueueSync(command);
 
@@ -290,11 +290,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                             UpdateProcessState(new CdcSinkProcessState
                             {
                                 ConfigurationName = Configuration.Name,
-                                ScriptName = Script.Name,
+                                ScriptName = Table.Name,
                                 NodeTag = Database.ServerStore.NodeTag
                             });
 
-                            Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Script.Name, Statistics);
+                            Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Table.Name, Statistics);
                         }
                         catch (Exception e)
                         {
@@ -341,7 +341,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         if (_longRunningWork != null)
             return;
 
-        if (Script.Disabled || Configuration.Disabled)
+        if (Table.Disabled || Configuration.Disabled)
             return;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
@@ -379,11 +379,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
         }
 
-        if (testScript.Configuration.Scripts.Count != 1)
+        if (testScript.Configuration.Tables.Count != 1)
         {
             throw new InvalidOperationException(
-                $"Invalid number of scripts. You have provided {testScript.Configuration.Scripts.Count} " +
-                "while CDC Sink test expects to get exactly 1 script");
+                $"Invalid number of tables. You have provided {testScript.Configuration.Tables.Count} " +
+                "while CDC Sink test expects to get exactly 1 table");
         }
 
         if (string.IsNullOrEmpty(testScript.Message))
@@ -393,7 +393,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         using (context.OpenWriteTransaction())
         {
-            var script = new PatchRequest(testScript.Configuration.Scripts[0].Script, PatchRequestType.CdcSink);
+            var script = new PatchRequest(testScript.Configuration.Tables[0].Patch, PatchRequestType.CdcSink);
 
             var command = new TestCdcMessageCommand(context, script, messageDoc);
 

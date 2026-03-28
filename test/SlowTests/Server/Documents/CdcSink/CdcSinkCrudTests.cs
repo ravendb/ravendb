@@ -33,12 +33,15 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 Name = name,
                 ConnectionStringName = connectionStringName,
-                Scripts = new List<CdcSinkScript>
+                Tables = new List<CdcSinkTableConfig>
                 {
-                    new CdcSinkScript
+                    new CdcSinkTableConfig
                     {
-                        Name = "script1",
-                        Script = "this['@metadata']['@collection'] = 'Users'; put(this.Id, this);"
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        ColumnsMapping = new Dictionary<string, string> { { "order_id", "OrderId" }, { "customer_id", "CustomerId" } },
+                        PrimaryKeyColumns = new List<string> { "order_id" },
                     }
                 }
             };
@@ -78,14 +81,14 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Update the configuration
             config.TaskId = addResult.TaskId;
-            config.Scripts[0].Script = "this['@metadata']['@collection'] = 'Orders'; put(this.Id, this);";
+            config.Tables[0].SourceTableName = "updated_orders";
 
             var updateResult = store.Maintenance.Send(new UpdateCdcSinkOperation(addResult.TaskId, config));
             Assert.NotNull(updateResult);
 
             var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             Assert.Equal(1, record.CdcSinks.Count);
-            Assert.Contains("Orders", record.CdcSinks[0].Scripts[0].Script);
+            Assert.Equal("updated_orders", record.CdcSinks[0].Tables[0].SourceTableName);
         }
 
         [Fact]

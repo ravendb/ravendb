@@ -28,7 +28,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     internal bool TestMode { get; set; }
 
-    public List<CdcSinkScript> Scripts { get; set; } = new();
+    public List<CdcSinkTableConfig> Tables { get; set; } = new();
 
     [JsonDeserializationIgnore]
     [JsonIgnore]
@@ -56,21 +56,55 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (validateConnection && TestMode == false)
             Connection.Validate(errors);
 
+        if (Tables.Count == 0)
+            errors.Add($"'{nameof(Tables)}' list cannot be empty.");
+
         var uniqueNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (Scripts.Count == 0)
-            throw new InvalidOperationException($"'{nameof(Scripts)}' list cannot be empty.");
-
-        foreach (var script in Scripts)
+        foreach (var table in Tables)
         {
-            if (string.IsNullOrWhiteSpace(script.Script))
-                errors.Add($"Script '{Name}' must not be empty");
+            if (string.IsNullOrWhiteSpace(table.Name))
+                errors.Add("Table collection name must not be empty");
 
-            if (uniqueNames.Add(script.Name) == false)
-                errors.Add($"Script name '{script.Name}' name is already defined. The script names need to be unique");
+            if (string.IsNullOrWhiteSpace(table.SourceTableName))
+                errors.Add($"Table '{table.Name}' must have a source table name");
+
+            if (table.PrimaryKeyColumns == null || table.PrimaryKeyColumns.Count == 0)
+                errors.Add($"Table '{table.Name}' must have at least one primary key column");
+
+            if (table.ColumnsMapping == null || table.ColumnsMapping.Count == 0)
+                errors.Add($"Table '{table.Name}' must have at least one column mapping");
+
+            if (uniqueNames.Add(table.Name) == false)
+                errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
+
+            ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
         }
 
         return errors.Count == 0;
+    }
+
+    private static void ValidateEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, string parentName, List<string> errors)
+    {
+        if (embeddedTables == null)
+            return;
+
+        foreach (var embedded in embeddedTables)
+        {
+            if (string.IsNullOrWhiteSpace(embedded.SourceTableName))
+                errors.Add($"Embedded table under '{parentName}' must have a source table name");
+
+            if (string.IsNullOrWhiteSpace(embedded.PropertyName))
+                errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have a property name");
+
+            if (embedded.JoinColumns == null || embedded.JoinColumns.Count == 0)
+                errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have join columns");
+
+            if (embedded.PrimaryKeyColumns == null || embedded.PrimaryKeyColumns.Count == 0)
+                errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have primary key columns");
+
+            ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
+        }
     }
 
     public DynamicJsonValue ToJson()
@@ -83,7 +117,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             [nameof(ConnectionStringName)] = ConnectionStringName,
             [nameof(MentorNode)] = MentorNode,
             [nameof(PinToMentorNode)] = PinToMentorNode,
-            [nameof(Scripts)] = new DynamicJsonArray(Scripts.Select(x => x.ToJson())),
+            [nameof(Tables)] = new DynamicJsonArray(Tables.Select(x => x.ToJson())),
         };
     }
 
@@ -111,29 +145,44 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     internal CdcSinkConfigurationCompareDifferences Compare(
         CdcSinkConfiguration config,
         Dictionary<string, SqlConnectionString> connectionStrings,
-        List<(string TransformationName, CdcSinkConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        List<(string TableName, CdcSinkConfigurationCompareDifferences Difference)> tableDiffs = null)
     {
         if (config == null)
             throw new ArgumentNullException(nameof(config), "Got null config to compare");
 
         var differences = CdcSinkConfigurationCompareDifferences.None;
 
-        if (config.Scripts.Count != Scripts.Count)
-            differences |= CdcSinkConfigurationCompareDifferences.ScriptsCount;
+        if (config.Tables.Count != Tables.Count)
+            differences |= CdcSinkConfigurationCompareDifferences.TablesCount;
 
-        var localTransforms = Scripts.OrderBy(x => x.Name);
-        var remoteTransforms = config.Scripts.OrderBy(x => x.Name);
+        var localTables = Tables.OrderBy(x => x.Name);
+        var remoteTables = config.Tables.OrderBy(x => x.Name);
 
-        using var localEnum = localTransforms.GetEnumerator();
-        using var remoteEnum = remoteTransforms.GetEnumerator();
+        using var localEnum = localTables.GetEnumerator();
+        using var remoteEnum = remoteTables.GetEnumerator();
 
         while (localEnum.MoveNext() && remoteEnum.MoveNext())
         {
-            var diff = localEnum.Current.Compare(remoteEnum.Current);
-            differences |= diff;
+            var local = localEnum.Current;
+            var remote = remoteEnum.Current;
 
-            if (diff != CdcSinkConfigurationCompareDifferences.None)
-                transformationDiffs?.Add((localEnum.Current.Name, diff));
+            if (string.Equals(local.Name, remote.Name, StringComparison.OrdinalIgnoreCase) == false)
+            {
+                differences |= CdcSinkConfigurationCompareDifferences.TableName;
+                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableName));
+            }
+
+            if (local.Disabled != remote.Disabled)
+            {
+                differences |= CdcSinkConfigurationCompareDifferences.TableDisabled;
+                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableDisabled));
+            }
+
+            if (HasTableConfigChanged(local, remote))
+            {
+                differences |= CdcSinkConfigurationCompareDifferences.TableConfig;
+                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableConfig));
+            }
         }
 
         if (config.ConnectionStringName != ConnectionStringName)
@@ -148,7 +197,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 differences |= CdcSinkConfigurationCompareDifferences.ConnectionString;
         }
 
-        if (config.Name.Equals(Name, StringComparison.OrdinalIgnoreCase) == false)
+        if (string.Equals(config.Name, Name, StringComparison.OrdinalIgnoreCase) == false)
             differences |= CdcSinkConfigurationCompareDifferences.ConfigurationName;
 
         if (config.MentorNode != MentorNode)
@@ -158,5 +207,70 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             differences |= CdcSinkConfigurationCompareDifferences.ConfigurationDisabled;
 
         return differences;
+    }
+
+    private static bool HasTableConfigChanged(CdcSinkTableConfig local, CdcSinkTableConfig remote)
+    {
+        if (string.Equals(local.SourceTableSchema, remote.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false)
+            return true;
+
+        if (string.Equals(local.SourceTableName, remote.SourceTableName, StringComparison.OrdinalIgnoreCase) == false)
+            return true;
+
+        if (string.Equals(local.Patch, remote.Patch, StringComparison.Ordinal) == false)
+            return true;
+
+        if (DictionariesEqual(local.ColumnsMapping, remote.ColumnsMapping) == false)
+            return true;
+
+        if (DictionariesEqual(local.AttachmentNameMapping, remote.AttachmentNameMapping) == false)
+            return true;
+
+        if (ListsEqual(local.PrimaryKeyColumns, remote.PrimaryKeyColumns) == false)
+            return true;
+
+        // Compare embedded and linked tables by count — detailed comparison would require
+        // recursive structural comparison. Count change is sufficient to trigger reload.
+        if ((local.EmbeddedTables?.Count ?? 0) != (remote.EmbeddedTables?.Count ?? 0))
+            return true;
+
+        if ((local.LinkedTables?.Count ?? 0) != (remote.LinkedTables?.Count ?? 0))
+            return true;
+
+        return false;
+    }
+
+    private static bool DictionariesEqual(Dictionary<string, string> a, Dictionary<string, string> b)
+    {
+        if (a == null && b == null)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.Count != b.Count)
+            return false;
+
+        foreach (var kvp in a)
+        {
+            if (b.TryGetValue(kvp.Key, out var value) == false || value != kvp.Value)
+                return false;
+        }
+        return true;
+    }
+
+    private static bool ListsEqual(List<string> a, List<string> b)
+    {
+        if (a == null && b == null)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.Count != b.Count)
+            return false;
+
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (a[i] != b[i])
+                return false;
+        }
+        return true;
     }
 }

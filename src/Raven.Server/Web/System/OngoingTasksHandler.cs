@@ -200,9 +200,9 @@ namespace Raven.Server.Web.System
         {
             var taskState = OngoingTaskState.Enabled;
 
-            if (config.Disabled || config.Scripts.All(x => x.Disabled))
+            if (config.Disabled || config.Tables.All(x => x.Disabled))
                 taskState = OngoingTaskState.Disabled;
-            else if (config.Scripts.Any(x => x.Disabled))
+            else if (config.Tables.Any(x => x.Disabled))
                 taskState = OngoingTaskState.PartiallyEnabled;
 
             return taskState;

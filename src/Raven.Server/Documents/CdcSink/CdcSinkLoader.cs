@@ -31,11 +31,11 @@ public class CdcSinkLoader : IDisposable
     protected RavenLogger Logger;
     public CdcSinkProcess[] Processes => _processes;
 
-    public event Action<(string ConfigurationName, string ScriptName, CdcSinkProcessStatistics Statistics)> BatchCompleted;
+    public event Action<(string ConfigurationName, string TableName, CdcSinkProcessStatistics Statistics)> BatchCompleted;
 
-    public void OnBatchCompleted(string configurationName, string scriptName, CdcSinkProcessStatistics statistics)
+    public void OnBatchCompleted(string configurationName, string tableName, CdcSinkProcessStatistics statistics)
     {
-        BatchCompleted?.Invoke((configurationName, scriptName, statistics));
+        BatchCompleted?.Invoke((configurationName, tableName, statistics));
     }
 
     public event Action<CdcSinkProcess> ProcessAdded;
@@ -123,21 +123,21 @@ public class CdcSinkLoader : IDisposable
             if (ValidateConfiguration(config, uniqueNames) == false)
                 continue;
 
-            var processState = GetProcessState(config.Scripts, _database, config.Name);
+            var processState = GetProcessState(config.Tables, _database, config.Name);
             var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
             if (whoseTaskIsIt != _serverStore.NodeTag)
                 continue;
 
-            foreach (var script in config.Scripts)
+            foreach (var table in config.Tables)
             {
-                var process = CreateProcess(script, config, _database);
+                var process = CreateProcess(table, config, _database);
                 if (process != null)
                     yield return process;
             }
         }
     }
 
-    protected virtual CdcSinkProcess CreateProcess(CdcSinkScript script, CdcSinkConfiguration configuration, DocumentDatabase database)
+    protected virtual CdcSinkProcess CreateProcess(CdcSinkTableConfig table, CdcSinkConfiguration configuration, DocumentDatabase database)
     {
         return null;
     }
@@ -181,7 +181,7 @@ public class CdcSinkLoader : IDisposable
 
     private bool IsMyTask(DatabaseRecord record, CdcSinkConfiguration config, ref Dictionary<string, string> responsibleNodes)
     {
-        var processState = GetProcessState(config.Scripts, _database, config.Name);
+        var processState = GetProcessState(config.Tables, _database, config.Name);
         var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, config, processState, _database.NotificationCenter);
 
         responsibleNodes[config.Name] = whoseTaskIsIt;
@@ -189,16 +189,16 @@ public class CdcSinkLoader : IDisposable
         return whoseTaskIsIt == _serverStore.NodeTag;
     }
 
-    public static CdcSinkProcessState GetProcessState(List<CdcSinkScript> scripts, DocumentDatabase database, string configurationName)
+    public static CdcSinkProcessState GetProcessState(List<CdcSinkTableConfig> tables, DocumentDatabase database, string configurationName)
     {
         CdcSinkProcessState processState = null;
 
-        foreach (var script in scripts)
+        foreach (var table in tables)
         {
-            if (script.Name == null)
+            if (table.Name == null)
                 continue;
 
-            processState = CdcSinkProcess.GetProcessState(database, configurationName, script.Name);
+            processState = CdcSinkProcess.GetProcessState(database, configurationName, table.Name);
             if (processState.NodeTag != null)
                 break;
         }
