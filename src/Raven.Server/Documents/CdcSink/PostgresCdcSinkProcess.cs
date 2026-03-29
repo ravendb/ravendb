@@ -370,21 +370,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         Json
     }
 
-    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn)
+    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
     {
         var command = new CdcSinkBatchCommand(
             Database, ops, Configuration.Name, lastLsn,
-            tableLoadUpdates: null,
-            statsScope: null, statistics: Statistics, logger: Logger);
-
-        return Database.TxMerger.Enqueue(command);
-    }
-
-    private Task SubmitBatchAsync(List<CdcSinkDocumentOp> ops, Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates)
-    {
-        var command = new CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, lastLsn: null,
             tableLoadUpdates: tableLoadUpdates,
+            patchRequest: _documentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger);
 
         return Database.TxMerger.Enqueue(command);
@@ -457,7 +449,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 {
                     [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
                 };
-                await SubmitBatchAsync([], finalUpdate);
+                await SubmitBatch([], tableLoadUpdates: finalUpdate);
                 break;
             }
 
@@ -468,7 +460,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 [tableKey] = new CdcSinkTableLoadState { LastKeyValues = [.. newLastKeys] }
             };
 
-            lastBatch = SubmitBatchAsync(ops, tableLoadUpdate);
+            lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
             lastKeys = newLastKeys;
         }
 

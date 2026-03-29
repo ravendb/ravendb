@@ -189,24 +189,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         using (context.OpenWriteTransaction())
         {
-            var table = testScript.Configuration.Tables[0];
+            // Build the same combined patch request used in production.
+            var docProcessor = new CdcSinkDocumentProcessor(testScript.Configuration);
+            var patchRequest = docProcessor.CombinedPatchRequest
+                ?? throw new InvalidOperationException("The table has no patch script configured.");
 
-            // Generate the same combined-script format used in production:
-            // per-table function receives $row as parameter, called with doc as `this`.
-            var sb = new StringBuilder();
-            sb.Append("function __cdc_test($row) {\n");
-            sb.Append(table.Patch).Append("\n}\n\n");
-            sb.Append("function execute(doc, args) {\n");
-            sb.Append("  __cdc_test.call(doc, args);\n");
-            sb.Append("  return doc;\n");
-            sb.Append("}\n");
-
-            // In test mode: the message IS the $row data, and the document is the message.
-            // PatchDocumentCommand calls execute(doc, args) where doc = GetCurrentDocument()
-            // and args = the second patch tuple (which we set to messageDoc below).
-            var script = new PatchRequest(sb.ToString(), PatchRequestType.EtlBehaviorFunctions);
-
-            var command = new TestCdcMessageCommand(context, script, messageDoc);
+            var command = new TestCdcMessageCommand(context, patchRequest, messageDoc);
 
             command.Execute(context, null);
 

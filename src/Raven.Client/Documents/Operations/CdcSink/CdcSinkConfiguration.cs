@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
@@ -243,6 +244,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     private static bool HaveEmbeddedTablesChanged(List<CdcSinkEmbeddedTableConfig> local, List<CdcSinkEmbeddedTableConfig> remote)
     {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+        
         if ((local?.Count ?? 0) != (remote?.Count ?? 0))
             return true;
 
@@ -297,6 +300,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         static void CollectEmbeddedSourceTableNames(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<string> names)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             if (embedded == null)
                 return;
 
@@ -331,6 +335,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         static void CollectEmbeddedTablesFlat(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<TableInfo> tables)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
             if (embedded == null)
                 return;
 

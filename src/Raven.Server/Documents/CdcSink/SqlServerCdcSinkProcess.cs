@@ -608,6 +608,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         var command = new CdcSinkBatchCommand(
             Database, ops, Configuration.Name, lastLsn,
             tableLoadUpdates: tableLoadUpdates,
+            patchRequest: _documentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger);
 
         return Database.TxMerger.Enqueue(command);

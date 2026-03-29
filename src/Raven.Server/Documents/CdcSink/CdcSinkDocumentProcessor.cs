@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.CdcSink;
@@ -13,6 +17,11 @@ public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
     private readonly Dictionary<string, CdcSinkTableProcessor> _tableIndex;
+
+    /// <summary>
+    /// Pre-built patch request for all tables that have user scripts. Null if no tables have patches.
+    /// </summary>
+    public PatchRequest CombinedPatchRequest { get; }
 
     public CdcSinkDocumentProcessor(CdcSinkConfiguration config)
     {
@@ -39,7 +48,83 @@ public class CdcSinkDocumentProcessor
                 RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, new List<EmbeddedPathSegment>());
             }
         }
+
+        CombinedPatchRequest = BuildCombinedPatchRequest();
     }
+
+    /// <summary>
+    /// Builds a single combined script that dispatches per-table patches by table name.
+     /// Each per-table function receives $row as a parameter — so user scripts
+    /// can reference $row.column_name naturally, with `this` bound to the document.
+    /// </summary>
+    private PatchRequest BuildCombinedPatchRequest()
+    {
+        var tableScripts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var table in _config.Tables)
+        {
+            if (table.Patch != null)
+                tableScripts.TryAdd(table.SourceTableName, table.Patch);
+
+            CollectEmbeddedPatches(table.EmbeddedTables, tableScripts);
+        }
+
+        if (tableScripts.Count == 0)
+            return null;
+
+        var functions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase);
+        var switchCases = new StringBuilder();
+
+        foreach (var (tableName, script) in tableScripts)
+        {
+            var funcName = $"__cdc_{SanitizeForJs(tableName)}";
+
+            functions[funcName] = new DeclaredFunction
+            {
+                Name = funcName,
+                FunctionText = $"function {funcName}($row) {{\n{script}\n}}",
+                Type = DeclaredFunction.FunctionType.JavaScript,
+            };
+
+            switchCases.Append("    case \"").Append(EscapeJsString(tableName))
+                .Append("\": ").Append(funcName).Append(".call(this, $row); break;\n");
+        }
+
+        var dispatchScript = $$"""
+            for (var i = 0; i < $rows.length; i++) {
+              var $row = $rows[i].row;
+              switch($rows[i].table) {
+            {{switchCases}}  }
+            }
+            """;
+
+        return new PatchRequest(dispatchScript, PatchRequestType.Patch, functions);
+
+        static void CollectEmbeddedPatches(List<CdcSinkEmbeddedTableConfig> embedded, Dictionary<string, string> scripts)
+        {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            if (embedded == null) return;
+            foreach (var e in embedded)
+            {
+                if (e.Patch != null)
+                    scripts.TryAdd(e.SourceTableName, e.Patch);
+                CollectEmbeddedPatches(e.EmbeddedTables, scripts);
+            }
+        }
+    }
+
+    private static string SanitizeForJs(string name)
+    {
+        var sb = new StringBuilder(name.Length);
+        for (int i = 0; i < name.Length; i++)
+        {
+            var c = name[i];
+            sb.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+        }
+        return sb.ToString();
+    }
+
+    private static string EscapeJsString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
     private void RegisterEmbeddedTables(
         CdcSinkTableConfig rootConfig,

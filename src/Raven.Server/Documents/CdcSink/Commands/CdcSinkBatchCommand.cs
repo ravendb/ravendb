@@ -23,6 +23,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private readonly string _configurationName;
     private readonly string _lastLsn;
     private readonly Dictionary<string, CdcSinkTableLoadState> _tableLoadUpdates;
+    private readonly PatchRequest _patchRequest;
     private readonly CdcSinkStatsScope _statsScope;
     private readonly CdcSinkProcessStatistics _statistics;
     private readonly RavenLogger _logger;
@@ -36,6 +37,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         string configurationName,
         string lastLsn,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates,
+        PatchRequest patchRequest,
         CdcSinkStatsScope statsScope,
         CdcSinkProcessStatistics statistics,
         RavenLogger logger)
@@ -45,6 +47,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         _configurationName = configurationName;
         _lastLsn = lastLsn;
         _tableLoadUpdates = tableLoadUpdates;
+        _patchRequest = patchRequest;
         _statsScope = statsScope;
         _statistics = statistics;
         _logger = logger;
@@ -531,66 +534,13 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// Runs all surviving patches in a single script invocation. Generates a combined script with
     /// a per-table function for each unique (tableName, patchScript) pair, then a dispatch function
     /// that iterates through all rows calling the appropriate table function.
+    /// The script itself is pre-built once in <see cref="CdcSinkDocumentProcessor.CombinedPatchRequest"/>.
     /// </summary>
     private BlittableJsonReaderObject RunPatches(
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject document,
         List<(string TableName, Dictionary<string, object> RawData, string PatchScript)> patches)
     {
-        // Collect unique table→script pairs. Each table has exactly one script.
-        // Use table name as the function identifier.
-        var tableScripts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < patches.Count; i++)
-        {
-            var (tableName, _, patchScript) = patches[i];
-            // The same table always has the same script, so TryAdd is sufficient
-            tableScripts.TryAdd(tableName, patchScript);
-        }
-
-        // Build the combined script:
-        //   function __cdc_<tableName>($row) { <user script> }
-        //   ...
-        //   function execute(doc, args) {
-        //     Raven_ExplodeArgs(this, args);
-        //     var $rows = args.$rows;
-        //     for (var i = 0; i < $rows.length; i++) {
-        //       var $row = $rows[i].row;
-        //       switch($rows[i].table) {
-        //         case "<tableName>": __cdc_<tableName>.call(this, $row); break;
-        //       }
-        //     }
-        //     return doc;
-        //   }
-        //
-        // Each per-table function receives $row as a direct parameter.
-        // The user's script references $row.column_name directly.
-        // `this` is the document being modified.
-        var sb = new StringBuilder();
-        var switchCases = new StringBuilder();
-
-        foreach (var kvp in tableScripts)
-        {
-            var funcName = $"__cdc_{SanitizeForJs(kvp.Key)}";
-            sb.Append("function ").Append(funcName).Append("($row) {\n");
-            sb.Append(kvp.Value).Append("\n}\n\n");
-
-            switchCases.Append("      case \"").Append(EscapeJsString(kvp.Key))
-                .Append("\": ").Append(funcName).Append(".call(doc, $row); break;\n");
-        }
-
-        sb.Append("function execute(doc, args) {\n");
-        sb.Append("  var $rows = args.$rows;\n");
-        sb.Append("  for (var i = 0; i < $rows.length; i++) {\n");
-        sb.Append("    var $row = $rows[i].row;\n");
-        sb.Append("    switch($rows[i].table) {\n");
-        sb.Append(switchCases);
-        sb.Append("    }\n");
-        sb.Append("  }\n");
-        sb.Append("  return doc;\n");
-        sb.Append("}\n");
-
-        var combinedScript = sb.ToString();
-
         // Build the $rows array: [{table: "orders", row: {...}}, {table: "order_lines", row: {...}}]
         var rowsArray = new DynamicJsonArray();
         for (int i = 0; i < patches.Count; i++)
@@ -617,9 +567,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         var argsDjv = new DynamicJsonValue { ["$rows"] = rowsArray };
         using var argsBlittable = context.ReadObject(argsDjv, "cdc-patch-args");
 
-        // EtlBehaviorFunctions passes the script as-is (no wrapper generation)
-        var patchRequest = new PatchRequest(combinedScript, PatchRequestType.EtlBehaviorFunctions);
-        using (context.DocumentDatabase.Scripts.GetScriptRunner(patchRequest, readOnly: false, out var runner))
+        using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
         {
             var documentInstance = (Patch.BlittableObjectInstance)runner.Translate(context,
                 new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
@@ -629,29 +577,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
-    }
-
-    /// <summary>
-    /// Sanitize a SQL table name to be a valid JavaScript identifier.
-    /// Replaces non-alphanumeric/underscore characters with underscores.
-    /// </summary>
-    private static string SanitizeForJs(string tableName)
-    {
-        var sb = new StringBuilder(tableName.Length);
-        for (int i = 0; i < tableName.Length; i++)
-        {
-            var c = tableName[i];
-            sb.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
-        }
-        return sb.ToString();
-    }
-
-    /// <summary>
-    /// Escape a string for use inside a JavaScript string literal (double-quoted).
-    /// </summary>
-    private static string EscapeJsString(string value)
-    {
-        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     private void UpdateState(DocumentsOperationContext context)
@@ -811,7 +736,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
 
             return new CdcSinkBatchCommand(database, ops, ConfigurationName, LastLsn,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
         }
     }
 }
