@@ -94,7 +94,9 @@ public class CdcSinkDocumentProcessor
             for (var i = 0; i < $rows.length; i++) {
               var $row = $rows[i].row;
               switch($rows[i].table) {
-            {{switchCases}}  }
+              {{switchCases}}
+                  default: throw new Error('CDC Sink: no patch function for table "' + $rows[i].table + '"'); break;
+              }
             }
             """;
 

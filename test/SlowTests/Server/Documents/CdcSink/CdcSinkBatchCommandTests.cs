@@ -138,7 +138,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("Orders/1", mappedData)
             };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
             using (var session = store.OpenSession())
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
 
             var putOps = new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", mappedData) };
-            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null);
+            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             // Verify it exists
@@ -183,7 +183,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Now delete it
             var deleteOps = new List<CdcSinkDocumentOp> { CreateDeleteOp("Orders/1") };
-            var deleteCmd = new CdcSinkBatchCommand(database, deleteOps, "test-config", null, null, null, null, null);
+            var deleteCmd = new CdcSinkBatchCommand(database, deleteOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(deleteCmd);
 
             using (var session = store.OpenSession())
@@ -209,7 +209,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
             var putOps = new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) };
-            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null);
+            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             // Create embedded array config
@@ -242,7 +242,7 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 CreateEmbeddedOp("Orders/1", itemData, CdcSinkOperation.Upsert, embeddedProcessor)
             };
-            var embCmd = new CdcSinkBatchCommand(database, embOps, "test-config", null, null, null, null, null);
+            var embCmd = new CdcSinkBatchCommand(database, embOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(embCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -282,7 +282,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -315,7 +315,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(insertCmd);
 
             // Update the same item (same PK)
@@ -330,7 +330,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(updateCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -368,7 +368,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -399,7 +399,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(insertCmd);
 
             // Verify it was inserted
@@ -423,7 +423,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", deleteData, CdcSinkOperation.Delete, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(deleteCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -455,7 +455,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -485,7 +485,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", itemData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(embCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -521,7 +521,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -551,7 +551,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", itemData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(embCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -585,7 +585,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
             var putOps = new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) };
-            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null);
+            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -622,7 +622,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreateEmbeddedOp("Orders/1", item1, CdcSinkOperation.Upsert, embeddedProcessor),
                 CreateEmbeddedOp("Orders/1", item2, CdcSinkOperation.Upsert, embeddedProcessor)
             };
-            var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test-config", null, null, null, null, null);
+            var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(batchCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -654,8 +654,16 @@ namespace SlowTests.Server.Documents.CdcSink
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            var config = CreateRootTableConfig(patch: "this.ComputedField = $row.extra_info + ' processed';");
-            var processor = CreateRootProcessor(config);
+            var tableConfig = CreateRootTableConfig(patch: "this.ComputedField = $row.extra_info + ' processed';");
+            var processor = CreateRootProcessor(tableConfig);
+
+            // Build a CdcSinkDocumentProcessor to get the CombinedPatchRequest
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
 
             var mappedData = new DynamicJsonValue
             {
@@ -679,7 +687,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("Orders/1", mappedData, rawData, processor)
             };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
             await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -734,7 +744,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("Products/99", badData, processor: badProcessor)
             };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
             using (var session = store.OpenSession())
@@ -804,7 +814,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("Documents/1", mappedData, rawData, processor)
             };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -867,7 +877,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreatePutOp("Orders/1", mappedData)
             };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -903,7 +913,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -937,7 +947,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(insertCmd);
 
             // Update the same item but only send Product and LineId (not ExtraInfo)
@@ -951,7 +961,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(updateCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -995,7 +1005,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -1027,7 +1037,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(insertCmd);
 
             // Update the same key but only send Key and Value (not Source)
@@ -1041,7 +1051,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(updateCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -1081,7 +1091,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
             var putCmd = new CdcSinkBatchCommand(database,
                 new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(putCmd);
 
             var embeddedConfig = new CdcSinkEmbeddedTableConfig
@@ -1113,7 +1123,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(insertCmd);
 
             // Update: only send Carrier (not EstimatedDate or TrackingNumber)
@@ -1126,7 +1136,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
                 },
-                "test-config", null, null, null, null, null);
+                "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(updateCmd);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
@@ -1185,7 +1195,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1246,7 +1256,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1318,7 +1328,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1402,7 +1412,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1494,7 +1504,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())
@@ -1551,7 +1561,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var command = new CdcSinkBatchCommand(
                 database, ops, "test-config", null,
-                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var tx = context.OpenWriteTransaction())

@@ -564,7 +564,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             });
         }
 
-        var argsDjv = new DynamicJsonValue { ["$rows"] = rowsArray };
+        var argsDjv = new DynamicJsonValue { ["rows"] = rowsArray };
         using var argsBlittable = context.ReadObject(argsDjv, "cdc-patch-args");
 
         using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))

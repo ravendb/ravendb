@@ -33,9 +33,9 @@ public class CdcSinkTaskState : IDynamicJson
     public DynamicJsonValue ToJson()
     {
         var tables = new DynamicJsonValue();
-        foreach (var (key, value) in Tables)
+        foreach (var kvp in Tables)
         {
-            tables[key] = value.ToJson();
+            tables[kvp.Key] = kvp.Value.ToJson();
         }
 
         return new DynamicJsonValue
