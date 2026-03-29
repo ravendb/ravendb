@@ -15,6 +15,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -147,20 +148,35 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             Debug.Assert(commands != null);
 
-            if (commands.Count == 0)
-                return 0;
-
             if (ShouldTrackTimeSeries())
             {
-                foreach (var command in commands)
+                bool createdNotification = false;
+
+                for (int i = commands.Count - 1; i >= 0; i--)
                 {
-                    if (command is TimeSeriesBatchCommandData tsbc)
+                    if (commands[i] is TimeSeriesBatchCommandData tsbc &&
+                        TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
                     {
-                        if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
-                            throw new NotSupportedException($"Load isn't support for incremental time series '{tsbc.Name}' at document '{tsbc.Id}'");
+                        if (createdNotification == false)
+                        {
+                            Database.NotificationCenter.Add(
+                                AlertRaised.Create(
+                                    Database.Name,
+                                    "Incremental Time Series Command Ignored",
+                                    $"An incremental time series command for '{tsbc.Name}' was discarded. Incremental time series is not supported in ETL.",
+                                    AlertReason.Etl_Warning,
+                                    NotificationSeverity.Warning
+                                )
+                            );
+                            createdNotification = true;
+                        }
+                        commands.RemoveAt(i);
                     }
                 }
             }
+
+            if (commands.Count == 0)
+                return 0;
 
             BatchOptions options = null;
             if (Configuration.LoadRequestTimeoutInSec != null)
