@@ -176,7 +176,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var r = await chat.RunAsync<AnswerSchema>();
     }
 
-    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenMultiplatformTheory(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task AiAgentClientApi(Options options, GenAiConfiguration config)
     {
