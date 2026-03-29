@@ -2,22 +2,19 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
-using Raven.Server.Documents.CdcSink.Commands;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
@@ -52,12 +49,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected readonly RavenLogger Logger;
 
-    private int _statsId;
     private CdcSinkStatsAggregator _lastStats;
 
     private readonly ConcurrentQueue<CdcSinkStatsAggregator> _lastCdcSinkStats = new();
-
-    private ICdcSinkConsumer _consumer;
 
     protected CdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
     {
@@ -126,200 +120,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, Database.ServerStore.Engine.OperationTimeout).Wait(CancellationToken);
     }
 
-    protected virtual void Run()
-    {
-        while (true)
-        {
-            using var _ = Database.PreventFromUnloadingByIdleOperations();
-            try
-            {
-                if (CancellationToken.IsCancellationRequested)
-                    return;
-            }
-            catch (ObjectDisposedException)
-            {
-                return;
-            }
-
-            if (FallbackTime != null)
-            {
-                if (CancellationToken.WaitHandle.WaitOne(FallbackTime.Value))
-                    return;
-
-                FallbackTime = null;
-            }
-
-            EnsureThreadAllocationStats();
-
-            try
-            {
-                if (_consumer == null)
-                {
-                    try
-                    {
-                        _consumer = CreateConsumer();
-                    }
-                    catch (Exception e)
-                    {
-                        string msg = $"[{Name}] Failed to create CDC sink consumer";
-
-                        if (Logger.IsErrorEnabled)
-                            Logger.Error(msg, e);
-
-                        var key = $"{Tag}/{Name}";
-
-                        var alert = AlertRaised.Create(Database.Name, Tag, msg, AlertReason.CdcSink_ConsumerCreationError, NotificationSeverity.Error, key, new ExceptionDetails(e));
-
-                        Database.NotificationCenter.Add(alert);
-
-                        EnterFallbackMode();
-                        continue;
-                    }
-                }
-
-                var statsAggregator = new CdcSinkStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-
-                using (Statistics.NewBatch())
-                using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var stats = statsAggregator.CreateScope())
-                {
-                    var messages = new List<BlittableJsonReaderObject>();
-
-                    using (var readScope = stats.For(CdcSinkBatchPhases.QueueReading, start: false))
-                    {
-                        var batchStarted = false;
-
-                        while (true)
-                        {
-                            try
-                            {
-                                var message = batchStarted
-                                    ? _consumer.Consume(TimeSpan.Zero)
-                                    : _consumer.Consume(CancellationToken);
-
-                                if (message is null)
-                                    break;
-
-                                if (batchStarted == false)
-                                {
-                                    statsAggregator.Start();
-                                    stats.Start();
-                                    readScope.Start();
-
-                                    AddPerformanceStats(statsAggregator);
-                                }
-
-                                batchStarted = true;
-
-                                var json = context.Sync.ReadForMemory(new MemoryStream(message), "cdc-message");
-
-                                messages.Add(json);
-
-                                readScope.RecordReadMessage();
-
-                                if (CanContinueBatch(stats, messages.Count, context) == false)
-                                    break;
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                return;
-                            }
-                            catch (Exception e)
-                            {
-                                string msg = "Failed to consume CDC message.";
-
-                                if (Logger.IsErrorEnabled)
-                                    Logger.Error(msg, e);
-
-                                readScope.RecordReadError();
-                                Statistics.RecordConsumeError(e.Message);
-
-                                if (batchStarted == false)
-                                {
-                                    EnterFallbackMode();
-                                }
-                            }
-                        }
-                    }
-
-                    var processedSuccessfully = 0;
-
-                    try
-                    {
-                        using (var scriptProcessingScope = stats.For(CdcSinkBatchPhases.ScriptProcessing))
-                        {
-                            try
-                            {
-                                var command = new BatchCdcSinkScriptCommand(Configuration.Tables[0].Patch, messages, scriptProcessingScope, Statistics, Logger);
-
-                                Database.TxMerger.EnqueueSync(command);
-
-                                processedSuccessfully = command.ProcessedSuccessfully;
-
-                                _consumer.Commit();
-                            }
-                            catch (JavaScriptParseException e)
-                            {
-                                HandleScriptParseException(e);
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-                    catch (Exception e)
-                    {
-                        var message = $"{Tag} Exception in CDC sink process '{Name}'";
-
-                        if (Logger.IsErrorEnabled)
-                            Logger.Error(message, e);
-                    }
-
-                    statsAggregator.Complete();
-
-                    if (processedSuccessfully > 0)
-                    {
-                        Statistics.ConsumeSuccess(processedSuccessfully);
-
-                        try
-                        {
-                            UpdateProcessState(new CdcSinkProcessState
-                            {
-                                ConfigurationName = Configuration.Name,
-                                ScriptName = Name,
-                                NodeTag = Database.ServerStore.NodeTag
-                            });
-
-                            Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
-                        }
-                        catch (Exception e)
-                        {
-                            if (CancellationToken.IsCancellationRequested == false)
-                            {
-                                if (Logger.IsErrorEnabled)
-                                    Logger.Error($"{Tag} Failed to update state of CDC sink process '{Name}'", e);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                var msg = $"Unexpected error in {Tag} process: '{Name}'";
-
-                if (Logger.IsErrorEnabled)
-                {
-                    Logger.Error(msg, e);
-                }
-            }
-            finally
-            {
-                _threadAllocations.CurrentlyAllocatedForProcessing = 0;
-                _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-            }
-        }
-    }
+    protected abstract void Run();
 
     private void AddPerformanceStats(CdcSinkStatsAggregator stats)
     {
@@ -330,8 +131,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         while (_lastCdcSinkStats.Count > 25)
             _lastCdcSinkStats.TryDequeue(out _);
     }
-
-    protected abstract ICdcSinkConsumer CreateConsumer();
 
     public void Start()
     {
@@ -390,7 +189,22 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         using (context.OpenWriteTransaction())
         {
-            var script = new PatchRequest(testScript.Configuration.Tables[0].Patch, PatchRequestType.CdcSink);
+            var table = testScript.Configuration.Tables[0];
+
+            // Generate the same combined-script format used in production:
+            // per-table function receives $row as parameter, called with doc as `this`.
+            var sb = new StringBuilder();
+            sb.Append("function __cdc_test($row) {\n");
+            sb.Append(table.Patch).Append("\n}\n\n");
+            sb.Append("function execute(doc, args) {\n");
+            sb.Append("  __cdc_test.call(doc, args);\n");
+            sb.Append("  return doc;\n");
+            sb.Append("}\n");
+
+            // In test mode: the message IS the $row data, and the document is the message.
+            // PatchDocumentCommand calls execute(doc, args) where doc = GetCurrentDocument()
+            // and args = the second patch tuple (which we set to messageDoc below).
+            var script = new PatchRequest(sb.ToString(), PatchRequestType.EtlBehaviorFunctions);
 
             var command = new TestCdcMessageCommand(context, script, messageDoc);
 
@@ -423,35 +237,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         if (longRunningWork != PoolOfThreads.LongRunningWork.Current)
             longRunningWork.Join(int.MaxValue);
-
-        _consumer?.Dispose();
-        _consumer = null;
-    }
-
-    private void HandleScriptParseException(Exception e)
-    {
-        var message = $"[{Name}] Could not parse script. Stopping CDC Sink process.";
-
-        if (Logger.IsInfoEnabled)
-            Logger.Info(message, e);
-
-        var key = $"{Tag}/{Name}";
-        var details = new CdcSinkErrorsDetails();
-
-        details.Errors.Enqueue(new CdcSinkErrorInfo(e.ToString()));
-
-        var alert = AlertRaised.Create(
-            Database.Name,
-            Tag,
-            message,
-            AlertReason.CdcSink_ScriptError,
-            NotificationSeverity.Error,
-            key: key,
-            details: details);
-
-        Database.NotificationCenter.Add(alert);
-
-        Stop(message);
     }
 
     protected void EnterFallbackMode()
@@ -473,10 +258,16 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     public CdcSinkPerformanceStats[] GetPerformanceStats()
     {
         var lastStats = _lastStats;
+        List<CdcSinkPerformanceStats> result = [];
 
-        return _lastCdcSinkStats
-            .Select(x => x == lastStats ? x.ToPerformanceLiveStatsWithDetails() : x.ToPerformanceStats())
-            .ToArray();
+        foreach (var stats in _lastCdcSinkStats)
+        {
+            result.Add(stats == lastStats
+                ? stats.ToPerformanceLiveStatsWithDetails()
+                : stats.ToPerformanceStats());
+        }
+
+        return result.ToArray();
     }
 
     public CdcSinkStatsAggregator GetLatestPerformanceStats()
@@ -484,81 +275,39 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         return _lastStats;
     }
 
-    private bool CanContinueBatch(CdcSinkStatsScope stats, int batchSize, DocumentsOperationContext ctx)
+    /// <summary>
+    /// Lightweight batch-size check for the streaming loops in derived classes.
+    /// Returns false when the batch should be flushed (size limit, low memory, or CPU credits).
+    /// </summary>
+    protected bool ShouldFlushBatch(int batchSize)
     {
-        if (Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
-        {
-            var reason = $"Stopping the batch after {stats.Duration} because the CPU credits balance is almost completely used";
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] {reason}");
-
-            stats.RecordPullCompleteReason(reason);
-
-            return false;
-        }
+        if (batchSize >= Database.Configuration.CdcSink.MaxBatchSize)
+            return true;
 
         if (_lowMemoryFlag.IsRaised() && batchSize >= MinBatchSize)
-        {
-            var reason = $"The batch was stopped after processing {batchSize:#,#;;0} items because of low memory";
+            return true;
 
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] {reason}");
+        if (Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
+            return true;
 
-            stats.RecordPullCompleteReason(reason);
-            return false;
-        }
-
-        var totalAllocated = new Size(_threadAllocations.TotalAllocated, SizeUnit.Bytes);
-        _threadAllocations.CurrentlyAllocatedForProcessing = totalAllocated.GetValue(SizeUnit.Bytes);
-
-        stats.RecordCurrentlyAllocated(totalAllocated.GetValue(SizeUnit.Bytes) + GC.GetAllocatedBytesForCurrentThread());
-
-        if (totalAllocated > _currentMaximumAllowedMemory)
-        {
-            if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                    totalAllocated,
-                    Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Database.ServerStore.Server.MetricCacher, Logger, out var memoryUsage) == false)
-            {
-                var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {totalAllocated}.";
-                if (memoryUsage != null)
-                {
-                    reason += " Current memory usage: " +
-                               $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +
-                               $"{nameof(memoryUsage.PrivateMemory)} = {memoryUsage.PrivateMemory}";
-                }
-
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] {reason}");
-
-                stats.RecordPullCompleteReason(reason);
-
-                ctx.DoNotReuse = true;
-
-                return false;
-            }
-        }
-
-        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
-
-        if (maxBatchSize != null && batchSize >= maxBatchSize)
-        {
-            var reason = $"Stopping the batch because maximum batch size limit was reached ({batchSize})";
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] {reason}");
-
-            stats.RecordPullCompleteReason(reason);
-
-            return false;
-        }
-
-        return true;
+        return false;
     }
+
 
     protected void EnsureThreadAllocationStats()
     {
         _threadAllocations = NativeMemory.CurrentThreadStats;
+    }
+
+    protected CdcSinkTaskState LoadState(DocumentsOperationContext context)
+    {
+        var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
+        var doc = Database.DocumentsStorage.Get(context, stateDocId);
+
+        if (doc == null)
+            return new CdcSinkTaskState { ConfigurationName = Configuration.Name };
+
+        return JsonDeserializationServer.CdcSinkTaskState(doc.Data);
     }
 
     public void Dispose()
@@ -571,7 +320,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         exceptionAggregator.Execute(() => Stop("Dispose"));
 
         exceptionAggregator.Execute(() => _cts.Dispose());
-        exceptionAggregator.Execute(() => _consumer?.Dispose());
 
         exceptionAggregator.ThrowIfNeeded();
     }

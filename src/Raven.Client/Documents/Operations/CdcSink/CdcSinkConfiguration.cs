@@ -155,16 +155,17 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (config.Tables.Count != Tables.Count)
             differences |= CdcSinkConfigurationCompareDifferences.TablesCount;
 
-        var localTables = Tables.OrderBy(x => x.Name);
-        var remoteTables = config.Tables.OrderBy(x => x.Name);
+        // Sort copies by name for stable comparison
+        var localTables = new List<CdcSinkTableConfig>(Tables);
+        localTables.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        var remoteTables = new List<CdcSinkTableConfig>(config.Tables);
+        remoteTables.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
 
-        using var localEnum = localTables.GetEnumerator();
-        using var remoteEnum = remoteTables.GetEnumerator();
-
-        while (localEnum.MoveNext() && remoteEnum.MoveNext())
+        var count = localTables.Count < remoteTables.Count ? localTables.Count : remoteTables.Count;
+        for (int i = 0; i < count; i++)
         {
-            var local = localEnum.Current;
-            var remote = remoteEnum.Current;
+            var local = localTables[i];
+            var remote = remoteTables[i];
 
             if (string.Equals(local.Name, remote.Name, StringComparison.OrdinalIgnoreCase) == false)
             {
@@ -257,7 +258,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 l.SourceTableName != r.SourceTableName ||
                 l.PropertyName != r.PropertyName ||
                 l.Patch != r.Patch ||
-                l.Type != r.Type)
+                l.Type != r.Type ||
+                l.CaseSensitiveKeys != r.CaseSensitiveKeys)
                 return true;
 
             if (l.PrimaryKeyColumns.SequenceEqual(r.PrimaryKeyColumns) == false)
@@ -275,6 +277,85 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Collects fully-qualified source table names (schema.table) from all configured tables,
+    /// including embedded tables recursively.
+    /// </summary>
+    /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
+    public List<string> CollectAllSourceTableNames(string defaultSchema)
+    {
+        var names = new List<string>();
+        foreach (var table in Tables)
+        {
+            var schema = table.SourceTableSchema ?? defaultSchema;
+            names.Add($"{schema}.{table.SourceTableName}");
+            CollectEmbeddedSourceTableNames(table.EmbeddedTables, defaultSchema, names);
+        }
+        return names;
+
+        static void CollectEmbeddedSourceTableNames(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<string> names)
+        {
+            if (embedded == null)
+                return;
+
+            foreach (var e in embedded)
+            {
+                var schema = e.SourceTableSchema ?? defaultSchema;
+                names.Add($"{schema}.{e.SourceTableName}");
+                CollectEmbeddedSourceTableNames(e.EmbeddedTables, defaultSchema, names);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects all configured tables (including embedded tables recursively) as a flat list
+    /// of TableInfo instances with schema, name, and primary key columns.
+    /// </summary>
+    /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
+    public List<TableInfo> CollectAllTablesFlat(string defaultSchema)
+    {
+        var tables = new List<TableInfo>();
+        foreach (var table in Tables)
+        {
+            tables.Add(new TableInfo
+            {
+                Schema = table.SourceTableSchema ?? defaultSchema,
+                TableName = table.SourceTableName,
+                PrimaryKeyColumns = table.PrimaryKeyColumns,
+            });
+            CollectEmbeddedTablesFlat(table.EmbeddedTables, defaultSchema, tables);
+        }
+        return tables;
+
+        static void CollectEmbeddedTablesFlat(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<TableInfo> tables)
+        {
+            if (embedded == null)
+                return;
+
+            foreach (var e in embedded)
+            {
+                tables.Add(new TableInfo
+                {
+                    Schema = e.SourceTableSchema ?? defaultSchema,
+                    TableName = e.SourceTableName,
+                    PrimaryKeyColumns = e.PrimaryKeyColumns,
+                });
+                CollectEmbeddedTablesFlat(e.EmbeddedTables, defaultSchema, tables);
+            }
+        }
+    }
+
+    public class TableInfo
+    {
+        public string Schema { get; set; }
+        public string TableName { get; set; }
+        public List<string> PrimaryKeyColumns { get; set; }
+        public string FullName => $"{Schema}.{TableName}";
+
+        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);
+        public override bool Equals(object obj) => obj is TableInfo other && string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool HaveLinkedTablesChanged(List<CdcSinkLinkedTableConfig> local, List<CdcSinkLinkedTableConfig> remote)

@@ -200,6 +200,25 @@ public static class CdcSinkSourceVerifier
             dbName = (await cmd.ExecuteScalarAsync())?.ToString() ?? "unknown";
         }
 
+        // Check SQL Server Agent status — required for CDC capture/cleanup jobs
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT dss.[status]
+                FROM sys.dm_server_services dss
+                WHERE dss.[servicename] LIKE N'SQL Server Agent (%'";
+
+            var agentStatus = await cmd.ExecuteScalarAsync();
+
+            // agentStatus = 4 means running. Null means we can't check (insufficient permissions, which is fine).
+            if (agentStatus != null && agentStatus != DBNull.Value && Convert.ToInt32(agentStatus) != 4)
+            {
+                result.Warnings.Add(
+                    "SQL Server Agent is not running. CDC capture jobs require SQL Server Agent to be active. " +
+                    "Changes will not be captured until the Agent is started.");
+            }
+        }
+
         // Check if user has db_owner permissions
         bool hasPermission;
         await using (var permCmd = connection.CreateCommand())
@@ -235,6 +254,38 @@ public static class CdcSinkSourceVerifier
                     "Ask a database administrator to run: EXEC sys.sp_cdc_enable_db;");
             }
             return;
+        }
+
+        // Check CDC capture/cleanup job health
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = @"
+                SELECT job_type, job_error
+                FROM msdb.dbo.cdc_jobs
+                WHERE database_id = DB_ID()";
+
+            try
+            {
+                await using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    var jobType = reader.GetString(reader.GetOrdinal("job_type"));
+                    var jobError = reader.IsDBNull(reader.GetOrdinal("job_error"))
+                        ? 0
+                        : reader.GetInt32(reader.GetOrdinal("job_error"));
+
+                    if (jobError != 0)
+                    {
+                        result.Warnings.Add(
+                            $"CDC {jobType} job in database '{dbName}' has error code {jobError}. " +
+                            "This may indicate the CDC infrastructure is unhealthy.");
+                    }
+                }
+            }
+            catch
+            {
+                // User may not have access to msdb — not a fatal error for verification
+            }
         }
 
         // Check each configured table has CDC tracking enabled

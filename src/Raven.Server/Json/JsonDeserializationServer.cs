@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -371,6 +372,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseNotificationsSummaryRequestConfig> NotificationsSummaryRequestConfig = GenerateJsonDeserializationRoutine<DatabaseNotificationsSummaryRequestConfig>();
+
+        public static readonly Func<BlittableJsonReaderObject, CdcSinkTaskState> CdcSinkTaskState = GenerateJsonDeserializationRoutine<CdcSinkTaskState>();
         
         public sealed class Parameters
         {

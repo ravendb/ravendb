@@ -22,14 +22,15 @@ public class CdcSinkDocumentProcessor
         foreach (var table in config.Tables)
         {
             // Register the root table
+            var rootKey = MakeKey(table.SourceTableSchema, table.SourceTableName);
             var rootProcessor = new CdcSinkTableProcessor
             {
+                Key = rootKey,
                 RootConfig = table,
                 CollectionName = table.Name,
                 IsRoot = true,
             };
 
-            var rootKey = MakeKey(table.SourceTableSchema, table.SourceTableName);
             _tableIndex[rootKey] = rootProcessor;
 
             // Register all embedded tables recursively
@@ -93,8 +94,10 @@ public class CdcSinkDocumentProcessor
             //   This requires that ALL descendant tables carry the root's FK (company_id) as a denormalized column.
             var rootJoinColumns = path[0].Config.JoinColumns;
 
+            var key = MakeKey(embedded.SourceTableSchema, embedded.SourceTableName);
             var processor = new CdcSinkTableProcessor
             {
+                Key = key,
                 RootConfig = rootConfig,
                 CollectionName = rootConfig.Name,
                 IsRoot = false,
@@ -103,7 +106,6 @@ public class CdcSinkDocumentProcessor
                 RootJoinColumns = rootJoinColumns,
             };
 
-            var key = MakeKey(embedded.SourceTableSchema, embedded.SourceTableName);
             _tableIndex[key] = processor;
 
             // Recurse for deep nesting
@@ -112,6 +114,13 @@ public class CdcSinkDocumentProcessor
                 RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, path);
             }
         }
+    }
+
+    public CdcSinkTableProcessor GetProcessor(string processorKey)
+    {
+        if (_tableIndex.TryGetValue(processorKey, out var processor) == false)
+            throw new InvalidOperationException($"No processor found for table key '{processorKey}'.");
+        return processor;
     }
 
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row)

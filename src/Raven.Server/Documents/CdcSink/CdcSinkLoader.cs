@@ -136,7 +136,12 @@ public class CdcSinkLoader : IDisposable
 
     protected virtual CdcSinkProcess CreateProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
     {
-        return null;
+        return configuration.Connection?.FactoryName switch
+        {
+            "Npgsql" => new PostgresCdcSinkProcess(configuration, database),
+            "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => new SqlServerCdcSinkProcess(configuration, database),
+            _ => throw new NotSupportedException($"CDC is not supported for provider '{configuration.Connection?.FactoryName}'")
+        };
     }
 
     private bool ValidateConfiguration(CdcSinkConfiguration config, HashSet<string> uniqueNames)

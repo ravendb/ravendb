@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
+using Npgsql;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -16,62 +16,23 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink
 {
-    public class CdcSinkSqlServerIntegrationTests : SqlAwareTestBase
+    public class CdcSinkPostgresIntegrationTests : SqlAwareTestBase
     {
-        public CdcSinkSqlServerIntegrationTests(ITestOutputHelper output) : base(output)
+        public CdcSinkPostgresIntegrationTests(ITestOutputHelper output) : base(output)
         {
         }
 
-        private void ExecuteMsSql(string connectionString, string sql)
+        private void ExecuteNpgSql(string connectionString, string sql)
         {
-            using var connection = new SqlConnection(connectionString);
-            connection.Open();
-            using var cmd = new SqlCommand(sql, connection);
-            cmd.CommandTimeout = 120;
-            cmd.ExecuteNonQuery();
+            ExecuteSqlQuery(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, connectionString, sql);
         }
 
-        private void EnableCdc(string connectionString)
-        {
-            ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_enable_db");
-        }
-
-        private void EnableCdcOnTable(string connectionString, string schema, string tableName)
-        {
-            ExecuteMsSql(connectionString,
-                $"EXEC sys.sp_cdc_enable_table @source_schema = N'{schema}', @source_name = N'{tableName}', @role_name = NULL");
-
-            // SQL Server creates the capture instance asynchronously via SQL Agent.
-            // Wait for it to become available before proceeding.
-            WaitForCdcCaptureInstance(connectionString, schema, tableName);
-        }
-
-        private void WaitForCdcCaptureInstance(string connectionString, string schema, string tableName)
-        {
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 30_000)
-            {
-                using var connection = new SqlConnection(connectionString);
-                connection.Open();
-                using var cmd = new SqlCommand(
-                    "SELECT capture_instance FROM cdc.change_tables WHERE source_object_id = OBJECT_ID(@name)", connection);
-                cmd.Parameters.AddWithValue("@name", $"{schema}.{tableName}");
-                var result = cmd.ExecuteScalar();
-                if (result != null)
-                    return;
-
-                System.Threading.Thread.Sleep(500);
-            }
-
-            throw new TimeoutException($"CDC capture instance for {schema}.{tableName} was not created within 30 seconds.");
-        }
-
-        private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string connectionString, string name = "mssql-cdc-test")
+        private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string connectionString, string name = "pg-cdc-test")
         {
             var sqlCs = new SqlConnectionString
             {
                 Name = name,
-                FactoryName = "Microsoft.Data.SqlClient",
+                FactoryName = "Npgsql",
                 ConnectionString = connectionString
             };
 
@@ -140,39 +101,36 @@ namespace SlowTests.Server.Documents.CdcSink
             return count;
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 CREATE TABLE products (
-                    id INT PRIMARY KEY,
-                    name NVARCHAR(200) NOT NULL,
-                    price DECIMAL(10,2) NOT NULL
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    price NUMERIC(10,2) NOT NULL
                 )");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
                 INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 19.99);
                 INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);");
-
-            EnableCdc(connectionString);
-            EnableCdcOnTable(connectionString, "dbo", "products");
 
             var sqlCs = SetupSqlConnectionString(store, connectionString);
 
             var config = new CdcSinkConfiguration
             {
-                Name = "test-mssql-initial-load",
+                Name = "test-initial-load",
                 ConnectionStringName = sqlCs.Name,
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
                     {
                         Name = "Products",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = "public",
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
                         ColumnsMapping = new Dictionary<string, string>
@@ -208,35 +166,85 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
-        public async Task CdcStreaming_Insert()
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task InitialLoad_WithColumnMapping()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE events (
-                    id INT PRIMARY KEY,
-                    description NVARCHAR(200) NOT NULL
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE items (
+                    product_id SERIAL PRIMARY KEY,
+                    product_name VARCHAR(200) NOT NULL
                 )");
 
-            EnableCdc(connectionString);
-            EnableCdcOnTable(connectionString, "dbo", "events");
-
-            ExecuteMsSql(connectionString, @"INSERT INTO events (id, description) VALUES (1, 'Initial Event');");
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO items (product_id, product_name) VALUES (1, 'Alpha');
+                INSERT INTO items (product_id, product_name) VALUES (2, 'Beta');");
 
             var sqlCs = SetupSqlConnectionString(store, connectionString);
 
             var config = new CdcSinkConfiguration
             {
-                Name = "test-mssql-cdc-insert",
+                Name = "test-column-mapping",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "product_id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "product_id", "Id" },
+                            { "product_name", "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var count = await WaitForDocumentCountAsync(store, "Items", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var item = await session.LoadAsync<dynamic>("Items/1");
+                Assert.NotNull(item);
+                Assert.Equal("Alpha", (string)item.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task CdcStreaming_Insert()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE events (
+                    id SERIAL PRIMARY KEY,
+                    description VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO events (id, description) VALUES (1, 'Initial Event');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-cdc-insert",
                 ConnectionStringName = sqlCs.Name,
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
                     {
                         Name = "Events",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = "public",
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
                         ColumnsMapping = new Dictionary<string, string>
@@ -254,43 +262,41 @@ namespace SlowTests.Server.Documents.CdcSink
             var initialDoc = await WaitForDocumentAsync<dynamic>(store, "Events/1", timeoutMs: 60_000);
             Assert.NotNull(initialDoc);
 
-            // Insert a new row to be captured via CDC streaming
-            ExecuteMsSql(connectionString, @"INSERT INTO events (id, description) VALUES (2, 'Streamed Event');");
+            // Insert a new row via CDC streaming
+            ExecuteNpgSql(connectionString, @"INSERT INTO events (id, description) VALUES (2, 'Streamed Event');");
 
             var newDoc = await WaitForDocumentAsync<dynamic>(store, "Events/2", timeoutMs: 60_000);
             Assert.NotNull(newDoc);
             Assert.Equal("Streamed Event", (string)newDoc.Description);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task CdcStreaming_Update()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 CREATE TABLE notes (
-                    id INT PRIMARY KEY,
-                    content NVARCHAR(500) NOT NULL
+                    id SERIAL PRIMARY KEY,
+                    content VARCHAR(500) NOT NULL
                 )");
 
-            EnableCdc(connectionString);
-            EnableCdcOnTable(connectionString, "dbo", "notes");
-
-            ExecuteMsSql(connectionString, @"INSERT INTO notes (id, content) VALUES (1, 'Original Content');");
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO notes (id, content) VALUES (1, 'Original Content');");
 
             var sqlCs = SetupSqlConnectionString(store, connectionString);
 
             var config = new CdcSinkConfiguration
             {
-                Name = "test-mssql-cdc-update",
+                Name = "test-cdc-update",
                 ConnectionStringName = sqlCs.Name,
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
                     {
                         Name = "Notes",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = "public",
                         SourceTableName = "notes",
                         PrimaryKeyColumns = new List<string> { "id" },
                         ColumnsMapping = new Dictionary<string, string>
@@ -309,7 +315,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("Original Content", (string)doc.Content);
 
             // Update the row
-            ExecuteMsSql(connectionString, @"UPDATE notes SET content = 'Updated Content' WHERE id = 1;");
+            ExecuteNpgSql(connectionString, @"UPDATE notes SET content = 'Updated Content' WHERE id = 1;");
 
             // Wait for the updated content to appear
             await AssertWaitForValueAsync(async () =>
@@ -320,22 +326,22 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Updated Content", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task CdcStreaming_Delete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
-            ExecuteMsSql(connectionString, @"
+            // REPLICA IDENTITY FULL is required for DELETE to send full row data
+            ExecuteNpgSql(connectionString, @"
                 CREATE TABLE records (
-                    id INT PRIMARY KEY,
-                    title NVARCHAR(200) NOT NULL
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(200) NOT NULL
                 )");
 
-            EnableCdc(connectionString);
-            EnableCdcOnTable(connectionString, "dbo", "records");
+            ExecuteNpgSql(connectionString, @"ALTER TABLE records REPLICA IDENTITY FULL;");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 INSERT INTO records (id, title) VALUES (1, 'To Be Deleted');
                 INSERT INTO records (id, title) VALUES (2, 'To Keep');");
 
@@ -343,14 +349,14 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkConfiguration
             {
-                Name = "test-mssql-cdc-delete",
+                Name = "test-cdc-delete",
                 ConnectionStringName = sqlCs.Name,
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
                     {
                         Name = "Records",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = "public",
                         SourceTableName = "records",
                         PrimaryKeyColumns = new List<string> { "id" },
                         ColumnsMapping = new Dictionary<string, string>
@@ -368,7 +374,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(2, count);
 
             // Delete a row
-            ExecuteMsSql(connectionString, @"DELETE FROM records WHERE id = 1;");
+            ExecuteNpgSql(connectionString, @"DELETE FROM records WHERE id = 1;");
 
             var deleted = await WaitForDocumentDeletionAsync(store, "Records/1", timeoutMs: 60_000);
             Assert.True(deleted, "Document Records/1 should have been deleted after CDC DELETE");
@@ -382,31 +388,27 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task EmbeddedArray()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 CREATE TABLE orders (
-                    id INT PRIMARY KEY,
-                    customer_name NVARCHAR(200) NOT NULL
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
                 )");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 CREATE TABLE order_lines (
-                    id INT PRIMARY KEY,
+                    id SERIAL PRIMARY KEY,
                     order_id INT NOT NULL REFERENCES orders(id),
-                    product NVARCHAR(200) NOT NULL,
+                    product VARCHAR(200) NOT NULL,
                     quantity INT NOT NULL
                 )");
 
-            EnableCdc(connectionString);
-            EnableCdcOnTable(connectionString, "dbo", "orders");
-            EnableCdcOnTable(connectionString, "dbo", "order_lines");
-
-            ExecuteMsSql(connectionString, @"
+            ExecuteNpgSql(connectionString, @"
                 INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
                 INSERT INTO order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
                 INSERT INTO order_lines (id, order_id, product, quantity) VALUES (2, 1, 'Bananas', 3);");
@@ -415,14 +417,14 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkConfiguration
             {
-                Name = "test-mssql-embedded-array",
+                Name = "test-embedded-array",
                 ConnectionStringName = sqlCs.Name,
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
                     {
                         Name = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = "public",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         ColumnsMapping = new Dictionary<string, string>
@@ -434,7 +436,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = "public",
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -477,6 +479,129 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Contains("Apples", products);
                 Assert.Contains("Bananas", products);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchWithDollarRow()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE people (
+                    id SERIAL PRIMARY KEY,
+                    first_name VARCHAR(100) NOT NULL,
+                    last_name VARCHAR(100) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO people (id, first_name, last_name) VALUES (1, 'John', 'Doe');
+                INSERT INTO people (id, first_name, last_name) VALUES (2, 'Jane', 'Smith');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-patch-dollar-row",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "People",
+                        SourceTableSchema = "public",
+                        SourceTableName = "people",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" }
+                        },
+                        Patch = "this.FullName = $row.first_name + ' ' + $row.last_name;"
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var count = await WaitForDocumentCountAsync(store, "People", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var p1 = await session.LoadAsync<dynamic>("People/1");
+                Assert.NotNull(p1);
+                Assert.Equal("John Doe", (string)p1.FullName);
+
+                var p2 = await session.LoadAsync<dynamic>("People/2");
+                Assert.NotNull(p2);
+                Assert.Equal("Jane Smith", (string)p2.FullName);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task LinkedTable()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE customers (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_id INT NOT NULL REFERENCES customers(id),
+                    total NUMERIC(10,2) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO customers (id, name) VALUES (42, 'Big Corp');
+                INSERT INTO orders (id, customer_id, total) VALUES (1, 42, 150.00);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-linked-table",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "total", "Total" }
+                        },
+                        LinkedTables = new List<CdcSinkLinkedTableConfig>
+                        {
+                            new CdcSinkLinkedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "customers",
+                                PropertyName = "Customer",
+                                LinkedCollectionName = "Customers",
+                                Type = CdcSinkRelationType.Value,
+                                JoinColumns = new List<string> { "customer_id" }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Orders/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal(150.00m, (decimal)doc.Total);
+            Assert.Equal("Customers/42", (string)doc.Customer);
         }
     }
 }

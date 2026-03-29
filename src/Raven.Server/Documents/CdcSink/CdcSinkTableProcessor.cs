@@ -15,6 +15,11 @@ public class CdcSinkTableProcessor
     private readonly StringBuilder _sb = new();
 
     /// <summary>
+    /// The key used to look up this processor in the table index (schema.table or just table).
+    /// </summary>
+    public string Key { get; init; }
+
+    /// <summary>
     /// The root table configuration this processor belongs to.
     /// </summary>
     public CdcSinkTableConfig RootConfig { get; init; }

@@ -654,7 +654,7 @@ namespace SlowTests.Server.Documents.CdcSink
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            var config = CreateRootTableConfig(patch: "this.ComputedField = args['$row'].extra_info + ' processed';");
+            var config = CreateRootTableConfig(patch: "this.ComputedField = $row.extra_info + ' processed';");
             var processor = CreateRootProcessor(config);
 
             var mappedData = new DynamicJsonValue
@@ -835,6 +835,748 @@ namespace SlowTests.Server.Documents.CdcSink
                 attachment.Stream.CopyTo(memoryStream);
                 var storedBytes = memoryStream.ToArray();
                 Assert.Equal(fileContent, storedBytes);
+            }
+        }
+        [Fact]
+        public async Task PropertyRetention_OnUpdate()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Put initial document with an extra property not in the CDC mapping
+            using (var session = store.OpenSession())
+            {
+                session.Store(new { OrderId = 1, CustomerName = "Alice", ExtraField = "keep me" }, "Orders/1");
+                session.Advanced.GetMetadataFor(session.Load<dynamic>("Orders/1"))[Constants.Documents.Metadata.Collection] = "Orders";
+                session.SaveChanges();
+            }
+
+            // CDC Put arrives with only OrderId and CustomerName mapped
+            var mappedData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Bob",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", mappedData)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+
+                // Updated property should reflect the new value
+                doc.Data.TryGet("CustomerName", out string customerName);
+                Assert.Equal("Bob", customerName);
+
+                // ExtraField should still be present (Object.assign retains existing properties)
+                doc.Data.TryGet("ExtraField", out string extraField);
+                Assert.Equal("keep me", extraField);
+            }
+        }
+
+        [Fact]
+        public async Task EmbeddedUpdate_Array_RetainsExistingProperties()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Put parent document
+            var parentData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "line_id", "LineId" },
+                    { "product", "Product" },
+                    { "qty", "Quantity" }
+                },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                JoinColumns = new List<string> { "order_id" },
+                Type = CdcSinkRelationType.Array
+            };
+
+            var embeddedProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            // Insert initial item with an extra property (ExtraInfo)
+            var insertData = new DynamicJsonValue
+            {
+                ["LineId"] = 10,
+                ["Product"] = "Widget",
+                ["Quantity"] = 5,
+                ["ExtraInfo"] = "retain this"
+            };
+            var insertCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(insertCmd);
+
+            // Update the same item but only send Product and LineId (not ExtraInfo)
+            var updateData = new DynamicJsonValue
+            {
+                ["LineId"] = 10,
+                ["Product"] = "SuperWidget"
+            };
+            var updateCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(updateCmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(1, lines.Length);
+
+                var item = (BlittableJsonReaderObject)lines[0];
+                item.TryGet("Product", out string product);
+                Assert.Equal("SuperWidget", product);
+
+                // ExtraInfo should be retained from the original insert
+                item.TryGet("ExtraInfo", out string extraInfo);
+                Assert.Equal("retain this", extraInfo);
+
+                // Quantity should also be retained (it was not in the update)
+                item.TryGet("Quantity", out long quantity);
+                Assert.Equal(5L, quantity);
+            }
+        }
+
+        [Fact]
+        public async Task EmbeddedUpdate_Map_RetainsExistingProperties()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Put parent document
+            var parentData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "order_attributes",
+                PropertyName = "Attributes",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "attr_key", "Key" },
+                    { "attr_value", "Value" }
+                },
+                PrimaryKeyColumns = new List<string> { "attr_key" },
+                JoinColumns = new List<string> { "order_id" },
+                Type = CdcSinkRelationType.Map
+            };
+
+            var embeddedProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            // Insert initial entry with an extra property
+            var insertData = new DynamicJsonValue
+            {
+                ["Key"] = "color",
+                ["Value"] = "red",
+                ["Source"] = "user-input"
+            };
+            var insertCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(insertCmd);
+
+            // Update the same key but only send Key and Value (not Source)
+            var updateData = new DynamicJsonValue
+            {
+                ["Key"] = "color",
+                ["Value"] = "blue"
+            };
+            var updateCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(updateCmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("Attributes", out BlittableJsonReaderObject attributes);
+                Assert.NotNull(attributes);
+                attributes.TryGet("color", out BlittableJsonReaderObject colorEntry);
+                Assert.NotNull(colorEntry);
+
+                colorEntry.TryGet("Value", out string value);
+                Assert.Equal("blue", value);
+
+                // Source should be retained from the original insert
+                colorEntry.TryGet("Source", out string source);
+                Assert.Equal("user-input", source);
+            }
+        }
+
+        [Fact]
+        public async Task EmbeddedUpdate_Value_RetainsExistingProperties()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Put parent document
+            var parentData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "shipping_info",
+                PropertyName = "ShippingInfo",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "carrier", "Carrier" },
+                    { "tracking_no", "TrackingNumber" }
+                },
+                PrimaryKeyColumns = new List<string> { "order_id" },
+                JoinColumns = new List<string> { "order_id" },
+                Type = CdcSinkRelationType.Value
+            };
+
+            var embeddedProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            // Insert initial value with an extra property
+            var insertData = new DynamicJsonValue
+            {
+                ["Carrier"] = "FedEx",
+                ["TrackingNumber"] = "ABC123",
+                ["EstimatedDate"] = "2026-04-01"
+            };
+            var insertCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(insertCmd);
+
+            // Update: only send Carrier (not EstimatedDate or TrackingNumber)
+            var updateData = new DynamicJsonValue
+            {
+                ["Carrier"] = "UPS"
+            };
+            var updateCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp>
+                {
+                    CreateEmbeddedOp("Orders/1", updateData, CdcSinkOperation.Upsert, embeddedProcessor)
+                },
+                "test-config", null, null, null, null, null);
+            await database.TxMerger.Enqueue(updateCmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("ShippingInfo", out BlittableJsonReaderObject shippingInfo);
+                Assert.NotNull(shippingInfo);
+
+                shippingInfo.TryGet("Carrier", out string carrier);
+                Assert.Equal("UPS", carrier);
+
+                // These should be retained from the original insert
+                shippingInfo.TryGet("TrackingNumber", out string trackingNumber);
+                Assert.Equal("ABC123", trackingNumber);
+
+                shippingInfo.TryGet("EstimatedDate", out string estimatedDate);
+                Assert.Equal("2026-04-01", estimatedDate);
+            }
+        }
+
+        [Fact]
+        public async Task SequentialPutDeletePut_LastPutWins()
+        {
+            // Simulates CDC sequence: put, delete, put — the last put should win
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var put1 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Alice",
+                ["Amount"] = 50.0,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var delete = CreateDeleteOp("Orders/1");
+
+            var put2 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Bob",
+                ["Amount"] = 75.0,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var ops = new List<CdcSinkDocumentOp> { put1, delete, put2 };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.NotNull(doc);
+                doc.Data.TryGet("CustomerName", out string name);
+                Assert.Equal("Bob", name);
+                doc.Data.TryGet("Amount", out double amount);
+                Assert.Equal(75.0, amount);
+            }
+        }
+
+        [Fact]
+        public async Task SequentialPutDeleteOnly_DocumentIsDeleted()
+        {
+            // Simulates CDC sequence: put, delete — document should end up deleted
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Pre-create the document
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["OrderId"] = 1,
+                    ["CustomerName"] = "Alice",
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Orders"
+                    }
+                };
+                using var blittable = context.ReadObject(djv, "Orders/1");
+                database.DocumentsStorage.Put(context, "Orders/1", null, blittable);
+                tx.Commit();
+            }
+
+            var put = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Bob",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+            var delete = CreateDeleteOp("Orders/1");
+
+            var ops = new List<CdcSinkDocumentOp> { put, delete };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.Null(doc);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteThenEmbed_CreatesStubWithEmbed()
+        {
+            // Simulates CDC sequence: delete, embed — should create a stub document with the embed applied
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Pre-create document
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["OrderId"] = 1,
+                    ["CustomerName"] = "Alice",
+                    ["Lines"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue { ["LineId"] = 1L, ["Product"] = "OldProduct" }
+                    },
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Orders"
+                    }
+                };
+                using var blittable = context.ReadObject(djv, "Orders/1");
+                database.DocumentsStorage.Put(context, "Orders/1", null, blittable);
+                tx.Commit();
+            }
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Type = CdcSinkRelationType.Array,
+                JoinColumns = new List<string> { "order_id" },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "line_id", "LineId" },
+                    { "product", "Product" }
+                }
+            };
+            var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            var delete = CreateDeleteOp("Orders/1");
+            var embed = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 99L,
+                ["Product"] = "NewProduct"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var ops = new List<CdcSinkDocumentOp> { delete, embed };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.NotNull(doc);
+
+                // Old data is gone (delete cleared it), but new embed is applied on a stub
+                doc.Data.TryGet("CustomerName", out string name);
+                Assert.Null(name);
+
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(1, lines.Length);
+
+                var line = lines[0] as BlittableJsonReaderObject;
+                Assert.NotNull(line);
+                line.TryGet("Product", out string product);
+                Assert.Equal("NewProduct", product);
+            }
+        }
+
+        [Fact]
+        public async Task PutDeletePutEmbed_FinalStateHasLastPutAndEmbed()
+        {
+            // Full sequence: put, delete, put, embed — last put creates fresh doc, embed adds to it
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Type = CdcSinkRelationType.Array,
+                JoinColumns = new List<string> { "order_id" },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "line_id", "LineId" },
+                    { "product", "Product" }
+                }
+            };
+            var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            var put1 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Alice",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var delete = CreateDeleteOp("Orders/1");
+
+            var put2 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Charlie",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var embed = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 1L,
+                ["Product"] = "Widget"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var ops = new List<CdcSinkDocumentOp> { put1, delete, put2, embed };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("CustomerName", out string name);
+                Assert.Equal("Charlie", name);
+
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(1, lines.Length);
+
+                var line = lines[0] as BlittableJsonReaderObject;
+                line.TryGet("Product", out string product);
+                Assert.Equal("Widget", product);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteClearsEmbedsBefore()
+        {
+            // Sequence: embed, embed, delete, embed — only the last embed survives
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Pre-create document
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["OrderId"] = 1,
+                    ["CustomerName"] = "Alice",
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Orders"
+                    }
+                };
+                using var blittable = context.ReadObject(djv, "Orders/1");
+                database.DocumentsStorage.Put(context, "Orders/1", null, blittable);
+                tx.Commit();
+            }
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Type = CdcSinkRelationType.Array,
+                JoinColumns = new List<string> { "order_id" },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "line_id", "LineId" },
+                    { "product", "Product" }
+                }
+            };
+            var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            var embed1 = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 1L,
+                ["Product"] = "Apples"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var embed2 = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 2L,
+                ["Product"] = "Bananas"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var delete = CreateDeleteOp("Orders/1");
+
+            var embed3 = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 3L,
+                ["Product"] = "Cherries"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var ops = new List<CdcSinkDocumentOp> { embed1, embed2, delete, embed3 };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.NotNull(doc);
+
+                // Only the embed after the delete survives
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(1, lines.Length);
+
+                var line = lines[0] as BlittableJsonReaderObject;
+                line.TryGet("Product", out string product);
+                Assert.Equal("Cherries", product);
+            }
+        }
+
+        [Fact]
+        public async Task MultiplePutsAccumulate_ObjectAssign()
+        {
+            // Two puts on the same doc: second put adds new fields, retains first put's fields
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var put1 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Alice",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var put2 = CreatePutOp("Orders/1", new DynamicJsonValue
+            {
+                ["Amount"] = 99.5,
+                ["Status"] = "Confirmed",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            });
+
+            var ops = new List<CdcSinkDocumentOp> { put1, put2 };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(context, "Orders/1");
+                Assert.NotNull(doc);
+
+                // First put's fields retained
+                doc.Data.TryGet("OrderId", out long orderId);
+                Assert.Equal(1, orderId);
+                doc.Data.TryGet("CustomerName", out string name);
+                Assert.Equal("Alice", name);
+
+                // Second put's fields added
+                doc.Data.TryGet("Amount", out double amount);
+                Assert.Equal(99.5, amount);
+                doc.Data.TryGet("Status", out string status);
+                Assert.Equal("Confirmed", status);
             }
         }
     }

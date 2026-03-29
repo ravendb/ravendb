@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -15,13 +15,36 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.CdcSink;
 
+/// <summary>
+/// CDC Sink process that pulls change data from SQL Server using its native Change Data Capture feature.
+///
+/// <para><b>Startup:</b> Enables CDC on the database (<c>sp_cdc_enable_db</c>) and on each configured table
+/// (<c>sp_cdc_enable_table</c>) if not already enabled. If the connection lacks permissions, the error
+/// includes the exact admin script to run.</para>
+///
+/// <para><b>Initial Load:</b> Before streaming changes, performs a full table scan of each configured table
+/// using keyset pagination (ordered by primary key). Rows are read in batches, processed through
+/// <see cref="CdcSinkDocumentProcessor"/>, and written to RavenDB. Progress (last PK values per table)
+/// is persisted so a restart resumes from where it left off rather than re-reading the entire table.</para>
+///
+/// <para><b>Change Polling:</b> After the initial load completes, enters a polling loop. Each iteration
+/// opens a read transaction on the SQL Server connection for snapshot consistency, then executes a single
+/// query to fetch the current max LSN, the incremented last-processed LSN, and per-table min LSNs.
+/// Changes are read from <c>cdc.fn_cdc_get_all_changes_&lt;capture&gt;</c> for each table, filtered to
+/// exclude pre-update images (operation 3), and ordered by <c>__$start_lsn, __$seqval</c> to preserve
+/// transaction boundaries. The max LSN is saved as the checkpoint after each successful batch.</para>
+///
+/// <para><b>Consistency guarantee:</b> SQL Server CDC uses a pull model — change tables are populated
+/// asynchronously by the capture job and cleaned up by a separate cleanup job. The polling transaction
+/// ensures all LSN reads and change queries see the same point in time. If the cleanup job purges entries
+/// before we read them, the per-table min LSN clamping ensures we start from the earliest available
+/// row rather than requesting a purged range (which would error).</para>
+/// </summary>
 public class SqlServerCdcSinkProcess : CdcSinkProcess
 {
     private readonly CdcSinkDocumentProcessor _documentProcessor;
     private readonly string _connectionString;
     private readonly string _factoryName;
-
-    private static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(1);
 
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
@@ -29,11 +52,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         _documentProcessor = new CdcSinkDocumentProcessor(configuration);
         _connectionString = configuration.Connection.ConnectionString;
         _factoryName = configuration.Connection.FactoryName;
-    }
-
-    protected override ICdcSinkConsumer CreateConsumer()
-    {
-        throw new NotSupportedException("SqlServerCdcSinkProcess uses its own Run() loop instead of ICdcSinkConsumer.");
     }
 
     protected override void Run()
@@ -71,6 +89,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
+    /// <summary>
+    /// Enables CDC on the database and individual tables if not already enabled.
+    /// Agent and job health checks are handled by <see cref="CdcSinkSourceVerifier"/>.
+    /// </summary>
     private async Task EnsureCdcEnabled(CancellationToken ct)
     {
         await using var conn = await OpenConnectionAsync(ct);
@@ -84,18 +106,36 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             isCdcEnabled = result != null && result != DBNull.Value && Convert.ToInt32(result) == 1;
         }
 
+        var allTables = Configuration.CollectAllTablesFlat("dbo");
+
         if (isCdcEnabled == false)
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"[{Name}] Enabling CDC on the source database.");
 
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "EXEC sys.sp_cdc_enable_db";
-            await cmd.ExecuteNonQueryAsync(ct);
+            try
+            {
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = "EXEC sys.sp_cdc_enable_db";
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    $"""
+                    Insufficient permissions to enable CDC on the database. 
+                    SQL Server error: {ex.Message}
+
+                    An administrator can enable it manually by running the following script:
+
+                    EXEC sys.sp_cdc_enable_db;
+                    {BuildEnableTablesScript(allTables)}
+                    """, ex);
+            }
         }
 
         // Enable CDC on each configured table
-        var allTables = CollectAllTablesFlat();
+        var untrackedTables = new List<CdcSinkConfiguration.TableInfo>();
         foreach (var tableInfo in allTables)
         {
             bool isTracked;
@@ -115,13 +155,33 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             }
 
             if (isTracked == false)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] Enabling CDC tracking on table {tableInfo.FullName}.");
+                untrackedTables.Add(tableInfo);
+        }
 
+        foreach (var tableInfo in untrackedTables)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Enabling CDC tracking on table {tableInfo.FullName}.");
+
+            try
+            {
                 await using var cmd = conn.CreateCommand();
-                cmd.CommandText = $"EXEC sys.sp_cdc_enable_table @source_schema = '{tableInfo.Schema}', @source_name = '{tableInfo.TableName}', @role_name = NULL";
+                cmd.CommandText = "EXEC sys.sp_cdc_enable_table @source_schema = @schema, @source_name = @table, @role_name = NULL";
+                AddParameter(cmd, "@schema", tableInfo.Schema);
+                AddParameter(cmd, "@table", tableInfo.TableName);
                 await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                throw new InvalidOperationException(
+                    $"""
+                    Insufficient permissions to enable CDC tracking on table '{tableInfo.FullName}'. 
+                    SQL Server error: {ex.Message}
+                    
+                    An administrator can enable CDC for all required tables by running the following script:
+
+                    {BuildEnableTablesScript(untrackedTables)}
+                    """, ex);
             }
         }
     }
@@ -135,140 +195,170 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var state = LoadState(context);
             lastLsn = string.IsNullOrEmpty(state.LastLsn)
                 ? null
-                : HexStringToBytes(state.LastLsn);
+                : Convert.FromHexString(state.LastLsn);
         }
 
-        // Build capture instance mapping for each table
         var captureInstances = await ResolveCaptureInstances(ct);
+        var pollInterval = Database.Configuration.CdcSink.PollInterval.AsTimeSpan;
+
+        await using var conn = await OpenConnectionAsync(ct);
+        bool shouldWait = false;
 
         while (true)
         {
             ct.ThrowIfCancellationRequested();
 
-            await using var conn = await OpenConnectionAsync(ct);
+            if (shouldWait)
+                await Task.Delay(pollInterval, ct);
+            shouldWait = true;
 
-            // Get the current max LSN
-            byte[] maxLsn;
-            await using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = "SELECT sys.fn_cdc_get_max_lsn()";
-                var result = await cmd.ExecuteScalarAsync(ct);
-                maxLsn = result as byte[];
-            }
+            // Use a transaction per iteration to get a consistent snapshot of the CDC state.
+            // All LSN reads and change queries within a single iteration see the same point in time.
+            // The transaction is read-only, so disposal (implicit rollback) is fine — no need to commit.
+            await using var tx = await conn.BeginTransactionAsync(ct);
+                var lsnInfo = await GetLsnBounds(conn, tx, captureInstances, lastLsn, ct);
 
-            if (maxLsn == null || maxLsn.All(b => b == 0))
-            {
-                await Task.Delay(DefaultPollInterval, ct);
-                continue;
-            }
-
-            // If we have no previous LSN, start from the minimum available
-            byte[] fromLsn;
-            if (lastLsn == null)
-            {
-                fromLsn = await GetGlobalMinLsn(conn, captureInstances, ct);
-                if (fromLsn == null)
-                {
-                    await Task.Delay(DefaultPollInterval, ct);
-                    continue;
-                }
-            }
-            else
-            {
-                // Increment the last LSN to avoid re-reading the same changes
-                fromLsn = await IncrementLsn(conn, lastLsn, ct);
-                if (fromLsn == null)
-                {
-                    await Task.Delay(DefaultPollInterval, ct);
-                    continue;
-                }
-            }
-
-            if (CompareLsn(fromLsn, maxLsn) > 0)
-            {
-                await Task.Delay(DefaultPollInterval, ct);
-                continue;
-            }
-
-            var batch = new List<CdcSinkDocumentOp>();
-            bool hasChanges = false;
-
-            foreach (var (tableInfo, captureInstance) in captureInstances)
-            {
-                // Get the min LSN for this capture instance to avoid querying before it's available
-                byte[] tableMinLsn;
-                await using (var cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = $"SELECT sys.fn_cdc_get_min_lsn('{captureInstance}')";
-                    var result = await cmd.ExecuteScalarAsync(ct);
-                    tableMinLsn = result as byte[];
-                }
-
-                if (tableMinLsn == null || tableMinLsn.All(b => b == 0))
+                if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
                     continue;
 
-                // Use the greater of our fromLsn and the table's min LSN
-                var effectiveFromLsn = CompareLsn(fromLsn, tableMinLsn) >= 0 ? fromLsn : tableMinLsn;
+                var batch = new List<CdcSinkDocumentOp>();
+                bool hasChanges = false;
 
-                if (CompareLsn(effectiveFromLsn, maxLsn) > 0)
-                    continue;
-
-                await using var cmd2 = conn.CreateCommand();
-                cmd2.CommandText = $"SELECT * FROM cdc.fn_cdc_get_all_changes_{captureInstance}(@from_lsn, @to_lsn, N'all update old')";
-                AddParameter(cmd2, "@from_lsn", effectiveFromLsn);
-                AddParameter(cmd2, "@to_lsn", maxLsn);
-
-                await using var reader = await cmd2.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct))
+                foreach (var ci in captureInstances)
                 {
-                    var operation = reader.GetInt32(reader.GetOrdinal("__$operation"));
-
-                    // Skip pre-update images (operation = 3)
-                    if (operation == 3)
+                    var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
+                    if (tableMinLsn == null || IsAllZero(tableMinLsn))
                         continue;
 
-                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
+                    // fn_cdc_get_all_changes requires fromLsn >= fn_cdc_get_min_lsn(), otherwise it errors.
+                    // This can happen when the CDC cleanup job purges old entries and our saved position
+                    // points to an LSN that no longer exists in the change table.
+                    var effectiveFromLsn = CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0 ? lsnInfo.FromLsn : tableMinLsn;
 
-                    var data = new Dictionary<string, object>();
-                    for (int i = 0; i < reader.FieldCount; i++)
+                    await using var cmd = conn.CreateCommand();
+                    cmd.Transaction = tx;
+                    cmd.CommandText = ci.Query;
+                    AddParameter(cmd, "@from_lsn", effectiveFromLsn);
+                    AddParameter(cmd, "@to_lsn", lsnInfo.MaxLsn);
+
+                    await using var reader = await cmd.ExecuteReaderAsync(ct);
+                    var columns = ci.Columns;
+                    while (await reader.ReadAsync(ct))
                     {
-                        var colName = reader.GetName(i);
-                        // Skip CDC metadata columns
-                        if (colName.StartsWith("__$"))
-                            continue;
+                        // __$operation is at ordinal 0 in our query (we select it first)
+                        var operation = reader.GetInt32(0);
 
-                        data[colName] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                        var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
+
+                        // Columns start at ordinal 1 (after __$operation), in the same order as ci.Columns
+                        var data = new Dictionary<string, object>(columns.Length);
+                        for (int i = 0; i < columns.Length; i++)
+                        {
+                            int ordinal = i + 1;
+                            data[columns[i]] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
+                        }
+
+                        var row = new CdcSinkRow
+                        {
+                            TableSchema = ci.TableInfo.Schema,
+                            TableName = ci.TableInfo.TableName,
+                            Operation = cdcOperation,
+                            Data = data,
+                        };
+
+                        batch.Add(_documentProcessor.ProcessRow(row));
+                        hasChanges = true;
                     }
-
-                    var row = new CdcSinkRow
-                    {
-                        TableSchema = tableInfo.Schema,
-                        TableName = tableInfo.TableName,
-                        Operation = cdcOperation,
-                        Data = data,
-                    };
-
-                    var op = _documentProcessor.ProcessRow(row);
-                    batch.Add(op);
-                    hasChanges = true;
                 }
-            }
 
-            if (hasChanges)
-            {
-                var lsnHex = BytesToHexString(maxLsn);
-                await SubmitBatch(batch, lsnHex);
-                lastLsn = maxLsn;
-            }
-
-            await Task.Delay(DefaultPollInterval, ct);
+                if (hasChanges)
+                {
+                    var lsnHex = Convert.ToHexString(lsnInfo.MaxLsn);
+                    await SubmitBatch(batch, lsnHex);
+                    lastLsn = lsnInfo.MaxLsn;
+                }
         }
     }
 
-    private async Task<Dictionary<TableInfo, string>> ResolveCaptureInstances(CancellationToken ct)
+    /// <summary>
+    /// Fetches max LSN, per-table min LSNs, and computes the effective from-LSN in a single roundtrip.
+    /// Returns null MaxLsn when CDC has been enabled but no transactions have been captured yet
+    /// (the CDC log is empty, so fn_cdc_get_max_lsn returns 0x00...00).
+    /// </summary>
+    private static async Task<(byte[] MaxLsn, byte[] FromLsn, Dictionary<string, byte[]> TableMinLsns)> GetLsnBounds(
+        DbConnection conn, DbTransaction tx,
+        List<CaptureInstanceInfo> captureInstances,
+        byte[] lastLsn, CancellationToken ct)
     {
-        var result = new Dictionary<TableInfo, string>();
-        var allTables = CollectAllTablesFlat();
+        // Build a single query that returns max LSN, incremented last LSN, and per-table min LSNs.
+        // This avoids N+2 roundtrips (max + increment + N tables) by doing it all in one batch.
+        var sb = new StringBuilder();
+        sb.Append("SELECT sys.fn_cdc_get_max_lsn() AS max_lsn");
+
+        if (lastLsn != null)
+            sb.Append(", sys.fn_cdc_increment_lsn(@last_lsn) AS from_lsn");
+
+        foreach (var ci in captureInstances)
+            sb.Append($", sys.fn_cdc_get_min_lsn('{ci.CaptureInstance}') AS [{ci.CaptureInstance}_min]");
+
+        await using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = sb.ToString();
+
+        if (lastLsn != null)
+            AddParameter(cmd, "@last_lsn", lastLsn);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+        if (await reader.ReadAsync(ct) == false)
+            return (null, null, null);
+
+        var maxLsn = reader["max_lsn"] as byte[];
+        if (maxLsn == null || IsAllZero(maxLsn))
+            return (null, null, null);
+
+        byte[] fromLsn;
+        if (lastLsn != null)
+        {
+            fromLsn = reader["from_lsn"] as byte[];
+        }
+        else
+        {
+            // No previous LSN — find the global minimum across all capture instances
+            fromLsn = null;
+            foreach (var ci in captureInstances)
+            {
+                var minLsn = reader[$"{ci.CaptureInstance}_min"] as byte[];
+                if (minLsn == null || IsAllZero(minLsn))
+                    continue;
+                if (fromLsn == null || CompareLsn(minLsn, fromLsn) < 0)
+                    fromLsn = minLsn;
+            }
+        }
+
+        var tableMinLsns = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        foreach (var ci in captureInstances)
+        {
+            var minLsn = reader[$"{ci.CaptureInstance}_min"] as byte[];
+            tableMinLsns[ci.CaptureInstance] = minLsn;
+        }
+
+        return (maxLsn, fromLsn, tableMinLsns);
+    }
+
+    private sealed class CaptureInstanceInfo
+    {
+        public CdcSinkConfiguration.TableInfo TableInfo;
+        public string CaptureInstance;
+        /// <summary>Pre-built SELECT query with explicit column list and ORDER BY.</summary>
+        public string Query;
+        /// <summary>Column names in the same order as the SELECT list (excludes CDC metadata columns).</summary>
+        public string[] Columns;
+    }
+
+    private async Task<List<CaptureInstanceInfo>> ResolveCaptureInstances(CancellationToken ct)
+    {
+        var result = new List<CaptureInstanceInfo>();
+        var allTables = Configuration.CollectAllTablesFlat("dbo");
 
         await using var conn = await OpenConnectionAsync(ct);
 
@@ -276,7 +366,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         {
             string captureInstance = null;
 
-            // Try to resolve the capture instance from the CDC metadata
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
@@ -295,41 +384,53 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 captureInstance = $"{tableInfo.Schema}_{tableInfo.TableName}";
             }
 
-            result[tableInfo] = captureInstance;
+            // Fetch the captured column names so we can build an explicit SELECT
+            // and read by ordinal instead of calling GetName()/skipping __$ at runtime.
+            var columns = new List<string>();
+            await using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = @"
+                    SELECT column_name
+                    FROM cdc.captured_columns
+                    WHERE capture_instance = @capture
+                    ORDER BY column_ordinal";
+
+                AddParameter(cmd, "@capture", captureInstance);
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                    columns.Add(reader.GetString(0));
+            }
+
+            if (columns.Count == 0)
+                throw new InvalidOperationException(
+                    $"No captured columns found for CDC capture instance '{captureInstance}' (table {tableInfo.FullName}). " +
+                    "Verify that CDC tracking is enabled on this table.");
+
+            var quotedColumns = new string[columns.Count];
+            for (int i = 0; i < columns.Count; i++)
+                quotedColumns[i] = $"[{columns[i]}]";
+            var columnList = string.Join(", ", quotedColumns);
+            // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
+            // We filter out pre-update images (3) at the SQL level to avoid transferring rows we'd discard.
+            var query = $@"
+                SELECT __$operation, {columnList}
+                FROM cdc.fn_cdc_get_all_changes_{captureInstance}(@from_lsn, @to_lsn, N'all')
+                WHERE __$operation <> 3
+                ORDER BY __$start_lsn, __$seqval";
+
+            result.Add(new CaptureInstanceInfo
+            {
+                TableInfo = tableInfo,
+                CaptureInstance = captureInstance,
+                Query = query,
+                Columns = columns.ToArray(),
+            });
         }
 
         return result;
     }
 
-    private async Task<byte[]> GetGlobalMinLsn(DbConnection conn, Dictionary<TableInfo, string> captureInstances, CancellationToken ct)
-    {
-        byte[] globalMin = null;
 
-        foreach (var (_, captureInstance) in captureInstances)
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = $"SELECT sys.fn_cdc_get_min_lsn('{captureInstance}')";
-            var result = await cmd.ExecuteScalarAsync(ct);
-            var minLsn = result as byte[];
-
-            if (minLsn == null || minLsn.All(b => b == 0))
-                continue;
-
-            if (globalMin == null || CompareLsn(minLsn, globalMin) < 0)
-                globalMin = minLsn;
-        }
-
-        return globalMin;
-    }
-
-    private async Task<byte[]> IncrementLsn(DbConnection conn, byte[] lsn, CancellationToken ct)
-    {
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT sys.fn_cdc_increment_lsn(@lsn)";
-        AddParameter(cmd, "@lsn", lsn);
-        var result = await cmd.ExecuteScalarAsync(ct);
-        return result as byte[];
-    }
 
     private async Task HandleInitialLoad(CancellationToken ct)
     {
@@ -340,10 +441,11 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             state = LoadState(context);
         }
 
-        var allTables = CollectAllTablesFlat();
+        var allTables = Configuration.CollectAllTablesFlat("dbo");
 
-        foreach (var tableInfo in allTables)
+        for (int i = 0; i < allTables.Count; i++)
         {
+            var tableInfo = allTables[i];
             var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
 
             if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
@@ -359,229 +461,156 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
+    /// <summary>
+    /// Reads one table in batches using TOP N with keyset pagination,
+    /// overlapping reads with TxMerger writes (same pattern as PostgresCdcSinkProcess).
+    /// </summary>
     private async Task ProcessTableInitialLoad(
-        TableInfo tableInfo, string tableKey, CdcSinkTableLoadState resumeState, CancellationToken ct)
+        CdcSinkConfiguration.TableInfo tableInfo, string tableKey,
+        CdcSinkTableLoadState resumeState, CancellationToken ct)
     {
-        await using var conn = await OpenConnectionAsync(ct);
-
         var pkColumns = tableInfo.PrimaryKeyColumns;
-        var orderBy = string.Join(", ", pkColumns);
-        var query = $"SELECT * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] ORDER BY {orderBy}";
+        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
 
+        string[] lastKeys = null;
         if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
         {
-            var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
-            var whereParts = $"({string.Join(", ", pkColumns)}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})";
-            query = $"SELECT * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] WHERE {whereParts} ORDER BY {orderBy}";
+            lastKeys = new string[resumeState.LastKeyValues.Count];
+            for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
+                lastKeys[i] = resumeState.LastKeyValues[i];
+        }
 
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = query;
-            for (int i = 0; i < pkColumns.Count; i++)
+        // Single connection for the entire initial load of this table.
+        await using var conn = await OpenConnectionAsync(ct);
+
+        // Fetch column types once for the entire initial load — used for keyset pagination parameter types
+        var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+
+        var lastBatch = Task.CompletedTask;
+
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var (ops, newLastKeys) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
+
+            if (ops.Count == 0)
             {
-                var value = ConvertStringToType(resumeState.LastKeyValues[i], columnTypes.GetValueOrDefault(pkColumns[i], "nvarchar"));
-                AddParameter(cmd, $"@k{i}", value);
+                await lastBatch;
+
+                var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                {
+                    [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
+                };
+                await SubmitBatch(new List<CdcSinkDocumentOp>(), tableLoadUpdates: finalUpdate);
+                break;
             }
 
-            await ProcessInitialLoadReader(cmd, tableInfo, tableKey, pkColumns, ct);
-        }
-        else
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = query;
-            await ProcessInitialLoadReader(cmd, tableInfo, tableKey, pkColumns, ct);
-        }
-    }
+            await lastBatch;
 
-    private async Task ProcessInitialLoadReader(
-        DbCommand cmd, TableInfo tableInfo, string tableKey,
-        List<string> pkColumns, CancellationToken ct)
-    {
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-
-        var batch = new List<CdcSinkDocumentOp>();
-        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize ?? 1024;
-        string[] lastKeyValues = null;
-
-        while (await reader.ReadAsync(ct))
-        {
-            var data = new Dictionary<string, object>();
-            for (int i = 0; i < reader.FieldCount; i++)
+            var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
             {
-                var name = reader.GetName(i);
-                var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                data[name] = value;
-            }
-
-            lastKeyValues = pkColumns.Select(col => data.TryGetValue(col, out var v) ? v?.ToString() : "").ToArray();
-
-            var row = new CdcSinkRow
-            {
-                TableSchema = tableInfo.Schema,
-                TableName = tableInfo.TableName,
-                Operation = CdcSinkOperation.Upsert,
-                Data = data,
+                [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys) }
             };
 
-            var op = _documentProcessor.ProcessRow(row);
-            batch.Add(op);
-
-            if (batch.Count >= maxBatchSize)
-            {
-                var loadUpdate = new Dictionary<string, CdcSinkTableLoadState>
-                {
-                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = lastKeyValues.ToList() }
-                };
-
-                var command = new CdcSinkBatchCommand(
-                    Database, batch, Configuration.Name, lastLsn: null,
-                    tableLoadUpdates: loadUpdate,
-                    statsScope: null, statistics: Statistics, logger: Logger);
-
-                Database.TxMerger.EnqueueSync(command);
-                batch = new List<CdcSinkDocumentOp>();
-            }
+            lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
+            lastKeys = newLastKeys;
         }
 
-        // Final batch + mark table complete
-        var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+        await lastBatch;
+    }
+
+    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys)> ReadOneBatch(
+        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        string[] lastKeys, int maxBatchSize, Dictionary<string, string> columnTypes, CancellationToken ct)
+    {
+        // Build ORDER BY clause with bracket-quoted column names
+        var orderByParts = new string[pkColumns.Count];
+        for (int i = 0; i < pkColumns.Count; i++)
+            orderByParts[i] = $"[{pkColumns[i]}]";
+        var orderBy = string.Join(", ", orderByParts);
+
+        DbCommand cmd;
+        if (lastKeys != null)
         {
-            [tableKey] = new CdcSinkTableLoadState
+            // Keyset pagination with row-value comparison: WHERE (col1, col2) > (@k0, @k1)
+            var paramPlaceholders = new string[pkColumns.Count];
+            for (int i = 0; i < pkColumns.Count; i++)
+                paramPlaceholders[i] = $"@k{i}";
+
+            var columnList = string.Join(", ", orderByParts);
+            var paramList = string.Join(", ", paramPlaceholders);
+
+            var query = $"SELECT TOP ({maxBatchSize}) * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] " +
+                        $"WHERE ({columnList}) > ({paramList}) ORDER BY {orderBy}";
+
+            cmd = conn.CreateCommand();
+            cmd.CommandText = query;
+
+            for (int i = 0; i < pkColumns.Count; i++)
             {
-                InitialLoadCompleted = true,
-                LastKeyValues = null,
+                var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "nvarchar"));
+                AddParameter(cmd, $"@k{i}", value);
             }
-        };
-
-        if (batch.Count > 0)
-        {
-            var command = new CdcSinkBatchCommand(
-                Database, batch, Configuration.Name, lastLsn: null,
-                tableLoadUpdates: finalUpdate,
-                statsScope: null, statistics: Statistics, logger: Logger);
-
-            Database.TxMerger.EnqueueSync(command);
         }
         else
         {
-            var command = new CdcSinkBatchCommand(
-                Database, new List<CdcSinkDocumentOp>(), Configuration.Name, lastLsn: null,
-                tableLoadUpdates: finalUpdate,
-                statsScope: null, statistics: Statistics, logger: Logger);
+            var query = $"SELECT TOP ({maxBatchSize}) * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] ORDER BY {orderBy}";
+            cmd = conn.CreateCommand();
+            cmd.CommandText = query;
+        }
 
-            Database.TxMerger.EnqueueSync(command);
+        await using (cmd)
+        {
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+
+            var ops = new List<CdcSinkDocumentOp>();
+
+            while (await reader.ReadAsync(ct))
+            {
+                var data = new Dictionary<string, object>();
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    var name = reader.GetName(i);
+                    var value = reader.IsDBNull(i) ? null : ConvertSqlServerValue(reader.GetValue(i));
+                    data[name] = value;
+                }
+
+                var row = new CdcSinkRow
+                {
+                    TableSchema = tableInfo.Schema,
+                    TableName = tableInfo.TableName,
+                    Operation = CdcSinkOperation.Upsert,
+                    Data = data,
+                };
+
+                var op = _documentProcessor.ProcessRow(row);
+                ops.Add(op);
+            }
+
+            // Extract last keys from the last row's RawData for keyset pagination resume
+            string[] newLastKeys = null;
+            if (ops.Count > 0)
+            {
+                var lastRowData = ops[ops.Count - 1].RawData;
+                newLastKeys = new string[pkColumns.Count];
+                for (int i = 0; i < pkColumns.Count; i++)
+                    newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
+            }
+
+            return (ops, newLastKeys);
         }
     }
 
-    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn)
+    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
     {
         var command = new CdcSinkBatchCommand(
             Database, ops, Configuration.Name, lastLsn,
-            tableLoadUpdates: null,
+            tableLoadUpdates: tableLoadUpdates,
             statsScope: null, statistics: Statistics, logger: Logger);
 
         return Database.TxMerger.Enqueue(command);
-    }
-
-    private CdcSinkTaskState LoadState(DocumentsOperationContext context)
-    {
-        var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
-        var doc = Database.DocumentsStorage.Get(context, stateDocId);
-
-        if (doc == null)
-            return new CdcSinkTaskState { ConfigurationName = Configuration.Name };
-
-        var data = doc.Data;
-        var state = new CdcSinkTaskState();
-
-        if (data.TryGet(nameof(CdcSinkTaskState.ConfigurationName), out string configName))
-            state.ConfigurationName = configName;
-
-        if (data.TryGet(nameof(CdcSinkTaskState.LastLsn), out string lastLsn))
-            state.LastLsn = lastLsn;
-
-        if (data.TryGet(nameof(CdcSinkTaskState.Tables), out BlittableJsonReaderObject tablesJson) && tablesJson != null)
-        {
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < tablesJson.Count; i++)
-            {
-                tablesJson.GetPropertyByIndex(i, ref prop);
-                var key = prop.Name.ToString();
-
-                if (prop.Value is BlittableJsonReaderObject tableJson)
-                {
-                    var ts = new CdcSinkTableLoadState();
-                    if (tableJson.TryGet(nameof(CdcSinkTableLoadState.InitialLoadCompleted), out bool completed))
-                        ts.InitialLoadCompleted = completed;
-                    if (tableJson.TryGet(nameof(CdcSinkTableLoadState.LastKeyValues), out BlittableJsonReaderArray arr) && arr != null)
-                    {
-                        ts.LastKeyValues = new List<string>();
-                        foreach (var k in arr)
-                            ts.LastKeyValues.Add(k?.ToString());
-                    }
-                    state.Tables[key] = ts;
-                }
-            }
-        }
-
-        return state;
-    }
-
-    private List<string> CollectAllSourceTableNames()
-    {
-        var names = new List<string>();
-        foreach (var table in Configuration.Tables)
-        {
-            var schema = table.SourceTableSchema ?? "dbo";
-            names.Add($"{schema}.{table.SourceTableName}");
-            CollectEmbeddedTableNames(table.EmbeddedTables, names);
-        }
-        return names;
-    }
-
-    private static void CollectEmbeddedTableNames(List<CdcSinkEmbeddedTableConfig> embedded, List<string> names)
-    {
-        if (embedded == null)
-            return;
-
-        foreach (var e in embedded)
-        {
-            var schema = e.SourceTableSchema ?? "dbo";
-            names.Add($"{schema}.{e.SourceTableName}");
-            CollectEmbeddedTableNames(e.EmbeddedTables, names);
-        }
-    }
-
-    private List<TableInfo> CollectAllTablesFlat()
-    {
-        var tables = new List<TableInfo>();
-        foreach (var table in Configuration.Tables)
-        {
-            tables.Add(new TableInfo
-            {
-                Schema = table.SourceTableSchema ?? "dbo",
-                TableName = table.SourceTableName,
-                PrimaryKeyColumns = table.PrimaryKeyColumns,
-            });
-            CollectEmbeddedTablesFlat(table.EmbeddedTables, tables);
-        }
-        return tables;
-    }
-
-    private static void CollectEmbeddedTablesFlat(List<CdcSinkEmbeddedTableConfig> embedded, List<TableInfo> tables)
-    {
-        if (embedded == null)
-            return;
-
-        foreach (var e in embedded)
-        {
-            tables.Add(new TableInfo
-            {
-                Schema = e.SourceTableSchema ?? "dbo",
-                TableName = e.SourceTableName,
-                PrimaryKeyColumns = e.PrimaryKeyColumns,
-            });
-            CollectEmbeddedTablesFlat(e.EmbeddedTables, tables);
-        }
     }
 
     private async Task<DbConnection> OpenConnectionAsync(CancellationToken ct)
@@ -618,19 +647,25 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         while (await reader.ReadAsync(ct))
         {
             var colName = reader.GetString(0);
-            if (columns.Contains(colName, StringComparer.OrdinalIgnoreCase))
-                types[colName] = reader.GetString(1);
+            for (int i = 0; i < columns.Count; i++)
+            {
+                if (string.Equals(colName, columns[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    types[colName] = reader.GetString(1).ToLowerInvariant();
+                    break;
+                }
+            }
         }
 
         return types;
     }
 
-    private static object ConvertStringToType(string value, string sqlType)
+    private static object ConvertStringToType(string value, string normalizedType)
     {
         if (string.IsNullOrEmpty(value))
             return DBNull.Value;
 
-        return sqlType.ToLower() switch
+        return normalizedType switch
         {
             "tinyint" => byte.Parse(value),
             "smallint" => short.Parse(value),
@@ -645,39 +680,57 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         };
     }
 
+    /// <summary>
+    /// Normalizes SQL Server values for consistent storage in RavenDB.
+    /// Integers are normalized to long, floats to double.
+    /// </summary>
+    private static object ConvertSqlServerValue(object value)
+    {
+        if (value is null || value == DBNull.Value)
+            return null;
+
+        return value switch
+        {
+            byte b => (long)b,
+            short s => (long)s,
+            int i => (long)i,
+            long => value,
+            float f => (double)f,
+            double => value,
+            decimal d => (double)d,
+            Guid g => g.ToString(),
+            byte[] => value,
+            DateTime => value,
+            DateTimeOffset => value,
+            _ => value,
+        };
+    }
+
+
     private static int CompareLsn(byte[] a, byte[] b)
     {
         if (a == null && b == null) return 0;
         if (a == null) return -1;
         if (b == null) return 1;
 
-        for (int i = 0; i < Math.Min(a.Length, b.Length); i++)
+        return ((ReadOnlySpan<byte>)a).SequenceCompareTo(b);
+    }
+
+    private static bool IsAllZero(byte[] bytes)
+    {
+        return MemoryExtensions.ContainsAnyExcept((ReadOnlySpan<byte>)bytes, (byte)0) == false;
+    }
+
+    private static string BuildEnableTablesScript(List<CdcSinkConfiguration.TableInfo> tables)
+    {
+        var sb = new StringBuilder();
+        foreach (var table in tables)
         {
-            if (a[i] < b[i]) return -1;
-            if (a[i] > b[i]) return 1;
+            sb.Append("  EXEC sys.sp_cdc_enable_table @source_schema = N'").Append(table.Schema)
+              .Append("', @source_name = N'").Append(table.TableName)
+              .Append("', @role_name = NULL;\n");
         }
-
-        return a.Length.CompareTo(b.Length);
-    }
-
-    private static string BytesToHexString(byte[] bytes)
-    {
-        return Convert.ToHexString(bytes);
-    }
-
-    private static byte[] HexStringToBytes(string hex)
-    {
-        return Convert.FromHexString(hex);
-    }
-
-    internal class TableInfo
-    {
-        public string Schema { get; init; }
-        public string TableName { get; init; }
-        public List<string> PrimaryKeyColumns { get; init; }
-        public string FullName => $"{Schema}.{TableName}";
-
-        public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);
-        public override bool Equals(object obj) => obj is TableInfo other && string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
+        sb.Append('\n');
+        return sb.ToString();
     }
 }

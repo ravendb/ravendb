@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,6 +18,35 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.CdcSink;
 
+/// <summary>
+/// CDC Sink process that pulls change data from PostgreSQL using logical replication streaming.
+///
+/// <para><b>Startup:</b> Creates a publication (<c>CREATE PUBLICATION</c>) covering all configured tables
+/// and a logical replication slot (<c>pg_create_logical_replication_slot</c>) using the <c>pgoutput</c>
+/// plugin, if they don't already exist. If the connection lacks permissions, the error includes the exact
+/// admin SQL to run. Existing publications/slots (e.g., pre-created by an admin) are reused.</para>
+///
+/// <para><b>Initial Load:</b> Before streaming, performs a full table scan of each configured table using
+/// keyset pagination (ordered by primary key). Rows are processed through <see cref="CdcSinkDocumentProcessor"/>
+/// and written to RavenDB. Progress (last PK values per table) is persisted so a restart resumes from
+/// where it left off. Batch submission is pipelined: the next batch is read while the previous one is
+/// being written by the transaction merger.</para>
+///
+/// <para><b>Replication Streaming:</b> After the initial load, opens a <see cref="LogicalReplicationConnection"/>
+/// and starts streaming from the replication slot at the last acknowledged LSN. Messages arrive as
+/// <c>InsertMessage</c>, <c>UpdateMessage</c>, <c>KeyDeleteMessage</c>, or <c>FullDeleteMessage</c> inside
+/// <c>BeginMessage</c>/<c>CommitMessage</c> transaction boundaries. Rows within a transaction are buffered
+/// in a pending list and moved to the batch on commit, so partial transactions are never written to RavenDB.
+/// Batch submission is pipelined with reading: while the transaction merger processes one batch, the next
+/// messages are read from the replication stream.</para>
+///
+/// <para><b>Consistency guarantee:</b> PostgreSQL logical replication is push-based — the server streams
+/// changes in commit order and the replication slot tracks consumer progress. After each batch is written,
+/// the acknowledged LSN is reported back via <c>SetReplicationStatus</c> + <c>SendStatusUpdate</c>.
+/// This ensures PostgreSQL retains WAL segments until we confirm receipt, so no changes are lost as long
+/// as the slot exists. Column types are resolved from the <c>RelationMessage</c> OIDs that PostgreSQL
+/// sends inline in the replication stream.</para>
+/// </summary>
 public class PostgresCdcSinkProcess : CdcSinkProcess
 {
     private readonly CdcSinkDocumentProcessor _documentProcessor;
@@ -27,16 +54,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private string _publicationName;
     private string _slotName;
 
+    // Cache resolved type categories per RelationMessage OID layout.
+    // Column types are fixed per relation in the replication stream.
+    private readonly Dictionary<string, PostgresTypeCategory[]> _relationTypeCache = new();
+
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
     {
         _documentProcessor = new CdcSinkDocumentProcessor(configuration);
         _connectionString = configuration.Connection.ConnectionString;
-    }
-
-    protected override ICdcSinkConsumer CreateConsumer()
-    {
-        throw new NotSupportedException("PostgresCdcSinkProcess uses its own Run() loop instead of ICdcSinkConsumer.");
     }
 
     protected override void Run()
@@ -76,7 +102,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
     private async Task EnsureReplicationSetup(CancellationToken ct)
     {
-        var tableNames = CollectAllSourceTableNames();
+        var tableNames = Configuration.CollectAllSourceTableNames("public");
         _publicationName = CdcSinkSourceVerifier.ComputePublicationName(tableNames);
         _slotName = CdcSinkSourceVerifier.ComputeSlotName(tableNames);
 
@@ -96,21 +122,59 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     return parts.Length == 2 ? $"{parts[0]}.{parts[1]}" : t;
                 }));
 
-                await using var createCmd = new NpgsqlCommand(
-                    $"CREATE PUBLICATION {_publicationName} FOR TABLE {tableList}", conn);
-                await createCmd.ExecuteNonQueryAsync(ct);
+                try
+                {
+                    await using var createCmd = new NpgsqlCommand(
+                        $"CREATE PUBLICATION {_publicationName} FOR TABLE {string.Join(", ", tableList)}", conn);
+                    await createCmd.ExecuteNonQueryAsync(ct);
+                }
+                catch (PostgresException ex) when (ex.SqlState == "42501")
+                {
+                    throw new InvalidOperationException(
+                        $"""
+                        Insufficient permissions to create publication '{_publicationName}'. The database user must have CREATE permission on the database, or an administrator can create the publication manually:
+
+                          CREATE PUBLICATION {_publicationName} FOR TABLE {tableList};
+
+                        PostgreSQL error: {ex.MessageText}
+                        """, ex);
+                }
             }
         }
 
-        try
+        // Check if replication slot already exists before trying to create it.
+        // This avoids permission errors when the slot was created by an admin but
+        // the current user lacks the REPLICATION role attribute.
+        bool slotExists;
+        await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName", conn))
         {
-            await using var cmd = new NpgsqlCommand(
-                $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
-            await cmd.ExecuteNonQueryAsync(ct);
+            cmd.Parameters.AddWithValue("slotName", _slotName);
+            slotExists = await cmd.ExecuteScalarAsync(ct) != null;
         }
-        catch (PostgresException ex) when (ex.SqlState == "42710")
+
+        if (slotExists == false)
         {
-            // Replication slot already exists
+            try
+            {
+                await using var cmd = new NpgsqlCommand(
+                    $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
+                await cmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (PostgresException ex) when (ex.SqlState == "42710")
+            {
+                // Race condition: slot was created between our check and create — safe to ignore
+            }
+            catch (PostgresException ex) when (ex.SqlState == "42501")
+            {
+                throw new InvalidOperationException(
+                    $"""
+                    Insufficient permissions to create replication slot '{_slotName}'. The database user must have the REPLICATION role attribute, or an administrator can create the slot manually:
+
+                      SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');
+
+                    PostgreSQL error: {ex.MessageText}
+                    """, ex);
+            }
         }
     }
 
@@ -138,8 +202,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         var batch = new List<CdcSinkDocumentOp>();
         var pending = new List<CdcSinkDocumentOp>();
         Task lastBatch = Task.CompletedTask;
+        int rowsSinceLastAck = 0;
+        int maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
 
-        await using var enumerator = replicationStream.GetAsyncEnumerator();
+        await using var enumerator = replicationStream.GetAsyncEnumerator(ct);
         while (true)
         {
             ct.ThrowIfCancellationRequested();
@@ -157,8 +223,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 if (lastBatch.IsCompleted)
                 {
                     await lastBatch;
+
+                    // No more records available right now — acknowledge everything we've persisted
                     conn.SetReplicationStatus(lastLsn);
                     await conn.SendStatusUpdate(ct);
+                    rowsSinceLastAck = 0;
 
                     if (batch.Count > 0)
                     {
@@ -175,72 +244,72 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             switch (message)
             {
                 case InsertMessage insert:
-                {
-                    var ops = await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert);
-                    pending.AddRange(ops);
+                    pending.Add(await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert));
                     break;
-                }
                 case UpdateMessage update:
-                {
-                    var ops = await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert);
-                    pending.AddRange(ops);
+                    pending.Add(await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert));
                     break;
-                }
                 case KeyDeleteMessage keyDel:
-                {
-                    var ops = await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete);
-                    pending.AddRange(ops);
+                    pending.Add(await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete));
                     break;
-                }
                 case FullDeleteMessage fullDel:
-                {
-                    var ops = await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete);
-                    pending.AddRange(ops);
+                    pending.Add(await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete));
                     break;
-                }
                 case BeginMessage:
                     break;
                 case CommitMessage commit:
                     batch.AddRange(pending);
                     pending.Clear();
 
-                    if (lastBatch.IsCompleted)
+                    if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
                     {
                         await lastBatch;
-                        conn.SetReplicationStatus(lastLsn);
-                        await conn.SendStatusUpdate(ct);
 
                         if (batch.Count > 0)
                         {
+                            rowsSinceLastAck += batch.Count;
                             lastBatch = SubmitBatch(batch, commit.CommitLsn.ToString());
                             lastLsn = commit.CommitLsn;
                             batch = new List<CdcSinkDocumentOp>();
                         }
-                    }
-                    else if (batch.Count >= Database.Configuration.CdcSink.MaxBatchSize)
-                    {
-                        await lastBatch;
-                        conn.SetReplicationStatus(lastLsn);
-                        await conn.SendStatusUpdate(ct);
 
-                        lastBatch = SubmitBatch(batch, commit.CommitLsn.ToString());
-                        lastLsn = commit.CommitLsn;
-                        batch = new List<CdcSinkDocumentOp>();
+                        // Acknowledge to PostgreSQL periodically — when we've persisted enough rows,
+                        // rather than on every batch flush. This reduces roundtrips while still
+                        // advancing the replication slot position to allow WAL cleanup.
+                        if (rowsSinceLastAck >= maxBatchSize)
+                        {
+                            conn.SetReplicationStatus(lastLsn);
+                            await conn.SendStatusUpdate(ct);
+                            rowsSinceLastAck = 0;
+                        }
                     }
                     break;
             }
         }
     }
 
-    private async Task<List<CdcSinkDocumentOp>> DecodeRow(
+    private async Task<CdcSinkDocumentOp> DecodeRow(
         RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation)
     {
+        var relationKey = $"{relation.Namespace}.{relation.RelationName}";
+
+        if (_relationTypeCache.TryGetValue(relationKey, out var typeCategories) == false)
+        {
+            typeCategories = BuildTypeCategoriesFromRelation(relation);
+            _relationTypeCache[relationKey] = typeCategories;
+        }
+
         var data = new Dictionary<string, object>();
+        int columnIndex = 0;
+
         await foreach (var item in row)
         {
             var columnName = item.GetFieldName();
+            var category = columnIndex < typeCategories.Length ? typeCategories[columnIndex] : PostgresTypeCategory.Other;
             var value = item.IsDBNull ? null : await item.Get();
-            data[columnName] = ConvertPostgresValue(item.GetDataTypeName(), value);
+            data[columnName] = ConvertPostgresValue(category, value);
+
+            columnIndex++;
         }
 
         var cdcRow = new CdcSinkRow
@@ -251,8 +320,54 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             Data = data,
         };
 
-        var op = _documentProcessor.ProcessRow(cdcRow);
-        return new List<CdcSinkDocumentOp> { op };
+        return _documentProcessor.ProcessRow(cdcRow);
+    }
+
+    /// <summary>
+    /// Build type category array from the RelationMessage's column OIDs.
+    /// PostgreSQL OIDs are well-known and documented.
+    /// </summary>
+    private static PostgresTypeCategory[] BuildTypeCategoriesFromRelation(RelationMessage relation)
+    {
+        var categories = new PostgresTypeCategory[relation.Columns.Count];
+        for (int i = 0; i < relation.Columns.Count; i++)
+        {
+            categories[i] = OidToCategory(relation.Columns[i].DataTypeId);
+        }
+        return categories;
+    }
+
+    private static PostgresTypeCategory OidToCategory(uint oid)
+    {
+        return oid switch
+        {
+            21 or 23 or 26 => PostgresTypeCategory.Integer,    // int2, int4, oid
+            20 => PostgresTypeCategory.BigInt,                  // int8
+            700 => PostgresTypeCategory.Float,                  // float4
+            701 => PostgresTypeCategory.Double,                 // float8
+            1700 => PostgresTypeCategory.Numeric,               // numeric/decimal
+            16 => PostgresTypeCategory.Boolean,                 // bool
+            1082 or 1114 or 1184 => PostgresTypeCategory.DateTime, // date, timestamp, timestamptz
+            2950 => PostgresTypeCategory.Uuid,                  // uuid
+            17 => PostgresTypeCategory.Bytea,                   // bytea
+            114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
+            _ => PostgresTypeCategory.Other,
+        };
+    }
+
+    private enum PostgresTypeCategory
+    {
+        Other,
+        Integer,
+        BigInt,
+        Float,
+        Double,
+        Numeric,
+        Boolean,
+        DateTime,
+        Uuid,
+        Bytea,
+        Json
     }
 
     private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn)
@@ -260,6 +375,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         var command = new CdcSinkBatchCommand(
             Database, ops, Configuration.Name, lastLsn,
             tableLoadUpdates: null,
+            statsScope: null, statistics: Statistics, logger: Logger);
+
+        return Database.TxMerger.Enqueue(command);
+    }
+
+    private Task SubmitBatchAsync(List<CdcSinkDocumentOp> ops, Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates)
+    {
+        var command = new CdcSinkBatchCommand(
+            Database, ops, Configuration.Name, lastLsn: null,
+            tableLoadUpdates: tableLoadUpdates,
             statsScope: null, statistics: Statistics, logger: Logger);
 
         return Database.TxMerger.Enqueue(command);
@@ -274,7 +399,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             state = LoadState(context);
         }
 
-        var allTables = CollectAllTablesFlat();
+        var allTables = Configuration.CollectAllTablesFlat("public");
 
         foreach (var tableInfo in allTables)
         {
@@ -294,218 +419,130 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     }
 
     private async Task ProcessTableInitialLoad(
-        TableInfo tableInfo, string tableKey, CdcSinkTableLoadState resumeState, CancellationToken ct)
+        CdcSinkConfiguration.TableInfo tableInfo, string tableKey, CdcSinkTableLoadState resumeState, CancellationToken ct)
     {
+        var pkColumns = tableInfo.PrimaryKeyColumns;
+        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
+
+        string[] lastKeys = null;
+        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
+        {
+            lastKeys = new string[resumeState.LastKeyValues.Count];
+            for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
+                lastKeys[i] = resumeState.LastKeyValues[i];
+        }
+
+        // Single connection for the entire initial load of this table.
+        // Read one batch at a time with LIMIT; while the previous batch
+        // is being applied by the TxMerger, we read the next batch.
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        var pkColumns = tableInfo.PrimaryKeyColumns;
-        var orderBy = string.Join(", ", pkColumns);
-        var query = $"SELECT * FROM {tableInfo.FullName} ORDER BY {orderBy}";
+        // Fetch column types once for the entire initial load — used for keyset pagination parameter types
+        var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
 
-        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
+        var lastBatch = Task.CompletedTask;
+
+        while (true)
         {
-            var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
-            var whereParts = $"({string.Join(", ", pkColumns)}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})";
-            query = $"SELECT * FROM {tableInfo.FullName} WHERE {whereParts} ORDER BY {orderBy}";
+            ct.ThrowIfCancellationRequested();
 
-            await using var cmd = new NpgsqlCommand(query, conn);
-            for (int i = 0; i < pkColumns.Count; i++)
+            var (ops, newLastKeys) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
+
+            if (ops.Count == 0)
             {
-                var value = ConvertStringToType(resumeState.LastKeyValues[i], columnTypes[pkColumns[i]]);
-                cmd.Parameters.AddWithValue($"k{i}", value);
+                await lastBatch;
+
+                var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                {
+                    [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
+                };
+                await SubmitBatchAsync([], finalUpdate);
+                break;
             }
 
-            await ProcessInitialLoadReader(cmd, tableInfo, tableKey, pkColumns, ct);
-        }
-        else
-        {
-            await using var cmd = new NpgsqlCommand(query, conn);
-            await ProcessInitialLoadReader(cmd, tableInfo, tableKey, pkColumns, ct);
-        }
-    }
+            await lastBatch;
 
-    private async Task ProcessInitialLoadReader(
-        NpgsqlCommand cmd, TableInfo tableInfo, string tableKey,
-        List<string> pkColumns, CancellationToken ct)
-    {
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-
-        var batch = new List<CdcSinkDocumentOp>();
-        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize ?? 1024;
-        string[] lastKeyValues = null;
-
-        while (await reader.ReadAsync(ct))
-        {
-            var data = new Dictionary<string, object>();
-            for (int i = 0; i < reader.FieldCount; i++)
+            var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
             {
-                var name = reader.GetName(i);
-                var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                data[name] = value;
-            }
-
-            lastKeyValues = pkColumns.Select(col => data.TryGetValue(col, out var v) ? v?.ToString() : "").ToArray();
-
-            var row = new CdcSinkRow
-            {
-                TableSchema = tableInfo.Schema,
-                TableName = tableInfo.TableName,
-                Operation = CdcSinkOperation.Upsert,
-                Data = data,
+                [tableKey] = new CdcSinkTableLoadState { LastKeyValues = [.. newLastKeys] }
             };
 
-            var op = _documentProcessor.ProcessRow(row);
-            batch.Add(op);
-
-            if (batch.Count >= maxBatchSize)
-            {
-                var loadUpdate = new Dictionary<string, CdcSinkTableLoadState>
-                {
-                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = lastKeyValues.ToList() }
-                };
-
-                var command = new CdcSinkBatchCommand(
-                    Database, batch, Configuration.Name, lastLsn: null,
-                    tableLoadUpdates: loadUpdate,
-                    statsScope: null, statistics: Statistics, logger: Logger);
-
-                Database.TxMerger.EnqueueSync(command);
-                batch = new List<CdcSinkDocumentOp>();
-            }
+            lastBatch = SubmitBatchAsync(ops, tableLoadUpdate);
+            lastKeys = newLastKeys;
         }
 
-        // Final batch + mark table complete
-        var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+        await lastBatch;
+    }
+
+    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys)> ReadOneBatch(
+        NpgsqlConnection conn, CdcSinkConfiguration.TableInfo tableInfo,
+        List<string> pkColumns, string[] lastKeys, int maxBatchSize,
+        Dictionary<string, string> columnTypes, CancellationToken ct)
+    {
+        var orderBy = string.Join(", ", pkColumns);
+
+        NpgsqlCommand cmd;
+        if (lastKeys != null)
         {
-            [tableKey] = new CdcSinkTableLoadState
+            var paramPlaceholders = new string[pkColumns.Count];
+            for (int i = 0; i < pkColumns.Count; i++)
+                paramPlaceholders[i] = $"@k{i}";
+
+            var query = $"SELECT * FROM {tableInfo.FullName} WHERE ({string.Join(", ", pkColumns)}) > ({string.Join(", ", paramPlaceholders)}) ORDER BY {orderBy} LIMIT {maxBatchSize}";
+            cmd = new NpgsqlCommand(query, conn);
+
+            for (int i = 0; i < pkColumns.Count; i++)
             {
-                InitialLoadCompleted = true,
-                LastKeyValues = null,
+                var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
+                cmd.Parameters.AddWithValue($"k{i}", value);
             }
-        };
-
-        if (batch.Count > 0)
-        {
-            var command = new CdcSinkBatchCommand(
-                Database, batch, Configuration.Name, lastLsn: null,
-                tableLoadUpdates: finalUpdate,
-                statsScope: null, statistics: Statistics, logger: Logger);
-
-            Database.TxMerger.EnqueueSync(command);
         }
         else
         {
-            // No rows remaining, but still need to mark complete
-            var command = new CdcSinkBatchCommand(
-                Database, new List<CdcSinkDocumentOp>(), Configuration.Name, lastLsn: null,
-                tableLoadUpdates: finalUpdate,
-                statsScope: null, statistics: Statistics, logger: Logger);
-
-            Database.TxMerger.EnqueueSync(command);
+            var query = $"SELECT * FROM {tableInfo.FullName} ORDER BY {orderBy} LIMIT {maxBatchSize}";
+            cmd = new NpgsqlCommand(query, conn);
         }
-    }
 
-    private CdcSinkTaskState LoadState(DocumentsOperationContext context)
-    {
-        var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
-        var doc = Database.DocumentsStorage.Get(context, stateDocId);
-
-        if (doc == null)
-            return new CdcSinkTaskState { ConfigurationName = Configuration.Name };
-
-        // Deserialize inline
-        var data = doc.Data;
-        var state = new CdcSinkTaskState();
-
-        if (data.TryGet(nameof(CdcSinkTaskState.ConfigurationName), out string configName))
-            state.ConfigurationName = configName;
-
-        if (data.TryGet(nameof(CdcSinkTaskState.LastLsn), out string lastLsn))
-            state.LastLsn = lastLsn;
-
-        if (data.TryGet(nameof(CdcSinkTaskState.Tables), out BlittableJsonReaderObject tablesJson) && tablesJson != null)
+        await using (cmd)
         {
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < tablesJson.Count; i++)
-            {
-                tablesJson.GetPropertyByIndex(i, ref prop);
-                var key = prop.Name.ToString();
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
 
-                if (prop.Value is BlittableJsonReaderObject tableJson)
+            var ops = new List<CdcSinkDocumentOp>();
+
+            while (await reader.ReadAsync(ct))
+            {
+                var data = new Dictionary<string, object>();
+                for (int i = 0; i < reader.FieldCount; i++)
                 {
-                    var ts = new CdcSinkTableLoadState();
-                    if (tableJson.TryGet(nameof(CdcSinkTableLoadState.InitialLoadCompleted), out bool completed))
-                        ts.InitialLoadCompleted = completed;
-                    if (tableJson.TryGet(nameof(CdcSinkTableLoadState.LastKeyValues), out BlittableJsonReaderArray arr) && arr != null)
-                    {
-                        ts.LastKeyValues = new List<string>();
-                        foreach (var k in arr)
-                            ts.LastKeyValues.Add(k?.ToString());
-                    }
-                    state.Tables[key] = ts;
+                    var name = reader.GetName(i);
+                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    data[name] = value;
                 }
+
+                var row = new CdcSinkRow
+                {
+                    TableSchema = tableInfo.Schema,
+                    TableName = tableInfo.TableName,
+                    Operation = CdcSinkOperation.Upsert,
+                    Data = data,
+                };
+
+                var op = _documentProcessor.ProcessRow(row);
+                ops.Add(op);
             }
-        }
 
-        return state;
-    }
-
-    private List<string> CollectAllSourceTableNames()
-    {
-        var names = new List<string>();
-        foreach (var table in Configuration.Tables)
-        {
-            var schema = table.SourceTableSchema ?? "public";
-            names.Add($"{schema}.{table.SourceTableName}");
-            CollectEmbeddedTableNames(table.EmbeddedTables, names);
-        }
-        return names;
-    }
-
-    private static void CollectEmbeddedTableNames(List<CdcSinkEmbeddedTableConfig> embedded, List<string> names)
-    {
-        if (embedded == null)
-            return;
-
-        foreach (var e in embedded)
-        {
-            var schema = e.SourceTableSchema ?? "public";
-            names.Add($"{schema}.{e.SourceTableName}");
-            CollectEmbeddedTableNames(e.EmbeddedTables, names);
-        }
-    }
-
-    private List<TableInfo> CollectAllTablesFlat()
-    {
-        var tables = new List<TableInfo>();
-        foreach (var table in Configuration.Tables)
-        {
-            tables.Add(new TableInfo
+            // Extract last keys from the last row's RawData for keyset pagination resume
+            string[] newLastKeys = null;
+            if (ops.Count > 0)
             {
-                Schema = table.SourceTableSchema ?? "public",
-                TableName = table.SourceTableName,
-                PrimaryKeyColumns = table.PrimaryKeyColumns,
-            });
-            CollectEmbeddedTablesFlat(table.EmbeddedTables, tables);
-        }
-        return tables;
-    }
+                var lastRowData = ops[ops.Count - 1].RawData;
+                newLastKeys = new string[pkColumns.Count];
+                for (int i = 0; i < pkColumns.Count; i++)
+                    newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
+            }
 
-    private static void CollectEmbeddedTablesFlat(List<CdcSinkEmbeddedTableConfig> embedded, List<TableInfo> tables)
-    {
-        if (embedded == null)
-            return;
-
-        foreach (var e in embedded)
-        {
-            tables.Add(new TableInfo
-            {
-                Schema = e.SourceTableSchema ?? "public",
-                TableName = e.SourceTableName,
-                PrimaryKeyColumns = e.PrimaryKeyColumns,
-            });
-            CollectEmbeddedTablesFlat(e.EmbeddedTables, tables);
+            return (ops, newLastKeys);
         }
     }
 
@@ -523,57 +560,44 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
-            types[reader.GetString(0)] = reader.GetString(1);
+            types[reader.GetString(0)] = reader.GetString(1).ToLowerInvariant();
 
         return types;
     }
 
-    private static object ConvertStringToType(string value, string postgresType)
+    private static object ConvertStringToType(string value, string normalizedType)
     {
         if (string.IsNullOrEmpty(value))
             return DBNull.Value;
 
-        return postgresType.ToLower() switch
+        return normalizedType switch
         {
-            "smallint" => short.Parse(value),
-            "integer" or "serial" => int.Parse(value),
-            "bigint" or "bigserial" => long.Parse(value),
-            "real" => float.Parse(value),
-            "double precision" => double.Parse(value),
-            "numeric" or "decimal" => decimal.Parse(value),
+            "smallint" or "integer" or "serial" or "bigint" or "bigserial" => long.Parse(value),
+            "real" or "double precision" or "numeric" or "decimal" => double.Parse(value),
             "boolean" => bool.Parse(value),
             "uuid" => Guid.Parse(value),
             _ => value,
         };
     }
 
-    private static object ConvertPostgresValue(string postgresType, object value)
+    private static object ConvertPostgresValue(PostgresTypeCategory category, object value)
     {
         if (value is null || value == DBNull.Value)
             return null;
 
-        return postgresType.ToLower() switch
+        return category switch
         {
-            "smallint" => Convert.ToInt16(value),
-            "integer" or "serial" => Convert.ToInt32(value),
-            "bigint" or "bigserial" => Convert.ToInt64(value),
-            "real" => Convert.ToSingle(value),
-            "double precision" => Convert.ToDouble(value),
-            "numeric" or "decimal" => Convert.ToDecimal(value),
-            "boolean" => Convert.ToBoolean(value),
-            "date" or "timestamp" or "timestamptz" => Convert.ToDateTime(value),
-            "uuid" => value.ToString(),
-            "bytea" => value,
-            "json" or "jsonb" => value.ToString(),
+            PostgresTypeCategory.Integer => Convert.ToInt64(value),
+            PostgresTypeCategory.BigInt => Convert.ToInt64(value),
+            PostgresTypeCategory.Float => Convert.ToDouble(value),
+            PostgresTypeCategory.Double => Convert.ToDouble(value),
+            PostgresTypeCategory.Numeric => Convert.ToDouble(value),
+            PostgresTypeCategory.Boolean => Convert.ToBoolean(value),
+            PostgresTypeCategory.DateTime => Convert.ToDateTime(value),
+            PostgresTypeCategory.Uuid => value.ToString(),
+            PostgresTypeCategory.Bytea => value,
+            PostgresTypeCategory.Json => value.ToString(),
             _ => value,
         };
-    }
-
-    private class TableInfo
-    {
-        public string Schema { get; init; }
-        public string TableName { get; init; }
-        public List<string> PrimaryKeyColumns { get; init; }
-        public string FullName => $"{Schema}.{TableName}";
     }
 }

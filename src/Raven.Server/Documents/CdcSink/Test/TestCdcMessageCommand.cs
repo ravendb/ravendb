@@ -2,24 +2,31 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using System;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.CdcSink.Test;
 
 public sealed class TestCdcMessageCommand : PatchDocumentCommand
 {
-    private readonly BlittableJsonReaderObject _message;
-
-    public TestCdcMessageCommand(JsonOperationContext context, PatchRequest patch, BlittableJsonReaderObject message) : base(context, Guid.NewGuid().ToString(),
-        null, false, (patch, null), (null, null), null, '/', isTest: true, debugMode: true, collectResultsNeeded: true, returnDocument: true)
+    public TestCdcMessageCommand(JsonOperationContext context, PatchRequest patch, BlittableJsonReaderObject rowArgs)
+        : base(context, Guid.NewGuid().ToString(),
+            null, false, (patch, rowArgs), (null, null), null, '/', isTest: true, debugMode: true, collectResultsNeeded: true, returnDocument: true)
     {
-        _message = message;
     }
 
     protected override Document GetCurrentDocument(DocumentsOperationContext context, string id)
     {
+        // Return an empty document — the test script modifies it via `this`.
+        var empty = new DynamicJsonValue
+        {
+            ["@metadata"] = new DynamicJsonValue
+            {
+                ["@collection"] = "TestCdcSink"
+            }
+        };
         return new Document
         {
-            Data = _message
+            Data = context.ReadObject(empty, "cdc-test-doc")
         };
     }
 }

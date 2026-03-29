@@ -55,6 +55,13 @@ public class CdcSinkEmbeddedTableConfig : IDynamicJson
     public string Patch { get; set; }
 
     /// <summary>
+    /// Whether primary key matching and map key comparison are case-sensitive.
+    /// When false (default), string PK values and map keys are compared using ordinal case-insensitive comparison.
+    /// When true, comparison is ordinal case-sensitive.
+    /// </summary>
+    public bool CaseSensitiveKeys { get; set; }
+
+    /// <summary>
     /// Nested embedded tables (deep nesting).
     /// Requires that the nested table has a denormalized FK to the root table.
     /// </summary>
@@ -73,6 +80,7 @@ public class CdcSinkEmbeddedTableConfig : IDynamicJson
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
             [nameof(Type)] = Type.ToString(),
             [nameof(Patch)] = Patch,
+            [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
         };
     }
