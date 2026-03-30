@@ -1,5 +1,4 @@
 import commandBase = require("commands/commandBase");
-import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes");
 import endpoints = require("endpoints");
 
 class testAiAgentCommand extends commandBase {
@@ -10,7 +9,7 @@ class testAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<aiAgentsTypes.AiAgentRunResult> {
+    execute(): JQueryPromise<Raven.Server.Documents.Handlers.AI.Agents.AiAgentProcessorForTestConversation.AiAgentTestResult> {
         const url = endpoints.databases.aiAgent.aiAgentTest;
 
         return this.post(url, JSON.stringify(this.dto), this.db).fail((response: JQueryXHR) =>

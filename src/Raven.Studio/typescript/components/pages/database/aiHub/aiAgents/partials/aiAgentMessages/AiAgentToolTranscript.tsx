@@ -18,18 +18,18 @@ import { AiAgentToolResponseContent } from "components/pages/database/aiHub/aiAg
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAiAgentMessagesContext } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesContext";
 
 interface AiAgentToolTranscriptProps {
     toolCall: AiAgentToolCall;
-    parametersFromUser?: Record<string, string>;
 }
 
-export function AiAgentToolTranscript({ toolCall, parametersFromUser }: AiAgentToolTranscriptProps) {
+export function AiAgentToolTranscript({ toolCall }: AiAgentToolTranscriptProps) {
     const type = toolCall.type;
 
     switch (type) {
         case "query":
-            return <QueryToolTranscript toolCall={toolCall} parametersFromUser={parametersFromUser} />;
+            return <QueryToolTranscript toolCall={toolCall} />;
         case "action":
             return <ActionToolTranscript toolCall={toolCall} />;
         case "sub-agent":
@@ -41,16 +41,11 @@ export function AiAgentToolTranscript({ toolCall, parametersFromUser }: AiAgentT
     }
 }
 
-function QueryToolTranscript({
-    toolCall,
-    parametersFromUser,
-}: {
-    toolCall: AiAgentToolCallQuery;
-    parametersFromUser?: Record<string, string>;
-}) {
+function QueryToolTranscript({ toolCall }: { toolCall: AiAgentToolCallQuery }) {
     const detailsId = toolCall.id + "-details";
 
     const rqlLanguageService = useRqlLanguageService();
+    const { parametersFromUser } = useAiAgentMessagesContext();
 
     const { linkToQuery, queryWithParameters } = useToolQueryDetails({
         queryText: toolCall.configDetails.Query,
@@ -173,11 +168,25 @@ function ActionToolTranscript({ toolCall }: { toolCall: AiAgentToolCallAction })
 }
 
 function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent }) {
-    const subConversationId = toolCall.responseMessage.subConversationId;
+    const subConversationId = toolCall.responseMessage?.subConversationId;
+    const aiAgentMessages = useAiAgentMessagesContext();
 
     const { appUrl } = useAppUrls();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const subAgentConversationLink = appUrl.forChatAiAgent(databaseName, toolCall.name, subConversationId);
+
+    const subAgentConversationLink = subConversationId
+        ? appUrl.forChatAiAgent(databaseName, toolCall.name, subConversationId)
+        : null;
+
+    const isTest = aiAgentMessages.mode === "test";
+
+    const handleOpenTestSubConversation = () => {
+        if (!isTest) {
+            return;
+        }
+
+        aiAgentMessages.openTestSubConversation(subConversationId);
+    };
 
     return (
         <Accordion className="transcript-tool sub-agent-transcript border border-secondary rounded-2 panel-bg-1">
@@ -205,17 +214,29 @@ function SubAgentTranscript({ toolCall }: { toolCall: AiAgentToolCallSubAgent })
                             </div>
                             <div className="sub-agent-transcript__content">
                                 <div>Sub-conversation created</div>
-                                <a
-                                    href={subAgentConversationLink}
-                                    className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between px-2 py-1 text-muted"
-                                    title={subConversationId}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    <Icon icon="ai-agents" />
-                                    <span className="text-truncate">Conversation details</span>
-                                    <Icon icon="newtab" margin="ms-auto" />
-                                </a>
+                                {isTest ? (
+                                    <button
+                                        type="button"
+                                        className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between px-2 py-1 text-muted w-100"
+                                        title="Open the sub-agent transcript returned by the current test run"
+                                        onClick={handleOpenTestSubConversation}
+                                    >
+                                        <Icon icon="preview" />
+                                        <span className="text-truncate">Conversation details</span>
+                                    </button>
+                                ) : (
+                                    <a
+                                        href={subAgentConversationLink}
+                                        className="sub-agent-transcript__link btn panel-bg-2 rounded-2 border border-secondary hstack justify-content-between px-2 py-1 text-muted"
+                                        title={subConversationId}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <Icon icon="ai-agents" />
+                                        <span className="text-truncate">Conversation details</span>
+                                        <Icon icon="newtab" margin="ms-auto" />
+                                    </a>
+                                )}
                             </div>
                         </div>
                         <div className="sub-agent-transcript__step">

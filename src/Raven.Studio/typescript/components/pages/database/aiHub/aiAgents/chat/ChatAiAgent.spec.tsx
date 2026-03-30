@@ -2,7 +2,10 @@ import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./ChatAiAgent.stories";
 import { composeStories } from "@storybook/react-webpack5";
 import document from "models/database/documents/document";
-import { AiAgentDocMessage } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes";
+import {
+    AiAgentDocMessage,
+    AiAgentOpenActionCalls,
+} from "components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes";
 
 const { ChatAiAgentStory } = composeStories(Stories);
 
@@ -10,9 +13,13 @@ const selectors = {
     promptPlaceholder: "Ask the agent anything",
 } as const;
 
-function createDocumentWithMessages(messages: AiAgentDocMessage[]): document {
+function createDocumentWithMessages(
+    messages: AiAgentDocMessage[],
+    openActionCalls: AiAgentOpenActionCalls = {}
+): document {
     return new document({
         Messages: messages,
+        OpenActionCalls: openActionCalls,
     });
 }
 
@@ -109,23 +116,32 @@ describe("AiAgentMessages", () => {
     it("can show action tool to submit", async () => {
         const actionToolName = "ActionProductSearch";
 
-        const conversationDocument = createDocumentWithMessages([
-            {
-                content: null,
-                role: "assistant",
-                tool_calls: [
-                    {
-                        function: {
-                            arguments: '{"Query":["test"]}',
-                            name: actionToolName,
+        const conversationDocument = createDocumentWithMessages(
+            [
+                {
+                    content: null,
+                    role: "assistant",
+                    tool_calls: [
+                        {
+                            function: {
+                                arguments: '{"Query":["test"]}',
+                                name: actionToolName,
+                            },
+                            id: "call_MdKvWaFtl0cJAc5a0q26Lo97",
+                            type: "function",
                         },
-                        id: "call_MdKvWaFtl0cJAc5a0q26Lo97",
-                        type: "function",
-                    },
-                ],
-                date: "2025-08-08T10:28:01.5884757Z",
-            },
-        ]);
+                    ],
+                    date: "2025-08-08T10:28:01.5884757Z",
+                },
+            ],
+            {
+                call_MdKvWaFtl0cJAc5a0q26Lo97: {
+                    Name: actionToolName,
+                    ToolId: "call_MdKvWaFtl0cJAc5a0q26Lo97",
+                    Arguments: '{"Query":["test"]}',
+                },
+            }
+        );
 
         const { screen } = await rtlRender_WithWaitForLoad(
             <ChatAiAgentStory conversationDocument={conversationDocument} />

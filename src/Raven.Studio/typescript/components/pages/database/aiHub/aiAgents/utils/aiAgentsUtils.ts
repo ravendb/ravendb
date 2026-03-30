@@ -1,6 +1,7 @@
 import moment from "moment";
 import {
     AiAgentDocMessage,
+    AiAgentDocumentResponse,
     AiAgentMessage,
     AiAgentToolCall,
     AiAgentToolInfo,
@@ -33,12 +34,18 @@ function getContentFromDoc(docMessage: AiAgentDocMessage): string {
 }
 
 interface MapMessagesFromDocOptions {
-    docMessages: AiAgentDocMessage[];
+    conversationDocument: documentDto;
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
-    docAttachments?: documentAttachmentDto[];
 }
 
-function mapMessagesFromDoc({ docMessages, config, docAttachments }: MapMessagesFromDocOptions): AiAgentMessage[] {
+function mapMessagesFromDoc({ conversationDocument, config }: MapMessagesFromDocOptions): AiAgentMessage[] {
+    const docMessages = conversationDocument?.Messages as AiAgentDocMessage[];
+    const docAttachments = conversationDocument?.["@metadata"]?.["@attachments"];
+
+    if (!docMessages?.length || !config) {
+        return [];
+    }
+
     const formatDate = (date: string) => (date ? moment(date).format(aiAgentsUtils.messageDateFormat) : null);
 
     function getToolInfoByName(toolName: string): AiAgentToolInfo {
@@ -185,8 +192,13 @@ function mapMessagesFromDoc({ docMessages, config, docAttachments }: MapMessages
     return messages;
 }
 
+function hasOpenActionCalls(conversationDocument: Partial<Pick<AiAgentDocumentResponse, "OpenActionCalls">>): boolean {
+    return Object.keys(conversationDocument?.OpenActionCalls ?? {}).length > 0;
+}
+
 export const aiAgentsUtils = {
     messageDateFormat: "HH:mm A",
     getPrettifiedContent,
     mapMessagesFromDoc,
+    hasOpenActionCalls,
 };

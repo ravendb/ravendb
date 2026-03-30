@@ -16,6 +16,7 @@ export interface CheckboxProps extends Omit<RavenFormControlProps, "className" |
     reverse?: boolean;
     disabled?: boolean;
     className?: string;
+    formCheckClassName?: string;
     id?: string;
 }
 
@@ -29,6 +30,7 @@ export function Checkbox(props: CheckboxProps) {
         size,
         reverse,
         className,
+        formCheckClassName,
         disabled,
         id,
         ...rest
@@ -56,6 +58,7 @@ export function Checkbox(props: CheckboxProps) {
                 label={children}
                 onChange={toggleSelection}
                 disabled={disabled}
+                className={formCheckClassName}
                 {...rest}
             />
         </div>
@@ -63,7 +66,19 @@ export function Checkbox(props: CheckboxProps) {
 }
 
 export function Switch(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, ...rest } = props;
+    const {
+        selected,
+        toggleSelection,
+        children,
+        color,
+        size,
+        reverse,
+        className,
+        formCheckClassName,
+        disabled,
+        id,
+        ...rest
+    } = props;
     const defaultId = useUniqueId("switch");
 
     const inputId = id ?? defaultId;
@@ -80,6 +95,7 @@ export function Switch(props: CheckboxProps) {
                 onChange={toggleSelection}
                 label={children}
                 disabled={disabled}
+                className={formCheckClassName}
                 {...rest}
             />
         </div>
@@ -87,8 +103,20 @@ export function Switch(props: CheckboxProps) {
 }
 
 export function Radio(props: CheckboxProps) {
-    const { selected, toggleSelection, children, color, size, reverse, className, disabled, id, isInvalid, ...rest } =
-        props;
+    const {
+        selected,
+        toggleSelection,
+        children,
+        color,
+        size,
+        reverse,
+        className,
+        formCheckClassName,
+        disabled,
+        id,
+        isInvalid,
+        ...rest
+    } = props;
     const defaultId = useUniqueId("radio");
 
     const inputId = id ?? defaultId;
@@ -106,6 +134,7 @@ export function Radio(props: CheckboxProps) {
                 label={children}
                 disabled={disabled}
                 isInvalid={isInvalid}
+                className={formCheckClassName}
                 {...rest}
             />
         </div>

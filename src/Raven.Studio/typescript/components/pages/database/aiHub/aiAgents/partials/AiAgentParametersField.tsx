@@ -2,7 +2,6 @@ import classNames from "classnames";
 import { FormInput, FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import Badge from "react-bootstrap/Badge";
 import { Control } from "react-hook-form";
 import { TestAiAgentFormData } from "../edit/utils/editAiAgentValidation";
 import { ChatAiAgentFormData } from "../chat/utils/chatAiAgentValidation";
@@ -76,16 +75,15 @@ function ParameterItem({ control, parameter, idx, panelClassName }: ParameterIte
     return (
         <div className={classNames("p-2 rounded-2 d-grid gap-1 border border-secondary", panelClassName)}>
             <div className="d-flex justify-content-between align-items-end">
-                <Badge
-                    bg="primary"
-                    className="font-size-12 text-truncate"
-                    title={parameter.name}
-                    pill
-                    style={{ maxWidth: "300px" }}
-                >
+                <span className="text-truncate font-monospace" title={parameter.name} style={{ maxWidth: "300px" }}>
                     {parameter.name}
-                </Badge>
-                <FormSwitch control={control} name={`parameters.${idx}.isSendToModel`} color="primary" className="mb-0">
+                </span>
+                <FormSwitch
+                    control={control}
+                    name={`parameters.${idx}.isSendToModel`}
+                    color="primary"
+                    formCheckClassName="mb-0 hstack align-items-end"
+                >
                     Send to model
                 </FormSwitch>
             </div>

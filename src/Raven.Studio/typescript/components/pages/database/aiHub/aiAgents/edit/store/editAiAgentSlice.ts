@@ -1,21 +1,22 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentMessage, AiAgentRunResult, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadStatus } from "components/models/common";
 import { TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
+const TEST_CONVERSATION_ID = "TestConversation";
+
 interface EditAiAgentState {
     isTestOpen: boolean;
     isTestPinned: boolean;
     isRawData: boolean;
-    testMessages: AiAgentMessage[];
     testToolParameters: AiAgentToolCall[];
-    testDocument: documentDto;
+    testDocuments: Record<string, documentDto>;
+    testConfiguration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
     runTestState: loadStatus;
-    isWaitingForActionToolSubmit: boolean;
     allIdentifiers?: string[];
 }
 
@@ -23,11 +24,10 @@ const initialState: EditAiAgentState = {
     isTestOpen: false,
     isTestPinned: false,
     isRawData: false,
-    testMessages: [],
     testToolParameters: [],
-    testDocument: null,
+    testDocuments: {},
+    testConfiguration: null,
     runTestState: "idle",
-    isWaitingForActionToolSubmit: false,
     allIdentifiers: [],
 };
 
@@ -44,17 +44,12 @@ export const editAiAgentSlice = createSlice({
         isRawDataSet: (state, action: PayloadAction<boolean>) => {
             state.isRawData = action.payload;
         },
-        testMessagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
-            state.testMessages = action.payload;
-        },
         testToolParametersSet: (state, action: PayloadAction<AiAgentToolCall[]>) => {
             state.testToolParameters = action.payload;
         },
-        testDocumentSet: (state, action: PayloadAction<any>) => {
-            state.testDocument = action.payload;
-        },
-        isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
-            state.isWaitingForActionToolSubmit = action.payload;
+        testResultsReset: (state) => {
+            state.testDocuments = {};
+            state.testConfiguration = null;
         },
         reset: () => initialState,
     },
@@ -66,15 +61,12 @@ export const editAiAgentSlice = createSlice({
             state.runTestState = "failure";
         });
         builder.addCase(runTest.fulfilled, (state, action) => {
-            state.runTestState = "success";
-            state.testDocument = action.payload.result.Document;
-
             const { result, configuration } = action.payload;
 
-            state.testMessages = aiAgentsUtils.mapMessagesFromDoc({
-                docMessages: result.Document.Messages,
-                config: configuration,
-            });
+            state.testDocuments = result.Documents ?? {};
+            state.testConfiguration = configuration;
+
+            state.runTestState = "success";
         });
         builder.addCase(getAllIdentifiers.fulfilled, (state, action) => {
             state.allIdentifiers = action.payload;
@@ -104,13 +96,13 @@ const runTest = createAsyncThunk(
         },
         { getState }
     ): Promise<{
-        result: AiAgentRunResult;
+        result: Raven.Server.Documents.Handlers.AI.Agents.AiAgentProcessorForTestConversation.AiAgentTestResult;
         configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
     }> => {
         const { databaseName, configuration, testFormValues, toolCallParameters } = payload;
 
         const state = getState() as RootState;
-        const testDocument = state.editAiAgent.testDocument;
+        const testDocuments = state.editAiAgent.testDocuments;
 
         const result = await services.aiAgentService.testAiAgent(databaseName, {
             Configuration: configuration,
@@ -119,10 +111,10 @@ const runTest = createAsyncThunk(
                 ToolId: x.id,
                 Content: x.arguments,
             })),
-            Document: testDocument,
+            Documents: testDocuments,
             RequestBody: undefined,
             CreationOptions: {
-                Parameters: createParametersDto(testDocument, testFormValues.parameters),
+                Parameters: createParametersDto(testDocuments, testFormValues.parameters),
             },
         });
 
@@ -131,10 +123,10 @@ const runTest = createAsyncThunk(
 );
 
 function createParametersDto(
-    testDocument: documentDto,
+    testDocuments: Record<string, documentDto>,
     formParameters: TestAiAgentFormData["parameters"]
 ): Record<string, Raven.Client.Documents.AI.AiConversationParameter> {
-    if (testDocument) {
+    if (Object.keys(testDocuments ?? {}).length > 0) {
         return null;
     }
 
@@ -168,14 +160,34 @@ export const editAiAgentActions = {
     runTest,
 };
 
+const selectTestDocuments = (state: RootState) => state.editAiAgent.testDocuments;
+const selectTestConfiguration = (state: RootState) => state.editAiAgent.testConfiguration;
+
+const selectMainTestDocument = createSelector([selectTestDocuments], (testDocuments) => {
+    return testDocuments[TEST_CONVERSATION_ID] ?? null;
+});
+
+const selectMainTestMessages = createSelector(
+    [selectMainTestDocument, selectTestConfiguration],
+    (conversationDocument, config) =>
+        aiAgentsUtils.mapMessagesFromDoc({
+            conversationDocument,
+            config,
+        })
+);
+
 export const editAiAgentSelectors = {
     isTestOpen: (state: RootState) => state.editAiAgent.isTestOpen,
     isTestPinned: (state: RootState) => state.editAiAgent.isTestPinned,
     isRawData: (state: RootState) => state.editAiAgent.isRawData,
-    testMessages: (state: RootState) => state.editAiAgent.testMessages,
+    mainTestMessages: selectMainTestMessages,
     testToolParameters: (state: RootState) => state.editAiAgent.testToolParameters,
-    testDocument: (state: RootState) => state.editAiAgent.testDocument,
+    testDocuments: selectTestDocuments,
+    mainTestDocument: selectMainTestDocument,
+    testConfiguration: (state: RootState) => state.editAiAgent.testConfiguration,
     runTestState: (state: RootState) => state.editAiAgent.runTestState,
-    isWaitingForActionToolSubmit: (state: RootState) => state.editAiAgent.isWaitingForActionToolSubmit,
+    isActionToolSubmitRequired: createSelector([selectMainTestDocument], (conversationDocument) =>
+        aiAgentsUtils.hasOpenActionCalls(conversationDocument)
+    ),
     allIdentifiers: (state: RootState) => state.editAiAgent.allIdentifiers,
 };

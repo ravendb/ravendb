@@ -61,12 +61,14 @@ export interface AiAgentMessage {
     attachments?: AiAgentMessageAttachment[];
 }
 
+export type AiAgentOpenActionCalls = Record<string, Raven.Client.Documents.Operations.AI.Agents.AiAgentActionRequest>;
+
 export interface AiAgentDocumentResponse {
     Agent: string;
     Parameters: Record<string, any>;
     Messages: AiAgentDocMessage[];
     TotalUsage: Raven.Client.Documents.Operations.AI.AiUsage;
-    OpenActionCalls: TODO;
+    OpenActionCalls: AiAgentOpenActionCalls;
 }
 
 export interface AiAgentRunResult {

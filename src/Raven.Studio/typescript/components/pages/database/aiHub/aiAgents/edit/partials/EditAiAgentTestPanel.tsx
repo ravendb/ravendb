@@ -8,7 +8,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRef, useEffect } from "react";
 import _ from "lodash";
-import AiAgentMessages from "../../partials/AiAgentMessages";
 import AiAgentParametersField from "../../partials/AiAgentParametersField";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import Button from "react-bootstrap/Button";
@@ -23,6 +22,7 @@ import { compareSets } from "common/typeUtils";
 import AiAgentParametersDropdown from "../../partials/AiAgentParametersDropdown";
 import classNames from "classnames";
 import { AiAgentToolCall } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes";
+import EditAiAgentTestMessages from "./EditAiAgentTestMessages";
 
 interface EditAiAgentTestPanelProps {
     testForm: UseFormReturn<TestAiAgentFormData>;
@@ -46,11 +46,11 @@ export default function EditAiAgentTestPanel({
         control: editForm.control,
     });
 
-    const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
+    const testDocument = useAppSelector(editAiAgentSelectors.mainTestDocument);
+    const messages = useAppSelector(editAiAgentSelectors.mainTestMessages);
     const isRawData = useAppSelector(editAiAgentSelectors.isRawData);
-    const messages = useAppSelector(editAiAgentSelectors.testMessages);
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
-    const isWaitingForActionToolSubmit = useAppSelector(editAiAgentSelectors.isWaitingForActionToolSubmit);
+    const isActionToolSubmitRequired = useAppSelector(editAiAgentSelectors.isActionToolSubmitRequired);
     const isTestPinned = useAppSelector(editAiAgentSelectors.isTestPinned);
 
     const hasLatestParameters = compareSets(
@@ -61,8 +61,8 @@ export default function EditAiAgentTestPanel({
     const hasMissingParameters =
         messages.length > 0 && testFormValues.parameters.some((x) => x.type !== "Null" && x.value == null);
 
-    const isLoading = runTestState === "loading" || isWaitingForActionToolSubmit;
-    const isTestDisabled = !hasLatestParameters || hasMissingParameters || isLoading;
+    const isLoading = runTestState === "loading";
+    const isTestDisabled = !hasLatestParameters || hasMissingParameters || isLoading || isActionToolSubmitRequired;
 
     const configuration = editAiAgentUtils.mapToDto(editFormValues);
 
@@ -109,9 +109,7 @@ export default function EditAiAgentTestPanel({
     }, [messages.length]);
 
     const handleNewChat = () => {
-        dispatch(editAiAgentActions.testDocumentSet(null));
-        dispatch(editAiAgentActions.testMessagesSet([]));
-        dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(false));
+        dispatch(editAiAgentActions.testResultsReset());
         testForm.setValue("prompt", "");
         generateTestParameters();
     };
@@ -183,14 +181,7 @@ export default function EditAiAgentTestPanel({
                         </div>
                     )}
                     {!isRawData && messages.length > 0 && (
-                        <AiAgentMessages
-                            messages={messages}
-                            handleSaveParameters={handleSaveParameters}
-                            setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                            }
-                            parametersFromUser={testDocument?.Parameters}
-                        />
+                        <EditAiAgentTestMessages handleSaveParameters={handleSaveParameters} />
                     )}
                     {isRawData && testDocument && (
                         <SizeGetter

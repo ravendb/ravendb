@@ -614,6 +614,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AiAgentConfiguration));
             scripter.AddType(typeof(RequestBody));
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
+            scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestResult));
             scripter.AddType(typeof(AiAgentActionRequest));
             scripter.AddType(typeof(ConversionRequestBody));
 
