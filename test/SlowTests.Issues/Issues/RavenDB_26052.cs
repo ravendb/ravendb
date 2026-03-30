@@ -57,7 +57,7 @@ public class RavenDB_26052 : StorageTest
                 var random = new Random(seed);
                 
                 entriesCount = random.Next(1, 200);
-                duplicatedValuesCount = random.Next(1, 100);
+                duplicatedValuesCount = random.Next(1, entriesCount + 1);
             }
             
             var create = new List<(Slice, long)>();
