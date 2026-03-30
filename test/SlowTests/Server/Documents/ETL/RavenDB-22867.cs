@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -61,11 +59,6 @@ namespace SlowTests.Server.Documents.ETL
                 using var session = dest.OpenAsyncSession();
                 return await session.LoadAsync<User>(goodDocId);
             }, interval: 1000);
-
-            var connectionStringName =
-                $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}/ETL : " +
-                $"{src.Database}@{src.Urls.First()} to {dest.Database}@{dest.Urls.First()}";
-
             var database = await Databases.GetDocumentDatabaseInstanceFor(src);
 
             Assert.True(WaitForValue(() => HasIncrementalTsEtlWarning(database), true));
@@ -82,8 +75,8 @@ namespace SlowTests.Server.Documents.ETL
                         continue;
 
                     if (reason == AlertReason.Etl_Warning.ToString() &&
-                        notification.Json.TryGet("Title", out string title) &&
-                        title == "Incremental Time Series Command Ignored")
+                        notification.Json.TryGet("Message", out string msg) &&
+                        msg == "Incremental Time Series are not supported and are going to be skipped going forward. First encountered in document 'users/1' for time series 'INC:HeartRate'")
                         return true;
                 }
 

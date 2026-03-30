@@ -15,7 +15,6 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
@@ -30,6 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private RequestExecutor _requestExecutor;
         private string _recentUrl;
+        private bool _incrementalTsAlertRaised;
         public string Url => _recentUrl;
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
@@ -150,26 +150,23 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             if (ShouldTrackTimeSeries())
             {
-                bool createdNotification = false;
-
                 for (int i = commands.Count - 1; i >= 0; i--)
                 {
                     if (commands[i] is TimeSeriesBatchCommandData tsbc &&
                         TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
                     {
-                        if (createdNotification == false)
+                        if (_incrementalTsAlertRaised == false)
                         {
-                            Database.NotificationCenter.Add(
-                                AlertRaised.Create(
-                                    Database.Name,
-                                    "Incremental Time Series Command Ignored",
-                                    $"An incremental time series command for '{tsbc.Name}' was discarded. Incremental time series is not supported in ETL.",
-                                    AlertReason.Etl_Warning,
-                                    NotificationSeverity.Warning
-                                )
-                            );
-                            createdNotification = true;
+                            Database.NotificationCenter.EtlNotifications.AddWarning(
+                                Tag,
+                                Name,
+                                $"Incremental Time Series are not supported and are going to be skipped going forward. First encountered in document '{tsbc.Id}' for time series '{tsbc.Name}'",
+                                tsbc.Id,
+                                tsbc.Name);
+
+                            _incrementalTsAlertRaised = true;
                         }
+
                         commands.RemoveAt(i);
                     }
                 }
