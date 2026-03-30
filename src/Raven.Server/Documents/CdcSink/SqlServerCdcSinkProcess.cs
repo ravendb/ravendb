@@ -443,9 +443,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         var allTables = Configuration.CollectAllTablesFlat("dbo");
 
-        for (int i = 0; i < allTables.Count; i++)
+        foreach (var tableInfo in allTables)
         {
-            var tableInfo = allTables[i];
             var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
 
             if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)

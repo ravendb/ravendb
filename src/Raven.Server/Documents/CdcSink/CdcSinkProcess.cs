@@ -21,6 +21,7 @@ using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
@@ -194,7 +195,24 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var patchRequest = docProcessor.CombinedPatchRequest
                 ?? throw new InvalidOperationException("The table has no patch script configured.");
 
-            var command = new TestCdcMessageCommand(context, patchRequest, messageDoc);
+            var table = testScript.Configuration.Tables[0];
+
+            // Wrap the message in the same $rows format that production uses,
+            // so the dispatch script and per-table functions work identically.
+            var rowsArgs = new DynamicJsonValue
+            {
+                ["rows"] = new DynamicJsonArray
+                {
+                    new DynamicJsonValue
+                    {
+                        ["table"] = table.SourceTableName,
+                        ["row"] = new DynamicJsonValue(messageDoc)
+                    }
+                }
+            };
+            using var argsBlittable = context.ReadObject(rowsArgs, "cdc-test-args");
+
+            var command = new TestCdcMessageCommand(context, patchRequest, argsBlittable);
 
             command.Execute(context, null);
 

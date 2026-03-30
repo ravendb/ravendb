@@ -134,6 +134,8 @@ public class CdcSinkDocumentProcessor
         List<string> parentPkColumns,
         List<EmbeddedPathSegment> currentPath)
     {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
         if (embeddedTables == null)
             return;
 
