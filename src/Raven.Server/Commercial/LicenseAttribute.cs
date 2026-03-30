@@ -77,4 +77,5 @@ public enum LicenseAttribute
     AiAssistant,
     Sso,
     CdcSink,
+    ServerWideConnectionStrings,
 }

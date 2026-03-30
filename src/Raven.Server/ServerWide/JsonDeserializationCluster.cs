@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Sharding;
@@ -93,6 +94,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, PrefixedShardingSetting> PrefixedShardingSetting = GenerateJsonDeserializationRoutine<PrefixedShardingSetting>();
 
         public static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplication> ServerWideExternalReplication = GenerateJsonDeserializationRoutine<ServerWideExternalReplication>();
+
+        public static readonly Func<BlittableJsonReaderObject, ServerWideConnectionString> ServerWideConnectionString = blittable => Client.ServerWide.Operations.ConnectionStrings.ServerWideConnectionString.FromBlittable(blittable);
 
         public static readonly Func<BlittableJsonReaderObject, ExternalReplicationState> ExternalReplicationState = GenerateJsonDeserializationRoutine<ExternalReplicationState>();
 
@@ -308,6 +311,8 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteServerWideAnalyzerCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideAnalyzerCommand>(),
             [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
             [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>(),
+            [nameof(PutServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutServerWideConnectionStringCommand>(),
+            [nameof(DeleteServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideConnectionStringCommand>(),
             [nameof(DelayBackupCommand)] = GenerateJsonDeserializationRoutine<DelayBackupCommand>(),
             [nameof(EditLockModeCommand)] = GenerateJsonDeserializationRoutine<EditLockModeCommand>(),
             [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>(),

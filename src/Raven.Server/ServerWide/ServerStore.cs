@@ -39,6 +39,7 @@ using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Tcp;
@@ -2220,6 +2221,20 @@ namespace Raven.Server.ServerWide
         public Task<(long Index, object Result)> ToggleServerWideTaskStateAsync(ToggleServerWideTaskStateCommand.Parameters configuration, string raftRequestId)
         {
             var command = new ToggleServerWideTaskStateCommand(configuration, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long Index, object Result)> PutServerWideConnectionStringAsync(ServerWideConnectionString connectionString, string raftRequestId)
+        {
+            var command = new PutServerWideConnectionStringCommand(connectionString, raftRequestId);
+
+            return SendToLeaderAsync(command);
+        }
+
+        public Task<(long Index, object Result)> DeleteServerWideConnectionStringAsync(DeleteServerWideConnectionStringCommand.DeleteConfiguration configuration, string raftRequestId)
+        {
+            var command = new DeleteServerWideConnectionStringCommand(configuration, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

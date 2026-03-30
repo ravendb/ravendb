@@ -49,6 +49,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.DocumentsCompression;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -291,6 +292,10 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, PutServerWideBackupConfigurationResponse> PutServerWideBackupConfigurationResponse = GenerateJsonDeserializationRoutine<PutServerWideBackupConfigurationResponse>();
         
         internal static readonly Func<BlittableJsonReaderObject, ServerWideExternalReplicationResponse> PutServerWideConfigurationResponse = GenerateJsonDeserializationRoutine<ServerWideExternalReplicationResponse>();
+
+        internal static readonly Func<BlittableJsonReaderObject, PutServerWideConnectionStringResult> PutServerWideConnectionStringResult = GenerateJsonDeserializationRoutine<PutServerWideConnectionStringResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, DeleteServerWideConnectionStringResult> DeleteServerWideConnectionStringResult = GenerateJsonDeserializationRoutine<DeleteServerWideConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetServerWideBackupConfigurationsResponse> GetServerWideBackupConfigurationsResponse = GenerateJsonDeserializationRoutine<GetServerWideBackupConfigurationsResponse>();
         

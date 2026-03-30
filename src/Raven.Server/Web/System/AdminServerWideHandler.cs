@@ -4,8 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
@@ -189,6 +191,109 @@ namespace Raven.Server.Web.System
                     };
 
                     context.Write(writer, toggleResponse.ToJson());
+                }
+            }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutServerWideConnectionString()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var connectionStringBlittable = await context.ReadForMemoryAsync(RequestBodyStream(), "server-wide-connection-string");
+                var serverWideConnectionString = ServerWideConnectionString.FromBlittable(connectionStringBlittable);
+
+                if (serverWideConnectionString?.ConnectionString == null)
+                    throw new InvalidOperationException("Connection string is missing or invalid");
+
+                var errors = new List<string>();
+                serverWideConnectionString.ConnectionString.Validate(errors);
+                if (errors.Count > 0)
+                    throw new InvalidOperationException($"Connection string validation failed: {string.Join(", ", errors)}");
+
+                var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var putResponse = new PutServerWideConnectionStringResult
+                    {
+                        RaftCommandIndex = newIndex
+                    };
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(PutServerWideConnectionStringResult.RaftCommandIndex)] = putResponse.RaftCommandIndex
+                    });
+                }
+            }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "GET", AuthorizationStatus.ClusterAdmin)]
+        public async Task GetServerWideConnectionStrings()
+        {
+            var name = GetStringQueryString("name", required: false);
+            var typeAsString = GetStringQueryString("type", required: false);
+
+            ConnectionStringType? type = null;
+            if (typeAsString != null)
+            {
+                if (Enum.TryParse(typeAsString, true, out ConnectionStringType parsedType) == false)
+                    throw new ArgumentException($"{typeAsString} is unknown connection string type.");
+                type = parsedType;
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var blittables = ServerStore.Cluster.GetServerWideConnectionStrings(context, type, name);
+                var result = new GetServerWideConnectionStringsResult();
+
+                foreach (var blittable in blittables)
+                {
+                    var connectionString = ServerWideConnectionString.FromBlittable(blittable);
+                    if (connectionString != null)
+                        result.Results.Add(connectionString);
+                }
+
+                context.Write(writer, result.ToJson());
+            }
+        }
+
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        public async Task DeleteServerWideConnectionString()
+        {
+            var name = GetStringQueryString("name", required: true);
+            var typeAsString = GetStringQueryString("type", required: true);
+
+            if (Enum.TryParse(typeAsString, true, out ConnectionStringType type) == false)
+                throw new ArgumentException($"{typeAsString} is unknown connection string type.");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var deleteConfiguration = new DeleteServerWideConnectionStringCommand.DeleteConfiguration
+                {
+                    ConnectionStringName = name,
+                    Type = type
+                };
+
+                var (newIndex, _) = await ServerStore.DeleteServerWideConnectionStringAsync(deleteConfiguration, GetRaftRequestIdFromQuery());
+                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var deleteResponse = new DeleteServerWideConnectionStringResult
+                    {
+                        RaftCommandIndex = newIndex
+                    };
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DeleteServerWideConnectionStringResult.RaftCommandIndex)] = deleteResponse.RaftCommandIndex
+                    });
                 }
             }
         }
