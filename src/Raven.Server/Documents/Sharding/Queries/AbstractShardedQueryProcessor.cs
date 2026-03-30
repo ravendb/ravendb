@@ -519,8 +519,15 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             {
                 var offsetString = GetOffsetString(me.Arguments[0]);
 
-                if (string.IsNullOrEmpty(offsetString) || TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
-                    throw new InvalidQueryException($"Invalid offset format for {me.Name.Value}().");
+                if (string.IsNullOrEmpty(offsetString))
+                    throw new InvalidQueryException($"Method {me.Name.Value}() offset argument must be a non-empty string.");
+
+                if (TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
+                    throw new InvalidQueryException(
+                        $"Invalid offset format '{offsetString}' for {me.Name.Value}(). " +
+                        "Expected format: [+|-]N(y|year|years)[N(mo|month|months)][N(d|day|days)][N(h|hour|hours)][N(m|min|minute|minutes)][N(s|sec|second|seconds)]. " +
+                        "Units must appear in descending order. Spaces between components are allowed. " +
+                        "Examples: '+1y6mo', '-2hours30minutes', '1 year 6 months', '15d'.");
 
                 resolved = offset.Apply(_now);
             }
@@ -567,6 +574,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 return context.ResolveNow(me);
 
             case MethodExpression me when me.Name.Value.Equals("today", StringComparison.OrdinalIgnoreCase):
+                if (me.Arguments is { Count: > 0 })
+                    throw new InvalidQueryException("Method today() does not accept arguments. Use now() with an offset instead (e.g., now('+1d')).");
                 return context.ResolveToday();
 
             case BinaryExpression be:

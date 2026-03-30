@@ -598,10 +598,10 @@ namespace Raven.Server.Documents.Queries
                         ValueTokenType.String);
 
                 case MethodType.Today:
-                    if (method.Arguments is { Count: > 1 })
-                        throw new InvalidQueryException("Method today() expects zero or one argument.", query.QueryText, parameters);
+                    if (method.Arguments is { Count: > 0 })
+                        throw new InvalidQueryException("Method today() does not accept arguments. Use now() with an offset instead (e.g., now('+1d')).", query.QueryText, parameters);
                     return new ValueExpression(
-                        ResolveTimeFunction(query, metadata, parameters, method, queryTime.Today).GetDefaultRavenFormat(isUtc: true),
+                        queryTime.Today.GetDefaultRavenFormat(isUtc: true),
                         ValueTokenType.String);
             }
 
