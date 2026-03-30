@@ -237,15 +237,16 @@ namespace Raven.Client.Documents.Queries
         /// For use in LINQ queries only. For DocumentQuery and AsyncDocumentQuery, use <see cref="RavenDocumentQuery.Now(string)"/> instead.
         /// </summary>
         /// <param name="offset">
-        /// A duration string representing the time offset.
+        /// A duration string representing the time offset. The result is floor-rounded to the smallest unit specified.
         /// <para>
-        /// Format: <c>[+|-][n]y[n]mo[n]d[n]h[n]m[n]s</c>
+        /// Format: <c>[+|-]Ny[Nmo][Nd][Nh][Nm][Ns]</c> — units must appear in descending order (year to second).
+        /// Not all units are required; only the ones you need. Spaces between components are allowed.
         /// </para>
-        /// <list type="bullet">
-        /// <item><description><c>y, mo, d</c>: Years, Months, Days</description></item>
-        /// <item><description><c>h, m, s</c>: Hours, Minutes, Seconds</description></item>
-        /// </list>
-        /// Examples: <c>"+1y6mo"</c>, <c>"-2h30m"</c>, <c>"15d"</c> (defaults to positive).
+        /// <para>
+        /// Each unit supports aliases:
+        /// <c>[+|-]N(y|year|years)[N(mo|month|months)][N(d|day|days)][N(h|hour|hours)][N(m|min|minute|minutes)][N(s|sec|second|seconds)]</c>
+        /// </para>
+        /// Examples: <c>"+1y6mo"</c>, <c>"-2hours30minutes"</c>, <c>"1 year 6 months"</c>, <c>"15d"</c> (defaults to positive).
         /// </param>
         /// <returns>The adjusted and rounded UTC date and time.</returns>
         /// <exception cref="NotSupportedException">Thrown when called directly in client code.</exception>

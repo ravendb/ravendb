@@ -622,7 +622,9 @@ namespace Raven.Server.Documents.Queries
             if (TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
                 throw new InvalidQueryException(
                     $"Invalid offset format '{offsetString}' for {method.Name.Value}(). " +
-                    "Expected format: [+|-]NyNmoNdNhNmNs (e.g., '+1d', '-2h30m', '1y6mo').",
+                    "Expected format: [+|-]N(y|year|years)[N(mo|month|months)][N(d|day|days)][N(h|hour|hours)][N(m|min|minute|minutes)][N(s|sec|second|seconds)]. " +
+                    "Units must appear in descending order. Spaces between components are allowed. " +
+                    "Examples: '+1y6mo', '-2hours30minutes', '1 year 6 months', '15d'.",
                     query.QueryText, parameters);
 
             return offset.Apply(baseTime);
