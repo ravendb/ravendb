@@ -180,10 +180,10 @@ export const editAiAgentSelectors = {
     isTestOpen: (state: RootState) => state.editAiAgent.isTestOpen,
     isTestPinned: (state: RootState) => state.editAiAgent.isTestPinned,
     isRawData: (state: RootState) => state.editAiAgent.isRawData,
-    mainTestMessages: selectMainTestMessages,
     testToolParameters: (state: RootState) => state.editAiAgent.testToolParameters,
     testDocuments: selectTestDocuments,
     mainTestDocument: selectMainTestDocument,
+    mainTestMessages: selectMainTestMessages,
     testConfiguration: (state: RootState) => state.editAiAgent.testConfiguration,
     runTestState: (state: RootState) => state.editAiAgent.runTestState,
     isActionToolSubmitRequired: createSelector([selectMainTestDocument], (conversationDocument) =>

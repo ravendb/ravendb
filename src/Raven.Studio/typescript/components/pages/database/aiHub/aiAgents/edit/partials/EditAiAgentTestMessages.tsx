@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import { Modal } from "components/common/Modal";
 import { Icon } from "components/common/Icon";
@@ -12,11 +12,11 @@ import { useServices } from "components/hooks/useServices";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 import { LazyLoad } from "components/common/LazyLoad";
+import copyToClipboard from "common/copyToClipboard";
 
 interface SubConversationData {
-    conversationId: string;
-    messages: AiAgentMessage[];
     document: documentDto;
+    messages: AiAgentMessage[];
 }
 
 interface EditAiAgentTestMessagesProps {
@@ -33,7 +33,12 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
     const [subConversationHistory, setSubConversationHistory] = useState<SubConversationData[]>([]);
     const currentSubConversationData = subConversationHistory[subConversationHistory.length - 1];
 
+    const abortControllerRef = useRef<AbortController>(null);
+
     const asyncOpenSubConversation = useAsyncCallback(async (subConversationId: string) => {
+        abortControllerRef.current?.abort();
+        abortControllerRef.current = new AbortController();
+
         const conversationDocument = testDocuments[subConversationId];
         if (!conversationDocument) {
             messagePublisher.reportError(`Sub-conversation (${subConversationId}) data is not available`);
@@ -46,7 +51,7 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
             return;
         }
 
-        const agentResult = await aiAgentService.getAiAgents(databaseName, agentId);
+        const agentResult = await aiAgentService.getAiAgents(databaseName, agentId, abortControllerRef.current.signal);
         const config = agentResult.AiAgents[0];
         if (!config) {
             messagePublisher.reportError(
@@ -63,7 +68,6 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
         setSubConversationHistory((prev) => [
             ...prev,
             {
-                conversationId: subConversationId,
                 messages: subMessages,
                 document: conversationDocument,
             },
@@ -72,6 +76,7 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
 
     const handleGoBack = () => {
         if (asyncOpenSubConversation.loading) {
+            abortControllerRef.current?.abort();
             return;
         }
 
@@ -96,6 +101,24 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
                                 <Icon icon="ai-agents" />
                                 Sub-agent test transcript
                             </h3>
+                            {currentSubConversationData?.document && (
+                                <small className="text-muted text-break">
+                                    Identifier: <b>{currentSubConversationData.document.Agent}</b>
+                                    <Button
+                                        variant="link"
+                                        className="p-0 ms-1 align-baseline"
+                                        onClick={() =>
+                                            copyToClipboard.copy(
+                                                currentSubConversationData.document.Agent,
+                                                "Agent ID copied to clipboard"
+                                            )
+                                        }
+                                        size="xs"
+                                    >
+                                        <Icon icon="copy" margin="m-0" />
+                                    </Button>
+                                </small>
+                            )}
                             <small className="text-muted text-break">
                                 This conversation exists only in the current test result and is not stored in the
                                 database.
@@ -108,30 +131,18 @@ export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAi
                         </Modal.Body>
                     ) : (
                         <>
-                            <Modal.Body className="pt-0">
-                                <div className="vstack gap-3">
-                                    <div className="panel-bg-2 border border-secondary rounded-2 p-2 hstack justify-content-between align-items-start gap-2">
-                                        <div className="overflow-hidden">
-                                            <div className="fw-semibold text-truncate">Conversation ID</div>
-                                            <small className="text-muted text-break">
-                                                {currentSubConversationData.conversationId}
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div className="overflow-auto" style={{ maxHeight: "65vh" }}>
-                                        <AiAgentMessages
-                                            mode="test"
-                                            messages={currentSubConversationData.messages}
-                                            handleSaveParameters={handleSaveParameters}
-                                            parametersFromUser={currentSubConversationData.document?.Parameters}
-                                            openActionCalls={currentSubConversationData.document?.OpenActionCalls}
-                                            openTestSubConversation={asyncOpenSubConversation.execute}
-                                        />
-                                    </div>
-                                </div>
+                            <Modal.Body className="overflow-auto" style={{ maxHeight: "65vh" }}>
+                                <AiAgentMessages
+                                    mode="test"
+                                    messages={currentSubConversationData.messages}
+                                    handleSaveParameters={handleSaveParameters}
+                                    parametersFromUser={currentSubConversationData.document?.Parameters}
+                                    openActionCalls={currentSubConversationData.document?.OpenActionCalls}
+                                    openTestSubConversation={asyncOpenSubConversation.execute}
+                                />
                             </Modal.Body>
                             <Modal.Footer>
-                                <Button variant="secondary" onClick={handleGoBack}>
+                                <Button variant="secondary" onClick={handleGoBack} className="rounded-pill">
                                     <Icon icon="close" />
                                     Close
                                 </Button>

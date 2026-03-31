@@ -12,7 +12,6 @@ import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
 import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
 import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
-import { aiAgentsUtils } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsUtils";
 import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSubmittedActionTool";
 import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
 import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesAttachments";
