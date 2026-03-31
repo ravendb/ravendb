@@ -78,12 +78,7 @@ function ParameterItem({ control, parameter, idx, panelClassName }: ParameterIte
                 <span className="text-truncate font-monospace" title={parameter.name} style={{ maxWidth: "300px" }}>
                     {parameter.name}
                 </span>
-                <FormSwitch
-                    control={control}
-                    name={`parameters.${idx}.isSendToModel`}
-                    color="primary"
-                    formCheckClassName="mb-0 hstack align-items-end"
-                >
+                <FormSwitch control={control} name={`parameters.${idx}.isSendToModel`} color="primary">
                     Send to model
                 </FormSwitch>
             </div>
