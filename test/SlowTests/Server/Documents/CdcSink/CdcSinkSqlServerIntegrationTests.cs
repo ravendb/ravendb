@@ -140,7 +140,7 @@ namespace SlowTests.Server.Documents.CdcSink
             return count;
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();
@@ -208,7 +208,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
@@ -262,7 +262,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("Streamed Event", (string)newDoc.Description);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task CdcStreaming_Update()
         {
             using var store = GetDocumentStore();
@@ -320,7 +320,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Updated Content", timeout: 60_000);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task CdcStreaming_Delete()
         {
             using var store = GetDocumentStore();
@@ -382,7 +382,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true)]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task EmbeddedArray()
         {
             using var store = GetDocumentStore();
