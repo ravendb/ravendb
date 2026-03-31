@@ -14,10 +14,11 @@ namespace FastTests.Corax.Vectors;
 
 public class IndexVectorExactViaStaticIndexesTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Corax)]
-    public async Task AssertIndexDefinitionViaStaticIndexes()
+    [RavenTheory(RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task AssertIndexDefinitionViaStaticIndexes(Options options)
     {
-        using var store = CreateDocumentStore();
+        using var store = CreateDocumentStore(options);
         var localIndexDefinition = new IndexDefinition()
         {
             Name = "Vector",
@@ -57,23 +58,23 @@ select new
     }
 
     [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    [InlineData(VectorEmbeddingType.Binary, 0.7f)]
-    [InlineData(VectorEmbeddingType.Int8, 0.82f)]
-    [InlineData(VectorEmbeddingType.Single, 0.75f)]
-    public async Task CanCreateVectorIndexFromCSharp(VectorEmbeddingType vectorEmbeddingType, float similarity)
-    => await CanCreateVectorIndexBase<TextVectorIndex>(vectorEmbeddingType, similarity);
-    
-    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    [InlineData(VectorEmbeddingType.Binary, 0.7f)]
-    [InlineData(VectorEmbeddingType.Int8, 0.82f)]
-    [InlineData(VectorEmbeddingType.Single, 0.75f)]
-    public async Task CanCreateVectorIndexFromJs(VectorEmbeddingType vectorEmbeddingType, float similarity)
-        => await CanCreateVectorIndexBase<TextVectorIndexJs>(vectorEmbeddingType, similarity);
+    [RavenData(VectorEmbeddingType.Binary, 0.7f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(VectorEmbeddingType.Int8, 0.82f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(VectorEmbeddingType.Single, 0.75f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanCreateVectorIndexFromCSharp(Options options, VectorEmbeddingType vectorEmbeddingType, float similarity)
+    => await CanCreateVectorIndexBase<TextVectorIndex>(options, vectorEmbeddingType, similarity);
 
-    private async Task CanCreateVectorIndexBase<TIndex>(VectorEmbeddingType vectorEmbeddingType, float similarity)
+    [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Vector, RavenArchitecture.AllX64)]
+    [RavenData(VectorEmbeddingType.Binary, 0.7f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(VectorEmbeddingType.Int8, 0.82f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(VectorEmbeddingType.Single, 0.75f, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanCreateVectorIndexFromJs(Options options, VectorEmbeddingType vectorEmbeddingType, float similarity)
+        => await CanCreateVectorIndexBase<TextVectorIndexJs>(options, vectorEmbeddingType, similarity);
+
+    private async Task CanCreateVectorIndexBase<TIndex>(Options options, VectorEmbeddingType vectorEmbeddingType, float similarity)
         where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = CreateDocumentStore();
+        using var store = CreateDocumentStore(options);
         
         {
             using var session = store.OpenAsyncSession();
@@ -100,14 +101,15 @@ select new
     }
 
 
-    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Vector)]
-    public async Task CreateVectorIndexFromFloatEmbeddings() => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndex>();
-    public async Task CreateVectorIndexFromFloatEmbeddingsJs() => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndexJs>();
-    
-    private async Task CreateVectorIndexFromFloatEmbeddingsBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Vector)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CreateVectorIndexFromFloatEmbeddings(Options options) => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndex>(options);
+    public async Task CreateVectorIndexFromFloatEmbeddingsJs() => await CreateVectorIndexFromFloatEmbeddingsBase<NumericalVectorIndexJs>(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+
+    private async Task CreateVectorIndexFromFloatEmbeddingsBase<TIndex>(Options options)
         where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = CreateDocumentStore();
+        using var store = CreateDocumentStore(options);
         
         using (var session = store.OpenAsyncSession())
         {
@@ -130,7 +132,7 @@ select new
         }
     }
 
-    private IDocumentStore CreateDocumentStore() => GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+    private IDocumentStore CreateDocumentStore(Options options = null) => GetDocumentStore(options ?? Options.ForSearchEngine(RavenSearchEngineMode.Corax));
 
     private class TextVectorIndex : AbstractIndexCreationTask<Document>
     {
@@ -228,45 +230,57 @@ select new
         public object Vector { get; set; }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void EmbeddingTextSourceTest() => StaticIndexApi<EmbeddingTextSource>();
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingTextSourceTest(Options options) => StaticIndexApi<EmbeddingTextSource>(options);
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void EmbeddingTextSourceTestJs() => StaticIndexApi<EmbeddingTextSourceJs>();
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingTextSourceTestJs(Options options) => StaticIndexApi<EmbeddingTextSourceJs>(options);
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void MultiEmbeddingTextIndexTest() => StaticIndexApi<MultiEmbeddingTextIndex>();
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingTextIndexTest(Options options) => StaticIndexApi<MultiEmbeddingTextIndex>(options);
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void MultiEmbeddingTextIndexTestJs() => StaticIndexApi<MultiEmbeddingTextIndexJs>();
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingTextIndexTestJs(Options options) => StaticIndexApi<MultiEmbeddingTextIndexJs>(options);
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void EmbeddingSingleIndexTest() => StaticIndexApi<EmbeddingSingleIndex>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void EmbeddingSingleIndexTestJs() => StaticIndexApi<EmbeddingSingleIndexJs>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void MultiEmbeddingSingleIndexTest() => StaticIndexApi<MultiEmbeddingSingleIndex>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void MultiEmbeddingSingleIndexTestJs() => StaticIndexApi<MultiEmbeddingSingleIndexJs>();
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingSingleIndexTest(Options options) => StaticIndexApi<EmbeddingSingleIndex>(options);
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void EmbeddingSingleAsBase64IndexTest() => StaticIndexApi<EmbeddingSingleAsBase64Index>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void EmbeddingSingleAsBase64IndexTestJs() => StaticIndexApi<EmbeddingSingleAsBase64IndexJs>();
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingSingleIndexTestJs(Options options) => StaticIndexApi<EmbeddingSingleIndexJs>(options);
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void MultiEmbeddingSingleAsBase64IndexTest() => StaticIndexApi<MultiEmbeddingSingleAsBase64Index>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void MultiEmbeddingSingleAsBase64IndexTestJs() => StaticIndexApi<MultiEmbeddingSingleAsBase64IndexJs>();
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingSingleIndexTest(Options options) => StaticIndexApi<MultiEmbeddingSingleIndex>(options);
 
-    private void StaticIndexApi<TIndex>() where TIndex : AbstractIndexCreationTask, new()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingSingleIndexTestJs(Options options) => StaticIndexApi<MultiEmbeddingSingleIndexJs>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingSingleAsBase64IndexTest(Options options) => StaticIndexApi<EmbeddingSingleAsBase64Index>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void EmbeddingSingleAsBase64IndexTestJs(Options options) => StaticIndexApi<EmbeddingSingleAsBase64IndexJs>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingSingleAsBase64IndexTest(Options options) => StaticIndexApi<MultiEmbeddingSingleAsBase64Index>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void MultiEmbeddingSingleAsBase64IndexTestJs(Options options) => StaticIndexApi<MultiEmbeddingSingleAsBase64IndexJs>(options);
+
+    private void StaticIndexApi<TIndex>(Options options) where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = CreateDocumentStore();
+        using var store = CreateDocumentStore(options);
         using (var session = store.OpenSession())
         {
             float[][] embeddings = [[0.1f, 0.1f], [0.2f, 0.3f]];

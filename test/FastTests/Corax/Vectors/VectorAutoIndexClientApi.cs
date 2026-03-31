@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Vector;
+using Raven.Server.Config;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -41,85 +42,96 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
             };
         });
 
-        foreach (var isExact in exactConfig)
+        foreach (var databaseMode in new[] { RavenDatabaseMode.Single, RavenDatabaseMode.Sharded })
         {
-            foreach (var isNative in isNativeVector)
+            var options = RavenTestBase.Options.ForMode(databaseMode);
+            options.SearchEngineMode = RavenSearchEngineMode.Corax;
+            options.ModifyDatabaseRecord += record =>
             {
-                yield return [isExact, isNative, isNative ? primitiveValueFunc : ravenVectorValueFunc];
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
+                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
+            };
+
+            foreach (var isExact in exactConfig)
+            {
+                foreach (var isNative in isNativeVector)
+                {
+                    yield return [options, isExact, isNative, isNative ? primitiveValueFunc : ravenVectorValueFunc];
+                }
             }
         }
     }
 
     [RavenTheory(RavenTestCategory.Vector)]
     [MemberData(nameof(GenerateScenarios))]
-    public void SinglesToSinglesTest(bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
+    public void SinglesToSinglesTest(Options options, bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(Singles)",
         fieldRqlSelector: "vector.search(Singles, $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Singles),
-            embedding(new float[] {0.1f, 0.1f}), isExact: isExact), isExact);
+            embedding(new float[] {0.1f, 0.1f}), isExact: isExact), isExact, options);
 
     [RavenTheory(RavenTestCategory.Vector)]
     [MemberData(nameof(GenerateScenarios))]
-    public void SinglesToInt8Test(bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
+    public void SinglesToInt8Test(Options options, bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i8(Singles))",
         fieldRqlSelector: "vector.search(embedding.f32_i8(Singles), $p0)",
-        vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Int8), embedding(new float[] { 0.1f, 0.1f }), isExact: isExact), isExact);
+        vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Int8), embedding(new float[] { 0.1f, 0.1f }), isExact: isExact), isExact, options);
 
     [RavenTheory(RavenTestCategory.Vector)]
     [MemberData(nameof(GenerateScenarios))]
-    public void SinglesToBinaryTest(bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
+    public void SinglesToBinaryTest(Options options, bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.f32_i1(Singles))",
         fieldRqlSelector: "vector.search(embedding.f32_i1(Singles), $p0)",
-        vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Binary), embedding(new float[]{ 0.1f, 0.1f }), isExact: isExact), isExact);
+        vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Singles).TargetQuantization(VectorEmbeddingType.Binary), embedding(new float[]{ 0.1f, 0.1f }), isExact: isExact), isExact, options);
 
     [RavenTheory(RavenTestCategory.Vector)]
     [MemberData(nameof(GenerateScenarios))]
-    public void Int8Test(bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
+    public void Int8Test(Options options, bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i8(Int8))",
         fieldRqlSelector: "vector.search(embedding.i8(Int8), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Int8, VectorEmbeddingType.Int8),
-            embedding(VectorQuantizer.ToInt8([-1f, 1f])), isExact: isExact), isExact);
+            embedding(VectorQuantizer.ToInt8([-1f, 1f])), isExact: isExact), isExact, options);
 
 
     [RavenTheory(RavenTestCategory.Vector)]
     [MemberData(nameof(GenerateScenarios))]
-    public void Int1Test(bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
+    public void Int1Test(Options options, bool isExact, bool isNative, Func<object, Action<IVectorEmbeddingFieldValueFactory>> embedding) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.i1(Binary))",
         fieldRqlSelector: "vector.search(embedding.i1(Binary), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithEmbedding(f => f.Binary, VectorEmbeddingType.Binary),
-            embedding(VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0])), isExact: isExact), isExact);
+            embedding(VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0])), isExact: isExact), isExact, options);
 
     [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void TextToSinglesTest(bool isExact) => AutoIndexingTestingBase(
+    [RavenData(true, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(false, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToSinglesTest(Options options, bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text(Text))",
         fieldRqlSelector: "vector.search(embedding.text(Text), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithText(x => x.Text),
-            value => value.ByText("test"), isExact: isExact), isExact);
+            value => value.ByText("test"), isExact: isExact), isExact, options);
 
     [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void TextToInt8Test(bool isExact) => AutoIndexingTestingBase(
+    [RavenData(true, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(false, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToInt8Test(Options options, bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i8(Text))",
         fieldRqlSelector: "vector.search(embedding.text_i8(Text), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Int8),
-            value => value.ByText("test"), isExact: isExact), isExact);
+            value => value.ByText("test"), isExact: isExact), isExact, options);
 
     [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void TextToInt1Test(bool isExact) => AutoIndexingTestingBase(
+    [RavenData(true, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(false, SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToInt1Test(Options options, bool isExact) => AutoIndexingTestingBase(
         autoIndexName: "Auto/AutoVecDocs/ByVector.search(embedding.text_i1(Text))",
         fieldRqlSelector: "vector.search(embedding.text_i1(Text), $p0)",
         vectorWhere: docs => docs.VectorSearch(field => field.WithText(x => x.Text).TargetQuantization(VectorEmbeddingType.Binary),
-            value => value.ByText("test"), isExact: isExact), isExact);
+            value => value.ByText("test"), isExact: isExact), isExact, options);
 
     private void AutoIndexingTestingBase(string autoIndexName, string fieldRqlSelector, Func<IRavenQueryable<AutoVecDoc>, IRavenQueryable<AutoVecDoc>> vectorWhere,
-        bool isExact)
+        bool isExact, Options options = null)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options ?? Options.ForSearchEngine(RavenSearchEngineMode.Corax));
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("Test", [1.0f, 1.0f], VectorQuantizer.ToInt8([-1, 1]), VectorQuantizer.ToInt1([1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0])));
         session.SaveChanges();
@@ -134,10 +146,11 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
         Assert.Equal(rql, baseQuery.ToString());
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
-    public void NonExistingFieldDoesntEndWithNre()
+    [RavenMultiplatformTheory(RavenTestCategory.Vector, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void NonExistingFieldDoesntEndWithNre(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.SaveChanges();
 

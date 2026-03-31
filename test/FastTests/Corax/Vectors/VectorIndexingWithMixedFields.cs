@@ -11,10 +11,11 @@ namespace FastTests.Corax.Vectors;
 
 public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CanIndexNullWithVector()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanIndexNullWithVector(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(string.Empty, new float[] { .1f, .2f }, null, null, 0f, 0f));
         session.Store(new AutoVecDoc(string.Empty, null, null, null, 0f, 0f));
@@ -29,10 +30,11 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Null(result.Singles);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void CanIndexNullWhenServerGeneratesTheEmbedding()
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanIndexNullWhenServerGeneratesTheEmbedding(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("animal", null, null, null, 0f, 0f));
         session.Store(new AutoVecDoc(null, null, null, null, 0f, 0f));
@@ -49,16 +51,18 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Null(result.Singles);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndTextualValues() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedField>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndTextualValuesJs() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedFieldJs>();
-    
-    private void CannotMixVectorAndTextualValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndTextualValues(Options options) => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedField>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndTextualValuesJs(Options options) => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedFieldJs>(options);
+
+    private void CannotMixVectorAndTextualValuesBase<TIndex>(Options options)
     where  TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("test", [.1f, .2f], null, null, 0f, 0f));
         session.SaveChanges();
@@ -68,13 +72,14 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Contains("tried to index textual value instead", errors[0].Errors[0].Error);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndNumericalValues() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedField>();
-    public void CannotMixVectorAndNumericalValuesJs() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedFieldJs>();
-    private void CannotMixVectorAndNumericalValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndNumericalValues(Options options) => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedField>(options);
+    public void CannotMixVectorAndNumericalValuesJs() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedFieldJs>(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+    private void CannotMixVectorAndNumericalValuesBase<TIndex>(Options options)
     where  TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, [.1f, .2f], [2, -3], null, 0f, 0f));
         session.SaveChanges();
@@ -84,16 +89,18 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Contains("tried to index numerical value instead", errors[0].Errors[0].Error);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndSpatialValues() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedField>();
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndSpatialValues(Options options) => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedField>(options);
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndSpatialValuesJs() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedFieldJs>();
-    
-    private void CannotMixVectorAndSpatialValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndSpatialValuesJs(Options options) => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedFieldJs>(options);
+
+    private void CannotMixVectorAndSpatialValuesBase<TIndex>(Options options)
     where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, null, [2, -3], null, 0f, 0f));
         session.SaveChanges();

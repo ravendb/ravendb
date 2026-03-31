@@ -19,54 +19,57 @@ public class VectorJavaScriptIndexing : RavenTestBase
     {
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void TextToSinglesTest() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
-    
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void TextToInt8Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToSinglesTest(Options options) => JsIndexingTestingBase(options, nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void TextToInt1Test() => JsIndexingTestingBase(nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToInt8Test(Options options) => JsIndexingTestingBase(options, nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
+
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void TextToInt1Test(Options options) => JsIndexingTestingBase(options, nameof(VecDoc.Text), VectorEmbeddingType.Text, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByText("test")));
     
     
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(nameof(VecDoc.Singles))]
-    [InlineData(nameof(VecDoc.SinglesBase64))]
-    [InlineData(nameof(VecDoc.SinglesEnumerable))]
-    [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToSinglesTest(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
-    
+    [RavenData(nameof(VecDoc.Singles), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerable), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerableBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void SinglesToSinglesTest(Options options, string fieldName) => JsIndexingTestingBase(options, fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Single, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(nameof(VecDoc.Singles))]
-    [InlineData(nameof(VecDoc.SinglesBase64))]
-    [InlineData(nameof(VecDoc.SinglesEnumerable))]
-    [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
-    
+    [RavenData(nameof(VecDoc.Singles), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerable), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerableBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void SinglesToInt8Test(Options options, string fieldName) => JsIndexingTestingBase(options, fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(nameof(VecDoc.Singles))]
-    [InlineData(nameof(VecDoc.SinglesBase64))]
-    [InlineData(nameof(VecDoc.SinglesEnumerable))]
-    [InlineData(nameof(VecDoc.SinglesEnumerableBase64))]
-    public void SinglesToInt1Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
-    
+    [RavenData(nameof(VecDoc.Singles), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerable), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.SinglesEnumerableBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void SinglesToInt1Test(Options options, string fieldName) => JsIndexingTestingBase(options, fieldName, VectorEmbeddingType.Single, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1.0f, 1.0f])));
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(nameof(VecDoc.Int8))]
-    [InlineData(nameof(VecDoc.Int8Base64))]
-    [InlineData(nameof(VecDoc.Int8Enumerable))]
-    [InlineData(nameof(VecDoc.Int8EnumerableBase64))]
-    public void Int8Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding(VectorQuantizer.ToInt8([-1, 1]))));
-        
+    [RavenData(nameof(VecDoc.Int8), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.Int8Base64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.Int8Enumerable), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.Int8EnumerableBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void Int8Test(Options options, string fieldName) => JsIndexingTestingBase(options, fieldName, VectorEmbeddingType.Int8, VectorEmbeddingType.Int8, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding(VectorQuantizer.ToInt8([-1, 1]))));
+
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    [InlineData(nameof(VecDoc.Binary))]
-    [InlineData(nameof(VecDoc.BinaryBase64))]
-    [InlineData(nameof(VecDoc.BinaryEnumerable))]
-    [InlineData(nameof(VecDoc.BinaryEnumerableBase64))]
-    public void Int1Test(string fieldName) => JsIndexingTestingBase(fieldName, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1, 0])));
-    
-    private void JsIndexingTestingBase(string fieldName, VectorEmbeddingType src, VectorEmbeddingType dest, Func<IRavenQueryable<VecDoc>, IRavenQueryable<VecDoc>> vectorWhere)
+    [RavenData(nameof(VecDoc.Binary), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.BinaryBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.BinaryEnumerable), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(nameof(VecDoc.BinaryEnumerableBase64), SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void Int1Test(Options options, string fieldName) => JsIndexingTestingBase(options, fieldName, VectorEmbeddingType.Binary, VectorEmbeddingType.Binary, docs => docs.VectorSearch(f => f.WithField(x => x.Vector), v => v.ByEmbedding([1, 0])));
+
+    private void JsIndexingTestingBase(Options options, string fieldName, VectorEmbeddingType src, VectorEmbeddingType dest, Func<IRavenQueryable<VecDoc>, IRavenQueryable<VecDoc>> vectorWhere)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
 
         float[][] singles = [[1.0f, 1.0f], [-1.0f, 1.0f]];
