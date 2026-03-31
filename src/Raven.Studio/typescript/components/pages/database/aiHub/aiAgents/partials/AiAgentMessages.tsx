@@ -6,7 +6,6 @@ import { useRef } from "react";
 import ReactAce from "react-ace";
 import { Control, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
-import Button from "react-bootstrap/Button";
 import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
 import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
@@ -16,7 +15,6 @@ import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAg
 import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
 import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesAttachments";
 import {
-    AiAgentMessagesCommonContextValue,
     AiAgentMessagesContextValue,
     AiAgentMessagesProvider,
     useAiAgentMessagesContext,
@@ -24,41 +22,13 @@ import {
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import InnerForm from "components/common/InnerForm";
 import { tryHandleSubmit } from "components/utils/common";
-import useUniqueId from "components/hooks/useUniqueId";
 
-interface AiAgentMessagesPropsBase extends AiAgentMessagesCommonContextValue {
+type AiAgentMessagesProps = AiAgentMessagesContextValue & {
     messages: AiAgentMessage[];
-}
-
-type AiAgentMessagesProps =
-    | (AiAgentMessagesPropsBase & {
-          mode?: "chat";
-      })
-    | (AiAgentMessagesPropsBase & {
-          mode: "test";
-          openTestSubConversation: (subConversationId: string) => void;
-      });
+};
 
 export default function AiAgentMessages(props: AiAgentMessagesProps) {
-    const { messages } = props;
-
-    const contextValue: AiAgentMessagesContextValue =
-        props.mode === "test"
-            ? {
-                  mode: "test",
-                  handleSaveParameters: props.handleSaveParameters,
-                  parametersFromUser: props.parametersFromUser,
-                  documentId: props.documentId,
-                  openActionCalls: props.openActionCalls,
-                  openTestSubConversation: props.openTestSubConversation,
-              }
-            : {
-                  mode: "chat",
-                  handleSaveParameters: props.handleSaveParameters,
-                  parametersFromUser: props.parametersFromUser,
-                  documentId: props.documentId,
-                  openActionCalls: props.openActionCalls,
-              };
+    const { messages, ...contextValue } = props;
 
     // Used as key for OpenActionCalls component to re-render it when openActionCalls change
     const openActionCallsIds = Object.keys(props.openActionCalls ?? {});

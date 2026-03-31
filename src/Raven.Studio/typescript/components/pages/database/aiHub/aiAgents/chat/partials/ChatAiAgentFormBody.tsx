@@ -125,6 +125,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                     )}
                     {!isRawData && messages.length > 0 && (
                         <AiAgentMessages
+                            mode="chat"
                             messages={messages}
                             handleSaveParameters={runChat}
                             parametersFromUser={document.data?.Parameters}
