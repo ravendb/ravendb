@@ -62,7 +62,7 @@ namespace SlowTests.Issues
 
             var db = await GetDatabase(store.Database);
 
-            await Backup.HoldBackupExecutionIfNeededAndInvoke(db.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(db.Name, db.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
             {
                 // wait for completion should not hang
                 var operation = await store.Maintenance.SendAsync(new BackupOperation(config));

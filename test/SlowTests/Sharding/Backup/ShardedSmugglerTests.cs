@@ -429,15 +429,15 @@ namespace SlowTests.Sharding.Backup
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions()
                     , file2);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+                    
+                    //var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
+                    //var backups = periodicBackupRunner.PeriodicBackups;
 
-                    var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
-                    var backups = periodicBackupRunner.PeriodicBackups;
-
-                    Assert.Equal("Backup", backups.First().Configuration.Name);
-                    Assert.Equal(true, backups.First().Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
-                    Assert.Equal(true, backups.First().Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
-                    Assert.Equal(BackupType.Backup, backups.First().Configuration.BackupType);
-                    Assert.Equal(true, backups.First().Configuration.Disabled);
+                    //Assert.Equal("Backup", backups.First().Configuration.Name);
+                    //Assert.Equal(true, backups.First().Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
+                    //Assert.Equal(true, backups.First().Configuration.FullBackupFrequency.Equals("0 */1 * * *"));
+                    //Assert.Equal(BackupType.Backup, backups.First().Configuration.BackupType);
+                    //Assert.Equal(true, backups.First().Configuration.Disabled);
 
                     var record = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
 

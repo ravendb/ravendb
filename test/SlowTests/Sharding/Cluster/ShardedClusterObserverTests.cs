@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
@@ -23,6 +24,7 @@ using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 
 namespace SlowTests.Sharding.Cluster
 {
@@ -31,7 +33,7 @@ namespace SlowTests.Sharding.Cluster
         public ShardedClusterObserverTests(ITestOutputHelper output) : base(output)
         {
         }
-        
+
         [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CanMoveToRehabAndBackToMember()
         {
@@ -585,10 +587,15 @@ namespace SlowTests.Sharding.Cluster
                     //stall the periodic backup on 2 shards
                     var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]),
                         new List<RavenServer>() { nodes[1] });
-                    server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+
+                    var testingStuff = new TestingStuffInternal() { OnBackupTaskRunHoldBackupExecution = tcs };
+                    server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.Add(server1Database.Name, testingStuff);
+
                     var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]),
                         new List<RavenServer>() { nodes[2] });
-                    server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+                    testingStuff = new TestingStuffInternal() { OnBackupTaskRunHoldBackupExecution = tcs };
+                    server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.Add(server2Database.Name, testingStuff);
+
 
                     var timeBeforeCxDeletion = DateTime.UtcNow;
 
@@ -770,9 +777,13 @@ namespace SlowTests.Sharding.Cluster
                 //stall the periodic backup on 2 shards
                 var tcs = new TaskCompletionSource<object>();
                 var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
-                server1Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+
+                server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.TryGetValue(server1Database.Name, out ServerBackupRunner.TestingStuffInternal value);
+                value.OnBackupTaskRunHoldBackupExecution = tcs;
+
                 var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
-                server2Database.PeriodicBackupRunner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = tcs;
+                server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.TryGetValue(server2Database.Name, out ServerBackupRunner.TestingStuffInternal value2);
+                value2.OnBackupTaskRunHoldBackupExecution = tcs;
 
                 timeBeforeCxDeletion = DateTime.UtcNow;
 
@@ -783,7 +794,7 @@ namespace SlowTests.Sharding.Cluster
                 
                 //trigger periodic backup again on leader
                 var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
-                documentDatabase.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
+                leader.ServerStore.BackupRunner.StartBackupTask(documentDatabase.Name, backupTaskId, isFullBackup: false, documentDatabase.Operations.GetNextOperationId());
 
                 PeriodicBackupStatus backupStatus = null;
 

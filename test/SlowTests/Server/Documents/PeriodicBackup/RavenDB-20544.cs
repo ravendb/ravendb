@@ -28,7 +28,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.NotNull(documentDatabase);
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
             {
                 using (var session = store.OpenAsyncSession())
                 {

@@ -28,6 +28,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -78,6 +79,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -131,6 +133,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -185,6 +188,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -236,6 +240,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -290,6 +295,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -343,6 +349,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -391,6 +398,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -440,6 +448,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var result = await Encryption.EncryptedServerAsync();
@@ -489,6 +498,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -541,6 +551,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             var result = await Encryption.EncryptedServerAsync();
@@ -611,6 +622,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -657,6 +669,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -697,6 +710,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -743,6 +757,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -773,6 +788,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_encrypted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -848,6 +864,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_sample_data_encrypted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options
@@ -929,6 +946,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public unsafe void failed_to_restore_backup_wrong_key()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -978,6 +996,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public void encryption_settings_validation()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=";
 
@@ -1045,6 +1064,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -1087,6 +1107,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_1()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -1120,6 +1141,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -1152,6 +1174,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1194,6 +1217,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Snapshot, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)]
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 

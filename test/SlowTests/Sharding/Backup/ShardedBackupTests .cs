@@ -93,6 +93,7 @@ namespace SlowTests.Sharding.Backup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task CanBackupShardedIncremental()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "_BackupFolder");
 
             using (var store1 = Sharding.GetDocumentStore())
@@ -402,6 +403,7 @@ namespace SlowTests.Sharding.Backup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task OneTimeBackupSharded(Options options)
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "_BackupFolder");
             const string idPrefix = "users";
 
@@ -450,6 +452,7 @@ namespace SlowTests.Sharding.Backup
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task BackupNowSharded(Options options)
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "_BackupFolder");
             const string idPrefix = "users";
 

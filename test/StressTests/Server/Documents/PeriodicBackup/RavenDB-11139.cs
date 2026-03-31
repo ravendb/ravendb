@@ -14,17 +14,20 @@ using Raven.Client.Http;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
+using SlowTests.MailingList;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 
 namespace StressTests.Server.Documents.PeriodicBackup
 {
     public class RavenDB_11139_Stress : ClusterTestBase
     {
         private readonly ITestOutputHelper _output;
-
+        //TODO - Fix tests [Efrat]
         public RavenDB_11139_Stress(ITestOutputHelper output) : base(output)
         {
             _output = output;
@@ -258,7 +261,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 Expect(backupKind);
 
                 var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
-                database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
+                var testingStuff = new TestingStuffInternal() { SimulateFailedBackup = true };
+                database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.Add(database.Name, testingStuff);
 
                 try
                 {
@@ -270,7 +274,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = false;
+                    testingStuff.SimulateFailedBackup = false;
+                    database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
                 }
             }
 
@@ -321,7 +326,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
+                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
                 {
                     await ChangeMentorNodeIfNeededAsync();
 
@@ -372,7 +377,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                     $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` " +
                     $"to return status code {HttpStatusCode.OK}, but it is {command.StatusCode}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
 
-                await _parent.Backup.CheckBackupOperationStatus(expectedOperationStatus, command, _store, _backupConfiguration.TaskId, operationId, periodicBackupRunner: null);
+                await _parent.Backup.CheckBackupOperationStatus(expectedOperationStatus, command, _store, _backupConfiguration.TaskId, operationId, serverBackupRunner: null);
                 Assert.True(expectedOperationStatus == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` to be {expectedOperationStatus}, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
                 _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Backup operation with ID `{operationId}` {command.Result.Status} for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
             }

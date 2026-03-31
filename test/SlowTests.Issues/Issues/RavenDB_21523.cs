@@ -9,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Sparrow.Backups;
@@ -187,17 +188,18 @@ public class RavenDB_21523 : RavenTestBase
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
-
+        var server = GetNewServer();
         using (var store = GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
             {
                 record.Settings[RavenConfiguration.GetKey(x => x.Backup.CompressionAlgorithm)] = algorithm.ToString();
                 record.Settings[RavenConfiguration.GetKey(x => x.Backup.CompressionLevel)] = compressionLevel.ToString();
-            }
+            },
+            Server = server
         }))
         {
-            await RunBackupRestore(store, backupPath, BackupType.Backup, async lastFile =>
+            await RunBackupRestore(server, store, backupPath, BackupType.Backup, async lastFile =>
             {
                 await using (var fileStream = File.OpenRead(lastFile))
                 {
@@ -241,17 +243,18 @@ public class RavenDB_21523 : RavenTestBase
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
-
+        var server = GetNewServer();
         using (var store = GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
             {
                 record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionAlgorithm)] = algorithm?.ToString();
                 record.Settings[RavenConfiguration.GetKey(x => x.Backup.SnapshotCompressionLevel)] = compressionLevel?.ToString();
-            }
+            },
+            Server = server
         }))
         {
-            await RunBackupRestore(store, backupPath, BackupType.Snapshot, async lastFile =>
+            await RunBackupRestore(server, store, backupPath, BackupType.Snapshot, async lastFile =>
             {
                 using (var zip = ZipFile.Open(lastFile, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
                 {
@@ -282,7 +285,7 @@ public class RavenDB_21523 : RavenTestBase
         }
     }
 
-    private async Task RunBackupRestore(DocumentStore store, string backupPath, BackupType backupType, Func<string, Task> assertBackupCompressionAlgorithm)
+    private async Task RunBackupRestore(RavenServer server, DocumentStore store, string backupPath, BackupType backupType, Func<string, Task> assertBackupCompressionAlgorithm)
     {
         using (var session = store.OpenAsyncSession())
         {
@@ -292,7 +295,7 @@ public class RavenDB_21523 : RavenTestBase
 
         var config = Backup.CreateBackupConfiguration(backupPath, backupType);
 
-        await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+        await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
         var databaseName = GetDatabaseName() + "restore";
 
@@ -322,7 +325,8 @@ public class RavenDB_21523 : RavenTestBase
         using (var store2 = GetDocumentStore(new Options
         {
             CreateDatabase = false,
-            ModifyDatabaseName = s => databaseName
+            ModifyDatabaseName = s => databaseName,
+            Server = server
         }))
         {
             using (var session = store2.OpenAsyncSession())

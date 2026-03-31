@@ -48,6 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
         public async Task can_delete_backups_by_date(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental, string suffix = null)
         {
+            DoNotReuseServer();
             using (await SkipMinimumBackupAgeToKeepValidationAsync())
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -81,6 +82,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_s3(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
+            DoNotReuseServer();
             using (await SkipMinimumBackupAgeToKeepValidationAsync())
             {
                 var settings = GetS3Settings();
@@ -107,6 +109,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(10, 3, true)]
         public async Task can_delete_backups_by_date_azure(int backupAgeInSeconds, int numberOfBackupsToCreate, bool checkIncremental)
         {
+            DoNotReuseServer();
             using (await SkipMinimumBackupAgeToKeepValidationAsync())
             using (var holder = new Azure.AzureClientHolder(AzureRetryFactAttribute.AzureSettings))
             {
@@ -127,6 +130,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task configuration_validation()
         {
+            DoNotReuseServer();
             await Locker.WaitAsync();
 
             try
