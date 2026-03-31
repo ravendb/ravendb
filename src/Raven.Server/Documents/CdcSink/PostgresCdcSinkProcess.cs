@@ -142,11 +142,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
         }
 
-        // Check if replication slot already exists before trying to create it.
-        // This avoids permission errors when the slot was created by an admin but
-        // the current user lacks the REPLICATION role attribute.
+        // Check if replication slot already exists in the CURRENT database.
+        // pg_replication_slots is a global view across all databases, so we must also
+        // filter by database = current_database() to avoid reusing a stale slot from
+        // a different database (same slot name hash but wrong database).
         bool slotExists;
-        await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName", conn))
+        await using (var cmd = new NpgsqlCommand(
+            "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName AND database = current_database()", conn))
         {
             cmd.Parameters.AddWithValue("slotName", _slotName);
             slotExists = await cmd.ExecuteScalarAsync(ct) != null;
@@ -162,7 +164,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
             catch (PostgresException ex) when (ex.SqlState == "42710")
             {
-                // Race condition: slot was created between our check and create — safe to ignore
+                // Slot exists globally but NOT in our database (stale slot from a dropped/orphaned database).
+                // Drop the stale slot and recreate it in the current database.
+                await using var dropCmd = new NpgsqlCommand(
+                    $"SELECT pg_drop_replication_slot('{_slotName}')", conn);
+                await dropCmd.ExecuteNonQueryAsync(ct);
+
+                await using var retryCmd = new NpgsqlCommand(
+                    $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
+                await retryCmd.ExecuteNonQueryAsync(ct);
             }
             catch (PostgresException ex) when (ex.SqlState == "42501")
             {

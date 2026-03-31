@@ -603,5 +603,203 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(150.00m, (decimal)doc.Total);
             Assert.Equal("Customers/42", (string)doc.Customer);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedArray_CdcStreaming_Insert()
+        {
+            // Verify that CDC streaming (not just initial load) works for embedded tables
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                )");
+
+            // Seed only the parent row
+            ExecuteNpgSql(connectionString, "INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-emb-cdc-insert",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" },
+                                    { "quantity", "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load of the parent
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Orders/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+
+            // Now INSERT embedded rows via CDC streaming (after replication is active)
+            ExecuteNpgSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                Assert.Single(lines);
+                Assert.Equal("Apples", (string)lines[0].Product);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedArray_Delete()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            // Use composite PK (order_id, line_num) so that PostgreSQL's default REPLICA IDENTITY
+            // (which only sends PK columns on DELETE) includes the join column order_id.
+            // Without this, a KeyDeleteMessage would only carry the PK and the CDC processor
+            // couldn't route the delete to the correct parent document.
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);
+                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 3, 'Cherries', 7);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-embedded-delete",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" },
+                                    { "quantity", "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for all 3 embedded lines
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 3, timeout: 60_000);
+
+            // Delete one embedded row via CDC streaming
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+
+            // Wait for the array to shrink from 3 to 2
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 2, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                Assert.Equal(2, lines.Count);
+                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                Assert.Contains("Apples", products);
+                Assert.Contains("Cherries", products);
+                Assert.DoesNotContain("Bananas", products);
+            }
+        }
     }
 }
