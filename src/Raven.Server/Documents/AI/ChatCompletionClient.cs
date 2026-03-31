@@ -425,7 +425,8 @@ public class ChatCompletionClient : IDisposable
         List<BlittableJsonReaderObject> tools,
         bool useTools,
         bool streaming,
-        string schema)
+        string schema,
+        string promptCacheKey = null)
      {
 
         if (_settings.Model is null)
@@ -441,9 +442,9 @@ public class ChatCompletionClient : IDisposable
                     return;
                 }
 
-                WriteCompletionRequestPayload(writer, ctx, 
+                WriteCompletionRequestPayload(writer, ctx,
                     messages.Where(IsValidMessage) // IEnumerable of valid messages
-                    , attachments, tools, useTools, streaming, schema);
+                    , attachments, tools, useTools, streaming, schema, promptCacheKey);
             }
         }, ConventionsToUse);
 
@@ -463,7 +464,7 @@ public class ChatCompletionClient : IDisposable
     }
 
     public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<AiAttachment> attachments, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming,
-        string schema)
+        string schema, string promptCacheKey = null)
     {
         writer.WriteStartObject();
 
@@ -518,6 +519,13 @@ public class ChatCompletionClient : IDisposable
             writer.WritePropertyName(Constants.RequestFields.IncludeUsage);
             writer.WriteBool(true);
             writer.WriteEndObject();
+        }
+
+        if (promptCacheKey != null)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.RequestFields.PromptCacheKey);
+            writer.WriteString(promptCacheKey);
         }
 
         _settings.HandleCompletionRequestPayload(writer);
@@ -1046,6 +1054,7 @@ public class ChatCompletionClient : IDisposable
             public const string Stream = "stream";
             public const string StreamOptions = "stream_options";
             public const string IncludeUsage = "include_usage";
+            public const string PromptCacheKey = "prompt_cache_key";
         }
 
         public static class AttachmentsRequestFields

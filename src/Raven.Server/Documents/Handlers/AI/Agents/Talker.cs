@@ -32,7 +32,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
     public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments)
     {
         AiUsage = new();
-        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, _schema);
+        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, _schema, promptCacheKey: document.Id);
     }
 
     public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, HttpRequestMessage request, CancellationToken token)
