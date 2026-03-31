@@ -656,7 +656,7 @@ namespace Voron.Debugging
                     long numberOfAllocatedPages;
                     TreeReport chunksTreeReport;
 
-                    if (tree.IsInlineStream(it.CurrentKey, out _, out _))
+                    if (tree.IsInlineStream(it.CurrentKey, out _, out _, out _))
                     {
                         // Inline stream — data is stored in the tree node, no overflow pages or FST
                         numberOfAllocatedPages = 0;

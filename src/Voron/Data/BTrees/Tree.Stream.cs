@@ -308,7 +308,7 @@ namespace Voron.Data.BTrees
 
         public Stream ReadStream(Slice key)
         {
-            if (IsInlineStream(key, out var inlineData, out _))
+            if (IsInlineStream(key, out var inlineData, out _, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 var tagSize = header->Info.TagSize;
@@ -324,16 +324,17 @@ namespace Voron.Data.BTrees
             return new VoronStream(pieces, _llt);
         }
 
-        public bool IsInlineStream(string key, out byte* data, out int dataSize)
+        public bool IsInlineStream(string key, out byte* data, out int dataSize, out TreePage treePage)
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
-                return IsInlineStream(str, out data, out dataSize);
+                return IsInlineStream(str, out data, out dataSize, out treePage);
         }
 
-        public bool IsInlineStream(Slice key, out byte* data, out int dataSize)
+        public bool IsInlineStream(Slice key, out byte* data, out int dataSize, out TreePage treePage)
         {
             data = null;
             dataSize = 0;
+            treePage = default;
 
             var p = FindPageFor(key, out TreeNodeHeader* node);
             if (p.LastMatch != 0 || node == null)
@@ -353,12 +354,13 @@ namespace Voron.Data.BTrees
 
             data = nodeData;
             dataSize = nodeDataSize;
+            treePage = p;
             return true;
         }
 
         public ChunkDetails[] ReadTreeChunks(Slice key, out FixedSizeTree tree)
         {
-            if (IsInlineStream(key, out _, out _))
+            if (IsInlineStream(key, out _, out _, out _))
             {
                 tree = null;
                 return null;
@@ -400,14 +402,12 @@ namespace Voron.Data.BTrees
 
         public int TouchStream(Slice key)
         {
-            if (IsInlineStream(key, out var inlineData, out _))
+            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
             {
-                // Need writable page. The FindPageFor in IsInlineStream gave us a read-only pointer.
-                var p = FindPageFor(key, out TreeNodeHeader* node);
-                Debug.Assert(p.LastMatch == 0 && node != null);
-                _llt.ModifyPage(p.PageNumber);
-                // re-find node after modification since the page pointer may have changed
-                p = FindPageFor(key, out node);
+                // The page from IsInlineStream may be read-only, so call ModifyPage to get
+                // a writable copy (preserving search position).
+                var p = ModifyPage(inlinePage);
+                var node = p.GetNode(p.LastSearchPosition);
                 var data = (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
                 var header = (InlineStreamHeader*)data;
                 return ++header->Info.Version;
@@ -425,7 +425,7 @@ namespace Voron.Data.BTrees
         {
             tag = null;
 
-            if (IsInlineStream(key, out var inlineData, out _))
+            if (IsInlineStream(key, out var inlineData, out _, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 var infoPtr = &header->Info;
@@ -522,15 +522,14 @@ namespace Voron.Data.BTrees
 
         public StreamInfo* GetStreamInfo(Slice key, bool writable)
         {
-            if (IsInlineStream(key, out var inlineData, out _))
+            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
             {
                 if (writable)
                 {
-                    var p = FindPageFor(key, out TreeNodeHeader* node);
-                    Debug.Assert(p.LastMatch == 0 && node != null);
-                    _llt.ModifyPage(p.PageNumber);
-                    // re-find after modification since page pointer may have changed
-                    p = FindPageFor(key, out node);
+                    // The page from IsInlineStream may be read-only, so call ModifyPage to get
+                    // a writable copy (preserving search position).
+                    var p = ModifyPage(inlinePage);
+                    var node = p.GetNode(p.LastSearchPosition);
                     inlineData = (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
                 }
 
@@ -587,7 +586,7 @@ namespace Voron.Data.BTrees
         {
             int version = 0;
             long size = 0;
-            if (IsInlineStream(key, out var inlineData, out _))
+            if (IsInlineStream(key, out var inlineData, out _, out _))
             {
                 var header = (InlineStreamHeader*)inlineData;
                 version = header->Info.Version;

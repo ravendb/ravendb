@@ -101,7 +101,7 @@ public sealed unsafe class LuceneVoronStream
         {
             var tree = tx.ReadTree(_treeName);
             byte* inlineData = null;
-            if (tree == null || tree.IsInlineStream(_name, out inlineData, out _) == false)
+            if (tree == null || tree.IsInlineStream(_name, out inlineData, out _, out _) == false)
                 ThrowMissingInlineStream();
             var header = (Tree.InlineStreamHeader*)inlineData;
             _inlineStream.UpdatePtr(inlineData + Tree.InlineStreamHeader.SizeOf + header->Info.TagSize);
