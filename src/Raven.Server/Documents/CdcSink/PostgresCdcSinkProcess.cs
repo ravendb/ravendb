@@ -224,10 +224,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 {
                     await lastBatch;
 
-                    // No more records available right now — acknowledge everything we've persisted
-                    conn.SetReplicationStatus(lastLsn);
-                    await conn.SendStatusUpdate(ct);
-                    rowsSinceLastAck = 0;
+                    // No more records available right now — acknowledge everything we've persisted.
+                    // Only send status updates if we got any records since the last time
+                    // Important: we must also only send it the _first_ time after we recieve _a_ value
+                    if (rowsSinceLastAck is not 0)
+                    {
+                        conn.SetReplicationStatus(lastLsn);
+                        await conn.SendStatusUpdate(ct);
+                        rowsSinceLastAck = 0;
+                    }
 
                     if (batch.Count > 0)
                     {
@@ -274,8 +279,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         }
 
                         // Acknowledge to PostgreSQL periodically — when we've persisted enough rows,
-                        // rather than on every batch flush. This reduces roundtrips while still
-                        // advancing the replication slot position to allow WAL cleanup.
+                        // rather than on every batch flush. We'll either consume a enough records to
+                        // flush, or go idle and send the update higher in this method
                         if (rowsSinceLastAck >= maxBatchSize)
                         {
                             conn.SetReplicationStatus(lastLsn);

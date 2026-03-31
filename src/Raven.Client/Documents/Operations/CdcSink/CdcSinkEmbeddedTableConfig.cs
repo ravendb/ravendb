@@ -1,10 +1,12 @@
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CdcSink;
 
-public class CdcSinkEmbeddedTableConfig : IDynamicJson
+public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
 {
     /// <summary>
     /// SQL schema name.
@@ -66,6 +68,24 @@ public class CdcSinkEmbeddedTableConfig : IDynamicJson
     /// Requires that the nested table has a denormalized FK to the root table.
     /// </summary>
     public List<CdcSinkEmbeddedTableConfig> EmbeddedTables { get; set; } = new();
+
+    public void FillFromBlittableJson(BlittableJsonReaderObject json)
+    {
+        var config = DocumentConventions.Default.Serialization.DefaultConverter
+            .FromBlittable<CdcSinkEmbeddedTableConfig>(json, "CdcSinkEmbeddedTableConfig");
+
+        SourceTableSchema = config.SourceTableSchema;
+        SourceTableName = config.SourceTableName;
+        PropertyName = config.PropertyName;
+        ColumnsMapping = config.ColumnsMapping;
+        AttachmentNameMapping = config.AttachmentNameMapping;
+        PrimaryKeyColumns = config.PrimaryKeyColumns;
+        JoinColumns = config.JoinColumns;
+        Type = config.Type;
+        Patch = config.Patch;
+        CaseSensitiveKeys = config.CaseSensitiveKeys;
+        EmbeddedTables = config.EmbeddedTables;
+    }
 
     public DynamicJsonValue ToJson()
     {
