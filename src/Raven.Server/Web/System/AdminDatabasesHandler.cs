@@ -7,6 +7,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
@@ -35,6 +36,7 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.Logging;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -610,7 +612,7 @@ namespace Raven.Server.Web.System
 
             using (var token = CreateHttpRequestBoundOperationToken())
             {
-                await database.PeriodicBackupRunner.DelayAsync(id, delayUntil, GetCurrentCertificate(), token.Token);
+                await ServerStore.BackupRunner.DelayAsync(database?.Name, id, delayUntil, GetCurrentCertificate(), token.Token);
             }
 
             if (RavenLogManager.Instance.IsAuditEnabled)

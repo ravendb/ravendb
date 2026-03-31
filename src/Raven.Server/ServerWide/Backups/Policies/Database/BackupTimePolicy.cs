@@ -22,8 +22,7 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
             {
                 BackupStatus = backupStatus,
                 Configuration = backupState.Configuration,
-                NodeTag = serverStore.NodeTag,
-                //ResponsibleNodeTag = serverStore.NodeTag
+                NodeTag = serverStore.NodeTag
             });
         }
 

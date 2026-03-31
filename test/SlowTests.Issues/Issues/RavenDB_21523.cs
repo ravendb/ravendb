@@ -186,9 +186,10 @@ public class RavenDB_21523 : RavenTestBase
     [InlineData(BackupCompressionAlgorithm.Zstd, CompressionLevel.NoCompression)]
     public async Task CanBackupRestore(BackupCompressionAlgorithm algorithm, CompressionLevel compressionLevel)
     {
+        DoNotReuseServer();
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
-        var server = GetNewServer();
+        using var server = GetNewServer();
         using (var store = GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>
@@ -241,9 +242,10 @@ public class RavenDB_21523 : RavenTestBase
     [InlineData(SnapshotBackupCompressionAlgorithm.Zstd, CompressionLevel.NoCompression)]
     public async Task CanSnapshotRestore(SnapshotBackupCompressionAlgorithm? algorithm, CompressionLevel? compressionLevel)
     {
+        DoNotReuseServer();
         var backupPath = NewDataPath(suffix: "BackupFolder");
         IOExtensions.DeleteDirectory(backupPath);
-        var server = GetNewServer();
+        using var server = GetNewServer();
         using (var store = GetDocumentStore(new Options
         {
             ModifyDatabaseRecord = record =>

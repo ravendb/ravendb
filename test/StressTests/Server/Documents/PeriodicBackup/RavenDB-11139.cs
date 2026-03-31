@@ -262,7 +262,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
 
                 var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
                 var testingStuff = new TestingStuffInternal() { SimulateFailedBackup = true };
-                database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.Add(database.Name, testingStuff);
+                database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
 
                 try
                 {
@@ -326,7 +326,11 @@ namespace StressTests.Server.Documents.PeriodicBackup
                 var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                var ts = database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                if (ts.DatabaseTestingStuffInternals.ContainsKey(database.Name) == false)
+                    ts.DatabaseTestingStuffInternals[database.Name] = new ServerBackupRunner.TestingStuffInternal();
+
+                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, ts, async () =>
                 {
                     await ChangeMentorNodeIfNeededAsync();
 

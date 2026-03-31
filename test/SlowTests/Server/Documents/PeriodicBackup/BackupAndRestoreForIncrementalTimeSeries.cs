@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -22,11 +23,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalTimeSeriesCanRestoreDeadValue()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var config = Backup.CreateBackupConfiguration(backupPath);
             config.BackupType = BackupType.Snapshot;
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var baseline = RavenTestHelper.UtcToday;
 
@@ -45,7 +48,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -54,9 +57,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
-                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase))
+                using (var restored = RestoreAndGetStore(store, backupPath, out var releaseDatabase, server: server))
                 using (releaseDatabase)
                 {
                     var stats = await restored.Maintenance.SendAsync(new GetStatisticsOperation());
@@ -151,7 +154,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null)
+        public IDocumentStore RestoreAndGetStore(IDocumentStore store, string backupPath, out IDisposable releaseDatabase, TimeSpan? timeout = null, RavenServer server = null)
         {
             var restoredDatabaseName = GetDatabaseName();
 
@@ -166,7 +169,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 ModifyDatabaseName = s => restoredDatabaseName,
                 CreateDatabase = false,
                 DeleteDatabaseOnDispose = true,
-                Server = GetServers().First()
+                Server = server ?? GetServers().First()
             };
 
             options.ModifyDocumentStore = null;

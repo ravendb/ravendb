@@ -20,6 +20,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
@@ -58,11 +59,11 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly bool _isBackupEncrypted;
         protected Action<IOperationProgress> _onProgress;
         protected readonly string _taskName;
-        internal PeriodicBackupRunner.TestingStuff _forTestingPurposes;
+        internal ServerBackupRunner.TestingStuff _forTestingPurposes;
         private readonly DateTime _startTimeUtc;
         protected Action OnBackupException;
 
-        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+        public BackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null)
         {
             Database = database;
             _taskName = backupParameters.Name;
@@ -92,18 +93,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress, BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
+        public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress,  BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
         {
             runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupType };
-            return Run(onProgress, periodicBackup: null, task: null, ref runningBackupStatus);
+            return Run(onProgress, null, task: null, ref runningBackupStatus);
         }
 
-        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
+        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, DatabaseBackupState backupState, Task task, ref PeriodicBackupStatus runningBackupStatus)
         {
-            return Run(onProgress, periodicBackup, task, ref runningBackupStatus);
+            return Run(onProgress, backupState, task, ref runningBackupStatus);
         }
 
-        private BackupResult Run(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
+        private BackupResult Run(Action<IOperationProgress> onProgress, DatabaseBackupState backupState, Task task, ref PeriodicBackupStatus runningBackupStatus)
         {
             _onProgress = onProgress;
             AddInfo($"Started task: '{_taskName}'");
@@ -118,12 +119,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // The PeriodicBackupRunner.OnGoingBackup method checks that RunningTask is not null and then returns RunningBackup,
                 // which contains the backup process's start time and whether it's a full backup or not.
                 // Therefore, it's crucial to assign RunningTask only after those fields in runningBackupStatus have been populated.
-                if (periodicBackup != null && task != null)
-                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask { Id = _operationId, Task = task };
+                if (backupState != null && task != null)
+                    backupState.RunningTask = new ServerBackupRunner.RunningBackupTask { Id = backupState.OperationId, Task = task };
 
-                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
-                if (_forTestingPurposes?.SimulateFailedBackup == true)
-                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+                TaskCompletionSource<object> value = null;
+                if (_forTestingPurposes != null &&
+                    _forTestingPurposes.DatabaseTestingStuffInternals != null &&
+                    _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(backupState.DatabaseName, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                {
+                    testingStuffInternal.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
+                    if (testingStuffInternal.SimulateFailedBackup)
+                        throw new Exception(nameof(testingStuffInternal.SimulateFailedBackup));
+                }
+
                 Database.ForTestingPurposes?.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
                 runningBackupStatus.LocalBackup ??= new LocalBackup();
@@ -289,7 +297,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                         BackupUtils.SaveBackupStatus(status, Database.Name, Database.ServerStore, _logger, BackupResult, _onProgress, TaskCancelToken);
                     }
 
-                    _forTestingPurposes?.AfterBackupBatchCompleted?.Invoke();
+                    if (_forTestingPurposes != null &&
+                        _forTestingPurposes.DatabaseTestingStuffInternals != null &&
+                        _forTestingPurposes.DatabaseTestingStuffInternals.TryGetValue(Database.Name, out ServerBackupRunner.TestingStuffInternal testingStuffInternal))
+                    {
+                        testingStuffInternal.AfterBackupBatchCompleted?.Invoke();
+                    }
                 }
             }
         }

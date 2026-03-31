@@ -20,12 +20,14 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task CanMigrateTablesWithCounterWord()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");
 
             ExtractFile(fullBackupPath);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var databaseName = GetDatabaseName();
 
@@ -59,7 +61,7 @@ namespace SlowTests.Issues
                         Assert.Equal(1, details.Counters[0].TotalValue);
                     }
 
-                    var db = await GetDatabase(databaseName);
+                    var db = await GetDatabase(databaseName, server);
 
                     using (var tx = db.DocumentsStorage.Environment.ReadTransaction())
                     {

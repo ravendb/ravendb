@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source",Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     foreach (var attachment in Attachments)
                     {
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source", Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
@@ -159,7 +159,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -218,7 +218,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source",Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections, server);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -277,7 +277,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source", Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
                     var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -405,7 +405,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source", Server = server
                 }))
                 {
-                   var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                   var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -480,7 +480,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source", Server = server
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     // Export
                     var exportPath = NewDataPath(suffix: "ExportFolder");

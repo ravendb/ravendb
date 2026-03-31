@@ -59,14 +59,15 @@ namespace SlowTests.Issues
         public async Task ExceptionWhenImportingSnapshotWithCommunityLicense()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.DisableRevisionCompression(Server, store);
+                    await LicenseHelper.DisableRevisionCompression(server, store);
 
                     config = await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Snapshot);
 
@@ -74,16 +75,16 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     config.Disabled = false;
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
-                        await Backup.UpdateConfigAsync(Server, config, store);
+                        await Backup.UpdateConfigAsync(server, config, store);
                     });
                     Assert.Equal(LimitType.SnapshotBackup, exception.LimitType);
                 }
@@ -98,30 +99,31 @@ namespace SlowTests.Issues
         public async Task ExceptionWhenImportingSnapshotWithProLicense()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var file = GetTempFileName();
             try
             {
                 PeriodicBackupConfiguration config;
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.DisableRevisionCompression(Server, store);
+                    await LicenseHelper.DisableRevisionCompression(server, store);
                     config = await LicenseHelper.CreatePeriodicBackup(backupPath, store, BackupType.Snapshot);
 
                     var operation = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_PRO);
+                    await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_PRO);
 
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                     config.Disabled = false;
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
-                        await Backup.UpdateConfigAsync(Server, config, store);
+                        await Backup.UpdateConfigAsync(server, config, store);
 
                     });
                     Assert.Equal(LimitType.SnapshotBackup, exception.LimitType);

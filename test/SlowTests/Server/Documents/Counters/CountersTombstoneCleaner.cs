@@ -244,13 +244,15 @@ namespace SlowTests.Server.Documents.Counters
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task IncrementalBackupCleanCounterTombstones(Options options)
         {
-            using (var store = GetDocumentStore(options))
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options(options) { Server = server }))
             {
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 1 *");
                 var taskId = options.DatabaseMode == RavenDatabaseMode.Single
-                    ? await Backup.UpdateConfigAsync(Server, config, store)
-                    : await Sharding.Backup.UpdateConfigAsync(Server, config, store);
+                    ? await Backup.UpdateConfigAsync(server, config, store)
+                    : await Sharding.Backup.UpdateConfigAsync(server, config, store);
 
                 using (var session = store.OpenSession())
                 {
@@ -276,7 +278,7 @@ namespace SlowTests.Server.Documents.Counters
                     session.SaveChanges();
                 }
 
-                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322");
+                var storage = await GetDocumentDatabaseInstanceForAsync(store, options.DatabaseMode, "user/322", server);
 
                 using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (context.OpenWriteTransaction())

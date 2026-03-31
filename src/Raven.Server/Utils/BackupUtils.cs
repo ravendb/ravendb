@@ -21,6 +21,7 @@ using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -30,6 +31,7 @@ using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
 using Voron;
+using static Raven.Server.ServerWide.Backups.ServerBackupRunner;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
@@ -38,7 +40,7 @@ public static class BackupUtils
 {
     internal static bool IgnoreHealthChecksBeforeBackup = false;
 
-    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null)
+    internal static BackupTask GetBackupTask(DocumentDatabase database, BackupParameters backupParameters, BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null)
     {
         return configuration.BackupUploadMode == BackupUploadMode.DirectUpload
             ? new DirectUploadBackupTask(database, backupParameters, configuration, token, logger, forTestingPurposes)
@@ -89,7 +91,7 @@ public static class BackupUtils
     {
         var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, taskId: 0L);
 
-        if (parameters.PeriodicBackups.Count == 0 && oneTimeBackupStatus == null)
+        if ((parameters.DatabaseBackupStates == null || parameters.DatabaseBackupStates.Count == 0) && oneTimeBackupStatus == null)
             return null;
 
         var lastBackup = 0L;
@@ -101,7 +103,7 @@ public static class BackupUtils
             lastBackupStatus = oneTimeBackupStatus;
         }
 
-        foreach (var periodicBackup in parameters.PeriodicBackups)
+        foreach (var periodicBackup in parameters.DatabaseBackupStates ?? [])
         {
             // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
@@ -200,7 +202,7 @@ public static class BackupUtils
         }
     }
 
-    internal static string GetResponsibleNodeTag(ClusterOperationContext context, string databaseName, long taskId)
+    internal static string GetResponsibleNodeTag(ClusterOperationContext context,  string databaseName, long taskId)
     {
         var blittable = GetResponsibleNodeInfoFromCluster(context, databaseName, taskId);
         if (blittable == null)
@@ -215,8 +217,8 @@ public static class BackupUtils
         // task id == raft index
         // we must wait here to ensure that the task was actually created on this node
         await database.ServerStore.Cluster.WaitForIndexNotification(taskId);
-
-        var nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+        
+        var nodeTag = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
         if (nodeTag == null)
         {
             // this can happen if the database was just created or if a new task that was just created
@@ -232,7 +234,7 @@ public static class BackupUtils
                     throw new InvalidOperationException($"Couldn't find a node which is responsible for backup task id: {taskId}");
                 }
 
-                nodeTag = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                nodeTag = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
                 if (nodeTag != null)
                     break;
             }
@@ -698,7 +700,7 @@ public static class BackupUtils
     public sealed class BackupInfoParameters
     {
         public ClusterOperationContext Context { get; set; }
-        public List<PeriodicBackup> PeriodicBackups { get; set; }
+        public List<DatabaseBackupState> DatabaseBackupStates { get; set; }
         public string DatabaseName { get; set; }
     }
 

@@ -1305,7 +1305,7 @@ namespace Raven.Server.Documents
             PendingClusterTransactions,
         }
 
-        public bool UnloadDirectly(StringSegment databaseName, DateTime? wakeup = null, [CallerMemberName] string caller = null)
+        public bool UnloadDirectly(StringSegment databaseName, [CallerMemberName] string caller = null)
         {
             var nextScheduledAction = new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase);
             return UnloadDirectly(databaseName, nextScheduledAction, caller);

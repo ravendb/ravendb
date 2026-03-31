@@ -73,6 +73,7 @@ using System.Diagnostics.CodeAnalysis;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.SchemaValidation;
+using Raven.Server.ServerWide.Backups;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 
@@ -310,8 +311,6 @@ namespace Raven.Server.Documents
 
         public TimeSeriesPolicyRunner TimeSeriesPolicyRunner { get; private set; }
 
-        public PeriodicBackupRunner PeriodicBackupRunner { get; private set; }
-
         public SchemaValidatorCache SchemaValidatorCache { get; private set; }
 
         public TombstoneCleaner TombstoneCleaner { get; private set; }
@@ -448,8 +447,7 @@ namespace Raven.Server.Documents
                 SupportedFeatures = new SupportedFeature(record);
 
                 ReplicationLoader = CreateReplicationLoader();
-                PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore, wakeup);
-
+                TombstoneCleaner.Subscribe(new BackupTombstoneCleanerInfo(_serverStore, this));
                 _addToInitLog(LogLevel.Debug, "Initializing IndexStore (async)");
                 _indexStoreTask = IndexStore.InitializeAsync(record, index, _addToInitLog);
                 _addToInitLog(LogLevel.Debug, "Initializing Replication");
@@ -1237,12 +1235,9 @@ namespace Raven.Server.Documents
             });
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed ExpiredDocumentsCleaner");
 
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing PeriodicBackupRunner");
-            exceptionAggregator.Execute(() =>
-            {
-                PeriodicBackupRunner?.Dispose();
-            });
-            ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposed PeriodicBackupRunner");
+            // Note: we do NOT call BackupRunner.RemoveDatabase here.
+            // The centralized ServerBackupRunner retains backup state across database unloads.
+            // Cleanup happens via HandleDatabaseRecordChange when a database is actually deleted.
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Disposing SchemaValidatorCache");
             exceptionAggregator.Execute(() =>
@@ -1283,7 +1278,7 @@ namespace Raven.Server.Documents
             var performanceHints = NotificationCenter.GetPerformanceHintCount();
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: backupInfo.");
-            var backupInfo = PeriodicBackupRunner?.GetBackupInfo();
+            var backupInfo = _serverStore.BackupRunner?.GetBackupInfo(Name);
 
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Generating offline database info: mountPointsUsage.");
             var mountPointsUsage = GetMountPointsUsage(includeTempBuffers: false)
@@ -1748,9 +1743,9 @@ namespace Raven.Server.Documents
 
             try
             {
+                
                 UpdateSchemaValidation(record.SchemaValidation);
                 _serverStore.BackupRunner.HandleDatabaseRecordChange(record);
-                PeriodicBackupRunner?.UpdateConfigurations(record.PeriodicBackups);
                 EmbeddingsGeneratorQueries?.HandleDatabaseRecordChange(record);
                 EmbeddingsGeneratorEtl?.HandleDatabaseRecordChange(record);
                 EtlLoader?.HandleDatabaseRecordChange(record);
@@ -1849,8 +1844,7 @@ namespace Raven.Server.Documents
 
                     SubscriptionStorage?.HandleDatabaseRecordChange();
                     EtlLoader?.HandleDatabaseValueChanged();
-                    PeriodicBackupRunner?.HandleDatabaseValueChanged(type, changeState);
-
+                    _serverStore.BackupRunner.HandleDatabaseValueChanged(type, changeState, Name);
                     LastValueChangeIndex = index;
                 }
                 finally
@@ -2270,6 +2264,8 @@ namespace Raven.Server.Documents
             internal AsyncManualResetEvent DelayQueryByPatch;
 
             internal bool EnableWritesToTheWrongShard = false;
+
+            internal Action AfterBackupBatchCompleted;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

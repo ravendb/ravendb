@@ -62,10 +62,12 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot }, Skip = "flaky")]
     public async Task CanBackupAndRestoreGenAiEtl(Options options, GenAiConfiguration config, BackupType backupType)
     {
+        DoNotReuseServer();
+        using var server = GetNewServer();
         var backupPath = NewDataPath();
         var sampleObject = JsonConvert.SerializeObject(new { Answer = "42" });
 
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(new Options(options) { Server = server }))
         {
             config.Prompt = "Give a short answer to the following question";
             config.Collection = "Posts";
@@ -104,10 +106,10 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 srcHash = hashes.Single().ToString();
             }
 
-            var srcDb = await GetDatabase(store.Database);
+            var srcDb = await GetDatabase(store.Database, server);
 
             var srcState = EtlProcess.GetProcessState(srcDb, config.Name, config.Transforms[0].Name);
-            var srcLastProcessedEtag = srcState.GetLastProcessedEtag(srcDb.DbBase64Id, Server.ServerStore.NodeTag);
+            var srcLastProcessedEtag = srcState.GetLastProcessedEtag(srcDb.DbBase64Id, server.ServerStore.NodeTag);
             Assert.True(srcLastProcessedEtag > 0);
 
             // Perform backup
@@ -148,12 +150,12 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 Assert.Equal(srcGenConfig.Collection, dstGenConfig.Collection);
                 Assert.Equal(srcGenConfig.GenAiTransformation.Script, dstGenConfig.GenAiTransformation.Script);
 
-                var dstDb = await GetDatabase(restoredDb);
+                var dstDb = await GetDatabase(restoredDb, server);
 
                 var value = await WaitForValueAsync(() =>
                 {
                     var dstState = EtlProcess.GetProcessState(dstDb, config.Name, config.Transforms[0].Name);
-                    var lastProcessedEtag = dstState.GetLastProcessedEtag(dstDb.DbBase64Id, Server.ServerStore.NodeTag);
+                    var lastProcessedEtag = dstState.GetLastProcessedEtag(dstDb.DbBase64Id, server.ServerStore.NodeTag);
                     return Task.FromResult(lastProcessedEtag > 0);
                 }, true, timeout: 60_000);
 

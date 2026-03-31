@@ -21,12 +21,14 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public void CanMigrateDatabaseFromFirstStable()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(forceCreateDir: true);
             var fullBackupPath = Path.Combine(backupPath, "northwind.ravendb-snapshot");
 
             ExtractFile(fullBackupPath);
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var databaseName = GetDatabaseName();
 

@@ -339,7 +339,8 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Delete_Backup_Task_Values_After_Task_Deletion()
         {
-            var server = GetNewServer();
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options{Server = server}))
             {

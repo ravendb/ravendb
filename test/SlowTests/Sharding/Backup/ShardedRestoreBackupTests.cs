@@ -128,16 +128,18 @@ namespace SlowTests.Sharding.Backup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task CanBackupAndRestoreShardedDatabase_FromLocalBackup()
         {
-            using (var store1 = Sharding.GetDocumentStore())
-            using (var store2 = GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store1 = Sharding.GetDocumentStore(new Options { Server = server }))
+            using (var store2 = GetDocumentStore(new Options { Server = server }))
             {
                 await Sharding.Backup.InsertData(store1);
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store1, server);
 
                 var backupPath = NewDataPath(suffix: "BackupFolder");
-                
+
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store1, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store1, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
@@ -840,7 +842,9 @@ namespace SlowTests.Sharding.Backup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Sharding)]
         public async Task BackupAndRestoreShardedDatabase_ShouldPreserveBucketRanges()
         {
-            using (var store = Sharding.GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = Sharding.GetDocumentStore(new Options { Server = server }))
             {
                 const string id = "users/1/$b";
                 var originalLocation = await Sharding.GetShardNumberForAsync(store, id);
@@ -884,11 +888,11 @@ namespace SlowTests.Sharding.Backup
                     }
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, server);
                 var backupPath = NewDataPath(suffix: "BackupFolder");
                 var config = Backup.CreateBackupConfiguration(backupPath);
 
-                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config);
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 
                 var dirs = Directory.GetDirectories(backupPath);
@@ -1004,9 +1008,11 @@ namespace SlowTests.Sharding.Backup
         public async Task CanBackupAndRestoreShardedDatabase_WithAtomicGuardTombstones()
         {
             //RavenDB-19201
-            using (var store = Sharding.GetDocumentStore())
+            DoNotReuseServer();
+            using var server = GetNewServer();
+            using (var store = Sharding.GetDocumentStore(new Options { Server = server }))
             {
-                Cluster.WaitForFirstCompareExchangeTombstonesClean(Server);
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -1037,22 +1043,22 @@ namespace SlowTests.Sharding.Backup
                     await session.SaveChangesAsync();
                 }
 
-                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
 #pragma warning disable CS0618
-                    var compareExchangeTombs = Server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(context, store.Database).ToList();
+                    var compareExchangeTombs = server.ServerStore.Cluster.GetCompareExchangeTombstonesByKey(context, store.Database).ToList();
 #pragma warning restore CS0618
                     Assert.Equal(1, compareExchangeTombs.Count);
                     Assert.Equal("rvn-atomic/users/ayende", compareExchangeTombs[0].Key.Key);
                 }
 
-                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store);
+                var waitHandles = await Sharding.Backup.WaitForBackupToComplete(store, server);
 
                 var backupPath = NewDataPath(suffix: "BackupFolder");
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(Server, store, config);
+                await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(server, store, config);
 
                 Assert.True(WaitHandle.WaitAll(waitHandles, TimeSpan.FromMinutes(1)));
 

@@ -19,16 +19,19 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanRunTwoBackupsConcurrently()
         {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
             DoNotReuseServer();
-            await Server.ServerStore.EnsureNotPassiveAsync();
+            using var server = GetNewServer();
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            await server.ServerStore.EnsureNotPassiveAsync();
 
-            using var store = GetDocumentStore();
-            var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            using var store = GetDocumentStore(new Options { Server = server });
+            var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             Assert.NotNull(documentDatabase);
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+            var ts = documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly();
+            ts.DatabaseTestingStuffInternals[documentDatabase.Name] = new Raven.Server.ServerWide.Backups.ServerBackupRunner.TestingStuffInternal();
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(documentDatabase.Name, ts, async () =>
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -39,8 +42,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config1 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *");
                 var config2 = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
 
-                var taskId1 = await Backup.UpdateConfigAndRunBackupAsync(Server, config1, store, opStatus: OperationStatus.InProgress);
-                var taskId2 = await Backup.UpdateConfigAndRunBackupAsync(Server, config2, store, opStatus: OperationStatus.InProgress);
+                var taskId1 = await Backup.UpdateConfigAndRunBackupAsync(server, config1, store, opStatus: OperationStatus.InProgress);
+                var taskId2 = await Backup.UpdateConfigAndRunBackupAsync(server, config2, store, opStatus: OperationStatus.InProgress);
 
                 var op1 = new GetOngoingTaskInfoOperation(taskId1, OngoingTaskType.Backup);
                 var op2 = new GetOngoingTaskInfoOperation(taskId2, OngoingTaskType.Backup);

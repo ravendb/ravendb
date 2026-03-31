@@ -213,6 +213,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [InlineData(5)] // after the next scheduled backup.
         public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)
         {
+            DoNotReuseServer();
             const string fullBackupFrequency = "*/2 * * * *";
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -273,13 +274,15 @@ namespace StressTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task NextCronScheduleOccurence_BasedOnLastBackup_ShouldBeCorrect()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             const string endpoint = "/studio-tasks/next-cron-expression-occurrence";
             const string cronExpression = "*/2 * * * *";
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options { Server = server });
 
             var configuration = Backup.CreateBackupConfiguration(NewDataPath(), fullBackupFrequency: cronExpression);
-            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), Server.ServerStore.ServerShutdown);
-            var taskId = await Backup.UpdateConfigAsync(Server, configuration, store);
+            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), server.ServerStore.ServerShutdown);
+            var taskId = await Backup.UpdateConfigAsync(server, configuration, store);
             await Task.Delay(TimeSpan.FromSeconds(130));
 
             var client = store.GetRequestExecutor().HttpClient;

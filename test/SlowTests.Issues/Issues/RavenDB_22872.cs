@@ -21,15 +21,17 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments | RavenTestCategory.Replication)]
         public async Task ProperCalculationOfTombstoneConflictedId()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var src = GetDocumentStore())
-            using (var dst = GetDocumentStore())
+            using (var src = GetDocumentStore(new Options { Server = server }))
+            using (var dst = GetDocumentStore(new Options { Server = server }))
             {
                 await SetupReplicationAsync(src, dst);
                 await EnsureReplicatingAsync(src, dst);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, dst);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, dst);
                 var operation = new GetPeriodicBackupStatusOperation(backupTaskId);
 
                 var backupStatus = dst.Maintenance.Send(operation);
@@ -69,7 +71,7 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(src, dst);
 
                 var lastEtag = dst.Maintenance.Send(new GetStatisticsOperation()).LastDocEtag;
-                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, dst, isFullBackup: false, expectedEtag: lastEtag);
+                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, dst, isFullBackup: false, expectedEtag: lastEtag);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";

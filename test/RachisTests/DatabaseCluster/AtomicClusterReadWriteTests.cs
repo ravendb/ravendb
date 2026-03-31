@@ -573,6 +573,7 @@ namespace RachisTests.DatabaseCluster
         [RavenData(2 * 1024, DatabaseMode = RavenDatabaseMode.All)]// DatabaseDestination.DatabaseCompareExchangeActions.BatchSize
         public async Task ClusterWideTransaction_WhenRestoreFromIncrementalBackupAfterStoreAndUpdate_ShouldCompleteImportWithNoException(Options options, int count)
         {
+            DoNotReuseServer();
             const string modified = "Modified";
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -586,7 +587,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                Backup.WaitForResponsibleNodeUpdate(leader.ServerStore, source.Database, backupTaskId);
+                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
 
                 using (var session = source.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                 {

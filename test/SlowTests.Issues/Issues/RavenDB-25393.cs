@@ -28,12 +28,14 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RestoreIncrementalBackupCreatesExtraRevision(Options options)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using var store = GetDocumentStore(options);
+            using var store = GetDocumentStore(new Options(options) { Server = server });
 
-            using (var source = GetDocumentStore())
+            using (var source = GetDocumentStore(new Options { Server = server }))
             {
-                await RevisionsHelper.SetupRevisionsAsync(source, Server.ServerStore, configuration: new RevisionsConfiguration
+                await RevisionsHelper.SetupRevisionsAsync(source, server.ServerStore, configuration: new RevisionsConfiguration
                 {
                     Default = new RevisionsCollectionConfiguration
                     {
@@ -44,7 +46,7 @@ namespace SlowTests.Issues
 
                 var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
                 var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, source.Database, backupTaskId);
+                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, source.Database, backupTaskId);
 
                 using (var session = source.OpenAsyncSession())
                 {

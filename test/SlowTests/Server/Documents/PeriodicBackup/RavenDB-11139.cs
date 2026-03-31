@@ -44,7 +44,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchange()
         {
-            var server = GetNewServer();
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options{Server = server}))
             {
@@ -92,6 +93,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -119,8 +121,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncremental()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -129,7 +132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/poo", user, 0));
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -137,7 +140,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/pooclown", user2, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -162,6 +165,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -185,8 +189,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncrementalBackups()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -197,7 +202,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(user.Name == val.Value.Name, "val.Value.Name = 'emojis/poo'");
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -208,7 +213,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(user2.Name == val2.Value.Name, "val.Value.Name = 'emojis/clown'");
 
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user3 = new User
                 {
@@ -218,7 +223,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val3 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/goblin"));
                 Assert.True(user3.Name == val3.Value.Name, "val.Value.Name = 'emojis/goblin'");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user4 = new User
                 {
@@ -228,7 +233,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var val4 = await store.Operations.SendAsync(new GetCompareExchangeValueOperation<User>("emojis/ghost"));
                 Assert.True(user4.Name == val4.Value.Name, "val.Value.Name = 'emojis/ghost'");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user5 = new User
                 {
@@ -241,7 +246,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var emojisNum = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation()).CountOfCompareExchange;
                 Assert.True(emojisNum == 5, "CountOfCompareExchange == 5");
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -269,6 +274,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -300,8 +306,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetween()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -313,7 +320,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -322,12 +329,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var clownResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🤡", user2, 0));
                 Assert.True(clownResult.Successful);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete poo
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/💩", pooResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -350,6 +357,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -373,8 +381,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetweenBackups()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var user = new User
                 {
@@ -385,7 +394,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var user2 = new User
                 {
@@ -393,12 +402,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var clownResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🤡", user2, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete poo
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/💩", pooResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var user3 = new User
                 {
@@ -406,12 +415,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 };
                 var pirateFlagResult = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<User>("emojis/🏴‍☠️", user3, 0));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 // delete clown
                 await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>("emojis/🤡", clownResult.Index));
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -434,6 +443,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -457,13 +467,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeleteBetween()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔"});
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var count = 0;
                 foreach (var e in list)
@@ -511,7 +522,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 for (var i = 0; i < list.Count; i++)
                 {
@@ -525,7 +536,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(count, stats.CountOfCompareExchange);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -548,6 +559,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -562,13 +574,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeletePlusAddBetween()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
                                                 "🐩", "🐈", "🐓", "🦃", "🕊",
                                                 "🐇", "🐁", "🐀", "🐿", "🦔" });
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var count = 0;
 
@@ -617,7 +630,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 if (Directory.Exists(backupPath))
                     Directory.Delete(backupPath, true);
 
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 for (var i = 0; i < list.Count; i++)
                 {
@@ -642,7 +655,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
                 Assert.Equal(count, stats.CountOfCompareExchange);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -665,6 +678,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -679,8 +693,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithIdentity()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -692,7 +707,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -703,7 +718,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -726,6 +741,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -761,8 +777,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CreateFullAndIncrementalBackupWithIdentityAndRestoreOnlyIncremental()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -775,7 +792,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -786,7 +803,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 var databaseName = GetDatabaseName() + "restore";
@@ -811,6 +828,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -1569,8 +1587,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Expect(backupKind);
 
                 var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
-                var testingStuff = new TestingStuffInternal() { SimulateFailedBackup = true };
-                database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.Add(database.Name, testingStuff);
+                var testingStuffInternals = database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals;
+                if (testingStuffInternals.TryGetValue(database.Name, out var testingStuff) == false)
+                    testingStuff = new TestingStuffInternal();
+                testingStuff.SimulateFailedBackup = true;
+                testingStuffInternals[database.Name] = testingStuff;
 
                 try
                 {
@@ -1582,7 +1603,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 finally
                 {
-                    testingStuff = new TestingStuffInternal() { SimulateFailedBackup = false };
+                    testingStuff.SimulateFailedBackup = false;
                     database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[database.Name] = testingStuff;
                 }
             }
@@ -1634,7 +1655,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, database.ServerStore.BackupRunner.ForTestingPurposesOnly(), async () =>
+                var ts = database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                if (ts.DatabaseTestingStuffInternals.ContainsKey(database.Name) == false)
+                    ts.DatabaseTestingStuffInternals[database.Name] = new ServerBackupRunner.TestingStuffInternal();
+
+                await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.Name, ts, async () =>
                 {
                     await ChangeMentorNodeIfNeededAsync();
 

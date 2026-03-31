@@ -16,7 +16,8 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task GetNextBackupTime()
         {
-            var server = GetNewServer();
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(new Options{Server = server}))
             {

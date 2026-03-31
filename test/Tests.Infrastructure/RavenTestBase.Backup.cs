@@ -65,6 +65,9 @@ namespace FastTests
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
                 var serverBackupRunner = documentDatabase.ServerStore.BackupRunner;
 
+                if (documentDatabase.DisableOngoingTasks)
+                    throw new InvalidOperationException($"Backup task is disabled via marker file for database '{documentDatabase.Name}'.");
+
                 long opId;
                 try
                 {
@@ -718,6 +721,18 @@ namespace FastTests
                             tcs.SetException(new Exception(nameof(testingStuffInternal.SimulateFailedBackup)));
                         else
                             tcs.TrySetResult(null);
+                    }
+                }
+                else
+                {
+                    // no testing entry — invoke without holding
+                    try
+                    {
+                        await func.Invoke();
+                    }
+                    finally
+                    {
+                        tcs.TrySetResult(null);
                     }
                 }
             }

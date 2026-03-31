@@ -1,11 +1,7 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
+
 using System.Threading.Tasks;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Commercial;
@@ -143,21 +139,22 @@ namespace SlowTests.Issues
         public async Task RestoreDisabledEmbeddingsGenerationWithCommunityLicense()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.DisableRevisionCompression(Server, store);
+                    await LicenseHelper.DisableRevisionCompression(server, store);
 
-                    await LicenseHelper.AddAiIntegration(store, Server, true);
+                    await LicenseHelper.AddAiIntegration(store, server, true);
 
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
 
                     LicenseHelper.RunRestore(store, backupPath);
                 }
@@ -172,21 +169,22 @@ namespace SlowTests.Issues
         public async Task RestoreEmbeddingsGenerationWithCommunityLicense()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             try
             {
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.DisableRevisionCompression(Server, store);
+                    await LicenseHelper.DisableRevisionCompression(server, store);
 
-                    await LicenseHelper.AddAiIntegration(store, Server);
+                    await LicenseHelper.AddAiIntegration(store, server);
 
                     await LicenseHelper.RunBackup(store, backupPath);
                 }
 
-                using (var store = GetDocumentStore())
+                using (var store = GetDocumentStore(new Options { Server = server }))
                 {
-                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                    await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
 
                     var exception = Assert.Throws<LicenseLimitException>(() =>
                     {

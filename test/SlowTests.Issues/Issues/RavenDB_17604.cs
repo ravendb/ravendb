@@ -64,9 +64,10 @@ public class RavenDB_17604 : ReplicationTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Can_Disable_Backup_With_Marker()
     {
+        DoNotReuseServer();
         var path = NewDataPath();
         IOExtensions.DeleteDirectory(path);
-        var server = GetNewServer();
+        using var server = GetNewServer();
         using (var store = GetDocumentStore(new Options { RunInMemory = false, Path = path , Server = server}))
         {
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(new PeriodicBackupConfiguration

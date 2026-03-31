@@ -778,11 +778,15 @@ namespace SlowTests.Sharding.Cluster
                 var tcs = new TaskCompletionSource<object>();
                 var server1Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[1]]), new List<RavenServer>() { nodes[1] });
 
-                server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.TryGetValue(server1Database.Name, out ServerBackupRunner.TestingStuffInternal value);
+                var ts1 = server1Database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                if (ts1.DatabaseTestingStuffInternals.TryGetValue(server1Database.Name, out ServerBackupRunner.TestingStuffInternal value) == false)
+                    ts1.DatabaseTestingStuffInternals[server1Database.Name] = value = new TestingStuffInternal();
                 value.OnBackupTaskRunHoldBackupExecution = tcs;
 
                 var server2Database = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(database, serverToShard[nodes[2]]), new List<RavenServer>() { nodes[2] });
-                server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals.TryGetValue(server2Database.Name, out ServerBackupRunner.TestingStuffInternal value2);
+                var ts2 = server2Database.ServerStore.BackupRunner.ForTestingPurposesOnly();
+                if (ts2.DatabaseTestingStuffInternals.TryGetValue(server2Database.Name, out ServerBackupRunner.TestingStuffInternal value2) == false)
+                    ts2.DatabaseTestingStuffInternals[server2Database.Name] = value2 = new TestingStuffInternal();
                 value2.OnBackupTaskRunHoldBackupExecution = tcs;
 
                 timeBeforeCxDeletion = DateTime.UtcNow;
