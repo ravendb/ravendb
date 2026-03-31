@@ -13,8 +13,8 @@ public class ServerCpuCreditsPolicy : IServerBackupPolicy
     private ServerCpuCreditsPolicy()
     {
     }
-    
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason)
+
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {
         if (Disabled)
         {

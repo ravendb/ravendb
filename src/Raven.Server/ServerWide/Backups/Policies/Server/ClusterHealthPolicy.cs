@@ -11,9 +11,9 @@ public class ClusterHealthPolicy : IServerBackupPolicy
     {
     }
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason)
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {
-        var state = serverStore.Engine.CurrentCommittedState.State;
+        var state = serverStore.CurrentRachisState;
         if (state is RachisState.Leader or RachisState.Follower)
         {
             reason = null;

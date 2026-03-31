@@ -14,8 +14,8 @@ public class ServerHighDirtyMemoryPolicy : IServerBackupPolicy
     private ServerHighDirtyMemoryPolicy()
     {
     }
-    
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason)
+
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {
         if (Disabled)
         {

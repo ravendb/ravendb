@@ -12,9 +12,9 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
     {
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
-        var nodeTag = BackupUtils.GetResponsibleNodeTag(context, serverStore, backupState.DatabaseName, backupState.Configuration.TaskId);
+        var nodeTag = BackupUtils.GetResponsibleNodeTag(context, backupState.DatabaseName, backupState.Configuration.TaskId);
         if (nodeTag == null)
         {
             reason = $"Cannot start backup {backupState} because no node is responsible for this task.";

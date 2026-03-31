@@ -11,9 +11,12 @@ public class BackupRunningPolicy : IDatabaseBackupPolicy
     {
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
         reason = null;
+        if (backupState.Running)
+            reason = "Cannot start another backup while a backup is already running.";
+
         return backupState.Running == false;
     }
 }

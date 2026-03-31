@@ -15,7 +15,7 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
         _concurrentBackupsCounter = concurrentBackupsCounter ?? throw new ArgumentNullException(nameof(concurrentBackupsCounter));
     }
 
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason)
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {
         if (Disabled)
         {
@@ -23,7 +23,7 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
             return true;
         }
 
-        if (_concurrentBackupsCounter.CanRunBackup(string.Empty) == false)
+        if (_concurrentBackupsCounter.CanRunBackup(databaseName) == false)
         {
             reason = $"Cannot start backup(s) because the maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
             return false;

@@ -4,5 +4,5 @@ namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
 public interface IServerBackupPolicy
 {
-    bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason);
+    bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason);
 }

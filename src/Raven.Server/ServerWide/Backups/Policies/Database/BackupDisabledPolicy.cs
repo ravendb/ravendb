@@ -11,7 +11,7 @@ public class BackupDisabledPolicy : IDatabaseBackupPolicy
     {
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
         if (backupState.Configuration.Disabled)
         {

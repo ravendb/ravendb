@@ -13,17 +13,17 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
 
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
         if (backupState.NextBackup == null)
         {
-            var backupStatus = BackupUtils.GetBackupStatusFromCluster(serverStore, context, backupState.DatabaseName, backupState.Configuration.TaskId);
+            var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, backupState.DatabaseName, backupState.Configuration.TaskId);
             backupState.NextBackup = BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
             {
                 BackupStatus = backupStatus,
                 Configuration = backupState.Configuration,
                 NodeTag = serverStore.NodeTag,
-                ResponsibleNodeTag = serverStore.NodeTag
+                //ResponsibleNodeTag = serverStore.NodeTag
             });
         }
 

@@ -11,7 +11,7 @@ public class DatabaseExistsPolicy : IDatabaseBackupPolicy
     {
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
         if (serverStore.Cluster.DatabaseExists(backupState.DatabaseName) == false)
         {
