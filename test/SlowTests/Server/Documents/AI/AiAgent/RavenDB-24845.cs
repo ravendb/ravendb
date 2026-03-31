@@ -152,7 +152,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task CanSetUserPromptWithMultipleStringsAndNull()
         {
             using var store = GetDocumentStore();
-            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             var chat = store.AI.Conversation("fake-agent", "chats/", new AiConversationCreationOptions());
             var e = Assert.Throws<ArgumentNullException>(() => chat.AddUserPrompt("single string", null, "third string"));
             Assert.Contains("Value cannot be null.", e.Message);
@@ -162,7 +161,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task CanSetUserPromptWithMultipleStringsAndEmptyString()
         {
             using var store = GetDocumentStore();
-            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
             var chat = store.AI.Conversation("fake-agent", "chats/", new AiConversationCreationOptions());
             var e = Assert.Throws<ArgumentException>(() => chat.AddUserPrompt("single string", "", "third string"));
             Assert.Contains("cannot be null or empty", e.Message);
