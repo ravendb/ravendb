@@ -148,7 +148,6 @@ static async Task DownloadFile(string fullPath)
         client.Timeout = TimeSpan.FromHours(1); // Set timeout to a reasonable value for large files
         
         string path = url + Path.GetFileName(fullPath);
-        var request = new HttpRequestMessage(HttpMethod.Get, path);
 
         using (var response = await client.GetAsync(path, HttpCompletionOption.ResponseHeadersRead))
         {
