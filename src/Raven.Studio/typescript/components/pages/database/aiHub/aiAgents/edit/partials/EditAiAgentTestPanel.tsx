@@ -83,7 +83,7 @@ export default function EditAiAgentTestPanel({
 
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
-            runTest();
+            await runTest();
         });
     };
 
@@ -93,7 +93,7 @@ export default function EditAiAgentTestPanel({
             throw new Error(parametersNotUpToDateText);
         }
 
-        runTest(toolCallParameters);
+        await runTest(toolCallParameters);
     };
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);

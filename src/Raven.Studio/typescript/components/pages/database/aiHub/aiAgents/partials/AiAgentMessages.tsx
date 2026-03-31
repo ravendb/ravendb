@@ -21,6 +21,10 @@ import {
     AiAgentMessagesProvider,
     useAiAgentMessagesContext,
 } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesContext";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import InnerForm from "components/common/InnerForm";
+import { tryHandleSubmit } from "components/utils/common";
+import useUniqueId from "components/hooks/useUniqueId";
 
 interface AiAgentMessagesPropsBase extends AiAgentMessagesCommonContextValue {
     messages: AiAgentMessage[];
@@ -56,12 +60,16 @@ export default function AiAgentMessages(props: AiAgentMessagesProps) {
                   openActionCalls: props.openActionCalls,
               };
 
+    // Used as key for OpenActionCalls component to re-render it when openActionCalls change
+    const openActionCallsIds = Object.keys(props.openActionCalls ?? {});
+
     return (
         <AiAgentMessagesProvider value={contextValue}>
             <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
                 {messages.map((message) => (
                     <AiAgentMessageComponent key={message.id} message={message} />
                 ))}
+                {openActionCallsIds.length > 0 && <OpenActionCalls key={openActionCallsIds.join(";")} />}
             </div>
         </AiAgentMessagesProvider>
     );
@@ -160,30 +168,6 @@ interface AgentMessageProps {
 
 function AgentMessage({ agentMessage }: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
-    const { handleSaveParameters, openActionCalls } = useAiAgentMessagesContext();
-
-    const openActionCallsValues = Object.values(openActionCalls ?? {});
-
-    const { control, handleSubmit, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
-        defaultValues: {
-            parameters: openActionCallsValues.map((x) => ({
-                id: x.ToolId,
-                name: x.Name,
-                arguments: "",
-            })),
-        },
-    });
-
-    const parametersFieldsArray = useFieldArray({
-        control,
-        name: "parameters",
-    });
-
-    const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = (formData) => {
-        handleSaveParameters?.(formData.parameters);
-    };
-
-    const isRequireParameters = openActionCallsValues.length > 0 && !formState.isSubmitted;
     const contentMode = aceEditorUtils.getAceEditorMode(agentMessage.content);
 
     return (
@@ -247,20 +231,55 @@ function AgentMessage({ agentMessage }: AgentMessageProps) {
                     )}
                 </div>
             )}
-            {isRequireParameters && (
-                <div className="hstack justify-content-end mt-2">
-                    <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
-                        {parametersFieldsArray.fields.map((field, idx) => (
-                            <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
-                        ))}
-                        <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
-                            <Icon icon="check" />
-                            Submit
-                        </Button>
-                    </div>
-                </div>
-            )}
         </div>
+    );
+}
+
+function OpenActionCalls() {
+    const { openActionCalls, handleSaveParameters } = useAiAgentMessagesContext();
+
+    const openActionCallsValues = Object.values(openActionCalls ?? {});
+
+    const { control, handleSubmit, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
+        defaultValues: {
+            parameters: openActionCallsValues.map((x) => ({
+                id: x.ToolId,
+                name: x.Name,
+                arguments: "",
+            })),
+        },
+    });
+
+    const parametersFieldsArray = useFieldArray({
+        control,
+        name: "parameters",
+    });
+
+    const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = async (formData) => {
+        return tryHandleSubmit(async () => {
+            await handleSaveParameters(formData.parameters);
+        });
+    };
+
+    return (
+        <InnerForm onSubmit={handleSubmit(handleSave)}>
+            <div className="hstack justify-content-end mt-2">
+                <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
+                    {parametersFieldsArray.fields.map((field, idx) => (
+                        <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
+                    ))}
+                    <ButtonWithSpinner
+                        variant="primary"
+                        className="rounded-pill ms-auto"
+                        onClick={handleSubmit(handleSave)}
+                        isSpinning={formState.isSubmitting}
+                        icon="check"
+                    >
+                        Submit
+                    </ButtonWithSpinner>
+                </div>
+            </div>
+        </InnerForm>
     );
 }
 

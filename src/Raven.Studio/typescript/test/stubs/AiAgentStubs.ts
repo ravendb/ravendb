@@ -210,7 +210,7 @@ export class AiAgentStubs {
                             },
                         },
                         {
-                            id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                            id: "call_whzFC5Mlx17thYJYOvdWf7RZ",
                             type: "function",
                             function: {
                                 name: "TEST_parameters",
@@ -340,7 +340,15 @@ export class AiAgentStubs {
                 CachedTokens: 0,
                 ReasoningTokens: 20,
             },
-            OpenActionCalls: {},
+            OpenActionCalls: {
+                call_MdKvWaFtl0cJAc5a0q26Lo97: {
+                    Name: "ActionProductSearch",
+                    ToolId: "call_MdKvWaFtl0cJAc5a0q26Lo99",
+                    Arguments: "{}",
+                    Type: "UserAction",
+                    SubConversationId: null,
+                },
+            },
             LastMessageAt: "2025-08-08T10:28:30.5884757Z",
             CreatedAt: "2025-08-08T10:28:20.5582091Z",
             Expires: null,

@@ -2,7 +2,7 @@ import { PropsWithChildren, createContext, useContext } from "react";
 import { AiAgentOpenActionCalls, AiAgentToolCall } from "components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes";
 
 export interface AiAgentMessagesCommonContextValue {
-    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
+    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => Promise<void>;
     parametersFromUser?: Record<string, string>;
     documentId?: string;
     openActionCalls?: AiAgentOpenActionCalls;

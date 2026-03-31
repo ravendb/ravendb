@@ -7,7 +7,7 @@ import { TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 
-const TEST_CONVERSATION_ID = "TestConversation";
+const MAIN_TEST_CONVERSATION_ID = "TestConversation";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
@@ -164,7 +164,7 @@ const selectTestDocuments = (state: RootState) => state.editAiAgent.testDocument
 const selectTestConfiguration = (state: RootState) => state.editAiAgent.testConfiguration;
 
 const selectMainTestDocument = createSelector([selectTestDocuments], (testDocuments) => {
-    return testDocuments[TEST_CONVERSATION_ID] ?? null;
+    return testDocuments[MAIN_TEST_CONVERSATION_ID] ?? null;
 });
 
 const selectMainTestMessages = createSelector(

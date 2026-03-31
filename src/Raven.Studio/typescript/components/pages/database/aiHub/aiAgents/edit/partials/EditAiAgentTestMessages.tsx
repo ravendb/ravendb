@@ -20,7 +20,7 @@ interface SubConversationData {
 }
 
 interface EditAiAgentTestMessagesProps {
-    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
+    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => Promise<void>;
 }
 
 export default function EditAiAgentTestMessages({ handleSaveParameters }: EditAiAgentTestMessagesProps) {

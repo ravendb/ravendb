@@ -485,11 +485,12 @@ export function FormAceEditor<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & AceEditorProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, disabled, ...rest } = props;
 
     const {
         field: { onChange, value },
         fieldState: { error },
+        formState,
     } = useController({
         name,
         control,
@@ -498,7 +499,15 @@ export function FormAceEditor<
         shouldUnregister,
     });
 
-    return <AceEditor onChange={onChange} value={value} validationErrorMessage={error?.message} {...rest} />;
+    return (
+        <AceEditor
+            onChange={onChange}
+            value={value}
+            validationErrorMessage={error?.message}
+            readOnly={formState.isSubmitting || disabled}
+            {...rest}
+        />
+    );
 }
 
 export function FormDurationPicker<
