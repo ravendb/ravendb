@@ -3,15 +3,9 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
-using Newtonsoft.Json.Linq;
 using Orders;
 using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
-using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -66,10 +60,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 string capturedPromptCacheKey = null;
 
-                var handler = new MockHandler(Server.ServerStore, database, onRequest: payload =>
-                {
-                    capturedPromptCacheKey ??= payload["prompt_cache_key"]?.ToString();
-                })
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: payload =>
+                    {
+                        capturedPromptCacheKey ??= payload["prompt_cache_key"]?.ToString();
+                        return null; // fall through to default handling
+                    })
                 {
                     Authentication = null
                 };
@@ -85,60 +81,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 Assert.NotNull(capturedPromptCacheKey);
                 Assert.Equal("conversations/1-A", capturedPromptCacheKey);
-            }
-        }
-
-        private class MockHandler : ConversationHandler
-        {
-            private readonly DocumentDatabase _database;
-            private readonly System.Action<JObject> _onRequest;
-
-            public MockHandler(Raven.Server.ServerWide.ServerStore server, DocumentDatabase database, System.Action<JObject> onRequest)
-                : base(server, database)
-            {
-                _database = database;
-                _onRequest = onRequest;
-            }
-
-            protected internal override ChatCompletionClient CreateClient()
-            {
-                var settings = new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
-                return new MockLlm(_database.DocumentsStorage.ContextPool, settings, _onRequest, ChatCompletionClient.ConventionsToUse);
-            }
-        }
-
-        private class MockLlm : ChatCompletionClient
-        {
-            private readonly System.Action<JObject> _onRequest;
-
-            internal MockLlm(IMemoryContextPool contextPool, AbstractChatCompletionClientSettings settings, System.Action<JObject> onRequest, DocumentConventions conventions = null)
-                : base(contextPool, settings, conventions)
-            {
-                _onRequest = onRequest;
-            }
-
-            protected override async Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token)
-            {
-                var r = await request.Content.ReadAsStringAsync(token);
-                var payload = JObject.Parse(r);
-
-                _onRequest(payload);
-
-                foreach (var t in payload["messages"])
-                {
-                    if (t["role"].ToString() == "tool")
-                    {
-                        return new HttpResponseMessage(HttpStatusCode.OK)
-                        {
-                            Content = new StringContent(AiAgentMockLlmTests.CreateMockResponse(t["content"].ToString()))
-                        };
-                    }
-                }
-
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(AiAgentMockLlmTests.MockToolResponse)
-                };
             }
         }
     }

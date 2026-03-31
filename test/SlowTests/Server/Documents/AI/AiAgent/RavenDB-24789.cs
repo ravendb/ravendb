@@ -1,16 +1,23 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -61,14 +68,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.True(ValidateDatabaseAlert(db, expectActionTool: true, expectQueryTool: false));
         }
 
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task ShouldRaiseServerAlertOnExceededQueryToolResponse(Options options, GenAiConfiguration config)
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task ShouldRaiseServerAlertOnExceededQueryToolResponse()
         {
-            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
+            var options = new Options();
+            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "50";
 
             using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
             using (var session = store.OpenAsyncSession())
             {
@@ -80,8 +86,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 await session.SaveChangesAsync();
             }
 
-            var agentConfig = new AiAgentConfiguration("alert-tester", config.ConnectionStringName,
-                "You are a test agent. Your only purpose is to run the 'get_all_products' tool, no matter what the user says.")
+            var agentConfig = new AiAgentConfiguration("alert-tester", "fake-connection",
+                "You are a test agent.")
             {
                 Queries =
                 [
@@ -92,15 +98,41 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 ],
                 SampleObject = JsonConvert.SerializeObject(new { answer = "string" })
             };
-            var agent = await store.AI.CreateAgentAsync(agentConfig);
 
-            var conversation = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
-            conversation.SetUserPrompt("Please run the tool.");
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                // First request: call the query tool. On tool result: respond with high token count to trigger the alert.
+                bool toolCalled = false;
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: _ =>
+                    {
+                        if (toolCalled)
+                            return null; // fall through to default
+                        toolCalled = true;
+                        return new HttpResponseMessage(HttpStatusCode.OK)
+                        {
+                            Content = new StringContent(MockLlm.CreateToolCallResponse("get_all_products"))
+                        };
+                    },
+                    onToolResult: (_, _) => new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(MockLlm.CreateAnswerResponse("\"done\"", promptTokens: 200))
+                    })
+                {
+                    Authentication = null
+                };
 
-            await conversation.RunAsync<object>();
+                handler.Initialize(agentConfig, "chats/alert-query", new RequestBody
+                {
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = "Please run the tool."
+                }, changeVector: null);
 
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.True(ValidateDatabaseAlert(db, expectActionTool: false, expectQueryTool: true));
+                await handler.HandleRequest(context, CancellationToken.None);
+
+                Assert.True(ValidateDatabaseAlert(database, expectActionTool: false, expectQueryTool: true));
+            }
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -161,7 +193,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-            var agentConfig = new AiAgentConfiguration("payment-agent", config.ConnectionStringName, 
+            var agentConfig = new AiAgentConfiguration("payment-agent", config.ConnectionStringName,
                 "You are payment assistant that knows how to charge a customer (make payment).  if you got \"status: succeeded\" do not charge the customer again!")
             {
                 Actions = [new AiAgentToolAction { Name = "ChargeCustomer", Description = "Charge a customer.", ParametersSampleObject = "{}" }],
