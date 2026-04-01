@@ -1279,6 +1279,29 @@ namespace SlowTests.Server.Documents.CdcSink
                 var p3 = await session.LoadAsync<Product>("Products/3");
                 Assert.Equal("Doohickey", p3.Name);
             }
+
+            // Verify documents were created in the same order as the SQL inserts
+            // by comparing their change vectors (etags increase monotonically)
+            using (var session = store.OpenAsyncSession())
+            {
+                var p1 = await session.LoadAsync<Product>("Products/1");
+                var p2 = await session.LoadAsync<Product>("Products/2");
+                var p3 = await session.LoadAsync<Product>("Products/3");
+
+                var cv1 = session.Advanced.GetChangeVectorFor(p1);
+                var cv2 = session.Advanced.GetChangeVectorFor(p2);
+                var cv3 = session.Advanced.GetChangeVectorFor(p3);
+
+                // Extract etag numbers from change vectors (format: "A:N-...")
+                static long ExtractEtag(string cv) => long.Parse(cv.Split(':')[1].Split('-')[0]);
+
+                var etag1 = ExtractEtag(cv1);
+                var etag2 = ExtractEtag(cv2);
+                var etag3 = ExtractEtag(cv3);
+
+                Assert.True(etag1 < etag2, $"Product/1 etag ({etag1}) should be less than Product/2 etag ({etag2})");
+                Assert.True(etag2 < etag3, $"Product/2 etag ({etag2}) should be less than Product/3 etag ({etag3})");
+            }
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -1535,6 +1558,23 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Contains("Oranges", products);
                 Assert.Contains("Grapes", products);
             }
+
+            // Delete one line and verify removal
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>("Orders/1");
+                Assert.Single(order.Lines);
+                Assert.Equal("Grapes", order.Lines[0].Product);
+            }
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -1636,6 +1676,16 @@ namespace SlowTests.Server.Documents.CdcSink
                 var attachments = session.Advanced.Attachments.GetNames(file);
                 Assert.True(attachments.Length > 0, "Expected at least one attachment (binary column mapped to 'file')");
                 Assert.Contains("file", attachments.Select(a => a.Name));
+            }
+
+            using (var session2 = store.OpenAsyncSession())
+            using (var attachmentResult = await session2.Advanced.Attachments.GetAsync("Files/1", "file"))
+            {
+                Assert.NotNull(attachmentResult);
+                using var ms = new System.IO.MemoryStream();
+                await attachmentResult.Stream.CopyToAsync(ms);
+                var content = System.Text.Encoding.ASCII.GetString(ms.ToArray());
+                Assert.Equal("Hello World", content);
             }
         }
 
@@ -2042,6 +2092,17 @@ namespace SlowTests.Server.Documents.CdcSink
                 var names = attachments.Select(a => a.Name).ToList();
                 Assert.Contains("Photos/1/thumb", names);
                 Assert.Contains("Photos/2/thumb", names);
+            }
+
+            using (var session2 = store.OpenAsyncSession())
+            using (var attachmentResult = await session2.Advanced.Attachments.GetAsync("Albums/1", "Photos/1/thumb"))
+            {
+                Assert.NotNull(attachmentResult);
+                using var ms = new System.IO.MemoryStream();
+                await attachmentResult.Stream.CopyToAsync(ms);
+                Assert.True(ms.Length > 0, "Attachment content should not be empty");
+                // Verify it's the PNG header bytes we inserted: 89504E47
+                Assert.Equal(0x89, ms.ToArray()[0]);
             }
         }
 
