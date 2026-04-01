@@ -6,6 +6,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -204,12 +205,12 @@ namespace Raven.Server.Web.System
                 var serverWideConnectionString = ServerWideConnectionString.FromBlittable(connectionStringBlittable);
 
                 if (serverWideConnectionString?.ConnectionString == null)
-                    throw new InvalidOperationException("Connection string is missing or invalid");
+                    throw new BadRequestException("Connection string is missing or invalid");
 
                 var errors = new List<string>();
                 serverWideConnectionString.ConnectionString.Validate(errors);
                 if (errors.Count > 0)
-                    throw new InvalidOperationException($"Connection string validation failed: {string.Join(", ", errors)}");
+                    throw new BadRequestException($"Invalid connection string configuration. Errors: {string.Join($"{Environment.NewLine}", errors)}");
 
                 var (newIndex, _) = await ServerStore.PutServerWideConnectionStringAsync(serverWideConnectionString, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
@@ -237,10 +238,21 @@ namespace Raven.Server.Web.System
             var typeAsString = GetStringQueryString("type", required: false);
 
             ConnectionStringType? type = null;
-            if (typeAsString != null)
+            if (name != null)
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                    throw new BadRequestException($"'{nameof(name)}' must have a non empty value");
+
+                if (Enum.TryParse(typeAsString, true, out ConnectionStringType parsedType) == false)
+                    throw new BadRequestException($"Unknown connection string type: {typeAsString}");
+
+                type = parsedType;
+            }
+            else if (typeAsString != null)
             {
                 if (Enum.TryParse(typeAsString, true, out ConnectionStringType parsedType) == false)
-                    throw new ArgumentException($"{typeAsString} is unknown connection string type.");
+                    throw new BadRequestException($"Unknown connection string type: {typeAsString}");
+
                 type = parsedType;
             }
 
@@ -269,7 +281,7 @@ namespace Raven.Server.Web.System
             var typeAsString = GetStringQueryString("type", required: true);
 
             if (Enum.TryParse(typeAsString, true, out ConnectionStringType type) == false)
-                throw new ArgumentException($"{typeAsString} is unknown connection string type.");
+                throw new NotSupportedException($"Unknown connection string type: {typeAsString}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
