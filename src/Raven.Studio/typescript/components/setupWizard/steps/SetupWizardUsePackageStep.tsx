@@ -163,7 +163,7 @@ export function SetupWizardUsePackageStep() {
                                     <SetupWizardInfoPopover
                                         description="Select which node from the predefined cluster you would like to set up now.
                                             Do not choose one that is already configured."
-                                        docsLink="https://docs.ravendb.net/glossary/node-tag"
+                                        ravenLinkHash="WJJHFY"
                                     />
                                 }
                             >

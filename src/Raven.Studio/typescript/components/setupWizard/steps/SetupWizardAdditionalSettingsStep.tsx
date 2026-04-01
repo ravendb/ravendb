@@ -258,7 +258,7 @@ function PostgreSqlIntegrationToggle({ control }: { control: Control<SetupWizard
                             message={
                                 <SetupWizardInfoPopover
                                     description="Enabling this feature allows RavenDB to function as a PostgreSQL server. Requires a license that includes the PostgreSQL Protocol."
-                                    docsLink="https://docs.ravendb.net/integrations/postgresql-protocol/overview/"
+                                    ravenLinkHash="TRKC2W"
                                 />
                             }
                             placement="right"
@@ -362,7 +362,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                             </li>
                                         </ul>
                                     }
-                                    docsLink="https://docs.ravendb.net/server/storage/directory-structure"
+                                    ravenLinkHash="GUNB5P"
                                 />
                             ),
                         }}
@@ -413,7 +413,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                                     </li>
                                                 </ul>
                                             }
-                                            docsLink="https://docs.ravendb.net/server/configuration/security-configuration#securitycertificatepath"
+                                            ravenLinkHash="OXZ53O"
                                         />
                                     ),
                                 }}
@@ -457,7 +457,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                                             </li>
                                         </ul>
                                     }
-                                    docsLink="https://docs.ravendb.net/server/troubleshooting/logging"
+                                    ravenLinkHash="BHUAJU"
                                 />
                             ),
                         }}
@@ -490,7 +490,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             message: (
                                 <SetupWizardInfoPopover
                                     description="Defines the indexing engine used for auto indexes in RavenDB."
-                                    docsLink="https://docs.ravendb.net/indexes/search-engine/corax"
+                                    ravenLinkHash="H8IONI"
                                 />
                             ),
                         }}
@@ -515,7 +515,7 @@ function AdvancedSettingsContent({ control, isVisible }: AdvancedSettingsContent
                             message: (
                                 <SetupWizardInfoPopover
                                     description="Defines the indexing engine used for static indexes in RavenDB."
-                                    docsLink="https://docs.ravendb.net/indexes/search-engine/corax"
+                                    ravenLinkHash="H8IONI"
                                 />
                             ),
                         }}

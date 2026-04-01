@@ -146,7 +146,7 @@ export function SetupWizardSelfSignedCertificateStep() {
                                 <SetupWizardInfoPopover
                                     description="Enter the passphrase used to encrypt your private key. 
                                         This passphrase is required to unlock and use your certificate."
-                                    docsLink="https://docs.ravendb.net/studio/server/certificates/server-management-certificates-view"
+                                    ravenLinkHash="VBORN2"
                                 />
                             }
                         >
@@ -171,7 +171,7 @@ export function SetupWizardSelfSignedCertificateStep() {
                             message={
                                 <SetupWizardInfoPopover
                                     description="The common name (CN) of the certificate. This is the name that will be displayed in the browser when you access the server."
-                                    docsLink="https://docs.ravendb.net/studio/server/certificates/server-management-certificates-view"
+                                    ravenLinkHash="VBORN2"
                                 />
                             }
                         >
