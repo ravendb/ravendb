@@ -270,29 +270,35 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         var (target, targetBlittable) = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot, op);
         var config = op.Processor.EmbeddedConfig;
 
-        // For single-level embedding targetBlittable is the root document.
-        // For deep nesting (e.g., Company → Departments[] → Employees[]),
-        // targetBlittable is the intermediate array element (the department object).
-        var effectiveParent = targetBlittable ?? parentDoc;
+        // targetBlittable is the blittable at the navigated level — used to read existing
+        // data (e.g., an existing array to merge into). For single-level embedding it's the
+        // root document. For deep nesting it's the intermediate element (e.g., the department).
+        // When null, the intermediate was created as a stub (no prior data) — the Apply methods
+        // handle this by going straight to "create new" without trying to read existing values.
 
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                ApplyArrayOperation(effectiveParent, target, config, op);
+                ApplyArrayOperation(targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Map:
-                ApplyMapOperation(effectiveParent, target, config, op);
+                ApplyMapOperation(targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Value:
-                ApplyValueOperation(effectiveParent, target, config, op);
+                ApplyValueOperation(targetBlittable, target, config, op);
                 break;
         }
 
         return context.ReadObject(parentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
     }
 
+    /// <param name="parentDoc">
+    /// The blittable at the navigated level, used to read existing embedded data.
+    /// Null when the intermediate was a stub (no prior data at this level) —
+    /// in that case we go straight to creating new values on the target.
+    /// </param>
     private static void ApplyValueOperation(
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
@@ -303,8 +309,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             return;
         }
 
-        // Merge new values onto existing embedded object 
-        if (parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
+        // Merge new values onto existing embedded object
+        if (parentDoc != null &&
+            parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingObj)
         {
             existingObj.Modifications = new DynamicJsonValue(existingObj);
@@ -324,7 +331,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         var newArray = new DynamicJsonArray();
         bool found = false;
 
-        if (parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
+        if (parentDoc != null &&
+            parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderArray existingArray)
         {
             foreach(var arrayVal in existingArray)
@@ -364,7 +372,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         // so all stored map keys use the same normalization. Direct lookup works.
         var mapKey = BuildMapKey(op.MappedData, config);
 
-        if (parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
+        if (parentDoc != null &&
+            parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingMap)
         {
             existingMap.Modifications = new DynamicJsonValue(existingMap);
