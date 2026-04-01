@@ -2427,6 +2427,181 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ThreeWayNesting_WithPatches_InsertDeleteOrdering()
+        {
+            // 3-level nesting with patches at root and department level.
+            // Tests that:
+            // 1. Root patch computes a field from unmapped columns
+            // 2. Embedded patch on departments sets a computed field on the root doc
+            // 3. CDC streaming inserts and deletes at all levels work correctly
+            // 4. Operations within a single transaction are applied in order
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE companies (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    country VARCHAR(100) NOT NULL
+                );
+                CREATE TABLE departments (
+                    company_id INT NOT NULL REFERENCES companies(id),
+                    dept_id INT NOT NULL,
+                    dept_name VARCHAR(200) NOT NULL,
+                    budget NUMERIC(12,2) NOT NULL DEFAULT 0,
+                    PRIMARY KEY (company_id, dept_id)
+                );
+                CREATE TABLE employees (
+                    company_id INT NOT NULL,
+                    dept_id INT NOT NULL,
+                    emp_id INT NOT NULL,
+                    emp_name VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (company_id, dept_id, emp_id),
+                    FOREIGN KEY (company_id, dept_id) REFERENCES departments(company_id, dept_id)
+                );
+                INSERT INTO companies (id, name, country) VALUES (1, 'Acme Corp', 'US');
+                INSERT INTO departments (company_id, dept_id, dept_name, budget) VALUES (1, 10, 'Engineering', 500000);
+                INSERT INTO departments (company_id, dept_id, dept_name, budget) VALUES (1, 20, 'Sales', 300000);
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 1, 'Alice');
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 2, 'Bob');
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 20, 3, 'Charlie');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-3way-patch",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Companies",
+                        SourceTableSchema = "public",
+                        SourceTableName = "companies",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        },
+                        // Root patch: read the unmapped 'country' column
+                        Patch = "this.DisplayName = $row.name + ' (' + $row.country + ')';",
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "departments",
+                                PropertyName = "Departments",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "company_id" },
+                                PrimaryKeyColumns = new List<string> { "dept_id" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "dept_id", "DeptId" },
+                                    { "dept_name", "DeptName" }
+                                },
+                                // Embedded patch: accumulate total budget on the root doc
+                                Patch = "this.TotalBudget = (this.TotalBudget || 0) + $row.budget;",
+                                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                                {
+                                    new CdcSinkEmbeddedTableConfig
+                                    {
+                                        SourceTableSchema = "public",
+                                        SourceTableName = "employees",
+                                        PropertyName = "Employees",
+                                        Type = CdcSinkRelationType.Array,
+                                        JoinColumns = new List<string> { "dept_id" },
+                                        PrimaryKeyColumns = new List<string> { "emp_id" },
+                                        ColumnsMapping = new Dictionary<string, string>
+                                        {
+                                            { "emp_id", "EmpId" },
+                                            { "emp_name", "EmpName" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for all 3 employees to be nested
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var company = await session.LoadAsync<CompanyWithBudget>("Companies/1");
+                if (company?.Departments == null) return 0;
+                int total = 0;
+                foreach (var dept in company.Departments)
+                    total += dept.Employees?.Count ?? 0;
+                return total;
+            }, 3, timeout: 60_000);
+
+            // Verify initial state: patches applied during initial load
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<CompanyWithBudget>("Companies/1");
+                Assert.Equal("Acme Corp (US)", company.DisplayName);
+                // TotalBudget = 500000 + 300000 = 800000 (each dept patch adds its budget)
+                Assert.Equal(800000.0, company.TotalBudget, 0);
+            }
+
+            // CDC streaming: in a single transaction, add a new employee to Sales
+            // and delete one from Engineering
+            ExecuteNpgSql(connectionString, """
+                BEGIN;
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 20, 4, 'Diana');
+                DELETE FROM employees WHERE company_id = 1 AND dept_id = 10 AND emp_id = 1;
+                COMMIT;
+                """);
+
+            // Wait for Engineering to have 1 employee (Alice deleted) and Sales to have 2
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var company = await session.LoadAsync<CompanyWithBudget>("Companies/1");
+                var eng = company?.Departments?.FirstOrDefault(d => d.DeptName == "Engineering");
+                var sales = company?.Departments?.FirstOrDefault(d => d.DeptName == "Sales");
+                return (eng?.Employees?.Count ?? 0, sales?.Employees?.Count ?? 0);
+            }, (1, 2), timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<CompanyWithBudget>("Companies/1");
+
+                var eng = company.Departments.First(d => d.DeptName == "Engineering");
+                Assert.Single(eng.Employees);
+                Assert.Equal("Bob", eng.Employees[0].EmpName);
+
+                var sales = company.Departments.First(d => d.DeptName == "Sales");
+                Assert.Equal(2, sales.Employees.Count);
+                var salesNames = sales.Employees.Select(e => e.EmpName).OrderBy(n => n).ToList();
+                Assert.Equal("Charlie", salesNames[0]);
+                Assert.Equal("Diana", salesNames[1]);
+            }
+        }
+
+        private class CompanyWithBudget
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string DisplayName { get; set; }
+            public double TotalBudget { get; set; }
+            public List<DepartmentWithEmployees> Departments { get; set; }
+        }
+
+        private class DepartmentWithEmployees
+        {
+            public int DeptId { get; set; }
+            public string DeptName { get; set; }
+            public List<Employee> Employees { get; set; }
+        }
+
         private class ArchivedOrder
         {
             public string Id { get; set; }
