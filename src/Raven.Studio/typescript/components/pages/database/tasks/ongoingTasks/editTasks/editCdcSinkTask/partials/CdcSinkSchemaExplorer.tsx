@@ -56,7 +56,7 @@ export default function CdcSinkSchemaExplorer() {
         const provider = factoryNameToProvider(sqlCs.FactoryName);
 
         const result = await CdcSinkService.fetchSchema(databaseName, {
-            ConnectionString: connName,
+            ConnectionString: sqlCs.ConnectionString,
             Provider: provider,
             Schemas: [],
         });
