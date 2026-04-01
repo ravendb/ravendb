@@ -3,6 +3,7 @@ import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import BackupsPage = require("components/pages/database/tasks/backups/BackupsPage");
 import CreateSampleData = require("components/pages/database/tasks/createSampleData/CreateSampleData");
+import EditCdcSinkTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask");
 import EditGenAiTask = require("components/pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/EditGenAiTask");
 import OngoingTasksPage = require("components/pages/database/tasks/ongoingTasks/OngoingTasksPage");
 import AddNewOngoingTask = require("components/pages/database/tasks/ongoingTasks/AddNewOngoingTask");
@@ -399,6 +400,19 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             search: {
                 overrideTitle: "Add New RabbitMQ Sink Task",
                 alternativeTitles: ["Create RabbitMQ Sink Task"],
+            }
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editCdcSinkTask',
+            moduleId: reactUtils.bridgeToReact(EditCdcSinkTask.default, "nonShardedView"),
+            title: 'CDC Sink Task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.editCdcSinkTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks',
+            search: {
+                overrideTitle: "Add New CDC Sink Task",
+                alternativeTitles: ["Create CDC Sink Task", "Change Data Capture"],
             }
         }),
     ];

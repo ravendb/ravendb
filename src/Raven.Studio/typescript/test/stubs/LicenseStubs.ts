@@ -127,6 +127,7 @@ export class LicenseStubs {
             HasClientConfiguration: true,
             HasStudioConfiguration: true,
             HasQueueSink: true,
+            HasCdcSink: true,
             HasDataArchival: true,
             HasRevisionsInSubscriptions: true,
             HasMultiNodeSharding: true,

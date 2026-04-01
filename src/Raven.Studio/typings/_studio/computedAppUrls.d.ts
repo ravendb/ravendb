@@ -39,6 +39,7 @@ interface computedAppUrls {
     editAmazonSqsEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editKafkaSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRabbitMqSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editCdcSink: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editEmbeddingsGeneration: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editGenAi: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
@@ -68,6 +69,7 @@ interface computedAppUrls {
     editAmazonSqsEtlTaskUrl: KnockoutComputed<string>;
     editKafkaSinkTaskUrl: KnockoutComputed<string>;
     editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
+    editCdcSinkTaskUrl: KnockoutComputed<string>;
     editEmbeddingsGenerationTaskUrl: KnockoutComputed<string>;
     editGenAiTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;

@@ -4,7 +4,7 @@ import jsonUtil = require("common/jsonUtil");
 class cdcSinkColumnMapping {
     sqlColumnName: string;
     sqlColumnType: string;
-    propertyName: ko.Observable<string>;
+    propertyName: KnockoutObservable<string>;
     isPrimaryKey: boolean;
 
     constructor(sqlColumnName: string, sqlColumnType: string, propertyName: string, isPrimaryKey: boolean) {
@@ -66,6 +66,7 @@ class ongoingTaskCdcSinkTableModel {
                 Disabled: false,
                 EmbeddedTables: [],
                 LinkedTables: [],
+                OnDelete: null,
             }, true);
     }
 
@@ -88,6 +89,7 @@ class ongoingTaskCdcSinkTableModel {
             Disabled: false,
             EmbeddedTables: [],
             LinkedTables: [],
+            OnDelete: null,
         }, true);
 
         model.isSelected(true);
@@ -142,6 +144,7 @@ class ongoingTaskCdcSinkTableModel {
             Disabled: this.disabled(),
             EmbeddedTables: [],
             LinkedTables: [],
+            OnDelete: null,
         };
     }
 
