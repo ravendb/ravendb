@@ -8,8 +8,28 @@ import { CdcSinkFormData, CdcSinkTableFormData } from "../types";
 import CdcSinkService from "../services/cdcSinkService";
 import { Icon } from "components/common/Icon";
 import { useState } from "react";
+import getConnectionStringsCommand from "commands/database/settings/getConnectionStringsCommand";
 
 type SqlTableSchema = Raven.Server.SqlMigration.Schema.SqlTableSchema;
+type MigrationProvider = Raven.Server.SqlMigration.MigrationProvider;
+
+function factoryNameToProvider(factoryName: string): MigrationProvider {
+    switch (factoryName) {
+        case "Npgsql":
+            return "NpgSQL";
+        case "Microsoft.Data.SqlClient":
+        case "System.Data.SqlClient":
+            return "MsSQL";
+        case "MySql.Data.MySqlClient":
+            return "MySQL_MySql_Data";
+        case "MySqlConnector.MySqlConnectorFactory":
+            return "MySQL_MySqlConnector";
+        case "Oracle.ManagedDataAccess.Client":
+            return "Oracle";
+        default:
+            return "NpgSQL";
+    }
+}
 
 export default function CdcSinkSchemaExplorer() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -21,12 +41,23 @@ export default function CdcSinkSchemaExplorer() {
     const [selectedTables, setSelectedTables] = useState<Set<string>>(new Set());
 
     const asyncFetchSchema = useAsyncCallback(async () => {
-        if (!formValues.connectionStringName) {
+        const connName = formValues.connectionStringName;
+        if (!connName) {
             return;
         }
+
+        // Fetch the connection string details to determine the provider
+        const connectionStrings = await new getConnectionStringsCommand(databaseName).execute();
+        const sqlCs = connectionStrings.SqlConnectionStrings?.[connName];
+        if (!sqlCs) {
+            throw new Error(`SQL connection string '${connName}' not found`);
+        }
+
+        const provider = factoryNameToProvider(sqlCs.FactoryName);
+
         const result = await CdcSinkService.fetchSchema(databaseName, {
-            ConnectionString: formValues.connectionStringName,
-            Provider: "MsSQL",
+            ConnectionString: connName,
+            Provider: provider,
             Schemas: [],
         });
         setDiscoveredTables(result.Tables ?? []);
