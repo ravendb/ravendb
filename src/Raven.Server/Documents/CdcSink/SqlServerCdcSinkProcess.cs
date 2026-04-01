@@ -266,8 +266,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                             Data = data,
                         };
 
-                        batch.Add(_documentProcessor.ProcessRow(row));
-                        hasChanges = true;
+                        var op = _documentProcessor.ProcessRow(row);
+                        if (op != null)
+                        {
+                            batch.Add(op);
+                            hasChanges = true;
+                        }
                     }
                 }
 
@@ -584,7 +588,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 };
 
                 var op = _documentProcessor.ProcessRow(row);
-                ops.Add(op);
+                if (op != null)
+                    ops.Add(op);
             }
 
             // Extract last keys from the last row's RawData for keyset pagination resume

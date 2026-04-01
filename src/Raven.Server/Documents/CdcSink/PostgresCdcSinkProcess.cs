@@ -75,6 +75,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         try
         {
             await EnsureReplicationSetup(ct);
+            await EnsureReplicaIdentityForEmbeddedTables(ct);
             await HandleInitialLoad(ct);
             await StartListening(ct);
         }
@@ -181,6 +182,125 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
     }
 
+    /// <summary>
+    /// Ensures that embedded tables have an appropriate REPLICA IDENTITY for CDC DELETE routing.
+    ///
+    /// PostgreSQL's default REPLICA IDENTITY only sends primary key columns on DELETE.
+    /// For embedded tables, the CDC processor needs the join column (FK to the parent table)
+    /// to route the delete to the correct parent document. If the join column is already part
+    /// of the PK, the default identity is sufficient. Otherwise, we need REPLICA IDENTITY FULL
+    /// so that all columns (including the join column) are sent on DELETE events.
+    ///
+    /// When IgnoreDeletes is set on the embedded table config, we skip this check entirely
+    /// since DELETE events are discarded and routing is not needed.
+    ///
+    /// Example:
+    ///   order_lines(id PK, order_id FK, product, quantity)
+    ///   JoinColumns = ["order_id"]  — order_id is NOT in the PK
+    ///   → We set REPLICA IDENTITY FULL so DELETE events include order_id
+    ///
+    ///   order_lines(order_id, line_num, product) PK(order_id, line_num)
+    ///   JoinColumns = ["order_id"]  — order_id IS in the PK
+    ///   → Default REPLICA IDENTITY is sufficient, no action needed
+    /// </summary>
+    private async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
+    {
+        var embeddedTables = new List<CdcSinkEmbeddedTableConfig>();
+        CollectEmbeddedTablesNeedingReplicaIdentity(Configuration.Tables, embeddedTables);
+
+        if (embeddedTables.Count == 0)
+            return;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        foreach (var embedded in embeddedTables)
+        {
+            var schema = embedded.SourceTableSchema ?? "public";
+            var table = embedded.SourceTableName;
+
+            // Check current REPLICA IDENTITY: 'd' = default (PK), 'f' = full, 'i' = index, 'n' = nothing
+            char replicaIdentity;
+            await using (var cmd = new NpgsqlCommand(
+                "SELECT relreplident FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid " +
+                "WHERE n.nspname = @schema AND c.relname = @table", conn))
+            {
+                cmd.Parameters.AddWithValue("schema", schema);
+                cmd.Parameters.AddWithValue("table", table);
+                var result = await cmd.ExecuteScalarAsync(ct);
+                replicaIdentity = result is char c ? c : 'd';
+            }
+
+            // FULL or INDEX already set — sufficient for routing deletes
+            if (replicaIdentity is 'f' or 'i')
+                continue;
+
+            // Default (PK-only) — set to FULL so DELETE events include join columns
+            try
+            {
+                await using var alterCmd = new NpgsqlCommand(
+                    $"ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL", conn);
+                await alterCmd.ExecuteNonQueryAsync(ct);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] Set REPLICA IDENTITY FULL on {schema}.{table} " +
+                        $"(join columns {string.Join(", ", embedded.JoinColumns)} are not in the primary key)");
+            }
+            catch (PostgresException ex) when (ex.SqlState == "42501")
+            {
+                throw new InvalidOperationException(
+                    $"Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. " +
+                    $"The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of " +
+                    $"the primary key, so DELETE events need REPLICA IDENTITY FULL to include the join columns " +
+                    $"for routing to the parent document. An administrator can run:\n\n" +
+                    $"  ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;\n\n" +
+                    $"Alternatively, set IgnoreDeletes = true on this embedded table to skip delete processing.\n\n" +
+                    $"PostgreSQL error: {ex.MessageText}", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Collects embedded tables (recursively) that need a non-default REPLICA IDENTITY —
+    /// i.e., where the join columns are not all covered by the primary key and IgnoreDeletes is false.
+    /// </summary>
+    private static void CollectEmbeddedTablesNeedingReplicaIdentity(
+        List<CdcSinkTableConfig> rootTables, List<CdcSinkEmbeddedTableConfig> result)
+    {
+        foreach (var root in rootTables)
+            CollectFromEmbedded(root.EmbeddedTables, root.PrimaryKeyColumns, result);
+
+        static void CollectFromEmbedded(
+            List<CdcSinkEmbeddedTableConfig> embedded, List<string> parentPkColumns,
+            List<CdcSinkEmbeddedTableConfig> result)
+        {
+            if (embedded == null)
+                return;
+
+            foreach (var e in embedded)
+            {
+                if (e.IgnoreDeletes == false)
+                {
+                    // Check if all join columns are in the table's own PK
+                    bool allJoinColumnsInPk = true;
+                    foreach (var joinCol in e.JoinColumns)
+                    {
+                        if (e.PrimaryKeyColumns.Contains(joinCol) == false)
+                        {
+                            allJoinColumnsInPk = false;
+                            break;
+                        }
+                    }
+
+                    if (allJoinColumnsInPk == false)
+                        result.Add(e);
+                }
+
+                CollectFromEmbedded(e.EmbeddedTables, e.PrimaryKeyColumns, result);
+            }
+        }
+    }
+
     private async Task StartListening(CancellationToken ct)
     {
         NpgsqlTypes.NpgsqlLogSequenceNumber lastLsn;
@@ -252,16 +372,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             switch (message)
             {
                 case InsertMessage insert:
-                    pending.Add(await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert));
+                    AddIfNotNull(pending, await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert));
                     break;
                 case UpdateMessage update:
-                    pending.Add(await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert));
+                    AddIfNotNull(pending, await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert));
                     break;
                 case KeyDeleteMessage keyDel:
-                    pending.Add(await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete));
+                    AddIfNotNull(pending, await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete));
                     break;
                 case FullDeleteMessage fullDel:
-                    pending.Add(await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete));
+                    AddIfNotNull(pending, await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete));
                     break;
                 case BeginMessage:
                     break;
@@ -529,7 +649,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 };
 
                 var op = _documentProcessor.ProcessRow(row);
-                ops.Add(op);
+                if (op != null)
+                    ops.Add(op);
             }
 
             // Extract last keys from the last row's RawData for keyset pagination resume
@@ -599,5 +720,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             PostgresTypeCategory.Json => value.ToString(),
             _ => value,
         };
+    }
+
+    private static void AddIfNotNull(List<CdcSinkDocumentOp> list, CdcSinkDocumentOp op)
+    {
+        if (op != null)
+            list.Add(op);
     }
 }

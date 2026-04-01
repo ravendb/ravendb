@@ -803,6 +803,106 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedArray_Delete_NonCompositePK()
+        {
+            // Embedded table has a simple auto-increment PK (id) that does NOT include
+            // the join column (order_id). The CDC setup should automatically set
+            // REPLICA IDENTITY FULL on the embedded table so DELETE events include
+            // the join column needed for parent document routing.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                );
+                CREATE TABLE order_lines (
+                    id SERIAL PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (2, 1, 'Bananas', 3);
+                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (3, 1, 'Cherries', 7);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-noncomposite-delete",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                // Simple PK that does NOT include order_id —
+                                // CDC setup should auto-set REPLICA IDENTITY FULL
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "id", "LineId" },
+                                    { "product", "Product" },
+                                    { "quantity", "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for all 3 embedded lines
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 3, timeout: 60_000);
+
+            // Delete one embedded row — should work because REPLICA IDENTITY FULL
+            // was auto-set, so the DELETE event includes order_id for routing
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE id = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var products = order.Lines.Select(l => l.Product).OrderBy(p => p).ToList();
+                Assert.Contains("Apples", products);
+                Assert.Contains("Cherries", products);
+                Assert.DoesNotContain("Bananas", products);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task EmbeddedArray_Update()
         {
             using var store = GetDocumentStore();
@@ -2073,6 +2173,7 @@ namespace SlowTests.Server.Documents.CdcSink
         private class OrderLine
         {
             public int LineNum { get; set; }
+            public string LineId { get; set; }
             public string Product { get; set; }
             public int Quantity { get; set; }
         }

@@ -268,6 +268,9 @@ public class CdcSinkDocumentProcessor
 
     private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor)
     {
+        if (row.Operation == CdcSinkOperation.Delete && processor.EmbeddedConfig.IgnoreDeletes)
+            return null;
+
         var parentDocumentId = processor.GetParentDocumentId(row.Data);
 
         if (parentDocumentId == null)

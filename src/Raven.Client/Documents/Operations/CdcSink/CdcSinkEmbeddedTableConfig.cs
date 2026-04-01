@@ -64,6 +64,19 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     public bool CaseSensitiveKeys { get; set; }
 
     /// <summary>
+    /// When true, DELETE events from this embedded table are ignored — rows are only
+    /// added and updated, never removed from the parent document. This is useful when
+    /// the embedded data is append-only (e.g., audit logs) or when the embedded table's
+    /// primary key doesn't include the join column to the parent and you don't want to
+    /// set up REPLICA IDENTITY FULL on the source table.
+    ///
+    /// When IgnoreDeletes is true, the CDC process does not need the join column to be
+    /// present in DELETE events, so the default REPLICA IDENTITY (primary key only) is
+    /// sufficient regardless of whether the PK includes the join column.
+    /// </summary>
+    public bool IgnoreDeletes { get; set; }
+
+    /// <summary>
     /// Nested embedded tables (deep nesting).
     /// Requires that the nested table has a denormalized FK to the root table.
     /// </summary>
@@ -84,6 +97,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         Type = config.Type;
         Patch = config.Patch;
         CaseSensitiveKeys = config.CaseSensitiveKeys;
+        IgnoreDeletes = config.IgnoreDeletes;
         EmbeddedTables = config.EmbeddedTables;
     }
 
@@ -101,6 +115,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(Type)] = Type.ToString(),
             [nameof(Patch)] = Patch,
             [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
+            [nameof(IgnoreDeletes)] = IgnoreDeletes,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
         };
     }
