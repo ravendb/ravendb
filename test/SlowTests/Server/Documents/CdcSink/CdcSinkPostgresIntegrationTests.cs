@@ -894,15 +894,13 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
-            "NavigateToEmbeddedParent does not handle array-type intermediate path segments. " +
-            "When employees (3rd level) are loaded, the code navigates through Departments " +
-            "(an array) but expects a BlittableJsonReaderObject. It replaces the Departments " +
-            "array with an empty object, losing all department data. Fix requires matching " +
-            "the correct array element using join column values during path navigation.")]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ThreeWayNesting()
         {
             // Company → Department → Employee (3 levels deep)
+            // Employees join to departments via dept_id. Since the employees PK is a composite
+            // (company_id, dept_id, emp_id), the default REPLICA IDENTITY includes dept_id,
+            // so DELETE events carry enough data for routing without USING INDEX.
             using var store = GetDocumentStore();
             using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
@@ -987,28 +985,34 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<Company>(store, "Companies/1", timeoutMs: 60_000);
-            Assert.NotNull(doc);
-            Assert.Equal("Acme Corp", doc.Name);
-
-            // Wait for departments to be populated
+            // Wait for employees to be nested inside departments
+            // Engineering has Alice (emp_id=1) and Bob (emp_id=2), Sales has Charlie (emp_id=3)
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
                 var company = await session.LoadAsync<Company>("Companies/1");
                 if (company?.Departments == null) return 0;
-                return company.Departments.Count;
-            }, 2, timeout: 60_000);
+                int total = 0;
+                foreach (var dept in company.Departments)
+                    total += dept.Employees?.Count ?? 0;
+                return total;
+            }, 3, timeout: 60_000);
 
-            // Verify the nested structure
             using (var session = store.OpenAsyncSession())
             {
                 var company = await session.LoadAsync<Company>("Companies/1");
-                var depts = company.Departments;
-                Assert.Equal(2, depts.Count);
+                Assert.Equal("Acme Corp", company.Name);
+                Assert.Equal(2, company.Departments.Count);
 
-                var engineering = depts.First(d => d.DeptName == "Engineering");
-                Assert.NotNull(engineering);
+                var engineering = company.Departments.First(d => d.DeptName == "Engineering");
+                Assert.Equal(2, engineering.Employees.Count);
+                var empNames = engineering.Employees.Select(e => e.EmpName).OrderBy(n => n).ToList();
+                Assert.Equal("Alice", empNames[0]);
+                Assert.Equal("Bob", empNames[1]);
+
+                var sales = company.Departments.First(d => d.DeptName == "Sales");
+                Assert.Single(sales.Employees);
+                Assert.Equal("Charlie", sales.Employees[0].EmpName);
             }
         }
 

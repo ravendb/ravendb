@@ -267,21 +267,26 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
     {
         parentDoc.Modifications ??= new DynamicJsonValue(parentDoc);
-        var target = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot);
+        var (target, targetBlittable) = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot, op);
         var config = op.Processor.EmbeddedConfig;
+
+        // For single-level embedding targetBlittable is the root document.
+        // For deep nesting (e.g., Company → Departments[] → Employees[]),
+        // targetBlittable is the intermediate array element (the department object).
+        var effectiveParent = targetBlittable ?? parentDoc;
 
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                ApplyArrayOperation(parentDoc, target, config, op);
+                ApplyArrayOperation(effectiveParent, target, config, op);
                 break;
 
             case CdcSinkRelationType.Map:
-                ApplyMapOperation(parentDoc, target, config, op);
+                ApplyMapOperation(effectiveParent, target, config, op);
                 break;
 
             case CdcSinkRelationType.Value:
-                ApplyValueOperation(parentDoc, target, config, op);
+                ApplyValueOperation(effectiveParent, target, config, op);
                 break;
         }
 
@@ -485,13 +490,22 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// Navigate the embedded path to find the parent DynamicJsonValue at the correct nesting level.
     /// For a path of [A, B, C], navigates to A.B and returns that as the target for C's property.
     /// For a single segment path [A], returns the root modifications.
+    ///
+    /// When an intermediate segment is an array (e.g., Departments[] in Company → Departments[] → Employees[]),
+    /// the correct array element is found by matching the next segment's join column values from the CDC row
+    /// against the stored items' mapped property values. For example, when navigating to Departments[] for an
+    /// employee row, we read dept_id from the row and find the department element where DeptId matches.
     /// </summary>
-    private static DynamicJsonValue NavigateToEmbeddedParent(
+    /// <returns>
+    /// A tuple of (target DynamicJsonValue for modifications, the BlittableJsonReaderObject at the navigated level).
+    /// The blittable may be null if the intermediate didn't exist and was created as a stub.
+    /// </returns>
+    private static (DynamicJsonValue Target, BlittableJsonReaderObject Blittable) NavigateToEmbeddedParent(
         BlittableJsonReaderObject rootDoc, DynamicJsonValue rootModifications,
-        List<EmbeddedPathSegment> path)
+        List<EmbeddedPathSegment> path, CdcSinkDocumentOp op)
     {
         if (path == null || path.Count <= 1)
-            return rootModifications;
+            return (rootModifications, rootDoc);
 
         var current = rootModifications;
         var currentBlittable = rootDoc;
@@ -501,11 +515,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             var segment = path[i];
             var propName = segment.Config.PropertyName;
 
-            if (currentBlittable != null &&
-                currentBlittable.TryGetMember(propName, out var nested) &&
-                nested is BlittableJsonReaderObject nestedObj)
+            if (currentBlittable == null || currentBlittable.TryGetMember(propName, out var nested) == false)
             {
-                // Reuse existing Modifications if already set, otherwise create new ones
+                var nestedMod = new DynamicJsonValue();
+                current[propName] = nestedMod;
+                current = nestedMod;
+                currentBlittable = null;
+                continue;
+            }
+
+            if (nested is BlittableJsonReaderObject nestedObj)
+            {
+                // Value or Map type — navigate directly into the object
                 if (nestedObj.Modifications != null)
                 {
                     current = nestedObj.Modifications;
@@ -518,6 +539,70 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 }
                 currentBlittable = nestedObj;
             }
+            else if (nested is BlittableJsonReaderArray nestedArray)
+            {
+                // Array type — find the matching element using the next segment's join columns.
+                // The next segment (i+1) has JoinMapping: { childFkColumn → parentPkColumn }.
+                // We read the FK value from the CDC row and match against the array element's
+                // mapped property for the parent PK column.
+                var nextSegment = path[i + 1];
+                BlittableJsonReaderObject matchedItem = null;
+
+                foreach (var arrayVal in nestedArray)
+                {
+                    if (arrayVal is not BlittableJsonReaderObject candidate)
+                        continue;
+
+                    bool matches = true;
+                    foreach (var (childFkCol, parentPkCol) in nextSegment.JoinMapping)
+                    {
+                        // Get the FK value from the CDC row
+                        if (op.RawData.TryGetValue(childFkCol, out var fkValue) == false)
+                        {
+                            matches = false;
+                            break;
+                        }
+
+                        // The parent PK column is stored under its mapped property name
+                        var mappedName = segment.Config.ColumnsMapping.TryGetValue(parentPkCol, out var mapped)
+                            ? mapped
+                            : parentPkCol;
+
+                        if (candidate.TryGetMember(mappedName, out var storedValue) == false)
+                        {
+                            matches = false;
+                            break;
+                        }
+
+                        if (ComparePrimaryKeyValues(storedValue, fkValue, StringComparison.OrdinalIgnoreCase) == false)
+                        {
+                            matches = false;
+                            break;
+                        }
+                    }
+
+                    if (matches)
+                    {
+                        matchedItem = candidate;
+                        break;
+                    }
+                }
+
+                if (matchedItem != null)
+                {
+                    matchedItem.Modifications ??= new DynamicJsonValue(matchedItem);
+                    current = matchedItem.Modifications;
+                    currentBlittable = matchedItem;
+                }
+                else
+                {
+                    // No matching element found — create a stub
+                    var nestedMod = new DynamicJsonValue();
+                    current[propName] = nestedMod;
+                    current = nestedMod;
+                    currentBlittable = null;
+                }
+            }
             else
             {
                 var nestedMod = new DynamicJsonValue();
@@ -527,7 +612,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
         }
 
-        return current;
+        return (current, currentBlittable);
     }
 
     /// <summary>
