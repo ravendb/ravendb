@@ -84,8 +84,8 @@ class ongoingTaskReplicationSinkEditModel extends ongoingTaskEditModel {
             AccessName: accessInfo.replicationAccessName(),
             CertificatePassword: certificatePassphrase,
             CertificateWithPrivateKey: this.replicationAccess().serverCertificateSelected() ? null : certificate,
-            AllowedHubToSinkPaths: accessInfo.hubToSinkPrefixes()?.map(x => x.path()),
-            AllowedSinkToHubPaths: accessInfo.sinkToHubPrefixes()?.map(x => x.path())
+            AllowedHubToSinkPaths: accessInfo.getHubToSinkPrefixesToSave(),
+            AllowedSinkToHubPaths: accessInfo.getSinkToHubPrefixesToSave()
         } as Raven.Client.Documents.Operations.Replication.PullReplicationAsSink;
     }
 

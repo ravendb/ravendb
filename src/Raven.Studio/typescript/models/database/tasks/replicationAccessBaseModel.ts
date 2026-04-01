@@ -26,9 +26,21 @@ class replicationAccessBaseModel {
         this.sinkToHubPrefixes(sinkToHub);
         this.certificate(certificate);
       
-        this.samePrefixesForBothDirections(_.isEqual(hubToSink.map(x => x.path()), sinkToHub.map(x => x.path())));
+        this.samePrefixesForBothDirections(_.isEqual(this.getNormalizedPrefixPaths(hubToSink), this.getNormalizedPrefixPaths(sinkToHub)));
        
         this.filteringPathsRequired(filteringPathsRequired);
+    }
+
+    private getNormalizedPrefixPaths(prefixes: prefixPathModel[]) {
+        return _.compact(prefixes.map(x => prefixPathModel.normalize(x.path())));
+    }
+
+    getHubToSinkPrefixesToSave() {
+        return this.getNormalizedPrefixPaths(this.hubToSinkPrefixes());
+    }
+
+    getSinkToHubPrefixesToSave() {
+        return this.getNormalizedPrefixPaths(this.sinkToHubPrefixes());
     }
     
     initObservables() {
@@ -53,7 +65,7 @@ class replicationAccessBaseModel {
         this.hubToSinkPrefixes.extend({
             validation: [
                 {
-                    validator: () => !this.filteringPathsRequired() || this.hubToSinkPrefixes().length,
+                    validator: () => !this.filteringPathsRequired() || this.getHubToSinkPrefixesToSave().length,
                     message: "Please add at least one filtering path"
                 }
             ]
@@ -62,7 +74,7 @@ class replicationAccessBaseModel {
         this.sinkToHubPrefixes.extend({
             validation: [
                 {
-                    validator: () => !this.filteringPathsRequired() || this.samePrefixesForBothDirections() || this.sinkToHubPrefixes().length,
+                    validator: () => !this.filteringPathsRequired() || this.samePrefixesForBothDirections() || this.getSinkToHubPrefixesToSave().length,
                     message: "Please add at least one filtering path, or use the Hub to Sink paths"
                 }
             ]
@@ -70,7 +82,10 @@ class replicationAccessBaseModel {
     }
     
     private hasSingleDocumentPattern(paths: prefixPathModel[]): KnockoutComputed<boolean> {
-        return ko.pureComputed(() => paths.length && !!paths.find(x => !x.path().endsWith("*")));
+        return ko.pureComputed(() => paths.length && !!paths.find(x => {
+            const normalizedPath = prefixPathModel.normalize(x.path());
+            return normalizedPath && !normalizedPath.endsWith("*");
+        }));
     }
     
     getSingleDocumentPatternWarning() {
@@ -78,9 +93,14 @@ class replicationAccessBaseModel {
     }
 
     addHubToSinkInputPrefixWithBlink() {
-        const pathToAdd = this.inputPrefixHubToSink().path();
+        const pathToAdd = prefixPathModel.normalize(this.inputPrefixHubToSink().path());
+
+        if (!pathToAdd) {
+            this.inputPrefixHubToSink().path(null);
+            return;
+        }
         
-        if (!this.hubToSinkPrefixes().find(prefix => prefix.path() === pathToAdd))
+        if (!this.hubToSinkPrefixes().find(prefix => prefixPathModel.normalize(prefix.path()) === pathToAdd))
         { 
             const itemToAdd = new prefixPathModel(pathToAdd);
             this.hubToSinkPrefixes.unshift(itemToAdd);
@@ -91,9 +111,14 @@ class replicationAccessBaseModel {
     }
 
     addSinkToHubInputPrefixWithBlink() {
-        const pathToAdd = this.inputPrefixSinkToHub().path();
+        const pathToAdd = prefixPathModel.normalize(this.inputPrefixSinkToHub().path());
+
+        if (!pathToAdd) {
+            this.inputPrefixSinkToHub().path(null);
+            return;
+        }
         
-        if (!this.sinkToHubPrefixes().find(prefix => prefix.path() === pathToAdd)) {
+        if (!this.sinkToHubPrefixes().find(prefix => prefixPathModel.normalize(prefix.path()) === pathToAdd)) {
             const itemToAdd = new prefixPathModel(pathToAdd);
             this.sinkToHubPrefixes.unshift(itemToAdd);
 
@@ -116,8 +141,8 @@ class replicationAccessBaseModel {
         return {
             Name: this.replicationAccessName(),
             CertificateBase64: this.certificate().publicKey(),
-            AllowedHubToSinkPaths: this.hubToSinkPrefixes().map(prefix => prefix.path()),
-            AllowedSinkToHubPaths: this.sinkToHubPrefixes().map(prefix => prefix.path())
+            AllowedHubToSinkPaths: this.getHubToSinkPrefixesToSave(),
+            AllowedSinkToHubPaths: this.getSinkToHubPrefixesToSave()
         }
     }
 }
