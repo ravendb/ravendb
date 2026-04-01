@@ -242,7 +242,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         {
             var name = prefix != null ? prefix + attachmentName : attachmentName;
             _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(
-                context, documentId, name, expectedChangeVector: null, collectionName: out _, updateDocument: false);
+                context, documentId, name, expectedChangeVector: null, collectionName: out _, updateDocument: true);
         }
     }
 
