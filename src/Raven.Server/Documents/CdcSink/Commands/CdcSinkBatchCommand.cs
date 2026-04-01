@@ -12,7 +12,6 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Jint;
-using Raven.Server.Documents.Queries.AST;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink.Commands;
@@ -96,15 +95,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         List<(string TableName, Dictionary<string, object> RawData, string PatchScript, Dictionary<string, object> OldRowData)> patches = null;
         CdcSinkDocumentOp lastPutOp = null;
+        CdcSinkDocumentOp lastDeleteOp = null;
         string collectionName = null;
         bool needsDelete = false;
-
-        // PatchOnDelete state for the root table. When a Delete op has PatchOnDelete,
-        // we record it here. At the end, if needsDelete is still true AND we have a
-        // PatchOnDelete, we run the patch and check its return value to decide whether
-        // to cancel the delete (return true) or proceed with deletion (return false/undefined).
-        string rootPatchOnDelete = null;
-        Dictionary<string, object> rootDeleteRawData = null;
 
         var existing = _database.DocumentsStorage.Get(context, documentId);
         if (existing != null)
@@ -120,11 +113,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 case CdcSinkDocumentOpType.Put:
                 {
                     // A new Put is a fresh state — clear any accumulated patches from
-                    // previous operations (e.g., a PatchOnDelete from an earlier Delete
+                    // previous operations (e.g., an OnDelete.Patch from an earlier Delete
                     // in the same transaction should not survive a subsequent re-insert).
                     patches?.Clear();
-                    rootPatchOnDelete = null;
-                    rootDeleteRawData = null;
 
                     // Merge new values onto current state
                     if (currentDoc != null)
@@ -139,6 +130,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     }
 
                     lastPutOp = op;
+                    lastDeleteOp = null;
                     needsDelete = false;
 
                     if (op.Processor.RootConfig.Patch != null)
@@ -155,18 +147,22 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     pendingEmbeds?.Clear();
                     patches?.Clear();
                     lastPutOp = null;
+                    lastDeleteOp = op;
                     needsDelete = true;
 
-                    // Record OnDelete settings for processing at the end.
-                    rootPatchOnDelete = op.Processor.RootConfig.OnDelete?.Patch;
-                    rootDeleteRawData = rootPatchOnDelete != null ? op.RawData : null;
+                    // OnDelete.Patch goes through the unified patch pipeline
+                    var deleteScript = op.Processor.RootConfig.OnDelete?.Patch;
+                    if (deleteScript != null)
+                    {
+                        patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                        patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, null));
+                    }
                     break;
                 }
                 case CdcSinkDocumentOpType.EmbeddedModify:
                 {
                     needsDelete = false;
-                    rootPatchOnDelete = null;
-                    rootDeleteRawData = null;
+                    lastDeleteOp = null;
 
                     pendingEmbeds ??= new List<CdcSinkDocumentOp>();
                     pendingEmbeds.Add(op);
@@ -179,19 +175,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         if (needsDelete)
         {
-            var rootOnDelete = ops[ops.Count - 1].Processor.RootConfig.OnDelete;
+            var rootOnDelete = lastDeleteOp.Processor.RootConfig.OnDelete;
             var ignoreDeletes = rootOnDelete?.IgnoreDeletes == true;
 
-            if (rootPatchOnDelete != null)
+            if (patches is { Count: > 0 })
             {
-                // OnDelete.Patch runs on the existing document as a side-effect.
+                // Load the existing document so OnDelete.Patch can run on it
                 var existingForPatch = existing ?? _database.DocumentsStorage.Get(context, documentId);
                 if (existingForPatch != null)
                 {
-                    var patched = RunPatchOnDelete(context, documentId, existingForPatch.Data,
-                        rootPatchOnDelete, rootDeleteRawData);
+                    var patched = RunPatches(context, documentId, existingForPatch.Data, patches);
 
-                    if (ignoreDeletes && patched != null)
+                    if (ignoreDeletes)
                     {
                         // IgnoreDeletes + Patch = archive pattern: save the patched doc, skip delete
                         _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, patched);
@@ -226,9 +221,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 var embOnDelete = embedOp.Processor.EmbeddedConfig.OnDelete;
                 if (embOnDelete?.Patch != null)
                 {
-                    // OnDelete.Patch runs on the parent document as a side-effect
-                    currentDoc = RunPatchOnDelete(context, documentId, currentDoc,
-                        embOnDelete.Patch, embedOp.RawData);
+                    // OnDelete.Patch goes through the unified patch pipeline
+                    patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                    patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
                 }
                 if (embOnDelete?.IgnoreDeletes == true)
                     continue; // skip the actual removal — item stays in the array
@@ -786,63 +781,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         using var argsBlittable = context.ReadObject(argsDjv, "cdc-patch-args");
 
         using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
-        {
-            var documentInstance = (Patch.BlittableObjectInstance)runner.Translate(context,
-                new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
-
-            using (var result = runner.Run(context, context, "execute", documentId, new object[] { documentInstance, argsBlittable }))
-            {
-                return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Runs a PatchOnDelete script on a document and checks the return value.
-    /// Runs the OnDelete.Patch script as a side-effect before the delete proceeds.
-    /// The delete always happens afterward — to prevent deletion, use OnDelete.IgnoreDeletes.
-    /// Returns the patched document so the caller can use it for subsequent operations
-    /// (e.g., embedded patches that modify parent state before the item is removed).
-    /// </summary>
-    private BlittableJsonReaderObject RunPatchOnDelete(
-        DocumentsOperationContext context, string documentId,
-        BlittableJsonReaderObject document, string patchScript,
-        Dictionary<string, object> rawData)
-    {
-        if (document == null)
-            return null;
-
-        var rowDjv = ConvertRawDataToDjv(rawData);
-
-        var rowsArray = new DynamicJsonArray();
-        rowsArray.Add(new DynamicJsonValue
-        {
-            ["table"] = "__on_delete",
-            ["row"] = rowDjv
-        });
-
-        var funcName = "__cdc_on_delete";
-        var functions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase)
-        {
-            [funcName] = new DeclaredFunction
-            {
-                Name = funcName,
-                FunctionText = $"function {funcName}($row) {{\n{patchScript}\n}}",
-                Type = DeclaredFunction.FunctionType.JavaScript,
-            }
-        };
-
-        var dispatchScript = $"""
-            var $row = $rows[0].row;
-            {funcName}.call(this, $row);
-            """;
-
-        var patchRequest = new PatchRequest(dispatchScript, PatchRequestType.Patch, functions);
-
-        var argsDjv = new DynamicJsonValue { ["rows"] = rowsArray };
-        using var argsBlittable = context.ReadObject(argsDjv, "cdc-patchondelete-args");
-
-        using (context.DocumentDatabase.Scripts.GetScriptRunner(patchRequest, readOnly: false, out var runner))
         {
             var documentInstance = (Patch.BlittableObjectInstance)runner.Translate(context,
                 new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();

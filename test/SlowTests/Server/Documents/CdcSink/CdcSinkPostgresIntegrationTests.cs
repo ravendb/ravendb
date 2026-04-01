@@ -2855,8 +2855,8 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
-            "del() is not available in the CDC patch scripting context. " +
-            "Conditional delete requires merging OnDelete.Patch into the combined dispatch pipeline.")]
+            "del() is not available in the CDC patch script runner. Conditional delete " +
+            "via del(id(this)) requires exposing document operations to the script context.")]
         public async Task OnDelete_Root_ConditionalDelete()
         {
             // IgnoreDeletes + Patch with conditional del(): only delete sent orders

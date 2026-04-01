@@ -66,14 +66,15 @@ public class CdcSinkDocumentProcessor
             if (table.Patch != null)
                 tableScripts.TryAdd(table.SourceTableName, table.Patch);
 
-            // OnDelete.Patch scripts run separately via RunPatchOnDelete as a
-            // side-effect before the delete proceeds. They are not part of the
-            // combined dispatch.
+            if (table.OnDelete?.Patch != null)
+                tableScripts.TryAdd(OnDeleteKey(table.SourceTableName), table.OnDelete.Patch);
 
             CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
             {
                 if (e.Patch != null)
                     tableScripts.TryAdd(e.SourceTableName, e.Patch);
+                if (e.OnDelete?.Patch != null)
+                    tableScripts.TryAdd(OnDeleteKey(e.SourceTableName), e.OnDelete.Patch);
             });
         }
 
@@ -294,6 +295,12 @@ public class CdcSinkDocumentProcessor
             Operation = row.Operation,
         };
     }
+
+    /// <summary>
+    /// Dispatch key for OnDelete.Patch scripts in the combined patch request,
+    /// distinct from the regular Patch key for the same table.
+    /// </summary>
+    internal static string OnDeleteKey(string tableName) => tableName + "__on_delete";
 
     private static string MakeKey(string schema, string tableName)
     {
