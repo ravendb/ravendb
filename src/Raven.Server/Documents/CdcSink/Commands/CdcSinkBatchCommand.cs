@@ -136,22 +136,58 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 }
                 case CdcSinkDocumentOpType.Delete:
                 {
-                    currentDoc = null;
-                    pendingEmbeds?.Clear();
-                    patches?.Clear();
-                    lastPutOp = null;
-                    needsDelete = true;
+                    var patchOnDelete = op.Processor.RootConfig.PatchOnDelete;
+                    if (patchOnDelete != null)
+                    {
+                        // PatchOnDelete: instead of deleting, run the patch on the existing document.
+                        // This enables archive/soft-delete patterns where the document is marked
+                        // rather than removed (e.g., setting an Archived flag).
+                        if (currentDoc == null)
+                        {
+                            // No current doc in this batch — load from storage
+                            var existingForPatch = _database.DocumentsStorage.Get(context, documentId);
+                            if (existingForPatch != null)
+                                currentDoc = existingForPatch.Data;
+                        }
+
+                        if (currentDoc != null)
+                        {
+                            patches ??= new List<(string, Dictionary<string, object>, string)>();
+                            patches.Add((CdcSinkDocumentProcessor.PatchOnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, patchOnDelete));
+                            needsDelete = false;
+                        }
+                        // else: document doesn't exist, nothing to archive
+                    }
+                    else
+                    {
+                        currentDoc = null;
+                        pendingEmbeds?.Clear();
+                        patches?.Clear();
+                        lastPutOp = null;
+                        needsDelete = true;
+                    }
                     break;
                 }
                 case CdcSinkDocumentOpType.EmbeddedModify:
                 {
                     needsDelete = false;
-                    pendingEmbeds ??= new List<CdcSinkDocumentOp>();
-                    pendingEmbeds.Add(op);
-                    if (op.Processor.EmbeddedConfig.Patch != null)
+
+                    if (op.Operation == CdcSinkOperation.Delete && op.Processor.EmbeddedConfig.PatchOnDelete != null)
                     {
+                        // PatchOnDelete on embedded: run the patch instead of removing the item.
+                        // Don't add to pendingEmbeds so the item stays in the array/map/value.
                         patches ??= new List<(string, Dictionary<string, object>, string)>();
-                        patches.Add((op.Processor.EmbeddedConfig.SourceTableName, op.RawData, op.Processor.EmbeddedConfig.Patch));
+                        patches.Add((CdcSinkDocumentProcessor.PatchOnDeleteKey(op.Processor.EmbeddedConfig.SourceTableName), op.RawData, op.Processor.EmbeddedConfig.PatchOnDelete));
+                    }
+                    else
+                    {
+                        pendingEmbeds ??= new List<CdcSinkDocumentOp>();
+                        pendingEmbeds.Add(op);
+                        if (op.Processor.EmbeddedConfig.Patch != null)
+                        {
+                            patches ??= new List<(string, Dictionary<string, object>, string)>();
+                            patches.Add((op.Processor.EmbeddedConfig.SourceTableName, op.RawData, op.Processor.EmbeddedConfig.Patch));
+                        }
                     }
                     break;
                 }

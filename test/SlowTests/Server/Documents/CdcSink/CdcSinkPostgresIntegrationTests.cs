@@ -2263,6 +2263,189 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal("Photos/2/thumb", attachments[0].Name);
             }
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchOnDelete_RootTable_ArchivePattern()
+        {
+            // Instead of deleting the document, PatchOnDelete marks it as archived.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                );
+                ALTER TABLE orders REPLICA IDENTITY FULL;
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-archive-root",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        PatchOnDelete = "this.Archived = true; this.ArchivedAt = new Date().toISOString();"
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            // Delete order 1 in PostgreSQL
+            ExecuteNpgSql(connectionString, "DELETE FROM orders WHERE id = 1;");
+
+            // Document should NOT be deleted — it should be archived
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<ArchivedOrder>("Orders/1");
+                return order?.Archived;
+            }, true, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order1 = await session.LoadAsync<ArchivedOrder>("Orders/1");
+                Assert.True(order1.Archived);
+                Assert.NotNull(order1.ArchivedAt);
+                Assert.Equal("Alice", order1.CustomerName);
+
+                // Order 2 should be unaffected
+                var order2 = await session.LoadAsync<ArchivedOrder>("Orders/2");
+                Assert.False(order2.Archived);
+                Assert.Equal("Bob", order2.CustomerName);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchOnDelete_EmbeddedTable()
+        {
+            // When an embedded row is deleted, PatchOnDelete runs on the parent doc
+            // instead of removing the item from the array.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (
+                    id SERIAL PRIMARY KEY,
+                    customer_name VARCHAR(200) NOT NULL
+                );
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-patchondelete-embedded",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" }
+                                },
+                                // Instead of removing the line, record the deletion on the parent
+                                PatchOnDelete = "this.LastDeletedLine = $row.line_num; this.DeleteCount = (this.DeleteCount || 0) + 1;"
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            // Delete one embedded row
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+
+            // The line should NOT be removed — PatchOnDelete runs instead
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                return order?.DeleteCount;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                // Line count should still be 2 — the item was NOT removed
+                Assert.Equal(2, order.Lines?.Count ?? 0);
+                Assert.Equal(2, order.LastDeletedLine);
+                Assert.Equal(1, order.DeleteCount);
+            }
+        }
+
+        private class ArchivedOrder
+        {
+            public string Id { get; set; }
+            public string CustomerName { get; set; }
+            public bool Archived { get; set; }
+            public string ArchivedAt { get; set; }
+        }
+
+        private class OrderWithDeleteTracking
+        {
+            public string Id { get; set; }
+            public string CustomerName { get; set; }
+            public List<OrderLine> Lines { get; set; }
+            public int LastDeletedLine { get; set; }
+            public int DeleteCount { get; set; }
+        }
+
         private class Product
         {
             public string Id { get; set; }

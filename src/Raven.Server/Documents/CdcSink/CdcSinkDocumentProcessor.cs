@@ -66,6 +66,9 @@ public class CdcSinkDocumentProcessor
             if (table.Patch != null)
                 tableScripts.TryAdd(table.SourceTableName, table.Patch);
 
+            if (table.PatchOnDelete != null)
+                tableScripts.TryAdd(PatchOnDeleteKey(table.SourceTableName), table.PatchOnDelete);
+
             CollectEmbeddedPatches(table.EmbeddedTables, tableScripts);
         }
 
@@ -110,6 +113,8 @@ public class CdcSinkDocumentProcessor
             {
                 if (e.Patch != null)
                     scripts.TryAdd(e.SourceTableName, e.Patch);
+                if (e.PatchOnDelete != null)
+                    scripts.TryAdd(PatchOnDeleteKey(e.SourceTableName), e.PatchOnDelete);
                 CollectEmbeddedPatches(e.EmbeddedTables, scripts);
             }
         }
@@ -289,6 +294,12 @@ public class CdcSinkDocumentProcessor
             Operation = row.Operation,
         };
     }
+
+    /// <summary>
+    /// Creates a dispatch key for PatchOnDelete scripts, distinct from the regular Patch key.
+    /// Used in the combined patch request to dispatch to different functions for upsert vs delete.
+    /// </summary>
+    internal static string PatchOnDeleteKey(string tableName) => tableName + "__on_delete";
 
     private static string MakeKey(string schema, string tableName)
     {

@@ -223,9 +223,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             // Check current REPLICA IDENTITY: 'd' = default (PK), 'f' = full, 'i' = index, 'n' = nothing
             char replicaIdentity;
-            await using (var cmd = new NpgsqlCommand(
-                "SELECT relreplident FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid " +
-                "WHERE n.nspname = @schema AND c.relname = @table", conn))
+            await using (var cmd = new NpgsqlCommand("""
+                SELECT relreplident
+                FROM pg_class c
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE n.nspname = @schema AND c.relname = @table
+                """, conn))
             {
                 cmd.Parameters.AddWithValue("schema", schema);
                 cmd.Parameters.AddWithValue("table", table);

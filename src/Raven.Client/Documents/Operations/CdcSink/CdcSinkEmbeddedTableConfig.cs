@@ -57,6 +57,19 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     public string Patch { get; set; }
 
     /// <summary>
+    /// Optional JavaScript patch that runs on the PARENT document when a DELETE event is
+    /// received for this embedded table, instead of removing the embedded item. This allows
+    /// implementing soft-delete patterns for embedded data (e.g., marking an item as inactive
+    /// rather than removing it from the array).
+    ///
+    /// When set, the embedded item is NOT removed from the parent's array/map/value.
+    /// Instead, the patch runs with this = parent document, $row = the DELETE event data.
+    ///
+    /// When PatchOnDelete is null (default), DELETE events remove the embedded item normally.
+    /// </summary>
+    public string PatchOnDelete { get; set; }
+
+    /// <summary>
     /// Whether primary key matching and map key comparison are case-sensitive.
     /// When false (default), string PK values and map keys are compared using ordinal case-insensitive comparison.
     /// When true, comparison is ordinal case-sensitive.
@@ -96,6 +109,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         JoinColumns = config.JoinColumns;
         Type = config.Type;
         Patch = config.Patch;
+        PatchOnDelete = config.PatchOnDelete;
         CaseSensitiveKeys = config.CaseSensitiveKeys;
         IgnoreDeletes = config.IgnoreDeletes;
         EmbeddedTables = config.EmbeddedTables;
@@ -114,6 +128,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
             [nameof(Type)] = Type.ToString(),
             [nameof(Patch)] = Patch,
+            [nameof(PatchOnDelete)] = PatchOnDelete,
             [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
             [nameof(IgnoreDeletes)] = IgnoreDeletes,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
