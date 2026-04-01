@@ -9,13 +9,22 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
+    /// <summary>
+    /// Operation to create or update a server-wide connection string.
+    /// The connection string will be automatically propagated to all databases in the cluster
+    /// (unless explicitly excluded via <see cref="ServerWideConnectionString.ExcludedDatabases"/>).
+    /// </summary>
     public sealed class PutServerWideConnectionStringOperation : IServerOperation<PutServerWideConnectionStringResult>
     {
         private readonly ServerWideConnectionString _connectionString;
 
+        /// <inheritdoc cref="PutServerWideConnectionStringOperation"/>
+        /// <param name="connectionString">The server-wide connection string to create or update.</param>
         public PutServerWideConnectionStringOperation(ServerWideConnectionString connectionString)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            if (connectionString.ConnectionString == null)
+                throw new ArgumentNullException(nameof(connectionString), $"{nameof(ServerWideConnectionString.ConnectionString)} must not be null.");
         }
 
         public RavenCommand<PutServerWideConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -64,8 +73,14 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         }
     }
 
+    /// <summary>
+    /// The result of a <see cref="PutServerWideConnectionStringOperation"/>.
+    /// </summary>
     public sealed class PutServerWideConnectionStringResult
     {
+        /// <summary>
+        /// The Raft command index assigned to this operation. Can be used to wait for the operation to be applied across the cluster.
+        /// </summary>
         public long RaftCommandIndex { get; set; }
     }
 }

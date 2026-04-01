@@ -5,23 +5,35 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Http;
-using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
+    /// <summary>
+    /// Operation to retrieve server-wide connection strings from the cluster.
+    /// Can retrieve all server-wide connection strings or filter by name and/or type.
+    /// </summary>
     public sealed class GetServerWideConnectionStringsOperation : IServerOperation<GetServerWideConnectionStringsResult>
     {
         private readonly string _connectionStringName;
         private readonly ConnectionStringType _type;
 
+        /// <inheritdoc cref="GetServerWideConnectionStringsOperation"/>
+        /// <param name="connectionStringName">The name of a specific connection string to retrieve.</param>
+        /// <param name="type">The type of connection strings to retrieve.</param>
         public GetServerWideConnectionStringsOperation(string connectionStringName, ConnectionStringType type)
         {
+            if (string.IsNullOrWhiteSpace(connectionStringName))
+                throw new ArgumentException("Connection string name must not be null or empty.", nameof(connectionStringName));
+
             _connectionStringName = connectionStringName;
             _type = type;
         }
 
+        /// <summary>
+        /// Retrieves all server-wide connection strings of all types.
+        /// </summary>
         public GetServerWideConnectionStringsOperation()
         {
             // get them all
@@ -74,8 +86,14 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         }
     }
 
+    /// <summary>
+    /// The result of a <see cref="GetServerWideConnectionStringsOperation"/>.
+    /// </summary>
     public sealed class GetServerWideConnectionStringsResult : IDynamicJson
     {
+        /// <summary>
+        /// The list of server-wide connection strings matching the query criteria.
+        /// </summary>
         public List<ServerWideConnectionString> Results { get; set; } = new List<ServerWideConnectionString>();
 
         public DynamicJsonValue ToJson()
