@@ -2735,6 +2735,457 @@ namespace SlowTests.Server.Documents.CdcSink
             public decimal Amount { get; set; }
         }
 
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task OnDelete_Root_PatchOnly_AuditThenDelete()
+        {
+            // OnDelete.Patch without IgnoreDeletes: patch runs, then document is deleted
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                ALTER TABLE orders REPLICA IDENTITY FULL;
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-root-patch-only",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            Patch = "this.DeleteCount = (this.DeleteCount || 0) + 1;"
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            ExecuteNpgSql(connectionString, "DELETE FROM orders WHERE id = 1;");
+
+            // Document should be deleted despite the patch running
+            var deleted = await WaitForDocumentDeletionAsync(store, "Orders/1", timeoutMs: 60_000);
+            Assert.True(deleted, "Document Orders/1 should be deleted (Patch runs but IgnoreDeletes is false)");
+
+            // Order 2 should still exist
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                Assert.NotNull(order2);
+                Assert.Equal("Bob", order2.CustomerName);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task OnDelete_Root_IgnoreDeletesOnly_SilentIgnore()
+        {
+            // OnDelete.IgnoreDeletes without Patch: DELETE event is silently discarded
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                ALTER TABLE orders REPLICA IDENTITY FULL;
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-root-ignore-only",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            IgnoreDeletes = true
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            var doc = await WaitForDocumentAsync<Order>(store, "Orders/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+
+            // Delete in PostgreSQL, then insert a new row to force CDC progress
+            ExecuteNpgSql(connectionString, "DELETE FROM orders WHERE id = 1;");
+            ExecuteNpgSql(connectionString, "INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');");
+
+            // Wait for the insert to arrive (proves CDC is processing)
+            var doc2 = await WaitForDocumentAsync<Order>(store, "Orders/2", timeoutMs: 60_000);
+            Assert.NotNull(doc2);
+
+            // Order 1 should still exist — delete was silently ignored
+            using (var session = store.OpenAsyncSession())
+            {
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                Assert.NotNull(order1);
+                Assert.Equal("Alice", order1.CustomerName);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
+            "del() is not available in the CDC patch scripting context. " +
+            "Conditional delete requires merging OnDelete.Patch into the combined dispatch pipeline.")]
+        public async Task OnDelete_Root_ConditionalDelete()
+        {
+            // IgnoreDeletes + Patch with conditional del(): only delete sent orders
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL, status VARCHAR(50) NOT NULL);
+                ALTER TABLE orders REPLICA IDENTITY FULL;
+                INSERT INTO orders (id, customer_name, status) VALUES (1, 'Alice', 'Sent');
+                INSERT INTO orders (id, customer_name, status) VALUES (2, 'Bob', 'Pending');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-root-conditional",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" },
+                            { "status", "Status" }
+                        },
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            IgnoreDeletes = true,
+                            Patch = @"
+                                if (this.Status === 'Sent') {
+                                    del(id(this));
+                                }
+                                // else: keep the document (IgnoreDeletes applies)"
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            // Delete both orders in PostgreSQL
+            ExecuteNpgSql(connectionString, """
+                BEGIN;
+                DELETE FROM orders WHERE id = 1;
+                DELETE FROM orders WHERE id = 2;
+                COMMIT;
+                """);
+
+            // Wait for the sent order to be deleted
+            var deleted = await WaitForDocumentDeletionAsync(store, "Orders/1", timeoutMs: 60_000);
+            Assert.True(deleted, "Sent order (Orders/1) should be deleted by conditional del()");
+
+            // Pending order should still exist — IgnoreDeletes kept it
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<OrderWithStatus>("Orders/2");
+                Assert.NotNull(order2);
+                Assert.Equal("Pending", order2.Status);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task OnDelete_Embedded_IgnoreDeletesOnly()
+        {
+            // Embedded OnDelete.IgnoreDeletes without Patch: item stays in array
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-emb-ignore-only",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" }
+                                },
+                                OnDelete = new CdcSinkOnDeleteConfig
+                                {
+                                    IgnoreDeletes = true
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            // Delete a line, then insert a new one to prove CDC is advancing
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 1;");
+            ExecuteNpgSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 3, 'Cherries');");
+
+            // Wait for the new item to arrive
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 3, timeout: 60_000);
+
+            // All 3 lines should be present — the delete was ignored
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<Order>("Orders/1");
+                Assert.Equal(3, order.Lines.Count);
+                var products = order.Lines.Select(l => l.Product).OrderBy(p => p).ToList();
+                Assert.Contains("Apples", products);
+                Assert.Contains("Bananas", products);
+                Assert.Contains("Cherries", products);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task OnDelete_Embedded_PatchAndIgnoreDeletes_Archive()
+        {
+            // Embedded IgnoreDeletes + Patch: patch runs on parent, item stays in array
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-emb-archive",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" }
+                                },
+                                OnDelete = new CdcSinkOnDeleteConfig
+                                {
+                                    IgnoreDeletes = true,
+                                    Patch = "this.LastArchivedLine = $row.line_num; this.ArchiveCount = (this.ArchiveCount || 0) + 1;"
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.Lines?.Count ?? 0;
+            }, 2, timeout: 60_000);
+
+            ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+
+            // Wait for the patch side-effect
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                return order?.ArchiveCount;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
+                // Item stays — IgnoreDeletes prevented removal
+                Assert.Equal(2, order.Lines.Count);
+                // Patch ran — audit fields set
+                Assert.Equal(2, order.LastArchivedLine);
+                Assert.Equal(1, order.ArchiveCount);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task OnDelete_Root_InsertThenDeleteInSameTransaction()
+        {
+            // INSERT then DELETE with OnDelete.Patch in same transaction
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE items (id INT PRIMARY KEY, name VARCHAR(200) NOT NULL);
+                ALTER TABLE items REPLICA IDENTITY FULL;
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-insert-delete-patch",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        },
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            Patch = "this.WasDeleted = true;"
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-insert-delete-patch");
+
+            // In a single transaction: insert then immediately delete
+            ExecuteNpgSql(connectionString, """
+                BEGIN;
+                INSERT INTO items (id, name) VALUES (1, 'Ephemeral');
+                DELETE FROM items WHERE id = 1;
+                COMMIT;
+                """);
+
+            // The document should be created by the INSERT, then deleted.
+            // The OnDelete.Patch runs but the delete still proceeds.
+            // Insert another item to prove CDC advanced past the transaction.
+            ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'Permanent');");
+            var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
+            Assert.NotNull(doc2);
+
+            // Item 1 should be deleted (Patch ran but IgnoreDeletes is false)
+            using (var session = store.OpenAsyncSession())
+            {
+                var item1 = await session.LoadAsync<Item>("Items/1");
+                Assert.Null(item1);
+            }
+        }
+
+        private class OrderWithStatus
+        {
+            public string Id { get; set; }
+            public string CustomerName { get; set; }
+            public string Status { get; set; }
+        }
+
         private class ArchivedOrder
         {
             public string Id { get; set; }
@@ -2750,6 +3201,8 @@ namespace SlowTests.Server.Documents.CdcSink
             public List<OrderLine> Lines { get; set; }
             public int LastDeletedLine { get; set; }
             public int DeleteCount { get; set; }
+            public int LastArchivedLine { get; set; }
+            public int ArchiveCount { get; set; }
         }
 
         private class Product
