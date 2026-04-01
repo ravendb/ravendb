@@ -489,6 +489,7 @@ export class ManageServerStubs {
         return [
             {
                 Date: "2024-11-05 10:48:58.9905",
+                NodeTag: "A",
                 Level: "INFO",
                 ThreadID: "3",
                 Resource: "LONG MESSAGE",
@@ -502,6 +503,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:48:59.0080",
+                NodeTag: "A",
                 Level: "DEBUG",
                 ThreadID: "24",
                 Resource: "Server",
@@ -514,6 +516,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:48:59.0575",
+                NodeTag: "A",
                 Level: "WARN",
                 ThreadID: "24",
                 Resource: "Server",
@@ -526,6 +529,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:48:59.4414",
+                NodeTag: "B",
                 Level: "ERROR",
                 ThreadID: "11",
                 Resource: "Sparrow",
@@ -539,6 +543,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:49:04.4572",
+                NodeTag: "B",
                 Level: "FATAL",
                 ThreadID: "11",
                 Resource: "Sparrow",
@@ -552,6 +557,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:49:09.4670",
+                NodeTag: "C",
                 Level: "OFF",
                 ThreadID: "11",
                 Resource: "Sparrow",
@@ -565,6 +571,7 @@ export class ManageServerStubs {
             },
             {
                 Date: "2024-11-05 10:49:11.4588",
+                NodeTag: "C",
                 Level: "TRACE",
                 ThreadID: "24",
                 Resource: "Server",
