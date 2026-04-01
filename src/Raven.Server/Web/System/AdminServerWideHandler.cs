@@ -233,7 +233,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/configuration/server-wide/connection-strings", "GET", AuthorizationStatus.ClusterAdmin)]
         public async Task GetServerWideConnectionStrings()
         {
-            var name = GetStringQueryString("name", required: false);
+            var name = GetStringQueryString("connectionStringName", required: false);
             var typeAsString = GetStringQueryString("type", required: false);
 
             ConnectionStringType? type = null;
