@@ -266,7 +266,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
     {
-        parentDoc.Modifications = new DynamicJsonValue(parentDoc);
+        parentDoc.Modifications ??= new DynamicJsonValue(parentDoc);
         var target = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot);
         var config = op.Processor.EmbeddedConfig;
 

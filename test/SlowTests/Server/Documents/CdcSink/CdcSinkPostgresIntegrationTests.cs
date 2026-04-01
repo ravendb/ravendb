@@ -801,5 +801,818 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.DoesNotContain("Bananas", products);
             }
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedArray_Update()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-embedded-update",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" },
+                                    { "quantity", "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 2, timeout: 60_000);
+
+            // Update an embedded row
+            ExecuteNpgSql(connectionString, "UPDATE order_lines SET quantity = 99, product = 'Bananas (Updated)' WHERE order_id = 1 AND line_num = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return null;
+                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var line = lines.FirstOrDefault(l => (int)l.LineNum == 2);
+                return (string)line?.Product;
+            }, "Bananas (Updated)", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                Assert.Equal(2, lines.Count);
+                var updatedLine = lines.First(l => (int)l.LineNum == 2);
+                Assert.Equal(99, (int)updatedLine.Quantity);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ThreeWayNesting()
+        {
+            // Company → Department → Employee (3 levels deep)
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE companies (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL);
+                CREATE TABLE departments (
+                    company_id INT NOT NULL REFERENCES companies(id),
+                    dept_id INT NOT NULL,
+                    dept_name VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (company_id, dept_id)
+                );
+                CREATE TABLE employees (
+                    company_id INT NOT NULL,
+                    dept_id INT NOT NULL,
+                    emp_id INT NOT NULL,
+                    emp_name VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (company_id, dept_id, emp_id),
+                    FOREIGN KEY (company_id, dept_id) REFERENCES departments(company_id, dept_id)
+                );
+                INSERT INTO companies (id, name) VALUES (1, 'Acme Corp');
+                INSERT INTO departments (company_id, dept_id, dept_name) VALUES (1, 10, 'Engineering');
+                INSERT INTO departments (company_id, dept_id, dept_name) VALUES (1, 20, 'Sales');
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 1, 'Alice');
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 2, 'Bob');
+                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 20, 3, 'Charlie');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-3-way-nesting",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Companies",
+                        SourceTableSchema = "public",
+                        SourceTableName = "companies",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "departments",
+                                PropertyName = "Departments",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "company_id" },
+                                PrimaryKeyColumns = new List<string> { "dept_id" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "dept_id", "DeptId" },
+                                    { "dept_name", "DeptName" }
+                                },
+                                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                                {
+                                    new CdcSinkEmbeddedTableConfig
+                                    {
+                                        SourceTableSchema = "public",
+                                        SourceTableName = "employees",
+                                        PropertyName = "Employees",
+                                        Type = CdcSinkRelationType.Array,
+                                        JoinColumns = new List<string> { "dept_id" },
+                                        PrimaryKeyColumns = new List<string> { "emp_id" },
+                                        ColumnsMapping = new Dictionary<string, string>
+                                        {
+                                            { "emp_id", "EmpId" },
+                                            { "emp_name", "EmpName" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Companies/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("Acme Corp", (string)doc.Name);
+
+            // Wait for departments to be populated
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var company = await session.LoadAsync<dynamic>("Companies/1");
+                if (company?.Departments == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)company.Departments);
+            }, 2, timeout: 60_000);
+
+            // Verify the nested structure
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<dynamic>("Companies/1");
+                var depts = ((IEnumerable<dynamic>)company.Departments).ToList();
+                Assert.Equal(2, depts.Count);
+
+                var engineering = depts.First(d => (string)d.DeptName == "Engineering");
+                Assert.NotNull(engineering);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task MultipleUpdates_SameRow_SameTransaction()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE counters (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, value INT NOT NULL);
+                INSERT INTO counters (id, name, value) VALUES (1, 'hits', 0);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-multi-update",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Counters",
+                        SourceTableSchema = "public",
+                        SourceTableName = "counters",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "value", "Value" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Counters/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+
+            // Multiple updates to the same row in a single transaction
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                UPDATE counters SET value = 1 WHERE id = 1;
+                UPDATE counters SET value = 2 WHERE id = 1;
+                UPDATE counters SET value = 3 WHERE id = 1;
+                COMMIT;");
+
+            // The last update should win
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var counter = await session.LoadAsync<dynamic>("Counters/1");
+                return (int?)counter?.Value;
+            }, 3, timeout: 60_000);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Transaction_InsertUpdateDeleteInsert_SameRow()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE items (id INT PRIMARY KEY, name VARCHAR(200) NOT NULL);
+                ALTER TABLE items REPLICA IDENTITY FULL;");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-insert-delete-insert",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load to complete (empty table — just wait for process to start)
+            await Task.Delay(3000);
+
+            // In a single transaction: insert, update, delete, then re-insert the same row
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                INSERT INTO items (id, name) VALUES (1, 'First');
+                UPDATE items SET name = 'Second' WHERE id = 1;
+                DELETE FROM items WHERE id = 1;
+                INSERT INTO items (id, name) VALUES (1, 'Final');
+                COMMIT;");
+
+            // The final state should be the last insert
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var item = await session.LoadAsync<dynamic>("Items/1");
+                return (string)item?.Name;
+            }, "Final", timeout: 60_000);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Transaction_MultipleDistinctRootDocuments()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE products (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, price NUMERIC(10,2) NOT NULL);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-multi-root",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Products",
+                        SourceTableSchema = "public",
+                        SourceTableName = "products",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "price", "Price" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await Task.Delay(3000);
+
+            // Single transaction creates multiple distinct documents
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
+                INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 19.99);
+                INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);
+                COMMIT;");
+
+            var count = await WaitForDocumentCountAsync(store, "Products", expectedCount: 3, timeoutMs: 60_000);
+            Assert.Equal(3, count);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var p1 = await session.LoadAsync<dynamic>("Products/1");
+                Assert.Equal("Widget", (string)p1.Name);
+                var p3 = await session.LoadAsync<dynamic>("Products/3");
+                Assert.Equal("Doohickey", (string)p3.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Transaction_MultipleRootAndEmbedded()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-root-and-embedded",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await Task.Delay(3000);
+
+            // Single transaction: create parent + embedded children for two different orders
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (2, 1, 'Cherries');
+                COMMIT;");
+
+            // Wait for both orders
+            var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            // Wait for embedded lines on order 1
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 2, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<dynamic>("Orders/2");
+                Assert.Equal("Bob", (string)order2.CustomerName);
+                var lines2 = ((IEnumerable<dynamic>)order2.Lines).ToList();
+                Assert.Single(lines2);
+                Assert.Equal("Cherries", (string)lines2[0].Product);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PropertyRetention_OnUpdate()
+        {
+            // Verify that fields set directly in RavenDB are preserved when a CDC update arrives
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE customers (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, email VARCHAR(200));
+                INSERT INTO customers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-property-retention",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Customers",
+                        SourceTableSchema = "public",
+                        SourceTableName = "customers",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "email", "Email" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Customers/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+
+            // Add a RavenDB-only field directly
+            using (var session = store.OpenAsyncSession())
+            {
+                var customer = await session.LoadAsync<dynamic>("Customers/1");
+                customer.InternalNotes = "VIP customer";
+                await session.SaveChangesAsync();
+            }
+
+            // Now update the row in PostgreSQL
+            ExecuteNpgSql(connectionString, "UPDATE customers SET name = 'Alice Updated' WHERE id = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var customer = await session.LoadAsync<dynamic>("Customers/1");
+                return (string)customer?.Name;
+            }, "Alice Updated", timeout: 60_000);
+
+            // Verify the RavenDB-only field is preserved
+            using (var session = store.OpenAsyncSession())
+            {
+                var customer = await session.LoadAsync<dynamic>("Customers/1");
+                Assert.Equal("Alice Updated", (string)customer.Name);
+                Assert.Equal("VIP customer", (string)customer.InternalNotes);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task UpdateParentAndEmbeddedTogether()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    line_num INT NOT NULL,
+                    product VARCHAR(200) NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-update-parent-embedded",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer_name", "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "product", "Product" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 1, timeout: 60_000);
+
+            // Update both parent and embedded in the same transaction
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                UPDATE orders SET customer_name = 'Alice Updated' WHERE id = 1;
+                UPDATE order_lines SET product = 'Oranges' WHERE order_id = 1 AND line_num = 1;
+                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Grapes');
+                COMMIT;");
+
+            // Wait for both changes
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                return (string)order?.CustomerName;
+            }, "Alice Updated", timeout: 60_000);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                if (order?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+            }, 2, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                Assert.Contains("Oranges", products);
+                Assert.Contains("Grapes", products);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task MetadataExpires_ViaPatch()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE events (id SERIAL PRIMARY KEY, title VARCHAR(200) NOT NULL, expires_at TIMESTAMP);
+                INSERT INTO events (id, title, expires_at) VALUES (1, 'Flash Sale', '2099-12-31 23:59:59');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-expires-patch",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Events",
+                        SourceTableSchema = "public",
+                        SourceTableName = "events",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "title", "Title" }
+                        },
+                        Patch = @"
+                            if ($row.expires_at) {
+                                this['@metadata'] = this['@metadata'] || {};
+                                this['@metadata']['@expires'] = $row.expires_at;
+                            }"
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Events/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("Flash Sale", (string)doc.Title);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<dynamic>("Events/1"));
+                Assert.True(metadata.ContainsKey("@expires"), "Document should have @expires metadata set by the patch script");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task BinaryColumn_RootAttachment()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE files (id SERIAL PRIMARY KEY, name VARCHAR(200) NOT NULL, content BYTEA);
+                INSERT INTO files (id, name, content) VALUES (1, 'readme.txt', decode('48656C6C6F20576F726C64', 'hex'));");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-binary-attachment",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Files",
+                        SourceTableSchema = "public",
+                        SourceTableName = "files",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        },
+                        AttachmentNameMapping = new Dictionary<string, string>
+                        {
+                            { "content", "file" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Files/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("readme.txt", (string)doc.Name);
+
+            // Verify attachment exists
+            using (var session = store.OpenAsyncSession())
+            {
+                var file = await session.LoadAsync<object>("Files/1");
+                var attachments = session.Advanced.Attachments.GetNames(file);
+                Assert.True(attachments.Length > 0, "Expected at least one attachment (binary column mapped to 'file')");
+                Assert.Contains("file", attachments.Select(a => a.Name));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchScript_CombinedRootAndEmbedded()
+        {
+            // Root patch computes a derived field; embedded patch runs on child rows
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE invoices (id SERIAL PRIMARY KEY, customer VARCHAR(200) NOT NULL, discount_pct NUMERIC(5,2) DEFAULT 0);
+                CREATE TABLE invoice_lines (
+                    invoice_id INT NOT NULL REFERENCES invoices(id),
+                    line_num INT NOT NULL,
+                    description VARCHAR(200) NOT NULL,
+                    amount NUMERIC(10,2) NOT NULL,
+                    PRIMARY KEY (invoice_id, line_num)
+                );
+                INSERT INTO invoices (id, customer, discount_pct) VALUES (1, 'Big Corp', 10.00);
+                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
+                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-combined-patch",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Invoices",
+                        SourceTableSchema = "public",
+                        SourceTableName = "invoices",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer", "Customer" }
+                        },
+                        Patch = "this.DiscountPct = $row.discount_pct;",
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "invoice_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "invoice_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "description", "Description" }
+                                },
+                                Patch = "this.LineAmount = $row.amount;"
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<dynamic>(store, "Invoices/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("Big Corp", (string)doc.Customer);
+            Assert.Equal(10.00, (double)doc.DiscountPct, 2);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var inv = await session.LoadAsync<dynamic>("Invoices/1");
+                if (inv?.Lines == null) return 0;
+                return (int)Enumerable.Count((IEnumerable<dynamic>)inv.Lines);
+            }, 2, timeout: 60_000);
+
+            // Embedded patch sets this.LineAmount on the root document (this = the document).
+            // The last embedded row's patch wins, so LineAmount = 200.00 (from line_num=2).
+            using (var session = store.OpenAsyncSession())
+            {
+                var inv = await session.LoadAsync<dynamic>("Invoices/1");
+                Assert.Equal(200.00, (double)inv.LineAmount, 2);
+            }
+        }
     }
 }
