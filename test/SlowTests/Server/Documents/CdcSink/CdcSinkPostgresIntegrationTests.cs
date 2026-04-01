@@ -1346,7 +1346,8 @@ namespace SlowTests.Server.Documents.CdcSink
             }
 
             // Verify documents were created in the same order as the SQL inserts
-            // by comparing their change vectors (etags increase monotonically)
+            // by comparing their change vector etags (monotonically increasing)
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (var session = store.OpenAsyncSession())
             {
                 var p1 = await session.LoadAsync<Product>("Products/1");
@@ -1357,12 +1358,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 var cv2 = session.Advanced.GetChangeVectorFor(p2);
                 var cv3 = session.Advanced.GetChangeVectorFor(p3);
 
-                // Extract etag numbers from change vectors (format: "A:N-...")
-                static long ExtractEtag(string cv) => long.Parse(cv.Split(':')[1].Split('-')[0]);
-
-                var etag1 = ExtractEtag(cv1);
-                var etag2 = ExtractEtag(cv2);
-                var etag3 = ExtractEtag(cv3);
+                var etag1 = Raven.Server.Utils.ChangeVectorUtils.GetEtagById(cv1, db.DbBase64Id);
+                var etag2 = Raven.Server.Utils.ChangeVectorUtils.GetEtagById(cv2, db.DbBase64Id);
+                var etag3 = Raven.Server.Utils.ChangeVectorUtils.GetEtagById(cv3, db.DbBase64Id);
 
                 Assert.True(etag1 < etag2, $"Product/1 etag ({etag1}) should be less than Product/2 etag ({etag2})");
                 Assert.True(etag2 < etag3, $"Product/2 etag ({etag2}) should be less than Product/3 etag ({etag3})");

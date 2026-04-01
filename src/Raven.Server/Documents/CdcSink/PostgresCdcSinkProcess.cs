@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -279,6 +280,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             List<CdcSinkEmbeddedTableConfig> embedded, List<string> parentPkColumns,
             List<CdcSinkEmbeddedTableConfig> result)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+
             if (embedded == null)
                 return;
 
