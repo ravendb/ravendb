@@ -65,14 +65,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         {
             await EnsureCdcEnabled(ct);
             await HandleInitialLoad(ct);
+            _initialLoadTcs.TrySetResult();
             await PollForChanges(ct);
         }
         catch (OperationCanceledException)
         {
-            // Normal shutdown
+            _initialLoadTcs.TrySetCanceled();
         }
         catch (Exception e)
         {
+            _initialLoadTcs.TrySetException(e);
             if (Logger.IsErrorEnabled)
                 Logger.Error($"[{Name}] CDC Sink process failed.", e);
 

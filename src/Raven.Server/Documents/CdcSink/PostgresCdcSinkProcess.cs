@@ -77,14 +77,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             await EnsureReplicationSetup(ct);
             await EnsureReplicaIdentityForEmbeddedTables(ct);
             await HandleInitialLoad(ct);
+            _initialLoadTcs.TrySetResult();
             await StartListening(ct);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException e)
         {
-            // Normal shutdown
+            _initialLoadTcs.TrySetCanceled();
         }
         catch (Exception e)
         {
+            _initialLoadTcs.TrySetException(e);
             if (Logger.IsErrorEnabled)
                 Logger.Error($"[{Name}] CDC Sink process failed.", e);
 

@@ -45,6 +45,25 @@ namespace SlowTests.Server.Documents.CdcSink
             return store.Maintenance.Send(new AddCdcSinkOperation(config));
         }
 
+        /// <summary>
+        /// Waits for the CDC Sink's initial load phase to complete.
+        /// Uses the InitialLoadCompleted TaskCompletionSource on CdcSinkProcess,
+        /// which is created at construction time (no race with process start).
+        /// </summary>
+        private async Task WaitForCdcInitialLoadAsync(IDocumentStore store, string configName, int timeoutMs = 60_000)
+        {
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == configName);
+            if (process == null)
+                throw new InvalidOperationException($"CDC Sink process '{configName}' not found");
+
+            var completed = await Task.WhenAny(process.InitialLoadCompleted, Task.Delay(timeoutMs));
+            if (completed != process.InitialLoadCompleted)
+                throw new TimeoutException($"CDC Sink '{configName}' initial load did not complete within {timeoutMs}ms");
+
+            await process.InitialLoadCompleted; // propagate any exception
+        }
+
         private async Task<T> WaitForDocumentAsync<T>(IDocumentStore store, string docId, int timeoutMs = 30_000)
             where T : class
         {
@@ -1205,8 +1224,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            // Wait for initial load to complete (empty table — just wait for process to start)
-            await Task.Delay(3000);
+            await WaitForCdcInitialLoadAsync(store, "test-insert-delete-insert");
 
             // In a single transaction: insert, update, delete, then re-insert the same row
             ExecuteNpgSql(connectionString, @"
@@ -1259,7 +1277,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
 
             AddCdcSink(store, config);
-            await Task.Delay(3000);
+            await WaitForCdcInitialLoadAsync(store, "test-multi-root");
 
             // Single transaction creates multiple distinct documents
             ExecuteNpgSql(connectionString, @"
@@ -1359,7 +1377,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
 
             AddCdcSink(store, config);
-            await Task.Delay(3000);
+            await WaitForCdcInitialLoadAsync(store, "test-root-and-embedded");
 
             // Single transaction: create parent + embedded children for two different orders
             ExecuteNpgSql(connectionString, @"
@@ -1926,7 +1944,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
 
             AddCdcSink(store, config);
-            await Task.Delay(3000);
+            await WaitForCdcInitialLoadAsync(store, "test-child-before-parent");
 
             // Insert child row FIRST (no parent yet in the CDC stream)
             ExecuteNpgSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");

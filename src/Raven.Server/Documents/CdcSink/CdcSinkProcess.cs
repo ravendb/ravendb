@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Json.Serialization;
@@ -67,6 +68,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     protected CancellationToken CancellationToken => _cts.Token;
 
     public DocumentDatabase Database { get; }
+
+    /// <summary>
+    /// Completed when the initial load phase finishes. Created at construction time
+    /// so tests can await it without racing against the process start.
+    /// </summary>
+    internal Task InitialLoadCompleted => _initialLoadTcs.Task;
+    protected readonly TaskCompletionSource _initialLoadTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public CdcSinkProcessStatistics Statistics { get; }
 
