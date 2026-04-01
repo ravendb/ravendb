@@ -87,6 +87,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     private static void ValidateEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, string parentName, List<string> errors)
     {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
         if (embeddedTables == null)
             return;
 
@@ -294,23 +296,10 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         {
             var schema = table.SourceTableSchema ?? defaultSchema;
             names.Add($"{schema}.{table.SourceTableName}");
-            CollectEmbeddedSourceTableNames(table.EmbeddedTables, defaultSchema, names);
+            ForEachEmbeddedTable(table.EmbeddedTables, e =>
+                names.Add($"{(e.SourceTableSchema ?? defaultSchema)}.{e.SourceTableName}"));
         }
         return names;
-
-        static void CollectEmbeddedSourceTableNames(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<string> names)
-        {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-            if (embedded == null)
-                return;
-
-            foreach (var e in embedded)
-            {
-                var schema = e.SourceTableSchema ?? defaultSchema;
-                names.Add($"{schema}.{e.SourceTableName}");
-                CollectEmbeddedSourceTableNames(e.EmbeddedTables, defaultSchema, names);
-            }
-        }
     }
 
     /// <summary>
@@ -329,27 +318,33 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 TableName = table.SourceTableName,
                 PrimaryKeyColumns = table.PrimaryKeyColumns,
             });
-            CollectEmbeddedTablesFlat(table.EmbeddedTables, defaultSchema, tables);
-        }
-        return tables;
-
-        static void CollectEmbeddedTablesFlat(List<CdcSinkEmbeddedTableConfig> embedded, string defaultSchema, List<TableInfo> tables)
-        {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-
-            if (embedded == null)
-                return;
-
-            foreach (var e in embedded)
-            {
+            ForEachEmbeddedTable(table.EmbeddedTables, e =>
                 tables.Add(new TableInfo
                 {
                     Schema = e.SourceTableSchema ?? defaultSchema,
                     TableName = e.SourceTableName,
                     PrimaryKeyColumns = e.PrimaryKeyColumns,
-                });
-                CollectEmbeddedTablesFlat(e.EmbeddedTables, defaultSchema, tables);
-            }
+                }));
+        }
+        return tables;
+    }
+
+    /// <summary>
+    /// Walks every embedded table in the configuration tree (depth-first, recursive).
+    /// A single traversal with a stack guard — all callers that need to visit embedded
+    /// tables should use this instead of rolling their own recursion.
+    /// </summary>
+    public static void ForEachEmbeddedTable(List<CdcSinkEmbeddedTableConfig> embedded, Action<CdcSinkEmbeddedTableConfig> action)
+    {
+        RuntimeHelpers.EnsureSufficientExecutionStack();
+
+        if (embedded == null)
+            return;
+
+        foreach (var e in embedded)
+        {
+            action(e);
+            ForEachEmbeddedTable(e.EmbeddedTables, action);
         }
     }
 

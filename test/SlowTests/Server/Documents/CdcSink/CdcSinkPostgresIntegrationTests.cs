@@ -2297,7 +2297,13 @@ namespace SlowTests.Server.Documents.CdcSink
                             { "id", "Id" },
                             { "customer_name", "CustomerName" }
                         },
-                        OnDelete = new CdcSinkOnDeleteConfig { Patch = "this.Archived = true; this.ArchivedAt = new Date().toISOString(); return true;" }
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            // IgnoreDeletes prevents the document from being deleted.
+                            // Patch runs to mark it as archived.
+                            IgnoreDeletes = true,
+                            Patch = "this.Archived = true; this.ArchivedAt = new Date().toISOString();"
+                        }
                     }
                 }
             };

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
@@ -208,8 +207,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// </summary>
     private async Task EnsureReplicaIdentityForEmbeddedTables(CancellationToken ct)
     {
-        var embeddedTables = new List<CdcSinkEmbeddedTableConfig>();
-        CollectEmbeddedTablesNeedingReplicaIdentity(Configuration.Tables, embeddedTables);
+        var embeddedTables = CollectEmbeddedTablesNeedingReplicaIdentity(Configuration.Tables);
 
         if (embeddedTables.Count == 0)
             return;
@@ -255,47 +253,28 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    /// <summary>
-    /// Collects embedded tables (recursively) that need a non-default REPLICA IDENTITY —
-    /// i.e., where the join columns are not all covered by the primary key and OnDelete.IgnoreDeletes is not set.
-    /// </summary>
-    private static void CollectEmbeddedTablesNeedingReplicaIdentity(
-        List<CdcSinkTableConfig> rootTables, List<CdcSinkEmbeddedTableConfig> result)
+    private static List<CdcSinkEmbeddedTableConfig> CollectEmbeddedTablesNeedingReplicaIdentity(
+        List<CdcSinkTableConfig> rootTables)
     {
+        var result = new List<CdcSinkEmbeddedTableConfig>();
         foreach (var root in rootTables)
-            CollectFromEmbedded(root.EmbeddedTables, root.PrimaryKeyColumns, result);
-
-        static void CollectFromEmbedded(
-            List<CdcSinkEmbeddedTableConfig> embedded, List<string> parentPkColumns,
-            List<CdcSinkEmbeddedTableConfig> result)
         {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-
-            if (embedded == null)
-                return;
-
-            foreach (var e in embedded)
+            CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
             {
-                if (e.OnDelete?.IgnoreDeletes != true)
+                if (e.OnDelete?.IgnoreDeletes == true)
+                    return;
+
+                foreach (var joinCol in e.JoinColumns)
                 {
-                    // Check if all join columns are in the table's own PK
-                    bool allJoinColumnsInPk = true;
-                    foreach (var joinCol in e.JoinColumns)
+                    if (e.PrimaryKeyColumns.Contains(joinCol) == false)
                     {
-                        if (e.PrimaryKeyColumns.Contains(joinCol) == false)
-                        {
-                            allJoinColumnsInPk = false;
-                            break;
-                        }
-                    }
-
-                    if (allJoinColumnsInPk == false)
                         result.Add(e);
+                        return;
+                    }
                 }
-
-                CollectFromEmbedded(e.EmbeddedTables, e.PrimaryKeyColumns, result);
-            }
+            });
         }
+        return result;
     }
 
     private async Task StartListening(CancellationToken ct)

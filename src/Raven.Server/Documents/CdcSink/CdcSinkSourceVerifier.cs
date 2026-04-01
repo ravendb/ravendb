@@ -208,8 +208,7 @@ public static class CdcSinkSourceVerifier
     private static async Task VerifyReplicaIdentityForEmbeddedTablesAsync(
         DbConnection connection, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
     {
-        var tablesToCheck = new List<CdcSinkEmbeddedTableConfig>();
-        CollectEmbeddedTablesNeedingReplicaCheck(configuration.Tables, tablesToCheck);
+        var tablesToCheck = CollectEmbeddedTablesNeedingReplicaCheck(configuration.Tables);
 
         foreach (var embedded in tablesToCheck)
         {
@@ -232,36 +231,28 @@ public static class CdcSinkSourceVerifier
             }
         }
 
-        static void CollectEmbeddedTablesNeedingReplicaCheck(
-            List<CdcSinkTableConfig> rootTables, List<CdcSinkEmbeddedTableConfig> result)
+        static List<CdcSinkEmbeddedTableConfig> CollectEmbeddedTablesNeedingReplicaCheck(
+            List<CdcSinkTableConfig> rootTables)
         {
+            var result = new List<CdcSinkEmbeddedTableConfig>();
             foreach (var root in rootTables)
-                CollectFromEmbedded(root.EmbeddedTables, result);
-
-            static void CollectFromEmbedded(List<CdcSinkEmbeddedTableConfig> embedded, List<CdcSinkEmbeddedTableConfig> result)
             {
-                RuntimeHelpers.EnsureSufficientExecutionStack();
-                if (embedded == null) return;
-
-                foreach (var e in embedded)
+                CdcSinkConfiguration.ForEachEmbeddedTable(root.EmbeddedTables, e =>
                 {
-                    if (e.OnDelete?.IgnoreDeletes != true)
+                    if (e.OnDelete?.IgnoreDeletes == true)
+                        return;
+
+                    foreach (var joinCol in e.JoinColumns)
                     {
-                        bool allInPk = true;
-                        foreach (var joinCol in e.JoinColumns)
+                        if (e.PrimaryKeyColumns.Contains(joinCol) == false)
                         {
-                            if (e.PrimaryKeyColumns.Contains(joinCol) == false)
-                            {
-                                allInPk = false;
-                                break;
-                            }
-                        }
-                        if (allInPk == false)
                             result.Add(e);
+                            return;
+                        }
                     }
-                    CollectFromEmbedded(e.EmbeddedTables, result);
-                }
+                });
             }
+            return result;
         }
     }
 

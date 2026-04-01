@@ -66,11 +66,15 @@ public class CdcSinkDocumentProcessor
             if (table.Patch != null)
                 tableScripts.TryAdd(table.SourceTableName, table.Patch);
 
-            // PatchOnDelete scripts are NOT registered in the combined dispatch —
-            // they run separately via RunPatchOnDelete, which needs to check the
-            // return value to decide whether to cancel the delete.
+            // OnDelete.Patch scripts run separately via RunPatchOnDelete as a
+            // side-effect before the delete proceeds. They are not part of the
+            // combined dispatch.
 
-            CollectEmbeddedPatches(table.EmbeddedTables, tableScripts);
+            CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
+            {
+                if (e.Patch != null)
+                    tableScripts.TryAdd(e.SourceTableName, e.Patch);
+            });
         }
 
         if (tableScripts.Count == 0)
@@ -109,19 +113,6 @@ public class CdcSinkDocumentProcessor
             """;
 
         return new PatchRequest(dispatchScript, PatchRequestType.Patch, functions);
-
-        static void CollectEmbeddedPatches(List<CdcSinkEmbeddedTableConfig> embedded, Dictionary<string, string> scripts)
-        {
-            RuntimeHelpers.EnsureSufficientExecutionStack();
-            if (embedded == null) return;
-            foreach (var e in embedded)
-            {
-                if (e.Patch != null)
-                    scripts.TryAdd(e.SourceTableName, e.Patch);
-                // PatchOnDelete handled separately via RunPatchOnDelete
-                CollectEmbeddedPatches(e.EmbeddedTables, scripts);
-            }
-        }
     }
 
     private static string SanitizeForJs(string name)
@@ -246,6 +237,10 @@ public class CdcSinkDocumentProcessor
 
         if (row.Operation == CdcSinkOperation.Delete)
         {
+            var onDelete = config.OnDelete;
+            if (onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
+                return null; // silently ignore — no patch, no delete
+
             return new CdcSinkDocumentOp
             {
                 Type = CdcSinkDocumentOpType.Delete,
@@ -277,8 +272,9 @@ public class CdcSinkDocumentProcessor
 
     private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor)
     {
-        if (row.Operation == CdcSinkOperation.Delete && processor.EmbeddedConfig.OnDelete?.IgnoreDeletes == true)
-            return null;
+        var onDelete = processor.EmbeddedConfig.OnDelete;
+        if (row.Operation == CdcSinkOperation.Delete && onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
+            return null; // silently ignore — no patch, no delete
 
         var parentDocumentId = processor.GetParentDocumentId(row.Data);
 
@@ -298,12 +294,6 @@ public class CdcSinkDocumentProcessor
             Operation = row.Operation,
         };
     }
-
-    /// <summary>
-    /// Creates a dispatch key for PatchOnDelete scripts, distinct from the regular Patch key.
-    /// Used in the combined patch request to dispatch to different functions for upsert vs delete.
-    /// </summary>
-    internal static string PatchOnDeleteKey(string tableName) => tableName + "__on_delete";
 
     private static string MakeKey(string schema, string tableName)
     {
