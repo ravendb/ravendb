@@ -80,7 +80,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             _initialLoadTcs.TrySetResult();
             await StartListening(ct);
         }
-        catch (OperationCanceledException e)
+        catch (OperationCanceledException)
         {
             _initialLoadTcs.TrySetCanceled();
         }

@@ -2854,9 +2854,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
-            "del() is not available in the CDC patch script runner. Conditional delete " +
-            "via del(id(this)) requires exposing document operations to the script context.")]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task OnDelete_Root_ConditionalDelete()
         {
             // IgnoreDeletes + Patch with conditional del(): only delete sent orders
@@ -2892,11 +2890,12 @@ namespace SlowTests.Server.Documents.CdcSink
                         OnDelete = new CdcSinkOnDeleteConfig
                         {
                             IgnoreDeletes = true,
-                            Patch = @"
-                                if (this.Status === 'Sent') {
-                                    del(id(this));
-                                }
-                                // else: keep the document (IgnoreDeletes applies)"
+                            Patch = """
+                                    if (this.Status === 'Sent') {
+                                        del(id(this));
+                                    }
+                                    // else: keep the document (IgnoreDeletes applies)"
+                                    """
                         }
                     }
                 }
@@ -3179,9 +3178,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
-            "put() is not available in the CDC patch script runner. Recording an audit " +
-            "trail via put() requires exposing document operations to the script context.")]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task Patch_AuditTrail_InsertUpdateDeleteInsertUpdate()
         {
             // Verifies that Patch and OnDelete.Patch record a full audit trail of
@@ -3215,9 +3212,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         },
                         // On upsert: record the operation in an audit document
                         Patch = @"
-                            var seq = (this.AuditSeq || 0) + 1;
-                            this.AuditSeq = seq;
-                            put('AuditLog/' + id(this) + '/' + seq, {
+                            put('AuditLog/' + id(this) + '/', {
                                 Op: $old ? 'Update' : 'Insert',
                                 Name: $row.name,
                                 PreviousName: $old ? $old.Name : null,
@@ -3228,9 +3223,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             // On delete: record the deletion, then let it proceed
                             Patch = @"
-                                var doc = load(id(this));
-                                var seq = (doc.AuditSeq || 0) + 1;
-                                put('AuditLog/' + id(this) + '/' + seq, {
+                                put('AuditLog/' + id(this) + '/', {
                                     Op: 'Delete',
                                     Name: $row.name,
                                     Timestamp: new Date().toISOString(),
@@ -3268,23 +3261,24 @@ namespace SlowTests.Server.Documents.CdcSink
             // Expected: Insert(Alpha), Update(Beta), Delete, Insert(Gamma), Update(Delta)
             using (var session = store.OpenAsyncSession())
             {
-                var audit1 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/1");
+                var items = (await session.Advanced.LoadStartingWithAsync<AuditEntry>("AuditLog/Items/1/", pageSize: 10)).ToList();
+                var audit1 = items[0];
                 Assert.Equal("Insert", audit1.Op);
                 Assert.Equal("Alpha", audit1.Name);
 
-                var audit2 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/2");
+                var audit2 = items[1];
                 Assert.Equal("Update", audit2.Op);
                 Assert.Equal("Beta", audit2.Name);
                 Assert.Equal("Alpha", audit2.PreviousName);
 
-                var audit3 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/3");
+                var audit3 = items[2];
                 Assert.Equal("Delete", audit3.Op);
 
-                var audit4 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/4");
+                var audit4 = items[3];
                 Assert.Equal("Insert", audit4.Op);
                 Assert.Equal("Gamma", audit4.Name);
 
-                var audit5 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/5");
+                var audit5 = items[4];
                 Assert.Equal("Update", audit5.Op);
                 Assert.Equal("Delta", audit5.Name);
                 Assert.Equal("Gamma", audit5.PreviousName);

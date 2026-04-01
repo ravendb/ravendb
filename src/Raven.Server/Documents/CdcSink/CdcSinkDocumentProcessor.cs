@@ -103,17 +103,17 @@ public class CdcSinkDocumentProcessor
         // populated for embedded updates. Enables delta computations in scripts:
         //   this.Total += $row.Amount - ($old?.Amount || 0)
         var dispatchScript = $$"""
-            for (var i = 0; i < $rows.length; i++) {
-              var $row = $rows[i].row;
-              var $old = $rows[i].old || null;
-              switch($rows[i].table) {
+            for (var i = 0; i < rows.length; i++) {
+              var $row = rows[i].row;
+              var $old = rows[i].old || null;
+              switch(rows[i].table) {
               {{switchCases}}
-                  default: throw new Error('CDC Sink: no patch function for table "' + $rows[i].table + '"'); break;
+                  default: throw new Error('CDC Sink: no patch function for table "' + rows[i].table + '"'); break;
               }
             }
             """;
 
-        return new PatchRequest(dispatchScript, PatchRequestType.Patch, functions);
+        return new PatchRequest(dispatchScript, PatchRequestType.CdcSink, functions);
     }
 
     private static string SanitizeForJs(string name)

@@ -2,22 +2,30 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Jint;
+using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Json;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Jint;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink.Commands;
 
 public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 {
+    /// <summary>
+    /// A single patch to run on the document. Old is the previous item's blittable (embedded / root)
+    /// (for array: the matched item, for value: the existing object) — null for inserts. Previous value for deletes and updates.
+    /// Provides $old in scripts for delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
+    /// </summary>
+    private record PatchEntry(string TableName, Dictionary<string, object> RawData, string PatchScript, BlittableJsonReaderObject Old);
+
     private readonly DocumentDatabase _database;
     private readonly List<CdcSinkDocumentOp> _ops;
     private readonly string _configurationName;
@@ -90,14 +98,13 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// </summary>
     private void ProcessDocumentGroup(DocumentsOperationContext context, string documentId, List<CdcSinkDocumentOp> ops)
     {
-        BlittableJsonReaderObject currentDoc = null;
+        BlittableJsonReaderObject currentDoc = null, deletedDoc = null;
         List<CdcSinkDocumentOp> pendingEmbeds = null;
 
-        List<(string TableName, Dictionary<string, object> RawData, string PatchScript, Dictionary<string, object> OldRowData)> patches = null;
+        List<PatchEntry> patches = null;
         CdcSinkDocumentOp lastPutOp = null;
         CdcSinkDocumentOp lastDeleteOp = null;
         string collectionName = null;
-        bool needsDelete = false;
 
         var existing = _database.DocumentsStorage.Get(context, documentId);
         if (existing != null)
@@ -111,57 +118,42 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             switch (op.Type)
             {
                 case CdcSinkDocumentOpType.Put:
-                {
-                    // A new Put is a fresh state — clear any accumulated patches from
-                    // previous operations (e.g., an OnDelete.Patch from an earlier Delete
-                    // in the same transaction should not survive a subsequent re-insert).
-                    patches?.Clear();
+                    if (op.Processor.RootConfig.Patch != null)
+                    {
+                        patches ??= [];
+                        patches.Add(new PatchEntry(op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch, currentDoc));
+                    }
 
-                    // Merge new values onto current state
                     if (currentDoc != null)
                     {
                         currentDoc.Modifications ??= new DynamicJsonValue(currentDoc);
                         foreach (var (name, value) in op.MappedData.Properties)
                             currentDoc.Modifications[name] = value;
                     }
-                    else
-                    {
-                        currentDoc = context.ReadObject(op.MappedData, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
-                    }
+                    
+                    currentDoc = context.ReadObject(op.MappedData, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
 
                     lastPutOp = op;
                     lastDeleteOp = null;
-                    needsDelete = false;
-
-                    if (op.Processor.RootConfig.Patch != null)
-                    {
-                        patches ??= [];
-                        patches.Add((op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch, null));
-                    }
+                    deletedDoc = null;
 
                     break;
-                }
                 case CdcSinkDocumentOpType.Delete:
-                {
-                    currentDoc = null;
-                    pendingEmbeds?.Clear();
-                    patches?.Clear();
-                    lastPutOp = null;
-                    lastDeleteOp = op;
-                    needsDelete = true;
-
                     // OnDelete.Patch goes through the unified patch pipeline
                     var deleteScript = op.Processor.RootConfig.OnDelete?.Patch;
                     if (deleteScript != null)
                     {
                         patches ??= [];
-                        patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, null));
+                        patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, currentDoc));
                     }
+                    deletedDoc = currentDoc;
+                    currentDoc = null;
+                    lastPutOp = null;
+                    lastDeleteOp = op;
+
                     break;
-                }
                 case CdcSinkDocumentOpType.EmbeddedModify:
-                {
-                    needsDelete = false;
+                    deletedDoc = null;
                     lastDeleteOp = null;
 
                     pendingEmbeds ??= [];
@@ -169,28 +161,22 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     // Embedded patches are collected after ApplyEmbeddedOperation, not here,
                     // so we have access to $old (the previous embedded item data for updates).
                     break;
-                }
             }
         }
 
-        if (needsDelete)
+        if (deletedDoc != null)
         {
             var ignoreDeletes = lastDeleteOp.Processor.RootConfig.OnDelete?.IgnoreDeletes == true;
 
             if (patches is { Count: > 0 })
             {
-                // Load the existing document so OnDelete.Patch can run on it
-                var existingForPatch = existing ?? _database.DocumentsStorage.Get(context, documentId);
-                if (existingForPatch != null)
-                {
-                    var patched = RunPatches(context, documentId, existingForPatch.Data, patches);
+                var patched = RunPatches(context, documentId, deletedDoc, patches);
 
-                    if (ignoreDeletes)
-                    {
-                        // IgnoreDeletes + Patch = archive pattern: save the patched doc, skip delete
-                        _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, patched);
-                        return;
-                    }
+                if (ignoreDeletes && patched is not null)
+                {
+                    // IgnoreDeletes + Patch = archive pattern: save the patched doc, skip delete
+                    _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, patched);
+                    return;
                 }
             }
 
@@ -222,7 +208,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 {
                     // OnDelete.Patch goes through the unified patch pipeline
                     patches ??= [];
-                    patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
+                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
                 }
                 if (embOnDelete?.IgnoreDeletes == true)
                     continue; // skip the actual removal — item stays in the array
@@ -237,7 +223,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
             {
                 patches ??= [];
-                patches.Add((embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
+                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
             }
         }
 
@@ -246,9 +232,14 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = RunPatches(context, documentId, currentDoc, patches);
         }
 
-        var final = context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+        // currentDot may be null if the patch in RunPatches did a del() / put() on the doc, in which case
+        // we won't do anything here since the patch already handled the update. Otherwise, save the updated document with applied puts and embeds.
+        if (currentDoc is not null)
+        {
+            var final = context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
-        _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, final);
+            _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, final);
+        }
 
         if (lastPutOp != null) // Store attachments from root table binary columns
             StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.RootConfig.AttachmentNameMapping, prefix: null);
@@ -256,7 +247,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         // Handle attachments from embedded table binary columns.
         // Attachment name includes the embedded path and PK values to distinguish
         // attachments from different embedded rows (e.g., "Lines/42/photo").
-        foreach(var embOp in pendingEmbeds ?? [])
+        foreach (var embOp in pendingEmbeds ?? [])
         {
             var embConfig = embOp.Processor.EmbeddedConfig;
             if (embConfig.AttachmentNameMapping == null || embConfig.AttachmentNameMapping.Count == 0)
@@ -324,11 +315,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     /// <summary>
     /// Applies an embedded operation (upsert or delete) and returns the updated document
-    /// along with the old embedded item data (for updates — null for inserts and deletes).
-    /// The old data is used to provide $old in embedded patch scripts, enabling delta
+    /// along with the old embedded item (for updates — null for inserts and deletes).
+    /// The old blittable is used to provide $old in embedded patch scripts, enabling delta
     /// computations like: this.Total += $row.Amount - ($old?.Amount || 0)
     /// </summary>
-    private (BlittableJsonReaderObject Document, Dictionary<string, object> OldItemData) ApplyEmbeddedOperation(
+    private (BlittableJsonReaderObject Document, BlittableJsonReaderObject Old) ApplyEmbeddedOperation(
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
     {
@@ -336,18 +327,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         var (target, targetBlittable) = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot, op);
         var config = op.Processor.EmbeddedConfig;
 
-        // targetBlittable is the blittable at the navigated level — used to read existing
-        // data (e.g., an existing array to merge into). For single-level embedding it's the
-        // root document. For deep nesting it's the intermediate element (e.g., the department).
-        // When null, the intermediate was created as a stub (no prior data) — the Apply methods
-        // handle this by going straight to "create new" without trying to read existing values.
-
-        Dictionary<string, object> oldItemData = null;
+        BlittableJsonReaderObject old = null;
 
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                oldItemData = ApplyArrayOperation(targetBlittable, target, config, op);
+                old = ApplyArrayOperation(targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Map:
@@ -355,12 +340,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 break;
 
             case CdcSinkRelationType.Value:
-                ApplyValueOperation(targetBlittable, target, config, op);
+                old = ApplyValueOperation(targetBlittable, target, config, op);
                 break;
         }
 
+        // Clone old before materializing the parent — the Apply methods return the blittable
+        // BEFORE setting Modifications on it, but ReadObject below would serialize including
+        // any Modifications. Cloning here captures the pre-modification state.
+        if (old != null)
+            old = old.Clone(context);
+
         var result = context.ReadObject(parentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-        return (result, oldItemData);
+        return (result, old);
     }
 
     /// <param name="parentDoc">
@@ -368,14 +359,14 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// Null when the intermediate was a stub (no prior data at this level) —
     /// in that case we go straight to creating new values on the target.
     /// </param>
-    private static void ApplyValueOperation(
+    private static BlittableJsonReaderObject ApplyValueOperation(
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
         if (op.Operation != CdcSinkOperation.Upsert)
         {
             target[config.PropertyName] = null;
-            return;
+            return null;
         }
 
         // Merge new values onto existing embedded object
@@ -383,46 +374,44 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingObj)
         {
+            var old = existingObj; // capture before modification
             existingObj.Modifications = new DynamicJsonValue(existingObj);
             foreach (var (name, value) in op.MappedData.Properties)
                 existingObj.Modifications[name] = value;
+            return old;
         }
-        else
-        {
-            target[config.PropertyName] = op.MappedData;
-        }
+
+        target[config.PropertyName] = op.MappedData;
+        return null; // insert, no old value
     }
 
     /// <returns>
-    /// The old item's property values when a matching item was found (update case),
-    /// or null when the item is new (insert) or being deleted. Used to provide $old
-    /// in embedded patch scripts for delta computations.
+    /// The matched item's blittable (before modification) when updating an existing item,
+    /// or null for inserts and deletes. Used as $old in embedded patch scripts.
     /// </returns>
-    private static Dictionary<string, object> ApplyArrayOperation(
+    private static BlittableJsonReaderObject ApplyArrayOperation(
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
         var newArray = new DynamicJsonArray();
         bool found = false;
-        Dictionary<string, object> oldItemData = null;
+        BlittableJsonReaderObject old = null;
 
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderArray existingArray)
         {
-            foreach(var arrayVal in existingArray)
+            foreach (var arrayVal in existingArray)
             {
                 if (arrayVal is BlittableJsonReaderObject item &&
                     MatchesPrimaryKey(item, op.MappedData, config))
                 {
                     found = true;
 
-                    // Capture old item data before modification — used as $old in patches
                     if (op.Operation == CdcSinkOperation.Upsert)
                     {
-                        oldItemData = ExtractBlittableProperties(item);
+                        old = item; // capture before modification
 
-                        // Use Modifications pattern on the nested blittable object
                         item.Modifications = new DynamicJsonValue(item);
                         foreach (var (name, value) in op.MappedData.Properties)
                             item.Modifications[name] = value;
@@ -441,36 +430,25 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             newArray.Add(op.MappedData);
 
         target[config.PropertyName] = newArray;
-        return oldItemData; // null for inserts and deletes
+        return old;
     }
 
-    private static DynamicJsonValue ConvertRawDataToDjv(Dictionary<string, object> rawData)
+    private static JsObject DictionaryToJint(Jint.Engine engine, Dictionary<string, object> rawData)
     {
-        var djv = new DynamicJsonValue();
+        var o = new JsObject(engine);
         foreach (var kvp in rawData)
         {
-            djv[kvp.Key] = kvp.Value switch
+            o.FastSetDataProperty(kvp.Key, kvp.Value switch
             {
                 null or DBNull => null,
                 byte[] bytes => Convert.ToBase64String(bytes),
                 Guid guid => guid.ToString(),
-                _ => kvp.Value
-            };
+                _ => JsValue.FromObject(engine, kvp.Value)
+            });
         }
-        return djv;
+        return o;
     }
 
-    private static Dictionary<string, object> ExtractBlittableProperties(BlittableJsonReaderObject obj)
-    {
-        var data = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        var prop = new BlittableJsonReaderObject.PropertyDetails();
-        for (int i = 0; i < obj.Count; i++)
-        {
-            obj.GetPropertyByIndex(i, ref prop);
-            data[prop.Name] = prop.Value;
-        }
-        return data;
-    }
 
     private void ApplyMapOperation(
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
@@ -741,52 +719,41 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private BlittableJsonReaderObject RunPatches(
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject document,
-        List<(string TableName, Dictionary<string, object> RawData, string PatchScript, Dictionary<string, object> OldRowData)> patches)
+        List<PatchEntry> patches)
     {
-        // Build the $rows array: [{table: "orders", row: {...}, old: {...}}, ...]
-        // $old is the previous embedded item data (null for inserts and root patches).
-        // This enables delta computations in embedded patches:
-        //   this.Total += $row.Amount - ($old?.Amount || 0)
-        var rowsArray = new DynamicJsonArray();
-        for (int i = 0; i < patches.Count; i++)
+         using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
         {
-            var rowDjv = ConvertRawDataToDjv(patches[i].RawData);
-
-            DynamicJsonValue oldDjv = null;
-            if (patches[i].OldRowData != null)
+            var documentInstance = (BlittableObjectInstance)runner.Translate(context,
+                new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
+            
+            using (var result = runner.Run(context, context, "execute", documentId, [documentInstance, CreateRows()]))
             {
-                oldDjv = new DynamicJsonValue();
-                foreach (var kvp in patches[i].OldRowData)
-                {
-                    oldDjv[kvp.Key] = kvp.Value switch
-                    {
-                        null or DBNull => null,
-                        byte[] bytes => Convert.ToBase64String(bytes),
-                        Guid guid => guid.ToString(),
-                        _ => kvp.Value
-                    };
-                }
+                // explicitly called del() / put() here - don't save the returned patched document since the script
+                // may have done its own put()
+                if (runner.OriginalDocumentUpdatedOrDeleted)
+                    return null; 
+                return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
 
-            rowsArray.Add(new DynamicJsonValue
+
+            JsArray CreateRows()
             {
-                ["table"] = patches[i].TableName,
-                ["row"] = rowDjv,
-                ["old"] = oldDjv,
-            });
-        }
+                // Build the $rows array: [{table: "orders", row: {...}, old: {...}}, ...]
+                // $old is the previous embedded item (null for inserts, deletes, and root patches).
+                // Enables delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
+                var rowsArray = new JsArray(runner.ScriptEngine, capacity: (uint)patches.Count);
+                for (int i = 0; i < patches.Count; i++)
+                {
+                    var patch = patches[i];
+                    var row = new JsObject(runner.ScriptEngine);
+                    var old = patch.Old == null ? null : new BlittableObjectInstance(runner.ScriptEngine, null, patch.Old, null, null, null);
 
-        var argsDjv = new DynamicJsonValue { ["rows"] = rowsArray };
-        using var argsBlittable = context.ReadObject(argsDjv, "cdc-patch-args");
-
-        using (context.DocumentDatabase.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
-        {
-            var documentInstance = (Patch.BlittableObjectInstance)runner.Translate(context,
-                new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
-
-            using (var result = runner.Run(context, context, "execute", documentId, new object[] { documentInstance, argsBlittable }))
-            {
-                return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    row.FastSetDataProperty("table", patch.TableName);
+                    row.FastSetDataProperty("row", DictionaryToJint(runner.ScriptEngine, patch.RawData));
+                    row.FastSetDataProperty("old", old);
+                    rowsArray.Push(row);
+                }
+                return rowsArray;
             }
         }
     }
