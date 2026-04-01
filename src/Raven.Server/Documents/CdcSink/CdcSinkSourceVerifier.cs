@@ -131,8 +131,8 @@ public static class CdcSinkSourceVerifier
         else
         {
             // User can't create replication infrastructure — check if admin already set it up
-            var expectedPubName = ComputePublicationName(tableNames);
-            var expectedSlotName = ComputeSlotName(tableNames);
+            var expectedPubName = ComputePublicationName(connection.Database, tableNames);
+            var expectedSlotName = ComputeSlotName(connection.Database, tableNames);
 
             bool publicationExists = false;
             bool slotExists = false;
@@ -347,6 +347,10 @@ public static class CdcSinkSourceVerifier
         }
     }
 
+    /// <summary>
+    /// Computes a hash key for a set of table names, used to track initial-load progress per table.
+    /// This is an internal key stored in RavenDB, not a PostgreSQL identifier, so length is unrestricted.
+    /// </summary>
     internal static string ComputeTablesHash(List<string> tableNames)
     {
         if (tableNames == null || tableNames.Count == 0)
@@ -354,16 +358,65 @@ public static class CdcSinkSourceVerifier
 
         var sorted = string.Join("_", tableNames.OrderBy(t => t));
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(sorted));
-        return Convert.ToHexString(bytes)[..16].ToLower();
+        return ToBase32Lower(bytes);
     }
 
-    internal static string ComputeSlotName(List<string> tableNames)
+    /// <summary>
+    /// Computes the PostgreSQL replication slot name for a given database and set of tables.
+    /// Includes the database name in the hash so different databases with the same tables
+    /// get distinct slots (pg_replication_slots is a cluster-wide global view).
+    /// </summary>
+    internal static string ComputeSlotName(string databaseName, List<string> tableNames)
     {
-        return $"rvn_cdc_slot_{ComputeTablesHash(tableNames)}";
+        return $"rvn_cdc_s_{ComputeIdentifierHash(databaseName, tableNames)}";
     }
 
-    internal static string ComputePublicationName(List<string> tableNames)
+    /// <summary>
+    /// Computes the PostgreSQL publication name for a given database and set of tables.
+    /// Publications are database-scoped, but including the database name in the hash
+    /// keeps publication and slot names consistent (same hash for same config).
+    /// </summary>
+    internal static string ComputePublicationName(string databaseName, List<string> tableNames)
     {
-        return $"rvn_cdc_pub_{ComputeTablesHash(tableNames)}";
+        return $"rvn_cdc_p_{ComputeIdentifierHash(databaseName, tableNames)}";
+    }
+
+    /// <summary>
+    /// Computes a full SHA-256 hash of the database name + sorted table names, encoded as
+    /// lowercase base32hex (0-9, a-v). Produces 52 characters for the full 256-bit hash.
+    /// Combined with the 10-char prefix ("rvn_cdc_s_" or "rvn_cdc_p_"), the total is 62 chars
+    /// — safely under PostgreSQL's 63-char identifier limit (NAMEDATALEN - 1).
+    /// </summary>
+    private static string ComputeIdentifierHash(string databaseName, List<string> tableNames)
+    {
+        var sorted = string.Join("_", tableNames.OrderBy(t => t));
+        var input = $"{databaseName}\0{sorted}";
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+        return ToBase32Lower(bytes);
+    }
+
+    /// <summary>
+    /// Encodes bytes as lowercase base32hex (RFC 4648 §7): digits 0-9 then letters a-v.
+    /// No padding. 32 bytes → 52 characters. All characters are valid in unquoted
+    /// PostgreSQL identifiers (alphanumeric).
+    /// </summary>
+    private static string ToBase32Lower(byte[] bytes)
+    {
+        const string alphabet = "0123456789abcdefghijklmnopqrstuv";
+        var sb = new StringBuilder((bytes.Length * 8 + 4) / 5);
+        int buffer = 0, bitsLeft = 0;
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            buffer = (buffer << 8) | bytes[i];
+            bitsLeft += 8;
+            while (bitsLeft >= 5)
+            {
+                bitsLeft -= 5;
+                sb.Append(alphabet[(buffer >> bitsLeft) & 0x1F]);
+            }
+        }
+        if (bitsLeft > 0)
+            sb.Append(alphabet[(buffer << (5 - bitsLeft)) & 0x1F]);
+        return sb.ToString();
     }
 }

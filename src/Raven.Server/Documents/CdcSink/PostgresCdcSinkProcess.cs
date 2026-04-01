@@ -103,11 +103,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private async Task EnsureReplicationSetup(CancellationToken ct)
     {
         var tableNames = Configuration.CollectAllSourceTableNames("public");
-        _publicationName = CdcSinkSourceVerifier.ComputePublicationName(tableNames);
-        _slotName = CdcSinkSourceVerifier.ComputeSlotName(tableNames);
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
+
+        _publicationName = CdcSinkSourceVerifier.ComputePublicationName(conn.Database, tableNames);
+        _slotName = CdcSinkSourceVerifier.ComputeSlotName(conn.Database, tableNames);
 
         await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_publication WHERE pubname = @pubName", conn))
         {
@@ -142,13 +143,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
         }
 
-        // Check if replication slot already exists in the CURRENT database.
-        // pg_replication_slots is a global view across all databases, so we must also
-        // filter by database = current_database() to avoid reusing a stale slot from
-        // a different database (same slot name hash but wrong database).
+        // Check if replication slot already exists before trying to create it.
+        // This avoids permission errors when the slot was created by an admin but
+        // the current user lacks the REPLICATION role attribute.
+        // The slot name includes the database name in its hash, so there's no risk
+        // of colliding with a slot from a different database.
         bool slotExists;
-        await using (var cmd = new NpgsqlCommand(
-            "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName AND database = current_database()", conn))
+        await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName", conn))
         {
             cmd.Parameters.AddWithValue("slotName", _slotName);
             slotExists = await cmd.ExecuteScalarAsync(ct) != null;
@@ -164,15 +165,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
             catch (PostgresException ex) when (ex.SqlState == "42710")
             {
-                // Slot exists globally but NOT in our database (stale slot from a dropped/orphaned database).
-                // Drop the stale slot and recreate it in the current database.
-                await using var dropCmd = new NpgsqlCommand(
-                    $"SELECT pg_drop_replication_slot('{_slotName}')", conn);
-                await dropCmd.ExecuteNonQueryAsync(ct);
-
-                await using var retryCmd = new NpgsqlCommand(
-                    $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
-                await retryCmd.ExecuteNonQueryAsync(ct);
+                // Race condition: slot was created between our check and create — safe to ignore
             }
             catch (PostgresException ex) when (ex.SqlState == "42501")
             {
