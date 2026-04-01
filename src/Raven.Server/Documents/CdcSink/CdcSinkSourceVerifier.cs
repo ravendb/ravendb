@@ -404,7 +404,8 @@ public static class CdcSinkSourceVerifier
     {
         const string alphabet = "0123456789abcdefghijklmnopqrstuv";
         var sb = new StringBuilder((bytes.Length * 8 + 4) / 5);
-        int buffer = 0, bitsLeft = 0;
+        long buffer = 0;
+        int bitsLeft = 0;
         for (int i = 0; i < bytes.Length; i++)
         {
             buffer = (buffer << 8) | bytes[i];
@@ -412,11 +413,11 @@ public static class CdcSinkSourceVerifier
             while (bitsLeft >= 5)
             {
                 bitsLeft -= 5;
-                sb.Append(alphabet[(buffer >> bitsLeft) & 0x1F]);
+                sb.Append(alphabet[(int)((buffer >> bitsLeft) & 0x1F)]);
             }
         }
         if (bitsLeft > 0)
-            sb.Append(alphabet[(buffer << (5 - bitsLeft)) & 0x1F]);
+            sb.Append(alphabet[(int)((buffer << (5 - bitsLeft)) & 0x1F)]);
         return sb.ToString();
     }
 }
