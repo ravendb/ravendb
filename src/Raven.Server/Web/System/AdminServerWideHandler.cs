@@ -263,9 +263,9 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.ClusterAdmin)]
-        public async Task DeleteServerWideConnectionString()
+        public async Task RemoveServerWideConnectionString()
         {
-            var name = GetStringQueryString("name", required: true);
+            var name = GetStringQueryString("connectionString", required: true);
             var typeAsString = GetStringQueryString("type", required: true);
 
             if (Enum.TryParse(typeAsString, true, out ConnectionStringType type) == false)
@@ -273,18 +273,18 @@ namespace Raven.Server.Web.System
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var deleteConfiguration = new DeleteServerWideConnectionStringCommand.DeleteConfiguration
+                var deleteConfiguration = new RemoveServerWideConnectionStringCommand.DeleteConfiguration
                 {
                     ConnectionStringName = name,
                     Type = type
                 };
 
-                var (newIndex, _) = await ServerStore.DeleteServerWideConnectionStringAsync(deleteConfiguration, GetRaftRequestIdFromQuery());
+                var (newIndex, _) = await ServerStore.RemoveServerWideConnectionStringAsync(deleteConfiguration, GetRaftRequestIdFromQuery());
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var deleteResponse = new DeleteServerWideConnectionStringResult
+                    var removeResponse = new RemoveServerWideConnectionStringResult
                     {
                         RaftCommandIndex = newIndex
                     };
@@ -292,7 +292,7 @@ namespace Raven.Server.Web.System
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DeleteServerWideConnectionStringResult.RaftCommandIndex)] = deleteResponse.RaftCommandIndex
+                        [nameof(RemoveServerWideConnectionStringResult.RaftCommandIndex)] = removeResponse.RaftCommandIndex
                     });
                 }
             }

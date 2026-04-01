@@ -9,31 +9,27 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 {
-    public sealed class DeleteServerWideConnectionStringOperation : IServerOperation<DeleteServerWideConnectionStringResult>
+    public sealed class RemoveServerWideConnectionStringOperation<T> : IServerOperation<RemoveServerWideConnectionStringResult> where T : ConnectionString
     {
-        private readonly string _connectionStringName;
-        private readonly ConnectionStringType _type;
+        private readonly T _connectionString;
 
-        public DeleteServerWideConnectionStringOperation(string connectionStringName, ConnectionStringType type)
+        public RemoveServerWideConnectionStringOperation(T connectionString)
         {
-            _connectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
-            _type = type;
+            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        public RavenCommand<DeleteServerWideConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<RemoveServerWideConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteServerWideConnectionStringCommand(_connectionStringName, _type);
+            return new RemoveServerWideConnectionStringCommand(_connectionString);
         }
 
-        private sealed class DeleteServerWideConnectionStringCommand : RavenCommand<DeleteServerWideConnectionStringResult>, IRaftCommand
+        private sealed class RemoveServerWideConnectionStringCommand : RavenCommand<RemoveServerWideConnectionStringResult>, IRaftCommand
         {
-            private readonly string _connectionStringName;
-            private readonly ConnectionStringType _type;
+            private readonly T _connectionString;
 
-            public DeleteServerWideConnectionStringCommand(string connectionStringName, ConnectionStringType type)
+            public RemoveServerWideConnectionStringCommand(T connectionString)
             {
-                _connectionStringName = connectionStringName;
-                _type = type;
+                _connectionString = connectionString;
             }
 
             public override bool IsReadRequest => false;
@@ -42,7 +38,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/server-wide/connection-strings?name={Uri.EscapeDataString(_connectionStringName)}&type={_type}";
+                url = $"{node.Url}/admin/configuration/server-wide/connection-strings?connectionString={Uri.EscapeDataString(_connectionString.Name)}&type={_connectionString.Type}";
 
                 return new HttpRequestMessage
                 {
@@ -55,12 +51,12 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.DeleteServerWideConnectionStringResult(response);
+                Result = JsonDeserializationClient.RemoveServerWideConnectionStringResult(response);
             }
         }
     }
 
-    public sealed class DeleteServerWideConnectionStringResult
+    public sealed class RemoveServerWideConnectionStringResult
     {
         public long RaftCommandIndex { get; set; }
     }

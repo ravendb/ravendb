@@ -2232,9 +2232,9 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(command);
         }
 
-        public Task<(long Index, object Result)> DeleteServerWideConnectionStringAsync(DeleteServerWideConnectionStringCommand.DeleteConfiguration configuration, string raftRequestId)
+        public Task<(long Index, object Result)> RemoveServerWideConnectionStringAsync(RemoveServerWideConnectionStringCommand.DeleteConfiguration configuration, string raftRequestId)
         {
-            var command = new DeleteServerWideConnectionStringCommand(configuration, raftRequestId);
+            var command = new RemoveServerWideConnectionStringCommand(configuration, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

@@ -7,14 +7,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public sealed class DeleteServerWideConnectionStringCommand : UpdateValueCommand<DeleteServerWideConnectionStringCommand.DeleteConfiguration>
+    public sealed class RemoveServerWideConnectionStringCommand : UpdateValueCommand<RemoveServerWideConnectionStringCommand.DeleteConfiguration>
     {
-        public DeleteServerWideConnectionStringCommand()
+        public RemoveServerWideConnectionStringCommand()
         {
             // for deserialization
         }
 
-        public DeleteServerWideConnectionStringCommand(DeleteConfiguration configuration, string uniqueRequestId) : base(uniqueRequestId)
+        public RemoveServerWideConnectionStringCommand(DeleteConfiguration configuration, string uniqueRequestId) : base(uniqueRequestId)
         {
             Name = ClusterStateMachine.ServerWideConfigurationKey.GetConnectionStringKeyByType(configuration.Type);
             Value = configuration;

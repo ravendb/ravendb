@@ -658,9 +658,9 @@ namespace Raven.Server.ServerWide
                         UpdateDatabasesWithServerWideConnectionString(context, type, serverWideConnectionString, index);
                         break;
 
-                    case nameof(DeleteServerWideConnectionStringCommand):
-                        var deleteCSConfiguration = UpdateValue<DeleteServerWideConnectionStringCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
-                        DeleteServerWideConnectionStringFromAllDatabases(deleteCSConfiguration, context, type, index);
+                    case nameof(RemoveServerWideConnectionStringCommand):
+                        var deleteCSConfiguration = UpdateValue<RemoveServerWideConnectionStringCommand.DeleteConfiguration>(context, type, cmd, index, skipNotifyValueChanged: true);
+                        RemoveServerWideConnectionStringFromAllDatabases(deleteCSConfiguration, context, type, index);
                         break;
 
                     case nameof(PutCertificateWithSamePinningHashCommand):

@@ -312,7 +312,7 @@ namespace Raven.Server.ServerWide
             [nameof(PutServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<PutServerWideSorterCommand>(),
             [nameof(DeleteServerWideSorterCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideSorterCommand>(),
             [nameof(PutServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<PutServerWideConnectionStringCommand>(),
-            [nameof(DeleteServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<DeleteServerWideConnectionStringCommand>(),
+            [nameof(RemoveServerWideConnectionStringCommand)] = GenerateJsonDeserializationRoutine<RemoveServerWideConnectionStringCommand>(),
             [nameof(DelayBackupCommand)] = GenerateJsonDeserializationRoutine<DelayBackupCommand>(),
             [nameof(EditLockModeCommand)] = GenerateJsonDeserializationRoutine<EditLockModeCommand>(),
             [nameof(EditPostgreSqlConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditPostgreSqlConfigurationCommand>(),

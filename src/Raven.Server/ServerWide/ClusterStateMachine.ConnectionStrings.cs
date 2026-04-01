@@ -150,7 +150,7 @@ public sealed partial class ClusterStateMachine
         ApplyDatabaseRecordUpdates(toUpdate, type, index, items, context);
     }
 
-    private void DeleteServerWideConnectionStringFromAllDatabases(DeleteServerWideConnectionStringCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
+    private void RemoveServerWideConnectionStringFromAllDatabases(RemoveServerWideConnectionStringCommand.DeleteConfiguration deleteConfiguration, ClusterOperationContext context, string type, long index)
     {
         if (deleteConfiguration == null)
             throw new RachisInvalidOperationException($"No configuration was supplied to {type}: raftIndex {index}");

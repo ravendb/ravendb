@@ -169,7 +169,7 @@ public class RavenDB_24310 : RavenTestBase
             Assert.True(record.RavenConnectionStrings.ContainsKey(expectedName));
 
             // delete it
-            var deleteResult = await store.Maintenance.Server.SendAsync(new DeleteServerWideConnectionStringOperation("MyRavenCS", ConnectionStringType.Raven));
+            var deleteResult = await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" }));
             Assert.True(deleteResult.RaftCommandIndex > 0);
 
             // verify removed from server-wide
@@ -304,7 +304,7 @@ public class RavenDB_24310 : RavenTestBase
             Assert.True(record.SqlConnectionStrings.ContainsKey(sqlExpectedName));
 
             // delete just the raven one
-            await store.Maintenance.Server.SendAsync(new DeleteServerWideConnectionStringOperation("MyRavenCS", ConnectionStringType.Raven));
+            await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" }));
 
             record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             Assert.False(record.RavenConnectionStrings.ContainsKey(ravenExpectedName));
@@ -351,7 +351,7 @@ public class RavenDB_24310 : RavenTestBase
 
             // attempt to delete server-wide connection string should fail
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
-                await store.Maintenance.Server.SendAsync(new DeleteServerWideConnectionStringOperation("MyRavenCS", ConnectionStringType.Raven)));
+                await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" })));
             Assert.Contains("used by task", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
