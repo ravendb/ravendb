@@ -594,7 +594,7 @@ namespace Raven.Server.Documents.Queries
                     if (method.Arguments is { Count: > 1 })
                         throw new InvalidQueryException("Method now() expects zero or one argument.", query.QueryText, parameters);
                     return new ValueExpression(
-                        ResolveTimeFunction(query, metadata, parameters, method, queryTime.Now).GetDefaultRavenFormat(isUtc: true),
+                        QueryBuilderHelper.ResolveTimeFunction(query, metadata, parameters, method, queryTime.Now).GetDefaultRavenFormat(isUtc: true),
                         ValueTokenType.String);
 
                 case MethodType.Today:
@@ -608,27 +608,6 @@ namespace Raven.Server.Documents.Queries
             throw new ArgumentException($"Unknown method {method.Name}");
         }
 
-        private static DateTime ResolveTimeFunction(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, MethodExpression method, DateTime baseTime)
-        {
-            if (method.Arguments is not { Count: 1 })
-                return baseTime;
-
-            var (value, _) = QueryBuilderHelper.GetValue(query, metadata, parameters, method.Arguments[0]);
-            var offsetString = value?.ToString();
-
-            if (string.IsNullOrEmpty(offsetString))
-                throw new InvalidQueryException($"Method {method.Name.Value}() offset argument must be a non-empty string.", query.QueryText, parameters);
-
-            if (TimeFunctionOffset.TryParse(offsetString.AsSpan(), out var offset) == false)
-                throw new InvalidQueryException(
-                    $"Invalid offset format '{offsetString}' for {method.Name.Value}(). " +
-                    "Expected format: [+|-]N(y|year|years)[N(mo|month|months)][N(d|day|days)][N(h|hour|hours)][N(m|min|minute|minutes)][N(s|sec|second|seconds)]. " +
-                    "Units must appear in descending order. Spaces between components are allowed. " +
-                    "Examples: '+1y6mo', '-2hours30minutes', '1 year 6 months', '15d'.",
-                    query.QueryText, parameters);
-
-            return offset.Apply(baseTime);
-        }
 
         private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
             Query query,

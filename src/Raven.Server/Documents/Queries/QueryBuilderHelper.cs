@@ -640,7 +640,7 @@ public static class QueryBuilderHelper
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static DateTime ResolveTimeFunction(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, MethodExpression method, DateTime baseTime)
+    internal static DateTime ResolveTimeFunction(Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, MethodExpression method, DateTime baseTime)
     {
         if (method.Arguments is not { Count: 1 })
             return baseTime;
