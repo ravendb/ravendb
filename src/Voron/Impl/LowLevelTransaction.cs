@@ -615,15 +615,6 @@ namespace Voron.Impl
             return p;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetPageWithoutCache(long pageNumber)
-        {
-            if (_txState != TxState.None)
-                ThrowObjectDisposed();
-
-            return GetPageInternal(pageNumber);
-        }
-
         private Page GetPageInternal(long pageNumber)
         {
             // Check if we can hit the lowest level locality cache.

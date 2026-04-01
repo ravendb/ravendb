@@ -107,6 +107,13 @@ namespace SlowTests.Voron.Issues
                 Assert.False(llt._pageLocator.TryGetReadOnlyPage(pageNumber, out _),
                     $"After CryptoPager.TryReleasePage freed the buffer for page {pageNumber}, " +
                     "the page locator still has a stale entry pointing to zeroed/freed memory.");
+
+                // GetPage must successfully re-decrypt the page from disk (not crash or return garbage).
+                // This is the VoronStream scenario: after TryReleasePage, GetPage is used to re-fetch
+                // the next page, and it must go through the pager rather than the stale locator entry.
+                var refetched = llt.GetPage(pageNumber);
+                Assert.True(refetched.IsValid);
+                Assert.Equal(pageNumber, refetched.PageNumber);
             }
         }
     }
