@@ -150,19 +150,19 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using (var session = store.OpenAsyncSession())
             {
-                var p1 = await session.LoadAsync<dynamic>("Products/1");
+                var p1 = await session.LoadAsync<Product>("Products/1");
                 Assert.NotNull(p1);
-                Assert.Equal("Widget", (string)p1.Name);
-                Assert.Equal(9.99m, (decimal)p1.Price);
+                Assert.Equal("Widget", p1.Name);
+                Assert.Equal(9.99m, p1.Price);
 
-                var p2 = await session.LoadAsync<dynamic>("Products/2");
+                var p2 = await session.LoadAsync<Product>("Products/2");
                 Assert.NotNull(p2);
-                Assert.Equal("Gadget", (string)p2.Name);
+                Assert.Equal("Gadget", p2.Name);
 
-                var p3 = await session.LoadAsync<dynamic>("Products/3");
+                var p3 = await session.LoadAsync<Product>("Products/3");
                 Assert.NotNull(p3);
-                Assert.Equal("Doohickey", (string)p3.Name);
-                Assert.Equal(29.99m, (decimal)p3.Price);
+                Assert.Equal("Doohickey", p3.Name);
+                Assert.Equal(29.99m, p3.Price);
             }
         }
 
@@ -212,9 +212,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using (var session = store.OpenAsyncSession())
             {
-                var item = await session.LoadAsync<dynamic>("Items/1");
+                var item = await session.LoadAsync<Item>("Items/1");
                 Assert.NotNull(item);
-                Assert.Equal("Alpha", (string)item.Name);
+                Assert.Equal("Alpha", item.Name);
             }
         }
 
@@ -259,15 +259,15 @@ namespace SlowTests.Server.Documents.CdcSink
             AddCdcSink(store, config);
 
             // Wait for initial load to complete
-            var initialDoc = await WaitForDocumentAsync<dynamic>(store, "Events/1", timeoutMs: 60_000);
+            var initialDoc = await WaitForDocumentAsync<Event>(store, "Events/1", timeoutMs: 60_000);
             Assert.NotNull(initialDoc);
 
             // Insert a new row via CDC streaming
             ExecuteNpgSql(connectionString, @"INSERT INTO events (id, description) VALUES (2, 'Streamed Event');");
 
-            var newDoc = await WaitForDocumentAsync<dynamic>(store, "Events/2", timeoutMs: 60_000);
+            var newDoc = await WaitForDocumentAsync<Event>(store, "Events/2", timeoutMs: 60_000);
             Assert.NotNull(newDoc);
-            Assert.Equal("Streamed Event", (string)newDoc.Description);
+            Assert.Equal("Streamed Event", newDoc.Description);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -310,9 +310,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Notes/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Note>(store, "Notes/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Original Content", (string)doc.Content);
+            Assert.Equal("Original Content", doc.Content);
 
             // Update the row
             ExecuteNpgSql(connectionString, @"UPDATE notes SET content = 'Updated Content' WHERE id = 1;");
@@ -321,8 +321,8 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var updated = await session.LoadAsync<dynamic>("Notes/1");
-                return (string)updated?.Content;
+                var updated = await session.LoadAsync<Note>("Notes/1");
+                return updated?.Content;
             }, "Updated Content", timeout: 60_000);
         }
 
@@ -382,9 +382,9 @@ namespace SlowTests.Server.Documents.CdcSink
             // Verify the other document still exists
             using (var session = store.OpenAsyncSession())
             {
-                var kept = await session.LoadAsync<dynamic>("Records/2");
+                var kept = await session.LoadAsync<Record>("Records/2");
                 Assert.NotNull(kept);
-                Assert.Equal("To Keep", (string)kept.Title);
+                Assert.Equal("To Keep", kept.Title);
             }
         }
 
@@ -455,27 +455,27 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Orders/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Order>(store, "Orders/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Alice", (string)doc.CustomerName);
+            Assert.Equal("Alice", doc.CustomerName);
 
             // Wait for embedded lines to be populated
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null)
                     return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
                 Assert.Equal(2, lines.Count);
 
-                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                var products = lines.Select(l => l.Product).OrderBy(p => p).ToList();
                 Assert.Contains("Apples", products);
                 Assert.Contains("Bananas", products);
             }
@@ -528,13 +528,13 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using (var session = store.OpenAsyncSession())
             {
-                var p1 = await session.LoadAsync<dynamic>("People/1");
+                var p1 = await session.LoadAsync<Person>("People/1");
                 Assert.NotNull(p1);
-                Assert.Equal("John Doe", (string)p1.FullName);
+                Assert.Equal("John Doe", p1.FullName);
 
-                var p2 = await session.LoadAsync<dynamic>("People/2");
+                var p2 = await session.LoadAsync<Person>("People/2");
                 Assert.NotNull(p2);
-                Assert.Equal("Jane Smith", (string)p2.FullName);
+                Assert.Equal("Jane Smith", p2.FullName);
             }
         }
 
@@ -598,10 +598,10 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Orders/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Order>(store, "Orders/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal(150.00m, (decimal)doc.Total);
-            Assert.Equal("Customers/42", (string)doc.Customer);
+            Assert.Equal(150.00m, doc.Total);
+            Assert.Equal("Customers/42", doc.Customer);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -672,7 +672,7 @@ namespace SlowTests.Server.Documents.CdcSink
             AddCdcSink(store, config);
 
             // Wait for initial load of the parent
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Orders/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Order>(store, "Orders/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
             // Now INSERT embedded rows via CDC streaming (after replication is active)
@@ -681,17 +681,17 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 1, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
                 Assert.Single(lines);
-                Assert.Equal("Apples", (string)lines[0].Product);
+                Assert.Equal("Apples", lines[0].Product);
             }
         }
 
@@ -773,9 +773,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 3, timeout: 60_000);
 
             // Delete one embedded row via CDC streaming
@@ -785,17 +785,17 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
                 Assert.Equal(2, lines.Count);
-                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                var products = lines.Select(l => l.Product).OrderBy(p => p).ToList();
                 Assert.Contains("Apples", products);
                 Assert.Contains("Cherries", products);
                 Assert.DoesNotContain("Bananas", products);
@@ -866,9 +866,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             // Update an embedded row
@@ -877,20 +877,20 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return null;
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
-                var line = lines.FirstOrDefault(l => (int)l.LineNum == 2);
-                return (string)line?.Product;
+                var lines = order.Lines;
+                var line = lines.FirstOrDefault(l => l.LineNum == 2);
+                return line?.Product;
             }, "Bananas (Updated)", timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
                 Assert.Equal(2, lines.Count);
-                var updatedLine = lines.First(l => (int)l.LineNum == 2);
-                Assert.Equal(99, (int)updatedLine.Quantity);
+                var updatedLine = lines.First(l => l.LineNum == 2);
+                Assert.Equal(99, updatedLine.Quantity);
             }
         }
 
@@ -987,27 +987,27 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Companies/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Company>(store, "Companies/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Acme Corp", (string)doc.Name);
+            Assert.Equal("Acme Corp", doc.Name);
 
             // Wait for departments to be populated
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var company = await session.LoadAsync<dynamic>("Companies/1");
+                var company = await session.LoadAsync<Company>("Companies/1");
                 if (company?.Departments == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)company.Departments);
+                return company.Departments.Count;
             }, 2, timeout: 60_000);
 
             // Verify the nested structure
             using (var session = store.OpenAsyncSession())
             {
-                var company = await session.LoadAsync<dynamic>("Companies/1");
-                var depts = ((IEnumerable<dynamic>)company.Departments).ToList();
+                var company = await session.LoadAsync<Company>("Companies/1");
+                var depts = company.Departments;
                 Assert.Equal(2, depts.Count);
 
-                var engineering = depts.First(d => (string)d.DeptName == "Engineering");
+                var engineering = depts.First(d => d.DeptName == "Engineering");
                 Assert.NotNull(engineering);
             }
         }
@@ -1047,7 +1047,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Counters/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Counter>(store, "Counters/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
             // Multiple updates to the same row in a single transaction
@@ -1062,7 +1062,7 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var counter = await session.LoadAsync<dynamic>("Counters/1");
+                var counter = await session.LoadAsync<Counter>("Counters/1");
                 return (int?)counter?.Value;
             }, 3, timeout: 60_000);
         }
@@ -1117,8 +1117,8 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var item = await session.LoadAsync<dynamic>("Items/1");
-                return (string)item?.Name;
+                var item = await session.LoadAsync<Item>("Items/1");
+                return item?.Name;
             }, "Final", timeout: 60_000);
         }
 
@@ -1170,10 +1170,10 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using (var session = store.OpenAsyncSession())
             {
-                var p1 = await session.LoadAsync<dynamic>("Products/1");
-                Assert.Equal("Widget", (string)p1.Name);
-                var p3 = await session.LoadAsync<dynamic>("Products/3");
-                Assert.Equal("Doohickey", (string)p3.Name);
+                var p1 = await session.LoadAsync<Product>("Products/1");
+                Assert.Equal("Widget", p1.Name);
+                var p3 = await session.LoadAsync<Product>("Products/3");
+                Assert.Equal("Doohickey", p3.Name);
             }
         }
 
@@ -1252,18 +1252,18 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order2 = await session.LoadAsync<dynamic>("Orders/2");
-                Assert.Equal("Bob", (string)order2.CustomerName);
-                var lines2 = ((IEnumerable<dynamic>)order2.Lines).ToList();
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                Assert.Equal("Bob", order2.CustomerName);
+                var lines2 = order2.Lines;
                 Assert.Single(lines2);
-                Assert.Equal("Cherries", (string)lines2[0].Product);
+                Assert.Equal("Cherries", lines2[0].Product);
             }
         }
 
@@ -1303,13 +1303,13 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Customers/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Customer>(store, "Customers/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
             // Add a RavenDB-only field directly
             using (var session = store.OpenAsyncSession())
             {
-                var customer = await session.LoadAsync<dynamic>("Customers/1");
+                var customer = await session.LoadAsync<Customer>("Customers/1");
                 customer.InternalNotes = "VIP customer";
                 await session.SaveChangesAsync();
             }
@@ -1320,16 +1320,16 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var customer = await session.LoadAsync<dynamic>("Customers/1");
-                return (string)customer?.Name;
+                var customer = await session.LoadAsync<Customer>("Customers/1");
+                return customer?.Name;
             }, "Alice Updated", timeout: 60_000);
 
             // Verify the RavenDB-only field is preserved
             using (var session = store.OpenAsyncSession())
             {
-                var customer = await session.LoadAsync<dynamic>("Customers/1");
-                Assert.Equal("Alice Updated", (string)customer.Name);
-                Assert.Equal("VIP customer", (string)customer.InternalNotes);
+                var customer = await session.LoadAsync<Customer>("Customers/1");
+                Assert.Equal("Alice Updated", customer.Name);
+                Assert.Equal("VIP customer", customer.InternalNotes);
             }
         }
 
@@ -1394,9 +1394,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 1, timeout: 60_000);
 
             // Update both parent and embedded in the same transaction
@@ -1411,23 +1411,23 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                return (string)order?.CustomerName;
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.CustomerName;
             }, "Alice Updated", timeout: 60_000);
 
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
-                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
+                var products = lines.Select(l => l.Product).OrderBy(p => p).ToList();
                 Assert.Contains("Oranges", products);
                 Assert.Contains("Grapes", products);
             }
@@ -1472,13 +1472,13 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Events/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Event>(store, "Events/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Flash Sale", (string)doc.Title);
+            Assert.Equal("Flash Sale", doc.Title);
 
             using (var session = store.OpenAsyncSession())
             {
-                var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<dynamic>("Events/1"));
+                var metadata = session.Advanced.GetMetadataFor(await session.LoadAsync<Event>("Events/1"));
                 Assert.True(metadata.ContainsKey("@expires"), "Document should have @expires metadata set by the patch script");
             }
         }
@@ -1521,9 +1521,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Files/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<FileDoc>(store, "Files/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("readme.txt", (string)doc.Name);
+            Assert.Equal("readme.txt", doc.Name);
 
             // Verify attachment exists
             using (var session = store.OpenAsyncSession())
@@ -1598,25 +1598,25 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Invoices/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Invoice>(store, "Invoices/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Big Corp", (string)doc.Customer);
-            Assert.Equal(10.00, (double)doc.DiscountPct, 2);
+            Assert.Equal("Big Corp", doc.Customer);
+            Assert.Equal(10.00, doc.DiscountPct, 2);
 
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var inv = await session.LoadAsync<dynamic>("Invoices/1");
+                var inv = await session.LoadAsync<Invoice>("Invoices/1");
                 if (inv?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)inv.Lines);
+                return inv.Lines.Count;
             }, 2, timeout: 60_000);
 
             // Embedded patch sets this.LineAmount on the root document (this = the document).
             // The last embedded row's patch wins, so LineAmount = 200.00 (from line_num=2).
             using (var session = store.OpenAsyncSession())
             {
-                var inv = await session.LoadAsync<dynamic>("Invoices/1");
-                Assert.Equal(200.00, (double)inv.LineAmount, 2);
+                var inv = await session.LoadAsync<Invoice>("Invoices/1");
+                Assert.Equal(200.00, inv.LineAmount, 2);
             }
         }
 
@@ -1682,9 +1682,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 2, timeout: 60_000);
 
             // In a single transaction: add a new line and remove an existing one
@@ -1698,17 +1698,17 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return false;
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
-                var products = lines.Select(l => (string)l.Product).OrderBy(p => p).ToList();
+                var lines = order.Lines;
+                var products = lines.Select(l => l.Product).OrderBy(p => p).ToList();
                 return products.Contains("Cherries") && !products.Contains("Apples");
             }, true, timeout: 60_000);
 
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                var lines = order.Lines;
                 Assert.Equal(2, lines.Count);
             }
         }
@@ -1781,9 +1781,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
+                var order = await session.LoadAsync<Order>("Orders/1");
                 if (order?.Lines == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)order.Lines);
+                return order.Lines.Count;
             }, 1, timeout: 60_000);
 
             // Now insert the parent
@@ -1792,18 +1792,18 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                return (string)order?.CustomerName;
+                var order = await session.LoadAsync<Order>("Orders/1");
+                return order?.CustomerName;
             }, "Alice", timeout: 60_000);
 
             // Both the parent fields and embedded lines should be present
             using (var session = store.OpenAsyncSession())
             {
-                var order = await session.LoadAsync<dynamic>("Orders/1");
-                Assert.Equal("Alice", (string)order.CustomerName);
-                var lines = ((IEnumerable<dynamic>)order.Lines).ToList();
+                var order = await session.LoadAsync<Order>("Orders/1");
+                Assert.Equal("Alice", order.CustomerName);
+                var lines = order.Lines;
                 Assert.Single(lines);
-                Assert.Equal("Apples", (string)lines[0].Product);
+                Assert.Equal("Apples", lines[0].Product);
             }
         }
 
@@ -1849,11 +1849,11 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var doc = await WaitForDocumentAsync<dynamic>(store, "Products/1", timeoutMs: 60_000);
+            var doc = await WaitForDocumentAsync<Product>(store, "Products/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
-            Assert.Equal("Widget", (string)doc.Name);
+            Assert.Equal("Widget", doc.Name);
             // 100.00 * (1 + 0.20) = 120.00
-            Assert.Equal(120.00, (double)doc.TotalPrice, 2);
+            Assert.Equal(120.00, doc.TotalPrice, 2);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -1923,9 +1923,9 @@ namespace SlowTests.Server.Documents.CdcSink
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
-                var album = await session.LoadAsync<dynamic>("Albums/1");
+                var album = await session.LoadAsync<Album>("Albums/1");
                 if (album?.Photos == null) return 0;
-                return (int)Enumerable.Count((IEnumerable<dynamic>)album.Photos);
+                return album.Photos.Count;
             }, 2, timeout: 60_000);
 
             // Verify embedded attachments exist with prefixed names
@@ -2032,6 +2032,129 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Single(attachments);
                 Assert.Equal("Photos/2/thumb", attachments[0].Name);
             }
+        }
+        private class Product
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public decimal Price { get; set; }
+            public double TotalPrice { get; set; }
+        }
+
+        private class Item
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        private class Event
+        {
+            public string Id { get; set; }
+            public string Description { get; set; }
+            public string Title { get; set; }
+        }
+
+        private class Note
+        {
+            public string Id { get; set; }
+            public string Content { get; set; }
+        }
+
+        private class Record
+        {
+            public string Id { get; set; }
+            public string Title { get; set; }
+        }
+
+        private class OrderLine
+        {
+            public int LineNum { get; set; }
+            public string Product { get; set; }
+            public int Quantity { get; set; }
+        }
+
+        private class Order
+        {
+            public string Id { get; set; }
+            public string CustomerName { get; set; }
+            public string Customer { get; set; }
+            public decimal Total { get; set; }
+            public List<OrderLine> Lines { get; set; }
+        }
+
+        private class Person
+        {
+            public string Id { get; set; }
+            public string FullName { get; set; }
+        }
+
+        private class Customer
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public string Email { get; set; }
+            public string InternalNotes { get; set; }
+        }
+
+        private class Employee
+        {
+            public int EmpId { get; set; }
+            public string EmpName { get; set; }
+        }
+
+        private class Department
+        {
+            public int DeptId { get; set; }
+            public string DeptName { get; set; }
+            public List<Employee> Employees { get; set; }
+        }
+
+        private class Company
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public List<Department> Departments { get; set; }
+        }
+
+        private class Counter
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public int Value { get; set; }
+        }
+
+        private class InvoiceLine
+        {
+            public int LineNum { get; set; }
+            public string Description { get; set; }
+        }
+
+        private class Invoice
+        {
+            public string Id { get; set; }
+            public string Customer { get; set; }
+            public double DiscountPct { get; set; }
+            public double LineAmount { get; set; }
+            public List<InvoiceLine> Lines { get; set; }
+        }
+
+        private class FileDoc
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        private class Photo
+        {
+            public int PhotoNum { get; set; }
+            public string Title { get; set; }
+        }
+
+        private class Album
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public List<Photo> Photos { get; set; }
         }
     }
 }
