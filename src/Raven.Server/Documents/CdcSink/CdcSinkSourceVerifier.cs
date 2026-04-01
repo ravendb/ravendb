@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+
 using System.Data.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
 
 namespace Raven.Server.Documents.CdcSink;
 
