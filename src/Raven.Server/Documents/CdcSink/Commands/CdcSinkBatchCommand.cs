@@ -126,12 +126,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     if (currentDoc != null)
                     {
+                        // Merge new values onto existing document — preserves properties
+                        // that aren't in the CDC mapping (e.g., fields set directly in RavenDB)
                         currentDoc.Modifications ??= new DynamicJsonValue(currentDoc);
                         foreach (var (name, value) in op.MappedData.Properties)
                             currentDoc.Modifications[name] = value;
+                        currentDoc = context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
                     }
-                    
-                    currentDoc = context.ReadObject(op.MappedData, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+                    else
+                    {
+                        currentDoc = context.ReadObject(op.MappedData, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
+                    }
 
                     lastPutOp = op;
                     lastDeleteOp = null;
@@ -332,7 +337,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                old = ApplyArrayOperation(targetBlittable, target, config, op);
+                old = ApplyArrayOperation(context, targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Map:
@@ -340,15 +345,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 break;
 
             case CdcSinkRelationType.Value:
-                old = ApplyValueOperation(targetBlittable, target, config, op);
+                old = ApplyValueOperation(context, targetBlittable, target, config, op);
                 break;
         }
-
-        // Clone old before materializing the parent — the Apply methods return the blittable
-        // BEFORE setting Modifications on it, but ReadObject below would serialize including
-        // any Modifications. Cloning here captures the pre-modification state.
-        if (old != null)
-            old = old.Clone(context);
 
         var result = context.ReadObject(parentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         return (result, old);
@@ -360,6 +359,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// in that case we go straight to creating new values on the target.
     /// </param>
     private static BlittableJsonReaderObject ApplyValueOperation(
+        DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
@@ -374,7 +374,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingObj)
         {
-            var old = existingObj; // capture before modification
+            var old = context.ReadObject(existingObj, "cdc-old-item"); // clone before modification
             existingObj.Modifications = new DynamicJsonValue(existingObj);
             foreach (var (name, value) in op.MappedData.Properties)
                 existingObj.Modifications[name] = value;
@@ -390,6 +390,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// or null for inserts and deletes. Used as $old in embedded patch scripts.
     /// </returns>
     private static BlittableJsonReaderObject ApplyArrayOperation(
+        DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
@@ -410,7 +411,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     if (op.Operation == CdcSinkOperation.Upsert)
                     {
-                        old = item; // capture before modification
+                        // Clone BEFORE setting Modifications. Clone() on a nested blittable
+                        // with Modifications calls ReadObject which includes the modifications.
+                        old = context.ReadObject(item, "cdc-old-item");
 
                         item.Modifications = new DynamicJsonValue(item);
                         foreach (var (name, value) in op.MappedData.Properties)
