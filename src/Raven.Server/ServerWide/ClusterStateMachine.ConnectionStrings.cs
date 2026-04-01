@@ -16,6 +16,51 @@ namespace Raven.Server.ServerWide;
 
 public sealed partial class ClusterStateMachine
 {
+    public sealed partial class ServerWideConfigurationKey
+    {
+        public static string ConnectionStringRaven = "server-wide/connection-strings/raven";
+        public static string ConnectionStringSql = "server-wide/connection-strings/sql";
+        public static string ConnectionStringOlap = "server-wide/connection-strings/olap";
+        public static string ConnectionStringElasticSearch = "server-wide/connection-strings/elasticsearch";
+        public static string ConnectionStringQueue = "server-wide/connection-strings/queue";
+        public static string ConnectionStringSnowflake = "server-wide/connection-strings/snowflake";
+        public static string ConnectionStringAi = "server-wide/connection-strings/ai";
+
+        public static string[] AllConnectionStringKeys = new[]
+        {
+            ConnectionStringRaven,
+            ConnectionStringSql,
+            ConnectionStringOlap,
+            ConnectionStringElasticSearch,
+            ConnectionStringQueue,
+            ConnectionStringSnowflake,
+            ConnectionStringAi
+        };
+
+        public static string GetConnectionStringKeyByType(ConnectionStringType type)
+        {
+            switch (type)
+            {
+                case ConnectionStringType.Raven:
+                    return ConnectionStringRaven;
+                case ConnectionStringType.Sql:
+                    return ConnectionStringSql;
+                case ConnectionStringType.Olap:
+                    return ConnectionStringOlap;
+                case ConnectionStringType.ElasticSearch:
+                    return ConnectionStringElasticSearch;
+                case ConnectionStringType.Queue:
+                    return ConnectionStringQueue;
+                case ConnectionStringType.Snowflake:
+                    return ConnectionStringSnowflake;
+                case ConnectionStringType.Ai:
+                    return ConnectionStringAi;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(type), type, null);
+            }
+        }
+    }
+
     private void UpdateDatabasesWithServerWideConnectionString(ClusterOperationContext context, string type, ServerWideConnectionString serverWideConnectionString, long index)
     {
         if (serverWideConnectionString == null)
