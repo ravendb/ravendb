@@ -202,7 +202,8 @@ public static class CdcSinkSourceVerifier
 
     /// <summary>
     /// Checks that each embedded table whose join columns aren't fully covered by its PK
-    /// has REPLICA IDENTITY set to FULL or INDEX. Tables with IgnoreDeletes skip this check.
+    /// has REPLICA IDENTITY set to FULL or to an INDEX that covers all required columns.
+    /// Tables with OnDelete.IgnoreDeletes skip this check.
     /// </summary>
     private static async Task VerifyReplicaIdentityForEmbeddedTablesAsync(
         DbConnection connection, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
@@ -214,38 +215,21 @@ public static class CdcSinkSourceVerifier
         {
             var schema = embedded.SourceTableSchema ?? "public";
             var table = embedded.SourceTableName;
-
-            await using var cmd = connection.CreateCommand();
-            cmd.CommandText = """
-                SELECT relreplident
-                FROM pg_class c
-                JOIN pg_namespace n ON c.relnamespace = n.oid
-                WHERE n.nspname = @schema AND c.relname = @table
-                """;
-            var schemaParam = cmd.CreateParameter();
-            schemaParam.ParameterName = "@schema";
-            schemaParam.Value = schema;
-            cmd.Parameters.Add(schemaParam);
-
-            var tableParam = cmd.CreateParameter();
-            tableParam.ParameterName = "@table";
-            tableParam.Value = table;
-            cmd.Parameters.Add(tableParam);
-
-            var replicaIdent = await cmd.ExecuteScalarAsync();
-            var identChar = replicaIdent is char c ? c : 'd';
-
-            if (identChar is 'f' or 'i')
-                continue;
-
             var joinCols = string.Join(", ", embedded.JoinColumns);
-            result.Warnings.Add(
-                $"Embedded table '{schema}.{table}' has REPLICA IDENTITY DEFAULT (PK-only), " +
-                $"but its join column(s) ({joinCols}) are not part of the primary key. " +
-                $"DELETE events will not include the join columns, which are needed to route " +
-                $"deletes to the correct parent document. The CDC process will automatically " +
-                $"set REPLICA IDENTITY FULL on this table at startup if it has permission. " +
-                $"To set it manually: ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;");
+            var requiredColumns = new HashSet<string>(embedded.JoinColumns, StringComparer.OrdinalIgnoreCase);
+            foreach (var pk in embedded.PrimaryKeyColumns)
+                requiredColumns.Add(pk);
+
+            var error = await CheckReplicaIdentityCoversColumns(connection, schema, table, requiredColumns);
+            if (error != null)
+            {
+                result.Errors.Add(
+                    $"Embedded table '{schema}.{table}': {error} " +
+                    $"The join column(s) ({joinCols}) are not part of the primary key, so DELETE events " +
+                    $"must include them for routing to the parent document. Either:\n\n" +
+                    $"  ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;\n\n" +
+                    $"Or set OnDelete.IgnoreDeletes = true on this embedded table configuration to skip delete processing.");
+            }
         }
 
         static void CollectEmbeddedTablesNeedingReplicaCheck(
@@ -261,7 +245,7 @@ public static class CdcSinkSourceVerifier
 
                 foreach (var e in embedded)
                 {
-                    if (e.IgnoreDeletes == false)
+                    if (e.OnDelete?.IgnoreDeletes != true)
                     {
                         bool allInPk = true;
                         foreach (var joinCol in e.JoinColumns)
@@ -278,6 +262,96 @@ public static class CdcSinkSourceVerifier
                     CollectFromEmbedded(e.EmbeddedTables, result);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Checks whether a table's REPLICA IDENTITY covers a set of required columns (PK + join columns).
+    /// Returns null if the identity is sufficient, or an error message describing the problem.
+    ///
+    /// Rules:
+    ///   'd' (DEFAULT, PK-only) → insufficient, the required columns aren't all in the PK
+    ///                            (caller already verified this before calling us)
+    ///   'n' (NOTHING) → insufficient, no columns sent on DELETE
+    ///   'f' (FULL) → always sufficient, all columns sent on DELETE
+    ///   'i' (INDEX) → sufficient only if the index covers all required columns
+    /// </summary>
+    internal static async Task<string> CheckReplicaIdentityCoversColumns(
+        DbConnection connection, string schema, string table, HashSet<string> requiredColumns)
+    {
+        char replicaIdentity;
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT relreplident
+                FROM pg_class c
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE n.nspname = @schema AND c.relname = @table
+                """;
+            AddParameter(cmd, "@schema", schema);
+            AddParameter(cmd, "@table", table);
+            var result = await cmd.ExecuteScalarAsync();
+            replicaIdentity = result is char c ? c : 'd';
+        }
+
+        switch (replicaIdentity)
+        {
+            case 'f':
+                return null; // FULL — all columns sent, always sufficient
+
+            case 'i':
+            {
+                // INDEX — check that the index covers all required columns.
+                // pg_class.relreplident = 'i' means a specific index is designated.
+                // Query the index columns via pg_index + pg_attribute.
+                var indexColumns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                await using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = """
+                        SELECT a.attname
+                        FROM pg_index idx
+                        JOIN pg_class c ON c.oid = idx.indrelid
+                        JOIN pg_namespace n ON n.oid = c.relnamespace
+                        JOIN pg_attribute a ON a.attrelid = idx.indexrelid
+                        WHERE n.nspname = @schema AND c.relname = @table
+                          AND idx.indisreplident = true
+                        """;
+                    AddParameter(cmd, "@schema", schema);
+                    AddParameter(cmd, "@table", table);
+                    await using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                        indexColumns.Add(reader.GetString(0));
+                }
+
+                var missing = new List<string>();
+                foreach (var col in requiredColumns)
+                {
+                    if (indexColumns.Contains(col) == false)
+                        missing.Add(col);
+                }
+
+                if (missing.Count > 0)
+                {
+                    return $"REPLICA IDENTITY is set to INDEX, but the designated index does not cover " +
+                           $"column(s): {string.Join(", ", missing)}.";
+                }
+
+                return null; // INDEX covers all required columns
+            }
+
+            case 'n':
+                return "REPLICA IDENTITY is set to NOTHING — no columns are sent on DELETE.";
+
+            default: // 'd' (DEFAULT) or unknown
+                return "REPLICA IDENTITY is DEFAULT (PK-only) and the required columns are not all in the primary key.";
+        }
+
+        static void AddParameter(DbCommand cmd, string name, object value)
+        {
+            var param = cmd.CreateParameter();
+            param.ParameterName = name;
+            param.Value = value;
+            cmd.Parameters.Add(param);
         }
     }
 

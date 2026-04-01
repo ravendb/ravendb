@@ -2297,7 +2297,7 @@ namespace SlowTests.Server.Documents.CdcSink
                             { "id", "Id" },
                             { "customer_name", "CustomerName" }
                         },
-                        PatchOnDelete = "this.Archived = true; this.ArchivedAt = new Date().toISOString();"
+                        OnDelete = new CdcSinkOnDeleteConfig { Patch = "this.Archived = true; this.ArchivedAt = new Date().toISOString(); return true;" }
                     }
                 }
             };
@@ -2389,8 +2389,8 @@ namespace SlowTests.Server.Documents.CdcSink
                                     { "line_num", "LineNum" },
                                     { "product", "Product" }
                                 },
-                                // Instead of removing the line, record the deletion on the parent
-                                PatchOnDelete = "this.LastDeletedLine = $row.line_num; this.DeleteCount = (this.DeleteCount || 0) + 1;"
+                                // Audit the deletion on the parent — no return true, so the item IS removed
+                                OnDelete = new CdcSinkOnDeleteConfig { Patch = "this.LastDeletedLine = $row.line_num; this.DeleteCount = (this.DeleteCount || 0) + 1;" }
                             }
                         }
                     }
@@ -2409,7 +2409,7 @@ namespace SlowTests.Server.Documents.CdcSink
             // Delete one embedded row
             ExecuteNpgSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
 
-            // The line should NOT be removed — PatchOnDelete runs instead
+            // The item IS removed (no return true), but the patch ran first
             await AssertWaitForValueAsync(async () =>
             {
                 using var session = store.OpenAsyncSession();
@@ -2420,8 +2420,10 @@ namespace SlowTests.Server.Documents.CdcSink
             using (var session = store.OpenAsyncSession())
             {
                 var order = await session.LoadAsync<OrderWithDeleteTracking>("Orders/1");
-                // Line count should still be 2 — the item was NOT removed
-                Assert.Equal(2, order.Lines?.Count ?? 0);
+                // Item was removed because PatchOnDelete didn't return true
+                Assert.Equal(1, order.Lines?.Count ?? 0);
+                Assert.Equal("Apples", order.Lines[0].Product);
+                // But the patch still ran — audit fields are set
                 Assert.Equal(2, order.LastDeletedLine);
                 Assert.Equal(1, order.DeleteCount);
             }
@@ -2600,6 +2602,131 @@ namespace SlowTests.Server.Documents.CdcSink
             public int DeptId { get; set; }
             public string DeptName { get; set; }
             public List<Employee> Employees { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedPatch_OldRowData_DeltaComputation()
+        {
+            // Tests that $old is available in embedded patches for delta computations.
+            // When an embedded line item's amount changes, the parent's TotalAmount
+            // is adjusted by the delta (new - old), not the absolute new value.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE invoices (id SERIAL PRIMARY KEY, customer VARCHAR(200) NOT NULL);
+                CREATE TABLE invoice_lines (
+                    invoice_id INT NOT NULL REFERENCES invoices(id),
+                    line_num INT NOT NULL,
+                    description VARCHAR(200) NOT NULL,
+                    amount NUMERIC(10,2) NOT NULL,
+                    PRIMARY KEY (invoice_id, line_num)
+                );
+                INSERT INTO invoices (id, customer) VALUES (1, 'Acme');
+                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
+                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-old-row-delta",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Invoices",
+                        SourceTableSchema = "public",
+                        SourceTableName = "invoices",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "customer", "Customer" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "invoice_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "invoice_id" },
+                                PrimaryKeyColumns = new List<string> { "line_num" },
+                                ColumnsMapping = new Dictionary<string, string>
+                                {
+                                    { "line_num", "LineNum" },
+                                    { "description", "Description" },
+                                    { "amount", "Amount" }
+                                },
+                                // $old is null on insert, populated on update.
+                                // On insert: adds the full amount (old is null, so $old?.Amount is undefined → || 0)
+                                // On update: adjusts by the delta (new amount - old amount)
+                                Patch = "this.TotalAmount = (this.TotalAmount || 0) + $row.amount - ($old?.Amount || 0);"
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load: 2 lines, TotalAmount = 100 + 200 = 300
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var inv = await session.LoadAsync<InvoiceWithTotal>("Invoices/1");
+                return inv?.TotalAmount;
+            }, 300.0, timeout: 60_000);
+
+            // Update line 1: amount changes from 100 to 150
+            // Delta = 150 - 100 = +50, so TotalAmount should go from 300 to 350
+            ExecuteNpgSql(connectionString, "UPDATE invoice_lines SET amount = 150.00 WHERE invoice_id = 1 AND line_num = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var inv = await session.LoadAsync<InvoiceWithTotal>("Invoices/1");
+                return inv?.TotalAmount;
+            }, 350.0, timeout: 60_000);
+
+            // Update line 2: amount changes from 200 to 50
+            // Delta = 50 - 200 = -150, so TotalAmount should go from 350 to 200
+            ExecuteNpgSql(connectionString, "UPDATE invoice_lines SET amount = 50.00 WHERE invoice_id = 1 AND line_num = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var inv = await session.LoadAsync<InvoiceWithTotal>("Invoices/1");
+                return inv?.TotalAmount;
+            }, 200.0, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var inv = await session.LoadAsync<InvoiceWithTotal>("Invoices/1");
+                Assert.Equal(200.0, inv.TotalAmount, 2);
+                Assert.Equal(2, inv.Lines.Count);
+                // Verify the line amounts were updated correctly too
+                var line1 = inv.Lines.First(l => l.LineNum == 1);
+                Assert.Equal(150.0, (double)line1.Amount, 2);
+            }
+        }
+
+        private class InvoiceWithTotal
+        {
+            public string Id { get; set; }
+            public string Customer { get; set; }
+            public double TotalAmount { get; set; }
+            public List<InvoiceLineWithAmount> Lines { get; set; }
+        }
+
+        private class InvoiceLineWithAmount
+        {
+            public int LineNum { get; set; }
+            public string Description { get; set; }
+            public decimal Amount { get; set; }
         }
 
         private class ArchivedOrder

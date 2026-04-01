@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Jint;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink.Commands;
@@ -93,10 +94,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         BlittableJsonReaderObject currentDoc = null;
         List<CdcSinkDocumentOp> pendingEmbeds = null;
 
-        List<(string TableName, Dictionary<string, object> RawData, string PatchScript)> patches = null;
+        List<(string TableName, Dictionary<string, object> RawData, string PatchScript, Dictionary<string, object> OldRowData)> patches = null;
         CdcSinkDocumentOp lastPutOp = null;
         string collectionName = null;
         bool needsDelete = false;
+
+        // PatchOnDelete state for the root table. When a Delete op has PatchOnDelete,
+        // we record it here. At the end, if needsDelete is still true AND we have a
+        // PatchOnDelete, we run the patch and check its return value to decide whether
+        // to cancel the delete (return true) or proceed with deletion (return false/undefined).
+        string rootPatchOnDelete = null;
+        Dictionary<string, object> rootDeleteRawData = null;
 
         var existing = _database.DocumentsStorage.Get(context, documentId);
         if (existing != null)
@@ -111,6 +119,13 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 case CdcSinkDocumentOpType.Put:
                 {
+                    // A new Put is a fresh state — clear any accumulated patches from
+                    // previous operations (e.g., a PatchOnDelete from an earlier Delete
+                    // in the same transaction should not survive a subsequent re-insert).
+                    patches?.Clear();
+                    rootPatchOnDelete = null;
+                    rootDeleteRawData = null;
+
                     // Merge new values onto current state
                     if (currentDoc != null)
                     {
@@ -128,67 +143,36 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     if (op.Processor.RootConfig.Patch != null)
                     {
-                        patches ??= new List<(string, Dictionary<string, object>, string)>();
-                        patches.Add((op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch));
+                        patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                        patches.Add((op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch, null));
                     }
 
                     break;
                 }
                 case CdcSinkDocumentOpType.Delete:
                 {
-                    var patchOnDelete = op.Processor.RootConfig.PatchOnDelete;
-                    if (patchOnDelete != null)
-                    {
-                        // PatchOnDelete: instead of deleting, run the patch on the existing document.
-                        // This enables archive/soft-delete patterns where the document is marked
-                        // rather than removed (e.g., setting an Archived flag).
-                        if (currentDoc == null)
-                        {
-                            // No current doc in this batch — load from storage
-                            var existingForPatch = _database.DocumentsStorage.Get(context, documentId);
-                            if (existingForPatch != null)
-                                currentDoc = existingForPatch.Data;
-                        }
+                    currentDoc = null;
+                    pendingEmbeds?.Clear();
+                    patches?.Clear();
+                    lastPutOp = null;
+                    needsDelete = true;
 
-                        if (currentDoc != null)
-                        {
-                            patches ??= new List<(string, Dictionary<string, object>, string)>();
-                            patches.Add((CdcSinkDocumentProcessor.PatchOnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, patchOnDelete));
-                            needsDelete = false;
-                        }
-                        // else: document doesn't exist, nothing to archive
-                    }
-                    else
-                    {
-                        currentDoc = null;
-                        pendingEmbeds?.Clear();
-                        patches?.Clear();
-                        lastPutOp = null;
-                        needsDelete = true;
-                    }
+                    // Record PatchOnDelete for later — the patch runs at the end,
+                    // after we know this Delete is the final operation for the document.
+                    rootPatchOnDelete = op.Processor.RootConfig.OnDelete?.Patch;
+                    rootDeleteRawData = rootPatchOnDelete != null ? op.RawData : null;
                     break;
                 }
                 case CdcSinkDocumentOpType.EmbeddedModify:
                 {
                     needsDelete = false;
+                    rootPatchOnDelete = null;
+                    rootDeleteRawData = null;
 
-                    if (op.Operation == CdcSinkOperation.Delete && op.Processor.EmbeddedConfig.PatchOnDelete != null)
-                    {
-                        // PatchOnDelete on embedded: run the patch instead of removing the item.
-                        // Don't add to pendingEmbeds so the item stays in the array/map/value.
-                        patches ??= new List<(string, Dictionary<string, object>, string)>();
-                        patches.Add((CdcSinkDocumentProcessor.PatchOnDeleteKey(op.Processor.EmbeddedConfig.SourceTableName), op.RawData, op.Processor.EmbeddedConfig.PatchOnDelete));
-                    }
-                    else
-                    {
-                        pendingEmbeds ??= new List<CdcSinkDocumentOp>();
-                        pendingEmbeds.Add(op);
-                        if (op.Processor.EmbeddedConfig.Patch != null)
-                        {
-                            patches ??= new List<(string, Dictionary<string, object>, string)>();
-                            patches.Add((op.Processor.EmbeddedConfig.SourceTableName, op.RawData, op.Processor.EmbeddedConfig.Patch));
-                        }
-                    }
+                    pendingEmbeds ??= new List<CdcSinkDocumentOp>();
+                    pendingEmbeds.Add(op);
+                    // Embedded patches are collected after ApplyEmbeddedOperation, not here,
+                    // so we have access to $old (the previous embedded item data for updates).
                     break;
                 }
             }
@@ -196,6 +180,20 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         if (needsDelete)
         {
+            if (rootPatchOnDelete != null)
+            {
+                // PatchOnDelete: run the patch on the existing document, then check
+                // the return value. If the script returns true, cancel the delete.
+                var existingForPatch = existing ?? _database.DocumentsStorage.Get(context, documentId);
+                if (existingForPatch != null)
+                {
+                    var (cancelDelete, _) = RunPatchOnDelete(context, documentId, existingForPatch.Data,
+                        rootPatchOnDelete, rootDeleteRawData);
+                    if (cancelDelete)
+                        return; // document was saved by RunPatchOnDelete, skip the delete
+                }
+            }
+
             _database.DocumentsStorage.Delete(context, documentId, null);
             return;
         }
@@ -212,9 +210,33 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = context.ReadObject(stub, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        foreach(var embedOp in pendingEmbeds ?? [])
+        foreach (var embedOp in pendingEmbeds ?? [])
         {
-            currentDoc = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+            if (embedOp.Operation == CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.OnDelete?.Patch != null)
+            {
+                // Embedded OnDelete.Patch: run the script on the parent document.
+                // If the script returns true, skip the embedded delete (keep the item).
+                // Otherwise, proceed with removing the item from the array/map/value.
+                // In both cases, use the patched document going forward so audit-style
+                // side effects (e.g., incrementing a counter) survive.
+                var (cancelEmbeddedDelete, patchedDoc) = RunPatchOnDelete(context, documentId, currentDoc,
+                    embedOp.Processor.EmbeddedConfig.OnDelete.Patch, embedOp.RawData);
+                currentDoc = patchedDoc ?? currentDoc;
+                if (cancelEmbeddedDelete)
+                    continue;
+            }
+
+            var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+            currentDoc = updatedDoc;
+
+            // Collect embedded patches AFTER applying the operation, so we have $old data.
+            // $old is the previous embedded item's mapped values (null for inserts),
+            // enabling delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
+            if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
+            {
+                patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                patches.Add((embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
+            }
         }
 
         if (patches is { Count: > 0 })
@@ -298,7 +320,13 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         return _sb.ToString();
     }
 
-    private BlittableJsonReaderObject ApplyEmbeddedOperation(
+    /// <summary>
+    /// Applies an embedded operation (upsert or delete) and returns the updated document
+    /// along with the old embedded item data (for updates — null for inserts and deletes).
+    /// The old data is used to provide $old in embedded patch scripts, enabling delta
+    /// computations like: this.Total += $row.Amount - ($old?.Amount || 0)
+    /// </summary>
+    private (BlittableJsonReaderObject Document, Dictionary<string, object> OldItemData) ApplyEmbeddedOperation(
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
     {
@@ -312,10 +340,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         // When null, the intermediate was created as a stub (no prior data) — the Apply methods
         // handle this by going straight to "create new" without trying to read existing values.
 
+        Dictionary<string, object> oldItemData = null;
+
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                ApplyArrayOperation(targetBlittable, target, config, op);
+                oldItemData = ApplyArrayOperation(targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Map:
@@ -327,7 +357,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 break;
         }
 
-        return context.ReadObject(parentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+        var result = context.ReadObject(parentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+        return (result, oldItemData);
     }
 
     /// <param name="parentDoc">
@@ -360,12 +391,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
     }
 
-    private static void ApplyArrayOperation(
+    /// <returns>
+    /// The old item's property values when a matching item was found (update case),
+    /// or null when the item is new (insert) or being deleted. Used to provide $old
+    /// in embedded patch scripts for delta computations.
+    /// </returns>
+    private static Dictionary<string, object> ApplyArrayOperation(
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
         var newArray = new DynamicJsonArray();
         bool found = false;
+        Dictionary<string, object> oldItemData = null;
 
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
@@ -377,8 +414,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     MatchesPrimaryKey(item, op.MappedData, config))
                 {
                     found = true;
+
+                    // Capture old item data before modification — used as $old in patches
                     if (op.Operation == CdcSinkOperation.Upsert)
                     {
+                        oldItemData = ExtractBlittableProperties(item);
+
                         // Use Modifications pattern on the nested blittable object
                         item.Modifications = new DynamicJsonValue(item);
                         foreach (var (name, value) in op.MappedData.Properties)
@@ -398,6 +439,35 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             newArray.Add(op.MappedData);
 
         target[config.PropertyName] = newArray;
+        return oldItemData; // null for inserts and deletes
+    }
+
+    private static DynamicJsonValue ConvertRawDataToDjv(Dictionary<string, object> rawData)
+    {
+        var djv = new DynamicJsonValue();
+        foreach (var kvp in rawData)
+        {
+            djv[kvp.Key] = kvp.Value switch
+            {
+                null or DBNull => null,
+                byte[] bytes => Convert.ToBase64String(bytes),
+                Guid guid => guid.ToString(),
+                _ => kvp.Value
+            };
+        }
+        return djv;
+    }
+
+    private static Dictionary<string, object> ExtractBlittableProperties(BlittableJsonReaderObject obj)
+    {
+        var data = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        var prop = new BlittableJsonReaderObject.PropertyDetails();
+        for (int i = 0; i < obj.Count; i++)
+        {
+            obj.GetPropertyByIndex(i, ref prop);
+            data[prop.Name] = prop.Value;
+        }
+        return data;
     }
 
     private void ApplyMapOperation(
@@ -669,28 +739,38 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private BlittableJsonReaderObject RunPatches(
         DocumentsOperationContext context, string documentId,
         BlittableJsonReaderObject document,
-        List<(string TableName, Dictionary<string, object> RawData, string PatchScript)> patches)
+        List<(string TableName, Dictionary<string, object> RawData, string PatchScript, Dictionary<string, object> OldRowData)> patches)
     {
-        // Build the $rows array: [{table: "orders", row: {...}}, {table: "order_lines", row: {...}}]
+        // Build the $rows array: [{table: "orders", row: {...}, old: {...}}, ...]
+        // $old is the previous embedded item data (null for inserts and root patches).
+        // This enables delta computations in embedded patches:
+        //   this.Total += $row.Amount - ($old?.Amount || 0)
         var rowsArray = new DynamicJsonArray();
         for (int i = 0; i < patches.Count; i++)
         {
-            var rowDjv = new DynamicJsonValue();
-            foreach (var kvp in patches[i].RawData)
+            var rowDjv = ConvertRawDataToDjv(patches[i].RawData);
+
+            DynamicJsonValue oldDjv = null;
+            if (patches[i].OldRowData != null)
             {
-                rowDjv[kvp.Key] = kvp.Value switch
+                oldDjv = new DynamicJsonValue();
+                foreach (var kvp in patches[i].OldRowData)
                 {
-                    null or DBNull => null,
-                    byte[] bytes => Convert.ToBase64String(bytes),
-                    Guid guid => guid.ToString(),
-                    _ => kvp.Value
-                };
+                    oldDjv[kvp.Key] = kvp.Value switch
+                    {
+                        null or DBNull => null,
+                        byte[] bytes => Convert.ToBase64String(bytes),
+                        Guid guid => guid.ToString(),
+                        _ => kvp.Value
+                    };
+                }
             }
 
             rowsArray.Add(new DynamicJsonValue
             {
                 ["table"] = patches[i].TableName,
-                ["row"] = rowDjv
+                ["row"] = rowDjv,
+                ["old"] = oldDjv,
             });
         }
 
@@ -707,6 +787,100 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
         }
+    }
+
+    /// <summary>
+    /// Runs a PatchOnDelete script on a document and checks the return value.
+    /// Returns (cancelDelete, patchedDocument):
+    ///   cancelDelete = true  → the script returned true, delete should not proceed
+    ///   cancelDelete = false → the script returned false/undefined, delete proceeds
+    ///   patchedDocument       → the document after the patch ran (with side effects applied),
+    ///                           regardless of whether the delete is cancelled. This allows
+    ///                           audit-style patches to set fields even when the delete proceeds.
+    /// </summary>
+    private (bool CancelDelete, BlittableJsonReaderObject PatchedDocument) RunPatchOnDelete(
+        DocumentsOperationContext context, string documentId,
+        BlittableJsonReaderObject document, string patchScript,
+        Dictionary<string, object> rawData)
+    {
+        if (document == null)
+            return (false, null);
+
+        // Build the $row object from the raw CDC data
+        var rowDjv = new DynamicJsonValue();
+        foreach (var kvp in rawData)
+        {
+            rowDjv[kvp.Key] = kvp.Value switch
+            {
+                null or DBNull => null,
+                byte[] bytes => Convert.ToBase64String(bytes),
+                Guid guid => guid.ToString(),
+                _ => kvp.Value
+            };
+        }
+
+        // Build a single-entry $rows array for the combined dispatch
+        var rowsArray = new DynamicJsonArray();
+        var tableName = CdcSinkDocumentProcessor.PatchOnDeleteKey("__inline");
+        rowsArray.Add(new DynamicJsonValue
+        {
+            ["table"] = tableName,
+            ["row"] = rowDjv
+        });
+
+        // Create an inline patch request that wraps the user script and captures the return value.
+        // The script is wrapped in a function that returns the user's return value.
+        var funcName = "__cdc_patch_on_delete";
+        var functions = new Dictionary<string, DeclaredFunction>(StringComparer.OrdinalIgnoreCase)
+        {
+            [funcName] = new DeclaredFunction
+            {
+                Name = funcName,
+                FunctionText = $"function {funcName}($row) {{\n{patchScript}\n}}",
+                Type = DeclaredFunction.FunctionType.JavaScript,
+            }
+        };
+
+        var dispatchScript = $"""
+            var $row = $rows[0].row;
+            var __result = {funcName}.call(this, $row);
+            this.__patchOnDeleteResult = !!__result;
+            """;
+
+        var patchRequest = new PatchRequest(dispatchScript, PatchRequestType.Patch, functions);
+
+        var argsDjv = new DynamicJsonValue { ["rows"] = rowsArray };
+        using var argsBlittable = context.ReadObject(argsDjv, "cdc-patchondelete-args");
+
+        BlittableJsonReaderObject patched;
+        using (context.DocumentDatabase.Scripts.GetScriptRunner(patchRequest, readOnly: false, out var runner))
+        {
+            var documentInstance = (Patch.BlittableObjectInstance)runner.Translate(context,
+                new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
+
+            using (var result = runner.Run(context, context, "execute", documentId, new object[] { documentInstance, argsBlittable }))
+            {
+                patched = result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
+        }
+
+        // Check if the script returned true (cancel the delete)
+        bool cancelDelete = false;
+        if (patched.TryGetMember("__patchOnDeleteResult", out var resultVal) && resultVal is bool b)
+            cancelDelete = b;
+
+        // Always strip the internal marker from the patched document
+        patched.Modifications = new DynamicJsonValue(patched);
+        patched.Modifications.Remove("__patchOnDeleteResult");
+        var cleaned = context.ReadObject(patched, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+        if (cancelDelete)
+        {
+            // Cancel the delete — save the patched document
+            _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, cleaned);
+        }
+
+        return (cancelDelete, cleaned);
     }
 
     private void UpdateState(DocumentsOperationContext context)

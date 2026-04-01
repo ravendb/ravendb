@@ -66,8 +66,9 @@ public class CdcSinkDocumentProcessor
             if (table.Patch != null)
                 tableScripts.TryAdd(table.SourceTableName, table.Patch);
 
-            if (table.PatchOnDelete != null)
-                tableScripts.TryAdd(PatchOnDeleteKey(table.SourceTableName), table.PatchOnDelete);
+            // PatchOnDelete scripts are NOT registered in the combined dispatch —
+            // they run separately via RunPatchOnDelete, which needs to check the
+            // return value to decide whether to cancel the delete.
 
             CollectEmbeddedPatches(table.EmbeddedTables, tableScripts);
         }
@@ -85,17 +86,21 @@ public class CdcSinkDocumentProcessor
             functions[funcName] = new DeclaredFunction
             {
                 Name = funcName,
-                FunctionText = $"function {funcName}($row) {{\n{script}\n}}",
+                FunctionText = $"function {funcName}($row, $old) {{\n{script}\n}}",
                 Type = DeclaredFunction.FunctionType.JavaScript,
             };
 
             switchCases.Append("    case \"").Append(EscapeJsString(tableName))
-                .Append("\": ").Append(funcName).Append(".call(this, $row); break;\n");
+                .Append("\": ").Append(funcName).Append(".call(this, $row, $old); break;\n");
         }
 
+        // $old is the previous embedded item data — null for inserts and root patches,
+        // populated for embedded updates. Enables delta computations in scripts:
+        //   this.Total += $row.Amount - ($old?.Amount || 0)
         var dispatchScript = $$"""
             for (var i = 0; i < $rows.length; i++) {
               var $row = $rows[i].row;
+              var $old = $rows[i].old || null;
               switch($rows[i].table) {
               {{switchCases}}
                   default: throw new Error('CDC Sink: no patch function for table "' + $rows[i].table + '"'); break;
@@ -113,8 +118,7 @@ public class CdcSinkDocumentProcessor
             {
                 if (e.Patch != null)
                     scripts.TryAdd(e.SourceTableName, e.Patch);
-                if (e.PatchOnDelete != null)
-                    scripts.TryAdd(PatchOnDeleteKey(e.SourceTableName), e.PatchOnDelete);
+                // PatchOnDelete handled separately via RunPatchOnDelete
                 CollectEmbeddedPatches(e.EmbeddedTables, scripts);
             }
         }
@@ -273,7 +277,7 @@ public class CdcSinkDocumentProcessor
 
     private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor)
     {
-        if (row.Operation == CdcSinkOperation.Delete && processor.EmbeddedConfig.IgnoreDeletes)
+        if (row.Operation == CdcSinkOperation.Delete && processor.EmbeddedConfig.OnDelete?.IgnoreDeletes == true)
             return null;
 
         var parentDocumentId = processor.GetParentDocumentId(row.Data);

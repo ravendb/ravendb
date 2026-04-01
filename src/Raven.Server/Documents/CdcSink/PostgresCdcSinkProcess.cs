@@ -194,7 +194,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// of the PK, the default identity is sufficient. Otherwise, we need REPLICA IDENTITY FULL
     /// so that all columns (including the join column) are sent on DELETE events.
     ///
-    /// When IgnoreDeletes is set on the embedded table config, we skip this check entirely
+    /// When OnDelete.IgnoreDeletes is set on the embedded table config, we skip this check entirely
     /// since DELETE events are discarded and routing is not needed.
     ///
     /// Example:
@@ -222,26 +222,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var schema = embedded.SourceTableSchema ?? "public";
             var table = embedded.SourceTableName;
 
-            // Check current REPLICA IDENTITY: 'd' = default (PK), 'f' = full, 'i' = index, 'n' = nothing
-            char replicaIdentity;
-            await using (var cmd = new NpgsqlCommand("""
-                SELECT relreplident
-                FROM pg_class c
-                JOIN pg_namespace n ON c.relnamespace = n.oid
-                WHERE n.nspname = @schema AND c.relname = @table
-                """, conn))
-            {
-                cmd.Parameters.AddWithValue("schema", schema);
-                cmd.Parameters.AddWithValue("table", table);
-                var result = await cmd.ExecuteScalarAsync(ct);
-                replicaIdentity = result is char c ? c : 'd';
-            }
+            var requiredColumns = new HashSet<string>(embedded.JoinColumns, StringComparer.OrdinalIgnoreCase);
+            foreach (var pk in embedded.PrimaryKeyColumns)
+                requiredColumns.Add(pk);
 
-            // FULL or INDEX already set — sufficient for routing deletes
-            if (replicaIdentity is 'f' or 'i')
+            var error = await CdcSinkSourceVerifier.CheckReplicaIdentityCoversColumns(conn, schema, table, requiredColumns);
+            if (error == null)
                 continue;
 
-            // Default (PK-only) — set to FULL so DELETE events include join columns
+            // Replica identity is insufficient — set to FULL so DELETE events include join columns
             try
             {
                 await using var alterCmd = new NpgsqlCommand(
@@ -260,7 +249,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     $"the primary key, so DELETE events need REPLICA IDENTITY FULL to include the join columns " +
                     $"for routing to the parent document. An administrator can run:\n\n" +
                     $"  ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;\n\n" +
-                    $"Alternatively, set IgnoreDeletes = true on this embedded table to skip delete processing.\n\n" +
+                    $"Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.\n\n" +
                     $"PostgreSQL error: {ex.MessageText}", ex);
             }
         }
@@ -268,7 +257,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
     /// <summary>
     /// Collects embedded tables (recursively) that need a non-default REPLICA IDENTITY —
-    /// i.e., where the join columns are not all covered by the primary key and IgnoreDeletes is false.
+    /// i.e., where the join columns are not all covered by the primary key and OnDelete.IgnoreDeletes is not set.
     /// </summary>
     private static void CollectEmbeddedTablesNeedingReplicaIdentity(
         List<CdcSinkTableConfig> rootTables, List<CdcSinkEmbeddedTableConfig> result)
@@ -287,7 +276,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             foreach (var e in embedded)
             {
-                if (e.IgnoreDeletes == false)
+                if (e.OnDelete?.IgnoreDeletes != true)
                 {
                     // Check if all join columns are in the table's own PK
                     bool allJoinColumnsInPk = true;

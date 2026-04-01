@@ -57,17 +57,11 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     public string Patch { get; set; }
 
     /// <summary>
-    /// Optional JavaScript patch that runs on the PARENT document when a DELETE event is
-    /// received for this embedded table, instead of removing the embedded item. This allows
-    /// implementing soft-delete patterns for embedded data (e.g., marking an item as inactive
-    /// rather than removing it from the array).
-    ///
-    /// When set, the embedded item is NOT removed from the parent's array/map/value.
-    /// Instead, the patch runs with this = parent document, $row = the DELETE event data.
-    ///
-    /// When PatchOnDelete is null (default), DELETE events remove the embedded item normally.
+    /// Controls how DELETE events are handled for this embedded table.
+    /// When null (default), deletes remove the embedded item from the parent's array/map/value.
+    /// See <see cref="CdcSinkOnDeleteConfig"/> for archive, audit, and ignore patterns.
     /// </summary>
-    public string PatchOnDelete { get; set; }
+    public CdcSinkOnDeleteConfig OnDelete { get; set; }
 
     /// <summary>
     /// Whether primary key matching and map key comparison are case-sensitive.
@@ -75,19 +69,6 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     /// When true, comparison is ordinal case-sensitive.
     /// </summary>
     public bool CaseSensitiveKeys { get; set; }
-
-    /// <summary>
-    /// When true, DELETE events from this embedded table are ignored — rows are only
-    /// added and updated, never removed from the parent document. This is useful when
-    /// the embedded data is append-only (e.g., audit logs) or when the embedded table's
-    /// primary key doesn't include the join column to the parent and you don't want to
-    /// set up REPLICA IDENTITY FULL on the source table.
-    ///
-    /// When IgnoreDeletes is true, the CDC process does not need the join column to be
-    /// present in DELETE events, so the default REPLICA IDENTITY (primary key only) is
-    /// sufficient regardless of whether the PK includes the join column.
-    /// </summary>
-    public bool IgnoreDeletes { get; set; }
 
     /// <summary>
     /// Nested embedded tables (deep nesting).
@@ -109,9 +90,8 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         JoinColumns = config.JoinColumns;
         Type = config.Type;
         Patch = config.Patch;
-        PatchOnDelete = config.PatchOnDelete;
+        OnDelete = config.OnDelete;
         CaseSensitiveKeys = config.CaseSensitiveKeys;
-        IgnoreDeletes = config.IgnoreDeletes;
         EmbeddedTables = config.EmbeddedTables;
     }
 
@@ -128,9 +108,8 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
             [nameof(Type)] = Type.ToString(),
             [nameof(Patch)] = Patch,
-            [nameof(PatchOnDelete)] = PatchOnDelete,
+            [nameof(OnDelete)] = OnDelete?.ToJson(),
             [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
-            [nameof(IgnoreDeletes)] = IgnoreDeletes,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
         };
     }

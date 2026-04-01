@@ -46,19 +46,11 @@ public class CdcSinkTableConfig : IDynamicJson
     public string Patch { get; set; }
 
     /// <summary>
-    /// Optional JavaScript patch that runs when a DELETE event is received instead of
-    /// deleting the document. This allows implementing soft-delete / archive patterns.
-    /// When set, the document is loaded, the patch is executed, and the document is saved
-    /// back — it is NOT deleted.
-    ///
-    /// Available variables: this = the existing document, $row = raw CDC row (DELETE event data).
-    ///
-    /// Example — archive pattern:
-    ///   PatchOnDelete = "this.Archived = true; this.ArchivedAt = new Date().toISOString();"
-    ///
-    /// When PatchOnDelete is null (default), DELETE events delete the document normally.
+    /// Controls how DELETE events are handled for this table.
+    /// When null (default), deletes are processed normally (document is deleted).
+    /// See <see cref="CdcSinkOnDeleteConfig"/> for archive, audit, and ignore patterns.
     /// </summary>
-    public string PatchOnDelete { get; set; }
+    public CdcSinkOnDeleteConfig OnDelete { get; set; }
 
     public bool Disabled { get; set; }
 
@@ -83,7 +75,7 @@ public class CdcSinkTableConfig : IDynamicJson
             [nameof(AttachmentNameMapping)] = DynamicJsonValue.Convert(AttachmentNameMapping),
             [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
             [nameof(Patch)] = Patch,
-            [nameof(PatchOnDelete)] = PatchOnDelete,
+            [nameof(OnDelete)] = OnDelete?.ToJson(),
             [nameof(Disabled)] = Disabled,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
             [nameof(LinkedTables)] = new DynamicJsonArray(LinkedTables.Select(x => x.ToJson())),
