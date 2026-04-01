@@ -1133,6 +1133,53 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Single(sales.Employees);
                 Assert.Equal("Charlie", sales.Employees[0].EmpName);
             }
+
+            // Delete one employee from Engineering (Alice, emp_id=1)
+            ExecuteNpgSql(connectionString, "DELETE FROM employees WHERE company_id = 1 AND dept_id = 10 AND emp_id = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var company = await session.LoadAsync<Company>("Companies/1");
+                var eng = company?.Departments?.FirstOrDefault(d => d.DeptName == "Engineering");
+                return eng?.Employees?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("Companies/1");
+                var engineering = company.Departments.First(d => d.DeptName == "Engineering");
+                Assert.Single(engineering.Employees);
+                Assert.Equal("Bob", engineering.Employees[0].EmpName);
+
+                // Sales department should be unaffected
+                var sales = company.Departments.First(d => d.DeptName == "Sales");
+                Assert.Single(sales.Employees);
+                Assert.Equal("Charlie", sales.Employees[0].EmpName);
+            }
+
+            // Delete entire Engineering department (dept_id=10) — first delete remaining employee, then department
+            ExecuteNpgSql(connectionString, @"
+                BEGIN;
+                DELETE FROM employees WHERE company_id = 1 AND dept_id = 10;
+                DELETE FROM departments WHERE company_id = 1 AND dept_id = 10;
+                COMMIT;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var company = await session.LoadAsync<Company>("Companies/1");
+                return company?.Departments?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var company = await session.LoadAsync<Company>("Companies/1");
+                Assert.Single(company.Departments);
+                Assert.Equal("Sales", company.Departments[0].DeptName);
+                Assert.Single(company.Departments[0].Employees);
+                Assert.Equal("Charlie", company.Departments[0].Employees[0].EmpName);
+            }
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
