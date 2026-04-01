@@ -110,8 +110,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        _publicationName = CdcSinkSourceVerifier.ComputePublicationName(conn.Database, tableNames);
-        _slotName = CdcSinkSourceVerifier.ComputeSlotName(conn.Database, tableNames);
+        _publicationName = CdcSinkSourceVerifier.ComputePublicationName(conn.Database, Configuration.Name, tableNames);
+        _slotName = CdcSinkSourceVerifier.ComputeSlotName(conn.Database, Configuration.Name, tableNames);
 
         await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_publication WHERE pubname = @pubName", conn))
         {

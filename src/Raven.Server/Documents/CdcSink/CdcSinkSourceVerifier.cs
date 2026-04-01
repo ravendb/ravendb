@@ -133,8 +133,9 @@ public static class CdcSinkSourceVerifier
         else
         {
             // User can't create replication infrastructure — check if admin already set it up
-            var expectedPubName = ComputePublicationName(connection.Database, tableNames);
-            var expectedSlotName = ComputeSlotName(connection.Database, tableNames);
+            var configName = configuration?.Name ?? "";
+            var expectedPubName = ComputePublicationName(connection.Database, configName, tableNames);
+            var expectedSlotName = ComputeSlotName(connection.Database, configName, tableNames);
 
             bool publicationExists = false;
             bool slotExists = false;
@@ -522,31 +523,37 @@ public static class CdcSinkSourceVerifier
     /// Includes the database name in the hash so different databases with the same tables
     /// get distinct slots (pg_replication_slots is a cluster-wide global view).
     /// </summary>
-    internal static string ComputeSlotName(string databaseName, List<string> tableNames)
-    {
-        return $"rvn_cdc_s_{ComputeIdentifierHash(databaseName, tableNames)}";
-    }
-
     /// <summary>
-    /// Computes the PostgreSQL publication name for a given database and set of tables.
-    /// Publications are database-scoped, but including the database name in the hash
-    /// keeps publication and slot names consistent (same hash for same config).
+    /// Computes the PostgreSQL replication slot name.
+    /// Includes the database name and CDC Sink configuration name in the hash so that:
+    /// - Different databases with the same tables get distinct slots
+    ///   (pg_replication_slots is a cluster-wide global view)
+    /// - Two CDC Sink tasks covering the same tables but with different configurations
+    ///   get distinct slots (e.g., different column mappings or patches)
     /// </summary>
-    internal static string ComputePublicationName(string databaseName, List<string> tableNames)
+    internal static string ComputeSlotName(string databaseName, string configName, List<string> tableNames)
     {
-        return $"rvn_cdc_p_{ComputeIdentifierHash(databaseName, tableNames)}";
+        return $"rvn_cdc_s_{ComputeIdentifierHash(databaseName, configName, tableNames)}";
     }
 
     /// <summary>
-    /// Computes a full SHA-256 hash of the database name + sorted table names, encoded as
-    /// lowercase base32hex (0-9, a-v). Produces 52 characters for the full 256-bit hash.
+    /// Computes the PostgreSQL publication name. Same uniqueness guarantees as the slot name.
+    /// </summary>
+    internal static string ComputePublicationName(string databaseName, string configName, List<string> tableNames)
+    {
+        return $"rvn_cdc_p_{ComputeIdentifierHash(databaseName, configName, tableNames)}";
+    }
+
+    /// <summary>
+    /// Computes a full SHA-256 hash of the database name + config name + sorted table names,
+    /// encoded as lowercase base32hex (0-9, a-v). Produces 52 characters for the full 256-bit hash.
     /// Combined with the 10-char prefix ("rvn_cdc_s_" or "rvn_cdc_p_"), the total is 62 chars
     /// — safely under PostgreSQL's 63-char identifier limit (NAMEDATALEN - 1).
     /// </summary>
-    private static string ComputeIdentifierHash(string databaseName, List<string> tableNames)
+    private static string ComputeIdentifierHash(string databaseName, string configName, List<string> tableNames)
     {
         var sorted = string.Join("_", tableNames.OrderBy(t => t));
-        var input = $"{databaseName}\0{sorted}";
+        var input = $"{databaseName}\0{configName}\0{sorted}";
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return ToBase32Lower(bytes);
     }
