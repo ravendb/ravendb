@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
 
 namespace Raven.Server.Documents.CdcSink;
@@ -17,7 +19,7 @@ namespace Raven.Server.Documents.CdcSink;
 /// </summary>
 public static class CdcSinkSourceVerifier
 {
-    public static async Task<CdcSinkVerificationResult> VerifyAsync(SqlConnectionString connection, List<string> tableNames = null)
+    public static async Task<CdcSinkVerificationResult> VerifyAsync(SqlConnectionString connection, List<string> tableNames = null, CdcSinkConfiguration configuration = null)
     {
         var result = new CdcSinkVerificationResult();
 
@@ -67,7 +69,7 @@ public static class CdcSinkSourceVerifier
                 switch (connection.FactoryName)
                 {
                     case "Npgsql":
-                        await VerifyPostgreSqlAsync(dbConnection, tableNames, result);
+                        await VerifyPostgreSqlAsync(dbConnection, tableNames, configuration, result);
                         break;
 
                     case "System.Data.SqlClient":
@@ -91,7 +93,7 @@ public static class CdcSinkSourceVerifier
         return result;
     }
 
-    private static async Task VerifyPostgreSqlAsync(DbConnection connection, List<string> tableNames, CdcSinkVerificationResult result)
+    private static async Task VerifyPostgreSqlAsync(DbConnection connection, List<string> tableNames, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
     {
         // Check wal_level = logical
         await using (var cmd = connection.CreateCommand())
@@ -186,6 +188,95 @@ public static class CdcSinkSourceVerifier
                     $"{string.Join(", ", missing)}. " +
                     $"Either grant the privilege with: ALTER ROLE {currentUser} REPLICATION; " +
                     $"or have an administrator run:\n{string.Join("\n", commands)}");
+            }
+        }
+
+        // Verify REPLICA IDENTITY for embedded tables whose join columns aren't in the PK.
+        // Without FULL or INDEX identity, DELETE events only carry PK columns — insufficient
+        // for routing to the parent document when the join column is outside the PK.
+        if (configuration != null)
+        {
+            await VerifyReplicaIdentityForEmbeddedTablesAsync(connection, configuration, result);
+        }
+    }
+
+    /// <summary>
+    /// Checks that each embedded table whose join columns aren't fully covered by its PK
+    /// has REPLICA IDENTITY set to FULL or INDEX. Tables with IgnoreDeletes skip this check.
+    /// </summary>
+    private static async Task VerifyReplicaIdentityForEmbeddedTablesAsync(
+        DbConnection connection, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
+    {
+        var tablesToCheck = new List<CdcSinkEmbeddedTableConfig>();
+        CollectEmbeddedTablesNeedingReplicaCheck(configuration.Tables, tablesToCheck);
+
+        foreach (var embedded in tablesToCheck)
+        {
+            var schema = embedded.SourceTableSchema ?? "public";
+            var table = embedded.SourceTableName;
+
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = """
+                SELECT relreplident
+                FROM pg_class c
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE n.nspname = @schema AND c.relname = @table
+                """;
+            var schemaParam = cmd.CreateParameter();
+            schemaParam.ParameterName = "@schema";
+            schemaParam.Value = schema;
+            cmd.Parameters.Add(schemaParam);
+
+            var tableParam = cmd.CreateParameter();
+            tableParam.ParameterName = "@table";
+            tableParam.Value = table;
+            cmd.Parameters.Add(tableParam);
+
+            var replicaIdent = await cmd.ExecuteScalarAsync();
+            var identChar = replicaIdent is char c ? c : 'd';
+
+            if (identChar is 'f' or 'i')
+                continue;
+
+            var joinCols = string.Join(", ", embedded.JoinColumns);
+            result.Warnings.Add(
+                $"Embedded table '{schema}.{table}' has REPLICA IDENTITY DEFAULT (PK-only), " +
+                $"but its join column(s) ({joinCols}) are not part of the primary key. " +
+                $"DELETE events will not include the join columns, which are needed to route " +
+                $"deletes to the correct parent document. The CDC process will automatically " +
+                $"set REPLICA IDENTITY FULL on this table at startup if it has permission. " +
+                $"To set it manually: ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;");
+        }
+
+        static void CollectEmbeddedTablesNeedingReplicaCheck(
+            List<CdcSinkTableConfig> rootTables, List<CdcSinkEmbeddedTableConfig> result)
+        {
+            foreach (var root in rootTables)
+                CollectFromEmbedded(root.EmbeddedTables, result);
+
+            static void CollectFromEmbedded(List<CdcSinkEmbeddedTableConfig> embedded, List<CdcSinkEmbeddedTableConfig> result)
+            {
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+                if (embedded == null) return;
+
+                foreach (var e in embedded)
+                {
+                    if (e.IgnoreDeletes == false)
+                    {
+                        bool allInPk = true;
+                        foreach (var joinCol in e.JoinColumns)
+                        {
+                            if (e.PrimaryKeyColumns.Contains(joinCol) == false)
+                            {
+                                allInPk = false;
+                                break;
+                            }
+                        }
+                        if (allInPk == false)
+                            result.Add(e);
+                    }
+                    CollectFromEmbedded(e.EmbeddedTables, result);
+                }
             }
         }
     }
