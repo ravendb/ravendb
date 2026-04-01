@@ -135,7 +135,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     if (op.Processor.RootConfig.Patch != null)
                     {
-                        patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                        patches ??= [];
                         patches.Add((op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch, null));
                     }
 
@@ -154,7 +154,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     var deleteScript = op.Processor.RootConfig.OnDelete?.Patch;
                     if (deleteScript != null)
                     {
-                        patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                        patches ??= [];
                         patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, null));
                     }
                     break;
@@ -164,7 +164,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     needsDelete = false;
                     lastDeleteOp = null;
 
-                    pendingEmbeds ??= new List<CdcSinkDocumentOp>();
+                    pendingEmbeds ??= [];
                     pendingEmbeds.Add(op);
                     // Embedded patches are collected after ApplyEmbeddedOperation, not here,
                     // so we have access to $old (the previous embedded item data for updates).
@@ -175,8 +175,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         if (needsDelete)
         {
-            var rootOnDelete = lastDeleteOp.Processor.RootConfig.OnDelete;
-            var ignoreDeletes = rootOnDelete?.IgnoreDeletes == true;
+            var ignoreDeletes = lastDeleteOp.Processor.RootConfig.OnDelete?.IgnoreDeletes == true;
 
             if (patches is { Count: > 0 })
             {
@@ -222,7 +221,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 if (embOnDelete?.Patch != null)
                 {
                     // OnDelete.Patch goes through the unified patch pipeline
-                    patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                    patches ??= [];
                     patches.Add((CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
                 }
                 if (embOnDelete?.IgnoreDeletes == true)
@@ -237,7 +236,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             // enabling delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
             if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
             {
-                patches ??= new List<(string, Dictionary<string, object>, string, Dictionary<string, object>)>();
+                patches ??= [];
                 patches.Add((embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
             }
         }

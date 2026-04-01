@@ -3179,6 +3179,126 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip =
+            "put() is not available in the CDC patch script runner. Recording an audit " +
+            "trail via put() requires exposing document operations to the script context.")]
+        public async Task Patch_AuditTrail_InsertUpdateDeleteInsertUpdate()
+        {
+            // Verifies that Patch and OnDelete.Patch record a full audit trail of
+            // operations via put(), and that the sequence matches the SQL transaction order:
+            // INSERT → UPDATE → DELETE → INSERT → UPDATE
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE items (id INT PRIMARY KEY, name VARCHAR(200) NOT NULL);
+                ALTER TABLE items REPLICA IDENTITY FULL;
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-audit-trail",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" }
+                        },
+                        // On upsert: record the operation in an audit document
+                        Patch = @"
+                            var seq = (this.AuditSeq || 0) + 1;
+                            this.AuditSeq = seq;
+                            put('AuditLog/' + id(this) + '/' + seq, {
+                                Op: $old ? 'Update' : 'Insert',
+                                Name: $row.name,
+                                PreviousName: $old ? $old.Name : null,
+                                Timestamp: new Date().toISOString(),
+                                '@metadata': { '@collection': 'AuditLog' }
+                            });",
+                        OnDelete = new CdcSinkOnDeleteConfig
+                        {
+                            // On delete: record the deletion, then let it proceed
+                            Patch = @"
+                                var doc = load(id(this));
+                                var seq = (doc.AuditSeq || 0) + 1;
+                                put('AuditLog/' + id(this) + '/' + seq, {
+                                    Op: 'Delete',
+                                    Name: $row.name,
+                                    Timestamp: new Date().toISOString(),
+                                    '@metadata': { '@collection': 'AuditLog' }
+                                });"
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-audit-trail");
+
+            // Execute the full sequence in a single transaction:
+            // INSERT → UPDATE → DELETE → INSERT → UPDATE
+            ExecuteNpgSql(connectionString, """
+                BEGIN;
+                INSERT INTO items (id, name) VALUES (1, 'Alpha');
+                UPDATE items SET name = 'Beta' WHERE id = 1;
+                DELETE FROM items WHERE id = 1;
+                INSERT INTO items (id, name) VALUES (1, 'Gamma');
+                UPDATE items SET name = 'Delta' WHERE id = 1;
+                COMMIT;
+                """);
+
+            // Wait for the final state
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var item = await session.LoadAsync<Item>("Items/1");
+                return item?.Name;
+            }, "Delta", timeout: 60_000);
+
+            // Verify the audit trail records the full sequence
+            // Expected: Insert(Alpha), Update(Beta), Delete, Insert(Gamma), Update(Delta)
+            using (var session = store.OpenAsyncSession())
+            {
+                var audit1 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/1");
+                Assert.Equal("Insert", audit1.Op);
+                Assert.Equal("Alpha", audit1.Name);
+
+                var audit2 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/2");
+                Assert.Equal("Update", audit2.Op);
+                Assert.Equal("Beta", audit2.Name);
+                Assert.Equal("Alpha", audit2.PreviousName);
+
+                var audit3 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/3");
+                Assert.Equal("Delete", audit3.Op);
+
+                var audit4 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/4");
+                Assert.Equal("Insert", audit4.Op);
+                Assert.Equal("Gamma", audit4.Name);
+
+                var audit5 = await session.LoadAsync<AuditEntry>("AuditLog/Items-1/5");
+                Assert.Equal("Update", audit5.Op);
+                Assert.Equal("Delta", audit5.Name);
+                Assert.Equal("Gamma", audit5.PreviousName);
+            }
+        }
+
+        private class AuditEntry
+        {
+            public string Op { get; set; }
+            public string Name { get; set; }
+            public string PreviousName { get; set; }
+            public string Timestamp { get; set; }
+        }
+
         private class OrderWithStatus
         {
             public string Id { get; set; }
