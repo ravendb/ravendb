@@ -274,6 +274,9 @@ namespace Voron.Impl.Paging
             {
                 state.RemoveBuffer(page);
                 ReturnBuffer(buffer);
+
+                if (tx is LowLevelTransaction llt)
+                    llt._pageLocator.Reset(page);
             }
         }
 
