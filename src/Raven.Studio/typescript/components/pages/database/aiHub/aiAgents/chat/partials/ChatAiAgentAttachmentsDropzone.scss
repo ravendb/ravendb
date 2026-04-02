@@ -1,0 +1,27 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.chat-ai-agent-attachments-dropzone {
+    .dropzone-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(148, 87, 181, 0.2);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+}

@@ -414,7 +414,10 @@ namespace Raven.Client.Documents.Linq
                                     value = RavenDocumentQuery.CmpXchg((string)args[0]);
                                     return true;
                                 case nameof(RavenQuery.Now):
-                                    value = RavenDocumentQuery.Now();
+                                    if (mce.Arguments.Count > 0 && TryGetMethodArguments(mce, out var nowArgs))
+                                        value = RavenDocumentQuery.Now((string)nowArgs[0]);
+                                    else
+                                        value = RavenDocumentQuery.Now();
                                     return true;
                                 case nameof(RavenQuery.Today):
                                     value = RavenDocumentQuery.Today();

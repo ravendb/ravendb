@@ -9,9 +9,11 @@ import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "../utils/chatAiAgentValidation";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import router from "plugins/router";
 
 export interface ChatAiAgentQueryParams {
     agentId: string;
@@ -23,6 +25,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
     const dispatch = useAppDispatch();
     const { databasesService } = useServices();
     const { databaseChangesApi } = useChanges();
+    const { appUrl } = useAppUrls();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
@@ -42,21 +45,29 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
     // Watch for document changes
     useEffect(() => {
+        let setIsChangedTimeout: NodeJS.Timeout;
+
         if (databaseChangesApi && conversationId) {
             const watchDocument = databaseChangesApi.watchDocument(conversationId, (e) => {
                 if (isLoading || e.ChangeVector === currentDocumentChangeVector) {
+                    clearTimeout(setIsChangedTimeout);
                     return;
                 }
 
                 if (e.Type === "Delete") {
                     dispatch(chatAiAgentActions.isDocumentDeletedSet(true));
                 } else {
-                    dispatch(chatAiAgentActions.isDocumentChangedSet(true));
+                    // onChange callback sends each event separately, so we need to wait a bit before checking
+                    // when the last one has the same change vector as the current document this timeout will be cleared
+                    setIsChangedTimeout = setTimeout(() => {
+                        dispatch(chatAiAgentActions.isDocumentChangedSet(true));
+                    }, 100);
                 }
             });
 
             return () => {
                 watchDocument.off();
+                clearTimeout(setIsChangedTimeout);
             };
         }
     }, [databaseChangesApi, conversationId, currentDocumentChangeVector, isLoading]);
@@ -78,6 +89,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
 
         return {
             prompts: [{ text: "" }],
+            attachments: [],
             parameters: config.Parameters.map((x): ChatAiAgentFormData["parameters"][number] => ({
                 name: x.Name,
                 value: null,
@@ -106,18 +118,11 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         chatForm.reset(result);
     };
 
-    const { control, handleSubmit, setValue } = chatForm;
-
-    const promptsFieldsArray = useFieldArray({
-        control,
-        name: "prompts",
-    });
-
-    const formValues = useWatch({
-        control,
-    });
+    const { getValues, handleSubmit, setValue } = chatForm;
 
     const runChat = async (toolCallParameters?: AiAgentToolCall[]) => {
+        const formValues = getValues();
+
         await dispatch(
             chatAiAgentActions.runChat({
                 databaseName,
@@ -128,10 +133,13 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         ).unwrap();
 
         setValue("prompts", [{ text: "" }]);
+        setValue("attachments", []);
     };
 
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
+            const formValues = getValues();
+
             if (
                 queryParams?.conversationId == null &&
                 isDocumentExpirationEnabled.status === "success" &&
@@ -150,15 +158,7 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
     };
 
     const handleNewChat = () => {
-        dispatch(chatAiAgentActions.conversationIdSet(null));
-        dispatch(chatAiAgentActions.messagesSet([]));
-        dispatch(chatAiAgentActions.documentSet(null));
-        dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        dispatch(chatAiAgentActions.activePromptIndexSet(0));
-        dispatch(chatAiAgentActions.hasScrollSet(false));
-        dispatch(chatAiAgentActions.isDocumentDeletedSet(false));
-        dispatch(chatAiAgentActions.isDocumentChangedSet(false));
-        chatForm.reset();
+        router.navigate(appUrl.forChatAiAgent(databaseName, queryParams.agentId));
     };
 
     return {
@@ -169,7 +169,6 @@ export default function useChatAiAgent(queryParams: ChatAiAgentQueryParams) {
         handleSubmit,
         runChat,
         asyncGetDefaultValues,
-        promptsFieldsArray,
     };
 }
 

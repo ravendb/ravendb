@@ -1,10 +1,11 @@
 import classNames from "classnames";
 import AceEditor from "components/common/ace/AceEditor";
 import { FormInput } from "components/common/Form";
+import { chatAiAgentAttachmentsUtils } from "components/pages/database/aiHub/aiAgents/chat/utils/chatAiAgentAttachmentsUtils";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { useRef, useEffect } from "react";
+import { ClipboardEvent, useRef, useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
-import { useFormContext, useWatch, UseFieldArrayReturn } from "react-hook-form";
+import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
 import AiAgentMessages from "../../partials/AiAgentMessages";
 import AiAgentParametersField from "../../partials/AiAgentParametersField";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
@@ -17,29 +18,23 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppUrls } from "components/hooks/useAppUrls";
 import "./ChatAiAgentFormBody.scss";
 import ChatAiAgentPromptActions from "./ChatAiAgentPromptActions";
+import ChatAiAgentPromptAttachments from "components/pages/database/aiHub/aiAgents/chat/partials/ChatAiAgentPromptAttachments";
+import ChatAiAgentAttachmentsDropzone from "components/pages/database/aiHub/aiAgents/chat/partials/ChatAiAgentAttachmentsDropzone";
 
 interface ChatAiAgentFormBodyProps {
     height: number;
     handleSend: () => Promise<void>;
     runChat: (toolCallParameters?: AiAgentToolCall[]) => Promise<void>;
     isHistory: boolean;
-    promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
 }
 
-export default function ChatAiAgentFormBody({
-    height,
-    handleSend,
-    runChat,
-    isHistory,
-    promptsFieldsArray,
-}: ChatAiAgentFormBodyProps) {
+export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHistory }: ChatAiAgentFormBodyProps) {
     const dispatch = useAppDispatch();
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
-    const hasScroll = useAppSelector(chatAiAgentSelectors.hasScroll);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
@@ -54,22 +49,23 @@ export default function ChatAiAgentFormBody({
 
     const { control, handleSubmit, formState } = useFormContext<ChatAiAgentFormData>();
 
-    const formValues = useWatch({
+    const formParameters = useWatch({
         control,
+        name: "parameters",
     });
 
-    // Scroll to the bottom of the test panel when new messages are added and set hasScroll
+    const promptsFieldsArray = useFieldArray({
+        control,
+        name: "prompts",
+    });
+
+    const attachmentsFieldsArray = useFieldArray({
+        control,
+        name: "attachments",
+    });
+
+    // Scroll to the bottom of the test panel when new messages are added
     useEffect(() => {
-        if (!messagesPanelRef.current) {
-            return;
-        }
-
-        dispatch(
-            chatAiAgentActions.hasScrollSet(
-                messagesPanelRef.current.scrollHeight > messagesPanelRef.current.clientHeight
-            )
-        );
-
         if (messagesPanelRef.current) {
             messagesPanelRef.current.scrollTo({
                 top: messagesPanelRef.current.scrollHeight,
@@ -85,16 +81,34 @@ export default function ChatAiAgentFormBody({
 
     const isPromptDisabled =
         isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
-    const hasPromptErrors = formState.errors.prompts?.length > 0;
+    const hasPromptErrors = !!formState.errors.prompts;
+
+    const handlePromptPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+        const files = chatAiAgentAttachmentsUtils.getLocalFilesFromClipboardData(event.clipboardData);
+        if (!files.length) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const { attachments, invalidFiles } = chatAiAgentAttachmentsUtils.prepareConversationLocalFiles(
+            files,
+            attachmentsFieldsArray.fields.map((x) => x.name),
+            document.data?.["@metadata"]?.["@attachments"]?.map((attachment) => attachment.Name) ?? []
+        );
+
+        if (attachments.length) {
+            attachmentsFieldsArray.append(attachments);
+        }
+
+        chatAiAgentAttachmentsUtils.reportValidationErrors(invalidFiles);
+    };
 
     return (
         <>
             <div
                 ref={messagesPanelRef}
-                className={classNames(
-                    "ai-agents overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
-                    { "pe-2": !hasScroll }
-                )}
+                className="ai-agents overflow-auto flex-grow-1 position-relative d-flex justify-content-center chat-ai-agent-messages-panel"
                 style={{ height: height - promptHeightInPx }}
             >
                 <div className="w-100" style={{ maxWidth: "800px" }}>
@@ -104,7 +118,7 @@ export default function ChatAiAgentFormBody({
                             <hr />
                             <AiAgentParametersField
                                 control={control}
-                                value={formValues.parameters}
+                                value={formParameters}
                                 panelClassName="panel-bg-1"
                             />
                         </div>
@@ -117,6 +131,7 @@ export default function ChatAiAgentFormBody({
                                 dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
                             }
                             parametersFromUser={document.data?.Parameters}
+                            documentId={conversationId}
                         />
                     )}
                     {isRawData && document.data && (
@@ -158,11 +173,13 @@ export default function ChatAiAgentFormBody({
                                 .
                             </RichAlert>
                         )}
+                        <ChatAiAgentAttachmentsDropzone attachmentsFieldsArray={attachmentsFieldsArray} />
                         <div
                             className={classNames("prompt-wrapper", {
                                 "border-danger": hasPromptErrors,
                             })}
                         >
+                            <ChatAiAgentPromptAttachments attachmentsFieldsArray={attachmentsFieldsArray} />
                             <FormInput
                                 type="textarea"
                                 as="textarea"
@@ -176,6 +193,7 @@ export default function ChatAiAgentFormBody({
                                         handleSubmit(handleSend)();
                                     }
                                 }}
+                                onPaste={handlePromptPaste}
                                 disabled={isPromptDisabled}
                                 key={promptsFieldsArray.fields[activePromptIndex].id}
                             />
@@ -184,6 +202,7 @@ export default function ChatAiAgentFormBody({
                                 isPromptDisabled={isPromptDisabled}
                                 isLoading={isLoading}
                                 hasPromptErrors={hasPromptErrors}
+                                attachmentsFieldsArray={attachmentsFieldsArray}
                             />
                         </div>
                     </div>

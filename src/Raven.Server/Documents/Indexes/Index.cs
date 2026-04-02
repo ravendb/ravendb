@@ -4225,7 +4225,7 @@ namespace Raven.Server.Documents.Indexes
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
 
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, q, length, indexEtagBytes, queryTime);
+            UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(queryContext, q, length, indexEtagBytes, queryTime);
 
             unchecked
             {
@@ -4265,14 +4265,14 @@ namespace Raven.Server.Documents.Indexes
             var indexEtagBytes = stackalloc byte[length];
 
             CalculateIndexEtagInternal(indexEtagBytes, isStale, State, queryContext, indexContext);
-            UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(queryContext, query, length, indexEtagBytes, queryTime);
+            UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(queryContext, query, length, indexEtagBytes, queryTime);
 
             var writePos = indexEtagBytes + minLength;
 
             return StaticIndexHelper.CalculateIndexEtag(this, length, indexEtagBytes, writePos, queryContext, indexContext, referencedCollectionsDict, collectionsWithCompareExchangeReferences);
         }
 
-        private static unsafe void UseAllDocumentsCounterCmpXchgAndTimeSeriesEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes, QueryTimeScope queryTime = null)
+        private static unsafe void UseAllDocumentsCounterCmpXchgTimeSeriesAndTimeBasedEtags(QueryOperationContext queryContext, QueryMetadata q, int length, byte* indexEtagBytes, QueryTimeScope queryTime = null)
         {
             if (q == null)
                 return;
@@ -4299,6 +4299,15 @@ namespace Raven.Server.Documents.Indexes
             {
                 pos -= sizeof(long);
                 *(long*)(indexEtagBytes + pos) = queryTime.Today.Ticks;
+            }
+
+            if (q.NowOffsets is { Count: > 0 })
+            {
+                foreach (var offset in q.NowOffsets)
+                {
+                    pos -= sizeof(long);
+                    *(long*)(indexEtagBytes + pos) = offset.Apply(queryTime.Now).Ticks;
+                }
             }
 
             if (hasCmpXchg)
@@ -4348,6 +4357,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (q.HasToday)
                 length += sizeof(long);
+
+            if (q.NowOffsets is { Count: > 0 })
+                length += sizeof(long) * q.NowOffsets.Count;
 
             return length;
         }

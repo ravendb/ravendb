@@ -146,6 +146,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "today", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Today;
 
+            if (string.Equals(methodName, "when", StringComparison.OrdinalIgnoreCase))
+                return MethodType.When;
+            
             if (throwIfNoMatch == false)
                 return MethodType.Unknown;
 

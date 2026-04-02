@@ -9,19 +9,22 @@ import { CustomDropdownToggle } from "components/common/Dropdown";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { chatAiAgentActions, chatAiAgentSelectors } from "../store/chatAiAgentSlice";
+import ChatAiAgentAttachmentsDropdown from "./ChatAiAgentAttachmentsDropdown";
 
 interface ChatAiAgentPromptActionsProps {
-    promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
     isPromptDisabled: boolean;
     isLoading: boolean;
     hasPromptErrors: boolean;
+    promptsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "prompts", "id">;
+    attachmentsFieldsArray: UseFieldArrayReturn<ChatAiAgentFormData, "attachments", "id">;
 }
 
 export default function ChatAiAgentPromptActions({
-    promptsFieldsArray,
     isPromptDisabled,
     isLoading,
     hasPromptErrors,
+    promptsFieldsArray,
+    attachmentsFieldsArray,
 }: ChatAiAgentPromptActionsProps) {
     const dispatch = useAppDispatch();
     const activePromptIndex = useAppSelector(chatAiAgentSelectors.activePromptIndex);
@@ -33,7 +36,11 @@ export default function ChatAiAgentPromptActions({
     const promptsCount = promptsFieldsArray.fields.length;
 
     return (
-        <div className="hstack gap-1 justify-content-end prompt-actions">
+        <div className="hstack gap-1 prompt-actions">
+            <ChatAiAgentAttachmentsDropdown
+                attachmentsFieldsArray={attachmentsFieldsArray}
+                isPromptDisabled={isPromptDisabled}
+            />
             {hasPromptErrors && (
                 <PopoverWithHoverWrapper message={promptsCount > 1 ? "Prompts are required" : "Prompt is required"}>
                     <Icon icon="warning" color="danger" margin="m-0" />

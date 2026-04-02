@@ -188,8 +188,10 @@ public static partial class CoraxQueryBuilder
             
             if (metadata.Query.Where is not null)
             {
-                coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where,  ref streamingOptimization);
-                coraxQuery = MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
+                coraxQuery = ToCoraxQuery(builderParameters, metadata.Query.Where, ref streamingOptimization);
+                coraxQuery = coraxQuery is CoraxWhenQuery 
+                    ? builderParameters.AllEntries.Replay() 
+                    : MaterializeWhenNeeded(builderParameters, coraxQuery, ref streamingOptimization);
             }
             // We sort on known field types, we'll optimize based on the first one to get the rest
             // Non-existing posting list isn't aware of dynamic fields, so we can't use this optimization for them
@@ -342,6 +344,12 @@ public static partial class CoraxQueryBuilder
                             default:
                                 left = ToCoraxQuery(builderParameters, @where.Left, ref leftOnlyOptimization, exact);
                                 right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
+                                
+                                if (left is CoraxWhenQuery)
+                                    return right;
+                                if (right is CoraxWhenQuery)
+                                    return left;
+                                
                                 // in case of AND we can materialize only TermMatches, we push streamingOptimization there only for changing order for MultiTermMatch;
                             if (left is CoraxBooleanItem cbi && leftOnlyOptimization.TrySetAsStreamingField(builderParameters, cbi, right))
                                     left = cbi.Materialize(ref leftOnlyOptimization);
@@ -365,6 +373,11 @@ public static partial class CoraxQueryBuilder
                         var left = ToCoraxQuery(builderParameters, @where.Left, ref builderParameters.StreamingDisabled, exact);
                         var right = ToCoraxQuery(builderParameters, @where.Right, ref builderParameters.StreamingDisabled, exact);
 
+                        if (left is CoraxWhenQuery)
+                            return right;
+                        if (right is CoraxWhenQuery)
+                            return left;
+                        
                         builderParameters.BuildSteps?.Add(
                             $"OR operator: left - {left.GetType().FullName} ({left}) assembly: {left.GetType().Assembly.FullName} assembly location: {left.GetType().Assembly.Location} , right - {right.GetType().FullName} ({right}) assemlbly: {right.GetType().Assembly.FullName} assembly location: {right.GetType().Assembly.Location}");
 
@@ -509,6 +522,8 @@ public static partial class CoraxQueryBuilder
                     return HandleEndsWith(builderParameters, me, exact, ref leftOnlyOptimization);
                 case MethodType.Exists:
                     return HandleExists(builderParameters, me, ref leftOnlyOptimization);
+                case MethodType.When:
+                    return HandleWhen(builderParameters, me, ref leftOnlyOptimization, exact, proximity);
                 case MethodType.Exact:
                     return HandleExact(builderParameters, me, ref leftOnlyOptimization, proximity);
                 case MethodType.Spatial_Within:
@@ -535,18 +550,27 @@ public static partial class CoraxQueryBuilder
     {
         var indexSearcher = builderParameters.IndexSearcher;
         IQueryMatch left = ToCoraxQuery(builderParameters, leftExpr, ref builderParameters.StreamingDisabled, exact);
+        
         // Corax does support internal negation of some primitives. Let's check if we can use it.
         if (TryUseNegatedQuery(builderParameters, rightExpr, out var right, exact) == false)
         {
+            if (left is CoraxWhenQuery)
+                left = builderParameters.AllEntries.Replay();
+            
             right = ToCoraxQuery(builderParameters, rightExpr.Expression, ref builderParameters.StreamingDisabled, exact);
             Materialize(builderParameters, ref left, ref right, ref builderParameters.StreamingDisabled);
-            return indexSearcher.AndNot(left, right, token: builderParameters.Token);
+            
+            return right is CoraxWhenQuery 
+                ? left 
+                : indexSearcher.AndNot(left, right, token: builderParameters.Token);
         }
 
         // We internally negated the right expression. If we find a pattern true and (NOT EXPR) we can skip the true, since it's noop. 
-        if (leftExpr is TrueExpression)
+        if (leftExpr is TrueExpression || left is CoraxWhenQuery)
             return right; // true and not... optimization
 
+        Debug.Assert(right is not CoraxWhenQuery, "TryUseNegatedQuery should not return CoraxWhenQuery as right side of the expression.");
+        
         // Materialize the query
         if (TryAndMergeOrMaterialize(builderParameters, ref left, ref right, out var merged, ref builderParameters.StreamingDisabled))
             return merged;
@@ -763,6 +787,17 @@ public static partial class CoraxQueryBuilder
 
             return CoraxBooleanItem.BuildBetween(builderParameters.IndexSearcher, index, fieldMetadata, valueFirstAsString, valueSecondAsString, leftSideOperation, rightSideOperation, ref builderParameters.StreamingDisabled);
         }
+    }
+    
+    private static IQueryMatch HandleWhen(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization, bool exact, int? proximity)
+    {
+        PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
+
+        var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], builderParameters.QueryParameters);
+        if (constantExpressionResult == false)
+            return new CoraxWhenQuery();
+            
+        return ToCoraxQuery(builderParameters, expression.Arguments[1], ref streamingOptimization, exact, proximity);
     }
 
     private static IQueryMatch HandleExists(Parameters builderParameters, MethodExpression expression, ref StreamingOptimization streamingOptimization)

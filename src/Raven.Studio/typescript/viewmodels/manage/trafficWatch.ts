@@ -486,13 +486,37 @@ class trafficWatch extends viewModelBase {
 
     private static formatDetails(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): string {
         if (trafficWatch.isHttpItem(item)) {
-            return item.RequestUri;
+            return trafficWatch.stripHostFromUrl(item.RequestUri);
         }
         if (trafficWatch.isTcpItem(item)) {
             return item.Operation + (item.Source ? " from node " + item.Source : "") + (item.OperationVersion ? " (version " + item.OperationVersion + ")" : "");
         }
 
         return "n/a";
+    }
+
+    private static tryParseUrl(url: string) {
+        try {
+            return new URL(url, location.origin);
+        } catch {
+            return null;
+        }
+    }
+
+    private static stripHostFromUrl(url: string) {
+        const parsed = this.tryParseUrl(url);
+        if (!parsed) {
+            return url;
+        }
+
+        return parsed.host === location.host
+            ? parsed.pathname + parsed.search + parsed.hash
+            : url;
+    }
+
+    private static extractTagFromUrl(url: string) {
+        const parsed = this.tryParseUrl(url);
+        return parsed?.searchParams.get("tag") ?? "";
     }
 
     compositionComplete() {
@@ -557,7 +581,7 @@ class trafficWatch extends viewModelBase {
             [
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => generalUtils.formatUtcDateAsLocal(x.TimeStamp, trafficWatch.dateTimeFormat),
-                    "Timestamp", "12%", {
+                    "Timestamp", "11%", {
                     extraClass: rowHighlightRules,
                     sortable: "string"
                 }),
@@ -567,7 +591,7 @@ class trafficWatch extends viewModelBase {
                     extraClass: rowHighlightRules,
                     useRawValue: () => true
                 }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid, 
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.ResponseStatusCode : "n/a",
                     "HTTP Status", "4%", {
                         extraClass: rowHighlightRules,
@@ -596,30 +620,36 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.ElapsedMilliseconds : null,
-                    "Duration", "6%", {
+                    "Duration", "5%", {
                         extraClass: rowHighlightRules,
-                        sortable: "number", 
+                        sortable: "number",
                         transformValue: (v, item) => durationProvider(item),
                         useRawValue: () => true
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.HttpMethod : "TCP",
-                    "Method", "6%", {
+                    "Method", "5%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.Type : (trafficWatch.isTcpItem(x) ? x.Operation : "n/a"),
-                    "Type", "6%", {
+                    "Type", "5%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
-                    x => trafficWatch.isPostgresItem(x) ? x.Username : "n/a",
-                    "Username", "6%", {
+                    x => trafficWatch.formatDetails(x),
+                    "Details", "13%", {
                         extraClass: rowHighlightRules,
-                        sortable: "string",
+                        sortable: "string"
                     }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isHttpItem(x) ? trafficWatch.extractTagFromUrl(x.RequestUri) : "",
+                    "Tag", "5%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string"
+                }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => x.CustomInfo,
                     "Custom Info", "8%", {
@@ -627,18 +657,18 @@ class trafficWatch extends viewModelBase {
                         sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
-                    x => trafficWatch.formatDetails(x),
-                    "Details", "14%", {
-                        extraClass: rowHighlightRules,
-                        sortable: "string"
-                    }),
-                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.isHttpItem(x) ? x.QueryTimings : null,
                     "<i class='icon-play' title='Query timings'></i>", "4%", {
                         extraClass: rowHighlightRules,
                         transformValue: (_, item) => timingsProvider(item),
                         useRawValue: () => true,
-                    })
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isPostgresItem(x) ? x.Username : "n/a",
+                    "Username", "6%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string",
+                    }),
             ]
         );
 

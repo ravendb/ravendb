@@ -274,5 +274,6 @@ function toDto(formData: RevertRevisionsFormData): RevertRevisionsRequest {
         Time: moment(formData.pointInTime).utc().toISOString(),
         WindowInSec,
         Collections: formData.isRevertAllCollections ? [] : formData.collections,
+        ContinuationParameters: undefined,
     };
 }

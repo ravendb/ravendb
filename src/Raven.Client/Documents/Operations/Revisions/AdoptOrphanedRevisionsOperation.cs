@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System;
 using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -24,13 +21,8 @@ public sealed class AdoptOrphanedRevisionsOperation : IOperation<OperationIdResu
     /// Parameters for the <see cref="AdoptOrphanedRevisionsOperation"/>, specifying which collections 
     /// to adopt orphaned revisions from.
     /// </summary>
-    public sealed class Parameters : IRevisionsOperationParameters
+    public sealed class Parameters : RevisionsOperationParameters
     {
-        /// <summary>
-        /// Gets or sets the collections from which orphaned revisions will be adopted.
-        /// If <c>null</c>, the operation will apply to all collections.
-        /// </summary>
-        public string[] Collections { get; set; } = null;
     }
 
     public AdoptOrphanedRevisionsOperation()
@@ -71,6 +63,8 @@ public sealed class AdoptOrphanedRevisionsOperation : IOperation<OperationIdResu
                 .Append("/databases/")
                 .Append(node.Database)
                 .Append("/admin/revisions/orphaned/adopt");
+
+            SelectedNodeTag = _parameters.GetNodeTag(node.Database);
 
             url = pathBuilder.ToString();
 

@@ -10,7 +10,9 @@ import { aiAgentParametersUtils } from "../../utils/aiAgentParametersUtils";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import { RunAiAgentRequestDto } from "commands/database/aiAgents/runAiAgentCommand";
 
-interface EditAiAgentState {
+type NewAttachmentTab = { tab: "source" } | { tab: "document" } | { tab: "documentAttachments"; documentId: string };
+
+interface ChatAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
     document: loadableData<documentDto>;
     runChatState: loadStatus;
@@ -18,14 +20,14 @@ interface EditAiAgentState {
     messages: AiAgentMessage[];
     isRawData: boolean;
     isWaitingForActionToolSubmit: boolean;
-    hasScroll: boolean;
     isDocumentExpirationEnabled: loadableData<boolean>;
     isDocumentDeleted: boolean;
     isDocumentChanged: boolean;
     activePromptIndex: number;
+    newAttachmentTab: NewAttachmentTab;
 }
 
-const initialState: EditAiAgentState = {
+const initialState: ChatAiAgentState = {
     config: createIdleState(),
     document: createIdleState(),
     runChatState: "idle",
@@ -33,11 +35,11 @@ const initialState: EditAiAgentState = {
     messages: [],
     isRawData: false,
     isWaitingForActionToolSubmit: false,
-    hasScroll: false,
     isDocumentExpirationEnabled: createIdleState(),
     isDocumentDeleted: false,
     isDocumentChanged: false,
     activePromptIndex: 0,
+    newAttachmentTab: null,
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -59,9 +61,6 @@ export const chatAiAgentSlice = createSlice({
         isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
             state.isWaitingForActionToolSubmit = action.payload;
         },
-        hasScrollSet: (state, action: PayloadAction<boolean>) => {
-            state.hasScroll = action.payload;
-        },
         isDocumentDeletedSet: (state, action: PayloadAction<boolean>) => {
             state.isDocumentDeleted = action.payload;
         },
@@ -70,6 +69,9 @@ export const chatAiAgentSlice = createSlice({
         },
         activePromptIndexSet: (state, action: PayloadAction<number>) => {
             state.activePromptIndex = action.payload;
+        },
+        newAttachmentTabSet: (state, action: PayloadAction<NewAttachmentTab>) => {
+            state.newAttachmentTab = action.payload;
         },
         reset: () => initialState,
     },
@@ -97,6 +99,7 @@ export const chatAiAgentSlice = createSlice({
                 state.messages = aiAgentsUtils.mapMessagesFromDoc({
                     docMessages: action.payload.Messages,
                     config: state.config.data,
+                    docAttachments: action.payload["@metadata"]?.["@attachments"],
                 });
             })
             .addCase(runChat.pending, (state) => {
@@ -171,6 +174,7 @@ const runChat = createAsyncThunk(
                     Content: x.arguments,
                 })),
                 AttachmentCommands: null,
+                attachments: formValues.attachments,
                 CreationOptions: {
                     Parameters: createParametersDto(conversationId, formValues.parameters),
                     ExpirationInSec:
@@ -199,12 +203,10 @@ function createUserPromptDto(
         return null;
     }
 
-    if (!prompts?.length) {
-        throw new Error("Prompt is required");
-    }
+    const validPrompts = prompts?.filter((x) => x?.text?.trim()) ?? [];
 
-    if (prompts.length > 1) {
-        return prompts.map((x) => ({ type: "text", text: x.text }));
+    if (validPrompts.length > 1) {
+        return validPrompts.map((x) => ({ type: "text", text: x.text.trim() }));
     }
 
     return prompts[0].text;
@@ -254,15 +256,16 @@ export const chatAiAgentSelectors = {
     config: (state: RootState) => state.chatAiAgent.config,
     isRawData: (state: RootState) => state.chatAiAgent.isRawData,
     document: (state: RootState) => state.chatAiAgent.document,
+    documentAttachments: (state: RootState) => state.chatAiAgent.document.data?.["@metadata"]?.["@attachments"] ?? [],
     runChatState: (state: RootState) => state.chatAiAgent.runChatState,
     isLoading: (state: RootState) =>
         state.chatAiAgent.runChatState === "loading" ||
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
     isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
-    hasScroll: (state: RootState) => state.chatAiAgent.hasScroll,
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
     isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
     isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,
     activePromptIndex: (state: RootState) => state.chatAiAgent.activePromptIndex,
+    newAttachmentTab: (state: RootState) => state.chatAiAgent.newAttachmentTab,
 };
