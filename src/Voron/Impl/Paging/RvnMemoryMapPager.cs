@@ -289,7 +289,15 @@ namespace Voron.Impl.Paging
 
         private const int PosixFadviseSequential = 2; // POSIX_FADV_SEQUENTIAL, same on all Linux arches
 
-        public void TryDropFromPageCacheHint()
+        /// <summary>
+        /// Calls posix_fadvise(POSIX_FADV_DONTNEED) on the specified byte range of the file,
+        /// releasing those clean pages from the page cache immediately.
+        /// Pass <paramref name="offset"/>=0 and <paramref name="length"/>=0 to advise the
+        /// entire file (kernel interprets len=0 as "to end of file").
+        /// Journal pages are always clean (read-only from the pager's perspective), so the
+        /// kernel always honours this hint. Errors are silently ignored — best-effort only.
+        /// </summary>
+        public void TryDropFromPageCacheHint(long offset = 0, long length = 0)
         {
             if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
                 return;
@@ -301,7 +309,7 @@ namespace Voron.Impl.Paging
             if (fd < 0)
                 return;
 
-            PosixFadvise(fd, 0, 0, PosixFadviseDoNotNeed);
+            PosixFadvise(fd, offset, length, PosixFadviseDoNotNeed);
         }
 
         private const int PosixFadviseDoNotNeed = 4; // POSIX_FADV_DONTNEED, same on all Linux arches
