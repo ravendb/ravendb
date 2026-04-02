@@ -3623,5 +3623,273 @@ namespace SlowTests.Server.Documents.CdcSink
                 return emp?.Name;
             }, "Alice Smith", timeout: 60_000);
         }
+
+        private class ComplexDoc
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public string Metadata { get; set; }    // json/jsonb → string
+            public string Settings { get; set; }    // jsonb → string
+            public string Tags { get; set; }        // text[] → string (via ToString)
+            public string SearchVector { get; set; } // tsvector → string
+            public string IpAddress { get; set; }   // inet → string
+        }
+
+        /// <summary>
+        /// Verifies that PostgreSQL complex types (json, jsonb, text arrays, tsvector, inet)
+        /// are handled correctly in both initial load and CDC streaming paths. These types
+        /// don't have direct .NET equivalents and must be converted to strings for JSON storage.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ComplexTypes_Json_Jsonb_Array_TsVector_Inet()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE complex_docs (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    metadata JSON,
+                    settings JSONB,
+                    tags TEXT[],
+                    search_vector TSVECTOR,
+                    ip_address INET
+                );
+                INSERT INTO complex_docs (id, name, metadata, settings, tags, search_vector, ip_address)
+                VALUES (
+                    1,
+                    'TestDoc',
+                    '{"key": "value", "nested": {"a": 1}}',
+                    '{"theme": "dark", "lang": "en"}',
+                    ARRAY['tag1', 'tag2', 'tag3'],
+                    to_tsvector('english', 'quick brown fox'),
+                    '192.168.1.100'
+                );
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-complex-types",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "ComplexDocs",
+                        SourceTableSchema = "public",
+                        SourceTableName = "complex_docs",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "metadata", "Metadata" },
+                            { "settings", "Settings" },
+                            { "tags", "Tags" },
+                            { "search_vector", "SearchVector" },
+                            { "ip_address", "IpAddress" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-complex-types");
+
+            // Verify initial load handled all complex types
+            var initialDoc = await WaitForDocumentAsync<ComplexDoc>(store, "ComplexDocs/1", timeoutMs: 60_000);
+            Assert.NotNull(initialDoc);
+            Assert.Equal("TestDoc", initialDoc.Name);
+
+            // JSON and JSONB should arrive as their string representation
+            Assert.NotNull(initialDoc.Metadata);
+            Assert.Contains("key", initialDoc.Metadata);
+            Assert.Contains("value", initialDoc.Metadata);
+
+            Assert.NotNull(initialDoc.Settings);
+            Assert.Contains("theme", initialDoc.Settings);
+            Assert.Contains("dark", initialDoc.Settings);
+
+            // Array, tsvector, inet should all arrive as string representations
+            Assert.NotNull(initialDoc.Tags);
+            Assert.NotNull(initialDoc.IpAddress);
+
+            // Capture initial values to compare after CDC update
+            var initialMetadata = initialDoc.Metadata;
+            var initialTags = initialDoc.Tags;
+            var initialIp = initialDoc.IpAddress;
+
+            // --- CDC streaming: update all complex columns ---
+            ExecuteNpgSql(connectionString, """
+                UPDATE complex_docs SET
+                    metadata = '{"key": "updated", "extra": true}',
+                    settings = '{"theme": "light", "lang": "fr"}',
+                    tags = ARRAY['alpha', 'beta'],
+                    search_vector = to_tsvector('english', 'lazy dog jumps'),
+                    ip_address = '10.0.0.1'
+                WHERE id = 1;
+                """);
+
+            // Verify the CDC update arrives with the same type handling
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<ComplexDoc>("ComplexDocs/1");
+                return doc?.Settings;
+            }, """{"lang": "fr", "theme": "light"}""", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var updated = await session.LoadAsync<ComplexDoc>("ComplexDocs/1");
+                Assert.NotNull(updated);
+
+                // JSON should have new content
+                Assert.Contains("updated", updated.Metadata);
+
+                // JSONB content updated
+                Assert.Contains("light", updated.Settings);
+
+                // Inet updated
+                Assert.Contains("10.0.0", updated.IpAddress);
+            }
+        }
+
+        private class TextAttachmentDoc
+        {
+            public int Id { get; set; }
+            public string Title { get; set; }
+        }
+
+        /// <summary>
+        /// Verifies that text/string columns (VARCHAR, TEXT, CLOB-equivalent) can be
+        /// stored as RavenDB attachments via AttachmentNameMapping. The source content
+        /// is stored as a UTF-8 encoded attachment, allowing large text blobs to be
+        /// kept out of the document body.
+        /// Also verifies that BYTEA columns continue to work as binary attachments.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task TextAndBinaryColumns_AsAttachments()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE articles (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(200) NOT NULL,
+                    body TEXT,
+                    summary VARCHAR(1000),
+                    thumbnail BYTEA
+                );
+                INSERT INTO articles (id, title, body, summary, thumbnail)
+                VALUES (
+                    1,
+                    'Hello World',
+                    'This is the full article body with lots of text content that should be stored as an attachment.',
+                    'A brief summary of the article.',
+                    decode('89504E470D0A1A0A', 'hex')
+                );
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-text-attachments",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Articles",
+                        SourceTableSchema = "public",
+                        SourceTableName = "articles",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "title", "Title" }
+                            // body, summary, thumbnail are NOT in ColumnsMapping — they go to attachments only
+                        },
+                        AttachmentNameMapping = new Dictionary<string, string>
+                        {
+                            { "body", "article-body.txt" },
+                            { "summary", "summary.txt" },
+                            { "thumbnail", "thumb.png" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<TextAttachmentDoc>(store, "Articles/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("Hello World", doc.Title);
+
+            // Wait for attachments to be written
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var article = await session.LoadAsync<object>("Articles/1");
+                return session.Advanced.Attachments.GetNames(article).Length;
+            }, 3, timeout: 60_000);
+
+            // Verify the binary attachment (BYTEA → byte[])
+            using (var session = store.OpenAsyncSession())
+            using (var attachment = await session.Advanced.Attachments.GetAsync("Articles/1", "thumb.png"))
+            {
+                Assert.NotNull(attachment);
+                using var ms = new System.IO.MemoryStream();
+                await attachment.Stream.CopyToAsync(ms);
+                var bytes = ms.ToArray();
+                // PNG header: 0x89504E47
+                Assert.Equal(0x89, bytes[0]);
+                Assert.Equal(0x50, bytes[1]);
+            }
+
+            // Verify the text attachment (TEXT → UTF-8 bytes)
+            using (var session = store.OpenAsyncSession())
+            using (var attachment = await session.Advanced.Attachments.GetAsync("Articles/1", "article-body.txt"))
+            {
+                Assert.NotNull(attachment);
+                using var ms = new System.IO.MemoryStream();
+                await attachment.Stream.CopyToAsync(ms);
+                var text = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+                Assert.Contains("full article body", text);
+            }
+
+            // Verify the VARCHAR attachment (string → UTF-8 bytes)
+            using (var session = store.OpenAsyncSession())
+            using (var attachment = await session.Advanced.Attachments.GetAsync("Articles/1", "summary.txt"))
+            {
+                Assert.NotNull(attachment);
+                using var ms = new System.IO.MemoryStream();
+                await attachment.Stream.CopyToAsync(ms);
+                var text = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+                Assert.Equal("A brief summary of the article.", text);
+            }
+
+            // --- CDC streaming: update the text content ---
+            ExecuteNpgSql(connectionString, """
+                UPDATE articles SET
+                    body = 'Updated article body after CDC streaming.',
+                    summary = 'Updated summary.'
+                WHERE id = 1;
+                """);
+
+            // Verify the text attachment is updated via CDC
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                using var attachment = await session.Advanced.Attachments.GetAsync("Articles/1", "article-body.txt");
+                if (attachment == null)
+                    return "";
+                using var ms = new System.IO.MemoryStream();
+                await attachment.Stream.CopyToAsync(ms);
+                return System.Text.Encoding.UTF8.GetString(ms.ToArray());
+            }, "Updated article body after CDC streaming.", timeout: 60_000);
+        }
     }
 }

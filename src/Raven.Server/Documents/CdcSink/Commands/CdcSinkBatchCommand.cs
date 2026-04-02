@@ -323,15 +323,31 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         foreach (var (sqlColumn, attachmentName) in attachmentMapping)
         {
-            if (rawData.TryGetValue(sqlColumn, out var value) == false || value is not byte[] bytes)
+            if (rawData.TryGetValue(sqlColumn, out var value) == false || value is null or DBNull)
                 continue;
+
+            byte[] bytes;
+            string contentType;
+            switch (value)
+            {
+                case byte[] b:
+                    bytes = b;
+                    contentType = "application/octet-stream";
+                    break;
+                case string s:
+                    bytes = Encoding.UTF8.GetBytes(s);
+                    contentType = "text/plain; charset=utf-8";
+                    break;
+                default:
+                    continue; // unsupported type for attachments
+            }
 
             var name = prefix != null ? prefix + attachmentName : attachmentName;
             var hash = AttachmentsStorageHelper.CalculateHash(bytes);
             using var stream = new MemoryStream(bytes);
 
             _database.DocumentsStorage.AttachmentsStorage.PutAttachment(
-                context, documentId, name, "application/octet-stream",
+                context, documentId, name, contentType,
                 hash, bytes.Length, remoteParams: null, stream: stream);
         }
     }

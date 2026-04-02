@@ -1,8 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using Raven.Client.Documents.Operations.CdcSink;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -87,15 +90,82 @@ public class CdcSinkTableProcessor
         {
             if (rowData.TryGetValue(mapping.Key, out var value))
             {
-                result[mapping.Value] = value switch
-                {
-                    null or DBNull => null,
-                    byte[] bytes => Convert.ToBase64String(bytes),
-                    Guid guid => guid.ToString(),
-                    _ => value
-                };
+                result[mapping.Value] = NormalizeForJson(value);
             }
         }
+        return result;
+    }
+
+    /// <summary>
+    /// Ensures a raw column value can be serialized into blittable JSON.
+    /// Primitive types are passed through. Arrays become DynamicJsonArray.
+    /// JSON/JSONB strings are detected and parsed into native JSON objects.
+    /// Complex database-specific types (inet, tsvector, etc.) fall back to ToString().
+    /// </summary>
+    internal static object NormalizeForJson(object value)
+    {
+        return value switch
+        {
+            null or DBNull => null,
+            byte[] bytes => Convert.ToBase64String(bytes),
+            Guid guid => guid.ToString(),
+            // Primitive types that ObjectJsonParser handles natively
+            bool or int or long or float or double or decimal
+                or DateTime or DateOnly or DateTimeOffset => value,
+            // Strings: check if they look like JSON objects/arrays and parse natively
+            string s => TryParseJsonString(s),
+            // CLR arrays / collections (e.g., Npgsql string[], int[]) → JSON arrays
+            Array arr => ConvertArrayToJsonArray(arr),
+            IList list => ConvertListToJsonArray(list),
+            // Complex types (IPAddress, NpgsqlInet, tsvector, etc.) → string fallback
+            _ => value.ToString()
+        };
+    }
+
+    /// <summary>
+    /// If the string looks like a JSON object or array, parse it into a native
+    /// DynamicJsonValue/DynamicJsonArray so it's stored as structured JSON in the document.
+    /// Otherwise return the string as-is.
+    /// </summary>
+    private static object TryParseJsonString(string s)
+    {
+        if (s.Length < 2)
+            return s;
+
+        var first = s[0];
+        if (first != '{' && first != '[')
+            return s;
+
+        try
+        {
+            // Parse JSON string into a blittable-compatible structure.
+            // We use the DynamicJsonValue parser to avoid allocating a full JsonOperationContext.
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+            var blittable = ctx.Sync.ReadForMemory(s, "cdc-json-column");
+
+            // Convert blittable back to DynamicJsonValue so it can be embedded in the parent document
+            return new DynamicJsonValue(blittable);
+        }
+        catch
+        {
+            // Not valid JSON — store as plain string
+            return s;
+        }
+    }
+
+    private static DynamicJsonArray ConvertArrayToJsonArray(Array arr)
+    {
+        var result = new DynamicJsonArray();
+        for (int i = 0; i < arr.Length; i++)
+            result.Add(NormalizeForJson(arr.GetValue(i)));
+        return result;
+    }
+
+    private static DynamicJsonArray ConvertListToJsonArray(IList list)
+    {
+        var result = new DynamicJsonArray();
+        for (int i = 0; i < list.Count; i++)
+            result.Add(NormalizeForJson(list[i]));
         return result;
     }
 
