@@ -34,6 +34,12 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     public Dictionary<string, string> AttachmentNameMapping { get; set; } = new();
 
     /// <summary>
+    /// SQL column names whose values are JSON (json/jsonb) and should be parsed as
+    /// structured objects/arrays in the document rather than stored as plain strings.
+    /// </summary>
+    public List<string> JsonColumns { get; set; } = new();
+
+    /// <summary>
     /// Primary key columns of this embedded table.
     /// Used for matching items within arrays/maps during updates and deletes.
     /// </summary>
@@ -86,6 +92,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         PropertyName = config.PropertyName;
         ColumnsMapping = config.ColumnsMapping;
         AttachmentNameMapping = config.AttachmentNameMapping;
+        JsonColumns = config.JsonColumns;
         PrimaryKeyColumns = config.PrimaryKeyColumns;
         JoinColumns = config.JoinColumns;
         Type = config.Type;
@@ -104,6 +111,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(PropertyName)] = PropertyName,
             [nameof(ColumnsMapping)] = DynamicJsonValue.Convert(ColumnsMapping),
             [nameof(AttachmentNameMapping)] = DynamicJsonValue.Convert(AttachmentNameMapping),
+            [nameof(JsonColumns)] = new DynamicJsonArray(JsonColumns),
             [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
             [nameof(Type)] = Type.ToString(),

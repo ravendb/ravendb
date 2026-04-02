@@ -1,6 +1,8 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using Jint;
 using Jint.Native;
@@ -162,17 +164,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     // side effects (e.g., audit put() calls to other documents).
                     if (pendingEmbeds is { Count: > 0 } && currentDoc != null)
                     {
-                        foreach (var embedOp in pendingEmbeds)
-                        {
-                            if (embedOp.Operation != CdcSinkOperation.Delete &&
-                                embedOp.Processor.EmbeddedConfig.Patch != null)
-                            {
-                                var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
-                                currentDoc = updatedDoc;
-                                patches ??= [];
-                                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
-                            }
-                        }
+                        currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches);
                     }
 
                     // Add the OnDelete patch last so it runs after all pre-delete patches.
@@ -245,32 +237,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = context.ReadObject(stub, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        foreach (var embedOp in pendingEmbeds ?? [])
+        if (pendingEmbeds is { Count: > 0 })
         {
-            if (embedOp.Operation == CdcSinkOperation.Delete)
-            {
-                var embOnDelete = embedOp.Processor.EmbeddedConfig.OnDelete;
-                if (embOnDelete?.Patch != null)
-                {
-                    // OnDelete.Patch goes through the unified patch pipeline
-                    patches ??= [];
-                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
-                }
-                if (embOnDelete?.IgnoreDeletes == true)
-                    continue; // skip the actual removal — item stays in the array
-            }
-
-            var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
-            currentDoc = updatedDoc;
-
-            // Collect embedded patches AFTER applying the operation, so we have $old data.
-            // $old is the previous embedded item's mapped values (null for inserts),
-            // enabling delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
-            if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
-            {
-                patches ??= [];
-                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
-            }
+            currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches, includeOnDelete: true);
         }
 
         if (patches is { Count: > 0 })
@@ -282,10 +251,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         // we won't do anything here since the patch already handled the update. Otherwise, save the updated document with applied puts and embeds.
         if (currentDoc is not null)
         {
-            // When there were embedded ops, ApplyEmbeddedOperation already materialized with ToDisk.
-            // When there were patches, RunPatches already materialized with ToDisk.
-            // Only re-materialize if we only had Put ops (no embeds, no patches).
-            var final = (pendingEmbeds is { Count: > 0 } || patches is { Count: > 0 })
+            // Skip double materialization: ApplyEmbeddedOperation and RunPatches already
+            // call ReadObject(..., ToDisk) when they modify the document. If Modifications
+            // is null, no further changes were applied and we can use the doc as-is.
+            // Otherwise (Put-only path), we need to materialize the pending Modifications.
+            var final = currentDoc.Modifications == null
                 ? currentDoc
                 : context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
@@ -326,39 +296,56 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (rawData.TryGetValue(sqlColumn, out var value) == false || value is null or DBNull)
                 continue;
 
-            byte[] bytes;
-            string contentType;
+            var name = prefix != null ? prefix + attachmentName : attachmentName;
+
             switch (value)
             {
                 case byte[] b:
-                    bytes = b;
-                    contentType = "application/octet-stream";
+                    StoreAttachmentFromSpan(context, documentId, name, "application/octet-stream", b);
                     break;
                 case string s:
-                    bytes = Encoding.UTF8.GetBytes(s);
-                    contentType = "text/plain; charset=utf-8";
+                    StoreStringAttachment(context, documentId, name, s);
                     break;
                 case float[] floats:
-                    bytes = new byte[floats.Length * sizeof(float)];
-                    Buffer.BlockCopy(floats, 0, bytes, 0, bytes.Length);
-                    contentType = "application/octet-stream";
+                    StoreAttachmentFromSpan(context, documentId, name, "application/octet-stream", MemoryMarshal.AsBytes(floats.AsSpan()));
                     break;
                 case double[] doubles:
-                    bytes = new byte[doubles.Length * sizeof(double)];
-                    Buffer.BlockCopy(doubles, 0, bytes, 0, bytes.Length);
-                    contentType = "application/octet-stream";
+                    StoreAttachmentFromSpan(context, documentId, name, "application/octet-stream", MemoryMarshal.AsBytes(doubles.AsSpan()));
                     break;
                 default:
-                    continue; // unsupported type for attachments
+                    throw new NotSupportedException($"Unsupported attachment type '{value.GetType().FullName}' for column '{sqlColumn}' on document '{documentId}'.");
             }
+        }
+    }
 
-            var name = prefix != null ? prefix + attachmentName : attachmentName;
-            var hash = AttachmentsStorageHelper.CalculateHash(bytes);
-            using var stream = new MemoryStream(bytes);
-
+    private unsafe void StoreAttachmentFromSpan(
+        DocumentsOperationContext context, string documentId,
+        string name, string contentType, ReadOnlySpan<byte> data)
+    {
+        var hash = AttachmentsStorageHelper.CalculateHash(data);
+        fixed (byte* ptr = data)
+        {
+            using var stream = new UnmanagedMemoryStream(ptr, data.Length);
             _database.DocumentsStorage.AttachmentsStorage.PutAttachment(
                 context, documentId, name, contentType,
-                hash, bytes.Length, remoteParams: null, stream: stream);
+                hash, data.Length, remoteParams: null, stream: stream);
+        }
+    }
+
+    private void StoreStringAttachment(
+        DocumentsOperationContext context, string documentId,
+        string name, string s)
+    {
+        var byteCount = Encoding.UTF8.GetByteCount(s);
+        var rented = ArrayPool<byte>.Shared.Rent(byteCount);
+        try
+        {
+            var written = Encoding.UTF8.GetBytes(s, 0, s.Length, rented, 0);
+            StoreAttachmentFromSpan(context, documentId, name, "text/plain; charset=utf-8", new ReadOnlySpan<byte>(rented, 0, written));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
         }
     }
 
@@ -388,6 +375,49 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
         _sb.Append('/');
         return _sb.ToString();
+    }
+
+    /// <summary>
+    /// Applies all pending embedded operations to the document, collecting patch entries for
+    /// each non-delete op that has a patch script. When <paramref name="includeOnDelete"/> is true,
+    /// also collects OnDelete patches and respects IgnoreDeletes for delete ops.
+    /// Used both before a root-level delete (to flush side-effect patches) and at the end of
+    /// the group (to apply surviving embeds onto the final document).
+    /// </summary>
+    private BlittableJsonReaderObject FlushPendingEmbeds(
+        DocumentsOperationContext context, string documentId,
+        BlittableJsonReaderObject currentDoc, List<CdcSinkDocumentOp> pendingEmbeds,
+        ref List<PatchEntry> patches, bool includeOnDelete = false)
+    {
+        foreach (var embedOp in pendingEmbeds)
+        {
+            if (includeOnDelete && embedOp.Operation == CdcSinkOperation.Delete)
+            {
+                var embOnDelete = embedOp.Processor.EmbeddedConfig.OnDelete;
+                if (embOnDelete?.Patch != null)
+                {
+                    // OnDelete.Patch goes through the unified patch pipeline
+                    patches ??= [];
+                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
+                }
+                if (embOnDelete?.IgnoreDeletes == true)
+                    continue; // skip the actual removal - item stays in the array
+            }
+
+            var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+            currentDoc = updatedDoc;
+
+            // Collect embedded patches AFTER applying the operation, so we have $old data.
+            // $old is the previous embedded item's mapped values (null for inserts),
+            // enabling delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
+            if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
+            {
+                patches ??= [];
+                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
+            }
+        }
+
+        return currentDoc;
     }
 
     /// <summary>
@@ -685,6 +715,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             var segment = path[i];
             var propName = segment.Config.PropertyName;
 
+            // Property doesn't exist yet — e.g., Company has no Departments[] yet,
+            // so create a stub object to attach the embedded data to.
             if (currentBlittable == null || currentBlittable.TryGetMember(propName, out var nested) == false)
             {
                 var nestedMod = new DynamicJsonValue();
@@ -696,7 +728,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
             if (nested is BlittableJsonReaderObject nestedObj)
             {
-                // Value or Map type — navigate directly into the object
+                // Value or Map type — e.g., navigating into Company.Address (a single object)
                 if (nestedObj.Modifications != null)
                 {
                     current = nestedObj.Modifications;
@@ -711,10 +743,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
             else if (nested is BlittableJsonReaderArray nestedArray)
             {
-                // Array type — find the matching element using the next segment's join columns.
-                // The next segment (i+1) has JoinMapping: { childFkColumn → parentPkColumn }.
-                // We read the FK value from the CDC row and match against the array element's
-                // mapped property for the parent PK column.
+                // Array type — e.g., finding the right Department in Company.Departments[]
+                // by matching dept_id from the CDC row against each element's DeptId property.
+                // The next segment (i+1) has JoinMapping: { childFkColumn -> parentPkColumn }.
                 var nextSegment = path[i + 1];
                 BlittableJsonReaderObject matchedItem = null;
 
@@ -758,6 +789,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     }
                 }
 
+                // Matched — e.g., found the Department where DeptId == the employee's dept_id
                 if (matchedItem != null)
                 {
                     matchedItem.Modifications ??= new DynamicJsonValue(matchedItem);
@@ -766,9 +798,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 }
                 else
                 {
-                    // No matching element found — create a stub element and append it
-                    // to the existing array. We must NOT replace the array with an object,
-                    // because that would destroy all existing array items.
+                    // No matching element — e.g., employee references a dept_id that doesn't
+                    // exist yet in Departments[]. Create a stub and append it to the array.
                     var stubElement = new DynamicJsonValue();
                     var updatedArray = new DynamicJsonArray();
                     foreach (var existingItem in nestedArray)
@@ -781,6 +812,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
             else
             {
+                // Unexpected type (e.g., a scalar where we expected an object/array) —
+                // replace with a fresh object to attach embedded data to.
                 var nestedMod = new DynamicJsonValue();
                 current[propName] = nestedMod;
                 current = nestedMod;

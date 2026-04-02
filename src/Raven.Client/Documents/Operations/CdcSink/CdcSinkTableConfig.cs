@@ -34,6 +34,12 @@ public class CdcSinkTableConfig : IDynamicJson
     public Dictionary<string, string> AttachmentNameMapping { get; set; } = new();
 
     /// <summary>
+    /// SQL column names whose values are JSON (json/jsonb) and should be parsed as
+    /// structured objects/arrays in the document rather than stored as plain strings.
+    /// </summary>
+    public List<string> JsonColumns { get; set; } = new();
+
+    /// <summary>
     /// Primary key column names, used for document ID generation.
     /// </summary>
     public List<string> PrimaryKeyColumns { get; set; } = new();
@@ -73,6 +79,7 @@ public class CdcSinkTableConfig : IDynamicJson
             [nameof(SourceTableName)] = SourceTableName,
             [nameof(ColumnsMapping)] = DynamicJsonValue.Convert(ColumnsMapping),
             [nameof(AttachmentNameMapping)] = DynamicJsonValue.Convert(AttachmentNameMapping),
+            [nameof(JsonColumns)] = new DynamicJsonArray(JsonColumns),
             [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
             [nameof(Patch)] = Patch,
             [nameof(OnDelete)] = OnDelete?.ToJson(),

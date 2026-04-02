@@ -2,9 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.CdcSink;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -54,6 +55,12 @@ public class CdcSinkTableProcessor
     public List<string> RootJoinColumns { get; init; }
 
     /// <summary>
+    /// Pre-computed set of SQL column names whose values should be parsed as JSON.
+    /// Built from the table's JsonColumns configuration during processor construction.
+    /// </summary>
+    public HashSet<string> JsonColumnSet { get; init; }
+
+    /// <summary>
     /// Generate a document ID from row data using primary key values.
     /// Format: "{CollectionName}/{pk1}/{pk2}/..."
     /// </summary>
@@ -82,26 +89,29 @@ public class CdcSinkTableProcessor
         return GenerateDocumentId(rowData, RootJoinColumns);
     }
 
-    public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, Dictionary<string, string> columnsMapping)
+    public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, Dictionary<string, string> columnsMapping,
+        HashSet<string> jsonColumns, JsonOperationContext context)
     {
         var result = new DynamicJsonValue();
         foreach (var mapping in columnsMapping)
         {
-            if (rowData.TryGetValue(mapping.Key, out var value))
-            {
-                result[mapping.Value] = NormalizeForJson(value);
-            }
+            if (rowData.TryGetValue(mapping.Key, out var value) == false)
+                continue;
+
+            bool isJsonColumn = jsonColumns != null && jsonColumns.Contains(mapping.Key);
+            result[mapping.Value] = NormalizeForJson(value, isJsonColumn, context);
         }
         return result;
     }
 
     /// <summary>
     /// Ensures a raw column value can be serialized into blittable JSON.
-    /// Primitive types are passed through. Arrays become DynamicJsonArray.
-    /// JSON/JSONB strings are detected and parsed into native JSON objects.
+    /// Primitive types are passed through. CLR arrays/lists become DynamicJsonArray.
+    /// String values in columns explicitly marked as JSON are parsed into native
+    /// BlittableJsonReaderObject/BlittableJsonReaderArray using the provided context.
     /// Complex database-specific types (inet, tsvector, etc.) fall back to ToString().
     /// </summary>
-    internal static object NormalizeForJson(object value)
+    internal static object NormalizeForJson(object value, bool isJsonColumn = false, JsonOperationContext context = null)
     {
         return value switch
         {
@@ -111,66 +121,34 @@ public class CdcSinkTableProcessor
             // Primitive types that ObjectJsonParser handles natively
             bool or int or long or float or double or decimal
                 or DateTime or DateOnly or DateTimeOffset => value,
-            // Strings: check if they look like JSON objects/arrays and parse natively
-            string s => TryParseJsonString(s),
-            // CLR arrays / collections (e.g., Npgsql string[], int[]) → JSON arrays
+            // JSON columns: parse the string into a blittable object/array using the parent context
+            string s when isJsonColumn && context != null => ParseJsonColumnValue(s, context),
+            string s => s,
+            // CLR arrays / collections (e.g., Npgsql string[], int[]) -> JSON arrays
             Array arr => ConvertArrayToJsonArray(arr),
             IList list => ConvertListToJsonArray(list),
-            // Complex types (IPAddress, NpgsqlInet, tsvector, etc.) → string fallback
+            // Complex types (IPAddress, NpgsqlInet, tsvector, etc.) -> string fallback
             _ => value.ToString()
         };
     }
 
     /// <summary>
-    /// If the string looks like a JSON object or array, parse it into a native
-    /// DynamicJsonValue/DynamicJsonArray so it's stored as structured JSON in the document.
-    /// Otherwise return the string as-is.
+    /// Parse a string value from a column explicitly marked as JSON into a native
+    /// blittable object or array using the parent JsonOperationContext.
     /// </summary>
-    private static object TryParseJsonString(string s)
+    private static object ParseJsonColumnValue(string s, JsonOperationContext context)
     {
-        if (s.Length < 2)
-            return s;
+        if (string.IsNullOrEmpty(s))
+            return null;
 
-        var first = s[0];
-        if (first != '{' && first != '[')
-            return s;
+        s = s.TrimStart();
+        if (s.Length == 0)
+            return null;
 
-        try
-        {
-            var token = JToken.Parse(s);
-            return ConvertJToken(token);
-        }
-        catch
-        {
-            return s;
-        }
-    }
+        if (s[0] == '[')
+            return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);
 
-    private static object ConvertJToken(JToken token)
-    {
-        switch (token.Type)
-        {
-            case JTokenType.Object:
-                var obj = new DynamicJsonValue();
-                foreach (var prop in (JObject)token)
-                    obj[prop.Key] = ConvertJToken(prop.Value);
-                return obj;
-            case JTokenType.Array:
-                var arr = new DynamicJsonArray();
-                foreach (var item in (JArray)token)
-                    arr.Add(ConvertJToken(item));
-                return arr;
-            case JTokenType.Integer:
-                return token.Value<long>();
-            case JTokenType.Float:
-                return token.Value<double>();
-            case JTokenType.Boolean:
-                return token.Value<bool>();
-            case JTokenType.Null:
-                return null;
-            default:
-                return token.ToString();
-        }
+        return context.Sync.ReadForMemory(s, "cdc-json-column");
     }
 
     private static DynamicJsonArray ConvertArrayToJsonArray(Array arr)
