@@ -211,7 +211,7 @@ public class CdcSinkDocumentProcessorTests
     }
 
     [Fact]
-    public void UnknownTable_Throws()
+    public void UnknownTable_ReturnsNull()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
@@ -223,8 +223,10 @@ public class CdcSinkDocumentProcessorTests
             Data = new Dictionary<string, object> { { "id", 1 } }
         };
 
-        var ex = Assert.Throws<InvalidOperationException>(() => processor.ProcessRow(row));
-        Assert.Contains("nonexistent_table", ex.Message);
+        // Unknown tables are gracefully skipped (returns null) instead of throwing,
+        // because the publication may cover more tables than the CDC Sink configuration.
+        var result = processor.ProcessRow(row);
+        Assert.Null(result);
     }
 
     [Fact]

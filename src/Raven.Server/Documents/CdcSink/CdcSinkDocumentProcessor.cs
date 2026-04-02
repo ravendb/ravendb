@@ -218,7 +218,7 @@ public class CdcSinkDocumentProcessor
         var key = MakeKey(row.TableSchema, row.TableName);
 
         if (_tableIndex.TryGetValue(key, out var processor) == false)
-            throw new InvalidOperationException($"Received CDC row for table '{key}' which is not configured in the CDC Sink task.");
+            return null; // table not in config — discard (publication may cover more tables than configured)
 
         if (processor.IsRoot)
             return ProcessRootRow(row, processor);

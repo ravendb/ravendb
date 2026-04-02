@@ -420,6 +420,27 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         var allTables = Configuration.CollectAllTablesFlat("dbo");
 
+        if (Configuration.SkipInitialLoad)
+        {
+            var updates = new Dictionary<string, CdcSinkTableLoadState>();
+            foreach (var tableInfo in allTables)
+            {
+                var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+                if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
+                    continue;
+                updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
+            }
+
+            if (updates.Count > 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] SkipInitialLoad is set — marking {updates.Count} table(s) as complete without scanning.");
+                await SubmitBatch([], tableLoadUpdates: updates);
+            }
+
+            return;
+        }
+
         foreach (var tableInfo in allTables)
         {
             var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
