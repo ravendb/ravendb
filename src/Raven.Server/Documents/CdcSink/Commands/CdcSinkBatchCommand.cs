@@ -338,6 +338,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     bytes = Encoding.UTF8.GetBytes(s);
                     contentType = "text/plain; charset=utf-8";
                     break;
+                case float[] floats:
+                    bytes = new byte[floats.Length * sizeof(float)];
+                    Buffer.BlockCopy(floats, 0, bytes, 0, bytes.Length);
+                    contentType = "application/octet-stream";
+                    break;
+                case double[] doubles:
+                    bytes = new byte[doubles.Length * sizeof(double)];
+                    Buffer.BlockCopy(doubles, 0, bytes, 0, bytes.Length);
+                    contentType = "application/octet-stream";
+                    break;
                 default:
                     continue; // unsupported type for attachments
             }

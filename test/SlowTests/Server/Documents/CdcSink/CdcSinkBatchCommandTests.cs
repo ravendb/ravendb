@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -850,6 +851,153 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(fileContent, storedBytes);
             }
         }
+        [Fact]
+        public async Task VectorToAttachment_FloatArray()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var embedding = new float[] { 0.1f, 0.2f, 0.3f, 0.4f, 0.5f };
+
+            var config = new CdcSinkTableConfig
+            {
+                Name = "Products",
+                SourceTableSchema = "public",
+                SourceTableName = "products",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                AttachmentNameMapping = new Dictionary<string, string>
+                {
+                    { "embedding", "vector" }
+                },
+                PrimaryKeyColumns = new List<string> { "id" }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = config,
+                CollectionName = "Products",
+                IsRoot = true
+            };
+
+            var mappedData = new DynamicJsonValue
+            {
+                ["Id"] = 1,
+                ["Name"] = "Widget",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Products"
+                }
+            };
+
+            var rawData = new Dictionary<string, object>
+            {
+                { "id", 1 },
+                { "name", "Widget" },
+                { "embedding", embedding }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Products/1", mappedData, rawData, processor)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var attachment = database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                    readCtx, "Products/1", "vector", AttachmentType.Document, changeVector: null);
+                Assert.NotNull(attachment);
+
+                using var ms = new MemoryStream();
+                attachment.Stream.CopyTo(ms);
+                var storedBytes = ms.ToArray();
+
+                // Verify the stored bytes are the raw float representation
+                Assert.Equal(embedding.Length * sizeof(float), storedBytes.Length);
+                var restored = new float[embedding.Length];
+                Buffer.BlockCopy(storedBytes, 0, restored, 0, storedBytes.Length);
+                for (int i = 0; i < embedding.Length; i++)
+                    Assert.Equal(embedding[i], restored[i]);
+            }
+        }
+
+        [Fact]
+        public async Task TextToAttachment_String()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var config = new CdcSinkTableConfig
+            {
+                Name = "Articles",
+                SourceTableSchema = "public",
+                SourceTableName = "articles",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "title", "Title" }
+                },
+                AttachmentNameMapping = new Dictionary<string, string>
+                {
+                    { "body", "content.txt" }
+                },
+                PrimaryKeyColumns = new List<string> { "id" }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = config,
+                CollectionName = "Articles",
+                IsRoot = true
+            };
+
+            var mappedData = new DynamicJsonValue
+            {
+                ["Id"] = 1,
+                ["Title"] = "Hello",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Articles"
+                }
+            };
+
+            var rawData = new Dictionary<string, object>
+            {
+                { "id", 1 },
+                { "title", "Hello" },
+                { "body", "This is the full article text." }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Articles/1", mappedData, rawData, processor)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var attachment = database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                    readCtx, "Articles/1", "content.txt", AttachmentType.Document, changeVector: null);
+                Assert.NotNull(attachment);
+                Assert.Equal("text/plain; charset=utf-8", attachment.ContentType);
+
+                using var ms = new MemoryStream();
+                attachment.Stream.CopyTo(ms);
+                var text = Encoding.UTF8.GetString(ms.ToArray());
+                Assert.Equal("This is the full article text.", text);
+            }
+        }
+
         [Fact]
         public async Task PropertyRetention_OnUpdate()
         {
@@ -2604,6 +2752,101 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // The error should be recorded in statistics
             Assert.Equal(1, statistics.ConsumeErrors);
+        }
+
+        /// <summary>
+        /// Verifies that NormalizeForJson handles complex types correctly:
+        /// - JSON strings → parsed into native DynamicJsonValue
+        /// - Arrays → DynamicJsonArray
+        /// - Plain strings stay as strings
+        /// </summary>
+        [Fact]
+        public async Task ComplexTypes_JsonAndArrays_StoredAsNativeJson()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var config = new CdcSinkTableConfig
+            {
+                Name = "Records",
+                SourceTableSchema = "public",
+                SourceTableName = "records",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "metadata", "Metadata" },
+                    { "tags", "Tags" },
+                    { "scores", "Scores" },
+                    { "plain_text", "PlainText" }
+                },
+                PrimaryKeyColumns = new List<string> { "id" }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = config,
+                CollectionName = "Records",
+                IsRoot = true
+            };
+
+            // Simulate Npgsql-returned types:
+            // json/jsonb → string containing JSON
+            // text[] → string[]
+            // integer[] → int[] (but normalized to long[] via NormalizeReaderValue)
+            // plain text → stays as string
+            var rawData = new Dictionary<string, object>
+            {
+                { "id", (long)1 },
+                { "metadata", """{"key": "value", "count": 42}""" },     // JSON string → should be parsed
+                { "tags", new string[] { "alpha", "beta", "gamma" } },   // string array → JSON array
+                { "scores", new long[] { 10, 20, 30 } },                  // numeric array → JSON array
+                { "plain_text", "just a regular string" },                // plain string → stays as string
+            };
+
+            var mappedData = processor.MapColumns(rawData, config.ColumnsMapping);
+            mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                { [Constants.Documents.Metadata.Collection] = "Records" };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Records/1", mappedData, rawData, processor)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Records/1");
+                Assert.NotNull(doc);
+
+                // JSON string should be stored as a nested object, not a string
+                Assert.True(doc.Data.TryGetMember("Metadata", out var metadata));
+                Assert.IsType<BlittableJsonReaderObject>(metadata);
+                var metadataObj = (BlittableJsonReaderObject)metadata;
+                metadataObj.TryGet("key", out string key);
+                Assert.Equal("value", key);
+                metadataObj.TryGet("count", out long count);
+                Assert.Equal(42, count);
+
+                // String array should be stored as a JSON array
+                Assert.True(doc.Data.TryGetMember("Tags", out var tags));
+                Assert.IsType<BlittableJsonReaderArray>(tags);
+                var tagsArr = (BlittableJsonReaderArray)tags;
+                Assert.Equal(3, tagsArr.Length);
+                Assert.Equal("alpha", tagsArr[0].ToString());
+
+                // Numeric array should be stored as a JSON array
+                Assert.True(doc.Data.TryGetMember("Scores", out var scores));
+                Assert.IsType<BlittableJsonReaderArray>(scores);
+                var scoresArr = (BlittableJsonReaderArray)scores;
+                Assert.Equal(3, scoresArr.Length);
+
+                // Plain text stays as a string
+                doc.Data.TryGet("PlainText", out string plainText);
+                Assert.Equal("just a regular string", plainText);
+            }
         }
 
         private class EmployeeStringFields

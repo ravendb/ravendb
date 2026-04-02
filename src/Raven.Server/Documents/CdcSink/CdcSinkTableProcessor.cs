@@ -2,10 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.CdcSink;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Json.Sync;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -138,18 +137,39 @@ public class CdcSinkTableProcessor
 
         try
         {
-            // Parse JSON string into a blittable-compatible structure.
-            // We use the DynamicJsonValue parser to avoid allocating a full JsonOperationContext.
-            using var ctx = JsonOperationContext.ShortTermSingleUse();
-            var blittable = ctx.Sync.ReadForMemory(s, "cdc-json-column");
-
-            // Convert blittable back to DynamicJsonValue so it can be embedded in the parent document
-            return new DynamicJsonValue(blittable);
+            var token = JToken.Parse(s);
+            return ConvertJToken(token);
         }
         catch
         {
-            // Not valid JSON — store as plain string
             return s;
+        }
+    }
+
+    private static object ConvertJToken(JToken token)
+    {
+        switch (token.Type)
+        {
+            case JTokenType.Object:
+                var obj = new DynamicJsonValue();
+                foreach (var prop in (JObject)token)
+                    obj[prop.Key] = ConvertJToken(prop.Value);
+                return obj;
+            case JTokenType.Array:
+                var arr = new DynamicJsonArray();
+                foreach (var item in (JArray)token)
+                    arr.Add(ConvertJToken(item));
+                return arr;
+            case JTokenType.Integer:
+                return token.Value<long>();
+            case JTokenType.Float:
+                return token.Value<double>();
+            case JTokenType.Boolean:
+                return token.Value<bool>();
+            case JTokenType.Null:
+                return null;
+            default:
+                return token.ToString();
         }
     }
 
