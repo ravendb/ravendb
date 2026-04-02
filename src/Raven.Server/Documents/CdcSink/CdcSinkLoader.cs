@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -80,7 +79,7 @@ public class CdcSinkLoader : IDisposable
                 }
             }
 
-            var ensureUniqueConfigurationNames = _uniqueConfigurationNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var ensureUniqueConfigurationNames = new HashSet<string>(_uniqueConfigurationNames, StringComparer.OrdinalIgnoreCase);
 
             var newProcesses = new List<CdcSinkProcess>();
             if (newDestinations != null && newDestinations.Count > 0)
@@ -236,15 +235,22 @@ public class CdcSinkLoader : IDisposable
 
         if (process is not null)
         {
-            var existing = myCdcSinks.FirstOrDefault(x =>
-                x.Name.Equals(process.Configuration.Name, StringComparison.OrdinalIgnoreCase));
+            CdcSinkConfiguration existing = null;
+            foreach (var x in myCdcSinks)
+            {
+                if (x.Name.Equals(process.Configuration.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    existing = x;
+                    break;
+                }
+            }
 
             if (existing != null)
                 differences = process.Configuration.Compare(existing, record.SqlConnectionStrings, transformationDiffs);
         }
         else
         {
-            throw new InvalidOperationException($"Unknown CDC Sink process type: " + process.GetType().FullName);
+            throw new InvalidOperationException("CDC Sink process is null");
         }
 
         if (differences != null)
@@ -285,13 +291,21 @@ public class CdcSinkLoader : IDisposable
             }
         }
 
-        var toRemove = _processes.GroupBy(x => x.Configuration.Name).ToDictionary(x => x.Key, x => x.ToList());
-
-        foreach (var processesPerConfig in _processes.GroupBy(x => x.Configuration.Name))
+        var processesPerConfig = new Dictionary<string, List<CdcSinkProcess>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var process in _processes)
         {
-            var process = processesPerConfig.First();
+            if (processesPerConfig.TryGetValue(process.Configuration.Name, out var list) == false)
+            {
+                list = new List<CdcSinkProcess>();
+                processesPerConfig[process.Configuration.Name] = list;
+            }
+            list.Add(process);
+        }
 
-            Debug.Assert(processesPerConfig.All(x => x.GetType() == process.GetType()));
+        var unchangedConfigs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (configName, processList) in processesPerConfig)
+        {
+            var process = processList[0];
 
             CdcSinkConfiguration existing = null;
 
@@ -308,42 +322,48 @@ public class CdcSinkLoader : IDisposable
 
             if (existing != null)
             {
-                toRemove.Remove(processesPerConfig.Key);
+                unchangedConfigs.Add(configName);
                 myCdcSinks.Remove(existing);
             }
         }
 
-        LoadProcesses(record, myCdcSinks, toRemove.SelectMany(x => x.Value).ToList());
+        var toRemoveList = new List<CdcSinkProcess>();
+        foreach (var (configName, processList) in processesPerConfig)
+        {
+            if (unchangedConfigs.Contains(configName))
+                continue;
+            for (int i = 0; i < processList.Count; i++)
+                toRemoveList.Add(processList[i]);
+        }
 
-        if (toRemove.Count == 0)
+        LoadProcesses(record, myCdcSinks, toRemoveList);
+
+        if (toRemoveList.Count == 0)
             return;
 
         ThreadPool.QueueUserWorkItem(_ =>
         {
-            Parallel.ForEach(toRemove, x =>
+            Parallel.ForEach(toRemoveList, process =>
             {
-                foreach (var process in x.Value)
+                try
                 {
-                    try
-                    {
-                        if (_database.DatabaseShutdown.IsCancellationRequested)
-                            return;
+                    if (_database.DatabaseShutdown.IsCancellationRequested)
+                        return;
 
-                        using (process)
-                        {
-                            string reason = GetStopReason(process, record, myCdcSinks, responsibleNodes);
-                            process.Stop(reason);
-                        }
-                    }
-                    catch (ObjectDisposedException)
+                    using (process)
                     {
+                        string reason = GetStopReason(process, record, myCdcSinks, responsibleNodes);
+                        process.Stop(reason);
                     }
-                    catch (Exception e)
-                    {
-                        if (Logger.IsErrorEnabled)
-                            Logger.Error(
-                                $"Failed to dispose CDC sink process {process.Name} on the database record change", e);
-                    }
+                }
+                catch (ObjectDisposedException)
+                {
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsErrorEnabled)
+                        Logger.Error(
+                            $"Failed to dispose CDC sink process {process.Name} on the database record change", e);
                 }
             });
         });
