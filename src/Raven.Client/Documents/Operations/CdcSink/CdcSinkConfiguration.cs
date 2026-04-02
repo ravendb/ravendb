@@ -31,6 +31,20 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     public List<CdcSinkTableConfig> Tables { get; set; } = new();
 
+    /// <summary>
+    /// PostgreSQL-specific settings (publication name, slot name).
+    /// Null for SQL Server configurations. Auto-filled on creation if omitted.
+    /// </summary>
+    public CdcSinkPostgresSettings Postgres { get; set; }
+
+    /// <summary>
+    /// When true, the initial full-table load is skipped — the task starts streaming
+    /// CDC changes immediately. Use this when the target RavenDB database is already
+    /// populated (e.g., from a prior migration or restore). The flag is consumed on
+    /// first startup; subsequent restarts use the per-table completion state.
+    /// </summary>
+    public bool SkipInitialLoad { get; set; }
+
     [JsonDeserializationIgnore]
     [JsonIgnore]
     internal SqlConnectionString Connection { get; set; }
@@ -56,6 +70,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         if (validateConnection && TestMode == false)
             Connection.Validate(errors);
+
+        if (Postgres != null)
+            ValidatePostgresSettings(Postgres, errors);
 
         if (Tables.Count == 0)
             errors.Add($"'{nameof(Tables)}' list cannot be empty.");
@@ -157,6 +174,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             [nameof(MentorNode)] = MentorNode,
             [nameof(PinToMentorNode)] = PinToMentorNode,
             [nameof(Tables)] = new DynamicJsonArray(Tables.Select(x => x.ToJson())),
+            [nameof(Postgres)] = Postgres?.ToJson(),
+            [nameof(SkipInitialLoad)] = SkipInitialLoad,
         };
     }
 
@@ -399,6 +418,40 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);
         public override bool Equals(object obj) => obj is TableInfo other && string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ValidatePostgresSettings(CdcSinkPostgresSettings settings, List<string> errors)
+    {
+        if (settings.PublicationName != null)
+            ValidatePostgresIdentifier(settings.PublicationName, "Postgres.PublicationName", errors);
+
+        if (settings.SlotName != null)
+            ValidatePostgresIdentifier(settings.SlotName, "Postgres.SlotName", errors);
+    }
+
+    private static void ValidatePostgresIdentifier(string value, string fieldName, List<string> errors)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            errors.Add($"{fieldName} cannot be empty or whitespace");
+            return;
+        }
+
+        if (value.Length > 63)
+        {
+            errors.Add($"{fieldName} exceeds PostgreSQL's 63-character identifier limit (length: {value.Length})");
+            return;
+        }
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            var c = value[i];
+            if (char.IsLetterOrDigit(c) || c == '_')
+                continue;
+
+            errors.Add($"{fieldName} contains invalid character '{c}' at position {i}. PostgreSQL identifiers may only contain letters, digits, and underscores");
+            return;
+        }
     }
 
     private static bool HaveLinkedTablesChanged(List<CdcSinkLinkedTableConfig> local, List<CdcSinkLinkedTableConfig> remote)
