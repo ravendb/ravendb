@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
+using Raven.Server.Config;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink;
@@ -2510,6 +2511,101 @@ namespace SlowTests.Server.Documents.CdcSink
         /// If initial load writes a date as "1990-06-15" but CDC writes "1990-06-15T00:00:00.0000000",
         /// this class will capture both representations exactly.
         /// </summary>
+        /// <summary>
+        /// A patch that exceeds the MaxStepsForScript limit should fail only for
+        /// that document, not block the entire CDC batch. Other documents in the
+        /// same batch must still be processed and the LSN must still advance.
+        /// </summary>
+        [Fact]
+        public async Task PatchMaxStepsExceeded_FailsDocumentNotBatch()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                    record.Settings[RavenConfiguration.GetKey(x => x.Patching.MaxStepsForScript)] = "50"
+            });
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Two tables: one with infinite-loop patch (will hit MaxSteps), one without patch
+            var badConfig = CreateRootTableConfig("BadOrders", patch: "while(true) {}");
+            var badProcessor = new CdcSinkTableProcessor
+            {
+                RootConfig = badConfig,
+                CollectionName = "BadOrders",
+                IsRoot = true
+            };
+
+            var goodConfig = CreateRootTableConfig("GoodOrders");
+            var goodProcessor = new CdcSinkTableProcessor
+            {
+                RootConfig = goodConfig,
+                CollectionName = "GoodOrders",
+                IsRoot = true
+            };
+
+            // Build the combined patch request from a config that includes the bad table
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-maxsteps",
+                Tables = new List<CdcSinkTableConfig> { badConfig, goodConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            var badData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "InfiniteLoop",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "BadOrders" }
+            };
+            var badRaw = new Dictionary<string, object>
+            {
+                { "order_id", 1 }, { "customer_name", "InfiniteLoop" }, { "amount", 0 }
+            };
+
+            var goodData = new DynamicJsonValue
+            {
+                ["OrderId"] = 2,
+                ["CustomerName"] = "Alice",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "GoodOrders" }
+            };
+            var goodRaw = new Dictionary<string, object>
+            {
+                { "order_id", 2 }, { "customer_name", "Alice" }, { "amount", 99 }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("BadOrders/1", badData, badRaw, badProcessor),
+                CreatePutOp("GoodOrders/2", goodData, goodRaw, goodProcessor),
+            };
+
+            var statistics = new CdcSinkProcessStatistics("test", "test", database.NotificationCenter);
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-maxsteps", "test-lsn",
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: statistics, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            // The good document should succeed despite the other document hitting MaxSteps
+            Assert.Equal(1, command.ProcessedSuccessfully);
+
+            using (var session = store.OpenSession())
+            {
+                var good = session.Load<dynamic>("GoodOrders/2");
+                Assert.NotNull(good);
+                Assert.Equal("Alice", (string)good.CustomerName);
+
+                // The bad document should NOT have been saved
+                var bad = session.Load<dynamic>("BadOrders/1");
+                Assert.Null(bad);
+            }
+
+            // The error should be recorded in statistics
+            Assert.Equal(1, statistics.ConsumeErrors);
+        }
+
         private class EmployeeStringFields
         {
             public string Name { get; set; }
