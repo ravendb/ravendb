@@ -65,42 +65,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _connectionString = configuration.Connection.ConnectionString;
     }
 
-    protected override void Run()
+    protected override async Task RunInternalAsync(CancellationToken ct)
     {
-        AsyncHelpers.RunSync(() => RunAsync(CancellationToken));
-    }
-
-    private async Task RunAsync(CancellationToken ct)
-    {
-        try
-        {
-            await EnsureReplicationSetup(ct);
-            await EnsureReplicaIdentityForEmbeddedTables(ct);
-            await HandleInitialLoad(ct);
-            _initialLoadTcs.TrySetResult();
-            await StartListening(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            _initialLoadTcs.TrySetCanceled();
-        }
-        catch (Exception e)
-        {
-            _initialLoadTcs.TrySetException(e);
-            if (Logger.IsErrorEnabled)
-                Logger.Error($"[{Name}] CDC Sink process failed.", e);
-
-            var alert = AlertRaised.Create(
-                Database.Name, Tag,
-                $"[{Name}] CDC Sink process failed: {e.Message}",
-                AlertReason.CdcSink_Error,
-                NotificationSeverity.Error,
-                key: $"{Tag}/{Name}",
-                details: new ExceptionDetails(e));
-
-            Database.NotificationCenter.Add(alert);
-            EnterFallbackMode();
-        }
+        await EnsureReplicationSetup(ct);
+        await EnsureReplicaIdentityForEmbeddedTables(ct);
+        await HandleInitialLoad(ct);
+        _initialLoadTcs.TrySetResult();
+        await StartListening(ct);
     }
 
     private async Task EnsureReplicationSetup(CancellationToken ct)
@@ -451,7 +422,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             701 => PostgresTypeCategory.Double,                 // float8
             1700 => PostgresTypeCategory.Numeric,               // numeric/decimal
             16 => PostgresTypeCategory.Boolean,                 // bool
-            1082 or 1114 or 1184 => PostgresTypeCategory.DateTime, // date, timestamp, timestamptz
+            1082 => PostgresTypeCategory.DateOnly,              // date
+            1114 or 1184 => PostgresTypeCategory.DateTime,      // timestamp, timestamptz
             2950 => PostgresTypeCategory.Uuid,                  // uuid
             17 => PostgresTypeCategory.Bytea,                   // bytea
             114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
@@ -468,13 +440,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         Double,
         Numeric,
         Boolean,
+        DateOnly,
         DateTime,
         Uuid,
         Bytea,
         Json
     }
 
-    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+    private async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
     {
         var command = new CdcSinkBatchCommand(
@@ -483,7 +456,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             patchRequest: _documentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger);
 
-        return Database.TxMerger.Enqueue(command);
+        await Database.TxMerger.Enqueue(command);
+
+        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
     }
 
     private async Task HandleInitialLoad(CancellationToken ct)
@@ -612,7 +587,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     var name = reader.GetName(i);
-                    var value = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    var value = reader.IsDBNull(i) ? null : NormalizeReaderValue(reader.GetValue(i));
                     data[name] = value;
                 }
 
@@ -677,6 +652,29 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         };
     }
 
+    /// <summary>
+    /// Normalizes raw CLR values from <see cref="System.Data.Common.DbDataReader.GetValue"/> during
+    /// initial load to match the types produced by <see cref="ConvertPostgresValue"/> during CDC
+    /// streaming. Without this, the same column would have different CLR types depending on the path
+    /// (e.g. int vs long, decimal vs double), causing inconsistent JSON serialization.
+    /// DateOnly is preserved as-is (Npgsql returns it for 'date' columns and the CDC path also
+    /// converts to DateOnly).
+    /// </summary>
+    private static object NormalizeReaderValue(object value)
+    {
+        return value switch
+        {
+            null or DBNull => null,
+            DateOnly => value,                                 // preserve DateOnly for 'date' columns
+            DateTimeOffset dto => dto.UtcDateTime,             // DateTimeOffset → DateTime UTC
+            byte or short or int => Convert.ToInt64(value),    // small ints → long
+            float f => (double)f,                              // float → double
+            decimal d => (double)d,                            // decimal → double
+            Guid g => g.ToString(),                            // Guid → string
+            _ => value,
+        };
+    }
+
     private static object ConvertPostgresValue(PostgresTypeCategory category, object value)
     {
         if (value is null || value == DBNull.Value)
@@ -690,6 +688,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             PostgresTypeCategory.Double => Convert.ToDouble(value),
             PostgresTypeCategory.Numeric => Convert.ToDouble(value),
             PostgresTypeCategory.Boolean => Convert.ToBoolean(value),
+            PostgresTypeCategory.DateOnly => System.DateOnly.FromDateTime(Convert.ToDateTime(value)),
             PostgresTypeCategory.DateTime => Convert.ToDateTime(value),
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,

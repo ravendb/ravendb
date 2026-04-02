@@ -54,41 +54,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         _factoryName = configuration.Connection.FactoryName;
     }
 
-    protected override void Run()
+    protected override async Task RunInternalAsync(CancellationToken ct)
     {
-        AsyncHelpers.RunSync(() => RunAsync(CancellationToken));
-    }
-
-    private async Task RunAsync(CancellationToken ct)
-    {
-        try
-        {
-            await EnsureCdcEnabled(ct);
-            await HandleInitialLoad(ct);
-            _initialLoadTcs.TrySetResult();
-            await PollForChanges(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            _initialLoadTcs.TrySetCanceled();
-        }
-        catch (Exception e)
-        {
-            _initialLoadTcs.TrySetException(e);
-            if (Logger.IsErrorEnabled)
-                Logger.Error($"[{Name}] CDC Sink process failed.", e);
-
-            var alert = AlertRaised.Create(
-                Database.Name, Tag,
-                $"[{Name}] CDC Sink process failed: {e.Message}",
-                AlertReason.CdcSink_Error,
-                NotificationSeverity.Error,
-                key: $"{Tag}/{Name}",
-                details: new ExceptionDetails(e));
-
-            Database.NotificationCenter.Add(alert);
-            EnterFallbackMode();
-        }
+        await EnsureCdcEnabled(ct);
+        await HandleInitialLoad(ct);
+        _initialLoadTcs.TrySetResult();
+        await PollForChanges(ct);
     }
 
     /// <summary>
@@ -608,7 +579,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    private Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+    private async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
     {
         var command = new CdcSinkBatchCommand(
@@ -617,7 +588,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             patchRequest: _documentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger);
 
-        return Database.TxMerger.Enqueue(command);
+        await Database.TxMerger.Enqueue(command);
+
+        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
     }
 
     private async Task<DbConnection> OpenConnectionAsync(CancellationToken ct)
