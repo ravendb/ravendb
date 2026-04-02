@@ -139,7 +139,7 @@ namespace Raven.Client.Documents.Operations.Replication
             using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes, CertificatePassword, CertificateLoaderUtil.FlagsForExport))
             {
                 if (certificate.HasPrivateKey == false)
-                    throw new AuthorizationException("Certificate with private key is required.");
+                    throw new InvalidOperationException("Certificate with private key is required.");
             }
         }
     }

@@ -987,8 +987,12 @@ namespace SlowTests.Server.Replication
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task ShouldRejectPullReplicationSinkCertificateWithoutPrivateKey()
         {
-            var certificates = Certificates.SetupServerAuthentication();
-            using var server = GetNewServer();
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings: customSettings);
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = customSettings
+            });
 
             using var sinkStore = GetDocumentStore(new Options
             {
@@ -1015,68 +1019,13 @@ namespace SlowTests.Server.Replication
                 TopologyDiscoveryUrls = sinkStore.Urls
             }));
 
-            // Bypass client-side validation by sending a raw command directly to the server endpoint
-            var command = new UpdatePullReplicationAsSinkWithoutClientValidationCommand(sinkStore.Conventions, pull);
-
+            // Skip client-side validation to test the server-side validation in isolation
             var exception = await Assert.ThrowsAsync<RavenException>(async () =>
             {
-                using var requestExecutor = sinkStore.GetRequestExecutor();
-                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
-                {
-                    await requestExecutor.ExecuteAsync(command, context);
-                }
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(pull, skipClientCertificateValidation: true));
             });
 
-            Assert.Contains("does not contain a private key", exception.Message);
-        }
-
-        /// <summary>
-        /// A custom command that sends the pull replication sink configuration to the server
-        /// without performing the client-side certificate validation.
-        /// Used to test the server-side validation in isolation.
-        /// </summary>
-        private class UpdatePullReplicationAsSinkWithoutClientValidationCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
-        {
-            private readonly DocumentConventions _conventions;
-            private readonly PullReplicationAsSink _pullReplication;
-
-            public UpdatePullReplicationAsSinkWithoutClientValidationCommand(DocumentConventions conventions, PullReplicationAsSink pullReplication)
-            {
-                _conventions = conventions;
-                _pullReplication = pullReplication;
-            }
-
-            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-            {
-                url = $"{node.Url}/databases/{node.Database}/admin/tasks/sink-pull-replication";
-
-                var request = new HttpRequestMessage
-                {
-                    Method = HttpMethod.Post,
-                    Content = new BlittableJsonContent(async stream =>
-                    {
-                        var json = new DynamicJsonValue
-                        {
-                            ["PullReplicationAsSink"] = _pullReplication.ToJson()
-                        };
-
-                        await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-pull-replication")).ConfigureAwait(false);
-                    }, _conventions)
-                };
-
-                return request;
-            }
-
-            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-            {
-                if (response == null)
-                    ThrowInvalidResponse();
-
-                Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
-            }
-
-            public override bool IsReadRequest => false;
-            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+            Assert.Contains("private key", exception.Message);
         }
 
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!
