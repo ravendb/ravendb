@@ -4039,5 +4039,142 @@ namespace SlowTests.Server.Documents.CdcSink
             public string Age { get; set; }
             public string Score { get; set; }
         }
+
+        /// <summary>
+        /// Verifies that JSON and JSONB columns declared in JsonColumns are stored as
+        /// native JSON objects/arrays in the RavenDB document (not as escaped strings).
+        /// Tests both initial load and CDC streaming to confirm both paths handle
+        /// JSON columns identically.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task JsonColumns_StoredAsNativeJsonObjects()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE configs (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    settings JSONB NOT NULL,
+                    tags JSON,
+                    description TEXT
+                );
+                INSERT INTO configs (id, name, settings, tags, description)
+                VALUES (
+                    1,
+                    'AppConfig',
+                    '{"theme": "dark", "notifications": {"email": true, "sms": false}}',
+                    '["production", "v2"]',
+                    'Main application configuration'
+                );
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-json-columns",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Configs",
+                        SourceTableSchema = "public",
+                        SourceTableName = "configs",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "settings", "Settings" },
+                            { "tags", "Tags" },
+                            { "description", "Description" }
+                        },
+                        // Mark settings and tags as JSON — they should be parsed as native objects
+                        JsonColumns = new List<string> { "settings", "tags" }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-json-columns");
+
+            // Verify initial load: JSON columns are native objects, not strings
+            var doc = await WaitForDocumentAsync<ConfigDoc>(store, "Configs/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("AppConfig", doc.Name);
+            Assert.Equal("Main application configuration", doc.Description);
+
+            // settings should be a nested object with theme and notifications
+            Assert.NotNull(doc.Settings);
+            Assert.Equal("dark", doc.Settings.Theme);
+            Assert.NotNull(doc.Settings.Notifications);
+            Assert.True(doc.Settings.Notifications.Email);
+            Assert.False(doc.Settings.Notifications.Sms);
+
+            // tags should be an array
+            Assert.NotNull(doc.Tags);
+            Assert.Equal(2, doc.Tags.Count);
+            Assert.Equal("production", doc.Tags[0]);
+            Assert.Equal("v2", doc.Tags[1]);
+
+            // --- CDC streaming: update the JSON columns ---
+            ExecuteNpgSql(connectionString, """
+                UPDATE configs SET
+                    settings = '{"theme": "light", "notifications": {"email": false, "sms": true}, "newField": 42}',
+                    tags = '["staging", "v3", "beta"]'
+                WHERE id = 1;
+                """);
+
+            // Verify the CDC update preserves native JSON structure
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var updated = await session.LoadAsync<ConfigDoc>("Configs/1");
+                return updated?.Settings?.Theme;
+            }, "light", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var updated = await session.LoadAsync<ConfigDoc>("Configs/1");
+                Assert.NotNull(updated);
+
+                // Updated JSONB: new theme, flipped notifications, new field
+                Assert.Equal("light", updated.Settings.Theme);
+                Assert.False(updated.Settings.Notifications.Email);
+                Assert.True(updated.Settings.Notifications.Sms);
+
+                // Updated JSON array: new tags
+                Assert.Equal(3, updated.Tags.Count);
+                Assert.Equal("staging", updated.Tags[0]);
+                Assert.Equal("v3", updated.Tags[1]);
+                Assert.Equal("beta", updated.Tags[2]);
+
+                // Non-JSON column unchanged
+                Assert.Equal("Main application configuration", updated.Description);
+            }
+        }
+
+        private class ConfigDoc
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public ConfigSettings Settings { get; set; }
+            public List<string> Tags { get; set; }
+            public string Description { get; set; }
+        }
+
+        private class ConfigSettings
+        {
+            public string Theme { get; set; }
+            public NotificationSettings Notifications { get; set; }
+        }
+
+        private class NotificationSettings
+        {
+            public bool Email { get; set; }
+            public bool Sms { get; set; }
+        }
     }
 }
