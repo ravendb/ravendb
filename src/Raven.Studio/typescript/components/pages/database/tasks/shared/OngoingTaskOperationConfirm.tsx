@@ -252,6 +252,20 @@ function getTaskGroups(type: OngoingTaskOperationConfirmType, tasks: OngoingTask
 }
 
 function getWarningMessage(taskGroups: TaskGroup[]): ReactNode {
+    const allDeleteTasks = taskGroups.find((x) => x.destinationStatus === "Removed")?.tasks ?? [];
+    const cdcSinkDeleteTasks = allDeleteTasks.filter((x) => x.taskType === "CdcSink");
+
+    if (cdcSinkDeleteTasks.length > 0) {
+        return (
+            <small>
+                Deleting {cdcSinkDeleteTasks.length === 1 ? "this CDC Sink task" : "these CDC Sink tasks"} will{" "}
+                <strong>not</strong> remove the associated PostgreSQL replication slot and publication. They will
+                become orphaned and continue consuming disk space on the source database until a database
+                administrator drops them manually.
+            </small>
+        );
+    }
+
     const allDisableTasks = taskGroups.find((x) => x.destinationStatus === "Disabled")?.tasks ?? [];
     const subscriptionDisableTasksCount = allDisableTasks.filter((x) => x.taskType === "Subscription").length;
 
