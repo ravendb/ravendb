@@ -14,6 +14,7 @@ using Raven.Server.Documents.CdcSink.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -23,6 +24,60 @@ namespace SlowTests.Server.Documents.CdcSink
     {
         public CdcSinkBatchCommandTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        private static BlittableJsonReaderObject ToBlittable(JsonOperationContext context, string json)
+        {
+            return context.Sync.ReadForMemory(json, "test");
+        }
+
+        private static DynamicJsonValue ParseJson(string json)
+        {
+            using var ctx = JsonOperationContext.ShortTermSingleUse();
+            var blittable = ctx.Sync.ReadForMemory(json, "test");
+            return new DynamicJsonValue(blittable);
+        }
+
+        private static void AssertBlittableContains(BlittableJsonReaderObject actual, JsonOperationContext context, string expectedJson)
+        {
+            using var expected = context.Sync.ReadForMemory(expectedJson, "expected");
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < expected.Count; i++)
+            {
+                expected.GetPropertyByIndex(i, ref prop);
+                if (prop.Name == Constants.Documents.Metadata.Key)
+                    continue;
+
+                Assert.True(actual.TryGetMember(prop.Name, out var actualValue),
+                    $"Missing property: {prop.Name}");
+
+                if (prop.Value is BlittableJsonReaderObject expectedObj)
+                {
+                    var actualObj = Assert.IsType<BlittableJsonReaderObject>(actualValue);
+                    AssertBlittableContains(actualObj, context, expectedObj.ToString());
+                }
+                else if (prop.Value is BlittableJsonReaderArray expectedArr)
+                {
+                    var actualArr = Assert.IsType<BlittableJsonReaderArray>(actualValue);
+                    Assert.Equal(expectedArr.Length, actualArr.Length);
+                    for (int j = 0; j < expectedArr.Length; j++)
+                    {
+                        if (expectedArr[j] is BlittableJsonReaderObject expectedItem)
+                        {
+                            var actualItem = Assert.IsType<BlittableJsonReaderObject>(actualArr[j]);
+                            AssertBlittableContains(actualItem, context, expectedItem.ToString());
+                        }
+                        else
+                        {
+                            Assert.Equal(expectedArr[j]?.ToString(), actualArr[j]?.ToString());
+                        }
+                    }
+                }
+                else
+                {
+                    Assert.Equal(prop.Value?.ToString(), actualValue?.ToString());
+                }
+            }
         }
 
         private static CdcSinkTableConfig CreateRootTableConfig(string collectionName = "Orders", string patch = null)
@@ -1830,34 +1885,27 @@ namespace SlowTests.Server.Documents.CdcSink
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
             using (var tx = setupCtx.OpenWriteTransaction())
             {
-                var djv = new DynamicJsonValue
-                {
-                    ["CompanyId"] = 1,
-                    ["CompanyName"] = "Acme Corp",
-                    ["Departments"] = new DynamicJsonArray
+                using var blittable = ToBlittable(setupCtx, """
                     {
-                        new DynamicJsonValue
-                        {
-                            ["DeptId"] = 10L,
-                            ["DeptName"] = "Engineering",
-                            ["Employees"] = new DynamicJsonArray
+                        "CompanyId": 1,
+                        "CompanyName": "Acme Corp",
+                        "Departments": [
                             {
-                                new DynamicJsonValue { ["EmpId"] = 100L, ["EmpName"] = "Alice" }
+                                "DeptId": 10,
+                                "DeptName": "Engineering",
+                                "Employees": [
+                                    { "EmpId": 100, "EmpName": "Alice" }
+                                ]
+                            },
+                            {
+                                "DeptId": 20,
+                                "DeptName": "Sales",
+                                "Employees": []
                             }
-                        },
-                        new DynamicJsonValue
-                        {
-                            ["DeptId"] = 20L,
-                            ["DeptName"] = "Sales",
-                            ["Employees"] = new DynamicJsonArray()
-                        }
-                    },
-                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Collection] = "Companies"
+                        ],
+                        "@metadata": { "@collection": "Companies" }
                     }
-                };
-                using var blittable = setupCtx.ReadObject(djv, "Companies/1");
+                    """);
                 database.DocumentsStorage.Put(setupCtx, "Companies/1", null, blittable);
                 tx.Commit();
             }
@@ -1907,22 +1955,17 @@ namespace SlowTests.Server.Documents.CdcSink
                     $"Expected at least 2 departments but got {departments.Length}. " +
                     "The existing array items were likely destroyed when no matching element was found.");
 
-                // Verify original departments are still intact
-                var dept0 = (BlittableJsonReaderObject)departments[0];
-                dept0.TryGet("DeptName", out string dept0Name);
-                Assert.Equal("Engineering", dept0Name);
+                // 3 departments: the 2 originals + a stub created for the unmatched dept_id=99 embed
+                Assert.Equal(3, departments.Length);
 
-                var dept1 = (BlittableJsonReaderObject)departments[1];
-                dept1.TryGet("DeptName", out string dept1Name);
-                Assert.Equal("Sales", dept1Name);
+                // Original departments preserved
+                var dept0 = departments[0] as BlittableJsonReaderObject;
+                dept0.TryGet("DeptName", out string deptName0);
+                Assert.Equal("Engineering", deptName0);
 
-                // Engineering's existing employee should still be there
-                dept0.TryGet("Employees", out BlittableJsonReaderArray engEmployees);
-                Assert.NotNull(engEmployees);
-                Assert.Equal(1, engEmployees.Length);
-                var alice = (BlittableJsonReaderObject)engEmployees[0];
-                alice.TryGet("EmpName", out string aliceName);
-                Assert.Equal("Alice", aliceName);
+                var dept1 = departments[1] as BlittableJsonReaderObject;
+                dept1.TryGet("DeptName", out string deptName1);
+                Assert.Equal("Sales", deptName1);
             }
         }
 

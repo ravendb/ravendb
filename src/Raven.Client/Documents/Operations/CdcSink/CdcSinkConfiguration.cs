@@ -96,6 +96,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
 
             ValidateNoConflictingPropertyNames(table, errors);
+            ValidateNoAttachmentColumnOverlap(table.Name, table.ColumnsMapping, table.AttachmentNameMapping, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
             ValidateLinkedTables(table.LinkedTables, table.Name, errors);
         }
@@ -141,6 +142,19 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         }
     }
 
+    private static void ValidateNoAttachmentColumnOverlap(string tableName,
+        Dictionary<string, string> columnsMapping, Dictionary<string, string> attachmentNameMapping, List<string> errors)
+    {
+        if (columnsMapping == null || attachmentNameMapping == null || attachmentNameMapping.Count == 0)
+            return;
+
+        foreach (var sqlColumn in attachmentNameMapping.Keys)
+        {
+            if (columnsMapping.ContainsKey(sqlColumn))
+                errors.Add($"Table '{tableName}': column '{sqlColumn}' is mapped both as a document property and as an attachment. A column can only be one or the other.");
+        }
+    }
+
     private static void ValidateEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, string parentName, List<string> errors)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -171,6 +185,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             // Check for conflicts within this embedded table's own properties
             ValidateNoConflictingPropertyNames(embedded.SourceTableName, embedded.ColumnsMapping, embedded.EmbeddedTables, linkedTables: null, errors);
+            ValidateNoAttachmentColumnOverlap(embedded.SourceTableName, embedded.ColumnsMapping, embedded.AttachmentNameMapping, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
         }

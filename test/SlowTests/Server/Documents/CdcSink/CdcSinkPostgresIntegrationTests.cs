@@ -3642,12 +3642,13 @@ namespace SlowTests.Server.Documents.CdcSink
             public string Tags { get; set; }        // text[] → string (via ToString)
             public string SearchVector { get; set; } // tsvector → string
             public string IpAddress { get; set; }   // inet → string
+            public object[] Embedding { get; set; }  // vector(5) → float[] → array of numbers
         }
 
         /// <summary>
-        /// Verifies that PostgreSQL complex types (json, jsonb, text arrays, tsvector, inet)
+        /// Verifies that PostgreSQL complex types (json, jsonb, text arrays, tsvector, inet, vector)
         /// are handled correctly in both initial load and CDC streaming paths. These types
-        /// don't have direct .NET equivalents and must be converted to strings for JSON storage.
+        /// don't have direct .NET equivalents and must be converted to strings or arrays for JSON storage.
         /// </summary>
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ComplexTypes_Json_Jsonb_Array_TsVector_Inet()
@@ -3656,6 +3657,7 @@ namespace SlowTests.Server.Documents.CdcSink
             using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
             ExecuteNpgSql(connectionString, """
+                CREATE EXTENSION IF NOT EXISTS vector;
                 CREATE TABLE complex_docs (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(200) NOT NULL,
@@ -3663,9 +3665,10 @@ namespace SlowTests.Server.Documents.CdcSink
                     settings JSONB,
                     tags TEXT[],
                     search_vector TSVECTOR,
-                    ip_address INET
+                    ip_address INET,
+                    embedding vector(5)
                 );
-                INSERT INTO complex_docs (id, name, metadata, settings, tags, search_vector, ip_address)
+                INSERT INTO complex_docs (id, name, metadata, settings, tags, search_vector, ip_address, embedding)
                 VALUES (
                     1,
                     'TestDoc',
@@ -3673,7 +3676,8 @@ namespace SlowTests.Server.Documents.CdcSink
                     '{"theme": "dark", "lang": "en"}',
                     ARRAY['tag1', 'tag2', 'tag3'],
                     to_tsvector('english', 'quick brown fox'),
-                    '192.168.1.100'
+                    '192.168.1.100',
+                    '[0.1, 0.2, 0.3, 0.4, 0.5]'
                 );
                 """);
 
@@ -3698,7 +3702,8 @@ namespace SlowTests.Server.Documents.CdcSink
                             { "settings", "Settings" },
                             { "tags", "Tags" },
                             { "search_vector", "SearchVector" },
-                            { "ip_address", "IpAddress" }
+                            { "ip_address", "IpAddress" },
+                            { "embedding", "Embedding" }
                         }
                     }
                 }
@@ -3725,6 +3730,10 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(initialDoc.Tags);
             Assert.NotNull(initialDoc.IpAddress);
 
+            // pgvector: embedding should arrive as an array of numbers
+            Assert.NotNull(initialDoc.Embedding);
+            Assert.Equal(5, initialDoc.Embedding.Length);
+
             // Capture initial values to compare after CDC update
             var initialMetadata = initialDoc.Metadata;
             var initialTags = initialDoc.Tags;
@@ -3737,7 +3746,8 @@ namespace SlowTests.Server.Documents.CdcSink
                     settings = '{"theme": "light", "lang": "fr"}',
                     tags = ARRAY['alpha', 'beta'],
                     search_vector = to_tsvector('english', 'lazy dog jumps'),
-                    ip_address = '10.0.0.1'
+                    ip_address = '10.0.0.1',
+                    embedding = '[0.9, 0.8, 0.7, 0.6, 0.5]'
                 WHERE id = 1;
                 """);
 
@@ -3762,6 +3772,10 @@ namespace SlowTests.Server.Documents.CdcSink
 
                 // Inet updated
                 Assert.Contains("10.0.0", updated.IpAddress);
+
+                // pgvector embedding updated
+                Assert.NotNull(updated.Embedding);
+                Assert.Equal(5, updated.Embedding.Length);
             }
         }
 
