@@ -16,6 +16,15 @@ using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink
 {
+    /// <summary>
+    /// PostgreSQL replication slots are cluster-global — tests that create/drop slots
+    /// and publications can interfere when running in parallel. This collection ensures
+    /// CDC Sink Postgres tests run sequentially.
+    /// </summary>
+    [CollectionDefinition(nameof(CdcSinkPostgresTests), DisableParallelization = true)]
+    public class CdcSinkPostgresTests;
+
+    [Collection(nameof(CdcSinkPostgresTests))]
     public class CdcSinkPostgresIntegrationTests : SqlAwareTestBase
     {
         public CdcSinkPostgresIntegrationTests(ITestOutputHelper output) : base(output)
