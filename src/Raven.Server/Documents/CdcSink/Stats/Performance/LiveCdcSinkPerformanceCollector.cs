@@ -13,7 +13,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, CdcSinkProcessAndPerformanceStatsList>> _perCdcSinkProcessStats = new();
 
-    public LiveCdcSinkPerformanceCollector(DocumentDatabase database, Dictionary<string, List<CdcSinkProcess>> cdcSinks) : base(database)
+    public LiveCdcSinkPerformanceCollector(DocumentDatabase database, IDictionary<string, List<CdcSinkProcess>> cdcSinks) : base(database)
     {
         foreach (var sink in cdcSinks)
         {
@@ -155,26 +155,34 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
         processes.TryAdd(cdcSink.Name, new CdcSinkProcessAndPerformanceStatsList(cdcSink));
     }
 
-    private void BatchCompleted((string ConfigurationName, string TransformationName, CdcSinkProcessStatistics Statistics) change)
+    private void BatchCompleted((string ConfigurationName, string TableName, CdcSinkProcessStatistics Statistics) change)
     {
         if (_perCdcSinkProcessStats.TryGetValue(change.ConfigurationName, out var taskProcesses) == false)
         {
             _perCdcSinkProcessStats.TryAdd(change.ConfigurationName, taskProcesses = new ConcurrentDictionary<string, CdcSinkProcessAndPerformanceStatsList>());
         }
 
-        if (taskProcesses.TryGetValue(change.TransformationName, out var processAndPerformanceStats) == false)
+        if (taskProcesses.TryGetValue(change.TableName, out var processAndPerformanceStats) == false)
         {
             var processes = Database.CdcSinkLoader.Processes;
 
-            var cdcSink = processes.FirstOrDefault(x => x.Configuration.Name.Equals(change.ConfigurationName, StringComparison.OrdinalIgnoreCase) &&
-                                                        x.Name.Equals(change.TransformationName, StringComparison.OrdinalIgnoreCase));
+            CdcSinkProcess cdcSink = null;
+            foreach (var p in processes)
+            {
+                if (p.Configuration.Name.Equals(change.ConfigurationName, StringComparison.OrdinalIgnoreCase) &&
+                    p.Name.Equals(change.TableName, StringComparison.OrdinalIgnoreCase))
+                {
+                    cdcSink = p;
+                    break;
+                }
+            }
 
             if (cdcSink == null)
                 return;
 
             processAndPerformanceStats = new CdcSinkProcessAndPerformanceStatsList(cdcSink);
 
-            taskProcesses.TryAdd(change.TransformationName, processAndPerformanceStats);
+            taskProcesses.TryAdd(change.TableName, processAndPerformanceStats);
         }
 
         var latestStat = processAndPerformanceStats.Handler.GetLatestPerformanceStats();

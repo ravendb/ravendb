@@ -16,6 +16,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Memory;
@@ -129,9 +130,74 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, Database.ServerStore.Engine.OperationTimeout).Wait(CancellationToken);
     }
 
-    protected abstract void Run();
+    /// <summary>
+    /// The actual work for a single iteration: setup, initial load, streaming.
+    /// Throwing exits the current attempt; the retry loop in <see cref="Run"/>
+    /// will enter fallback mode and call this again after the backoff period.
+    /// <see cref="OperationCanceledException"/> exits the process cleanly.
+    /// </summary>
+    protected abstract Task RunInternalAsync(CancellationToken ct);
 
-    private void AddPerformanceStats(CdcSinkStatsAggregator stats)
+    private void Run()
+    {
+        AsyncHelpers.RunSync(() => RunWithRetryAsync(CancellationToken));
+    }
+
+    private async Task RunWithRetryAsync(CancellationToken ct)
+    {
+        while (true)
+        {
+            try
+            {
+                if (ct.IsCancellationRequested)
+                    return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
+            }
+
+            if (FallbackTime != null)
+            {
+                if (ct.WaitHandle.WaitOne(FallbackTime.Value))
+                    return;
+
+                FallbackTime = null;
+            }
+
+            try
+            {
+                await RunInternalAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                _initialLoadTcs.TrySetCanceled();
+                return;
+            }
+            catch (Exception e)
+            {
+                _initialLoadTcs.TrySetException(e);
+
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"[{Name}] CDC Sink process failed.", e);
+
+                Statistics.RecordConsumeError(e.Message);
+
+                var alert = AlertRaised.Create(
+                    Database.Name, Tag,
+                    $"[{Name}] CDC Sink process failed: {e.Message}",
+                    AlertReason.CdcSink_Error,
+                    NotificationSeverity.Error,
+                    key: $"{Tag}/{Name}",
+                    details: new ExceptionDetails(e));
+
+                Database.NotificationCenter.Add(alert);
+                EnterFallbackMode();
+            }
+        }
+    }
+
+    protected void AddPerformanceStats(CdcSinkStatsAggregator stats)
     {
         _lastStats = stats;
 
@@ -150,6 +216,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             return;
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
+
+        LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
         var threadName = $"{Tag} process: {Name}";
         _longRunningWork = PoolOfThreads.GlobalRavenThreadPool.LongRunning(x =>
@@ -326,9 +394,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public void Dispose()
     {
-        if (CancellationToken.IsCancellationRequested)
-            return;
-
         var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
         exceptionAggregator.Execute(() => Stop("Dispose"));
