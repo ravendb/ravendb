@@ -1,9 +1,7 @@
+using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
-using Raven.Server.Documents.CdcSink;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
@@ -45,8 +43,10 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
         }
 
         /// <summary>
-        /// Auto-fills PublicationName and SlotName with deterministic hash-based names
-        /// when the user didn't provide them. Only applies to PostgreSQL connections.
+        /// Auto-fills PublicationName and SlotName when the user didn't provide them.
+        /// Uses a shared GUID with the rvn_cdc_ prefix to generate readable, unique names
+        /// that fit within PostgreSQL's 63-character identifier limit.
+        /// Only applies to PostgreSQL connections.
         /// </summary>
         private void AutoFillPostgresSettings(DatabaseRecord record)
         {
@@ -63,24 +63,12 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
 
             if (Configuration.Postgres.PublicationName == null || Configuration.Postgres.SlotName == null)
             {
-                var tableNames = Configuration.CollectAllSourceTableNames("public");
-                var dbName = ExtractDatabaseName(connectionString);
-
-                Configuration.Postgres.PublicationName ??=
-                    CdcSinkSourceVerifier.ComputePublicationName(dbName, Configuration.Name, tableNames);
-                Configuration.Postgres.SlotName ??=
-                    CdcSinkSourceVerifier.ComputeSlotName(dbName, Configuration.Name, tableNames);
+                // Use the same GUID for both so they're clearly paired.
+                // "rvn_cdc_p_" + 32 hex chars = 42 chars (well under the 63-char PG limit)
+                var id = Guid.NewGuid().ToString("N"); // 32 hex chars, no dashes
+                Configuration.Postgres.PublicationName ??= $"rvn_cdc_p_{id}";
+                Configuration.Postgres.SlotName ??= $"rvn_cdc_s_{id}";
             }
-        }
-
-        private static string ExtractDatabaseName(SqlConnectionString connectionString)
-        {
-            var builder = new DbConnectionStringBuilder { ConnectionString = connectionString.ConnectionString };
-            if (builder.TryGetValue("Database", out var db))
-                return db.ToString();
-            if (builder.TryGetValue("Initial Catalog", out db))
-                return db.ToString();
-            return "unknown";
         }
 
         public override void FillJson(DynamicJsonValue json)
