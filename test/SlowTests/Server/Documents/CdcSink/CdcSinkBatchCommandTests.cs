@@ -2849,6 +2849,122 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        /// <summary>
+        /// Verifies that OnDelete.Patch has access to the document's properties via 'this'.
+        /// This is the archive/soft-delete pattern: when a row is deleted in SQL, the patch
+        /// copies the document's fields into a separate "deleted" document before the delete proceeds.
+        /// </summary>
+        [Fact]
+        public async Task OnDeletePatch_CanAccessDocumentProperties()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Orders",
+                SourceTableSchema = "public",
+                SourceTableName = "orders",
+                PrimaryKeyColumns = new List<string> { "order_id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "order_id", "OrderId" },
+                    { "customer_name", "Customer" },
+                    { "amount", "Total" }
+                },
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    Patch = @"
+                        put('DeletedOrders/' + this.OrderId, {
+                            OriginalId: id(this),
+                            Customer: this.Customer,
+                            Total: this.Total,
+                            DeletedAt: new Date().toISOString(),
+                            '@metadata': { '@collection': 'DeletedOrders' }
+                        });"
+                }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Orders",
+                IsRoot = true
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-ondelete-this",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            // Step 1: Create the document via a Put
+            var putMapped = new DynamicJsonValue
+            {
+                ["OrderId"] = (long)42,
+                ["Customer"] = "Acme Corp",
+                ["Total"] = 1500.0,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+
+            var putRaw = new Dictionary<string, object>
+            {
+                { "order_id", (long)42 }, { "customer_name", "Acme Corp" }, { "amount", 1500.0 }
+            };
+
+            var putOps = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/42", putMapped, putRaw, processor)
+            };
+
+            var putCmd = new CdcSinkBatchCommand(database, putOps, "test-ondelete-this", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // Verify the order exists
+            using (var session = store.OpenSession())
+            {
+                var order = session.Load<dynamic>("Orders/42");
+                Assert.NotNull(order);
+                Assert.Equal("Acme Corp", (string)order.Customer);
+            }
+
+            // Step 2: Delete the document — the OnDelete.Patch should create a DeletedOrders document
+            var deleteRaw = new Dictionary<string, object>
+            {
+                { "order_id", (long)42 }, { "customer_name", "Acme Corp" }, { "amount", 1500.0 }
+            };
+
+            var deleteOps = new List<CdcSinkDocumentOp>
+            {
+                CreateDeleteOp("Orders/42", processor, deleteRaw)
+            };
+
+            var deleteCmd = new CdcSinkBatchCommand(database, deleteOps, "test-ondelete-this", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(deleteCmd);
+
+            // The original order should be deleted
+            using (var session = store.OpenSession())
+            {
+                var order = session.Load<dynamic>("Orders/42");
+                Assert.Null(order);
+            }
+
+            // The DeletedOrders document should exist with the original order's properties
+            using (var session = store.OpenSession())
+            {
+                var deleted = session.Load<dynamic>("DeletedOrders/42");
+                Assert.NotNull(deleted);
+                Assert.Equal("Orders/42", (string)deleted.OriginalId);
+                Assert.Equal("Acme Corp", (string)deleted.Customer);
+                Assert.Equal(1500.0, (double)deleted.Total);
+                Assert.NotNull((string)deleted.DeletedAt);
+            }
+        }
+
         private class EmployeeStringFields
         {
             public string Name { get; set; }
