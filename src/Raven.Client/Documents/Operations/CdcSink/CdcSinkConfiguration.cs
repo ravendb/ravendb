@@ -80,6 +80,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
 
             ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
+            ValidateLinkedTables(table.LinkedTables, table.Name, errors);
         }
 
         return errors.Count == 0;
@@ -92,6 +93,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (embeddedTables == null)
             return;
 
+        var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var embedded in embeddedTables)
         {
             if (string.IsNullOrWhiteSpace(embedded.SourceTableName))
@@ -99,6 +102,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             if (string.IsNullOrWhiteSpace(embedded.PropertyName))
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have a property name");
+            else if (propertyNames.Add(embedded.PropertyName) == false)
+                errors.Add($"Embedded table property name '{embedded.PropertyName}' under '{parentName}' is already defined. Property names must be unique within the same parent");
 
             if (embedded.JoinColumns == null || embedded.JoinColumns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have join columns");
@@ -106,7 +111,38 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (embedded.PrimaryKeyColumns == null || embedded.PrimaryKeyColumns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have primary key columns");
 
+            if (embedded.ColumnsMapping == null || embedded.ColumnsMapping.Count == 0)
+                errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
+
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
+        }
+    }
+
+    private static void ValidateLinkedTables(List<CdcSinkLinkedTableConfig> linkedTables, string parentName, List<string> errors)
+    {
+        if (linkedTables == null)
+            return;
+
+        var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var linked in linkedTables)
+        {
+            if (string.IsNullOrWhiteSpace(linked.SourceTableName))
+                errors.Add($"Linked table under '{parentName}' must have a source table name");
+
+            if (string.IsNullOrWhiteSpace(linked.PropertyName))
+                errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' must have a property name");
+            else if (propertyNames.Add(linked.PropertyName) == false)
+                errors.Add($"Linked table property name '{linked.PropertyName}' under '{parentName}' is already defined. Property names must be unique within the same parent");
+
+            if (string.IsNullOrWhiteSpace(linked.LinkedCollectionName))
+                errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' must have a linked collection name");
+
+            if (linked.JoinColumns == null || linked.JoinColumns.Count == 0)
+                errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' must have join columns");
+
+            if (linked.Type == CdcSinkRelationType.Map)
+                errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' cannot use relation type 'Map'. Use 'Value' or 'Array'");
         }
     }
 
@@ -215,10 +251,10 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
     private static bool HasTableConfigChanged(CdcSinkTableConfig local, CdcSinkTableConfig remote)
     {
-        if (local.SourceTableSchema != remote.SourceTableSchema)
+        if (string.Equals(local.SourceTableSchema, remote.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false)
             return true;
 
-        if (local.SourceTableName != remote.SourceTableName)
+        if (string.Equals(local.SourceTableName, remote.SourceTableName, StringComparison.OrdinalIgnoreCase) == false)
             return true;
 
         if (local.Patch != remote.Patch)
@@ -247,21 +283,27 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     private static bool HaveEmbeddedTablesChanged(List<CdcSinkEmbeddedTableConfig> local, List<CdcSinkEmbeddedTableConfig> remote)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
-        
+
         if ((local?.Count ?? 0) != (remote?.Count ?? 0))
             return true;
 
         if (local == null)
             return false;
 
-        for (int i = 0; i < local.Count; i++)
-        {
-            var l = local[i];
-            var r = remote[i];
+        // Sort copies by PropertyName for stable comparison regardless of order
+        var sortedLocal = new List<CdcSinkEmbeddedTableConfig>(local);
+        sortedLocal.Sort((a, b) => string.Compare(a.PropertyName, b.PropertyName, StringComparison.OrdinalIgnoreCase));
+        var sortedRemote = new List<CdcSinkEmbeddedTableConfig>(remote);
+        sortedRemote.Sort((a, b) => string.Compare(a.PropertyName, b.PropertyName, StringComparison.OrdinalIgnoreCase));
 
-            if (l.SourceTableSchema != r.SourceTableSchema ||
-                l.SourceTableName != r.SourceTableName ||
-                l.PropertyName != r.PropertyName ||
+        for (int i = 0; i < sortedLocal.Count; i++)
+        {
+            var l = sortedLocal[i];
+            var r = sortedRemote[i];
+
+            if (string.Equals(l.SourceTableSchema, r.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.SourceTableName, r.SourceTableName, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.PropertyName, r.PropertyName, StringComparison.OrdinalIgnoreCase) == false ||
                 l.Patch != r.Patch ||
                 l.Type != r.Type ||
                 l.CaseSensitiveKeys != r.CaseSensitiveKeys)
@@ -367,15 +409,21 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (local == null)
             return false;
 
-        for (int i = 0; i < local.Count; i++)
-        {
-            var l = local[i];
-            var r = remote[i];
+        // Sort copies by PropertyName for stable comparison regardless of order
+        var sortedLocal = new List<CdcSinkLinkedTableConfig>(local);
+        sortedLocal.Sort((a, b) => string.Compare(a.PropertyName, b.PropertyName, StringComparison.OrdinalIgnoreCase));
+        var sortedRemote = new List<CdcSinkLinkedTableConfig>(remote);
+        sortedRemote.Sort((a, b) => string.Compare(a.PropertyName, b.PropertyName, StringComparison.OrdinalIgnoreCase));
 
-            if (l.SourceTableSchema != r.SourceTableSchema ||
-                l.SourceTableName != r.SourceTableName ||
-                l.PropertyName != r.PropertyName ||
-                l.LinkedCollectionName != r.LinkedCollectionName ||
+        for (int i = 0; i < sortedLocal.Count; i++)
+        {
+            var l = sortedLocal[i];
+            var r = sortedRemote[i];
+
+            if (string.Equals(l.SourceTableSchema, r.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.SourceTableName, r.SourceTableName, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.PropertyName, r.PropertyName, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.LinkedCollectionName, r.LinkedCollectionName, StringComparison.OrdinalIgnoreCase) == false ||
                 l.Type != r.Type)
                 return true;
 
