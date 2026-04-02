@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -67,7 +71,7 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         session.Store(new AutoVecDoc("test", [.1f, .2f], null, null, 0f, 0f));
         session.SaveChanges();
         new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index textual value instead", errors[0].Errors[0].Error);
     }
@@ -83,8 +87,9 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, [.1f, .2f], [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index numerical value instead", errors[0].Errors[0].Error);
     }
@@ -105,9 +110,32 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         session.Store(new AutoVecDoc(null, null, [2, -3], null, 0f, 0f));
         session.SaveChanges();
         new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index spatial value instead", errors[0].Errors[0].Error);
+    }
+
+    private IndexErrors[] WaitForIndexingErrorsOnAnyShard(IDocumentStore store, string[] indexNames = null)
+    {
+        var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+        if (databaseRecord.IsSharded == false)
+            return Indexes.WaitForIndexingErrors(store, indexNames);
+
+        var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
+        var sp = Stopwatch.StartNew();
+        while (sp.Elapsed < timeout)
+        {
+            foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
+            {
+                var shardErrors = store.Maintenance.ForShard(shardNumber).Send(new GetIndexErrorsOperation(indexNames));
+                var withErrors = shardErrors.Where(e => e.Errors.Length > 0).ToArray();
+                if (withErrors.Length > 0)
+                    return withErrors;
+            }
+            Thread.Sleep(32);
+        }
+
+        throw new TimeoutException($"Got no index error on any shard for more than {timeout}.");
     }
 
     private record AutoVecDoc(string Text, float[] Singles, sbyte[] Int8, byte[] Binary, float lat, float lon, string Id = null);

@@ -480,6 +480,12 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
             }
         }
 
+        if (queryChanges.HasFlag(QueryChanges.AddOrderByScoreForVectorSearch))
+        {
+            clone.OrderBy = [(new MethodExpression("score", new List<QueryExpression>()), OrderByFieldType.Score, true)];
+            Query.Metadata.OrderBy = [new OrderByField(null, OrderByFieldType.Score, ascending: true)];
+        }
+
         modifications[nameof(IndexQuery.Query)] = clone.ToString();
 
         queryTemplate.Modifications = modifications;
@@ -694,6 +700,11 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (indexQuery.Metadata.HasTimeBasedFunction)
             queryChanges |= QueryChanges.RewriteTimeBasedFunctions;
+
+        if (indexQuery.Metadata.HasVectorSearch && indexQuery.Metadata.OrderBy is null or {Length: 0})
+        {
+            queryChanges |= QueryChanges.AddOrderByScoreForVectorSearch;
+        }
 
         return queryChanges;
     }
@@ -992,7 +1003,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         RewriteForLimitWithOrderByInMapReduce = 1 << 4,
         UpdateOrderByFieldsInMapReduce = 1 << 5,
         UseCachedOrderByFieldsInMapReduce = 1 << 6,
-        RewriteTimeBasedFunctions = 1 << 7
+        RewriteTimeBasedFunctions = 1 << 7,
+        AddOrderByScoreForVectorSearch = 1 << 8
     }
 
     [Flags]

@@ -10,7 +10,7 @@ namespace FastTests.Corax.Vectors;
 public class RavenDB_23656(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Indexes)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All, SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void DifferentDimensionsWillNotCrashTheServer(Options options)
     {
         using var store = GetDocumentStore(options);

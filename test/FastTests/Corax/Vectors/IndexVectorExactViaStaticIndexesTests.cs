@@ -301,13 +301,7 @@ select new
         new TIndex().Execute(store);
         Indexes.WaitForIndexing(store);
 
-        Assert.Equal(0, GetErrorCounts());
-
-        int GetErrorCounts()
-        {
-            var errors = store.Maintenance.Send(new GetIndexErrorsOperation());
-            return errors.First(x => x.Name == new TIndex().IndexName).Errors.Length;
-        }
+        RavenTestHelper.AssertNoIndexErrors(store);
     }
 
     private class DataSource

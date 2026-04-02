@@ -158,12 +158,25 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                         return 1;
                     return AlphaNumericFieldComparator.StringAlphanumComparer.Instance.Compare(xVal, yVal);
                 }
+            case OrderByFieldType.Score:
+                {
+                    // Note: reversed parameters. Ascending score is actually descending on values.
+                    var hasX = TryGetScoreValue(y, out double xDbl);
+                    var hasY = TryGetScoreValue(x, out double yDbl);
+                    
+                    if (hasX == false && hasY == false)
+                        return 0;
+                    if (hasX == false)
+                        return 1;
+                    if (hasY == false)
+                        return -1;
+                    return xDbl.CompareTo(yDbl);
+                }
             case OrderByFieldType.Random:
                 return _randoms[index].Next(int.MinValue, int.MaxValue);
 
             case OrderByFieldType.Custom:
                 throw new NotSupportedInShardingException("Custom sorting is not supported in sharding as of yet");
-            case OrderByFieldType.Score:
             default:
                 throw new ArgumentException("Unknown OrderingType: " + order.OrderingType);
         }
@@ -291,6 +304,54 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         }
 
         ThrowIfNotExpectedType(nameof(LazyNumberValue), arrayValue);
+        value = 0;
+        return false;
+    }
+
+    private bool TryGetScoreValue(BlittableJsonReaderObject blittable, out double value)
+    {
+        if (blittable.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
+        {
+            value = 0;
+            return false;
+        }
+
+        if (metadata.TryGet(Constants.Documents.Metadata.IndexScore, out object scoreValue) == false)
+        {
+            value = 0;
+            return false;
+        }
+
+        if (scoreValue is LazyNumberValue lnv)
+        {
+            value = lnv.ToDouble(CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        if (scoreValue is double d)
+        {
+            value = d;
+            return true;
+        }
+
+        if (scoreValue is float f)
+        {
+            value = f;
+            return true;
+        }
+
+        if (scoreValue is long l)
+        {
+            value = l;
+            return true;
+        }
+
+        if (scoreValue is int i)
+        {
+            value = i;
+            return true;
+        }
+
         value = 0;
         return false;
     }
