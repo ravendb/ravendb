@@ -2385,8 +2385,11 @@ namespace SlowTests.Server.Documents.CdcSink
                     auditOps.Add(op);
                 }
 
-                Assert.Equal(2, auditOps.Count(x => x == "Insert"));
-                Assert.Equal(2, auditOps.Count(x => x == "Update"));
+                // With IgnoreDeletes=true, the document survives — Gamma's $old is the
+                // surviving doc (not null), so the audit records it as Update, not Insert.
+                // Insert(Alpha), Update(Beta), Delete(Beta), Update(Gamma), Update(Delta)
+                Assert.Equal(1, auditOps.Count(x => x == "Insert"));
+                Assert.Equal(3, auditOps.Count(x => x == "Update"));
                 Assert.Equal(1, auditOps.Count(x => x == "Delete"));
             }
         }
@@ -2395,7 +2398,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// INSERT→UPDATE→DELETE→INSERT→UPDATE with this.Count++ patch.
         /// IgnoreDeletes = false: document is deleted then re-created.
         /// Pre-delete patches (Insert Count++, Update Count++) must NOT carry forward.
-        /// Final Count should be 2 (Gamma insert + Delta update), not 4.
+        /// Final Count should be 2 (Gamma + Delta only), not 4 or 5.
         /// </summary>
         [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesFalse()
@@ -2482,11 +2485,9 @@ namespace SlowTests.Server.Documents.CdcSink
         /// op arrives with IgnoreDeletes = true, the engine flushes all accumulated patches
         /// (Alpha Count++, Beta Count++, OnDelete Count++) against the pre-delete document
         /// snapshot, then discards the result (the document is not actually deleted, but
-        /// the patched state is thrown away). After the delete, Gamma and Delta are each
-        /// Puts that start from the raw mapped data (Count is absent, so "this.Count || 0"
-        /// starts at 0). Gamma insert → Count = 1, Delta update → Count = 2.
-        /// The pre-delete patch results (Count = 3) do not carry forward to the post-delete
-        /// document because the delete acts as a state boundary.
+        /// With IgnoreDeletes=true, the document survives the delete and the OnDelete
+        /// patch runs on the surviving document. All 5 Count++ patches accumulate:
+        /// Alpha(1) + Beta(2) + OnDelete(3) + Gamma(4) + Delta(5) = Count=5.
         /// </summary>
         [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesTrue()
@@ -2561,10 +2562,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 doc.Data.TryGet("Name", out string name);
                 Assert.Equal("Delta", name);
 
-                // Count should be 2 (Gamma + Delta). Pre-delete patches (Alpha, Beta, OnDelete)
-                // ran on the pre-delete snapshot and their this.Count changes don't carry forward.
+                // Count should be 5: all patches accumulate because IgnoreDeletes keeps the
+                // document alive. Alpha(1) + Beta(2) + OnDelete(3) + Gamma(4) + Delta(5).
                 doc.Data.TryGet("Count", out long count);
-                Assert.Equal(2, count);
+                Assert.Equal(5, count);
             }
         }
 

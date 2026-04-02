@@ -141,11 +141,9 @@ public class CdcSinkTableProcessor
         if (string.IsNullOrEmpty(s))
             return null;
 
-        s = s.TrimStart();
-        if (s.Length == 0)
-            return null;
+        var first = s.AsSpan().TrimStart()[0];
 
-        if (s[0] == '[')
+        if (first == '[')
             return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);
 
         return context.Sync.ReadForMemory(s, "cdc-json-column");

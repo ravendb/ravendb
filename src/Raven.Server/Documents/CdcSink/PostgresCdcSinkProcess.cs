@@ -78,10 +78,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         var tableNames = Configuration.CollectAllSourceTableNames("public");
 
-        _publicationName = Configuration.Postgres?.PublicationName
-            ?? throw new InvalidOperationException("Postgres.PublicationName is not set. It should have been auto-filled when the task was created.");
-        _slotName = Configuration.Postgres?.SlotName
-            ?? throw new InvalidOperationException("Postgres.SlotName is not set. It should have been auto-filled when the task was created.");
+        _publicationName = Configuration.Postgres?.PublicationName;
+        _slotName = Configuration.Postgres?.SlotName;
+
+        // Auto-fill if not set (e.g., task created before Postgres settings were introduced)
+        if (_publicationName == null || _slotName == null)
+        {
+            var id = Guid.NewGuid().ToString("N");
+            _publicationName ??= $"rvn_cdc_p_{id}";
+            _slotName ??= $"rvn_cdc_s_{id}";
+        }
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);

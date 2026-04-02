@@ -160,14 +160,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     break;
                 case CdcSinkDocumentOpType.Delete:
-                    // Before clearing state, flush pending embeds so their patches run for
-                    // side effects (e.g., audit put() calls to other documents).
-                    if (pendingEmbeds is { Count: > 0 } && currentDoc != null)
-                    {
-                        currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches);
-                    }
+                    var ignoreThisDelete = op.Processor.RootConfig.OnDelete?.IgnoreDeletes == true;
 
-                    // Add the OnDelete patch last so it runs after all pre-delete patches.
+                    // Flush pending embeds so their patches run
+                    currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches);
+
+                    // Add the OnDelete patch
                     var deleteScript = op.Processor.RootConfig.OnDelete?.Patch;
                     if (deleteScript != null)
                     {
@@ -175,26 +173,36 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                         patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, currentDoc));
                     }
 
-                    // Flush all accumulated patches on the pre-delete document.
-                    // Side effects (put, del on other docs) execute now. The returned
-                    // patched 'this' is kept only for the IgnoreDeletes archive pattern.
-                    if (patches is { Count: > 0 } && currentDoc != null)
+                    if (ignoreThisDelete)
                     {
-                        var patchedDoc = RunPatches(context, documentId, currentDoc, patches);
-                        deletedDoc = patchedDoc ?? currentDoc;
+                        // IgnoreDeletes: the document survives. Run patches and keep
+                        // the result as currentDoc so modifications (e.g., this.Archived = true)
+                        // persist into subsequent Puts or the final save.
+                        if (patches is { Count: > 0 } && currentDoc != null)
+                            currentDoc = RunPatches(context, documentId, currentDoc, patches) ?? currentDoc;
+                        patches = null;
+                        pendingEmbeds = null;
                     }
                     else
                     {
-                        deletedDoc = currentDoc;
-                    }
+                        // Real delete: flush patches for side effects (e.g., audit put() calls)
+                        // but discard modifications to 'this' — a subsequent Put starts fresh.
+                        if (patches is { Count: > 0 } && currentDoc != null)
+                        {
+                            var patchedDoc = RunPatches(context, documentId, currentDoc, patches);
+                            deletedDoc = patchedDoc ?? currentDoc;
+                        }
+                        else
+                        {
+                            deletedDoc = currentDoc;
+                        }
 
-                    // Start fresh — modifications to 'this' from flushed patches don't
-                    // carry forward to any subsequent Put that resurrects the document.
-                    patches = null;
-                    pendingEmbeds = null;
-                    currentDoc = null;
-                    lastPutOp = null;
-                    lastDeleteOp = op;
+                        patches = null;
+                        pendingEmbeds = null;
+                        currentDoc = null;
+                        lastPutOp = null;
+                        lastDeleteOp = op;
+                    }
 
                     break;
                 case CdcSinkDocumentOpType.EmbeddedModify:
@@ -237,10 +245,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = context.ReadObject(stub, documentId, BlittableJsonDocumentBuilder.UsageMode.None);
         }
 
-        if (pendingEmbeds is { Count: > 0 })
-        {
-            currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches, includeOnDelete: true);
-        }
+        currentDoc = FlushPendingEmbeds(context, documentId, currentDoc, pendingEmbeds, ref patches, includeOnDelete: true);
 
         if (patches is { Count: > 0 })
         {
@@ -389,7 +394,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         BlittableJsonReaderObject currentDoc, List<CdcSinkDocumentOp> pendingEmbeds,
         ref List<PatchEntry> patches, bool includeOnDelete = false)
     {
-        foreach (var embedOp in pendingEmbeds)
+        foreach (var embedOp in pendingEmbeds ?? [])
         {
             if (includeOnDelete && embedOp.Operation == CdcSinkOperation.Delete)
             {

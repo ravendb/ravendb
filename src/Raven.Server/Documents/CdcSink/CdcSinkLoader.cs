@@ -233,25 +233,18 @@ public class CdcSinkLoader : IDisposable
 
         var reason = "Database record change. ";
 
-        if (process is not null)
+        CdcSinkConfiguration existing = null;
+        foreach (var x in myCdcSinks)
         {
-            CdcSinkConfiguration existing = null;
-            foreach (var x in myCdcSinks)
+            if (x.Name.Equals(process.Configuration.Name, StringComparison.OrdinalIgnoreCase))
             {
-                if (x.Name.Equals(process.Configuration.Name, StringComparison.OrdinalIgnoreCase))
-                {
-                    existing = x;
-                    break;
-                }
+                existing = x;
+                break;
             }
+        }
 
-            if (existing != null)
-                differences = process.Configuration.Compare(existing, record.SqlConnectionStrings, transformationDiffs);
-        }
-        else
-        {
-            throw new InvalidOperationException("CDC Sink process is null");
-        }
+        if (existing != null)
+            differences = process.Configuration.Compare(existing, record.SqlConnectionStrings, transformationDiffs);
 
         if (differences != null)
         {

@@ -36,6 +36,8 @@ public class CdcSinkTableConfig : IDynamicJson
     /// <summary>
     /// SQL column names whose values are JSON (json/jsonb) and should be parsed as
     /// structured objects/arrays in the document rather than stored as plain strings.
+    /// Set by the user in the CDC Sink configuration, or auto-detected from the source
+    /// database schema during task creation when supported.
     /// </summary>
     public List<string> JsonColumns { get; set; } = new();
 
