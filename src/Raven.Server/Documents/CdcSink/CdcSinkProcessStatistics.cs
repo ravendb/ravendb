@@ -72,12 +72,45 @@ public class CdcSinkProcessStatistics
         if (ScriptExecutionErrors < 100)
             return;
 
-        var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}). " +
-                      "Could not tolerate script execution error ratio and stopped current batch. ";
+        if (ScriptExecutionErrors <= ConsumeSuccesses)
+            return;
+
+        var message = $"Script execution error ratio is too high (errors: {ScriptExecutionErrors}, successes: {ConsumeSuccesses}). " +
+                      "Could not tolerate script execution error ratio and stopped current batch.";
 
         CreateAlertIfAnyScriptExecutionErrors(message);
 
-        throw new InvalidOperationException($"{message}. Current stats: {this}");
+        throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {e}");
+    }
+
+    /// <summary>
+    /// Records a partial consume error for a single document group that failed processing.
+    /// Uses the same threshold logic as ETL's RecordPartialLoadError:
+    /// tolerate errors while under 100 cumulative errors OR while errors &lt;= successes.
+    /// When both thresholds are exceeded, throws to prevent LSN advancement.
+    /// </summary>
+    public void RecordPartialConsumeError(string error, string documentId)
+    {
+        WasLatestConsumeSuccessful = false;
+
+        ConsumeErrors++;
+
+        ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(error));
+
+        LastConsumeErrorTime = SystemTime.UtcNow;
+
+        if (ConsumeErrors < 100)
+            return;
+
+        if (ConsumeErrors <= ConsumeSuccesses)
+            return;
+
+        var message = $"Consume error ratio is too high (errors: {ConsumeErrors}, successes: {ConsumeSuccesses}). " +
+                      "Could not tolerate consume error ratio and stopped current CDC Sink batch.";
+
+        CreateAlertIfAnyConsumeErrors(message);
+
+        throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
     }
 
     private void CreateAlertIfAnyConsumeErrors(string preMessage = null)

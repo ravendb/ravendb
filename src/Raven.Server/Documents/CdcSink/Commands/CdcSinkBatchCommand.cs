@@ -64,6 +64,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
         var groups = GroupByDocumentId(_ops);
+        int batchErrors = 0;
 
         foreach (var (documentId, ops) in groups)
         {
@@ -71,19 +72,32 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 ProcessDocumentGroup(context, documentId, ops);
                 ProcessedSuccessfully += ops.Count;
+                _statistics?.ConsumeSuccess(ops.Count);
                 _statsScope?.RecordProcessedMessage();
             }
             catch (Exception e)
             {
+                batchErrors++;
+
                 if (_logger?.IsErrorEnabled == true)
                     _logger.Error($"Failed to process CDC operations for document '{documentId}'.", e);
 
                 _statsScope?.RecordScriptProcessingError();
-                _statistics?.RecordScriptExecutionError(e);
+
+                // RecordPartialConsumeError tracks cumulative error/success counts and throws
+                // InvalidOperationException when the error ratio is too high (>=100 errors AND
+                // errors > successes), preventing LSN advancement for a poisoned stream.
+                _statistics?.RecordPartialConsumeError(e.ToString(), documentId);
             }
         }
 
-        UpdateState(context);
+        if (batchErrors == 0 || ProcessedSuccessfully > 0)
+        {
+            // Advance LSN only when the entire batch succeeded, or when some items
+            // were processed successfully and the error ratio is still tolerable
+            // (if it weren't tolerable, RecordPartialConsumeError would have thrown above).
+            UpdateState(context);
+        }
 
         return _ops.Count;
     }
@@ -144,14 +158,48 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     break;
                 case CdcSinkDocumentOpType.Delete:
-                    // OnDelete.Patch goes through the unified patch pipeline
+                    // Before clearing state, flush pending embeds so their patches run for
+                    // side effects (e.g., audit put() calls to other documents).
+                    if (pendingEmbeds is { Count: > 0 } && currentDoc != null)
+                    {
+                        foreach (var embedOp in pendingEmbeds)
+                        {
+                            if (embedOp.Operation != CdcSinkOperation.Delete &&
+                                embedOp.Processor.EmbeddedConfig.Patch != null)
+                            {
+                                var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+                                currentDoc = updatedDoc;
+                                patches ??= [];
+                                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
+                            }
+                        }
+                    }
+
+                    // Add the OnDelete patch last so it runs after all pre-delete patches.
                     var deleteScript = op.Processor.RootConfig.OnDelete?.Patch;
                     if (deleteScript != null)
                     {
                         patches ??= [];
                         patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, currentDoc));
                     }
-                    deletedDoc = currentDoc;
+
+                    // Flush all accumulated patches on the pre-delete document.
+                    // Side effects (put, del on other docs) execute now. The returned
+                    // patched 'this' is kept only for the IgnoreDeletes archive pattern.
+                    if (patches is { Count: > 0 } && currentDoc != null)
+                    {
+                        var patchedDoc = RunPatches(context, documentId, currentDoc, patches);
+                        deletedDoc = patchedDoc ?? currentDoc;
+                    }
+                    else
+                    {
+                        deletedDoc = currentDoc;
+                    }
+
+                    // Start fresh — modifications to 'this' from flushed patches don't
+                    // carry forward to any subsequent Put that resurrects the document.
+                    patches = null;
+                    pendingEmbeds = null;
                     currentDoc = null;
                     lastPutOp = null;
                     lastDeleteOp = op;
@@ -171,22 +219,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         if (deletedDoc != null)
         {
+            // Patches have already been flushed inline during the Delete op above.
             var ignoreDeletes = lastDeleteOp.Processor.RootConfig.OnDelete?.IgnoreDeletes == true;
 
-            if (patches is { Count: > 0 })
-            {
-                var patched = RunPatches(context, documentId, deletedDoc, patches);
-
-                if (ignoreDeletes && patched is not null)
-                {
-                    // IgnoreDeletes + Patch = archive pattern: save the patched doc, skip delete
-                    _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, patched);
-                    return;
-                }
-            }
-
             if (ignoreDeletes)
-                return; // IgnoreDeletes without Patch: just skip the delete
+            {
+                // Archive pattern: save the (potentially patched) document, skip delete
+                _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, deletedDoc);
+                return;
+            }
 
             _database.DocumentsStorage.Delete(context, documentId, null);
             return;
@@ -237,11 +278,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = RunPatches(context, documentId, currentDoc, patches);
         }
 
-        // currentDot may be null if the patch in RunPatches did a del() / put() on the doc, in which case
+        // currentDoc may be null if the patch in RunPatches did a del() / put() on the doc, in which case
         // we won't do anything here since the patch already handled the update. Otherwise, save the updated document with applied puts and embeds.
         if (currentDoc is not null)
         {
-            var final = context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            // When there were embedded ops, ApplyEmbeddedOperation already materialized with ToDisk.
+            // When there were patches, RunPatches already materialized with ToDisk.
+            // Only re-materialize if we only had Put ops (no embeds, no patches).
+            var final = (pendingEmbeds is { Count: > 0 } || patches is { Count: > 0 })
+                ? currentDoc
+                : context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, final);
         }
@@ -694,10 +740,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 }
                 else
                 {
-                    // No matching element found — create a stub
-                    var nestedMod = new DynamicJsonValue();
-                    current[propName] = nestedMod;
-                    current = nestedMod;
+                    // No matching element found — create a stub element and append it
+                    // to the existing array. We must NOT replace the array with an object,
+                    // because that would destroy all existing array items.
+                    var stubElement = new DynamicJsonValue();
+                    var updatedArray = new DynamicJsonArray();
+                    foreach (var existingItem in nestedArray)
+                        updatedArray.Add(existingItem);
+                    updatedArray.Add(stubElement);
+                    current[propName] = updatedArray;
+                    current = stubElement;
                     currentBlittable = null;
                 }
             }
@@ -857,6 +909,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             Ops = serializedOps,
             ConfigurationName = _configurationName,
             LastLsn = _lastLsn,
+            TableLoadUpdates = _tableLoadUpdates,
         };
     }
 
@@ -876,6 +929,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         public List<SerializedCdcSinkOp> Ops { get; set; }
         public string ConfigurationName { get; set; }
         public string LastLsn { get; set; }
+        public Dictionary<string, CdcSinkTableLoadState> TableLoadUpdates { get; set; }
 
         public DocumentMergedTransactionCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -918,7 +972,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
 
             return new CdcSinkBatchCommand(database, ops, ConfigurationName, LastLsn,
-                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                tableLoadUpdates: TableLoadUpdates, patchRequest: docProcessor.CombinedPatchRequest,
                 statsScope: null, statistics: null, logger: null);
         }
     }
