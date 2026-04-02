@@ -95,7 +95,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.Put, result.Type);
@@ -120,7 +120,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.Delete, result.Type);
@@ -145,7 +145,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.Put, result.Type);
@@ -174,7 +174,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, result.Type);
@@ -202,7 +202,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, result.Type);
@@ -225,7 +225,7 @@ public class CdcSinkDocumentProcessorTests
 
         // Unknown tables are gracefully skipped (returns null) instead of throwing,
         // because the publication may cover more tables than the CDC Sink configuration.
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
         Assert.Null(result);
     }
 
@@ -247,7 +247,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal("Customers/ALFKI", result.DocumentId);
@@ -277,7 +277,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         // RawData should have ALL columns, including unmapped ones
@@ -347,7 +347,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, result.Type);
@@ -412,7 +412,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, result.Type);
@@ -460,7 +460,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Equal("OrderDetails/10248/11", result.DocumentId);
@@ -484,7 +484,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
         Assert.Null(result.MappedData["Customer"]);
@@ -508,7 +508,7 @@ public class CdcSinkDocumentProcessorTests
             }
         };
 
-        var result = processor.ProcessRow(row);
+        var result = processor.ProcessRow(row, null);
         Assert.NotNull(result);
         Assert.Equal("Orders/10248", result.DocumentId);
     }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -15,6 +14,7 @@ using Raven.Server.Documents.CdcSink.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink
@@ -120,7 +120,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PutRootDocument()
         {
             using var store = GetDocumentStore();
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeleteRootDocument()
         {
             using var store = GetDocumentStore();
@@ -196,7 +196,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpsert_Array()
         {
             using var store = GetDocumentStore();
@@ -269,7 +269,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpdate_Array()
         {
             using var store = GetDocumentStore();
@@ -355,7 +355,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedDelete_Array()
         {
             using var store = GetDocumentStore();
@@ -442,7 +442,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpsert_Map()
         {
             using var store = GetDocumentStore();
@@ -508,7 +508,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpsert_Value()
         {
             using var store = GetDocumentStore();
@@ -573,7 +573,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task BatchCoalescing()
         {
             using var store = GetDocumentStore();
@@ -652,7 +652,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PatchWithDollarRow()
         {
             using var store = GetDocumentStore();
@@ -706,7 +706,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PatchError_AbortsSingleDocument()
         {
             using var store = GetDocumentStore();
@@ -764,7 +764,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task BinaryToAttachment()
         {
             using var store = GetDocumentStore();
@@ -851,7 +851,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.Equal(fileContent, storedBytes);
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task VectorToAttachment_FloatArray()
         {
             using var store = GetDocumentStore();
@@ -928,7 +928,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task TextToAttachment_String()
         {
             using var store = GetDocumentStore();
@@ -998,7 +998,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PropertyRetention_OnUpdate()
         {
             using var store = GetDocumentStore();
@@ -1047,7 +1047,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpdate_Array_RetainsExistingProperties()
         {
             using var store = GetDocumentStore();
@@ -1139,7 +1139,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpdate_Map_RetainsExistingProperties()
         {
             using var store = GetDocumentStore();
@@ -1225,7 +1225,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task EmbeddedUpdate_Value_RetainsExistingProperties()
         {
             using var store = GetDocumentStore();
@@ -1311,7 +1311,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task SequentialPutDeletePut_LastPutWins()
         {
             // Simulates CDC sequence: put, delete, put — the last put should win
@@ -1367,7 +1367,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task SequentialPutDeleteOnly_DocumentIsDeleted()
         {
             // Simulates CDC sequence: put, delete — document should end up deleted
@@ -1424,7 +1424,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeleteThenEmbed_CreatesStubWithEmbed()
         {
             // Simulates CDC sequence: delete, embed — should create a stub document with the embed applied
@@ -1509,7 +1509,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PutDeletePutEmbed_FinalStateHasLastPutAndEmbed()
         {
             // Full sequence: put, delete, put, embed — last put creates fresh doc, embed adds to it
@@ -1591,7 +1591,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeleteClearsEmbedsBefore()
         {
             // Sequence: embed, embed, delete, embed — only the last embed survives
@@ -1681,7 +1681,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task MultiplePutsAccumulate_ObjectAssign()
         {
             // Two puts on the same doc: second put adds new fields, retains first put's fields
@@ -1813,7 +1813,7 @@ namespace SlowTests.Server.Documents.CdcSink
             return (rootConfig, deptConfig, empConfig, empProcessor);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeepNesting_NavigateToEmbeddedParent_PreservesExistingArrayItems()
         {
             // Bug 4: When NavigateToEmbeddedParent traverses an intermediate array and no
@@ -1926,7 +1926,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeepNesting_ArrayNavigation_MatchingElement_AppliesCorrectly()
         {
             // Bug 3 verification: ApplyArrayOperation receives the correct navigated parent
@@ -2029,7 +2029,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task DeleteThenEmbedOnly_DocumentResurrectedAsStub()
         {
             // Bug 8 analysis: When operations arrive as [Delete, EmbeddedModify] in a single
@@ -2135,7 +2135,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// All 5 audit entries must be written (patches have side effects on other docs).
         /// The final document should have Name = "Delta" with no leftover from the pre-delete era.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_AuditPut_IgnoreDeletesFalse()
         {
             using var store = GetDocumentStore();
@@ -2245,7 +2245,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// Final document should be "Delta" (last update wins regardless of archive).
         /// All 5 audit entries must be written.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_AuditPut_IgnoreDeletesTrue()
         {
             using var store = GetDocumentStore();
@@ -2354,7 +2354,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// Pre-delete patches (Insert Count++, Update Count++) must NOT carry forward.
         /// Final Count should be 2 (Gamma insert + Delta update), not 4.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesFalse()
         {
             using var store = GetDocumentStore();
@@ -2433,12 +2433,19 @@ namespace SlowTests.Server.Documents.CdcSink
         /// <summary>
         /// INSERT→UPDATE→DELETE→INSERT→UPDATE with this.Count++ patch.
         /// IgnoreDeletes = true: Delete is skipped. The OnDelete patch also does Count++.
-        /// Since the delete is ignored and a new Put follows, the final doc has the last Put's state.
-        /// Pre-delete patches ran on the pre-delete doc; post-delete patches run on the post-Put doc.
-        /// Count should be 2 (Gamma + Delta), pre-delete patches (Alpha, Beta, OnDelete) ran but
-        /// their this.Count modifications don't carry forward.
+        ///
+        /// Why Count = 2 and not 5:
+        /// The batch command processes ops in order on the same document ID. When a Delete
+        /// op arrives with IgnoreDeletes = true, the engine flushes all accumulated patches
+        /// (Alpha Count++, Beta Count++, OnDelete Count++) against the pre-delete document
+        /// snapshot, then discards the result (the document is not actually deleted, but
+        /// the patched state is thrown away). After the delete, Gamma and Delta are each
+        /// Puts that start from the raw mapped data (Count is absent, so "this.Count || 0"
+        /// starts at 0). Gamma insert → Count = 1, Delta update → Count = 2.
+        /// The pre-delete patch results (Count = 3) do not carry forward to the post-delete
+        /// document because the delete acts as a state boundary.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesTrue()
         {
             using var store = GetDocumentStore();
@@ -2519,152 +2526,11 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         /// <summary>
-        /// Simulates the PostgreSQL initial load vs CDC stream type mismatch.
-        /// Initial load uses raw DbDataReader.GetValue() which returns CLR types like
-        /// DateOnly, int, decimal, Guid. CDC stream applies ConvertPostgresValue() which
-        /// normalizes to DateTime, long, double, string.
-        ///
-        /// This test writes a document via the "initial load" path (using raw CLR types
-        /// as DbDataReader would return), reads it as a string-property class, then writes
-        /// an update via the "CDC stream" path (using normalized types), reads it again,
-        /// and verifies the field representations are identical.
-        /// </summary>
-        [Fact]
-        public async Task PostgresTypeConsistency_InitialLoadVsCdcStream_DateAndOtherTypes()
-        {
-            using var store = GetDocumentStore();
-            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
-
-            var tableConfig = new CdcSinkTableConfig
-            {
-                Name = "Employees",
-                SourceTableSchema = "public",
-                SourceTableName = "employees",
-                PrimaryKeyColumns = new List<string> { "id" },
-                ColumnsMapping = new Dictionary<string, string>
-                {
-                    { "id", "Id" },
-                    { "name", "Name" },
-                    { "birthday", "Birthday" },
-                    { "salary", "Salary" },
-                    { "employee_id", "EmployeeId" },
-                    { "active", "Active" },
-                    { "age", "Age" },
-                    { "score", "Score" },
-                }
-            };
-
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Employees",
-                IsRoot = true
-            };
-
-            var birthday = new DateTime(1990, 6, 15);
-
-            // --- Step 1: Simulate INITIAL LOAD (raw DbDataReader.GetValue types) ---
-            // Npgsql returns: date → DateOnly, integer → int, numeric → decimal,
-            // uuid → Guid, boolean → bool, real → float.
-            // The real code applies NormalizeReaderValue() before MapColumns(),
-            // converting DateOnly→DateTime, int→long, decimal→double, float→double, Guid→string.
-            // MapColumns then further normalizes Guid→string and byte[]→base64.
-            var initialLoadRaw = new Dictionary<string, object>
-            {
-                { "id", (long)1 },                                                  // NormalizeReaderValue: int → long
-                { "name", "Alice" },
-                { "birthday", new DateOnly(1990, 6, 15) },                          // NormalizeReaderValue: DateOnly preserved
-                { "salary", (double)75000.50 },                                     // NormalizeReaderValue: decimal → double
-                { "employee_id", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },         // NormalizeReaderValue: Guid → string
-                { "active", true },
-                { "age", (long)33 },                                                // NormalizeReaderValue: int → long
-                { "score", (double)4.5 },                                           // NormalizeReaderValue: float → double
-            };
-
-            // Use MapColumns like the real code does
-            var initialLoadMapped = processor.MapColumns(initialLoadRaw, tableConfig.ColumnsMapping);
-            initialLoadMapped[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                { [Constants.Documents.Metadata.Collection] = "Employees" };
-
-            var ops1 = new List<CdcSinkDocumentOp>
-            {
-                CreatePutOp("Employees/1", initialLoadMapped, initialLoadRaw, processor)
-            };
-            var cmd1 = new CdcSinkBatchCommand(database, ops1, "test-types", null, null, null, null, null, null);
-            await database.TxMerger.Enqueue(cmd1);
-
-            // Read the document after initial load — capture all fields as strings
-            string initialBirthday, initialSalary, initialEmployeeId, initialAge, initialScore;
-            bool initialActive;
-            using (var session = store.OpenSession())
-            {
-                var emp = session.Load<EmployeeStringFields>("Employees/1");
-                Assert.NotNull(emp);
-                Assert.Equal("Alice", emp.Name);
-                initialBirthday = emp.Birthday;
-                initialSalary = emp.Salary;
-                initialEmployeeId = emp.EmployeeId;
-                initialActive = emp.Active;
-                initialAge = emp.Age;
-                initialScore = emp.Score;
-            }
-
-            // --- Step 2: Simulate CDC UPDATE (ConvertPostgresValue-normalized types) ---
-            // CDC stream returns: date → DateTime (via Convert.ToDateTime), integer → long,
-            // numeric → double, uuid → string, boolean → bool, real → double
-            var cdcStreamRaw = new Dictionary<string, object>
-            {
-                { "id", (long)1 },
-                { "name", "Alice Updated" },
-                { "birthday", new DateOnly(1990, 6, 15) },                         // DateOnly (CDC path now also uses DateOnly for 'date')
-                { "salary", (double)75000.50 },                                     // double (not decimal)
-                { "employee_id", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },         // string (not Guid)
-                { "active", true },
-                { "age", (long)33 },                                                // long (not int)
-                { "score", (double)4.5 },                                           // double (not float)
-            };
-
-            var cdcStreamMapped = processor.MapColumns(cdcStreamRaw, tableConfig.ColumnsMapping);
-            cdcStreamMapped[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                { [Constants.Documents.Metadata.Collection] = "Employees" };
-
-            var ops2 = new List<CdcSinkDocumentOp>
-            {
-                CreatePutOp("Employees/1", cdcStreamMapped, cdcStreamRaw, processor)
-            };
-            var cmd2 = new CdcSinkBatchCommand(database, ops2, "test-types", null, null, null, null, null, null);
-            await database.TxMerger.Enqueue(cmd2);
-
-            // Read the document after CDC update — same string-field class
-            using (var session = store.OpenSession())
-            {
-                var emp = session.Load<EmployeeStringFields>("Employees/1");
-                Assert.NotNull(emp);
-                Assert.Equal("Alice Updated", emp.Name);
-
-                // These must be identical between initial load and CDC update.
-                // If the blittable JSON writer serializes DateOnly differently from DateTime,
-                // or decimal differently from double, these assertions will fail.
-                Assert.Equal(initialBirthday, emp.Birthday);
-                Assert.Equal(initialSalary, emp.Salary);
-                Assert.Equal(initialEmployeeId, emp.EmployeeId);
-                Assert.Equal(initialActive, emp.Active);
-                Assert.Equal(initialAge, emp.Age);
-                Assert.Equal(initialScore, emp.Score);
-            }
-        }
-
-        /// <summary>
-        /// DTO with all fields as strings to detect serialization differences.
-        /// If initial load writes a date as "1990-06-15" but CDC writes "1990-06-15T00:00:00.0000000",
-        /// this class will capture both representations exactly.
-        /// </summary>
-        /// <summary>
         /// A patch that exceeds the MaxStepsForScript limit should fail only for
         /// that document, not block the entire CDC batch. Other documents in the
         /// same batch must still be processed and the LSN must still advance.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task PatchMaxStepsExceeded_FailsDocumentNotBatch()
         {
             using var store = GetDocumentStore(new Options
@@ -2756,11 +2622,11 @@ namespace SlowTests.Server.Documents.CdcSink
 
         /// <summary>
         /// Verifies that NormalizeForJson handles complex types correctly:
-        /// - JSON strings → parsed into native DynamicJsonValue
+        /// - JSON columns (explicitly marked) strings → parsed into native DynamicJsonValue
         /// - Arrays → DynamicJsonArray
         /// - Plain strings stay as strings
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task ComplexTypes_JsonAndArrays_StoredAsNativeJson()
         {
             using var store = GetDocumentStore();
@@ -2779,14 +2645,16 @@ namespace SlowTests.Server.Documents.CdcSink
                     { "scores", "Scores" },
                     { "plain_text", "PlainText" }
                 },
-                PrimaryKeyColumns = new List<string> { "id" }
+                PrimaryKeyColumns = new List<string> { "id" },
+                JsonColumns = new List<string> { "metadata" }
             };
 
             var processor = new CdcSinkTableProcessor
             {
                 RootConfig = config,
                 CollectionName = "Records",
-                IsRoot = true
+                IsRoot = true,
+                JsonColumnSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "metadata" }
             };
 
             // Simulate Npgsql-returned types:
@@ -2803,17 +2671,21 @@ namespace SlowTests.Server.Documents.CdcSink
                 { "plain_text", "just a regular string" },                // plain string → stays as string
             };
 
-            var mappedData = processor.MapColumns(rawData, config.ColumnsMapping);
-            mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                { [Constants.Documents.Metadata.Collection] = "Records" };
-
-            var ops = new List<CdcSinkDocumentOp>
+            DynamicJsonValue mappedData;
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonCtx))
             {
-                CreatePutOp("Records/1", mappedData, rawData, processor)
-            };
+                mappedData = processor.MapColumns(rawData, config.ColumnsMapping, processor.JsonColumnSet, jsonCtx);
+                mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Records" };
 
-            var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
-            await database.TxMerger.Enqueue(command);
+                var ops = new List<CdcSinkDocumentOp>
+                {
+                    CreatePutOp("Records/1", mappedData, rawData, processor)
+                };
+
+                var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
+                await database.TxMerger.Enqueue(command);
+            }
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
@@ -2854,7 +2726,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// This is the archive/soft-delete pattern: when a row is deleted in SQL, the patch
         /// copies the document's fields into a separate "deleted" document before the delete proceeds.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task OnDeletePatch_CanAccessDocumentProperties()
         {
             using var store = GetDocumentStore();
@@ -2965,15 +2837,5 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
-        private class EmployeeStringFields
-        {
-            public string Name { get; set; }
-            public string Birthday { get; set; }
-            public string Salary { get; set; }
-            public string EmployeeId { get; set; }
-            public bool Active { get; set; }
-            public string Age { get; set; }
-            public string Score { get; set; }
-        }
     }
 }

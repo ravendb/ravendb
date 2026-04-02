@@ -3900,5 +3900,130 @@ namespace SlowTests.Server.Documents.CdcSink
                 return System.Text.Encoding.UTF8.GetString(ms.ToArray());
             }, "Updated article body after CDC streaming.", timeout: 60_000);
         }
+        /// <summary>
+        /// Verifies that the field representations in RavenDB documents are identical
+        /// whether they came from the initial load path (DbDataReader.GetValue) or
+        /// from the CDC streaming path (ConvertPostgresValue).
+        ///
+        /// Creates a Postgres table with date, numeric, uuid, boolean, integer and real
+        /// columns, inserts a row (initial load), then updates it (CDC stream), and
+        /// asserts that every non-name field has the same serialized value in both cases.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PostgresTypeConsistency_InitialLoadVsCdcStream_DateAndOtherTypes()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE employees (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    birthday DATE NOT NULL,
+                    salary NUMERIC(10,2) NOT NULL,
+                    employee_id UUID NOT NULL,
+                    active BOOLEAN NOT NULL,
+                    age INTEGER NOT NULL,
+                    score REAL NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO employees (id, name, birthday, salary, employee_id, active, age, score)
+                VALUES (1, 'Alice', '1990-06-15', 75000.50, 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', true, 33, 4.5)");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-type-consistency",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "TypeEmployees",
+                        SourceTableSchema = "public",
+                        SourceTableName = "employees",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "birthday", "Birthday" },
+                            { "salary", "Salary" },
+                            { "employee_id", "EmployeeId" },
+                            { "active", "Active" },
+                            { "age", "Age" },
+                            { "score", "Score" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load to bring the document in
+            var count = await WaitForDocumentCountAsync(store, "TypeEmployees", expectedCount: 1, timeoutMs: 60_000);
+            Assert.Equal(1, count);
+
+            // Capture the field representations after initial load
+            string initialBirthday, initialSalary, initialEmployeeId, initialAge, initialScore;
+            bool initialActive;
+            using (var session = store.OpenAsyncSession())
+            {
+                var emp = await session.LoadAsync<EmployeeStringFields>("TypeEmployees/1");
+                Assert.NotNull(emp);
+                Assert.Equal("Alice", emp.Name);
+                initialBirthday = emp.Birthday;
+                initialSalary = emp.Salary;
+                initialEmployeeId = emp.EmployeeId;
+                initialActive = emp.Active;
+                initialAge = emp.Age;
+                initialScore = emp.Score;
+            }
+
+            // Update via CDC stream — only change the name so all other fields stay the same
+            ExecuteNpgSql(connectionString, @"
+                UPDATE employees SET name = 'Alice Updated' WHERE id = 1");
+
+            // Wait for CDC to propagate the update
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var emp = await session.LoadAsync<EmployeeStringFields>("TypeEmployees/1");
+                return emp?.Name;
+            }, "Alice Updated", timeout: 60_000);
+
+            // Verify field representations are identical between initial load and CDC update
+            using (var session = store.OpenAsyncSession())
+            {
+                var emp = await session.LoadAsync<EmployeeStringFields>("TypeEmployees/1");
+                Assert.NotNull(emp);
+                Assert.Equal("Alice Updated", emp.Name);
+
+                Assert.Equal(initialBirthday, emp.Birthday);
+                Assert.Equal(initialSalary, emp.Salary);
+                Assert.Equal(initialEmployeeId, emp.EmployeeId);
+                Assert.Equal(initialActive, emp.Active);
+                Assert.Equal(initialAge, emp.Age);
+                Assert.Equal(initialScore, emp.Score);
+            }
+        }
+
+        /// <summary>
+        /// DTO with all fields as strings to detect serialization differences.
+        /// If initial load writes a date as "1990-06-15" but CDC writes "1990-06-15T00:00:00.0000000",
+        /// this class will capture both representations exactly.
+        /// </summary>
+        private class EmployeeStringFields
+        {
+            public string Name { get; set; }
+            public string Birthday { get; set; }
+            public string Salary { get; set; }
+            public string EmployeeId { get; set; }
+            public bool Active { get; set; }
+            public string Age { get; set; }
+            public string Score { get; set; }
+        }
     }
 }
