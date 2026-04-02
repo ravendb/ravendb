@@ -134,10 +134,13 @@ public static class CdcSinkSourceVerifier
         }
         else
         {
-            // User can't create replication infrastructure — check if admin already set it up
-            var configName = configuration?.Name ?? "";
-            var expectedPubName = ComputePublicationName(connection.Database, configName, tableNames);
-            var expectedSlotName = ComputeSlotName(connection.Database, configName, tableNames);
+            // User can't create replication infrastructure — check if admin already set it up.
+            // Use the config's Postgres settings if available (user-defined or previously auto-filled),
+            // otherwise compute the expected names from the hash.
+            var expectedPubName = configuration?.Postgres?.PublicationName
+                ?? ComputePublicationName(connection.Database, configuration?.Name ?? "", tableNames);
+            var expectedSlotName = configuration?.Postgres?.SlotName
+                ?? ComputeSlotName(connection.Database, configuration?.Name ?? "", tableNames);
 
             bool publicationExists = false;
             bool slotExists = false;

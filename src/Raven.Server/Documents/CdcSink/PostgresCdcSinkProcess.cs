@@ -78,80 +78,150 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         var tableNames = Configuration.CollectAllSourceTableNames("public");
 
+        _publicationName = Configuration.Postgres?.PublicationName
+            ?? throw new InvalidOperationException("Postgres.PublicationName is not set. It should have been auto-filled when the task was created.");
+        _slotName = Configuration.Postgres?.SlotName
+            ?? throw new InvalidOperationException("Postgres.SlotName is not set. It should have been auto-filled when the task was created.");
+
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        _publicationName = CdcSinkSourceVerifier.ComputePublicationName(conn.Database, Configuration.Name, tableNames);
-        _slotName = CdcSinkSourceVerifier.ComputeSlotName(conn.Database, Configuration.Name, tableNames);
-
+        // --- Publication: create if missing, verify table coverage if exists ---
+        bool publicationExists;
         await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_publication WHERE pubname = @pubName", conn))
         {
             cmd.Parameters.AddWithValue("pubName", _publicationName);
-            var exists = await cmd.ExecuteScalarAsync(ct);
+            publicationExists = await cmd.ExecuteScalarAsync(ct) != null;
+        }
 
-            if (exists == null)
+        if (publicationExists)
+        {
+            await VerifyPublicationTableCoverage(conn, tableNames, ct);
+        }
+        else
+        {
+            var tableList = string.Join(", ", tableNames.Select(t =>
             {
-                var tableList = string.Join(", ", tableNames.Select(t =>
-                {
-                    var parts = t.Split('.');
-                    return parts.Length == 2 ? $"{parts[0]}.{parts[1]}" : t;
-                }));
+                var parts = t.Split('.');
+                return parts.Length == 2 ? $"{parts[0]}.{parts[1]}" : t;
+            }));
 
+            try
+            {
+                await using var createCmd = new NpgsqlCommand(
+                    $"CREATE PUBLICATION {_publicationName} FOR TABLE {string.Join(", ", tableList)}", conn);
+                await createCmd.ExecuteNonQueryAsync(ct);
+            }
+            catch (PostgresException ex) when (ex.SqlState == "42501")
+            {
+                throw new InvalidOperationException(
+                    $"""
+                    Insufficient permissions to create publication '{_publicationName}'. The database user must have CREATE permission on the database, or an administrator can create the publication manually:
+
+                      CREATE PUBLICATION {_publicationName} FOR TABLE {tableList};
+
+                    PostgreSQL error: {ex.MessageText}
+                    """, ex);
+            }
+        }
+
+        // --- Slot: verify if exists, create if not ---
+        await using (var cmd = new NpgsqlCommand(
+            "SELECT plugin FROM pg_replication_slots WHERE slot_name = @slotName", conn))
+        {
+            cmd.Parameters.AddWithValue("slotName", _slotName);
+            var plugin = (string)await cmd.ExecuteScalarAsync(ct);
+
+            if (plugin != null)
+            {
+                if (string.Equals(plugin, "pgoutput", StringComparison.OrdinalIgnoreCase) == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Replication slot '{_slotName}' exists but uses plugin '{plugin}' instead of 'pgoutput'. " +
+                        $"CDC Sink requires the pgoutput plugin. Drop the existing slot and let the task recreate it, " +
+                        $"or create a new slot manually: SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');");
+                }
+            }
+            else
+            {
                 try
                 {
                     await using var createCmd = new NpgsqlCommand(
-                        $"CREATE PUBLICATION {_publicationName} FOR TABLE {string.Join(", ", tableList)}", conn);
+                        $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
                     await createCmd.ExecuteNonQueryAsync(ct);
+                }
+                catch (PostgresException ex) when (ex.SqlState == "42710")
+                {
+                    // Race condition: slot was created between our check and create
                 }
                 catch (PostgresException ex) when (ex.SqlState == "42501")
                 {
                     throw new InvalidOperationException(
                         $"""
-                        Insufficient permissions to create publication '{_publicationName}'. The database user must have CREATE permission on the database, or an administrator can create the publication manually:
+                        Insufficient permissions to create replication slot '{_slotName}'. The database user must have the REPLICATION role attribute, or an administrator can create the slot manually:
 
-                          CREATE PUBLICATION {_publicationName} FOR TABLE {tableList};
+                          SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');
 
                         PostgreSQL error: {ex.MessageText}
                         """, ex);
                 }
             }
         }
+    }
 
-        // Check if replication slot already exists before trying to create it.
-        // This avoids permission errors when the slot was created by an admin but
-        // the current user lacks the REPLICATION role attribute.
-        // The slot name includes the database name in its hash, so there's no risk
-        // of colliding with a slot from a different database.
-        bool slotExists;
-        await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName", conn))
+    private async Task VerifyPublicationTableCoverage(NpgsqlConnection conn, List<string> configuredTableNames, CancellationToken ct)
+    {
+        var publishedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        await using (var cmd = new NpgsqlCommand("""
+            SELECT n.nspname || '.' || c.relname
+            FROM pg_publication_rel pr
+            JOIN pg_class c ON c.oid = pr.prrelid
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE pr.prpubid = (SELECT oid FROM pg_publication WHERE pubname = @pubName)
+            """, conn))
         {
-            cmd.Parameters.AddWithValue("slotName", _slotName);
-            slotExists = await cmd.ExecuteScalarAsync(ct) != null;
+            cmd.Parameters.AddWithValue("pubName", _publicationName);
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+                publishedTables.Add(reader.GetString(0));
         }
 
-        if (slotExists == false)
+        // Check for configured tables missing from the publication
+        var missing = new List<string>();
+        foreach (var table in configuredTableNames)
         {
-            try
-            {
-                await using var cmd = new NpgsqlCommand(
-                    $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
-                await cmd.ExecuteNonQueryAsync(ct);
-            }
-            catch (PostgresException ex) when (ex.SqlState == "42710")
-            {
-                // Race condition: slot was created between our check and create — safe to ignore
-            }
-            catch (PostgresException ex) when (ex.SqlState == "42501")
-            {
-                throw new InvalidOperationException(
-                    $"""
-                    Insufficient permissions to create replication slot '{_slotName}'. The database user must have the REPLICATION role attribute, or an administrator can create the slot manually:
+            if (publishedTables.Contains(table) == false)
+                missing.Add(table);
+        }
 
-                      SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Publication '{_publicationName}' does not include the following configured tables: {string.Join(", ", missing)}. " +
+                $"Add them with: ALTER PUBLICATION {_publicationName} ADD TABLE {string.Join(", ", missing)};");
+        }
 
-                    PostgreSQL error: {ex.MessageText}
-                    """, ex);
-            }
+        // Warn about extra tables in the publication that aren't in the configuration
+        var extra = new List<string>();
+        var configuredSet = new HashSet<string>(configuredTableNames, StringComparer.OrdinalIgnoreCase);
+        foreach (var table in publishedTables)
+        {
+            if (configuredSet.Contains(table) == false)
+                extra.Add(table);
+        }
+
+        if (extra.Count > 0)
+        {
+            var alert = AlertRaised.Create(
+                Database.Name, Tag,
+                $"Publication '{_publicationName}' includes tables not configured in the CDC Sink task: {string.Join(", ", extra)}. " +
+                "Rows from these tables will be discarded. Consider narrowing the publication to only the configured tables.",
+                AlertReason.CdcSink_Error,
+                NotificationSeverity.Warning,
+                key: $"{Tag}/{Name}/publication-extra-tables");
+
+            Database.NotificationCenter.Add(alert);
         }
     }
 
@@ -471,6 +541,27 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
 
         var allTables = Configuration.CollectAllTablesFlat("public");
+
+        if (Configuration.SkipInitialLoad)
+        {
+            var updates = new Dictionary<string, CdcSinkTableLoadState>();
+            foreach (var tableInfo in allTables)
+            {
+                var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+                if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
+                    continue;
+                updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
+            }
+
+            if (updates.Count > 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] SkipInitialLoad is set — marking {updates.Count} table(s) as complete without scanning.");
+                await SubmitBatch([], tableLoadUpdates: updates);
+            }
+
+            return;
+        }
 
         foreach (var tableInfo in allTables)
         {
