@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -38,18 +37,18 @@ public class CdcSinkHandler : DatabaseRequestHandler
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
             var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkVerify");
+            var request = JsonDeserializationServer.CdcSinkVerifyRequest(bodyJson);
 
-            if (bodyJson.TryGet(nameof(CdcSinkVerifyRequest.ConnectionStringName), out string connectionStringName) == false ||
-                string.IsNullOrEmpty(connectionStringName))
+            if (string.IsNullOrEmpty(request.ConnectionStringName))
             {
                 ThrowRequiredPropertyNameInRequest(nameof(CdcSinkVerifyRequest.ConnectionStringName));
             }
 
             var databaseRecord = Database.ReadDatabaseRecord();
-            if (databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString) == false)
+            if (databaseRecord.SqlConnectionStrings.TryGetValue(request.ConnectionStringName, out var sqlConnectionString) == false)
             {
                 var notFoundResult = new CdcSinkVerificationResult();
-                notFoundResult.Errors.Add($"SQL connection string '{connectionStringName}' was not found in the database configuration.");
+                notFoundResult.Errors.Add($"SQL connection string '{request.ConnectionStringName}' was not found in the database configuration.");
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -58,19 +57,10 @@ public class CdcSinkHandler : DatabaseRequestHandler
                 return;
             }
 
-            // Extract optional table names from request for table-level checks
-            List<string> tableNames = null;
-            if (bodyJson.TryGet(nameof(CdcSinkVerifyRequest.TableNames), out BlittableJsonReaderArray tablesArray) && tablesArray != null)
-            {
-                tableNames = new List<string>();
-                foreach (var item in tablesArray)
-                    tableNames.Add(item.ToString());
-            }
-
             CdcSinkVerificationResult result;
             try
             {
-                result = await CdcSinkSourceVerifier.VerifyAsync(sqlConnectionString, tableNames);
+                result = await CdcSinkSourceVerifier.VerifyAsync(sqlConnectionString, request.TableNames);
             }
             catch (Exception e)
             {
@@ -82,6 +72,39 @@ public class CdcSinkHandler : DatabaseRequestHandler
             {
                 context.Write(writer, result.ToJson());
             }
+        }
+    }
+
+    [RavenAction("/databases/*/cdc-sink/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task Performance()
+    {
+        var sinks = GetProcessesToReportOn();
+
+        var stats = new List<CdcSinkTaskPerformanceStats>(sinks.Count);
+        foreach (var kvp in sinks)
+        {
+            var processPerformanceStats = new List<CdcSinkProcessPerformanceStats>(kvp.Value.Count);
+            foreach (var process in kvp.Value)
+            {
+                processPerformanceStats.Add(new CdcSinkProcessPerformanceStats
+                {
+                    ScriptName = process.Name,
+                    Performance = process.GetPerformanceStats()
+                });
+            }
+
+            stats.Add(new CdcSinkTaskPerformanceStats
+            {
+                TaskId = kvp.Value[0].TaskId,
+                TaskName = kvp.Key,
+                Stats = processPerformanceStats.ToArray()
+            });
+        }
+
+        using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+        {
+            writer.WriteCdcSinkTaskPerformanceStats(context, stats);
         }
     }
 
@@ -111,25 +134,32 @@ public class CdcSinkHandler : DatabaseRequestHandler
         }
     }
 
-    private Dictionary<string, List<CdcSinkProcess>> GetProcessesToReportOn()
+    private SortedDictionary<string, List<CdcSinkProcess>> GetProcessesToReportOn()
     {
-        Dictionary<string, List<CdcSinkProcess>> sinks;
         var names = HttpContext.Request.Query["name"];
+        var sinks = new SortedDictionary<string, List<CdcSinkProcess>>(StringComparer.Ordinal);
 
-        if (names.Count == 0)
+        foreach (var process in Database.CdcSinkLoader.Processes)
         {
-            sinks = Database.CdcSinkLoader.Processes
-                .GroupBy(x => x.Configuration.Name)
-                .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Name).ToList());
+            if (names.Count > 0 &&
+                names.Contains(process.Configuration.Name, StringComparer.OrdinalIgnoreCase) == false &&
+                names.Contains(process.Name, StringComparer.OrdinalIgnoreCase) == false)
+            {
+                continue;
+            }
+
+            if (sinks.TryGetValue(process.Configuration.Name, out var list) == false)
+            {
+                list = new List<CdcSinkProcess>();
+                sinks[process.Configuration.Name] = list;
+            }
+
+            list.Add(process);
         }
-        else
+
+        foreach (var list in sinks.Values)
         {
-            sinks = Database.CdcSinkLoader.Processes
-                .Where(x => names.Contains(x.Configuration.Name, StringComparer.OrdinalIgnoreCase) || names.Contains(x.Name, StringComparer.OrdinalIgnoreCase))
-                .GroupBy(x => x.Configuration.Name)
-                .OrderBy(x => x.Key)
-                .ToDictionary(x => x.Key, x => x.OrderBy(y => y.Name).ToList());
+            list.Sort((x, y) => string.Compare(x.Name, y.Name, StringComparison.Ordinal));
         }
 
         return sinks;
