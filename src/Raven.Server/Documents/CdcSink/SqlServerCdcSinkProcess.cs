@@ -49,7 +49,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
     {
-        _documentProcessor = new CdcSinkDocumentProcessor(configuration);
+        _documentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
         _connectionString = configuration.Connection.ConnectionString;
         _factoryName = configuration.Connection.FactoryName;
     }
@@ -175,6 +175,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         var pollInterval = Database.Configuration.CdcSink.PollInterval.AsTimeSpan;
 
         await using var conn = await OpenConnectionAsync(ct);
+        using var ___ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
         bool shouldWait = false;
 
         while (true)
@@ -239,7 +240,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                             Data = data,
                         };
 
-                        var op = _documentProcessor.ProcessRow(row);
+                        var op = _documentProcessor.ProcessRow(row, jsonParsingContext);
                         if (op != null)
                         {
                             batch.Add(op);
@@ -425,7 +426,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var updates = new Dictionary<string, CdcSinkTableLoadState>();
             foreach (var tableInfo in allTables)
             {
-                var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+                var tableKey = tableInfo.FullName;
                 if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
                     continue;
                 updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
@@ -443,7 +444,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         foreach (var tableInfo in allTables)
         {
-            var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+            var tableKey = tableInfo.FullName;
 
             if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
                 continue;
@@ -560,6 +561,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         await using (cmd)
         {
             await using var reader = await cmd.ExecuteReaderAsync(ct);
+            using var ____ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
 
             var ops = new List<CdcSinkDocumentOp>();
 
@@ -581,7 +583,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     Data = data,
                 };
 
-                var op = _documentProcessor.ProcessRow(row);
+                var op = _documentProcessor.ProcessRow(row, jsonParsingCtx);
                 if (op != null)
                     ops.Add(op);
             }

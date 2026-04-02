@@ -38,10 +38,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
     public CdcSinkPostgresSettings Postgres { get; set; }
 
     /// <summary>
-    /// When true, the initial full-table load is skipped — the task starts streaming
-    /// CDC changes immediately. Use this when the target RavenDB database is already
-    /// populated (e.g., from a prior migration or restore). The flag is consumed on
-    /// first startup; subsequent restarts use the per-table completion state.
+    /// When true, the initial full-table load is skipped — tables are marked as
+    /// loaded immediately and the task starts streaming CDC changes. Use this when
+    /// the target RavenDB database is already populated (e.g., from a prior migration).
     /// </summary>
     public bool SkipInitialLoad { get; set; }
 
@@ -96,11 +95,50 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (uniqueNames.Add(table.Name) == false)
                 errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
 
+            ValidateNoConflictingPropertyNames(table, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
             ValidateLinkedTables(table.LinkedTables, table.Name, errors);
         }
 
         return errors.Count == 0;
+    }
+
+    private static void ValidateNoConflictingPropertyNames(CdcSinkTableConfig table, List<string> errors)
+    {
+        ValidateNoConflictingPropertyNames(table.Name, table.ColumnsMapping, table.EmbeddedTables, table.LinkedTables, errors);
+    }
+
+    private static void ValidateNoConflictingPropertyNames(string tableName,
+        Dictionary<string, string> columnsMapping,
+        List<CdcSinkEmbeddedTableConfig> embeddedTables,
+        List<CdcSinkLinkedTableConfig> linkedTables,
+        List<string> errors)
+    {
+        var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (columnsMapping != null)
+        {
+            foreach (var mapped in columnsMapping.Values)
+                propertyNames.Add(mapped);
+        }
+
+        if (embeddedTables != null)
+        {
+            foreach (var embedded in embeddedTables)
+            {
+                if (embedded.PropertyName != null && propertyNames.Add(embedded.PropertyName) == false)
+                    errors.Add($"Table '{tableName}': property name '{embedded.PropertyName}' from embedded table '{embedded.SourceTableName}' conflicts with a column mapping or another embedded/linked table");
+            }
+        }
+
+        if (linkedTables != null)
+        {
+            foreach (var linked in linkedTables)
+            {
+                if (linked.PropertyName != null && propertyNames.Add(linked.PropertyName) == false)
+                    errors.Add($"Table '{tableName}': property name '{linked.PropertyName}' from linked table '{linked.SourceTableName}' conflicts with a column mapping or another embedded/linked table");
+            }
+        }
     }
 
     private static void ValidateEmbeddedTables(List<CdcSinkEmbeddedTableConfig> embeddedTables, string parentName, List<string> errors)
@@ -130,6 +168,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             if (embedded.ColumnsMapping == null || embedded.ColumnsMapping.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
+
+            // Check for conflicts within this embedded table's own properties
+            ValidateNoConflictingPropertyNames(embedded.SourceTableName, embedded.ColumnsMapping, embedded.EmbeddedTables, linkedTables: null, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
         }

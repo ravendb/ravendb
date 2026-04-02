@@ -6,7 +6,9 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.AST;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -17,6 +19,7 @@ public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
     private readonly Dictionary<string, CdcSinkTableProcessor> _tableIndex;
+    internal RavenLogger Logger { get; set; }
 
     /// <summary>
     /// Pre-built patch request for all tables that have user scripts. Null if no tables have patches.
@@ -38,6 +41,7 @@ public class CdcSinkDocumentProcessor
                 RootConfig = table,
                 CollectionName = table.Name,
                 IsRoot = true,
+                JsonColumnSet = BuildJsonColumnSet(table.JsonColumns),
             };
 
             _tableIndex[rootKey] = rootProcessor;
@@ -50,6 +54,14 @@ public class CdcSinkDocumentProcessor
         }
 
         CombinedPatchRequest = BuildCombinedPatchRequest();
+    }
+
+    private static HashSet<string> BuildJsonColumnSet(List<string> jsonColumns)
+    {
+        if (jsonColumns == null || jsonColumns.Count == 0)
+            return null;
+
+        return new HashSet<string>(jsonColumns, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -194,6 +206,7 @@ public class CdcSinkDocumentProcessor
                 EmbeddedConfig = embedded,
                 PathFromRoot = path,
                 RootJoinColumns = rootJoinColumns,
+                JsonColumnSet = BuildJsonColumnSet(embedded.JsonColumns),
             };
 
             _tableIndex[key] = processor;
@@ -213,20 +226,24 @@ public class CdcSinkDocumentProcessor
         return processor;
     }
 
-    public CdcSinkDocumentOp ProcessRow(CdcSinkRow row)
+    public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
         var key = MakeKey(row.TableSchema, row.TableName);
 
         if (_tableIndex.TryGetValue(key, out var processor) == false)
-            return null; // table not in config — discard (publication may cover more tables than configured)
+        {
+            if (Logger?.IsDebugEnabled == true)
+                Logger.Debug($"Discarding CDC row for table '{key}' — not configured in the CDC Sink task.");
+            return null;
+        }
 
         if (processor.IsRoot)
-            return ProcessRootRow(row, processor);
+            return ProcessRootRow(row, processor, context);
 
-        return ProcessEmbeddedRow(row, processor);
+        return ProcessEmbeddedRow(row, processor, context);
     }
 
-    private CdcSinkDocumentOp ProcessRootRow(CdcSinkRow row, CdcSinkTableProcessor processor)
+    private CdcSinkDocumentOp ProcessRootRow(CdcSinkRow row, CdcSinkTableProcessor processor, JsonOperationContext context)
     {
         var config = processor.RootConfig;
         var documentId = processor.GenerateDocumentId(row.Data, config.PrimaryKeyColumns);
@@ -252,7 +269,7 @@ public class CdcSinkDocumentProcessor
             };
         }
 
-        var mappedData = processor.MapColumns(row.Data, config.ColumnsMapping);
+        var mappedData = processor.MapColumns(row.Data, config.ColumnsMapping, processor.JsonColumnSet, context);
         processor.ApplyLinks(mappedData, row.Data);
 
         mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
@@ -271,7 +288,7 @@ public class CdcSinkDocumentProcessor
         };
     }
 
-    private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor)
+    private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor, JsonOperationContext context)
     {
         var onDelete = processor.EmbeddedConfig.OnDelete;
         if (row.Operation == CdcSinkOperation.Delete && onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
@@ -283,7 +300,7 @@ public class CdcSinkDocumentProcessor
             throw new InvalidOperationException(
                 $"Cannot determine parent document ID for embedded table '{processor.EmbeddedConfig.SourceTableSchema}.{processor.EmbeddedConfig.SourceTableName}': " +
                 $"root join columns ({string.Join(", ", processor.RootJoinColumns)}) are missing or null in the CDC row.");
-        var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.ColumnsMapping);
+        var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.ColumnsMapping, processor.JsonColumnSet, context);
 
         return new CdcSinkDocumentOp
         {

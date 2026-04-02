@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
@@ -21,9 +22,9 @@ public class CdcSinkTaskState : IDynamicJson
     public string LastLsn { get; set; }
 
     /// <summary>
-    /// Per-table initial load state. Key is "schema.tableName" (lowercase).
+    /// Per-table initial load state. Key is "schema.tableName".
     /// </summary>
-    public Dictionary<string, CdcSinkTableLoadState> Tables { get; set; } = new();
+    public Dictionary<string, CdcSinkTableLoadState> Tables { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// The name of the CDC Sink configuration this state belongs to.

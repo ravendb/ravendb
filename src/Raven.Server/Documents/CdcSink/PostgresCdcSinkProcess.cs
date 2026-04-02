@@ -61,7 +61,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
     {
-        _documentProcessor = new CdcSinkDocumentProcessor(configuration);
+        _documentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
         _connectionString = configuration.Connection.ConnectionString;
     }
 
@@ -344,6 +344,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 : new NpgsqlTypes.NpgsqlLogSequenceNumber(ulong.Parse(state.LastLsn));
         }
 
+        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext))
+        {
+
         await using var conn = new LogicalReplicationConnection(_connectionString);
         await conn.Open(ct);
 
@@ -403,16 +406,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             switch (message)
             {
                 case InsertMessage insert:
-                    AddIfNotNull(pending, await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert));
+                    AddIfNotNull(pending, await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
                     break;
                 case UpdateMessage update:
-                    AddIfNotNull(pending, await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert));
+                    AddIfNotNull(pending, await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
                     break;
                 case KeyDeleteMessage keyDel:
-                    AddIfNotNull(pending, await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete));
+                    AddIfNotNull(pending, await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, jsonParsingContext));
                     break;
                 case FullDeleteMessage fullDel:
-                    AddIfNotNull(pending, await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete));
+                    AddIfNotNull(pending, await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, jsonParsingContext));
                     break;
                 case BeginMessage:
                     break;
@@ -445,10 +448,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     break;
             }
         }
+
+        } // jsonParsingContext
     }
 
     private async Task<CdcSinkDocumentOp> DecodeRow(
-        RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation)
+        RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext)
     {
         var relationKey = $"{relation.Namespace}.{relation.RelationName}";
 
@@ -479,7 +484,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             Data = data,
         };
 
-        return _documentProcessor.ProcessRow(cdcRow);
+        return _documentProcessor.ProcessRow(cdcRow, jsonParsingContext);
     }
 
     /// <summary>
@@ -561,7 +566,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var updates = new Dictionary<string, CdcSinkTableLoadState>();
             foreach (var tableInfo in allTables)
             {
-                var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+                var tableKey = tableInfo.FullName;
                 if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
                     continue;
                 updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
@@ -579,7 +584,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         foreach (var tableInfo in allTables)
         {
-            var tableKey = CdcSinkSourceVerifier.ComputeTablesHash(new List<string> { tableInfo.FullName });
+            var tableKey = tableInfo.FullName;
 
             if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
                 continue;
@@ -683,6 +688,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await using (cmd)
         {
             await using var reader = await cmd.ExecuteReaderAsync(ct);
+            using var __ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
 
             var ops = new List<CdcSinkDocumentOp>();
 
@@ -704,7 +710,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     Data = data,
                 };
 
-                var op = _documentProcessor.ProcessRow(row);
+                var op = _documentProcessor.ProcessRow(row, jsonParsingCtx);
                 if (op != null)
                     ops.Add(op);
             }
