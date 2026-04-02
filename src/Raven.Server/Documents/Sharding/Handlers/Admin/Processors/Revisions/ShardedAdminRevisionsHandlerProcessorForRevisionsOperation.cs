@@ -11,7 +11,7 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Sharding.Handlers.Admin.Processors.Revisions
 {
     internal abstract class ShardedAdminRevisionsHandlerProcessorForRevisionsOperation<TOperationParameters, TOperationResult> : AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<ShardedDatabaseRequestHandler, TransactionOperationContext, TOperationParameters>
-        where TOperationParameters : IRevisionsOperationParameters
+        where TOperationParameters : RevisionsOperationParameters
         where TOperationResult : OperationResult, new()
     {
 

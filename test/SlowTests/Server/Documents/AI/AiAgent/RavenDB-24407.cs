@@ -152,7 +152,7 @@ If you do not have enough data, call another tool instead of guessing.";
         
         await store.AI.CreateAgentAsync(agent, OutputSampleObject.Instance);
 
-        chat.SetUserPrompt("Got anything that tastes better?");
+        chat.SetUserPrompt("use the tool I gave you and try to give me a cheaper alternative");
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
         Assert.NotNull(r.Answer);

@@ -1451,7 +1451,7 @@ class editDocument extends shardViewModelBase {
             .execute()
             .done((remoteAttachmentsConfiguration: RemoteAttachmentsStudioConfiguration) => {
                 if (remoteAttachmentsConfiguration == null || remoteAttachmentsConfiguration.Disabled) {
-                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings → Remote Attachments and update the configuration accordingly.");
+                    this.remoteAttachmentDisabledReason("Remote attachments are currently disabled. To enable them, go to Settings ? Remote Attachments and update the configuration accordingly.");
                 }
             })
             .fail(() => {
@@ -1480,15 +1480,14 @@ class editDocument extends shardViewModelBase {
             true
         ).execute();
 
-        const itemToCompare = revisions.items.find((x) => x.__metadata.changeVector() === changeVector);
+        const currentChangeVectorItem = revisions.items.find(x => x.__metadata.changeVector() === changeVector);
 
         this.revisionsToCompare(revisions.items.filter((x) => !x.__metadata.hasFlag("DeleteRevision")));
 
         this.diffMode("previous");
 
-        if (itemToCompare) {
-            const isLastItem =
-                this.revisionsToCompare().at(-1).__metadata.changeVector() === itemToCompare.__metadata.changeVector();
+        if (currentChangeVectorItem) {
+            const isLastItem = this.revisionsToCompare().at(-1).__metadata.changeVector() === currentChangeVectorItem.__metadata.changeVector();
             if (isLastItem) {
                 this.confirmationMessage(
                     "Nothing to compare",
@@ -1497,10 +1496,17 @@ class editDocument extends shardViewModelBase {
                         buttons: ["Ok"],
                     }
                 );
+                return;
             } else {
-                return this.changeRightRevision(itemToCompare);
+                return this.changeRightRevision(currentChangeVectorItem);
             }
         }
+        
+        if (this.revisionsToCompare().length) {
+            return this.changeRightRevision(this.revisionsToCompare()[0]);
+        }
+
+        messagePublisher.reportWarning("Could not find any revisions to compare with.");
     }
 
     async revisionNavigate(direction: "older" | "newer", tab: "right" | "left"): Promise<void> {

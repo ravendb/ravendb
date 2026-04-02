@@ -10,7 +10,7 @@ using Raven.Server.ServerWide.Context;
 namespace Raven.Server.Documents.Handlers.Admin.Processors.Revisions
 {
     internal abstract class AdminRevisionsHandlerProcessorForRevisionsOperation<TOperationParameters> : AbstractAdminRevisionsHandlerProcessorForRevisionsOperation<DatabaseRequestHandler, DocumentsOperationContext, TOperationParameters>
-        where TOperationParameters : IRevisionsOperationParameters
+        where TOperationParameters : RevisionsOperationParameters
     {
 
         public AdminRevisionsHandlerProcessorForRevisionsOperation([NotNull] DatabaseRequestHandler requestHandler, OperationType operationType)

@@ -193,6 +193,11 @@ export class AiAgentStubs {
                     date: "2025-08-08T10:28:20.5582920Z",
                 },
                 {
+                    role: "user",
+                    content: "[Attachments: screen.png, screen(1).png]",
+                    date: "2025-08-08T10:28:20.5582921Z",
+                },
+                {
                     role: "assistant",
                     content: null,
                     tool_calls: [

@@ -23,7 +23,7 @@ public class RavenDB_26183 : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Querying)]
-    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Single)]
     public void Now_ReturnsDocumentsWithDateBeforeCurrentTime(Options options)
     {
         using (var store = GetDocumentStore(options))
@@ -44,6 +44,13 @@ public class RavenDB_26183 : RavenTestBase
                     .ToList();
 
                 Assert.Equal(2, employees.Count);
+                
+                var employeesWithWhenOperator = session.Advanced
+                    .RawQuery<Employee>("from Employees where when($p0 > 10, HiredAt <= now())")
+                    .WaitForNonStaleResults()
+                    .AddParameter("p0", 20)
+                    .ToList();
+                Assert.Equal(2, employeesWithWhenOperator.Count);
             }
         }
     }
@@ -70,6 +77,14 @@ public class RavenDB_26183 : RavenTestBase
                     .ToList();
 
                 Assert.Equal(2, employees.Count);
+                
+                var employeesWithWhenOperator = session.Advanced
+                    .RawQuery<Employee>("from Employees where when($p0 > 10, HiredAt < today())")
+                    .AddParameter("p0", 20)
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employeesWithWhenOperator.Count);
             }
         }
     }
@@ -894,6 +909,323 @@ public class RavenDB_26183 : RavenTestBase
 
                 // today() resolves to the same ticks within the same day, so the ETag should match
                 Assert.Equal(HttpStatusCode.NotModified, command2.StatusCode);
+            }
+        }
+    }
+
+    // --- Offset tests ---
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithPositiveOffset_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                // now('+7d') adds 7 days, floors to day boundary
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now('+7d')")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithNegativeOffset_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-10) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                // now('-3d') subtracts 3 days, floors to day boundary
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now('-3d')")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(1, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithParameterOffset_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now($offset)")
+                    .AddParameter("offset", "+7d")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithOffset_DocumentQuery_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced.DocumentQuery<Employee>()
+                    .WhereLessThanOrEqual("HiredAt", RavenDocumentQuery.Now("+7d"))
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithOffset_Linq_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Query<Employee>()
+                    .Customize(x => x.WaitForNonStaleResults())
+                    .Where(x => x.HiredAt <= RavenQuery.Now("+7d"))
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithMultiUnitOffset_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(1).AddHours(3) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(2) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                // now('+1d5h') adds 1 day and 5 hours, floors to hour boundary
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now('+1d5h')")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithoutOffset_StillWorks(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddYears(1) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now()")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(1, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithInvalidOffset_Throws(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees where HiredAt <= now('invalid')")
+                        .WaitForNonStaleResults()
+                        .ToList();
+                });
+                Assert.Contains("Invalid offset format", ex.Message);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithOffset_IsCaseInsensitive(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= NOW('+7d')")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Today_WithOffset_IsRejected(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees where HiredAt < today('+1d')")
+                        .WaitForNonStaleResults()
+                        .ToList();
+                });
+                Assert.Contains("today() does not accept arguments", ex.Message);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithReadableUnitNames_ReturnsCorrectDocuments(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(-1) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(5) });
+                session.Store(new Employee { HiredAt = DateTime.UtcNow.AddDays(20) });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var employees = session.Advanced
+                    .RawQuery<Employee>("from Employees where HiredAt <= now('+7 days')")
+                    .WaitForNonStaleResults()
+                    .ToList();
+
+                Assert.Equal(2, employees.Count);
+            }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
+    public void Now_WithEmptyOffset_Throws(Options options)
+    {
+        using (var store = GetDocumentStore(options))
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Employee { HiredAt = DateTime.UtcNow });
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    session.Advanced
+                        .RawQuery<Employee>("from Employees where HiredAt <= now('')")
+                        .WaitForNonStaleResults()
+                        .ToList();
+                });
+                Assert.Contains("offset argument must be a non-empty string", ex.Message);
             }
         }
     }

@@ -2,6 +2,11 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+.chat-ai-agent-messages-panel {
+    overflow-y: auto;
+    scrollbar-gutter: stable both-edges;
+}
+
 .chat-ai-agent-bottom-section {
     .prompt-wrapper {
         position: relative;

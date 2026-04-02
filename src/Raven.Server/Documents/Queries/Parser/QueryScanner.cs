@@ -107,12 +107,18 @@ namespace Raven.Server.Documents.Queries.Parser
             return result;
         }
 
-        public bool Identifier(bool skipWhitespace = true, bool beginning = true, bool isParameter = false)
+        public bool Identifier(bool skipWhitespace = true, bool beginning = true, bool isParameter = false, bool insideWhenMethod = false)
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
-            if ((beginning && !isParameter ? char.IsLetter(_q[_pos]) == false : char.IsLetterOrDigit(_q[_pos]) == false) && _q[_pos] != '_' && _q[_pos] != '@')
+            var isNotIdentifier = (Beginning: beginning, IsParameter: isParameter) switch
+            {
+                (Beginning: true, IsParameter: false) => char.IsLetter(_q[_pos]) == false,
+                _ => char.IsLetterOrDigit(_q[_pos]) == false
+            };
+            
+            if (isNotIdentifier && _q[_pos] != '_' && _q[_pos] != '@' && (insideWhenMethod == false || _q[_pos] != '$'))
                 return false;
 
             _tokenStart = _pos;

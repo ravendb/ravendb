@@ -22,16 +22,8 @@ import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody
 import AiAgentLinkedConversationsDropdown from "../partials/AiAgentLinkedConversationsDropdown";
 
 export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatAiAgentQueryParams>) {
-    const {
-        handleSend,
-        reloadForm,
-        handleNewChat,
-        chatForm,
-        asyncGetDefaultValues,
-        handleSubmit,
-        runChat,
-        promptsFieldsArray,
-    } = useChatAiAgent(queryParams);
+    const { handleSend, reloadForm, handleNewChat, chatForm, asyncGetDefaultValues, handleSubmit, runChat } =
+        useChatAiAgent(queryParams);
 
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
@@ -130,7 +122,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                                     handleSend={handleSend}
                                     runChat={runChat}
                                     isHistory={queryParams?.isHistory}
-                                    promptsFieldsArray={promptsFieldsArray}
                                 />
                             </form>
                         </FormProvider>

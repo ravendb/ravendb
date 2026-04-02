@@ -1,8 +1,4 @@
 ﻿import React, { useCallback } from "react";
-import Form from "react-bootstrap/Form";
-
-import { UncontrolledButtonWithDropdownPanel } from "components/common/DropdownPanel";
-import useUniqueId from "components/hooks/useUniqueId";
 import useBoolean from "hooks/useBoolean";
 import { useServices } from "hooks/useServices";
 import { NodeGroup } from "components/pages/resources/manageDatabaseGroup/partials/NodeGroup";
@@ -19,7 +15,9 @@ import { SortableModeCounterProvider } from "./partials/useSortableModeCounter";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import Button from "react-bootstrap/Button";
-import { FormLabel } from "components/common/Form";
+import Dropdown from "react-bootstrap/Dropdown";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import { Switch } from "components/common/Checkbox";
 
 function getDynamicDatabaseDistributionWarning(
     hasDynamicNodesDistribution: boolean,
@@ -52,8 +50,6 @@ export function ManageDatabaseGroupPage() {
         db.isDynamicNodesDistribution
     );
 
-    const settingsUniqueId = useUniqueId("settings");
-
     const addNewShard = useCallback(() => {
         const addShardView = new addNewShardToDatabaseGroup(db.name);
         app.showBootstrapDialog(addShardView);
@@ -77,30 +73,25 @@ export function ManageDatabaseGroupPage() {
             <StickyHeader>
                 <div className="flex-horizontal">
                     {!db.isSharded && (
-                        <UncontrolledButtonWithDropdownPanel buttonText="Settings">
-                            <>
-                                <FormLabel className="dropdown-item-text m-0" htmlFor={settingsUniqueId}>
-                                    <div className="d-flex gap-3 form-switch">
-                                        <Form.Check
-                                            id={settingsUniqueId}
-                                            type="switch"
-                                            role="switch"
-                                            disabled={!enableDynamicDatabaseDistribution}
-                                            checked={dynamicDatabaseDistribution}
-                                            onChange={changeDynamicDatabaseDistribution}
-                                        />
-                                        Allow dynamic database distribution
-                                    </div>
-                                </FormLabel>
+                        <Dropdown>
+                            <Dropdown.Toggle as={CustomDropdownToggle}>Settings</Dropdown.Toggle>
+                            <Dropdown.Menu className="p-0">
+                                <Switch
+                                    selected={dynamicDatabaseDistribution}
+                                    toggleSelection={changeDynamicDatabaseDistribution}
+                                    disabled={!enableDynamicDatabaseDistribution}
+                                    className="p-2 text-nowrap"
+                                >
+                                    Dynamic database distribution
+                                </Switch>
                                 {dynamicDatabaseDistributionWarning && (
                                     <div className="bg-faded-warning px-4 py-2">
                                         {dynamicDatabaseDistributionWarning}
                                     </div>
                                 )}
-                            </>
-                        </UncontrolledButtonWithDropdownPanel>
+                            </Dropdown.Menu>
+                        </Dropdown>
                     )}
-
                     <FlexGrow />
                     {db.isSharded && (
                         <Button variant="shard" onClick={addNewShard}>

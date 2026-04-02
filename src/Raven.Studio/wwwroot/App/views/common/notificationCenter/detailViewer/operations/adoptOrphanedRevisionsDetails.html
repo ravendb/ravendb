@@ -1,0 +1,58 @@
+<div class="modal-dialog modal-lg revisionsDetails" role="document">
+    <div class="modal-content" tabindex="-1">
+        <div class="modal-header">
+            <div class="flex-horizontal">
+                <div class="flex-grow">
+                    <h3 id="myModalLabel" data-bind="text: op.title, attr:{ class: 'modal-title ' + op.headerClass() }"></h3>
+                </div>
+                <div class="flex-grow text-right margin-right margin-right-sm">
+                    <span class="text-muted">Time elapsed:</span> <span data-bind="text: op.duration"></span>
+                </div>
+                <div>
+                    <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                        <i class="icon-cancel"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="notification-time" data-bind="text: op.displayDate().format('LLL')"></div>
+        </div>
+        <div class="modal-body">
+            <p data-bind="html: op.message"></p>
+            <div class="modal-details" data-bind="with: progress">
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Scanned revisions:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: ScannedRevisions.toLocaleString()"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Scanned documents:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: ScannedDocuments.toLocaleString()"></div>
+                    </div>
+                </div>
+                <div class="details-item">
+                    <div class="row">
+                        <div class="col-sm-6 text-right">Adopted count:</div>
+                        <div class="col-sm-6 details-value" data-bind="text: AdoptedCount.toLocaleString()"></div>
+                    </div>
+                </div>
+            </div>
+            <div data-bind="if: operationFailed">
+                <h3 class="text-danger text-center">Operation failed!</h3>
+                <pre class="margin-top error-messages"><code data-bind="text: errorMessages().filter(x => x).join('\n')"></code></pre>
+            </div>
+            <div class="margin-bottom" style="position: relative; height: 300px" data-bind="visible: allWarnings().length">
+                <virtual-grid style="height: 300px" class="resizable flex-window" params="controller: gridController, emptyTemplate: 'empty-adopt-orphaned-revisions-template'"></virtual-grid>
+            </div>
+        </div>
+        <div class="modal-footer" data-bind="compose: $root.footerPartialView">
+        </div>
+    </div>
+</div>
+<div class="tooltip json-preview js-revisions-details-tooltip" style="opacity: 0">
+</div>
+
+<script type="text/html" id="empty-adopt-orphaned-revisions-template">
+    No warnings found.
+</script>

@@ -48,6 +48,8 @@ const selectStateFilterOptions = createSelector(
             }
             if (state === "About to expire") {
                 aboutToExpireCount++;
+                // About to expire certificates are still valid
+                validCount++;
             }
             if (state === "Expired") {
                 expiredCount++;
@@ -91,7 +93,12 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
-            if (stateFilter.length > 0 && !stateFilter.includes(certificatesUtils.getState(cert.NotAfter))) {
+            const state = certificatesUtils.getState(cert.NotAfter);
+            if (stateFilter.includes("Valid") && (state === "Valid" || state === "About to expire")) {
+                return true;
+            }
+
+            if (stateFilter.length > 0 && !stateFilter.includes(state)) {
                 return false;
             }
 

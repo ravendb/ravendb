@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Revisions;
@@ -49,6 +50,8 @@ namespace Raven.Server.Documents.Operations
 
                 if (_operationId.HasValue)
                     url += $"?operationId={_operationId}";
+
+                SelectedNodeTag = _request.GetNodeTag(node.Database);
 
                 return new HttpRequestMessage
                 {

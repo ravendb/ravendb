@@ -213,10 +213,11 @@ public partial class Hnsw
                     }
 
                     //decode in bulk
-                    Registration.InternalEntryIdToEntryId(matches[index..total]);
+                    Registration.InternalEntryIdToEntryId(matches.Slice(index, total));
 
                     var currentDocIdx = index;
-                    for (; currentDocIdx < index + total; currentDocIdx++)
+                    var endDocIdx = index + total;
+                    for (; currentDocIdx < endDocIdx; currentDocIdx++)
                     {
                         if (filter.Contains(matches[currentDocIdx]) == false)
                             continue;
@@ -232,7 +233,7 @@ public partial class Hnsw
 
                 if (_currentMatchesIndex < _postingListResults.Count)
                 {
-                    var currentFillLimit = Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
+                    var currentFillLimit = _currentMatchesIndex + Math.Min(_postingListResults.Count - _currentMatchesIndex, matches.Length - index);
                     for (; _currentMatchesIndex < currentFillLimit; _currentMatchesIndex++)
                     {
                         if (filter.Contains(_postingListResults[_currentMatchesIndex]) == false)

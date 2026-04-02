@@ -2,6 +2,10 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
+// There is option to overwrite react-datepicker sass variables but some of values are still hardcoded in the library
+// For now let's keep manual class styling
+@use "react-datepicker/src/stylesheets/datepicker";
+
 .react-datepicker {
     font-family: "Figtree", sans-serif;
     background-color: bs5variables.$panel-bg-1-var;
@@ -27,7 +31,7 @@
     display: block;
     height: 7px;
     position: absolute;
-    top: 6px;
+    top: 2px;
     width: 7px;
 }
 
@@ -48,7 +52,7 @@
 }
 
 .react-datepicker-popper {
-    z-index: 1;
+    z-index: bs5variables.$zindex-popover;
 }
 .react-datepicker-popper[data-placement^="bottom"] {
     padding-top: 10px;
@@ -84,7 +88,7 @@
 .react-datepicker__header {
     text-align: center;
     background-color: colors.$panel-bg-2-var;
-    border-bottom: 1px solid colors.$border-color-light-var;
+    border-bottom: none;
     border-top-left-radius: sizes.$border-radius-sm;
     padding: sizes.$gutter-xxs 0;
     position: relative;
@@ -122,6 +126,7 @@
 .react-datepicker-time__header,
 .react-datepicker-year-header {
     color: colors.$text-emphasis-var;
+    font-size: bs5variables.$font-size-base !important;
 }
 
 .react-datepicker-time__header {
@@ -312,6 +317,14 @@
     top: 0;
 }
 
+.react-datepicker__day--today {
+    background-color: transparent;
+}
+
+.react-datepicker__day--keyboard-selected {
+    background-color: colors.$panel-bg-2-var;
+}
+
 .react-datepicker__time-container .react-datepicker__time {
     position: relative;
     background: white;
@@ -422,7 +435,8 @@
 }
 
 .react-datepicker__day-names {
-    margin-bottom: -8px;
+    background-color: colors.$panel-bg-2-var;
+    border-bottom: 1px solid colors.$border-color-light-var;
 }
 
 .react-datepicker__day-name,
@@ -448,7 +462,7 @@
 .react-datepicker__quarter-text:hover,
 .react-datepicker__year-text:hover {
     border-radius: sizes.$border-radius-sm;
-    background-color: colors.$panel-bg-2-var;
+    background-color: colors.$panel-bg-2-var !important;
 }
 
 .react-datepicker__day--selected,
@@ -480,8 +494,8 @@
 .react-datepicker__year-text--selected:hover,
 .react-datepicker__year-text--in-selecting-range:hover,
 .react-datepicker__year-text--in-range:hover {
-    background-color: colors.$primary-var;
-    color: colors.$white;
+    background-color: colors.$primary-var !important;
+    color: colors.$white !important;
 }
 
 .react-datepicker__day--in-selecting-range:not(
@@ -583,7 +597,7 @@
 .react-datepicker__month-text--disabled:hover,
 .react-datepicker__quarter-text--disabled:hover,
 .react-datepicker__year-text--disabled:hover {
-    background-color: transparent;
+    background-color: transparent !important;
 }
 
 .react-datepicker__input-container {
@@ -606,7 +620,7 @@
 .react-datepicker__month-read-view,
 .react-datepicker__month-year-read-view {
     border: 1px solid transparent;
-    border-radius: sizes.$border-radius-pill;
+    border-radius: sizes.$border-radius-pill !important;
     position: relative;
     background-color: colors.$panel-bg-1-var;
     padding: 0 sizes.$gutter 0 sizes.$gutter-xs;
@@ -633,7 +647,7 @@
 .react-datepicker__month-year-read-view--down-arrow {
     transform: rotate(135deg);
     right: sizes.$gutter-xxs;
-    top: 5px;
+    top: 2px;
 }
 
 .react-datepicker__year-dropdown,

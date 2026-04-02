@@ -1,5 +1,5 @@
-import React, { ComponentProps, forwardRef } from "react";
-import ReactDatePicker from "react-datepicker";
+import { ComponentProps, forwardRef } from "react";
+import ReactDatePicker, { type DatePickerProps as ReactDatePickerProps } from "react-datepicker";
 import Form from "react-bootstrap/Form";
 import "./ReactDatepicker.scss";
 
@@ -9,16 +9,33 @@ const DatePickerInput = forwardRef<HTMLInputElement, ComponentProps<typeof Form.
     }
 );
 
-export default function DatePicker(props: ComponentProps<typeof ReactDatePicker> & { isInvalid?: boolean }) {
-    const dateFormat = props.dateFormat ?? (props.showTimeSelect ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
-    const timeFormat = props.timeFormat ?? "HH:mm";
+export type DatePickerProps = ReactDatePickerProps & {
+    isInvalid?: boolean;
+};
 
-    return (
-        <ReactDatePicker
-            {...props}
-            customInput={<DatePickerInput isInvalid={props.isInvalid} />}
-            dateFormat={dateFormat}
-            timeFormat={timeFormat}
-        />
-    );
+export default function DatePicker(props: DatePickerProps) {
+    const {
+        isInvalid,
+        dateFormat = props.showTimeSelect ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy",
+        timeFormat = "HH:mm",
+        popperPlacement = "bottom-start",
+        portalId = "react-datepicker-portal",
+        popperProps,
+        ...rest
+    } = props;
+
+    const reactDatePickerProps: ReactDatePickerProps = {
+        customInput: <DatePickerInput isInvalid={isInvalid} />,
+        dateFormat,
+        timeFormat,
+        popperPlacement,
+        portalId,
+        popperProps: {
+            strategy: "fixed",
+            ...popperProps,
+        },
+        ...rest,
+    };
+
+    return <ReactDatePicker {...reactDatePickerProps} />;
 }
