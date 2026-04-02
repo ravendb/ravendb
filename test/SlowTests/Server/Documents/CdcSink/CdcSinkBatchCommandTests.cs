@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -85,7 +86,8 @@ namespace SlowTests.Server.Documents.CdcSink
             };
         }
 
-        private static CdcSinkDocumentOp CreateDeleteOp(string documentId, CdcSinkTableProcessor processor = null)
+        private static CdcSinkDocumentOp CreateDeleteOp(string documentId, CdcSinkTableProcessor processor = null,
+            Dictionary<string, object> rawData = null)
         {
             return new CdcSinkDocumentOp
             {
@@ -93,7 +95,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 DocumentId = documentId,
                 Processor = processor ?? CreateRootProcessor(),
                 MappedData = new DynamicJsonValue(),
-                RawData = new Dictionary<string, object>(),
+                RawData = rawData ?? new Dictionary<string, object>(),
                 Operation = CdcSinkOperation.Delete
             };
         }
@@ -1588,6 +1590,935 @@ namespace SlowTests.Server.Documents.CdcSink
                 doc.Data.TryGet("Status", out string status);
                 Assert.Equal("Confirmed", status);
             }
+        }
+
+        /// <summary>
+        /// Helper to create a 2-level deep embedded processor for the pattern:
+        /// Company -> Departments[] -> Employees[]
+        /// </summary>
+        private static (CdcSinkTableConfig RootConfig, CdcSinkEmbeddedTableConfig DeptConfig, CdcSinkEmbeddedTableConfig EmpConfig, CdcSinkTableProcessor EmpProcessor)
+            CreateDeepNestedConfig()
+        {
+            var empConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "employees",
+                PropertyName = "Employees",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "emp_id", "EmpId" },
+                    { "emp_name", "EmpName" }
+                },
+                PrimaryKeyColumns = new List<string> { "emp_id" },
+                JoinColumns = new List<string> { "dept_id" },
+                Type = CdcSinkRelationType.Array
+            };
+
+            var deptConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "departments",
+                PropertyName = "Departments",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "dept_id", "DeptId" },
+                    { "dept_name", "DeptName" }
+                },
+                PrimaryKeyColumns = new List<string> { "dept_id" },
+                JoinColumns = new List<string> { "company_id" },
+                Type = CdcSinkRelationType.Array,
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { empConfig }
+            };
+
+            var rootConfig = new CdcSinkTableConfig
+            {
+                Name = "Companies",
+                SourceTableSchema = "public",
+                SourceTableName = "companies",
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "company_id", "CompanyId" },
+                    { "company_name", "CompanyName" }
+                },
+                PrimaryKeyColumns = new List<string> { "company_id" },
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { deptConfig }
+            };
+
+            // Build the path: [departments-segment, employees-segment]
+            var deptJoinMapping = new Dictionary<string, string> { { "company_id", "company_id" } };
+            var empJoinMapping = new Dictionary<string, string> { { "dept_id", "dept_id" } };
+
+            var deptSegment = new EmbeddedPathSegment { Config = deptConfig, JoinMapping = deptJoinMapping };
+            var empSegment = new EmbeddedPathSegment { Config = empConfig, JoinMapping = empJoinMapping };
+
+            var empProcessor = new CdcSinkTableProcessor
+            {
+                RootConfig = rootConfig,
+                CollectionName = "Companies",
+                IsRoot = false,
+                EmbeddedConfig = empConfig,
+                PathFromRoot = new List<EmbeddedPathSegment> { deptSegment, empSegment },
+                RootJoinColumns = new List<string> { "company_id" }
+            };
+
+            return (rootConfig, deptConfig, empConfig, empProcessor);
+        }
+
+        [Fact]
+        public async Task DeepNesting_NavigateToEmbeddedParent_PreservesExistingArrayItems()
+        {
+            // Bug 4: When NavigateToEmbeddedParent traverses an intermediate array and no
+            // element matches the FK, it was replacing the entire array with an empty object,
+            // losing all existing items.
+            //
+            // Scenario: Company has Departments[] with two departments.
+            // An employee CDC row arrives for dept_id=999 (no matching department).
+            // The fix should NOT destroy the existing departments.
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Create a company with two departments
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
+            using (var tx = setupCtx.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["CompanyId"] = 1,
+                    ["CompanyName"] = "Acme Corp",
+                    ["Departments"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["DeptId"] = 10L,
+                            ["DeptName"] = "Engineering",
+                            ["Employees"] = new DynamicJsonArray
+                            {
+                                new DynamicJsonValue { ["EmpId"] = 100L, ["EmpName"] = "Alice" }
+                            }
+                        },
+                        new DynamicJsonValue
+                        {
+                            ["DeptId"] = 20L,
+                            ["DeptName"] = "Sales",
+                            ["Employees"] = new DynamicJsonArray()
+                        }
+                    },
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Companies"
+                    }
+                };
+                using var blittable = setupCtx.ReadObject(djv, "Companies/1");
+                database.DocumentsStorage.Put(setupCtx, "Companies/1", null, blittable);
+                tx.Commit();
+            }
+
+            var (rootConfig, deptConfig, empConfig, empProcessor) = CreateDeepNestedConfig();
+
+            // Employee row referencing a non-existent department (dept_id=999)
+            var empData = new DynamicJsonValue
+            {
+                ["EmpId"] = 500,
+                ["EmpName"] = "NewHire"
+            };
+            var rawData = new Dictionary<string, object>
+            {
+                { "company_id", 1 },
+                { "dept_id", 999 },
+                { "emp_id", 500 },
+                { "emp_name", "NewHire" }
+            };
+
+            var embedOp = new CdcSinkDocumentOp
+            {
+                Type = CdcSinkDocumentOpType.EmbeddedModify,
+                DocumentId = "Companies/1",
+                Processor = empProcessor,
+                MappedData = empData,
+                RawData = rawData,
+                Operation = CdcSinkOperation.Upsert
+            };
+
+            var command = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { embedOp },
+                "test-config", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Companies/1");
+                Assert.NotNull(doc);
+
+                // The Departments array must still exist and retain both original departments.
+                // Before the fix, the array was replaced with an empty object {}.
+                doc.Data.TryGet("Departments", out BlittableJsonReaderArray departments);
+                Assert.NotNull(departments);
+                Assert.True(departments.Length >= 2,
+                    $"Expected at least 2 departments but got {departments.Length}. " +
+                    "The existing array items were likely destroyed when no matching element was found.");
+
+                // Verify original departments are still intact
+                var dept0 = (BlittableJsonReaderObject)departments[0];
+                dept0.TryGet("DeptName", out string dept0Name);
+                Assert.Equal("Engineering", dept0Name);
+
+                var dept1 = (BlittableJsonReaderObject)departments[1];
+                dept1.TryGet("DeptName", out string dept1Name);
+                Assert.Equal("Sales", dept1Name);
+
+                // Engineering's existing employee should still be there
+                dept0.TryGet("Employees", out BlittableJsonReaderArray engEmployees);
+                Assert.NotNull(engEmployees);
+                Assert.Equal(1, engEmployees.Length);
+                var alice = (BlittableJsonReaderObject)engEmployees[0];
+                alice.TryGet("EmpName", out string aliceName);
+                Assert.Equal("Alice", aliceName);
+            }
+        }
+
+        [Fact]
+        public async Task DeepNesting_ArrayNavigation_MatchingElement_AppliesCorrectly()
+        {
+            // Bug 3 verification: ApplyArrayOperation receives the correct navigated parent
+            // (not the root doc) for 2-level nesting. This test verifies that adding an
+            // employee to an existing department correctly navigates to that department
+            // and places the employee in its Employees array.
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Create company with one department
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
+            using (var tx = setupCtx.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["CompanyId"] = 1,
+                    ["CompanyName"] = "Acme Corp",
+                    ["Departments"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue
+                        {
+                            ["DeptId"] = 10L,
+                            ["DeptName"] = "Engineering",
+                            ["Employees"] = new DynamicJsonArray
+                            {
+                                new DynamicJsonValue { ["EmpId"] = 100L, ["EmpName"] = "Alice" }
+                            }
+                        }
+                    },
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Companies"
+                    }
+                };
+                using var blittable = setupCtx.ReadObject(djv, "Companies/1");
+                database.DocumentsStorage.Put(setupCtx, "Companies/1", null, blittable);
+                tx.Commit();
+            }
+
+            var (rootConfig, deptConfig, empConfig, empProcessor) = CreateDeepNestedConfig();
+
+            // Add a new employee to the existing Engineering department (dept_id=10)
+            var empData = new DynamicJsonValue
+            {
+                ["EmpId"] = 200,
+                ["EmpName"] = "Bob"
+            };
+            var rawData = new Dictionary<string, object>
+            {
+                { "company_id", 1 },
+                { "dept_id", 10 },
+                { "emp_id", 200 },
+                { "emp_name", "Bob" }
+            };
+
+            var embedOp = new CdcSinkDocumentOp
+            {
+                Type = CdcSinkDocumentOpType.EmbeddedModify,
+                DocumentId = "Companies/1",
+                Processor = empProcessor,
+                MappedData = empData,
+                RawData = rawData,
+                Operation = CdcSinkOperation.Upsert
+            };
+
+            var command = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { embedOp },
+                "test-config", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Companies/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("Departments", out BlittableJsonReaderArray departments);
+                Assert.NotNull(departments);
+                Assert.Equal(1, departments.Length);
+
+                var engDept = (BlittableJsonReaderObject)departments[0];
+                engDept.TryGet("DeptName", out string deptName);
+                Assert.Equal("Engineering", deptName);
+
+                engDept.TryGet("Employees", out BlittableJsonReaderArray employees);
+                Assert.NotNull(employees);
+                Assert.Equal(2, employees.Length);
+
+                // Verify both employees are present
+                var names = new List<string>();
+                for (int i = 0; i < employees.Length; i++)
+                {
+                    var emp = (BlittableJsonReaderObject)employees[i];
+                    emp.TryGet("EmpName", out string empName);
+                    names.Add(empName);
+                }
+                names.Sort();
+                Assert.Equal("Alice", names[0]);
+                Assert.Equal("Bob", names[1]);
+            }
+        }
+
+        [Fact]
+        public async Task DeleteThenEmbedOnly_DocumentResurrectedAsStub()
+        {
+            // Bug 8 analysis: When operations arrive as [Delete, EmbeddedModify] in a single
+            // batch, the EmbeddedModify clears the delete state and creates a stub document.
+            // This is by design for CDC streams where events are ordered: an embedded modify
+            // after a delete means the source DB had the child row recreated after deletion.
+            //
+            // This test documents the intentional behavior. If the embedded operation arrives
+            // AFTER a delete in the same batch, the document is resurrected as a stub with
+            // only the embedded data (no root properties preserved).
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Pre-create a document with root properties and an embedded array
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
+            using (var tx = setupCtx.OpenWriteTransaction())
+            {
+                var djv = new DynamicJsonValue
+                {
+                    ["OrderId"] = 1,
+                    ["CustomerName"] = "Alice",
+                    ["Amount"] = 100.0,
+                    ["Lines"] = new DynamicJsonArray
+                    {
+                        new DynamicJsonValue { ["LineId"] = 1L, ["Product"] = "ExistingProduct" }
+                    },
+                    [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    {
+                        [Constants.Documents.Metadata.Collection] = "Orders"
+                    }
+                };
+                using var blittable = setupCtx.ReadObject(djv, "Orders/1");
+                database.DocumentsStorage.Put(setupCtx, "Orders/1", null, blittable);
+                tx.Commit();
+            }
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Type = CdcSinkRelationType.Array,
+                JoinColumns = new List<string> { "order_id" },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "line_id", "LineId" },
+                    { "product", "Product" }
+                }
+            };
+            var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
+
+            // Sequence: [Delete, EmbeddedModify] — delete then embed in same batch
+            var delete = CreateDeleteOp("Orders/1");
+            var embed = CreateEmbeddedOp("Orders/1", new DynamicJsonValue
+            {
+                ["LineId"] = 99L,
+                ["Product"] = "Resurrected"
+            }, CdcSinkOperation.Upsert, embProcessor);
+
+            var ops = new List<CdcSinkDocumentOp> { delete, embed };
+
+            var command = new CdcSinkBatchCommand(
+                database, ops, "test-config", null,
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                command.Execute(context, null);
+                tx.Commit();
+            }
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Companies/1");
+
+                // The document is resurrected as a stub. The delete was overridden.
+                // All root properties from the original document are gone.
+                doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("CustomerName", out string name);
+                Assert.Null(name);
+
+                doc.Data.TryGet("Amount", out double amount);
+                Assert.Equal(0.0, amount); // no root data on stub
+
+                // Only the embedded data from the post-delete operation survives
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(1, lines.Length);
+
+                var line = lines[0] as BlittableJsonReaderObject;
+                line.TryGet("Product", out string product);
+                Assert.Equal("Resurrected", product);
+            }
+        }
+
+        /// <summary>
+        /// INSERT→UPDATE→DELETE→INSERT→UPDATE with audit put() patches.
+        /// IgnoreDeletes = false: document is deleted then re-created.
+        /// All 5 audit entries must be written (patches have side effects on other docs).
+        /// The final document should have Name = "Delta" with no leftover from the pre-delete era.
+        /// </summary>
+        [Fact]
+        public async Task InsertUpdateDeleteInsertUpdate_AuditPut_IgnoreDeletesFalse()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Items",
+                SourceTableSchema = "public",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                Patch = @"
+                    var op = $old ? 'Update' : 'Insert';
+                    put('AuditLog/' + op + '/' + $row.name, {
+                        Op: op,
+                        Name: $row.name,
+                        PreviousName: $old ? $old.Name : null,
+                        '@metadata': { '@collection': 'AuditLog' }
+                    });",
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    Patch = @"
+                        put('AuditLog/Delete/' + $row.name, {
+                            Op: 'Delete',
+                            Name: $row.name,
+                            '@metadata': { '@collection': 'AuditLog' }
+                        });"
+                }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Items",
+                IsRoot = true
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-audit",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
+            {
+                ["Id"] = 1, ["Name"] = name,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Items" }
+            };
+
+            Dictionary<string, object> MakeRaw(string name) => new Dictionary<string, object>
+            {
+                { "id", 1 }, { "name", name }
+            };
+
+            // INSERT(Alpha), UPDATE(Beta), DELETE(Beta), INSERT(Gamma), UPDATE(Delta)
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Items/1", MakeMapped("Alpha"), MakeRaw("Alpha"), processor),
+                CreatePutOp("Items/1", MakeMapped("Beta"), MakeRaw("Beta"), processor),
+                CreateDeleteOp("Items/1", processor, MakeRaw("Beta")),
+                CreatePutOp("Items/1", MakeMapped("Gamma"), MakeRaw("Gamma"), processor),
+                CreatePutOp("Items/1", MakeMapped("Delta"), MakeRaw("Delta"), processor),
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-audit", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                // Final document should be Delta (not deleted, no pre-delete patches applied)
+                var doc = database.DocumentsStorage.Get(ctx, "Items/1");
+                Assert.NotNull(doc);
+                doc.Data.TryGet("Name", out string name);
+                Assert.Equal("Delta", name);
+
+                // All 5 audit entries should exist: Insert(Alpha), Update(Beta), Delete(Beta), Insert(Gamma), Update(Delta)
+                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100);
+                var audits = auditDocs.ToList();
+                Assert.Equal(5, audits.Count);
+
+                var auditOps = new List<string>();
+                foreach (var audit in audits)
+                {
+                    audit.Data.TryGet("Op", out string op);
+                    auditOps.Add(op);
+                }
+
+                Assert.Equal(2, auditOps.Count(x => x == "Insert"));
+                Assert.Equal(2, auditOps.Count(x => x == "Update"));
+                Assert.Equal(1, auditOps.Count(x => x == "Delete"));
+            }
+        }
+
+        /// <summary>
+        /// INSERT→UPDATE→DELETE→INSERT→UPDATE with audit put() patches.
+        /// IgnoreDeletes = true: the Delete is skipped (archive pattern), but audit entries still record it.
+        /// Final document should be "Delta" (last update wins regardless of archive).
+        /// All 5 audit entries must be written.
+        /// </summary>
+        [Fact]
+        public async Task InsertUpdateDeleteInsertUpdate_AuditPut_IgnoreDeletesTrue()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Items",
+                SourceTableSchema = "public",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                Patch = @"
+                    var op = $old ? 'Update' : 'Insert';
+                    put('AuditLog/' + op + '/' + $row.name, {
+                        Op: op,
+                        Name: $row.name,
+                        PreviousName: $old ? $old.Name : null,
+                        '@metadata': { '@collection': 'AuditLog' }
+                    });",
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    IgnoreDeletes = true,
+                    Patch = @"
+                        put('AuditLog/Delete/' + $row.name, {
+                            Op: 'Delete',
+                            Name: $row.name,
+                            '@metadata': { '@collection': 'AuditLog' }
+                        });"
+                }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Items",
+                IsRoot = true
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-audit-ignore",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
+            {
+                ["Id"] = 1, ["Name"] = name,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Items" }
+            };
+
+            Dictionary<string, object> MakeRaw(string name) => new Dictionary<string, object>
+            {
+                { "id", 1 }, { "name", name }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Items/1", MakeMapped("Alpha"), MakeRaw("Alpha"), processor),
+                CreatePutOp("Items/1", MakeMapped("Beta"), MakeRaw("Beta"), processor),
+                CreateDeleteOp("Items/1", processor, MakeRaw("Beta")),
+                CreatePutOp("Items/1", MakeMapped("Gamma"), MakeRaw("Gamma"), processor),
+                CreatePutOp("Items/1", MakeMapped("Delta"), MakeRaw("Delta"), processor),
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-audit-ignore", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Items/1");
+                Assert.NotNull(doc);
+                doc.Data.TryGet("Name", out string name);
+                Assert.Equal("Delta", name);
+
+                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100);
+                var audits = auditDocs.ToList();
+
+                Assert.Equal(5, audits.Count);
+
+                var auditOps = new List<string>();
+                foreach (var audit in audits)
+                {
+                    audit.Data.TryGet("Op", out string op);
+                    auditOps.Add(op);
+                }
+
+                Assert.Equal(2, auditOps.Count(x => x == "Insert"));
+                Assert.Equal(2, auditOps.Count(x => x == "Update"));
+                Assert.Equal(1, auditOps.Count(x => x == "Delete"));
+            }
+        }
+
+        /// <summary>
+        /// INSERT→UPDATE→DELETE→INSERT→UPDATE with this.Count++ patch.
+        /// IgnoreDeletes = false: document is deleted then re-created.
+        /// Pre-delete patches (Insert Count++, Update Count++) must NOT carry forward.
+        /// Final Count should be 2 (Gamma insert + Delta update), not 4.
+        /// </summary>
+        [Fact]
+        public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesFalse()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Items",
+                SourceTableSchema = "public",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                Patch = "this.Count = (this.Count || 0) + 1;",
+                OnDelete = new CdcSinkOnDeleteConfig()
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Items",
+                IsRoot = true
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-counter",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
+            {
+                ["Id"] = 1, ["Name"] = name,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Items" }
+            };
+
+            Dictionary<string, object> MakeRaw(string name) => new Dictionary<string, object>
+            {
+                { "id", 1 }, { "name", name }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Items/1", MakeMapped("Alpha"), MakeRaw("Alpha"), processor),
+                CreatePutOp("Items/1", MakeMapped("Beta"), MakeRaw("Beta"), processor),
+                CreateDeleteOp("Items/1", processor, MakeRaw("Beta")),
+                CreatePutOp("Items/1", MakeMapped("Gamma"), MakeRaw("Gamma"), processor),
+                CreatePutOp("Items/1", MakeMapped("Delta"), MakeRaw("Delta"), processor),
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-counter", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Items/1");
+                Assert.NotNull(doc);
+                doc.Data.TryGet("Name", out string name);
+                Assert.Equal("Delta", name);
+
+                // Count should be 2 (Gamma + Delta), NOT 4 — pre-delete patches are flushed
+                // on the deleted doc and don't carry forward to the resurrected document.
+                doc.Data.TryGet("Count", out long count);
+                Assert.Equal(2, count);
+            }
+        }
+
+        /// <summary>
+        /// INSERT→UPDATE→DELETE→INSERT→UPDATE with this.Count++ patch.
+        /// IgnoreDeletes = true: Delete is skipped. The OnDelete patch also does Count++.
+        /// Since the delete is ignored and a new Put follows, the final doc has the last Put's state.
+        /// Pre-delete patches ran on the pre-delete doc; post-delete patches run on the post-Put doc.
+        /// Count should be 2 (Gamma + Delta), pre-delete patches (Alpha, Beta, OnDelete) ran but
+        /// their this.Count modifications don't carry forward.
+        /// </summary>
+        [Fact]
+        public async Task InsertUpdateDeleteInsertUpdate_Counter_IgnoreDeletesTrue()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Items",
+                SourceTableSchema = "public",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" }
+                },
+                Patch = "this.Count = (this.Count || 0) + 1;",
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    IgnoreDeletes = true,
+                    Patch = "this.Count = (this.Count || 0) + 1;"
+                }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Items",
+                IsRoot = true
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-counter-ignore",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
+            {
+                ["Id"] = 1, ["Name"] = name,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Items" }
+            };
+
+            Dictionary<string, object> MakeRaw(string name) => new Dictionary<string, object>
+            {
+                { "id", 1 }, { "name", name }
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Items/1", MakeMapped("Alpha"), MakeRaw("Alpha"), processor),
+                CreatePutOp("Items/1", MakeMapped("Beta"), MakeRaw("Beta"), processor),
+                CreateDeleteOp("Items/1", processor, MakeRaw("Beta")),
+                CreatePutOp("Items/1", MakeMapped("Gamma"), MakeRaw("Gamma"), processor),
+                CreatePutOp("Items/1", MakeMapped("Delta"), MakeRaw("Delta"), processor),
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-counter-ignore", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Items/1");
+                Assert.NotNull(doc);
+                doc.Data.TryGet("Name", out string name);
+                Assert.Equal("Delta", name);
+
+                // Count should be 2 (Gamma + Delta). Pre-delete patches (Alpha, Beta, OnDelete)
+                // ran on the pre-delete snapshot and their this.Count changes don't carry forward.
+                doc.Data.TryGet("Count", out long count);
+                Assert.Equal(2, count);
+            }
+        }
+
+        /// <summary>
+        /// Simulates the PostgreSQL initial load vs CDC stream type mismatch.
+        /// Initial load uses raw DbDataReader.GetValue() which returns CLR types like
+        /// DateOnly, int, decimal, Guid. CDC stream applies ConvertPostgresValue() which
+        /// normalizes to DateTime, long, double, string.
+        ///
+        /// This test writes a document via the "initial load" path (using raw CLR types
+        /// as DbDataReader would return), reads it as a string-property class, then writes
+        /// an update via the "CDC stream" path (using normalized types), reads it again,
+        /// and verifies the field representations are identical.
+        /// </summary>
+        [Fact]
+        public async Task PostgresTypeConsistency_InitialLoadVsCdcStream_DateAndOtherTypes()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = new CdcSinkTableConfig
+            {
+                Name = "Employees",
+                SourceTableSchema = "public",
+                SourceTableName = "employees",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "name", "Name" },
+                    { "birthday", "Birthday" },
+                    { "salary", "Salary" },
+                    { "employee_id", "EmployeeId" },
+                    { "active", "Active" },
+                    { "age", "Age" },
+                    { "score", "Score" },
+                }
+            };
+
+            var processor = new CdcSinkTableProcessor
+            {
+                RootConfig = tableConfig,
+                CollectionName = "Employees",
+                IsRoot = true
+            };
+
+            var birthday = new DateTime(1990, 6, 15);
+
+            // --- Step 1: Simulate INITIAL LOAD (raw DbDataReader.GetValue types) ---
+            // Npgsql returns: date → DateOnly, integer → int, numeric → decimal,
+            // uuid → Guid, boolean → bool, real → float.
+            // The real code applies NormalizeReaderValue() before MapColumns(),
+            // converting DateOnly→DateTime, int→long, decimal→double, float→double, Guid→string.
+            // MapColumns then further normalizes Guid→string and byte[]→base64.
+            var initialLoadRaw = new Dictionary<string, object>
+            {
+                { "id", (long)1 },                                                  // NormalizeReaderValue: int → long
+                { "name", "Alice" },
+                { "birthday", new DateOnly(1990, 6, 15) },                          // NormalizeReaderValue: DateOnly preserved
+                { "salary", (double)75000.50 },                                     // NormalizeReaderValue: decimal → double
+                { "employee_id", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },         // NormalizeReaderValue: Guid → string
+                { "active", true },
+                { "age", (long)33 },                                                // NormalizeReaderValue: int → long
+                { "score", (double)4.5 },                                           // NormalizeReaderValue: float → double
+            };
+
+            // Use MapColumns like the real code does
+            var initialLoadMapped = processor.MapColumns(initialLoadRaw, tableConfig.ColumnsMapping);
+            initialLoadMapped[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                { [Constants.Documents.Metadata.Collection] = "Employees" };
+
+            var ops1 = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Employees/1", initialLoadMapped, initialLoadRaw, processor)
+            };
+            var cmd1 = new CdcSinkBatchCommand(database, ops1, "test-types", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(cmd1);
+
+            // Read the document after initial load — capture all fields as strings
+            string initialBirthday, initialSalary, initialEmployeeId, initialAge, initialScore;
+            bool initialActive;
+            using (var session = store.OpenSession())
+            {
+                var emp = session.Load<EmployeeStringFields>("Employees/1");
+                Assert.NotNull(emp);
+                Assert.Equal("Alice", emp.Name);
+                initialBirthday = emp.Birthday;
+                initialSalary = emp.Salary;
+                initialEmployeeId = emp.EmployeeId;
+                initialActive = emp.Active;
+                initialAge = emp.Age;
+                initialScore = emp.Score;
+            }
+
+            // --- Step 2: Simulate CDC UPDATE (ConvertPostgresValue-normalized types) ---
+            // CDC stream returns: date → DateTime (via Convert.ToDateTime), integer → long,
+            // numeric → double, uuid → string, boolean → bool, real → double
+            var cdcStreamRaw = new Dictionary<string, object>
+            {
+                { "id", (long)1 },
+                { "name", "Alice Updated" },
+                { "birthday", new DateOnly(1990, 6, 15) },                         // DateOnly (CDC path now also uses DateOnly for 'date')
+                { "salary", (double)75000.50 },                                     // double (not decimal)
+                { "employee_id", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },         // string (not Guid)
+                { "active", true },
+                { "age", (long)33 },                                                // long (not int)
+                { "score", (double)4.5 },                                           // double (not float)
+            };
+
+            var cdcStreamMapped = processor.MapColumns(cdcStreamRaw, tableConfig.ColumnsMapping);
+            cdcStreamMapped[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                { [Constants.Documents.Metadata.Collection] = "Employees" };
+
+            var ops2 = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Employees/1", cdcStreamMapped, cdcStreamRaw, processor)
+            };
+            var cmd2 = new CdcSinkBatchCommand(database, ops2, "test-types", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(cmd2);
+
+            // Read the document after CDC update — same string-field class
+            using (var session = store.OpenSession())
+            {
+                var emp = session.Load<EmployeeStringFields>("Employees/1");
+                Assert.NotNull(emp);
+                Assert.Equal("Alice Updated", emp.Name);
+
+                // These must be identical between initial load and CDC update.
+                // If the blittable JSON writer serializes DateOnly differently from DateTime,
+                // or decimal differently from double, these assertions will fail.
+                Assert.Equal(initialBirthday, emp.Birthday);
+                Assert.Equal(initialSalary, emp.Salary);
+                Assert.Equal(initialEmployeeId, emp.EmployeeId);
+                Assert.Equal(initialActive, emp.Active);
+                Assert.Equal(initialAge, emp.Age);
+                Assert.Equal(initialScore, emp.Score);
+            }
+        }
+
+        /// <summary>
+        /// DTO with all fields as strings to detect serialization differences.
+        /// If initial load writes a date as "1990-06-15" but CDC writes "1990-06-15T00:00:00.0000000",
+        /// this class will capture both representations exactly.
+        /// </summary>
+        private class EmployeeStringFields
+        {
+            public string Name { get; set; }
+            public string Birthday { get; set; }
+            public string Salary { get; set; }
+            public string EmployeeId { get; set; }
+            public bool Active { get; set; }
+            public string Age { get; set; }
+            public string Score { get; set; }
         }
     }
 }
