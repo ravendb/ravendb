@@ -16,12 +16,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(60 * 15)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("CdcSink.MaxFallbackTimeInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting MaxFallbackTime { get; set; }
+        public TimeSetting MaxFallbackTime { get; protected set; }
 
         [Description("How frequently (in seconds) the SQL Server CDC Sink polls for new change rows. PostgreSQL uses streaming replication and ignores this setting.")]
         [DefaultValue(1)]
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("CdcSink.PollIntervalInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public TimeSetting PollInterval { get; set; }
+        public TimeSetting PollInterval { get; protected set; }
     }
 }

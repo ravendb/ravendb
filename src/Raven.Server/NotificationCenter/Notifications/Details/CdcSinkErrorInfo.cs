@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,7 +9,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
     {
         public CdcSinkErrorInfo(string error)
         {
-            Date = DateTime.UtcNow;
+            Date = SystemTime.UtcNow;
             Error = error;
         }
 

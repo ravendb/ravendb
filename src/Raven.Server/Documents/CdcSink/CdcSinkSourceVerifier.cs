@@ -441,7 +441,7 @@ public static class CdcSinkSourceVerifier
                     }
                 }
             }
-            catch
+            catch (DbException)
             {
                 // User may not have access to msdb — not a fatal error for verification
             }
