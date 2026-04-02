@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -12,12 +14,17 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -975,6 +982,101 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument(hub, "foo/bar/322", timeout * 5), hub.Identifier);
             }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task ShouldRejectPullReplicationSinkCertificateWithoutPrivateKey()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            using var server = GetNewServer();
+
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                Server = server,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
+            });
+
+            // Export certificate as public-only (no private key)
+            var publicOnlyCert = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert));
+
+            var pull = new PullReplicationAsSink
+            {
+                ConnectionStringName = "dummy",
+                HubName = "hub",
+                CertificateWithPrivateKey = publicOnlyCert
+            };
+
+            // Set up a dummy connection string so the server doesn't fail on that
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = sinkStore.Database,
+                Name = "dummy",
+                TopologyDiscoveryUrls = sinkStore.Urls
+            }));
+
+            // Bypass client-side validation by sending a raw command directly to the server endpoint
+            var command = new UpdatePullReplicationAsSinkWithoutClientValidationCommand(sinkStore.Conventions, pull);
+
+            var exception = await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                using var requestExecutor = sinkStore.GetRequestExecutor();
+                using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
+                {
+                    await requestExecutor.ExecuteAsync(command, context);
+                }
+            });
+
+            Assert.Contains("does not contain a private key", exception.Message);
+        }
+
+        /// <summary>
+        /// A custom command that sends the pull replication sink configuration to the server
+        /// without performing the client-side certificate validation.
+        /// Used to test the server-side validation in isolation.
+        /// </summary>
+        private class UpdatePullReplicationAsSinkWithoutClientValidationCommand : RavenCommand<ModifyOngoingTaskResult>, IRaftCommand
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly PullReplicationAsSink _pullReplication;
+
+            public UpdatePullReplicationAsSinkWithoutClientValidationCommand(DocumentConventions conventions, PullReplicationAsSink pullReplication)
+            {
+                _conventions = conventions;
+                _pullReplication = pullReplication;
+            }
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/admin/tasks/sink-pull-replication";
+
+                var request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        var json = new DynamicJsonValue
+                        {
+                            ["PullReplicationAsSink"] = _pullReplication.ToJson()
+                        };
+
+                        await ctx.WriteAsync(stream, ctx.ReadObject(json, "update-pull-replication")).ConfigureAwait(false);
+                    }, _conventions)
+                };
+
+                return request;
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                Result = JsonDeserializationClient.ModifyOngoingTaskResult(response);
+            }
+
+            public override bool IsReadRequest => false;
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
         }
 
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!

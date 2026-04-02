@@ -48,16 +48,9 @@ namespace Raven.Client.Documents.Operations.Replication
                     throw new ArgumentException(
                         $"When {nameof(useServerCertificate)} is set to true, " +
                         $"{nameof(PullReplicationAsSink.CertificateWithPrivateKey)} should be null to use server certificate.");
+
                 
-                
-                var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
-                using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes,
-                    pullReplication.CertificatePassword,
-                    CertificateLoaderUtil.FlagsForExport))
-                {
-                    if (certificate.HasPrivateKey == false)
-                        throw new AuthorizationException("Certificate with private key is required");
-                }
+                pullReplication.EnsureHasPrivateKey();
             }
         }
 

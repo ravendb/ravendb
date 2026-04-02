@@ -1998,6 +1998,8 @@ namespace Raven.Server.ServerWide
 
             pullReplicationAsSink = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
 
+            pullReplicationAsSink.EnsureHasPrivateKey();
+
             var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName, raftRequestId)
             {
                 PullReplicationAsSink = pullReplicationAsSink,

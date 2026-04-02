@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Text;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Replication
@@ -129,5 +131,16 @@ namespace Raven.Client.Documents.Operations.Replication
         }
 
         public override string GetDefaultTaskName() => ToString();
+
+        public void EnsureHasPrivateKey()
+        {
+            var certBytes = Convert.FromBase64String(CertificateWithPrivateKey);
+
+            using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes, CertificatePassword, CertificateLoaderUtil.FlagsForExport))
+            {
+                if (certificate.HasPrivateKey == false)
+                    throw new AuthorizationException("Certificate with private key is required.");
+            }
+        }
     }
 }
