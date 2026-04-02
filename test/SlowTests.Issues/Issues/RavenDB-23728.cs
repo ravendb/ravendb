@@ -173,7 +173,7 @@ namespace SlowTests.Issues
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(timeout)))
             using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, cts.Token, db.DatabaseShutdown))
-                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false, Collections = collections?.ToArray() }, token);
+                await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false, Collections = collections?.ToArray() }, maxOpsPerSecond: null, token);
         }
 
         private class User

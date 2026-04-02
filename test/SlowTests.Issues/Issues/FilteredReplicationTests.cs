@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.Smuggler;
@@ -1259,7 +1260,7 @@ namespace SlowTests.Issues
             Assert.True(WaitForDocument<Propagation>(sinkStore1, "foo", x => x.Completed == true));
 
             using (var token = new OperationCancelToken(hubDb.Configuration.Databases.OperationTimeout.AsTimeSpan, hubDb.DatabaseShutdown, CancellationToken.None))
-                await hubDb.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, includeForceCreated: true, collections: null, maxOpsPerSecond: null, token: token);
+                await hubDb.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true }, maxOpsPerSecond: null, token);
 
             using (var s = hubStore.OpenAsyncSession())
             {
