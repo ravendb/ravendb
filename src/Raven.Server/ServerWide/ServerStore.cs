@@ -792,6 +792,33 @@ namespace Raven.Server.ServerWide
                     Logger.Info("An error occurred while trying to determine Is Swapping On Hdd Instead Of Ssd", e);
             }
 
+            try
+            {
+                var highReadAheadDevices = PlatformSpecific.MemoryInformation.GetBlockDevicesWithHighReadAhead();
+                if (highReadAheadDevices != null)
+                {
+                    var deviceList = string.Join(", ", highReadAheadDevices.Select(x => $"{x.DeviceName} ({x.ReadAheadValue})"));
+                    var alert = AlertRaised.Create(
+                        null,
+                        "High read_ahead_kb Detected",
+                        $"One or more block devices have read_ahead_kb set above 128 KB: {deviceList}. " +
+                        "This can cause excessive I/O during random-access workloads. " +
+                        "Consider lowering it. Please follow the documentation for guidance.",
+                        AlertType.HighReadAheadKb,
+                        NotificationSeverity.Warning);
+                    if (NotificationCenter.IsInitialized)
+                        NotificationCenter.Add(alert);
+                    else
+                        _storeAlertForLateRaise.Add(alert);
+                }
+            }
+            catch (Exception e)
+            {
+                // the above should not throw, but we mask it in case it does (as it reads IO parameters) - this alert is just a nice-to-have warning
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("An error occurred while trying to check read_ahead_kb values for block devices", e);
+            }
+
             options.SchemaVersion = SchemaUpgrader.CurrentVersion.ServerVersion;
             options.SchemaUpgrader = SchemaUpgrader.Upgrader(SchemaUpgrader.StorageType.Server, null, null, this);
             options.BeforeSchemaUpgrade = _server.BeforeSchemaUpgrade;

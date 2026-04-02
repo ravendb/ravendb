@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -21,6 +22,13 @@ namespace Sparrow.Server.Platform
                 if (PlatformDetails.RunningOnPosix)
                     return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
                 return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
+            }
+
+            public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead()
+            {
+                if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
+                    return null;
+                return CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead();
             }
         }
 
