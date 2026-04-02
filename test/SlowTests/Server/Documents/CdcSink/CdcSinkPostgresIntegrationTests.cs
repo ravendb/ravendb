@@ -3443,5 +3443,185 @@ namespace SlowTests.Server.Documents.CdcSink
             public string Name { get; set; }
             public List<Photo> Photos { get; set; }
         }
+
+        private class EmployeeRecord
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public string Department { get; set; }
+        }
+
+        private class Car
+        {
+            public int Id { get; set; }
+            public string Make { get; set; }
+            public string Model { get; set; }
+        }
+
+        /// <summary>
+        /// Full lifecycle test: start with Employees only, let CDC run, then edit
+        /// the task to add Cars. Verifies that:
+        /// - Initial load works for the first table
+        /// - CDC streaming works for the first table
+        /// - Editing the task triggers initial load for the newly added table
+        /// - CDC streaming works for both tables after the edit
+        /// - The publication is updated to cover both tables
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EditTask_AddSecondTable_InitialLoadAndCdcWorkForBoth()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            // --- Setup: create both tables upfront ---
+            ExecuteNpgSql(connectionString, """
+                CREATE TABLE employees (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    department VARCHAR(200)
+                );
+                CREATE TABLE cars (
+                    id SERIAL PRIMARY KEY,
+                    make VARCHAR(200) NOT NULL,
+                    model VARCHAR(200) NOT NULL
+                );
+                """);
+
+            // Pre-populate both tables
+            ExecuteNpgSql(connectionString, """
+                INSERT INTO employees (id, name, department) VALUES (1, 'Alice', 'Engineering');
+                INSERT INTO employees (id, name, department) VALUES (2, 'Bob', 'Marketing');
+                INSERT INTO cars (id, make, model) VALUES (1, 'Toyota', 'Camry');
+                INSERT INTO cars (id, make, model) VALUES (2, 'Honda', 'Civic');
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            // --- Phase 1: Create CDC task with Employees only ---
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-edit-add-table",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Employees",
+                        SourceTableSchema = "public",
+                        SourceTableName = "employees",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        ColumnsMapping = new Dictionary<string, string>
+                        {
+                            { "id", "Id" },
+                            { "name", "Name" },
+                            { "department", "Department" }
+                        }
+                    }
+                }
+            };
+
+            var addResult = AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-edit-add-table");
+
+            // Verify initial load brought in both employees
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var emp = await session.LoadAsync<EmployeeRecord>("Employees/1");
+                return emp?.Name;
+            }, "Alice", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var bob = await session.LoadAsync<EmployeeRecord>("Employees/2");
+                Assert.NotNull(bob);
+                Assert.Equal("Bob", bob.Name);
+            }
+
+            // Cars should NOT exist in RavenDB yet
+            using (var session = store.OpenAsyncSession())
+            {
+                var car = await session.LoadAsync<Car>("Cars/1");
+                Assert.Null(car);
+            }
+
+            // --- Phase 2: Verify CDC streaming for employees ---
+            ExecuteNpgSql(connectionString, "UPDATE employees SET department = 'Management' WHERE id = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var emp = await session.LoadAsync<EmployeeRecord>("Employees/1");
+                return emp?.Department;
+            }, "Management", timeout: 60_000);
+
+            // --- Phase 3: Edit the task to add Cars table ---
+            config.TaskId = addResult.TaskId;
+            config.Tables.Add(new CdcSinkTableConfig
+            {
+                Name = "Cars",
+                SourceTableSchema = "public",
+                SourceTableName = "cars",
+                PrimaryKeyColumns = new List<string> { "id" },
+                ColumnsMapping = new Dictionary<string, string>
+                {
+                    { "id", "Id" },
+                    { "make", "Make" },
+                    { "model", "Model" }
+                }
+            });
+
+            store.Maintenance.Send(new UpdateCdcSinkOperation(addResult.TaskId, config));
+
+            // Wait for the new process to pick up and complete initial load for Cars.
+            // The process restarts on config change — need to wait for the new instance.
+            await AssertWaitForValueAsync(async () =>
+            {
+                var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+                var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-edit-add-table");
+                if (process == null)
+                    return false;
+
+                // Wait for initial load to complete (with a short inner timeout)
+                var completed = await Task.WhenAny(process.InitialLoadCompleted, Task.Delay(500));
+                return completed == process.InitialLoadCompleted && process.InitialLoadCompleted.IsCompletedSuccessfully;
+            }, true, timeout: 60_000);
+
+            // Verify initial load brought in both cars
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var car = await session.LoadAsync<Car>("Cars/1");
+                return car?.Make;
+            }, "Toyota", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var car2 = await session.LoadAsync<Car>("Cars/2");
+                Assert.NotNull(car2);
+                Assert.Equal("Honda", car2.Make);
+                Assert.Equal("Civic", car2.Model);
+            }
+
+            // --- Phase 4: Verify CDC streaming works for Cars ---
+            ExecuteNpgSql(connectionString, "UPDATE cars SET model = 'Accord' WHERE id = 2;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var car = await session.LoadAsync<Car>("Cars/2");
+                return car?.Model;
+            }, "Accord", timeout: 60_000);
+
+            // --- Phase 5: Verify CDC streaming STILL works for Employees ---
+            ExecuteNpgSql(connectionString, "UPDATE employees SET name = 'Alice Smith' WHERE id = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var emp = await session.LoadAsync<EmployeeRecord>("Employees/1");
+                return emp?.Name;
+            }, "Alice Smith", timeout: 60_000);
+        }
     }
 }
