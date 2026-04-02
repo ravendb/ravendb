@@ -197,9 +197,23 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (missing.Count > 0)
         {
-            throw new InvalidOperationException(
-                $"Publication '{_publicationName}' does not include the following configured tables: {string.Join(", ", missing)}. " +
-                $"Add them with: ALTER PUBLICATION {_publicationName} ADD TABLE {string.Join(", ", missing)};");
+            var tableList = string.Join(", ", missing);
+            try
+            {
+                await using var alterCmd = new NpgsqlCommand(
+                    $"ALTER PUBLICATION {_publicationName} ADD TABLE {tableList}", conn);
+                await alterCmd.ExecuteNonQueryAsync(ct);
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] Added missing tables to publication '{_publicationName}': {tableList}");
+            }
+            catch (PostgresException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Publication '{_publicationName}' does not include tables: {tableList}. " +
+                    $"Attempted to add them automatically but failed ({ex.MessageText}). " +
+                    $"Ask a database administrator to run: ALTER PUBLICATION {_publicationName} ADD TABLE {tableList};", ex);
+            }
         }
 
         // Warn about extra tables in the publication that aren't in the configuration
