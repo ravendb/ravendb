@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Http;
@@ -13,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.CdcSink;
 using Raven.Server.Documents.QueueSink;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -141,7 +143,39 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
         return connectionStatus;
     }
 
-    protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication, 
+    protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
+        out string tag, out string error)
+    {
+        var connectionStatus = OngoingTaskConnectionStatus.None;
+        error = null;
+
+        var processState = CdcSinkLoader.GetProcessState(config.Tables, _database, config.Name);
+
+        tag = OngoingTasksUtils.WhoseTaskIsIt(_server, record.Topology, config, processState, _database.NotificationCenter);
+
+        if (tag == _server.NodeTag)
+        {
+            var process = _database.CdcSinkLoader.Processes.FirstOrDefault(x => x.Configuration.Name == config.Name);
+
+            if (process != null)
+                connectionStatus = process.GetConnectionStatus();
+            else
+            {
+                if (config.Disabled)
+                    connectionStatus = OngoingTaskConnectionStatus.NotActive;
+                else
+                    error = $"CDC Sink process '{config.Name}' was not found.";
+            }
+        }
+        else
+        {
+            connectionStatus = OngoingTaskConnectionStatus.NotOnThisNode;
+        }
+
+        return connectionStatus;
+    }
+
+    protected override (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology, T replication,
         Dictionary<string, RavenConnectionString> connectionStrings, out ExternalReplicationState replicationState, out string responsibleNodeTag, out RavenConnectionString connection, out long lastDatabaseEtag, out string error)
     {
         error = null;

@@ -4,6 +4,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -47,6 +48,13 @@ public partial class ShardedDatabaseContext
         }
         
         protected override OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config, out string tag, out string error)
+        {
+            tag = null;
+            error = null;
+            return OngoingTaskConnectionStatus.None;
+        }
+
+        protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config, out string tag, out string error)
         {
             tag = null;
             error = null;
