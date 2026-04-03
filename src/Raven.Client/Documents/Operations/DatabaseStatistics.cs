@@ -48,7 +48,9 @@ namespace Raven.Client.Documents.Operations
 
         public DateTime? LastIndexingTime { get; set; }
 
-        public Size SizeOnDisk { get; set; }
+        public Size PhysicalSizeOnDisk { get; set; }
+
+        public Size AllocatedSizeOnDisk { get; set; }
 
         public Size TempBuffersSizeOnDisk { get; set; }
 

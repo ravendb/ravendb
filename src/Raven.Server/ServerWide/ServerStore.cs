@@ -3860,7 +3860,7 @@ namespace Raven.Server.ServerWide
             {
                 Name = environment.Name,
                 Type = environment.Type.ToString(),
-                UsedSpace = sizeOnDisk.DataFileInBytes,
+                UsedSpace = sizeOnDisk.DataFilePhysicalSizeInBytes,
                 DiskSpaceResult = FillDiskSpaceResult(diskSpaceResult),
                 UsedSpaceByTempBuffers = 0
             };

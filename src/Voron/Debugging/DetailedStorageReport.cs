@@ -11,7 +11,8 @@ namespace Voron.Debugging
 {
     public sealed class SizeReport
     {
-        public long DataFileInBytes { get; set; }
+        public long DataFilePhysicalSizeInBytes { get; set; }
+        public long DataFileAllocatedSizeInBytes { get; set; }
         public long JournalsInBytes { get; set; }
         public long TempBuffersInBytes { get; set; }
     }
@@ -65,7 +66,7 @@ namespace Voron.Debugging
         }
 
         public required long AllocatedSpaceInBytes { get; set; }
-        public required long ActualSpaceInBytes { get; set; }
+        public required long PhysicalSpaceInBytes { get; set; }
         public required long UsedSpaceInBytes { get; set; }
         public required long FreeSpaceInBytes { get; set; }
     }

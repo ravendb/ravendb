@@ -26,8 +26,8 @@ public unsafe partial class Pager
             ReadAddress = readAddress;
             WriteAddress = writeMemory;
             TotalAllocatedSize = totalAllocatedSize;
-            NumberOfAllocatedPages = totalAllocatedSize / pageSize;
             Handle = handle;
+            _pageSize = pageSize;
 
             Pager = pager;
             WeakSelf = new WeakReference<State>(this);
@@ -37,14 +37,14 @@ public unsafe partial class Pager
 
         public readonly byte* ReadAddress;
         public readonly byte* WriteAddress;
-        public long NumberOfAllocatedPages;
+        public long NumberOfAllocatedPages => TotalAllocatedSize / _pageSize;
         public long TotalAllocatedSize;
-        public long TotalFileSize;
-        public long TotalDiskSpace;
+        public long TotalPhysicalSpace;
 
         public bool Disposed;
 
         public void* Handle;
+        private readonly int _pageSize;
 
         public void Dispose()
         {

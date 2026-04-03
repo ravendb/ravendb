@@ -31,7 +31,8 @@ namespace Voron.Debugging
         public List<JournalFile> Journals;
         public JournalFile[] FlushedJournals { get; set; }
 
-        public required long ActualSizeInBytes { get; set; }
+        public required long AllocatedSizeInBytes { get; set; }
+        public long PhysicalSizeInBytes { get; set; }
         public long NumberOfAllocatedPages { get; set; }
         public int NumberOfFreePages { get; set; }
         public long NextPageNumber { get; set; }
@@ -79,7 +80,7 @@ namespace Voron.Debugging
 
         public StorageReport Generate(ReportInput input)
         {
-            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.ActualSizeInBytes);
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.PhysicalSizeInBytes);
 
             var journals = GenerateJournalsReport(input.Journals, input.FlushedJournals);
 
@@ -91,7 +92,7 @@ namespace Voron.Debugging
                 Journals = journals,
                 TempFiles = tempBuffers,
                 CountOfTables = input.CountOfTables,
-                CountOfTrees = input.CountOfTrees
+                CountOfTrees = input.CountOfTrees,
             };
         }
 
@@ -99,7 +100,7 @@ namespace Voron.Debugging
 
         public unsafe DetailedStorageReport Generate(DetailedReportInput input)
         {
-            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.ActualSizeInBytes);
+            var dataFile = GenerateDataFileReport(input.NumberOfAllocatedPages, input.NumberOfFreePages, input.NextPageNumber, input.PhysicalSizeInBytes);
 
             long streamsAllocatedSpaceInBytes = 0;
             long treesAllocatedSpaceInBytes = 0;
@@ -275,13 +276,13 @@ namespace Voron.Debugging
             };
         }
 
-        private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber, long actualSizeInBytes)
+        private DataFileReport GenerateDataFileReport(long numberOfAllocatedPages, long numberOfFreePages, long nextPageNumber, long physicalSizeInBytes)
         {
             var unallocatedPagesAtEndOfFile = numberOfAllocatedPages - (nextPageNumber - 1);
 
             return new DataFileReport
             {
-                ActualSpaceInBytes = actualSizeInBytes,
+                PhysicalSpaceInBytes = physicalSizeInBytes,
                 AllocatedSpaceInBytes = PagesToBytes(numberOfAllocatedPages),
                 UsedSpaceInBytes = PagesToBytes((nextPageNumber - 1) - numberOfFreePages),
                 FreeSpaceInBytes = PagesToBytes(numberOfFreePages + unallocatedPagesAtEndOfFile)

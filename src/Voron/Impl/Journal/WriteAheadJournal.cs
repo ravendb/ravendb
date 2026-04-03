@@ -1454,7 +1454,7 @@ namespace Voron.Impl.Journal
                         if (pages.IsEmpty)
                             return dataPagerState;
                         dataPager.EnsureContinuous(ref dataPagerState, pages[^1].page_num, pages[^1].count_of_pages);
-                        (dataPagerState.TotalFileSize, dataPagerState.TotalDiskSpace) = dataPager.GetFileSize(dataPagerState);
+                        (dataPagerState.TotalAllocatedSize, dataPagerState.TotalPhysicalSpace) = dataPager.GetFileSize(dataPagerState);
                         fixed (Pal.page_to_write* ptr = pages)
                         {
                             var rc = dataPager.Write(dataPagerState.Handle, ptr, pages.Length,  out var errorCode);

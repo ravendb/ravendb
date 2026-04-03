@@ -91,7 +91,7 @@ public class DebugPackageAnalysisSummary : IDynamicJson
                 var dbDiskUsage = new DatabaseDiskUsage
                 {
                     Database = dbReport.DatabaseName,
-                    Size = dbReport.DatabaseInfo.Stats.SizeOnDisk.SizeInBytes,
+                    Size = dbReport.DatabaseInfo.Stats.PhysicalSizeOnDisk.SizeInBytes,
                     TempBuffersSize = dbReport.DatabaseInfo.Stats.TempBuffersSizeOnDisk.SizeInBytes,
                 };
             

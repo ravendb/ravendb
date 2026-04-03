@@ -1273,7 +1273,7 @@ namespace Raven.Server.Web.System
                 throw new InvalidOperationException($"Could not load database '{databaseName}'.");
 
             using (database.PreventFromUnloadingByIdleOperations())
-                return new Size(database.GetSizeOnDisk().Data.SizeInBytes, SizeUnit.Bytes);
+                return new Size(database.GetSizeOnDisk().Physical.SizeInBytes, SizeUnit.Bytes);
         }
 
         [RavenAction("/admin/databases/unused-ids", "POST", AuthorizationStatus.Operator)]

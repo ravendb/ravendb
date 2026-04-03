@@ -163,4 +163,55 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
         Assert.Equal(expectedResult , inputSource);
     }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public unsafe void StorageReport_ShouldReflectPhysicalDiskSpaceAfterHolePunching()
+    {
+        Options.ManualFlushing = true;
+        var pages = new List<long>();
+        using (var wtx = Env.WriteTransaction())
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                // 2MB
+                Page allocatePage = wtx.LowLevelTransaction.AllocatePage(256);
+                allocatePage.Flags = PageFlags.Overflow | PageFlags.Single;
+                allocatePage.OverflowSize = (256 * Constants.Storage.PageSize) - PageHeader.SizeOf;
+                Memory.Set(allocatePage.DataPointer, 1, allocatePage.OverflowSize);
+                pages.Add(allocatePage.PageNumber);
+            }
+            wtx.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+
+        using (var wtx = Env.WriteTransaction())
+        {
+            // delete ~36MB of data (pages 7-25), which will create sparse regions after flush
+            for (int i = 7; i < 25; i++)
+            {
+                for (int j = 0; j < 256; j++)
+                {
+                    wtx.LowLevelTransaction.FreePage(pages[i] + j);
+                }
+            }
+            wtx.Commit();
+        }
+
+        Env.FlushLogToDataFile();
+
+        using var rtx = Env.ReadTransaction();
+        var report = Env.GenerateReport(rtx);
+
+        // AllocatedSpaceInBytes reflects the total logical file size (128MB)
+        Assert.Equal(128 * 1024 * 1024, report.DataFile.AllocatedSpaceInBytes);
+
+        if (PlatformDetails.RunningOnMacOsx is false)
+        {
+            // After hole punching, ActualSpaceInBytes (physical disk space) must be less than AllocatedSpaceInBytes
+            Assert.True(report.DataFile.PhysicalSpaceInBytes < report.DataFile.AllocatedSpaceInBytes,
+                $"PhysicalSpaceInBytes ({new Size(report.DataFile.PhysicalSpaceInBytes, SizeUnit.Bytes)}) should be less than " +
+                $"AllocatedSpaceInBytes ({new Size(report.DataFile.AllocatedSpaceInBytes, SizeUnit.Bytes)}) after hole punching");
+        }
+    }
 }

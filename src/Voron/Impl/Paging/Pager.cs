@@ -60,7 +60,7 @@ public unsafe partial class Pager : IDisposable
 
         pager.Write = Pal.rvn_get_writer(handle);
         var state = new State(pager, readOnlyMemory, writeMemory, memorySize, handle, pageSize ?? options.PageSize);
-        (state.TotalFileSize, state.TotalDiskSpace) = pager.GetFileSize(state);
+        (state.TotalAllocatedSize, state.TotalPhysicalSpace) = pager.GetFileSize(state);
         pager.InstallState(state);
         pager.Initialize(memorySize);
         return (pager, state);

@@ -1299,15 +1299,28 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk));
+            writer.WritePropertyName(nameof(statistics.PhysicalSizeOnDisk));
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk.HumaneSize));
-            writer.WriteString(statistics.SizeOnDisk.HumaneSize);
+            writer.WritePropertyName(nameof(statistics.PhysicalSizeOnDisk.HumaneSize));
+            writer.WriteString(statistics.PhysicalSizeOnDisk.HumaneSize);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(statistics.SizeOnDisk.SizeInBytes));
-            writer.WriteInteger(statistics.SizeOnDisk.SizeInBytes);
+            writer.WritePropertyName(nameof(statistics.PhysicalSizeOnDisk.SizeInBytes));
+            writer.WriteInteger(statistics.PhysicalSizeOnDisk.SizeInBytes);
+
+            writer.WriteEndObject();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.AllocatedSizeOnDisk));
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(statistics.AllocatedSizeOnDisk.HumaneSize));
+            writer.WriteString(statistics.AllocatedSizeOnDisk.HumaneSize);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(statistics.AllocatedSizeOnDisk.SizeInBytes));
+            writer.WriteInteger(statistics.AllocatedSizeOnDisk.SizeInBytes);
 
             writer.WriteEndObject();
             writer.WriteComma();
