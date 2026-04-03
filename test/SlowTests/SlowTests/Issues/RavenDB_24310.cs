@@ -6,9 +6,11 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -408,6 +410,76 @@ public class RavenDB_24310 : RavenTestBase
                 Assert.False(restoredRecord.RavenConnectionStrings.ContainsKey(expectedName),
                     "Server-wide connection string should have been filtered out during snapshot restore");
             }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Smuggler)]
+    public async Task ServerWideConnectionStringFilteredOutDuringSmugglerExport()
+    {
+        var file = GetTempFileName();
+        try
+        {
+            using (var store = GetDocumentStore())
+            {
+                // create server-wide connection string (propagated to the database)
+                var ravenCS = new ServerWideConnectionString
+                {
+                    ConnectionString = new RavenConnectionString
+                    {
+                        Name = "MyRavenCS",
+                        Database = "TargetDb",
+                        TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+                    }
+                };
+
+                await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+                var expectedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("MyRavenCS");
+
+                // verify it was propagated
+                var sourceRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                Assert.True(sourceRecord.RavenConnectionStrings.ContainsKey(expectedName));
+
+                // also add a regular (non-server-wide) connection string
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(
+                    new RavenConnectionString
+                    {
+                        Name = "RegularCS",
+                        Database = "SomeDb",
+                        TopologyDiscoveryUrls = new[] { "http://localhost:9090" }
+                    }));
+
+                // export to file (the export should filter out server-wide connection strings)
+                var exportOp = await store.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
+                await exportOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                // delete the server-wide connection string so it won't be re-propagated
+                await store.Maintenance.Server.SendAsync(
+                    new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" }));
+
+                // create a new database and import the file into it
+                var targetDbName = store.Database + "_target";
+                await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(targetDbName)));
+
+                using (var targetStore = GetDocumentStore(new Options { CreateDatabase = false, ModifyDatabaseName = _ => targetDbName }))
+                {
+                    var importOp = await targetStore.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
+                    await importOp.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+
+                    // the target database should NOT have the server-wide connection string
+                    var targetRecord = await targetStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(targetDbName));
+                    Assert.False(targetRecord.RavenConnectionStrings.ContainsKey(expectedName),
+                        "Server-wide connection string should have been filtered out during smuggler export");
+
+                    // but should have the regular connection string
+                    Assert.True(targetRecord.RavenConnectionStrings.ContainsKey("RegularCS"),
+                        "Regular connection string should have been imported");
+                }
+            }
+        }
+        finally
+        {
+            IOExtensions.DeleteFile(file);
         }
     }
 }
