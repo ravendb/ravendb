@@ -88,7 +88,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         bool publicationExists;
         await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_publication WHERE pubname = @pubName", conn))
         {
-            cmd.Parameters.AddWithValue("pubName", _publicationName);
+            AddParameter(cmd, "@pubName", _publicationName);
             publicationExists = await cmd.ExecuteScalarAsync(ct) != null;
         }
 
@@ -123,7 +123,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await using (var cmd = new NpgsqlCommand(
             "SELECT plugin FROM pg_replication_slots WHERE slot_name = @slotName", conn))
         {
-            cmd.Parameters.AddWithValue("slotName", _slotName);
+            AddParameter(cmd, "@slotName", _slotName);
             var plugin = (string)await cmd.ExecuteScalarAsync(ct);
 
             if (plugin != null)
@@ -175,7 +175,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             WHERE pr.prpubid = (SELECT oid FROM pg_publication WHERE pubname = @pubName)
             """, conn))
         {
-            cmd.Parameters.AddWithValue("pubName", _publicationName);
+            AddParameter(cmd, "@pubName", _publicationName);
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 publishedTables.Add(reader.GetString(0));
@@ -375,9 +375,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 {
                     await lastBatch;
 
-                    // No more records available right now — acknowledge everything we've persisted.
-                    // Only send status updates if we got any records since the last time
-                    // Important: we must also only send it the _first_ time after we recieve _a_ value
+                    // PostgreSQL retains WAL segments until the replication slot confirms receipt.
+                    // We must ack promptly after processing rows so WAL doesn't accumulate,
+                    // but avoid re-acking the same LSN on an idle stream. The rowsSinceLastAck
+                    // guard ensures we ack exactly once after a batch, then stay silent until
+                    // new data arrives.
                     if (rowsSinceLastAck is not 0)
                     {
                         conn.SetReplicationStatus(lastLsn);
@@ -443,7 +445,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             }
         }
 
-        } // jsonParsingContext
+        }
     }
 
     private async Task<CdcSinkDocumentOp> DecodeRow(
@@ -510,6 +512,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             2950 => PostgresTypeCategory.Uuid,                  // uuid
             17 => PostgresTypeCategory.Bytea,                   // bytea
             114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
+            // Extension types (e.g., pgvector) have dynamically assigned OIDs and fall
+            // through to Other, which reads them as text. For pgvector, the text
+            // representation (e.g., "[1,2,3]") can be stored as a JSON column or
+            // converted to an attachment via CdcColumnType configuration.
             _ => PostgresTypeCategory.Other,
         };
     }
@@ -633,7 +639,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
                 };
                 await SubmitBatch([], tableLoadUpdates: finalUpdate);
-                break;
+                return;
             }
 
             await lastBatch;
@@ -646,8 +652,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
             lastKeys = newLastKeys;
         }
-
-        await lastBatch;
     }
 
     private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys)> ReadOneBatch(
@@ -670,7 +674,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             for (int i = 0; i < pkColumns.Count; i++)
             {
                 var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
-                cmd.Parameters.AddWithValue($"k{i}", value);
+                AddParameter(cmd, $"@k{i}", value);
             }
         }
         else
@@ -731,9 +735,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     WHERE table_schema = @schema AND table_name = @table AND column_name = ANY(@columns)";
 
         await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("schema", schema);
-        cmd.Parameters.AddWithValue("table", tableName);
-        cmd.Parameters.AddWithValue("columns", columns.ToArray());
+        AddParameter(cmd, "@schema", schema);
+        AddParameter(cmd, "@table", tableName);
+        AddParameter(cmd, "@columns", columns.ToArray());
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))

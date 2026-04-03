@@ -26,12 +26,6 @@ public class CdcSinkLinkedTableConfig : IDynamicJson
     public List<string> JoinColumns { get; set; } = new();
 
     /// <summary>
-    /// Array = array of document IDs, Value = single document ID.
-    /// Map is not applicable for links.
-    /// </summary>
-    public CdcSinkRelationType Type { get; set; }
-
-    /// <summary>
     /// Target collection name used for document ID generation
     /// (e.g., "Customers" → generates "Customers/ALFKI").
     /// </summary>
@@ -45,7 +39,6 @@ public class CdcSinkLinkedTableConfig : IDynamicJson
             [nameof(SourceTableName)] = SourceTableName,
             [nameof(PropertyName)] = PropertyName,
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
-            [nameof(Type)] = Type.ToString(),
             [nameof(LinkedCollectionName)] = LinkedCollectionName,
         };
     }

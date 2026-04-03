@@ -1153,10 +1153,6 @@ namespace Raven.Server.Json
                 {
                     wp.WriteStartObject();
 
-                    wp.WritePropertyName(nameof(scriptStats.ScriptName));
-                    wp.WriteString(scriptStats.ScriptName);
-                    wp.WriteComma();
-
                     wp.WriteArray(cp, nameof(scriptStats.Performance), scriptStats.Performance, (wpp, cpp, perfStats) => wpp.WriteCdcSinkPerformanceStats(cpp, perfStats));
 
                     wp.WriteEndObject();

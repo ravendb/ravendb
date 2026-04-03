@@ -71,12 +71,13 @@ public class CdcSinkOnDeleteConfig : IDynamicJson
     ///   document as archived (e.g., setting an Archived flag).
     /// - Append-only data (e.g., audit logs) where rows should never be removed.
     /// - When the embedded table's primary key doesn't include the join column to
-    ///   the parent and you don't want to set up REPLICA IDENTITY FULL.
+    ///   the parent and you don't want to set up REPLICA IDENTITY FULL (PostgreSQL-specific;
+    ///   SQL Server CDC always includes all tracked columns in change rows).
     ///
     /// When IgnoreDeletes is true (without a Patch), the CDC process does not need
-    /// the join column to be present in DELETE events, so the default REPLICA IDENTITY
-    /// (primary key only) is sufficient regardless of whether the PK includes the
-    /// join column.
+    /// the join column to be present in DELETE events, so for PostgreSQL the default
+    /// REPLICA IDENTITY (primary key only) is sufficient regardless of whether the PK
+    /// includes the join column.
     /// </summary>
     public bool IgnoreDeletes { get; set; }
 

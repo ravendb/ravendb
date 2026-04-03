@@ -9,20 +9,17 @@ public class CdcSinkProcessState : IDatabaseTaskStatus
 
     public string ConfigurationName { get; set; }
 
-    public string ScriptName { get; set; }
-
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(ConfigurationName)] = ConfigurationName,
-            [nameof(ScriptName)] = ScriptName,
             [nameof(NodeTag)] = NodeTag,
         };
     }
 
-    public static string GenerateItemName(string databaseName, string configurationName, string transformationName)
+    public static string GenerateItemName(string databaseName, string configurationName)
     {
-        return $"values/{databaseName}/cdcsink/{configurationName.ToLowerInvariant()}/{transformationName.ToLowerInvariant()}";
+        return $"values/{databaseName}/cdcsink/{configurationName.ToLowerInvariant()}";
     }
 }

@@ -213,8 +213,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (linked.JoinColumns == null || linked.JoinColumns.Count == 0)
                 errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' must have join columns");
 
-            if (linked.Type == CdcSinkRelationType.Map)
-                errors.Add($"Linked table '{linked.SourceTableName}' under '{parentName}' cannot use relation type 'Map'. Use 'Value' or 'Array'");
         }
     }
 
@@ -513,8 +511,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (string.Equals(l.SourceTableSchema, r.SourceTableSchema, StringComparison.OrdinalIgnoreCase) == false ||
                 string.Equals(l.SourceTableName, r.SourceTableName, StringComparison.OrdinalIgnoreCase) == false ||
                 string.Equals(l.PropertyName, r.PropertyName, StringComparison.OrdinalIgnoreCase) == false ||
-                string.Equals(l.LinkedCollectionName, r.LinkedCollectionName, StringComparison.OrdinalIgnoreCase) == false ||
-                l.Type != r.Type)
+                string.Equals(l.LinkedCollectionName, r.LinkedCollectionName, StringComparison.OrdinalIgnoreCase) == false)
                 return true;
 
             if (l.JoinColumns.SequenceEqual(r.JoinColumns) == false)

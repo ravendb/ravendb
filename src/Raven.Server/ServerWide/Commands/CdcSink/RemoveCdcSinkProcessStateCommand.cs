@@ -9,22 +9,19 @@ public sealed class RemoveCdcSinkProcessStateCommand : UpdateValueForDatabaseCom
 {
     public string ConfigurationName { get; set; }
 
-    public string ScriptName { get; set; }
-
     public RemoveCdcSinkProcessStateCommand()
     {
         // for deserialization
     }
 
-    public RemoveCdcSinkProcessStateCommand(string databaseName, string configurationName, string scriptName, string uniqueRequestId)
+    public RemoveCdcSinkProcessStateCommand(string databaseName, string configurationName, string uniqueRequestId)
         : base(databaseName, uniqueRequestId)
     {
         ConfigurationName = configurationName;
-        ScriptName = scriptName;
     }
 
     public override string GetItemId() =>
-        CdcSinkProcessState.GenerateItemName(DatabaseName, ConfigurationName, ScriptName);
+        CdcSinkProcessState.GenerateItemName(DatabaseName, ConfigurationName);
 
     protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue) =>
         new UpdatedValue(UpdatedValueActionType.Delete, value: null);
@@ -32,6 +29,5 @@ public sealed class RemoveCdcSinkProcessStateCommand : UpdateValueForDatabaseCom
     public override void FillJson(DynamicJsonValue json)
     {
         json[nameof(ConfigurationName)] = ConfigurationName;
-        json[nameof(ScriptName)] = ScriptName;
     }
 }

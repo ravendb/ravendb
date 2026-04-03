@@ -30,7 +30,7 @@ public sealed class UpdateCdcSinkProcessStateCommand : UpdateValueForDatabaseCom
     public override string GetItemId()
     {
         var databaseName = ShardHelper.ToDatabaseName(DatabaseName);
-        return CdcSinkProcessState.GenerateItemName(databaseName, State.ConfigurationName, State.ScriptName);
+        return CdcSinkProcessState.GenerateItemName(databaseName, State.ConfigurationName);
     }
 
     public override void FillJson(DynamicJsonValue json)

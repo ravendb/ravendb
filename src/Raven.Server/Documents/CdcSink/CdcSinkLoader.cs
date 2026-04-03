@@ -122,7 +122,7 @@ public class CdcSinkLoader : IDisposable
             if (ValidateConfiguration(config, uniqueNames) == false)
                 continue;
 
-            var processState = GetProcessState(config.Tables, _database, config.Name);
+            var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
             var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, _databaseRecord.Topology, config, processState, _database.NotificationCenter);
             if (whoseTaskIsIt != _serverStore.NodeTag)
                 continue;
@@ -182,7 +182,7 @@ public class CdcSinkLoader : IDisposable
 
     private bool IsMyTask(DatabaseRecord record, CdcSinkConfiguration config, ref Dictionary<string, string> responsibleNodes)
     {
-        var processState = GetProcessState(config.Tables, _database, config.Name);
+        var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
         var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(_serverStore, record.Topology, config, processState, _database.NotificationCenter);
 
         responsibleNodes[config.Name] = whoseTaskIsIt;
@@ -190,22 +190,7 @@ public class CdcSinkLoader : IDisposable
         return whoseTaskIsIt == _serverStore.NodeTag;
     }
 
-    public static CdcSinkProcessState GetProcessState(List<CdcSinkTableConfig> tables, DocumentDatabase database, string configurationName)
-    {
-        CdcSinkProcessState processState = null;
 
-        foreach (var table in tables)
-        {
-            if (table.Name == null)
-                continue;
-
-            processState = CdcSinkProcess.GetProcessState(database, configurationName, table.Name);
-            if (processState.NodeTag != null)
-                break;
-        }
-
-        return processState ?? new CdcSinkProcessState();
-    }
 
     private void LogConfigurationError(CdcSinkConfiguration config, List<string> errors)
     {

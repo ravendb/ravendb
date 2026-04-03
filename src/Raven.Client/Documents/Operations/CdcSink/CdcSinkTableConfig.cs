@@ -35,7 +35,8 @@ public class CdcSinkTableConfig : IDynamicJson
     /// <summary>
     /// Optional JavaScript transformation patch.
     /// Runs on the document after column mapping and embedded operations.
-    /// Available variables: this = document, $row = raw CDC row (all columns).
+    /// Available variables: this = document, $row = raw CDC row (all columns),
+    /// $old = the previous version of this document (for updates, null for inserts).
     /// </summary>
     public string Patch { get; set; }
 

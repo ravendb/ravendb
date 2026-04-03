@@ -101,13 +101,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         return OngoingTaskConnectionStatus.NotActive;
     }
 
-    public static CdcSinkProcessState GetProcessState(DocumentDatabase database, string configurationName, string scriptName)
+    public static CdcSinkProcessState GetProcessState(DocumentDatabase database, string configurationName)
     {
         using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
             var stateBlittable = database.ServerStore.Cluster.Read(context,
-                CdcSinkProcessState.GenerateItemName(database.Name, configurationName, scriptName));
+                CdcSinkProcessState.GenerateItemName(database.Name, configurationName));
 
             if (stateBlittable != null)
             {
@@ -412,5 +412,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     public void LowMemoryOver()
     {
         _lowMemoryFlag.Lower();
+    }
+
+    internal static void AddParameter(System.Data.Common.DbCommand cmd, string name, object value)
+    {
+        var param = cmd.CreateParameter();
+        param.ParameterName = name;
+        param.Value = value ?? DBNull.Value;
+        cmd.Parameters.Add(param);
     }
 }

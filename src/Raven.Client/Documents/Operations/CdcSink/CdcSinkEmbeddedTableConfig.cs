@@ -48,7 +48,8 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
 
     /// <summary>
     /// Optional JavaScript patch that runs on the PARENT document after this embedded operation.
-    /// Available variables: this = parent document, $row = the embedded row data.
+    /// Available variables: this = parent document, $row = the embedded row data,
+    /// $old = the previous version of this embedded item (for updates, null for inserts).
     /// </summary>
     public string Patch { get; set; }
 

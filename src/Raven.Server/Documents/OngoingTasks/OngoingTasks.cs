@@ -149,7 +149,7 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
         var connectionStatus = OngoingTaskConnectionStatus.None;
         error = null;
 
-        var processState = CdcSinkLoader.GetProcessState(config.Tables, _database, config.Name);
+        var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
 
         tag = OngoingTasksUtils.WhoseTaskIsIt(_server, record.Topology, config, processState, _database.NotificationCenter);
 

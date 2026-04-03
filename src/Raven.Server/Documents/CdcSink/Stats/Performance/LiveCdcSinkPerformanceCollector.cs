@@ -52,7 +52,7 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 
                         perfStats.Add(new CdcSinkProcessPerformanceStats
                         {
-                            ScriptName = process.Name,
+
                             Performance = process.GetPerformanceStats()
                         });
 
@@ -113,7 +113,6 @@ public class LiveCdcSinkPerformanceCollector : DatabaseAwareLivePerformanceColle
 
                     processesStats.Add(new CdcSinkProcessPerformanceStats
                     {
-                        ScriptName = cdcSink.Name,
                         Performance = itemsToSend.Select(item => item.ToPerformanceLiveStatsWithDetails()).ToArray()
                     });
 

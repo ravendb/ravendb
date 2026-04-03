@@ -88,7 +88,6 @@ public class CdcSinkHandler : DatabaseRequestHandler
             {
                 processPerformanceStats.Add(new CdcSinkProcessPerformanceStats
                 {
-                    ScriptName = process.Name,
                     Performance = process.GetPerformanceStats()
                 });
             }

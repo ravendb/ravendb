@@ -38,7 +38,6 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
                             SourceTableName = "customers",
                             PropertyName = "Customer",
                             JoinColumns = new List<string> { "customer_id" },
-                            Type = CdcSinkRelationType.Value,
                             LinkedCollectionName = "Customers",
                         }
                     },

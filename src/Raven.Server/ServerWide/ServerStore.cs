@@ -2581,32 +2581,21 @@ namespace Raven.Server.ServerWide
         public async Task<(long, object)> AddCdcSink(TransactionOperationContext context,
             string databaseName, BlittableJsonReaderObject cdcSinkConfiguration, string raftRequestId)
         {
-            UpdateDatabaseCommand command;
-
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
-            {
-                var cdcSink = JsonDeserializationCluster.CdcSinkConfiguration(cdcSinkConfiguration);
-                cdcSink.Validate(out var cdcSinkErr, validateName: false, validateConnection: false);
-
-                var sqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                var validateConnectionString = sqlConnectionStrings != null && sqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out _);
-
-                if (validateConnectionString == false)
-                    cdcSinkErr.Add($"Could not find connection string named '{cdcSink.ConnectionStringName}'. Please supply an existing connection string.");
-
-                ThrowInvalidCdcSinkConfigurationIfNecessary(cdcSinkConfiguration, cdcSinkErr);
-                command = new AddCdcSinkCommand(cdcSink, databaseName, raftRequestId);
-            }
-
+            var cdcSink = ValidateCdcSinkConfiguration(databaseName, cdcSinkConfiguration);
+            var command = new AddCdcSinkCommand(cdcSink, databaseName, raftRequestId);
             return await SendToLeaderAsync(command);
         }
 
         public async Task<(long, object)> UpdateCdcSink(TransactionOperationContext context, string databaseName,
             long id, BlittableJsonReaderObject cdcSinkConfiguration, string raftRequestId)
         {
-            UpdateDatabaseCommand command;
+            var cdcSink = ValidateCdcSinkConfiguration(databaseName, cdcSinkConfiguration);
+            var command = new UpdateCdcSinkCommand(id, cdcSink, databaseName, raftRequestId);
+            return await SendToLeaderAsync(command);
+        }
+
+        private Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration ValidateCdcSinkConfiguration(string databaseName, BlittableJsonReaderObject cdcSinkConfiguration)
+        {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             using (var rawRecord = Cluster.ReadRawDatabaseRecord(ctx, databaseName))
@@ -2615,16 +2604,12 @@ namespace Raven.Server.ServerWide
                 cdcSink.Validate(out var cdcSinkErr, validateName: false, validateConnection: false);
 
                 var sqlConnectionStrings = rawRecord.SqlConnectionStrings;
-                var result = sqlConnectionStrings != null && sqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out _);
-
-                if (result == false)
+                if (sqlConnectionStrings == null || sqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out _) == false)
                     cdcSinkErr.Add($"Could not find connection string named '{cdcSink.ConnectionStringName}'. Please supply an existing connection string.");
 
                 ThrowInvalidCdcSinkConfigurationIfNecessary(cdcSinkConfiguration, cdcSinkErr);
-                command = new UpdateCdcSinkCommand(id, cdcSink, databaseName, raftRequestId);
+                return cdcSink;
             }
-
-            return await SendToLeaderAsync(command);
         }
 
         private void ThrowInvalidCdcSinkConfigurationIfNecessary(BlittableJsonReaderObject cdcSinkConfiguration,
@@ -2651,9 +2636,9 @@ namespace Raven.Server.ServerWide
             throw new InvalidOperationException(sb.ToString());
         }
 
-        public Task<(long, object)> RemoveCdcSinkProcessState(TransactionOperationContext context, string databaseName, string configurationName, string scriptName, string raftRequestId)
+        public Task<(long, object)> RemoveCdcSinkProcessState(TransactionOperationContext context, string databaseName, string configurationName, string raftRequestId)
         {
-            var command = new RemoveCdcSinkProcessStateCommand(databaseName, configurationName, scriptName, raftRequestId);
+            var command = new RemoveCdcSinkProcessStateCommand(databaseName, configurationName, raftRequestId);
 
             return SendToLeaderAsync(command);
         }

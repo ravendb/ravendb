@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Data.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -135,12 +133,9 @@ public static class CdcSinkSourceVerifier
         else
         {
             // User can't create replication infrastructure — check if admin already set it up.
-            // Use the config's Postgres settings if available (user-defined or previously auto-filled),
-            // otherwise compute the expected names from the hash.
-            var expectedPubName = configuration?.Postgres?.PublicationName
-                ?? ComputePublicationName(connection.Database, configuration?.Name ?? "", tableNames);
-            var expectedSlotName = configuration?.Postgres?.SlotName
-                ?? ComputeSlotName(connection.Database, configuration?.Name ?? "", tableNames);
+            // Names are always set by AddCdcSinkCommand, so they are guaranteed non-null here.
+            var expectedPubName = configuration.Postgres.PublicationName;
+            var expectedSlotName = configuration.Postgres.SlotName;
 
             bool publicationExists = false;
             bool slotExists = false;
@@ -148,20 +143,14 @@ public static class CdcSinkSourceVerifier
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT 1 FROM pg_publication WHERE pubname = @pubName";
-                var param = cmd.CreateParameter();
-                param.ParameterName = "@pubName";
-                param.Value = expectedPubName;
-                cmd.Parameters.Add(param);
+                CdcSinkProcess.AddParameter(cmd, "@pubName", expectedPubName);
                 publicationExists = await cmd.ExecuteScalarAsync() != null;
             }
 
             await using (var cmd = connection.CreateCommand())
             {
                 cmd.CommandText = "SELECT 1 FROM pg_replication_slots WHERE slot_name = @slotName";
-                var param = cmd.CreateParameter();
-                param.ParameterName = "@slotName";
-                param.Value = expectedSlotName;
-                cmd.Parameters.Add(param);
+                CdcSinkProcess.AddParameter(cmd, "@slotName", expectedSlotName);
                 slotExists = await cmd.ExecuteScalarAsync() != null;
             }
 
@@ -285,8 +274,8 @@ public static class CdcSinkSourceVerifier
                 JOIN pg_namespace n ON c.relnamespace = n.oid
                 WHERE n.nspname = @schema AND c.relname = @table
                 """;
-            AddParameter(cmd, "@schema", schema);
-            AddParameter(cmd, "@table", table);
+            CdcSinkProcess.AddParameter(cmd, "@schema", schema);
+            CdcSinkProcess.AddParameter(cmd, "@table", table);
             var result = await cmd.ExecuteScalarAsync();
             replicaIdentity = result is char c ? c : 'd';
         }
@@ -313,8 +302,8 @@ public static class CdcSinkSourceVerifier
                         WHERE n.nspname = @schema AND c.relname = @table
                           AND idx.indisreplident = true
                         """;
-                    AddParameter(cmd, "@schema", schema);
-                    AddParameter(cmd, "@table", table);
+                    CdcSinkProcess.AddParameter(cmd, "@schema", schema);
+                    CdcSinkProcess.AddParameter(cmd, "@table", table);
                     await using var reader = await cmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                         indexColumns.Add(reader.GetString(0));
@@ -343,13 +332,6 @@ public static class CdcSinkSourceVerifier
                 return "REPLICA IDENTITY is DEFAULT (PK-only) and the required columns are not all in the primary key.";
         }
 
-        static void AddParameter(DbCommand cmd, string name, object value)
-        {
-            var param = cmd.CreateParameter();
-            param.ParameterName = name;
-            param.Value = value;
-            cmd.Parameters.Add(param);
-        }
     }
 
     private static async Task VerifySqlServerAsync(DbConnection connection, List<string> tableNames, CdcSinkVerificationResult result)
@@ -509,83 +491,4 @@ public static class CdcSinkSourceVerifier
         }
     }
 
-    /// <summary>
-    /// Computes a hash key for a set of table names, used to track initial-load progress per table.
-    /// This is an internal key stored in RavenDB, not a PostgreSQL identifier, so length is unrestricted.
-    /// </summary>
-    internal static string ComputeTablesHash(List<string> tableNames)
-    {
-        if (tableNames == null || tableNames.Count == 0)
-            return "empty";
-
-        var sorted = string.Join("_", tableNames.OrderBy(t => t));
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(sorted));
-        return ToBase32Lower(bytes);
-    }
-
-    /// <summary>
-    /// Computes the PostgreSQL replication slot name for a given database and set of tables.
-    /// Includes the database name in the hash so different databases with the same tables
-    /// get distinct slots (pg_replication_slots is a cluster-wide global view).
-    /// </summary>
-    /// <summary>
-    /// Computes the PostgreSQL replication slot name.
-    /// Includes the database name and CDC Sink configuration name in the hash so that:
-    /// - Different databases with the same tables get distinct slots
-    ///   (pg_replication_slots is a cluster-wide global view)
-    /// - Two CDC Sink tasks covering the same tables but with different configurations
-    ///   get distinct slots (e.g., different column mappings or patches)
-    /// </summary>
-    internal static string ComputeSlotName(string databaseName, string configName, List<string> tableNames)
-    {
-        return $"rvn_cdc_s_{ComputeIdentifierHash(databaseName, configName, tableNames)}";
-    }
-
-    /// <summary>
-    /// Computes the PostgreSQL publication name. Same uniqueness guarantees as the slot name.
-    /// </summary>
-    internal static string ComputePublicationName(string databaseName, string configName, List<string> tableNames)
-    {
-        return $"rvn_cdc_p_{ComputeIdentifierHash(databaseName, configName, tableNames)}";
-    }
-
-    /// <summary>
-    /// Computes a full SHA-256 hash of the database name + config name + sorted table names,
-    /// encoded as lowercase base32hex (0-9, a-v). Produces 52 characters for the full 256-bit hash.
-    /// Combined with the 10-char prefix ("rvn_cdc_s_" or "rvn_cdc_p_"), the total is 62 chars
-    /// — safely under PostgreSQL's 63-char identifier limit (NAMEDATALEN - 1).
-    /// </summary>
-    private static string ComputeIdentifierHash(string databaseName, string configName, List<string> tableNames)
-    {
-        var sorted = string.Join("_", tableNames.OrderBy(t => t));
-        var input = $"{databaseName}\0{configName}\0{sorted}";
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
-        return ToBase32Lower(bytes);
-    }
-
-    /// <summary>
-    /// Encodes bytes as lowercase base32hex (RFC 4648 §7): digits 0-9 then letters a-v.
-    /// No padding. 32 bytes → 52 characters. All characters are valid in unquoted
-    /// PostgreSQL identifiers (alphanumeric).
-    /// </summary>
-    private static string ToBase32Lower(byte[] bytes)
-    {
-        const string alphabet = "0123456789abcdefghijklmnopqrstuv";
-        var sb = new StringBuilder((bytes.Length * 8 + 4) / 5);
-        long buffer = 0;
-        int bitsLeft = 0;
-        for (int i = 0; i < bytes.Length; i++)
-        {
-            buffer = (buffer << 8) | bytes[i];
-            bitsLeft += 8;
-            while (bitsLeft >= 5)
-            {
-                bitsLeft -= 5;
-                sb.Append(alphabet[(int)((buffer >> bitsLeft) & 0x1F)]);
-            }
-        }
-        if (bitsLeft > 0)
-            sb.Append(alphabet[(int)((buffer << (5 - bitsLeft)) & 0x1F)]);
-        return sb.ToString();
-    }
 }

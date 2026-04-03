@@ -320,9 +320,6 @@ namespace Raven.Server.Documents.Patch
                         .Host.StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
                 });
 
-                Console.WriteLine("Debugger listening on ws://127.0.0.1:9222");
-                Console.WriteLine("Open Chrome and go to: chrome://inspect");
-
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
                 ScriptEngine.SetClrFunc(GetMetadataMethod, JavaScriptUtils.GetMetadata);
                 ScriptEngine.SetClrFunc("metadataFor", JavaScriptUtils.GetMetadata);

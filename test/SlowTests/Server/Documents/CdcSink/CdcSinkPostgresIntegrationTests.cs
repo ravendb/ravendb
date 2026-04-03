@@ -616,7 +616,6 @@ namespace SlowTests.Server.Documents.CdcSink
                                 SourceTableName = "customers",
                                 PropertyName = "Customer",
                                 LinkedCollectionName = "Customers",
-                                Type = CdcSinkRelationType.Value,
                                 JoinColumns = new List<string> { "customer_id" }
                             }
                         }

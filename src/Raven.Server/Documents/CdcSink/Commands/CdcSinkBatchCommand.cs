@@ -256,15 +256,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         // we won't do anything here since the patch already handled the update. Otherwise, save the updated document with applied puts and embeds.
         if (currentDoc is not null)
         {
-            // Skip double materialization: ApplyEmbeddedOperation and RunPatches already
-            // call ReadObject(..., ToDisk) when they modify the document. If Modifications
-            // is null, no further changes were applied and we can use the doc as-is.
-            // Otherwise (Put-only path), we need to materialize the pending Modifications.
-            var final = currentDoc.Modifications == null
-                ? currentDoc
-                : context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-
-            _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, final);
+            _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, currentDoc);
         }
 
         if (lastPutOp != null) // Store attachments from root table binary columns
@@ -386,11 +378,19 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     }
 
     /// <summary>
-    /// Applies all pending embedded operations to the document, collecting patch entries for
-    /// each non-delete op that has a patch script. When <paramref name="includeOnDelete"/> is true,
-    /// also collects OnDelete patches and respects IgnoreDeletes for delete ops.
-    /// Used both before a root-level delete (to flush side-effect patches) and at the end of
-    /// the group (to apply surviving embeds onto the final document).
+    /// Applies all pending embedded operations to the document, collecting patch entries
+    /// with $old for each operation that has a patch script.
+    ///
+    /// This method is called twice per document group:
+    ///   1. Before a root-level delete (includeOnDelete = true) — we need to flush any
+    ///      OnDelete.Patch scripts for their side effects (audit trails, counters) before
+    ///      the parent document is removed. IgnoreDeletes is respected here: the embedded
+    ///      item stays in the document but the patch still runs.
+    ///   2. At the end of the group (includeOnDelete = false) — we apply the remaining
+    ///      upsert operations to build the final document state. Delete ops are still
+    ///      applied (items removed) but OnDelete patches are NOT collected, because they
+    ///      were already handled in the pre-delete flush or aren't relevant when the
+    ///      parent survives.
     /// </summary>
     private BlittableJsonReaderObject FlushPendingEmbeds(
         DocumentsOperationContext context, string documentId,
@@ -399,29 +399,33 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         foreach (var embedOp in pendingEmbeds ?? [])
         {
-            if (includeOnDelete && embedOp.Operation == CdcSinkOperation.Delete)
-            {
-                var embOnDelete = embedOp.Processor.EmbeddedConfig.OnDelete;
-                if (embOnDelete?.Patch != null)
-                {
-                    // OnDelete.Patch goes through the unified patch pipeline
-                    patches ??= [];
-                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embedOp.Processor.EmbeddedConfig.SourceTableName), embedOp.RawData, embOnDelete.Patch, null));
-                }
-                if (embOnDelete?.IgnoreDeletes == true)
-                    continue; // skip the actual removal - item stays in the array
-            }
+            var isDelete = embedOp.Operation == CdcSinkOperation.Delete;
+            var embeddedConfig = embedOp.Processor.EmbeddedConfig;
 
-            var (updatedDoc, oldItemData) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
-            currentDoc = updatedDoc;
+            // IgnoreDeletes means we want $old for the patch but keep the item in the document.
+            // We run ApplyEmbeddedOperation either way (to compute $old), but discard the
+            // resulting document when IgnoreDeletes is set.
+            bool skipApply = isDelete && includeOnDelete
+                             && embeddedConfig.OnDelete?.IgnoreDeletes == true;
 
-            // Collect embedded patches AFTER applying the operation, so we have $old data.
-            // $old is the previous embedded item's mapped values (null for inserts),
-            // enabling delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
-            if (embedOp.Operation != CdcSinkOperation.Delete && embedOp.Processor.EmbeddedConfig.Patch != null)
+            var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+            if (skipApply == false)
+                currentDoc = updatedDoc;
+
+            // Patch collection — three cases:
+            //   Delete + includeOnDelete + OnDelete.Patch → run the OnDelete.Patch with $old
+            //     (regardless of IgnoreDeletes — patch runs for side effects either way)
+            //   Delete without includeOnDelete → no patch (mid-group flush, not final)
+            //   Upsert + Patch → run the embedded Patch with $old (null on insert, previous item on update)
+            if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
             {
                 patches ??= [];
-                patches.Add(new PatchEntry(embedOp.Processor.EmbeddedConfig.SourceTableName, embedOp.RawData, embedOp.Processor.EmbeddedConfig.Patch, oldItemData));
+                patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embeddedConfig.SourceTableName), embedOp.RawData, embeddedConfig.OnDelete.Patch, old));
+            }
+            else if (!isDelete && embeddedConfig.Patch != null)
+            {
+                patches ??= [];
+                patches.Add(new PatchEntry(embeddedConfig.SourceTableName, embedOp.RawData, embeddedConfig.Patch, old));
             }
         }
 
@@ -430,8 +434,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     /// <summary>
     /// Applies an embedded operation (upsert or delete) and returns the updated document
-    /// along with the old embedded item (for updates — null for inserts and deletes).
-    /// The old blittable is used to provide $old in embedded patch scripts, enabling delta
+    /// along with the old embedded item (for updates and deletes — null for inserts).
+    /// The old blittable is used to provide $old in patch scripts, enabling delta
     /// computations like: this.Total += $row.Amount - ($old?.Amount || 0)
     /// </summary>
     private (BlittableJsonReaderObject Document, BlittableJsonReaderObject Old) ApplyEmbeddedOperation(
@@ -451,7 +455,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 break;
 
             case CdcSinkRelationType.Map:
-                ApplyMapOperation(targetBlittable, target, config, op);
+                old = ApplyMapOperation(context, targetBlittable, target, config, op);
                 break;
 
             case CdcSinkRelationType.Value:
@@ -475,8 +479,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         if (op.Operation != CdcSinkOperation.Upsert)
         {
+            BlittableJsonReaderObject old = null;
+            if (parentDoc != null &&
+                parentDoc.TryGetMember(config.PropertyName, out var deletedValue) &&
+                deletedValue is BlittableJsonReaderObject deletedObj)
+            {
+                old = context.ReadObject(deletedObj, "cdc-old-item");
+            }
             target[config.PropertyName] = null;
-            return null;
+            return old;
         }
 
         // Merge new values onto existing embedded object
@@ -496,8 +507,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     }
 
     /// <returns>
-    /// The matched item's blittable (before modification) when updating an existing item,
-    /// or null for inserts and deletes. Used as $old in embedded patch scripts.
+    /// The matched item's blittable (before modification) when updating or deleting an existing item,
+    /// or null for inserts. Used as $old in embedded patch scripts.
     /// </returns>
     private static BlittableJsonReaderObject ApplyArrayOperation(
         DocumentsOperationContext context,
@@ -519,18 +530,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 {
                     found = true;
 
+                    // Clone BEFORE any modification so we have the previous state for $old.
+                    old = context.ReadObject(item, "cdc-old-item");
+
                     if (op.Operation == CdcSinkOperation.Upsert)
                     {
-                        // Clone BEFORE setting Modifications. Clone() on a nested blittable
-                        // with Modifications calls ReadObject which includes the modifications.
-                        old = context.ReadObject(item, "cdc-old-item");
-
                         item.Modifications = new DynamicJsonValue(item);
                         foreach (var (name, value) in op.MappedData.Properties)
                             item.Modifications[name] = value;
                         newArray.Add(item);
                     }
-                    // else Delete: skip (don't add)
+                    // else Delete: skip (don't add) — old is still captured for OnDelete.Patch
                 }
                 else
                 {
@@ -563,13 +573,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     }
 
 
-    private void ApplyMapOperation(
+    private BlittableJsonReaderObject ApplyMapOperation(
+        DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
         CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
     {
         // BuildMapKey normalizes the key (lowercased when case-insensitive),
         // so all stored map keys use the same normalization. Direct lookup works.
         var mapKey = BuildMapKey(op.MappedData, config, op.Processor.MappedPrimaryKeyNames);
+        BlittableJsonReaderObject old = null;
 
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
@@ -577,10 +589,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         {
             existingMap.Modifications = new DynamicJsonValue(existingMap);
 
+            BlittableJsonReaderObject existingEntry = null;
+            if (existingMap.TryGetMember(mapKey, out var entryValue) &&
+                entryValue is BlittableJsonReaderObject entry)
+            {
+                existingEntry = entry;
+                old = context.ReadObject(existingEntry, "cdc-old-item");
+            }
+
             if (op.Operation == CdcSinkOperation.Upsert)
             {
-                if (existingMap.TryGetMember(mapKey, out var entryValue) &&
-                    entryValue is BlittableJsonReaderObject existingEntry)
+                if (existingEntry is not null)
                 {
                     existingEntry.Modifications = new DynamicJsonValue(existingEntry);
                     foreach (var (name, value) in op.MappedData.Properties)
@@ -607,6 +626,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 target[config.PropertyName] = newMap;
             }
         }
+
+        return old;
     }
 
     /// <summary>

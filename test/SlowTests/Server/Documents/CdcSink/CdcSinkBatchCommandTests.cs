@@ -2808,5 +2808,238 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task EmbeddedOnDelete_Array_OldHasPreviousValue()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Setup: parent document with a "Total" field we'll decrement on delete
+            var parentData = new DynamicJsonValue
+            {
+                ["Total"] = 0,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+            var rootConfig = CreateRootTableConfig("Orders");
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_lines",
+                    PropertyName = "Lines",
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "line_id", Name = "LineId" },
+                        new() { Column = "amount", Name = "Amount" }
+                    },
+                    PrimaryKeyColumns = new List<string> { "line_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Array,
+                    // On upsert: add the amount to the total. $old lets us subtract the previous value on update.
+                    Patch = "this.Total += $row.amount - ($old ? $old.Amount : 0);",
+                    OnDelete = new CdcSinkOnDeleteConfig
+                    {
+                        // On delete: subtract the old amount. $old must be the item being removed.
+                        Patch = "this.Total -= $old ? $old.Amount : 0;"
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var embProcessor = docProcessor.GetProcessor("public.order_lines");
+
+            // Step 1: Create parent
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // Step 2: Insert line with Amount=100, then delete it
+            var insertData = new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 100 };
+            var deleteData = new DynamicJsonValue { ["LineId"] = 1 };
+            var rawInsert = new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } };
+            var rawDelete = new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embProcessor, rawInsert),
+                CreateEmbeddedOp("Orders/1", deleteData, CdcSinkOperation.Delete, embProcessor, rawDelete),
+            };
+            var cmd = new CdcSinkBatchCommand(database, ops, "test", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(cmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(doc);
+                // Insert added 100, delete subtracted 100 via $old → Total should be 0
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "Total": 0,
+                        "Lines": []
+                    }
+                    """);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task EmbeddedOnDelete_Value_OldHasPreviousValue()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var parentData = new DynamicJsonValue
+            {
+                ["LastRemovedProduct"] = null,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+            var rootConfig = CreateRootTableConfig("Orders");
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_detail",
+                    PropertyName = "Detail",
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "detail_id", Name = "DetailId" },
+                        new() { Column = "product", Name = "Product" }
+                    },
+                    PrimaryKeyColumns = new List<string> { "detail_id" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Value,
+                    OnDelete = new CdcSinkOnDeleteConfig
+                    {
+                        // Capture the old product name before it's removed
+                        Patch = "this.LastRemovedProduct = $old ? $old.Product : null;"
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var embProcessor = docProcessor.GetProcessor("public.order_detail");
+
+            // Step 1: Create parent
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // Step 2: Insert the embedded value, then delete it
+            var insertData = new DynamicJsonValue { ["DetailId"] = 1, ["Product"] = "Widget" };
+            var deleteData = new DynamicJsonValue { ["DetailId"] = 1 };
+            var rawInsert = new Dictionary<string, object> { { "detail_id", 1 }, { "product", "Widget" } };
+            var rawDelete = new Dictionary<string, object> { { "detail_id", 1 }, { "product", "Widget" } };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embProcessor, rawInsert),
+                CreateEmbeddedOp("Orders/1", deleteData, CdcSinkOperation.Delete, embProcessor, rawDelete),
+            };
+            var cmd = new CdcSinkBatchCommand(database, ops, "test", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(cmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(doc);
+                // $old in the OnDelete patch should have had the previous value
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "LastRemovedProduct": "Widget",
+                        "Detail": null
+                    }
+                    """);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task EmbeddedOnDelete_Map_OldHasPreviousValue()
+        {
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var parentData = new DynamicJsonValue
+            {
+                ["RemovedKeys"] = new DynamicJsonArray(),
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+            var rootConfig = CreateRootTableConfig("Orders");
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+            {
+                new CdcSinkEmbeddedTableConfig
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "order_tags",
+                    PropertyName = "Tags",
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new() { Column = "tag_key", Name = "TagKey" },
+                        new() { Column = "tag_value", Name = "TagValue" }
+                    },
+                    PrimaryKeyColumns = new List<string> { "tag_key" },
+                    JoinColumns = new List<string> { "order_id" },
+                    Type = CdcSinkRelationType.Map,
+                    OnDelete = new CdcSinkOnDeleteConfig
+                    {
+                        // Record the old value that was removed
+                        Patch = "if ($old) this.RemovedKeys.push($old.TagValue);"
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var embProcessor = docProcessor.GetProcessor("public.order_tags");
+
+            // Step 1: Create parent
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // Step 2: Insert a tag, then delete it
+            var insertData = new DynamicJsonValue { ["TagKey"] = "priority", ["TagValue"] = "high" };
+            var deleteData = new DynamicJsonValue { ["TagKey"] = "priority" };
+            var rawInsert = new Dictionary<string, object> { { "tag_key", "priority" }, { "tag_value", "high" } };
+            var rawDelete = new Dictionary<string, object> { { "tag_key", "priority" }, { "tag_value", "high" } };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1", insertData, CdcSinkOperation.Upsert, embProcessor, rawInsert),
+                CreateEmbeddedOp("Orders/1", deleteData, CdcSinkOperation.Delete, embProcessor, rawDelete),
+            };
+            var cmd = new CdcSinkBatchCommand(database, ops, "test", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(cmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(doc);
+                // $old in the OnDelete patch should have had the map entry being removed
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "RemovedKeys": ["high"]
+                    }
+                    """);
+            }
+        }
+
     }
 }

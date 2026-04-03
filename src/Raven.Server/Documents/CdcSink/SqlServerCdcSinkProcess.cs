@@ -625,13 +625,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         return conn;
     }
 
-    private static void AddParameter(DbCommand cmd, string name, object value)
-    {
-        var param = cmd.CreateParameter();
-        param.ParameterName = name;
-        param.Value = value ?? DBNull.Value;
-        cmd.Parameters.Add(param);
-    }
+
 
     private static async Task<Dictionary<string, string>> GetColumnTypes(
         DbConnection conn, string schema, string tableName, List<string> columns, CancellationToken ct)

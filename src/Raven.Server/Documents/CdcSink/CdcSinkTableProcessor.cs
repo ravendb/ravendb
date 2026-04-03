@@ -244,9 +244,6 @@ public class CdcSinkTableProcessor
 
         foreach (var linked in RootConfig.LinkedTables)
         {
-            if (linked.Type != CdcSinkRelationType.Value)
-                continue;
-
             _sb.Clear();
             _sb.Append(linked.LinkedCollectionName);
 
