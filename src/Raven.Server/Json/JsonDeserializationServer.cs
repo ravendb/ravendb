@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
@@ -56,6 +57,8 @@ using Raven.Server.Documents.Indexes.Test;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.CdcSink.Handlers;
+using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -147,6 +150,10 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, TestQueueEtlScript> TestQueueEtlScript = GenerateJsonDeserializationRoutine<TestQueueEtlScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestQueueSinkScript> TestQueueSinkScript = GenerateJsonDeserializationRoutine<TestQueueSinkScript>();
+
+        public static readonly Func<BlittableJsonReaderObject, TestCdcSinkScript> TestCdcSinkScript = GenerateJsonDeserializationRoutine<TestCdcSinkScript>();
+
+        public static readonly Func<BlittableJsonReaderObject, Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest> CdcSinkVerifyRequest = GenerateJsonDeserializationRoutine<Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, TestEmbeddingsGenerationScript> TestEmbeddingsGenerationScript = GenerateJsonDeserializationRoutine<TestEmbeddingsGenerationScript>();
 
@@ -368,6 +375,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
 
         internal static readonly Func<BlittableJsonReaderObject, DatabaseNotificationsSummaryRequestConfig> NotificationsSummaryRequestConfig = GenerateJsonDeserializationRoutine<DatabaseNotificationsSummaryRequestConfig>();
+
+        public static readonly Func<BlittableJsonReaderObject, CdcSinkTaskState> CdcSinkTaskState = GenerateJsonDeserializationRoutine<CdcSinkTaskState>();
         
         public sealed class Parameters
         {

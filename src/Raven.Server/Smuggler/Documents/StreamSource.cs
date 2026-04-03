@@ -18,6 +18,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Queries.Sorting;
@@ -487,7 +488,25 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
                 }
-                
+
+                if (reader.TryGet(nameof(databaseRecord.CdcSinks), out BlittableJsonReaderArray cdcSinks) &&
+                    cdcSinks != null)
+                {
+                    databaseRecord.CdcSinks = new List<CdcSinkConfiguration>();
+                    foreach (BlittableJsonReaderObject cdcSink in cdcSinks)
+                    {
+                        try
+                        {
+                            databaseRecord.CdcSinks.Add(JsonDeserializationCluster.CdcSinkConfiguration(cdcSink));
+                        }
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the CDC sink configuration from smuggler file. Skipping.", e);
+                        }
+                    }
+                }
+
                 if (reader.TryGet(nameof(databaseRecord.EmbeddingsGenerations), out BlittableJsonReaderArray embeddingsGenerations) &&
                     embeddingsGenerations != null)
                 {
