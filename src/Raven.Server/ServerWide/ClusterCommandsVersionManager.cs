@@ -13,6 +13,7 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.Monitoring.Snmp;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sharding;
 using Raven.Server.ServerWide.Commands.Sorters;
@@ -180,10 +181,15 @@ namespace Raven.Server.ServerWide
             [nameof(UpdateServerPublishedUrlsCommand)] = 60_000,
             [nameof(PutShardedSubscriptionBatchCommand)] = 60_000,
             
-            [nameof(AddQueueSinkCommand)] = 60_000,            
+            [nameof(AddQueueSinkCommand)] = 60_000,
             [nameof(UpdateQueueSinkCommand)] = 60_000,
             [nameof(RemoveQueueSinkProcessStateCommand)] = 60_000,
             [nameof(UpdateQueueSinkProcessStateCommand)] = 60_000,
+
+            [nameof(AddCdcSinkCommand)] = 72_000,
+            [nameof(UpdateCdcSinkCommand)] = 72_000,
+            [nameof(RemoveCdcSinkProcessStateCommand)] = 72_000,
+            [nameof(UpdateCdcSinkProcessStateCommand)] = 72_000,
 
             [nameof(EditDataArchivalCommand)] = 60_000,
 

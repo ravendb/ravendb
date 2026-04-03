@@ -18,6 +18,7 @@ using Raven.Server.ServerWide.Commands.Analyzers;
 using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
+using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Commands.QueueSink;
 using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
@@ -63,6 +64,8 @@ public sealed partial class ClusterStateMachine
         nameof(AddElasticSearchEtlCommand),
         nameof(AddQueueSinkCommand),
         nameof(UpdateQueueSinkCommand),
+        nameof(AddCdcSinkCommand),
+        nameof(UpdateCdcSinkCommand),
         nameof(AddEmbeddingsGenerationCommand),
         nameof(UpdateEmbeddingsGenerationCommand),
         nameof(EditDataArchivalCommand),
@@ -142,6 +145,11 @@ public sealed partial class ClusterStateMachine
             case nameof(AddQueueSinkCommand):
             case nameof(UpdateQueueSinkCommand):
                 AssertQueueSink(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
+
+            case nameof(AddCdcSinkCommand):
+            case nameof(UpdateCdcSinkCommand):
+                AssertCdcSink(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
 
             case nameof(EditDataArchivalCommand):
@@ -252,6 +260,7 @@ public sealed partial class ClusterStateMachine
             if (AssertServerWideStudioConfiguration(newLicenseLimits, context) == false && databaseRecord.Studio is { Disabled: false })
                 throw new LicenseLimitException(LimitType.StudioConfiguration, "Your license doesn't support adding the studio configuration.");
             AssertQueueSink(databaseRecord, newLicenseLimits, context);
+            AssertCdcSink(databaseRecord, newLicenseLimits, context);
             AssertDataArchival(databaseRecord, newLicenseLimits, context);
             AssertEncryptionLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertDynamicNodesDistribution(databaseRecord, newLicenseLimits, context);
@@ -575,6 +584,21 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.QueueSink, "Your license doesn't support using the queue sink feature.");
+    }
+
+    private void AssertCdcSink(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (licenseStatus.HasCdcSink)
+            return;
+
+        if (databaseRecord.CdcSinks == null || databaseRecord.CdcSinks.Count == 0)
+            return;
+
+        // TODO: replace MinBuildVersion60000 with a new constant for 7.2 — old servers don't know about CdcSink
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
+            return;
+
+        throw new LicenseLimitException(LimitType.CdcSink, "Your license doesn't support using the CDC sink feature.");
     }
 
     private void AssertDataArchival(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
@@ -1282,6 +1306,9 @@ public sealed partial class ClusterStateMachine
                     break;
                 case OngoingTaskType.QueueSink:
                     AssertQueueSink(databaseRecord, licenseStatus, context);
+                    break;
+                case OngoingTaskType.CdcSink:
+                    AssertCdcSink(databaseRecord, licenseStatus, context);
                     break;
                 case OngoingTaskType.EmbeddingsGeneration:
                     AssertEmbeddingsGeneration(databaseRecord, licenseStatus, context);

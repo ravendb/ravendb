@@ -47,6 +47,7 @@ public enum LicenseAttribute
     ClientConfiguration,
     StudioConfiguration,
     QueueSink,
+    CdcSink,
     DataArchival,
     RevisionsInSubscriptions,
     MultiNodeSharding,
