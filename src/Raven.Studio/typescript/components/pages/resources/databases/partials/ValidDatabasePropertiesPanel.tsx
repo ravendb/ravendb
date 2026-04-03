@@ -347,7 +347,7 @@ function getLocalGeneralInfo(
 
     const totalSizeWithTempBuffers = sumBy(
         localDbStatesWithoutErrors,
-        (x) => (x.data?.totalSize?.SizeInBytes ?? 0) + (x.data?.tempBuffersSize?.SizeInBytes ?? 0)
+        (x) => (x.data?.totalPhysicalSize?.SizeInBytes ?? 0) + (x.data?.tempBuffersSize?.SizeInBytes ?? 0)
     );
 
     const totalDocuments = sumBy(localDbStatesWithoutErrors, (x) => x.data?.documentsCount ?? 0);

@@ -22,7 +22,8 @@
                 <th class="column-min-width">Name</th>
                 <th data-bind="visible: showPagesColumn()"># Pages</th>
                 <th data-bind="visible: showEntriesColumn()">Entries</th>
-                <th><span data-bind="visible: showTempFiles()">Total</span> Size (&sum; <span data-bind="text: node().formatSize(true)"></span>)</th>
+                <th><span data-bind="visible: showTempFiles()">Total</span> Allocated (&sum; <span data-bind="text: allocatedNodeSize"></span>)</th>
+                <th data-bind="visible: showOnDiskColumn">On Disk (&sum; <span data-bind="text: onDiskNodeSize"></span>)</th>
                 <th>% Total</th>
             </tr>
         </thead>
@@ -39,6 +40,7 @@
                 <td data-bind="visible: $root.showPagesColumn(), text: pageCount ? pageCount.toLocaleString() : 0"></td>
                 <td data-bind="visible: $root.showEntriesColumn(), text: numberOfEntries ? numberOfEntries.toLocaleString() : 0"></td>
                 <td data-bind="html: formatSize(false)"></td>
+                <td data-bind="visible: $root.showOnDiskColumn, text: $root.onDiskSizeFormatted($data)"></td>
                 <td data-bind="text: formatPercentage($parent.node().size)"></td>
             </tr>
         </tbody>

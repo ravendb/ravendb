@@ -13,15 +13,18 @@ export function SizeOnDisk(props: { info: DatabaseLocalInfo }) {
         return null;
     }
     const tempBufferSize = info.tempBuffersSize?.SizeInBytes ?? 0;
-    const totalSize = info.totalSize?.SizeInBytes ?? 0;
-    const grandTotalSize = tempBufferSize + totalSize;
+    const physicalSize = info.totalPhysicalSize?.SizeInBytes ?? 0;
+    const allocatedSize = info.totalAllocatedSize?.SizeInBytes ?? 0;
+    const grandTotalSize = tempBufferSize + physicalSize;
 
     return (
         <div>
             <OverlayTrigger
                 overlay={
                     <Tooltip id={tooltipId}>
-                        Data: <strong>{genUtils.formatBytesToSize(totalSize)}</strong>
+                        Data (on disk): <strong>{genUtils.formatBytesToSize(physicalSize)}</strong>
+                        <br />
+                        Data (allocated): <strong>{genUtils.formatBytesToSize(allocatedSize)}</strong>
                         <br />
                         Temp: <strong>{genUtils.formatBytesToSize(tempBufferSize)}</strong>
                         <br />

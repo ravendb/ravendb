@@ -57,7 +57,8 @@ export function toDatabaseLocalInfo(db: StudioDatabaseState, nodeTag: string): D
         performanceHints: db.PerformanceHints,
         upTime: db.UpTime ? genUtils.timeSpanAsAgo(db.UpTime, false) : null, // we format here to avoid constant updates of UI
         backupInfo: db.BackupInfo,
-        totalSize: db.TotalSize,
+        totalPhysicalSize: db.TotalPhysicalSize,
+        totalAllocatedSize: db.TotalAllocatedSize,
         tempBuffersSize: db.TempBuffersSize,
         databaseStatus: db.DatabaseStatus,
     };

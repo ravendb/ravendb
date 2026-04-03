@@ -237,7 +237,11 @@ export class DatabasesStubs {
             Alerts: 1,
             PerformanceHints: 2,
             IndexingErrors: 3,
-            TotalSize: {
+            TotalPhysicalSize: {
+                SizeInBytes: 5,
+                HumaneSize: "5 Bytes",
+            },
+            TotalAllocatedSize: {
                 SizeInBytes: 5,
                 HumaneSize: "5 Bytes",
             },
@@ -263,7 +267,11 @@ export class DatabasesStubs {
             NumberOfTransactionMergerQueueOperations: 0,
             DatabaseId: "jMR/KF8hz0uMKFDXnmrQJA",
             CountOfCompareExchangeTombstones: 44,
-            SizeOnDisk: {
+            PhysicalSizeOnDisk: {
+                HumaneSize: "295.44 MBytes",
+                SizeInBytes: 309788672,
+            },
+            AllocatedSizeOnDisk: {
                 HumaneSize: "295.44 MBytes",
                 SizeInBytes: 309788672,
             },
