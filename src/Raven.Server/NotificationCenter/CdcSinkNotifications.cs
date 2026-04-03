@@ -73,8 +73,8 @@ namespace Raven.Server.NotificationCenter
         public T GetAlert<T>(string processTag, string processName, AlertReason alertReason) where T : INotificationDetails, new()
         {
             Debug.Assert(
-                alertReason is AlertReason.CdcSink_ConsumeError or AlertReason.CdcSink_ScriptError or AlertReason.CdcSink_Error
-                    or AlertReason.CdcSink_ConsumerCreationError, $"Got type: {alertReason}");
+                alertReason is AlertReason.CdcSink_ConsumeError or AlertReason.CdcSink_ScriptError or AlertReason.CdcSink_Error,
+                $"Got type: {alertReason}");
 
             var key = $"{processTag}/{processName}";
 
