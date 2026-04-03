@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations.CdcSink;
 using Sparrow.Json;
@@ -55,10 +56,10 @@ public class CdcSinkTableProcessor
     public List<string> RootJoinColumns { get; init; }
 
     /// <summary>
-    /// Pre-computed set of SQL column names whose values should be parsed as JSON.
-    /// Built from the table's JsonColumns configuration during processor construction.
+    /// The column mappings for this table (root or embedded).
+    /// Used by MapColumns, and also consumed by the batch command for PK lookups and attachment handling.
     /// </summary>
-    public HashSet<string> JsonColumnSet { get; init; }
+    public List<CdcColumnMapping> Columns { get; init; }
 
     /// <summary>
     /// Generate a document ID from row data using primary key values.
@@ -89,17 +90,20 @@ public class CdcSinkTableProcessor
         return GenerateDocumentId(rowData, RootJoinColumns);
     }
 
-    public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, Dictionary<string, string> columnsMapping,
-        HashSet<string> jsonColumns, JsonOperationContext context)
+    public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, List<CdcColumnMapping> columns, JsonOperationContext context)
     {
         var result = new DynamicJsonValue();
-        foreach (var mapping in columnsMapping)
+        for (int i = 0; i < columns.Count; i++)
         {
-            if (rowData.TryGetValue(mapping.Key, out var value) == false)
+            var col = columns[i];
+            if (col.Type == CdcColumnType.Attachment)
+                continue; // attachments are handled separately by the batch command
+
+            if (rowData.TryGetValue(col.Column, out var value) == false)
                 continue;
 
-            bool isJsonColumn = jsonColumns != null && jsonColumns.Contains(mapping.Key);
-            result[mapping.Value] = NormalizeForJson(value, isJsonColumn, context);
+            bool isJsonColumn = col.Type == CdcColumnType.Json;
+            result[col.Name] = NormalizeForJson(value, isJsonColumn, context);
         }
         return result;
     }

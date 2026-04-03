@@ -87,11 +87,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = collectionName,
                 SourceTableSchema = "public",
                 SourceTableName = "orders",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "order_id", "OrderId" },
-                    { "customer_name", "CustomerName" },
-                    { "amount", "Amount" }
+                    new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                    new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" },
+                    new CdcColumnMapping { Column = "amount", Name = "Amount" }
                 },
                 PrimaryKeyColumns = new List<string> { "order_id" },
                 Patch = patch
@@ -277,11 +277,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_lines",
                 PropertyName = "Lines",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" },
-                    { "qty", "Quantity" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                    new CdcColumnMapping { Column = "qty", Name = "Quantity" }
                 },
                 PrimaryKeyColumns = new List<string> { "line_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -349,11 +349,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_lines",
                 PropertyName = "Lines",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" },
-                    { "qty", "Quantity" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                    new CdcColumnMapping { Column = "qty", Name = "Quantity" }
                 },
                 PrimaryKeyColumns = new List<string> { "line_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -435,10 +435,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_lines",
                 PropertyName = "Lines",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 },
                 PrimaryKeyColumns = new List<string> { "line_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -522,10 +522,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_attributes",
                 PropertyName = "Attributes",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "attr_key", "Key" },
-                    { "attr_value", "Value" }
+                    new CdcColumnMapping { Column = "attr_key", Name = "Key" },
+                    new CdcColumnMapping { Column = "attr_value", Name = "Value" }
                 },
                 PrimaryKeyColumns = new List<string> { "attr_key" },
                 JoinColumns = new List<string> { "order_id" },
@@ -588,10 +588,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "shipping_info",
                 PropertyName = "ShippingInfo",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "carrier", "Carrier" },
-                    { "tracking_no", "TrackingNumber" }
+                    new CdcColumnMapping { Column = "carrier", Name = "Carrier" },
+                    new CdcColumnMapping { Column = "tracking_no", Name = "TrackingNumber" }
                 },
                 PrimaryKeyColumns = new List<string> { "order_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -652,10 +652,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_lines",
                 PropertyName = "Lines",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 },
                 PrimaryKeyColumns = new List<string> { "line_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -832,14 +832,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = "Documents",
                 SourceTableSchema = "public",
                 SourceTableName = "documents",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
-                },
-                AttachmentNameMapping = new Dictionary<string, string>
-                {
-                    { "content", "FileContent" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" },
+                    new CdcColumnMapping { Column = "content", Name = "FileContent", Type = CdcColumnType.Attachment }
                 },
                 PrimaryKeyColumns = new List<string> { "id" }
             };
@@ -919,14 +916,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = "Products",
                 SourceTableSchema = "public",
                 SourceTableName = "products",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
-                },
-                AttachmentNameMapping = new Dictionary<string, string>
-                {
-                    { "embedding", "vector" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" },
+                    new CdcColumnMapping { Column = "embedding", Name = "vector", Type = CdcColumnType.Attachment }
                 },
                 PrimaryKeyColumns = new List<string> { "id" }
             };
@@ -994,14 +988,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = "Articles",
                 SourceTableSchema = "public",
                 SourceTableName = "articles",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "title", "Title" }
-                },
-                AttachmentNameMapping = new Dictionary<string, string>
-                {
-                    { "body", "content.txt" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "title", Name = "Title" },
+                    new CdcColumnMapping { Column = "body", Name = "content.txt", Type = CdcColumnType.Attachment }
                 },
                 PrimaryKeyColumns = new List<string> { "id" }
             };
@@ -1127,11 +1118,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_lines",
                 PropertyName = "Lines",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" },
-                    { "qty", "Quantity" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                    new CdcColumnMapping { Column = "qty", Name = "Quantity" }
                 },
                 PrimaryKeyColumns = new List<string> { "line_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -1219,10 +1210,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "order_attributes",
                 PropertyName = "Attributes",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "attr_key", "Key" },
-                    { "attr_value", "Value" }
+                    new CdcColumnMapping { Column = "attr_key", Name = "Key" },
+                    new CdcColumnMapping { Column = "attr_value", Name = "Value" }
                 },
                 PrimaryKeyColumns = new List<string> { "attr_key" },
                 JoinColumns = new List<string> { "order_id" },
@@ -1305,10 +1296,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "shipping_info",
                 PropertyName = "ShippingInfo",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "carrier", "Carrier" },
-                    { "tracking_no", "TrackingNumber" }
+                    new CdcColumnMapping { Column = "carrier", Name = "Carrier" },
+                    new CdcColumnMapping { Column = "tracking_no", Name = "TrackingNumber" }
                 },
                 PrimaryKeyColumns = new List<string> { "order_id" },
                 JoinColumns = new List<string> { "order_id" },
@@ -1515,10 +1506,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 Type = CdcSinkRelationType.Array,
                 JoinColumns = new List<string> { "order_id" },
                 PrimaryKeyColumns = new List<string> { "line_id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 }
             };
             var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
@@ -1578,10 +1569,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 Type = CdcSinkRelationType.Array,
                 JoinColumns = new List<string> { "order_id" },
                 PrimaryKeyColumns = new List<string> { "line_id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 }
             };
             var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
@@ -1678,10 +1669,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 Type = CdcSinkRelationType.Array,
                 JoinColumns = new List<string> { "order_id" },
                 PrimaryKeyColumns = new List<string> { "line_id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 }
             };
             var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
@@ -1808,10 +1799,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "employees",
                 PropertyName = "Employees",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "emp_id", "EmpId" },
-                    { "emp_name", "EmpName" }
+                    new CdcColumnMapping { Column = "emp_id", Name = "EmpId" },
+                    new CdcColumnMapping { Column = "emp_name", Name = "EmpName" }
                 },
                 PrimaryKeyColumns = new List<string> { "emp_id" },
                 JoinColumns = new List<string> { "dept_id" },
@@ -1823,10 +1814,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "departments",
                 PropertyName = "Departments",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "dept_id", "DeptId" },
-                    { "dept_name", "DeptName" }
+                    new CdcColumnMapping { Column = "dept_id", Name = "DeptId" },
+                    new CdcColumnMapping { Column = "dept_name", Name = "DeptName" }
                 },
                 PrimaryKeyColumns = new List<string> { "dept_id" },
                 JoinColumns = new List<string> { "company_id" },
@@ -1839,10 +1830,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = "Companies",
                 SourceTableSchema = "public",
                 SourceTableName = "companies",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "company_id", "CompanyId" },
-                    { "company_name", "CompanyName" }
+                    new CdcColumnMapping { Column = "company_id", Name = "CompanyId" },
+                    new CdcColumnMapping { Column = "company_name", Name = "CompanyName" }
                 },
                 PrimaryKeyColumns = new List<string> { "company_id" },
                 EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { deptConfig }
@@ -2116,10 +2107,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 Type = CdcSinkRelationType.Array,
                 JoinColumns = new List<string> { "order_id" },
                 PrimaryKeyColumns = new List<string> { "line_id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "line_id", "LineId" },
-                    { "product", "Product" }
+                    new CdcColumnMapping { Column = "line_id", Name = "LineId" },
+                    new CdcColumnMapping { Column = "product", Name = "Product" }
                 }
             };
             var embProcessor = CreateEmbeddedProcessor(embeddedConfig);
@@ -2190,10 +2181,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" }
                 },
                 Patch = @"
                     var op = $old ? 'Update' : 'Insert';
@@ -2300,10 +2291,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" }
                 },
                 Patch = @"
                     var op = $old ? 'Update' : 'Insert';
@@ -2412,10 +2403,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" }
                 },
                 Patch = "this.Count = (this.Count || 0) + 1;",
                 OnDelete = new CdcSinkOnDeleteConfig()
@@ -2501,10 +2492,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "name", "Name" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "name", Name = "Name" }
                 },
                 Patch = "this.Count = (this.Count || 0) + 1;",
                 OnDelete = new CdcSinkOnDeleteConfig
@@ -2681,24 +2672,22 @@ namespace SlowTests.Server.Documents.CdcSink
                 Name = "Records",
                 SourceTableSchema = "public",
                 SourceTableName = "records",
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "id", "Id" },
-                    { "metadata", "Metadata" },
-                    { "tags", "Tags" },
-                    { "scores", "Scores" },
-                    { "plain_text", "PlainText" }
+                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "metadata", Name = "Metadata", Type = CdcColumnType.Json },
+                    new CdcColumnMapping { Column = "tags", Name = "Tags" },
+                    new CdcColumnMapping { Column = "scores", Name = "Scores" },
+                    new CdcColumnMapping { Column = "plain_text", Name = "PlainText" }
                 },
-                PrimaryKeyColumns = new List<string> { "id" },
-                JsonColumns = new List<string> { "metadata" }
+                PrimaryKeyColumns = new List<string> { "id" }
             };
 
             var processor = new CdcSinkTableProcessor
             {
                 RootConfig = config,
                 CollectionName = "Records",
-                IsRoot = true,
-                JsonColumnSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "metadata" }
+                IsRoot = true
             };
 
             // Simulate Npgsql-returned types:
@@ -2718,7 +2707,7 @@ namespace SlowTests.Server.Documents.CdcSink
             DynamicJsonValue mappedData;
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonCtx))
             {
-                mappedData = processor.MapColumns(rawData, config.ColumnsMapping, processor.JsonColumnSet, jsonCtx);
+                mappedData = processor.MapColumns(rawData, config.Columns, jsonCtx);
                 mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     { [Constants.Documents.Metadata.Collection] = "Records" };
 
@@ -2782,11 +2771,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 SourceTableSchema = "public",
                 SourceTableName = "orders",
                 PrimaryKeyColumns = new List<string> { "order_id" },
-                ColumnsMapping = new Dictionary<string, string>
+                Columns = new List<CdcColumnMapping>
                 {
-                    { "order_id", "OrderId" },
-                    { "customer_name", "Customer" },
-                    { "amount", "Total" }
+                    new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                    new CdcColumnMapping { Column = "customer_name", Name = "Customer" },
+                    new CdcColumnMapping { Column = "amount", Name = "Total" }
                 },
                 OnDelete = new CdcSinkOnDeleteConfig
                 {

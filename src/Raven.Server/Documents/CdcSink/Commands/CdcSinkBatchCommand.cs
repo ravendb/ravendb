@@ -268,7 +268,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         if (lastPutOp != null) // Store attachments from root table binary columns
-            StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.RootConfig.AttachmentNameMapping, prefix: null);
+            StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.RootConfig.Columns, prefix: null);
 
         // Handle attachments from embedded table binary columns.
         // Attachment name includes the embedded path and PK values to distinguish
@@ -276,32 +276,46 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         foreach (var embOp in pendingEmbeds ?? [])
         {
             var embConfig = embOp.Processor.EmbeddedConfig;
-            if (embConfig.AttachmentNameMapping == null || embConfig.AttachmentNameMapping.Count == 0)
+            if (HasAttachmentColumns(embConfig.Columns) == false)
                 continue;
 
             var prefix = BuildEmbeddedAttachmentPrefix(embConfig, embOp.RawData);
 
             if (embOp.Operation == CdcSinkOperation.Upsert)
             {
-                StoreAttachments(context, documentId, embOp.RawData, embConfig.AttachmentNameMapping, prefix);
+                StoreAttachments(context, documentId, embOp.RawData, embConfig.Columns, prefix);
             }
             else
             {
-                DeleteAttachments(context, documentId, embConfig.AttachmentNameMapping, prefix);
+                DeleteAttachments(context, documentId, embConfig.Columns, prefix);
             }
         }
     }
 
+    private static bool HasAttachmentColumns(List<CdcColumnMapping> columns)
+    {
+        for (int i = 0; i < columns.Count; i++)
+        {
+            if (columns[i].Type == CdcColumnType.Attachment)
+                return true;
+        }
+        return false;
+    }
+
     private void StoreAttachments(
         DocumentsOperationContext context, string documentId,
-        Dictionary<string, object> rawData, Dictionary<string, string> attachmentMapping, string prefix)
+        Dictionary<string, object> rawData, List<CdcColumnMapping> columns, string prefix)
     {
-        foreach (var (sqlColumn, attachmentName) in attachmentMapping)
+        for (int i = 0; i < columns.Count; i++)
         {
-            if (rawData.TryGetValue(sqlColumn, out var value) == false || value is null or DBNull)
+            var col = columns[i];
+            if (col.Type != CdcColumnType.Attachment)
                 continue;
 
-            var name = prefix != null ? prefix + attachmentName : attachmentName;
+            if (rawData.TryGetValue(col.Column, out var value) == false || value is null or DBNull)
+                continue;
+
+            var name = prefix != null ? prefix + col.Name : col.Name;
 
             switch (value)
             {
@@ -318,7 +332,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     StoreAttachmentFromSpan(context, documentId, name, "application/octet-stream", MemoryMarshal.AsBytes(doubles.AsSpan()));
                     break;
                 default:
-                    throw new NotSupportedException($"Unsupported attachment type '{value.GetType().FullName}' for column '{sqlColumn}' on document '{documentId}'.");
+                    throw new NotSupportedException($"Unsupported attachment type '{value.GetType().FullName}' for column '{col.Column}' on document '{documentId}'.");
             }
         }
     }
@@ -356,11 +370,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     private void DeleteAttachments(
         DocumentsOperationContext context, string documentId,
-        Dictionary<string, string> attachmentMapping, string prefix)
+        List<CdcColumnMapping> columns, string prefix)
     {
-        foreach (var (_, attachmentName) in attachmentMapping)
+        for (int i = 0; i < columns.Count; i++)
         {
-            var name = prefix != null ? prefix + attachmentName : attachmentName;
+            var col = columns[i];
+            if (col.Type != CdcColumnType.Attachment)
+                continue;
+
+            var name = prefix != null ? prefix + col.Name : col.Name;
             _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(
                 context, documentId, name, expectedChangeVector: null, collectionName: out _, updateDocument: true);
         }
@@ -620,8 +638,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         foreach (var pkCol in config.PrimaryKeyColumns)
         {
-            if (config.ColumnsMapping.TryGetValue(pkCol, out var mappedName) == false)
-                mappedName = pkCol;
+            var mappedName = FindMappedName(config.Columns, pkCol) ?? pkCol;
 
             if (item.TryGetMember(mappedName, out var existingVal) == false)
                 return false;
@@ -636,6 +653,20 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 return false;
         }
         return true;
+    }
+
+    /// <summary>
+    /// Looks up the mapped property name for a SQL column in the Columns list.
+    /// Returns null if the column is not found (caller falls back to the raw column name).
+    /// </summary>
+    private static string FindMappedName(List<CdcColumnMapping> columns, string sqlColumn)
+    {
+        for (int i = 0; i < columns.Count; i++)
+        {
+            if (string.Equals(columns[i].Column, sqlColumn, StringComparison.OrdinalIgnoreCase))
+                return columns[i].Name;
+        }
+        return null;
     }
 
     private static bool ComparePrimaryKeyValues(object existingVal, object candidateVal, StringComparison stringComparison)
@@ -681,8 +712,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (i > 0)
                 _sb.Append('/');
             var pkCol = config.PrimaryKeyColumns[i];
-            if (config.ColumnsMapping.TryGetValue(pkCol, out var mappedName) == false)
-                mappedName = pkCol;
+            var mappedName = FindMappedName(config.Columns, pkCol) ?? pkCol;
 
             _sb.Append(mappedData[mappedName]?.ToString() ?? "");
         }
@@ -770,9 +800,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                         }
 
                         // The parent PK column is stored under its mapped property name
-                        var mappedName = segment.Config.ColumnsMapping.TryGetValue(parentPkCol, out var mapped)
-                            ? mapped
-                            : parentPkCol;
+                        var mappedName = FindMappedName(segment.Config.Columns, parentPkCol) ?? parentPkCol;
 
                         if (candidate.TryGetMember(mappedName, out var storedValue) == false)
                         {

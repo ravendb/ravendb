@@ -24,20 +24,10 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     public string PropertyName { get; set; }
 
     /// <summary>
-    /// SQL column name → document property name mapping.
+    /// Column mappings defining how SQL columns are stored in the embedded object.
+    /// Each entry maps a SQL column to a property, JSON field, or attachment.
     /// </summary>
-    public Dictionary<string, string> ColumnsMapping { get; set; } = new();
-
-    /// <summary>
-    /// SQL binary column name → attachment name mapping.
-    /// </summary>
-    public Dictionary<string, string> AttachmentNameMapping { get; set; } = new();
-
-    /// <summary>
-    /// SQL column names whose values are JSON (json/jsonb) and should be parsed as
-    /// structured objects/arrays in the document rather than stored as plain strings.
-    /// </summary>
-    public List<string> JsonColumns { get; set; } = new();
+    public List<CdcColumnMapping> Columns { get; set; } = new();
 
     /// <summary>
     /// Primary key columns of this embedded table.
@@ -90,9 +80,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         SourceTableSchema = config.SourceTableSchema;
         SourceTableName = config.SourceTableName;
         PropertyName = config.PropertyName;
-        ColumnsMapping = config.ColumnsMapping;
-        AttachmentNameMapping = config.AttachmentNameMapping;
-        JsonColumns = config.JsonColumns;
+        Columns = config.Columns;
         PrimaryKeyColumns = config.PrimaryKeyColumns;
         JoinColumns = config.JoinColumns;
         Type = config.Type;
@@ -109,9 +97,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(SourceTableSchema)] = SourceTableSchema,
             [nameof(SourceTableName)] = SourceTableName,
             [nameof(PropertyName)] = PropertyName,
-            [nameof(ColumnsMapping)] = DynamicJsonValue.Convert(ColumnsMapping),
-            [nameof(AttachmentNameMapping)] = DynamicJsonValue.Convert(AttachmentNameMapping),
-            [nameof(JsonColumns)] = new DynamicJsonArray(JsonColumns),
+            [nameof(Columns)] = new DynamicJsonArray(Columns.Select(x => x.ToJson())),
             [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
             [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
             [nameof(Type)] = Type.ToString(),

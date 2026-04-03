@@ -41,7 +41,7 @@ public class CdcSinkDocumentProcessor
                 RootConfig = table,
                 CollectionName = table.Name,
                 IsRoot = true,
-                JsonColumnSet = BuildJsonColumnSet(table.JsonColumns),
+                Columns = table.Columns,
             };
 
             _tableIndex[rootKey] = rootProcessor;
@@ -54,14 +54,6 @@ public class CdcSinkDocumentProcessor
         }
 
         CombinedPatchRequest = BuildCombinedPatchRequest();
-    }
-
-    private static HashSet<string> BuildJsonColumnSet(List<string> jsonColumns)
-    {
-        if (jsonColumns == null || jsonColumns.Count == 0)
-            return null;
-
-        return new HashSet<string>(jsonColumns, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -206,7 +198,7 @@ public class CdcSinkDocumentProcessor
                 EmbeddedConfig = embedded,
                 PathFromRoot = path,
                 RootJoinColumns = rootJoinColumns,
-                JsonColumnSet = BuildJsonColumnSet(embedded.JsonColumns),
+                Columns = embedded.Columns,
             };
 
             _tableIndex[key] = processor;
@@ -269,7 +261,7 @@ public class CdcSinkDocumentProcessor
             };
         }
 
-        var mappedData = processor.MapColumns(row.Data, config.ColumnsMapping, processor.JsonColumnSet, context);
+        var mappedData = processor.MapColumns(row.Data, config.Columns, context);
         processor.ApplyLinks(mappedData, row.Data);
 
         mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
@@ -300,7 +292,7 @@ public class CdcSinkDocumentProcessor
             throw new InvalidOperationException(
                 $"Cannot determine parent document ID for embedded table '{processor.EmbeddedConfig.SourceTableSchema}.{processor.EmbeddedConfig.SourceTableName}': " +
                 $"root join columns ({string.Join(", ", processor.RootJoinColumns)}) are missing or null in the CDC row.");
-        var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.ColumnsMapping, processor.JsonColumnSet, context);
+        var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.Columns, context);
 
         return new CdcSinkDocumentOp
         {

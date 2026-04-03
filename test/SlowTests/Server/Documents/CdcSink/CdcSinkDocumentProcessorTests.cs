@@ -22,11 +22,11 @@ public class CdcSinkDocumentProcessorTests
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
-                    ColumnsMapping = new Dictionary<string, string>
+                    Columns = new List<CdcColumnMapping>
                     {
-                        { "order_id", "OrderId" },
-                        { "customer_id", "CustomerId" },
-                        { "order_date", "OrderDate" },
+                        new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                        new CdcColumnMapping { Column = "customer_id", Name = "CustomerId" },
+                        new CdcColumnMapping { Column = "order_date", Name = "OrderDate" }
                     },
                     LinkedTables = new List<CdcSinkLinkedTableConfig>
                     {
@@ -50,12 +50,12 @@ public class CdcSinkDocumentProcessorTests
                             PrimaryKeyColumns = new List<string> { "product_id" },
                             JoinColumns = new List<string> { "order_id" },
                             Type = CdcSinkRelationType.Array,
-                            ColumnsMapping = new Dictionary<string, string>
+                            Columns = new List<CdcColumnMapping>
                             {
-                                { "product_id", "ProductId" },
-                                { "unit_price", "UnitPrice" },
-                                { "quantity", "Quantity" },
-                                { "discount", "Discount" },
+                                new CdcColumnMapping { Column = "product_id", Name = "ProductId" },
+                                new CdcColumnMapping { Column = "unit_price", Name = "UnitPrice" },
+                                new CdcColumnMapping { Column = "quantity", Name = "Quantity" },
+                                new CdcColumnMapping { Column = "discount", Name = "Discount" }
                             },
                         }
                     }
@@ -66,11 +66,11 @@ public class CdcSinkDocumentProcessorTests
                     SourceTableSchema = "public",
                     SourceTableName = "customers",
                     PrimaryKeyColumns = new List<string> { "customer_id" },
-                    ColumnsMapping = new Dictionary<string, string>
+                    Columns = new List<CdcColumnMapping>
                     {
-                        { "customer_id", "CustomerId" },
-                        { "company_name", "CompanyName" },
-                        { "contact_name", "ContactName" },
+                        new CdcColumnMapping { Column = "customer_id", Name = "CustomerId" },
+                        new CdcColumnMapping { Column = "company_name", Name = "CompanyName" },
+                        new CdcColumnMapping { Column = "contact_name", Name = "ContactName" }
                     },
                 }
             }
@@ -307,9 +307,9 @@ public class CdcSinkDocumentProcessorTests
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
-                    ColumnsMapping = new Dictionary<string, string>
+                    Columns = new List<CdcColumnMapping>
                     {
-                        { "order_id", "OrderId" },
+                        new CdcColumnMapping { Column = "order_id", Name = "OrderId" }
                     },
                     EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
                     {
@@ -321,10 +321,10 @@ public class CdcSinkDocumentProcessorTests
                             PrimaryKeyColumns = new List<string> { "product_id" },
                             JoinColumns = new List<string> { "order_id" },
                             Type = CdcSinkRelationType.Map,
-                            ColumnsMapping = new Dictionary<string, string>
+                            Columns = new List<CdcColumnMapping>
                             {
-                                { "product_id", "ProductId" },
-                                { "quantity", "Quantity" },
+                                new CdcColumnMapping { Column = "product_id", Name = "ProductId" },
+                                new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
                             },
                         }
                     }
@@ -369,10 +369,10 @@ public class CdcSinkDocumentProcessorTests
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
-                    ColumnsMapping = new Dictionary<string, string>
+                    Columns = new List<CdcColumnMapping>
                     {
-                        { "order_id", "OrderId" },
-                        { "shipping_id", "ShippingId" },
+                        new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                        new CdcColumnMapping { Column = "shipping_id", Name = "ShippingId" }
                     },
                     EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
                     {
@@ -384,11 +384,11 @@ public class CdcSinkDocumentProcessorTests
                             PrimaryKeyColumns = new List<string> { "shipping_id" },
                             JoinColumns = new List<string> { "order_id" },
                             Type = CdcSinkRelationType.Value,
-                            ColumnsMapping = new Dictionary<string, string>
+                            Columns = new List<CdcColumnMapping>
                             {
-                                { "shipping_id", "ShippingId" },
-                                { "carrier", "Carrier" },
-                                { "tracking_number", "TrackingNumber" },
+                                new CdcColumnMapping { Column = "shipping_id", Name = "ShippingId" },
+                                new CdcColumnMapping { Column = "carrier", Name = "Carrier" },
+                                new CdcColumnMapping { Column = "tracking_number", Name = "TrackingNumber" }
                             },
                         }
                     }
@@ -435,11 +435,11 @@ public class CdcSinkDocumentProcessorTests
                     SourceTableSchema = "public",
                     SourceTableName = "order_details",
                     PrimaryKeyColumns = new List<string> { "order_id", "product_id" },
-                    ColumnsMapping = new Dictionary<string, string>
+                    Columns = new List<CdcColumnMapping>
                     {
-                        { "order_id", "OrderId" },
-                        { "product_id", "ProductId" },
-                        { "quantity", "Quantity" },
+                        new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                        new CdcColumnMapping { Column = "product_id", Name = "ProductId" },
+                        new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
                     },
                 }
             }

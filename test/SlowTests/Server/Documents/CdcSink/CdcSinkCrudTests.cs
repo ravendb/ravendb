@@ -40,7 +40,11 @@ namespace SlowTests.Server.Documents.CdcSink
                         Name = "Orders",
                         SourceTableSchema = "public",
                         SourceTableName = "orders",
-                        ColumnsMapping = new Dictionary<string, string> { { "order_id", "OrderId" }, { "customer_id", "CustomerId" } },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                            new CdcColumnMapping { Column = "customer_id", Name = "CustomerId" }
+                        },
                         PrimaryKeyColumns = new List<string> { "order_id" },
                     }
                 }

@@ -89,14 +89,15 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (table.PrimaryKeyColumns == null || table.PrimaryKeyColumns.Count == 0)
                 errors.Add($"Table '{table.Name}' must have at least one primary key column");
 
-            if (table.ColumnsMapping == null || table.ColumnsMapping.Count == 0)
+            if (table.Columns == null || table.Columns.Count == 0)
                 errors.Add($"Table '{table.Name}' must have at least one column mapping");
+            else
+                ValidateColumns(table.Name, table.Columns, errors);
 
             if (uniqueNames.Add(table.Name) == false)
                 errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
 
             ValidateNoConflictingPropertyNames(table, errors);
-            ValidateNoAttachmentColumnOverlap(table.Name, table.ColumnsMapping, table.AttachmentNameMapping, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
             ValidateLinkedTables(table.LinkedTables, table.Name, errors);
         }
@@ -104,23 +105,53 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         return errors.Count == 0;
     }
 
+    private static void ValidateColumns(string tableName, List<CdcColumnMapping> columns, List<string> errors)
+    {
+        var columnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var targetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var col in columns)
+        {
+            if (string.IsNullOrWhiteSpace(col.Column))
+            {
+                errors.Add($"Table '{tableName}': column mapping has an empty Column name");
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(col.Name))
+            {
+                errors.Add($"Table '{tableName}': column '{col.Column}' has an empty Name");
+                continue;
+            }
+
+            if (columnNames.Add(col.Column) == false)
+                errors.Add($"Table '{tableName}': duplicate column '{col.Column}'");
+
+            if (targetNames.Add(col.Name) == false)
+                errors.Add($"Table '{tableName}': duplicate target name '{col.Name}' (used by multiple columns)");
+        }
+    }
+
     private static void ValidateNoConflictingPropertyNames(CdcSinkTableConfig table, List<string> errors)
     {
-        ValidateNoConflictingPropertyNames(table.Name, table.ColumnsMapping, table.EmbeddedTables, table.LinkedTables, errors);
+        ValidateNoConflictingPropertyNames(table.Name, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
     }
 
     private static void ValidateNoConflictingPropertyNames(string tableName,
-        Dictionary<string, string> columnsMapping,
+        List<CdcColumnMapping> columns,
         List<CdcSinkEmbeddedTableConfig> embeddedTables,
         List<CdcSinkLinkedTableConfig> linkedTables,
         List<string> errors)
     {
         var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (columnsMapping != null)
+        if (columns != null)
         {
-            foreach (var mapped in columnsMapping.Values)
-                propertyNames.Add(mapped);
+            foreach (var col in columns)
+            {
+                if (col.Type != CdcColumnType.Attachment)
+                    propertyNames.Add(col.Name);
+            }
         }
 
         if (embeddedTables != null)
@@ -139,19 +170,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 if (linked.PropertyName != null && propertyNames.Add(linked.PropertyName) == false)
                     errors.Add($"Table '{tableName}': property name '{linked.PropertyName}' from linked table '{linked.SourceTableName}' conflicts with a column mapping or another embedded/linked table");
             }
-        }
-    }
-
-    private static void ValidateNoAttachmentColumnOverlap(string tableName,
-        Dictionary<string, string> columnsMapping, Dictionary<string, string> attachmentNameMapping, List<string> errors)
-    {
-        if (columnsMapping == null || attachmentNameMapping == null || attachmentNameMapping.Count == 0)
-            return;
-
-        foreach (var sqlColumn in attachmentNameMapping.Keys)
-        {
-            if (columnsMapping.ContainsKey(sqlColumn))
-                errors.Add($"Table '{tableName}': column '{sqlColumn}' is mapped both as a document property and as an attachment. A column can only be one or the other.");
         }
     }
 
@@ -180,12 +198,13 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (embedded.PrimaryKeyColumns == null || embedded.PrimaryKeyColumns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have primary key columns");
 
-            if (embedded.ColumnsMapping == null || embedded.ColumnsMapping.Count == 0)
+            if (embedded.Columns == null || embedded.Columns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
+            else
+                ValidateColumns(embedded.SourceTableName, embedded.Columns, errors);
 
             // Check for conflicts within this embedded table's own properties
-            ValidateNoConflictingPropertyNames(embedded.SourceTableName, embedded.ColumnsMapping, embedded.EmbeddedTables, linkedTables: null, errors);
-            ValidateNoAttachmentColumnOverlap(embedded.SourceTableName, embedded.ColumnsMapping, embedded.AttachmentNameMapping, errors);
+            ValidateNoConflictingPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, linkedTables: null, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
         }
@@ -335,12 +354,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (local.Patch != remote.Patch)
             return true;
 
-        if (local.ColumnsMapping.Count != remote.ColumnsMapping.Count ||
-            local.ColumnsMapping.Any(kvp => remote.ColumnsMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
-            return true;
-
-        if (local.AttachmentNameMapping.Count != remote.AttachmentNameMapping.Count ||
-            local.AttachmentNameMapping.Any(kvp => remote.AttachmentNameMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
+        if (HaveColumnsChanged(local.Columns, remote.Columns))
             return true;
 
         if (local.PrimaryKeyColumns.SequenceEqual(remote.PrimaryKeyColumns) == false)
@@ -390,8 +404,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (l.JoinColumns.SequenceEqual(r.JoinColumns) == false)
                 return true;
 
-            if (l.ColumnsMapping.Count != r.ColumnsMapping.Count ||
-                l.ColumnsMapping.Any(kvp => r.ColumnsMapping.TryGetValue(kvp.Key, out var v) == false || v != kvp.Value))
+            if (HaveColumnsChanged(l.Columns, r.Columns))
                 return true;
 
             if (HaveEmbeddedTablesChanged(l.EmbeddedTables, r.EmbeddedTables))
@@ -508,6 +521,28 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             errors.Add($"{fieldName} contains invalid character '{c}' at position {i}. PostgreSQL identifiers may only contain letters, digits, and underscores");
             return;
         }
+    }
+
+    private static bool HaveColumnsChanged(List<CdcColumnMapping> local, List<CdcColumnMapping> remote)
+    {
+        if ((local?.Count ?? 0) != (remote?.Count ?? 0))
+            return true;
+
+        if (local == null)
+            return false;
+
+        for (int i = 0; i < local.Count; i++)
+        {
+            var l = local[i];
+            var r = remote[i];
+
+            if (string.Equals(l.Column, r.Column, StringComparison.OrdinalIgnoreCase) == false ||
+                string.Equals(l.Name, r.Name, StringComparison.OrdinalIgnoreCase) == false ||
+                l.Type != r.Type)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool HaveLinkedTablesChanged(List<CdcSinkLinkedTableConfig> local, List<CdcSinkLinkedTableConfig> remote)

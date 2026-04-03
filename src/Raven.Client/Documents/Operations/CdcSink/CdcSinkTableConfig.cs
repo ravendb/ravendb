@@ -22,24 +22,10 @@ public class CdcSinkTableConfig : IDynamicJson
     public string SourceTableName { get; set; }
 
     /// <summary>
-    /// SQL column name → document property name mapping.
-    /// Only mapped columns appear in the document.
-    /// Unmapped columns are still available in $row for patches.
+    /// Column mappings defining how SQL columns are stored in the RavenDB document.
+    /// Each entry maps a SQL column to a document property, JSON field, or attachment.
     /// </summary>
-    public Dictionary<string, string> ColumnsMapping { get; set; } = new();
-
-    /// <summary>
-    /// SQL binary column name → attachment name mapping.
-    /// </summary>
-    public Dictionary<string, string> AttachmentNameMapping { get; set; } = new();
-
-    /// <summary>
-    /// SQL column names whose values are JSON (json/jsonb) and should be parsed as
-    /// structured objects/arrays in the document rather than stored as plain strings.
-    /// Set by the user in the CDC Sink configuration, or auto-detected from the source
-    /// database schema during task creation when supported.
-    /// </summary>
-    public List<string> JsonColumns { get; set; } = new();
+    public List<CdcColumnMapping> Columns { get; set; } = new();
 
     /// <summary>
     /// Primary key column names, used for document ID generation.
@@ -79,9 +65,7 @@ public class CdcSinkTableConfig : IDynamicJson
             [nameof(Name)] = Name,
             [nameof(SourceTableSchema)] = SourceTableSchema,
             [nameof(SourceTableName)] = SourceTableName,
-            [nameof(ColumnsMapping)] = DynamicJsonValue.Convert(ColumnsMapping),
-            [nameof(AttachmentNameMapping)] = DynamicJsonValue.Convert(AttachmentNameMapping),
-            [nameof(JsonColumns)] = new DynamicJsonArray(JsonColumns),
+            [nameof(Columns)] = new DynamicJsonArray(Columns.Select(x => x.ToJson())),
             [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
             [nameof(Patch)] = Patch,
             [nameof(OnDelete)] = OnDelete?.ToJson(),
