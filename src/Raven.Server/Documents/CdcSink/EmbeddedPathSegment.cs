@@ -19,8 +19,9 @@ public class EmbeddedPathSegment
     public Dictionary<string, string> JoinMapping { get; set; }
 
     /// <summary>
-    /// Pre-computed mapping of SQL column name → mapped property Name for this segment's columns.
-    /// Used for primary key lookups during embedded path navigation.
+    /// Pre-computed mapped property names for this segment's PK columns,
+    /// aligned with Config.PrimaryKeyColumns. Used during embedded path
+    /// navigation to find matching array elements by their mapped property values.
     /// </summary>
-    public Dictionary<string, string> PropertyLookup { get; set; }
+    public string[] MappedPrimaryKeyNames { get; set; }
 }

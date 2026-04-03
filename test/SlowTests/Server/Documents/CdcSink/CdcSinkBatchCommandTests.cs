@@ -26,48 +26,6 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
-        private static void AssertBlittableContains(BlittableJsonReaderObject actual, JsonOperationContext context, string expectedJson)
-        {
-            using var expected = context.Sync.ReadForMemory(expectedJson, "expected");
-            var prop = new BlittableJsonReaderObject.PropertyDetails();
-            for (int i = 0; i < expected.Count; i++)
-            {
-                expected.GetPropertyByIndex(i, ref prop);
-                if (prop.Name == Constants.Documents.Metadata.Key)
-                    continue;
-
-                Assert.True(actual.TryGetMember(prop.Name, out var actualValue),
-                    $"Missing property: {prop.Name}");
-
-                if (prop.Value is BlittableJsonReaderObject expectedObj)
-                {
-                    var actualObj = Assert.IsType<BlittableJsonReaderObject>(actualValue);
-                    AssertBlittableContains(actualObj, context, expectedObj.ToString());
-                }
-                else if (prop.Value is BlittableJsonReaderArray expectedArr)
-                {
-                    var actualArr = Assert.IsType<BlittableJsonReaderArray>(actualValue);
-                    Assert.Equal(expectedArr.Length, actualArr.Length);
-                    for (int j = 0; j < expectedArr.Length; j++)
-                    {
-                        if (expectedArr[j] is BlittableJsonReaderObject expectedItem)
-                        {
-                            var actualItem = Assert.IsType<BlittableJsonReaderObject>(actualArr[j]);
-                            AssertBlittableContains(actualItem, context, expectedItem.ToString());
-                        }
-                        else
-                        {
-                            Assert.Equal(expectedArr[j]?.ToString(), actualArr[j]?.ToString());
-                        }
-                    }
-                }
-                else
-                {
-                    Assert.Equal(prop.Value?.ToString(), actualValue?.ToString());
-                }
-            }
-        }
-
         private static CdcSinkTableConfig CreateRootTableConfig(string collectionName = "Orders", string patch = null)
         {
             return new CdcSinkTableConfig
@@ -86,37 +44,16 @@ namespace SlowTests.Server.Documents.CdcSink
             };
         }
 
-        /// <summary>
-        /// Builds the pre-computed lookup fields that CdcSinkDocumentProcessor normally creates.
-        /// Tests that construct CdcSinkTableProcessor directly need these for the batch command.
-        /// </summary>
-        private static (List<CdcColumnMapping> Attachments, Dictionary<string, string> Lookup) BuildProcessorLookups(List<CdcColumnMapping> columns)
-        {
-            var attachments = new List<CdcColumnMapping>();
-            var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var c in columns)
-            {
-                if (c.Type == CdcColumnType.Attachment)
-                    attachments.Add(c);
-                else
-                    lookup[c.Column] = c.Name;
-            }
-            return (attachments, lookup);
-        }
-
         private static CdcSinkTableProcessor CreateRootProcessor(CdcSinkTableConfig config = null, string collectionName = "Orders")
         {
             config ??= CreateRootTableConfig(collectionName);
-            var (attachments, lookup) = BuildProcessorLookups(config.Columns);
-            return new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = config,
-                CollectionName = collectionName,
-                IsRoot = true,
-                Columns = config.Columns,
-                AttachmentColumns = attachments,
-                PropertyLookup = lookup,
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { config }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            return docProcessor.GetProcessor($"{config.SourceTableSchema ?? "public"}.{config.SourceTableName}");
         }
 
         private static CdcSinkTableProcessor CreateEmbeddedProcessor(
@@ -125,22 +62,17 @@ namespace SlowTests.Server.Documents.CdcSink
             CdcSinkTableConfig rootConfig = null)
         {
             rootConfig ??= CreateRootTableConfig(collectionName);
-            var (attachments, lookup) = BuildProcessorLookups(embeddedConfig.Columns);
-            return new CdcSinkTableProcessor
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { embeddedConfig };
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = rootConfig,
-                CollectionName = collectionName,
-                IsRoot = false,
-                EmbeddedConfig = embeddedConfig,
-                PathFromRoot = new List<EmbeddedPathSegment>
-                {
-                    new EmbeddedPathSegment { Config = embeddedConfig, PropertyLookup = lookup }
-                },
-                RootJoinColumns = new List<string> { "order_id" },
-                Columns = embeddedConfig.Columns,
-                AttachmentColumns = attachments,
-                PropertyLookup = lookup,
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var key = string.IsNullOrEmpty(embeddedConfig.SourceTableSchema)
+                ? embeddedConfig.SourceTableName
+                : $"{embeddedConfig.SourceTableSchema}.{embeddedConfig.SourceTableName}";
+            return docProcessor.GetProcessor(key);
         }
 
         private static CdcSinkDocumentOp CreatePutOp(string documentId, DynamicJsonValue mappedData,
@@ -795,17 +727,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Second op: document with an invalid patch that will throw
             var badConfig = CreateRootTableConfig("Products", patch: "throw new Error('intentional failure');");
-            var badProcessor = new CdcSinkTableProcessor
-            {
-                RootConfig = badConfig,
-                CollectionName = "Products",
-                IsRoot = true,
-                Columns = badConfig.Columns,
-                AttachmentColumns = badConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = badConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
+            var badProcessor = CreateRootProcessor(badConfig, "Products");
             var badData = new DynamicJsonValue
             {
                 ["ProductId"] = 99,
@@ -860,17 +782,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 PrimaryKeyColumns = new List<string> { "id" }
             };
 
-            var processor = new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = config,
-                CollectionName = "Documents",
-                IsRoot = true,
-                Columns = config.Columns,
-                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = config.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { config }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.documents");
 
             var mappedData = new DynamicJsonValue
             {
@@ -949,17 +867,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 PrimaryKeyColumns = new List<string> { "id" }
             };
 
-            var processor = new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = config,
-                CollectionName = "Products",
-                IsRoot = true,
-                Columns = config.Columns,
-                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = config.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { config }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.products");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1026,17 +940,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 PrimaryKeyColumns = new List<string> { "id" }
             };
 
-            var processor = new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = config,
-                CollectionName = "Articles",
-                IsRoot = true,
-                Columns = config.Columns,
-                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = config.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { config }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.articles");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1428,12 +1338,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1489,12 +1394,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1561,12 +1461,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1645,12 +1540,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1737,12 +1627,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1794,12 +1679,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -1873,28 +1753,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { deptConfig }
             };
 
-            // Build the path: [departments-segment, employees-segment]
-            var deptJoinMapping = new Dictionary<string, string> { { "company_id", "company_id" } };
-            var empJoinMapping = new Dictionary<string, string> { { "dept_id", "dept_id" } };
-
-            var (_, deptLookup) = BuildProcessorLookups(deptConfig.Columns);
-            var (_, empLookup) = BuildProcessorLookups(empConfig.Columns);
-            var deptSegment = new EmbeddedPathSegment { Config = deptConfig, JoinMapping = deptJoinMapping, PropertyLookup = deptLookup };
-            var empSegment = new EmbeddedPathSegment { Config = empConfig, JoinMapping = empJoinMapping, PropertyLookup = empLookup };
-
-            var (empAttachments, empPropLookup) = BuildProcessorLookups(empConfig.Columns);
-            var empProcessor = new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = rootConfig,
-                CollectionName = "Companies",
-                IsRoot = false,
-                EmbeddedConfig = empConfig,
-                PathFromRoot = new List<EmbeddedPathSegment> { deptSegment, empSegment },
-                RootJoinColumns = new List<string> { "company_id" },
-                Columns = empConfig.Columns,
-                AttachmentColumns = empAttachments,
-                PropertyLookup = empPropLookup,
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var empProcessor = docProcessor.GetProcessor("public.employees");
 
             return (rootConfig, deptConfig, empConfig, empProcessor);
         }
@@ -2169,12 +2034,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 database, ops, "test-config", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                command.Execute(context, null);
-                tx.Commit();
-            }
+            await database.TxMerger.Enqueue(command);
 
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
             using (readCtx.OpenReadTransaction())
@@ -2245,24 +2105,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
 
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Items",
-                IsRoot = true,
-                Columns = tableConfig.Columns,
-                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = tableConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
             var sinkConfig = new CdcSinkConfiguration
             {
                 Name = "test-audit",
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2361,24 +2210,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
 
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Items",
-                IsRoot = true,
-                Columns = tableConfig.Columns,
-                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = tableConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
             var sinkConfig = new CdcSinkConfiguration
             {
                 Name = "test-audit-ignore",
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2462,24 +2300,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 OnDelete = new CdcSinkOnDeleteConfig()
             };
 
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Items",
-                IsRoot = true,
-                Columns = tableConfig.Columns,
-                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = tableConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
             var sinkConfig = new CdcSinkConfiguration
             {
                 Name = "test-counter",
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2560,24 +2387,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
 
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Items",
-                IsRoot = true,
-                Columns = tableConfig.Columns,
-                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = tableConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
             var sinkConfig = new CdcSinkConfiguration
             {
                 Name = "test-counter-ignore",
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2637,30 +2453,9 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Two tables: one with infinite-loop patch (will hit MaxSteps), one without patch
             var badConfig = CreateRootTableConfig("BadOrders", patch: "while(true) {}");
-            var badProcessor = new CdcSinkTableProcessor
-            {
-                RootConfig = badConfig,
-                CollectionName = "BadOrders",
-                IsRoot = true,
-                Columns = badConfig.Columns,
-                AttachmentColumns = badConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = badConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
+            badConfig.SourceTableName = "bad_orders";
             var goodConfig = CreateRootTableConfig("GoodOrders");
-            var goodProcessor = new CdcSinkTableProcessor
-            {
-                RootConfig = goodConfig,
-                CollectionName = "GoodOrders",
-                IsRoot = true,
-                Columns = goodConfig.Columns,
-                AttachmentColumns = goodConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = goodConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
+            goodConfig.SourceTableName = "good_orders";
 
             // Build the combined patch request from a config that includes the bad table
             var sinkConfig = new CdcSinkConfiguration
@@ -2669,6 +2464,8 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { badConfig, goodConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var badProcessor = docProcessor.GetProcessor("public.bad_orders");
+            var goodProcessor = docProcessor.GetProcessor("public.good_orders");
 
             var badData = new DynamicJsonValue
             {
@@ -2753,17 +2550,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 PrimaryKeyColumns = new List<string> { "id" }
             };
 
-            var processor = new CdcSinkTableProcessor
+            var sinkConfig = new CdcSinkConfiguration
             {
-                RootConfig = config,
-                CollectionName = "Records",
-                IsRoot = true,
-                Columns = config.Columns,
-                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = config.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { config }
             };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.records");
 
             // Simulate Npgsql-returned types:
             // json/jsonb → string containing JSON
@@ -2865,24 +2658,13 @@ namespace SlowTests.Server.Documents.CdcSink
                 }
             };
 
-            var processor = new CdcSinkTableProcessor
-            {
-                RootConfig = tableConfig,
-                CollectionName = "Orders",
-                IsRoot = true,
-                Columns = tableConfig.Columns,
-                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
-                PropertyLookup = tableConfig.Columns
-                    .Where(c => c.Type != CdcColumnType.Attachment)
-                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
-            };
-
             var sinkConfig = new CdcSinkConfiguration
             {
                 Name = "test-ondelete-this",
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var processor = docProcessor.GetProcessor("public.orders");
 
             // Step 1: Create the document via a Put
             var putMapped = new DynamicJsonValue

@@ -35,6 +35,7 @@ public class CdcSinkDocumentProcessor
         {
             // Register the root table
             var rootKey = MakeKey(table.SourceTableSchema, table.SourceTableName);
+            var rootPropertyLookup = BuildPropertyLookup(table.Columns);
             var rootProcessor = new CdcSinkTableProcessor
             {
                 Key = rootKey,
@@ -43,7 +44,8 @@ public class CdcSinkDocumentProcessor
                 IsRoot = true,
                 Columns = table.Columns,
                 AttachmentColumns = FilterAttachmentColumns(table.Columns),
-                PropertyLookup = BuildPropertyLookup(table.Columns),
+                PropertyLookup = rootPropertyLookup,
+                MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(table.PrimaryKeyColumns, rootPropertyLookup),
             };
 
             _tableIndex[rootKey] = rootProcessor;
@@ -51,7 +53,7 @@ public class CdcSinkDocumentProcessor
             // Register all embedded tables recursively
             if (table.EmbeddedTables != null)
             {
-                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, new List<EmbeddedPathSegment>());
+                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, rootPropertyLookup, new List<EmbeddedPathSegment>());
             }
         }
 
@@ -139,6 +141,7 @@ public class CdcSinkDocumentProcessor
         CdcSinkTableConfig rootConfig,
         List<CdcSinkEmbeddedTableConfig> embeddedTables,
         List<string> parentPkColumns,
+        Dictionary<string, string> parentPropertyLookup,
         List<EmbeddedPathSegment> currentPath)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -155,11 +158,14 @@ public class CdcSinkDocumentProcessor
                 joinMapping[embedded.JoinColumns[i]] = parentPkColumns[i];
             }
 
+            var segmentLookup = BuildPropertyLookup(embedded.Columns);
             var segment = new EmbeddedPathSegment
             {
                 Config = embedded,
                 JoinMapping = joinMapping,
-                PropertyLookup = BuildPropertyLookup(embedded.Columns),
+                // Map this level's PK columns through its own property lookup
+                // (e.g., dept_id → DeptId for finding the right department in the array)
+                MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(embedded.PrimaryKeyColumns, segmentLookup),
             };
 
             var path = new List<EmbeddedPathSegment>(currentPath) { segment };
@@ -192,6 +198,7 @@ public class CdcSinkDocumentProcessor
             var rootJoinColumns = path[0].Config.JoinColumns;
 
             var key = MakeKey(embedded.SourceTableSchema, embedded.SourceTableName);
+            var embeddedPropertyLookup = BuildPropertyLookup(embedded.Columns);
             var processor = new CdcSinkTableProcessor
             {
                 Key = key,
@@ -203,7 +210,8 @@ public class CdcSinkDocumentProcessor
                 RootJoinColumns = rootJoinColumns,
                 Columns = embedded.Columns,
                 AttachmentColumns = FilterAttachmentColumns(embedded.Columns),
-                PropertyLookup = BuildPropertyLookup(embedded.Columns),
+                PropertyLookup = embeddedPropertyLookup,
+                MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(embedded.PrimaryKeyColumns, embeddedPropertyLookup),
             };
 
             _tableIndex[key] = processor;
@@ -211,7 +219,7 @@ public class CdcSinkDocumentProcessor
             // Recurse for deep nesting
             if (embedded.EmbeddedTables != null && embedded.EmbeddedTables.Count > 0)
             {
-                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, path);
+                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, embeddedPropertyLookup, path);
             }
         }
     }
@@ -335,6 +343,17 @@ public class CdcSinkDocumentProcessor
             }
         }
         return result ?? new List<CdcColumnMapping>();
+    }
+
+    private static string[] BuildMappedPrimaryKeyNames(List<string> primaryKeyColumns, Dictionary<string, string> propertyLookup)
+    {
+        var mapped = new string[primaryKeyColumns.Count];
+        for (int i = 0; i < primaryKeyColumns.Count; i++)
+        {
+            var pkCol = primaryKeyColumns[i];
+            mapped[i] = propertyLookup.TryGetValue(pkCol, out var name) ? name : pkCol;
+        }
+        return mapped;
     }
 
     private static Dictionary<string, string> BuildPropertyLookup(List<CdcColumnMapping> columns)

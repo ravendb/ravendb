@@ -23,7 +23,7 @@ public class CdcSinkTableConfig : IDynamicJson
 
     /// <summary>
     /// Column mappings defining how SQL columns are stored in the RavenDB document.
-    /// Each entry maps a SQL column to a property, JSON field, or attachment.
+    /// Each entry maps a SQL column to a property or an attachment.
     /// </summary>
     public List<CdcColumnMapping> Columns { get; set; } = new();
 

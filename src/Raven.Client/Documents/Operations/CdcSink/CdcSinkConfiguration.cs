@@ -109,9 +109,13 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         var columnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        if (columns != null)
+        if (columns == null)
         {
-            foreach (var col in columns)
+            errors.Add($"Table '{tableName}': Columns list is null");
+            return;
+        }
+
+        foreach (var col in columns)
             {
                 if (string.IsNullOrWhiteSpace(col.Column))
                 {
@@ -131,7 +135,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
                 if (propertyNames.Add(col.Name) == false)
                     errors.Add($"Table '{tableName}': duplicate target name '{col.Name}' (used by multiple columns)");
-            }
         }
 
         if (embeddedTables != null)

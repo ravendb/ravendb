@@ -69,9 +69,16 @@ public class CdcSinkTableProcessor
 
     /// <summary>
     /// Maps SQL column name → mapped property Name for non-attachment columns. Computed once during
-    /// construction to avoid linear scans in FindMappedName.
+    /// construction for property lookups during embedded path navigation.
     /// </summary>
     public Dictionary<string, string> PropertyLookup { get; init; }
+
+    /// <summary>
+    /// Pre-computed mapped property names for each primary key column, in the same order as the
+    /// config's PrimaryKeyColumns list. Avoids per-row dictionary lookups in MatchesPrimaryKey
+    /// and BuildMapKey.
+    /// </summary>
+    public string[] MappedPrimaryKeyNames { get; init; }
 
     /// <summary>
     /// Generate a document ID from row data using primary key values.

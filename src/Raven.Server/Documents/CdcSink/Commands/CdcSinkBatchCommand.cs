@@ -515,7 +515,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             foreach (var arrayVal in existingArray)
             {
                 if (arrayVal is BlittableJsonReaderObject item &&
-                    MatchesPrimaryKey(item, op.MappedData, config, op.Processor.PropertyLookup))
+                    MatchesPrimaryKey(item, op.MappedData, config, op.Processor.MappedPrimaryKeyNames))
                 {
                     found = true;
 
@@ -569,7 +569,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         // BuildMapKey normalizes the key (lowercased when case-insensitive),
         // so all stored map keys use the same normalization. Direct lookup works.
-        var mapKey = BuildMapKey(op.MappedData, config, op.Processor.PropertyLookup);
+        var mapKey = BuildMapKey(op.MappedData, config, op.Processor.MappedPrimaryKeyNames);
 
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
@@ -612,18 +612,19 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// <summary>
     /// Compares primary key values between an existing blittable item and a candidate DynamicJsonValue.
     /// Respects the <see cref="CdcSinkEmbeddedTableConfig.CaseSensitiveKeys"/> setting.
+    /// Uses the processor's pre-computed MappedPrimaryKeyNames to avoid per-row dictionary lookups.
     /// </summary>
     private static bool MatchesPrimaryKey(
         BlittableJsonReaderObject item, DynamicJsonValue candidate,
-        CdcSinkEmbeddedTableConfig config, Dictionary<string, string> propertyLookup)
+        CdcSinkEmbeddedTableConfig config, string[] mappedPrimaryKeyNames)
     {
         var stringComparison = config.CaseSensitiveKeys
             ? StringComparison.Ordinal
             : StringComparison.OrdinalIgnoreCase;
 
-        foreach (var pkCol in config.PrimaryKeyColumns)
+        for (int i = 0; i < mappedPrimaryKeyNames.Length; i++)
         {
-            var mappedName = FindMappedName(propertyLookup, pkCol) ?? pkCol;
+            var mappedName = mappedPrimaryKeyNames[i];
 
             if (item.TryGetMember(mappedName, out var existingVal) == false)
                 return false;
@@ -638,15 +639,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 return false;
         }
         return true;
-    }
-
-    /// <summary>
-    /// Looks up the mapped property name for a SQL column using the pre-computed lookup dictionary.
-    /// Returns null if the column is not found (caller falls back to the raw column name).
-    /// </summary>
-    private static string FindMappedName(Dictionary<string, string> propertyLookup, string sqlColumn)
-    {
-        return propertyLookup.TryGetValue(sqlColumn, out var name) ? name : null;
     }
 
     private static bool ComparePrimaryKeyValues(object existingVal, object candidateVal, StringComparison stringComparison)
@@ -682,19 +674,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// Builds the map key from primary key column values.
     /// Respects the <see cref="CdcSinkEmbeddedTableConfig.CaseSensitiveKeys"/> setting:
     /// when case-insensitive, the key is lowercased for consistent lookup.
+    /// Uses the processor's pre-computed MappedPrimaryKeyNames to avoid per-row dictionary lookups.
     /// </summary>
-    private string BuildMapKey(DynamicJsonValue mappedData, CdcSinkEmbeddedTableConfig config, Dictionary<string, string> propertyLookup)
+    private string BuildMapKey(DynamicJsonValue mappedData, CdcSinkEmbeddedTableConfig config, string[] mappedPrimaryKeyNames)
     {
         _sb ??= new StringBuilder();
         _sb.Clear();
-        for (int i = 0; i < config.PrimaryKeyColumns.Count; i++)
+        for (int i = 0; i < mappedPrimaryKeyNames.Length; i++)
         {
             if (i > 0)
                 _sb.Append('/');
-            var pkCol = config.PrimaryKeyColumns[i];
-            var mappedName = FindMappedName(propertyLookup, pkCol) ?? pkCol;
 
-            _sb.Append(mappedData[mappedName]?.ToString() ?? "");
+            _sb.Append(mappedData[mappedPrimaryKeyNames[i]]?.ToString() ?? "");
         }
 
         var key = _sb.ToString();
@@ -770,7 +761,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                         continue;
 
                     bool matches = true;
-                    foreach (var (childFkCol, parentPkCol) in nextSegment.JoinMapping)
+                    int pkIdx = 0;
+                    foreach (var (childFkCol, _) in nextSegment.JoinMapping)
                     {
                         // Get the FK value from the CDC row
                         if (op.RawData.TryGetValue(childFkCol, out var fkValue) == false)
@@ -780,7 +772,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                         }
 
                         // The parent PK column is stored under its mapped property name
-                        var mappedName = FindMappedName(segment.PropertyLookup, parentPkCol) ?? parentPkCol;
+                        var mappedName = segment.MappedPrimaryKeyNames[pkIdx++];
 
                         if (candidate.TryGetMember(mappedName, out var storedValue) == false)
                         {
