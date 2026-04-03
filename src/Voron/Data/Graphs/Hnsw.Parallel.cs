@@ -1,15 +1,12 @@
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server.Utils;
-using Sparrow.Server.Utils.VxSort;
 using Voron.Data.Containers;
 using Voron.Util;
 using Array = System.Array;
@@ -101,13 +98,27 @@ public partial class Hnsw
      *   so we won't cause a bottleneck in the thread pool.
      * * We tested using a dedicated thread pool, but those performed significantly worse than the 
      *   default .NET one. 
+     *
+     * # Allocation-free work item dispatch
+     *
+     * The WorkItem base class implements IThreadPoolWorkItem, which allows us to queue it directly to
+     * the .NET thread pool via ThreadPool.UnsafeQueueUserWorkItem without allocating a delegate or a
+     * Task. Each concrete worker (ProcessEdgesWorker, FilterEdgesHeuristicWorker, FindNearestWorker)
+     * is preallocated once per NodePlacement instance and stored in a field. The enumerators in
+     * Process(), FindGraphPlacementForNode(), NearestEdges(), etc. yield the *same* preallocated
+     * worker object repeatedly — mutating its state (CurrentNodeIndex, Level, Owner, etc.) before each
+     * yield return. This means no new work items are heap-allocated during the graph-building loop;
+     * the runner simply resets and re-queues the same objects. The trade-off is that a yielded WorkItem
+     * is only valid until the enumerator advances, but that is fine because the runner always consumes
+     * the item before calling MoveNext again.
      */
     public partial class Registration
     {
         private int _nextNodeIndex;
 
         public int MaxConcurrentBatches = 512;
-        void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
+
+        private void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
         {
             if (_searchState.TryGetLocationForNode(EntryPointId, out var entryPointNode) is false)
             {
@@ -145,6 +156,11 @@ public partial class Hnsw
             private int[] _visitedBitmapVersion = [];
             private int _visitedVersion;
             private readonly LinkedListNode<int> _listNode = new(-1);
+
+            // Pooled work items — reused across all yields to avoid per-yield heap allocations
+            private readonly ProcessEdgesWorker _processEdgesWorker = new(runner);
+            private readonly FilterEdgesHeuristicWorker _filterEdgesWorker = new(runner);
+            private readonly FindNearestWorker _findNearestWorker = new(runner);
             
             private void ClearVisited()
             {
@@ -185,6 +201,10 @@ public partial class Hnsw
 
             public IEnumerable<WorkItem> Process()
             {
+                _processEdgesWorker.Owner = this;
+                _filterEdgesWorker.Owner = this;
+                _findNearestWorker.Owner = this;
+
                 try
                 {
                     int createdNodesLength = _searchState.CreatedNodes;
@@ -270,11 +290,8 @@ public partial class Hnsw
                             MarkVisited(edgeIdx);
                         }
 
-                        yield return new FilterEdgesHeuristicWorker(this, vector)
-                        {
-                            CurrentNodeIndex = edgeIdx, 
-                            Level = level
-                        };
+                        _filterEdgesWorker.Reset(vector, edgeIdx, level);
+                        yield return _filterEdgesWorker;
                         
                         PortableExceptions.ThrowIf<InvalidOperationException>(_candidates.Count == 0 , "Cannot add a node to the graph without any edges after heuristic");
                         {
@@ -333,13 +350,9 @@ public partial class Hnsw
                         _nearestEdgesQ.Count == _searchState.Options.NumberOfCandidates)
                         break;
 
-                    var worker = new ProcessEdgesWorker(this, vector, lowerBound)
-                    {
-                        CurrentNodeIndex = cur,
-                        Level = level,
-                    };
-                    yield return worker;
-                    lowerBound = worker.LowerBound;
+                    _processEdgesWorker.Reset(vector, lowerBound, cur, level);
+                    yield return _processEdgesWorker;
+                    lowerBound = _processEdgesWorker.LowerBound;
                 }
 
                 _candidatesQ.Clear();
@@ -362,20 +375,24 @@ public partial class Hnsw
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
-                yield return new FilterEdgesHeuristicWorker(this, vector)
-                {
-                    // disable preloading - we already got everything from the 
-                    // previous preloading step and are operating purely in memory 
-                    CurrentNodeIndex = -1,
-                    Level = level
-                };
+                // disable preloading - we already got everything from the 
+                // previous preloading step and are operating purely in memory 
+                _filterEdgesWorker.Reset(vector, -1, level);
+                yield return _filterEdgesWorker;
             }
 
-            private record FilterEdgesHeuristicWorker(
-                NodePlacement Owner,
-                UnmanagedSpan Src) : WorkItem(Owner)
+            private sealed class FilterEdgesHeuristicWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
-                public override void Execute()
+                private UnmanagedSpan _src;
+
+                public void Reset(UnmanagedSpan src, int currentNodeIndex, int level)
+                {
+                    _src = src;
+                    CurrentNodeIndex = currentNodeIndex;
+                    Level = level;
+                }
+
+                protected override void DoWork()
                 {
                     // See: https://icode.best/i/45208840268843 - Chinese, but auto-translate works, and a good explanation with 
                     // conjunction of: https://img-bc.icode.best/20210425010212938.png
@@ -391,7 +408,7 @@ public partial class Hnsw
                     Debug.Assert(queue.Count is 0);
                     for (int i = 0; i < indexes.Count; i++)
                     {
-                        var distance = searchState.Distance(Src, vectors[i]);
+                        var distance = searchState.Distance(_src, vectors[i]);
                         // note that we use local indexes here!
                         queue.Enqueue(i, distance);
                     }
@@ -429,11 +446,20 @@ public partial class Hnsw
                     queue.Clear();
                 }
             }
-            private record ProcessEdgesWorker(NodePlacement Owner, UnmanagedSpan Vector, float LowerBound) : WorkItem(Owner)
+            private sealed class ProcessEdgesWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
-                public float LowerBound { get; private set; } = LowerBound;
+                private UnmanagedSpan _vector;
+                public float LowerBound;
 
-                public override void Execute()
+                public void Reset(UnmanagedSpan vector, float lowerBound, int currentNodeIndex, int level)
+                {
+                    _vector = vector;
+                    LowerBound = lowerBound;
+                    CurrentNodeIndex = currentNodeIndex;
+                    Level = level;
+                }
+
+                protected override void DoWork()
                 {
                     var searchState = Owner._searchState;
                     var indexes = Owner._indexes;
@@ -448,7 +474,7 @@ public partial class Hnsw
                         var nextIndex = indexes[i];
                         Debug.Assert(searchState.Nodes[nextIndex].EdgesPerLevel.Count > Level); 
                    
-                        float nextDist = -searchState.Distance(Vector, vectors[i]);
+                        float nextDist = -searchState.Distance(_vector, vectors[i]);
                         if (nearestEdgesQ.Count < numberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -483,16 +509,12 @@ public partial class Hnsw
                 {
                     do
                     {
-                        var worker = new FindNearestWorker(this, from)
-                        {
-                            CurrentNodeIndex = currentNodeIndex,
-                            Level = level
-                        };
-                        yield return worker;
-                        if (worker.Distance >= distance)
+                        _findNearestWorker.Reset(from, currentNodeIndex, level);
+                        yield return _findNearestWorker;
+                        if (_findNearestWorker.Distance >= distance)
                             break;
-                        currentNodeIndex = worker.CurrentNodeIndex;
-                        distance = worker.Distance;
+                        currentNodeIndex = _findNearestWorker.CurrentNodeIndex;
+                        distance = _findNearestWorker.Distance;
                     } while (true);
 
                     _nearestIndexes.Add(currentNodeIndex);
@@ -502,11 +524,20 @@ public partial class Hnsw
                 _nearestIndexes.Reverse();
             }
 
-            private record FindNearestWorker(NodePlacement Owner,UnmanagedSpan From) : WorkItem(Owner)
+            private sealed class FindNearestWorker(NodePlacementRunner runner) : WorkItem(runner)
             {
-                public float Distance = float.MaxValue;
+                private UnmanagedSpan _from;
+                public float Distance;
 
-                public override void Execute()
+                public void Reset(UnmanagedSpan from, int currentNodeIndex, int level)
+                {
+                    _from = from;
+                    Distance = float.MaxValue;
+                    CurrentNodeIndex = currentNodeIndex;
+                    Level = level;
+                }
+
+                protected override void DoWork()
                 {
                     var indexes = Owner._indexes;
                     var vectors = Owner._vectors;
@@ -515,7 +546,7 @@ public partial class Hnsw
                     for (var i = 0; i < indexes.Count; i++)
                     {
                         var edgeIdx = indexes[i];
-                        var curDist = searchState.Distance(From, vectors[i]);
+                        var curDist = searchState.Distance(_from, vectors[i]);
                         if (curDist >= Distance || double.IsNaN(curDist))
                             continue;
                         Distance = curDist;
@@ -628,24 +659,10 @@ public partial class Hnsw
                 }
             }
 
-            private void RunWorkItem(object state)
-            {
-                WorkItem workItem = (WorkItem)state;
-                try
-                {
-                    workItem.Execute();
-                    Enqueue(workItem.Iterator);
-                }
-                catch (Exception e)
-                {
-                    Error(workItem.Iterator, e);
-                }
-            }
             
             public void Run()
             {
                 List<long> batch = [];
-                WaitCallback callback = RunWorkItem;
                 while (true)
                 {
                     _ready.Wait();
@@ -702,7 +719,7 @@ public partial class Hnsw
                             continue; // no work to do, everything was already visited
                         }
 
-                        ThreadPool.UnsafeQueueUserWorkItem(callback, item);
+                        ThreadPool.UnsafeQueueUserWorkItem(item, preferLocal: false);
                     }
 
                     var batchSpan = CollectionsMarshal.AsSpan(batch);
@@ -718,7 +735,7 @@ public partial class Hnsw
 
                         if (item.Owner.AfterPreloading(item.CurrentNodeIndex, item.Level))
                         {
-                            ThreadPool.UnsafeQueueUserWorkItem(callback, item);
+                            ThreadPool.UnsafeQueueUserWorkItem(item, preferLocal: false);
                         }
                         else
                         {
@@ -748,13 +765,13 @@ public partial class Hnsw
                 }
             }
 
-            private void Enqueue(IEnumerator<WorkItem> it)
+            public void Enqueue(IEnumerator<WorkItem> it)
             { 
                 _placementTasks.Enqueue(it);
                 _ready.Set();
             }
 
-            private void Error(IEnumerator<WorkItem> it, Exception exception)
+            public void Error(IEnumerator<WorkItem> it, Exception exception)
             {
                 _placementErrors.Enqueue((exception, it));
                 _ready.Set();
@@ -779,11 +796,25 @@ public partial class Hnsw
             }
         }
         
-        private abstract record WorkItem(NodePlacement Owner)
+        private abstract class WorkItem(NodePlacementRunner runner) : IThreadPoolWorkItem
         {
+            public NodePlacement Owner;
             public IEnumerator<WorkItem> Iterator;
 
-            public abstract void Execute();
+            protected abstract void DoWork();
+
+            void IThreadPoolWorkItem.Execute()
+            {
+                try
+                {
+                    DoWork();
+                    runner.Enqueue(Iterator);
+                }
+                catch (Exception e)
+                {
+                    runner.Error(Iterator, e);
+                }
+            }
 
             public int CurrentNodeIndex;
             public int Level;
