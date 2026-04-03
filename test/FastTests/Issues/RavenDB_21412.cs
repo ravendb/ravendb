@@ -39,6 +39,7 @@ public class RavenDB_21412 : RavenTestBase
             OngoingTaskType.SnowflakeEtl,
             OngoingTaskType.EmbeddingsGeneration,
             OngoingTaskType.GenAi,
+            OngoingTaskType.CdcSink,
         };
 
         foreach (var enumValue in Enum.GetValues<OngoingTaskType>())
