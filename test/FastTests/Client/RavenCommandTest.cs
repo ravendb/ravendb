@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Raven.Server.Smuggler.Documents;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -277,6 +279,51 @@ namespace FastTests.Client
                 Assert.True(field != null,
                     $"{nameof(DatabaseRecord)} does not have a field named '{propertyName}' " +
                     $"for {nameof(ConnectionStringType)}.{type}");
+            }
+
+            // every connection string dictionary must be filtered in DatabaseSource.GetDatabaseRecordAsync during smuggler export
+            var getDatabaseRecordMethod = typeof(DatabaseSource).GetMethod(nameof(DatabaseSource.GetDatabaseRecordAsync), BindingFlags.Instance | BindingFlags.Public);
+            Assert.True(getDatabaseRecordMethod != null, $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} method not found");
+
+            var methodBody = getDatabaseRecordMethod.GetMethodBody();
+            Assert.True(methodBody != null, $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} has no method body");
+
+            var ilBytes = methodBody.GetILAsByteArray();
+            Assert.True(ilBytes != null, $"Could not get IL bytes for {nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)}");
+
+            // resolve field tokens from IL to verify each connection string dictionary is referenced
+            var module = typeof(DatabaseSource).Module;
+            var referencedFieldNames = new HashSet<string>();
+            for (int i = 0; i < ilBytes.Length; i++)
+            {
+                // ldfld and ldflda opcodes use a 4-byte metadata token
+                if (ilBytes[i] == 0x7B || ilBytes[i] == 0x7C) // ldfld or ldflda
+                {
+                    if (i + 4 < ilBytes.Length)
+                    {
+                        var token = BitConverter.ToInt32(ilBytes, i + 1);
+                        try
+                        {
+                            var resolvedField = module.ResolveField(token);
+                            if (resolvedField != null)
+                                referencedFieldNames.Add(resolvedField.Name);
+                        }
+                        catch
+                        {
+                            // ignore tokens that can't be resolved
+                        }
+                    }
+                }
+            }
+
+            foreach (var type in connectionStringTypes)
+            {
+                var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(type);
+                Assert.True(referencedFieldNames.Contains(propertyName),
+                    $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} does not filter " +
+                    $"server-wide connection strings from {nameof(DatabaseRecord)}.{propertyName} " +
+                    $"for {nameof(ConnectionStringType)}.{type}. " +
+                    $"Please add FilterOutServerWideConnectionStrings(databaseRecord.{propertyName}) to the method.");
             }
         }
     }
