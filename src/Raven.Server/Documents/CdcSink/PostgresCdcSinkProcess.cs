@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -55,10 +56,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private readonly NpgsqlDataSource _dataSource;
     private string _publicationName;
     private string _slotName;
+    private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
     // Cache resolved type categories per RelationMessage OID layout.
     // Column types are fixed per relation in the replication stream.
     private readonly Dictionary<string, PostgresTypeCategory[]> _relationTypeCache = new();
+    private System.Text.StringBuilder _reusableSb;
 
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
@@ -166,6 +169,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         """, ex);
                 }
             }
+        }
+
+        // Resolve pgvector extension OID so OidToCategory can recognize vector columns
+        // in the CDC stream. Returns null if the extension is not installed.
+        await using (var cmd = new NpgsqlCommand("SELECT oid FROM pg_type WHERE typname = 'vector'", conn))
+        {
+            var result = await cmd.ExecuteScalarAsync(ct);
+            _vectorOid = result is uint oid ? oid : uint.MaxValue;
         }
     }
 
@@ -473,7 +484,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var columnName = item.GetFieldName();
             var category = columnIndex < typeCategories.Length ? typeCategories[columnIndex] : PostgresTypeCategory.Other;
             var value = item.IsDBNull ? null : await item.Get();
-            data[columnName] = ConvertPostgresValue(category, value);
+            data[columnName] = ConvertPostgresValue(category, value, relationKey, columnName);
 
             columnIndex++;
         }
@@ -493,7 +504,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// Build type category array from the RelationMessage's column OIDs.
     /// PostgreSQL OIDs are well-known and documented.
     /// </summary>
-    private static PostgresTypeCategory[] BuildTypeCategoriesFromRelation(RelationMessage relation)
+    private PostgresTypeCategory[] BuildTypeCategoriesFromRelation(RelationMessage relation)
     {
         var categories = new PostgresTypeCategory[relation.Columns.Count];
         for (int i = 0; i < relation.Columns.Count; i++)
@@ -503,7 +514,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return categories;
     }
 
-    private static PostgresTypeCategory OidToCategory(uint oid)
+    private PostgresTypeCategory OidToCategory(uint oid)
     {
         return oid switch
         {
@@ -518,10 +529,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             2950 => PostgresTypeCategory.Uuid,                  // uuid
             17 => PostgresTypeCategory.Bytea,                   // bytea
             114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
-            // Extension types (e.g., pgvector) have dynamically assigned OIDs and fall
-            // through to Other, which reads them as text. For pgvector, the text
-            // representation (e.g., "[1,2,3]") can be stored as a JSON column or
-            // converted to an attachment via CdcColumnType configuration.
+            // Array types — Postgres has a dedicated OID for each base type's array form.
+            // pgoutput delivers these as text literals like "{tag1,tag2,tag3}".
+            1000 or 1001 or 1005 or 1007 or 1009 or 1015 or 1016
+                or 1021 or 1022 or 1028 or 1231 or 2951 or 199 or 3807
+                => PostgresTypeCategory.TextArray,              // bool[], bytea[], int2[], int4[], text[], varchar[], int8[], float4[], float8[], oid[], numeric[], uuid[], json[], jsonb[]
+            _ when oid == _vectorOid => PostgresTypeCategory.Vector,
             _ => PostgresTypeCategory.Other,
         };
     }
@@ -539,7 +552,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         DateTime,
         Uuid,
         Bytea,
-        Json
+        Json,
+        TextArray,
+        Vector
     }
 
     private async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
@@ -709,7 +724,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                             $"that cannot be read during initial load. You should exclude this column from the CDC Sink " +
                             $"column mappings or report this as an issue.");
 
-                    var value = reader.IsDBNull(i) ? null : NormalizeReaderValue(reader.GetValue(i));
+                    object rawValue = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                    // pgvector returns Pgvector.Vector which NormalizeForJson doesn't know about.
+                    // Convert to float[] here so it flows through as a standard CLR array.
+                    var value = rawValue is Pgvector.Vector v ? (object)v.ToArray() : rawValue;
                     data[name] = value;
                 }
 
@@ -774,28 +792,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         };
     }
 
-    /// <summary>
-    /// Normalizes raw CLR values from <see cref="System.Data.Common.DbDataReader.GetValue"/> during
-    /// initial load to match the types produced by <see cref="ConvertPostgresValue"/> during CDC
-    /// streaming.
-    /// </summary>
-    private static object NormalizeReaderValue(object value)
-    {
-        return value switch
-        {
-            null or DBNull => null,
-            DateOnly => value,
-            DateTimeOffset dto => dto.UtcDateTime,             // DateTimeOffset → DateTime UTC
-            byte or short or int => Convert.ToInt64(value),    // small ints → long
-            float f => (double)f,                              // float → double
-            decimal d => (double)d,                            // decimal → double
-            Guid g => g.ToString(),                            // Guid → string
-            Pgvector.Vector v => v.ToArray(),                     // pgvector → float[]
-            _ => value,
-        };
-    }
-
-    private static object ConvertPostgresValue(PostgresTypeCategory category, object value)
+    private object ConvertPostgresValue(PostgresTypeCategory category, object value, string table, string column)
     {
         if (value is null || value == DBNull.Value)
             return null;
@@ -813,8 +810,142 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,
             PostgresTypeCategory.Json => value.ToString(),
+            PostgresTypeCategory.TextArray => ParsePostgresArrayLiteral(value.ToString()),
+            PostgresTypeCategory.Vector => ParseVectorLiteral(value.ToString(), table, column),
             _ => value,
         };
+    }
+
+    /// <summary>
+    /// Parses a pgvector text literal like "[0.1,0.2,0.3]" into a float[].
+    /// </summary>
+    private static float[] ParseVectorLiteral(string text, string table, string column)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length < 3) // minimum "[0]"
+            return [];
+
+        var span = text.AsSpan();
+        if (span[0] == '[' && span[span.Length - 1] == ']')
+            span = span.Slice(1, span.Length - 2);
+
+        // SIMD-accelerated comma count for pre-allocation
+        int count = span.Count(',') + 1;
+        var result = new float[count];
+        int idx = 0;
+        while (span.Length > 0)
+        {
+            int comma = span.IndexOf(',');
+            var element = comma < 0 ? span : span.Slice(0, comma);
+
+            if (float.TryParse(element, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out result[idx]) == false)
+            {
+                throw new FormatException(
+                    $"Failed to parse pgvector element '{element}' at index {idx} in column '{column}' " +
+                    $"of table '{table}'. Full value: '{text}'");
+            }
+
+            idx++;
+            span = comma < 0 ? default : span.Slice(comma + 1);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Parses a Postgres array text literal like "{tag1,tag2,tag3}" into a string[].
+    /// Handles quoted elements (e.g., {"hello, world","foo"}) and NULL elements.
+    /// The pgoutput text protocol always delivers arrays in this format.
+    /// </summary>
+    private string[] ParsePostgresArrayLiteral(string text)
+    {
+        if (string.IsNullOrEmpty(text) || text == "{}")
+            return [];
+
+        var span = text.AsSpan();
+        if (span[0] == '{' && span[span.Length - 1] == '}')
+            span = span.Slice(1, span.Length - 2);
+
+        // SIMD-accelerated check: no quotes means simple comma-separated values
+        if (span.IndexOf('"') < 0)
+        {
+            int count = span.Count(',') + 1;
+            var result = new string[count];
+            int idx = 0;
+            while (span.Length > 0)
+            {
+                int comma = span.IndexOf(',');
+                var element = comma < 0 ? span : span.Slice(0, comma);
+                result[idx++] = element.SequenceEqual("NULL") ? null : element.ToString();
+                span = comma < 0 ? default : span.Slice(comma + 1);
+            }
+            return result;
+        }
+
+        // Slow path: quoted elements that may contain commas or escaped characters
+        return ParsePostgresArrayLiteralQuoted(span);
+    }
+
+    private static readonly SearchValues<char> QuoteOrComma = SearchValues.Create("\",");
+    private static readonly SearchValues<char> QuoteOrBackslash = SearchValues.Create("\"\\"); 
+
+    private string[] ParsePostgresArrayLiteralQuoted(ReadOnlySpan<char> span)
+    {
+        var result = new List<string>();
+        while (span.Length > 0)
+        {
+            if (span[0] == '"')
+            {
+                span = span.Slice(1); // skip opening quote
+                // SIMD scan for closing quote or backslash escape
+                int pos = span.IndexOfAny(QuoteOrBackslash);
+                if (pos >= 0 && span[pos] == '"')
+                {
+                    // No escapes — common case
+                    result.Add(span.Slice(0, pos).ToString());
+                    span = span.Slice(pos + 1); // skip closing quote
+                }
+                else
+                {
+                    // Has escapes — build unescaped string
+                    var sb = _reusableSb ??= new System.Text.StringBuilder();
+                    sb.Clear();
+                    while (span.Length > 0)
+                    {
+                        pos = span.IndexOfAny(QuoteOrBackslash);
+                        if (pos < 0)
+                            break;
+
+                        sb.Append(span.Slice(0, pos));
+                        if (span[pos] == '"')
+                        {
+                            span = span.Slice(pos + 1);
+                            break;
+                        }
+                        // backslash escape: append the next char
+                        if (pos + 1 < span.Length)
+                            sb.Append(span[pos + 1]);
+                        span = span.Slice(pos + 2);
+                    }
+                    result.Add(sb.ToString());
+                }
+            }
+            else
+            {
+                // Unquoted element — SIMD scan for comma or quote (next element boundary)
+                int comma = span.IndexOf(',');
+                var element = comma < 0 ? span : span.Slice(0, comma);
+                result.Add(element.SequenceEqual("NULL") ? null : element.ToString());
+                span = comma < 0 ? default : span.Slice(comma + 1);
+                continue;
+            }
+
+            // Skip comma separator after quoted element
+            if (span.Length > 0 && span[0] == ',')
+                span = span.Slice(1);
+        }
+
+        return result.ToArray();
     }
 
     private static void AddIfNotNull(List<CdcSinkDocumentOp> list, CdcSinkDocumentOp op)

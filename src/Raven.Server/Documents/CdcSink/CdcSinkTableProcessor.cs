@@ -134,7 +134,7 @@ public class CdcSinkTableProcessor
     /// BlittableJsonReaderObject/BlittableJsonReaderArray using the provided context.
     /// Complex database-specific types (inet, tsvector, etc.) fall back to ToString().
     /// </summary>
-    internal static object NormalizeForJson(object value, bool isJsonColumn = false, JsonOperationContext context = null)
+    internal static object NormalizeForJson(object value, bool isJsonColumn, JsonOperationContext context )
     {
         return value switch
         {
@@ -209,7 +209,7 @@ public class CdcSinkTableProcessor
     {
         var result = new DynamicJsonArray();
         for (int i = 0; i < arr.Length; i++)
-            result.Add(NormalizeForJson(arr.GetValue(i)));
+            result.Add(NormalizeForJson(arr.GetValue(i), false, null));
         return result;
     }
 
@@ -217,7 +217,7 @@ public class CdcSinkTableProcessor
     {
         var result = new DynamicJsonArray();
         for (int i = 0; i < list.Count; i++)
-            result.Add(NormalizeForJson(list[i]));
+            result.Add(NormalizeForJson(list[i], false, null));
         return result;
     }
 

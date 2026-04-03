@@ -3632,7 +3632,7 @@ namespace SlowTests.Server.Documents.CdcSink
             public List<string> Tags { get; set; }    // text[] → string array
             public string SearchVector { get; set; } // tsvector → string
             public string IpAddress { get; set; }   // inet → string
-            public float[] Embedding { get; set; }  // vector(5) → float[] → array of numbers
+            public float[] Embedding { get; set; }  // vector → float[]
         }
 
         /// <summary>
