@@ -42,6 +42,8 @@ public class CdcSinkDocumentProcessor
                 CollectionName = table.Name,
                 IsRoot = true,
                 Columns = table.Columns,
+                AttachmentColumns = FilterAttachmentColumns(table.Columns),
+                PropertyLookup = BuildPropertyLookup(table.Columns),
             };
 
             _tableIndex[rootKey] = rootProcessor;
@@ -157,6 +159,7 @@ public class CdcSinkDocumentProcessor
             {
                 Config = embedded,
                 JoinMapping = joinMapping,
+                PropertyLookup = BuildPropertyLookup(embedded.Columns),
             };
 
             var path = new List<EmbeddedPathSegment>(currentPath) { segment };
@@ -199,6 +202,8 @@ public class CdcSinkDocumentProcessor
                 PathFromRoot = path,
                 RootJoinColumns = rootJoinColumns,
                 Columns = embedded.Columns,
+                AttachmentColumns = FilterAttachmentColumns(embedded.Columns),
+                PropertyLookup = BuildPropertyLookup(embedded.Columns),
             };
 
             _tableIndex[key] = processor;
@@ -316,5 +321,31 @@ public class CdcSinkDocumentProcessor
         if (string.IsNullOrEmpty(schema))
             return tableName;
         return schema + "." + tableName;
+    }
+
+    private static List<CdcColumnMapping> FilterAttachmentColumns(List<CdcColumnMapping> columns)
+    {
+        List<CdcColumnMapping> result = null;
+        for (int i = 0; i < columns.Count; i++)
+        {
+            if (columns[i].Type == CdcColumnType.Attachment)
+            {
+                result ??= new List<CdcColumnMapping>();
+                result.Add(columns[i]);
+            }
+        }
+        return result ?? new List<CdcColumnMapping>();
+    }
+
+    private static Dictionary<string, string> BuildPropertyLookup(List<CdcColumnMapping> columns)
+    {
+        var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < columns.Count; i++)
+        {
+            var col = columns[i];
+            if (col.Type != CdcColumnType.Attachment)
+                lookup[col.Column] = col.Name;
+        }
+        return lookup;
     }
 }

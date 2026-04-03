@@ -62,6 +62,18 @@ public class CdcSinkTableProcessor
     public List<CdcColumnMapping> Columns { get; init; }
 
     /// <summary>
+    /// Pre-filtered list of columns where Type == Attachment. Computed once during construction
+    /// to avoid scanning all columns on every row.
+    /// </summary>
+    public List<CdcColumnMapping> AttachmentColumns { get; init; }
+
+    /// <summary>
+    /// Maps SQL column name → mapped property Name for non-attachment columns. Computed once during
+    /// construction to avoid linear scans in FindMappedName.
+    /// </summary>
+    public Dictionary<string, string> PropertyLookup { get; init; }
+
+    /// <summary>
     /// Generate a document ID from row data using primary key values.
     /// Format: "{CollectionName}/{pk1}/{pk2}/..."
     /// </summary>
@@ -145,7 +157,11 @@ public class CdcSinkTableProcessor
         if (string.IsNullOrEmpty(s))
             return null;
 
-        var first = s.AsSpan().TrimStart()[0];
+        var trimmed = s.AsSpan().TrimStart();
+        if (trimmed.IsEmpty)
+            return null;
+
+        var first = trimmed[0];
 
         if (first == '[')
             return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);

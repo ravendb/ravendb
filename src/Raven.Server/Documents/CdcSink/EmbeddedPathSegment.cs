@@ -17,4 +17,10 @@ public class EmbeddedPathSegment
     /// Maps FK column in child → PK column in parent, used for matching.
     /// </summary>
     public Dictionary<string, string> JoinMapping { get; set; }
+
+    /// <summary>
+    /// Pre-computed mapping of SQL column name → mapped property Name for this segment's columns.
+    /// Used for primary key lookups during embedded path navigation.
+    /// </summary>
+    public Dictionary<string, string> PropertyLookup { get; set; }
 }

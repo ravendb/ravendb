@@ -70,9 +70,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (validateConnection && TestMode == false)
             Connection.Validate(errors);
 
-        if (Postgres != null)
-            ValidatePostgresSettings(Postgres, errors);
-
         if (Tables.Count == 0)
             errors.Add($"'{nameof(Tables)}' list cannot be empty.");
 
@@ -91,13 +88,11 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             if (table.Columns == null || table.Columns.Count == 0)
                 errors.Add($"Table '{table.Name}' must have at least one column mapping");
-            else
-                ValidateColumns(table.Name, table.Columns, errors);
 
             if (uniqueNames.Add(table.Name) == false)
                 errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
 
-            ValidateNoConflictingPropertyNames(table, errors);
+            ValidateColumnsAndPropertyNames(table.Name, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
             ValidateLinkedTables(table.LinkedTables, table.Name, errors);
         }
@@ -105,52 +100,37 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         return errors.Count == 0;
     }
 
-    private static void ValidateColumns(string tableName, List<CdcColumnMapping> columns, List<string> errors)
-    {
-        var columnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var targetNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var col in columns)
-        {
-            if (string.IsNullOrWhiteSpace(col.Column))
-            {
-                errors.Add($"Table '{tableName}': column mapping has an empty Column name");
-                continue;
-            }
-
-            if (string.IsNullOrWhiteSpace(col.Name))
-            {
-                errors.Add($"Table '{tableName}': column '{col.Column}' has an empty Name");
-                continue;
-            }
-
-            if (columnNames.Add(col.Column) == false)
-                errors.Add($"Table '{tableName}': duplicate column '{col.Column}'");
-
-            if (targetNames.Add(col.Name) == false)
-                errors.Add($"Table '{tableName}': duplicate target name '{col.Name}' (used by multiple columns)");
-        }
-    }
-
-    private static void ValidateNoConflictingPropertyNames(CdcSinkTableConfig table, List<string> errors)
-    {
-        ValidateNoConflictingPropertyNames(table.Name, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
-    }
-
-    private static void ValidateNoConflictingPropertyNames(string tableName,
+    private static void ValidateColumnsAndPropertyNames(string tableName,
         List<CdcColumnMapping> columns,
         List<CdcSinkEmbeddedTableConfig> embeddedTables,
         List<CdcSinkLinkedTableConfig> linkedTables,
         List<string> errors)
     {
+        var columnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var propertyNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         if (columns != null)
         {
             foreach (var col in columns)
             {
-                if (col.Type != CdcColumnType.Attachment)
-                    propertyNames.Add(col.Name);
+                if (string.IsNullOrWhiteSpace(col.Column))
+                {
+                    var nameHint = string.IsNullOrWhiteSpace(col.Name) ? "" : $" (Name: '{col.Name}')";
+                    errors.Add($"Table '{tableName}': column mapping has an empty Column name{nameHint}");
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(col.Name))
+                {
+                    errors.Add($"Table '{tableName}': column '{col.Column}' has an empty Name");
+                    continue;
+                }
+
+                if (columnNames.Add(col.Column) == false)
+                    errors.Add($"Table '{tableName}': duplicate column '{col.Column}'");
+
+                if (propertyNames.Add(col.Name) == false)
+                    errors.Add($"Table '{tableName}': duplicate target name '{col.Name}' (used by multiple columns)");
             }
         }
 
@@ -200,11 +180,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
             if (embedded.Columns == null || embedded.Columns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
-            else
-                ValidateColumns(embedded.SourceTableName, embedded.Columns, errors);
 
-            // Check for conflicts within this embedded table's own properties
-            ValidateNoConflictingPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, linkedTables: null, errors);
+            ValidateColumnsAndPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, linkedTables: null, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);
         }
@@ -487,40 +464,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         public override int GetHashCode() => StringComparer.OrdinalIgnoreCase.GetHashCode(FullName);
         public override bool Equals(object obj) => obj is TableInfo other && string.Equals(FullName, other.FullName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void ValidatePostgresSettings(CdcSinkPostgresSettings settings, List<string> errors)
-    {
-        if (settings.PublicationName != null)
-            ValidatePostgresIdentifier(settings.PublicationName, "Postgres.PublicationName", errors);
-
-        if (settings.SlotName != null)
-            ValidatePostgresIdentifier(settings.SlotName, "Postgres.SlotName", errors);
-    }
-
-    private static void ValidatePostgresIdentifier(string value, string fieldName, List<string> errors)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            errors.Add($"{fieldName} cannot be empty or whitespace");
-            return;
-        }
-
-        if (value.Length > 63)
-        {
-            errors.Add($"{fieldName} exceeds PostgreSQL's 63-character identifier limit (length: {value.Length})");
-            return;
-        }
-
-        for (int i = 0; i < value.Length; i++)
-        {
-            var c = value[i];
-            if (char.IsLetterOrDigit(c) || c == '_')
-                continue;
-
-            errors.Add($"{fieldName} contains invalid character '{c}' at position {i}. PostgreSQL identifiers may only contain letters, digits, and underscores");
-            return;
-        }
     }
 
     private static bool HaveColumnsChanged(List<CdcColumnMapping> local, List<CdcColumnMapping> remote)

@@ -26,18 +26,6 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
-        private static BlittableJsonReaderObject ToBlittable(JsonOperationContext context, string json)
-        {
-            return context.Sync.ReadForMemory(json, "test");
-        }
-
-        private static DynamicJsonValue ParseJson(string json)
-        {
-            using var ctx = JsonOperationContext.ShortTermSingleUse();
-            var blittable = ctx.Sync.ReadForMemory(json, "test");
-            return new DynamicJsonValue(blittable);
-        }
-
         private static void AssertBlittableContains(BlittableJsonReaderObject actual, JsonOperationContext context, string expectedJson)
         {
             using var expected = context.Sync.ReadForMemory(expectedJson, "expected");
@@ -98,14 +86,36 @@ namespace SlowTests.Server.Documents.CdcSink
             };
         }
 
+        /// <summary>
+        /// Builds the pre-computed lookup fields that CdcSinkDocumentProcessor normally creates.
+        /// Tests that construct CdcSinkTableProcessor directly need these for the batch command.
+        /// </summary>
+        private static (List<CdcColumnMapping> Attachments, Dictionary<string, string> Lookup) BuildProcessorLookups(List<CdcColumnMapping> columns)
+        {
+            var attachments = new List<CdcColumnMapping>();
+            var lookup = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var c in columns)
+            {
+                if (c.Type == CdcColumnType.Attachment)
+                    attachments.Add(c);
+                else
+                    lookup[c.Column] = c.Name;
+            }
+            return (attachments, lookup);
+        }
+
         private static CdcSinkTableProcessor CreateRootProcessor(CdcSinkTableConfig config = null, string collectionName = "Orders")
         {
             config ??= CreateRootTableConfig(collectionName);
+            var (attachments, lookup) = BuildProcessorLookups(config.Columns);
             return new CdcSinkTableProcessor
             {
                 RootConfig = config,
                 CollectionName = collectionName,
-                IsRoot = true
+                IsRoot = true,
+                Columns = config.Columns,
+                AttachmentColumns = attachments,
+                PropertyLookup = lookup,
             };
         }
 
@@ -115,6 +125,7 @@ namespace SlowTests.Server.Documents.CdcSink
             CdcSinkTableConfig rootConfig = null)
         {
             rootConfig ??= CreateRootTableConfig(collectionName);
+            var (attachments, lookup) = BuildProcessorLookups(embeddedConfig.Columns);
             return new CdcSinkTableProcessor
             {
                 RootConfig = rootConfig,
@@ -123,9 +134,12 @@ namespace SlowTests.Server.Documents.CdcSink
                 EmbeddedConfig = embeddedConfig,
                 PathFromRoot = new List<EmbeddedPathSegment>
                 {
-                    new EmbeddedPathSegment { Config = embeddedConfig }
+                    new EmbeddedPathSegment { Config = embeddedConfig, PropertyLookup = lookup }
                 },
-                RootJoinColumns = new List<string> { "order_id" }
+                RootJoinColumns = new List<string> { "order_id" },
+                Columns = embeddedConfig.Columns,
+                AttachmentColumns = attachments,
+                PropertyLookup = lookup,
             };
         }
 
@@ -785,7 +799,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = badConfig,
                 CollectionName = "Products",
-                IsRoot = true
+                IsRoot = true,
+                Columns = badConfig.Columns,
+                AttachmentColumns = badConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = badConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
             var badData = new DynamicJsonValue
             {
@@ -845,7 +864,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = config,
                 CollectionName = "Documents",
-                IsRoot = true
+                IsRoot = true,
+                Columns = config.Columns,
+                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = config.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var mappedData = new DynamicJsonValue
@@ -929,7 +953,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = config,
                 CollectionName = "Products",
-                IsRoot = true
+                IsRoot = true,
+                Columns = config.Columns,
+                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = config.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var mappedData = new DynamicJsonValue
@@ -1001,7 +1030,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = config,
                 CollectionName = "Articles",
-                IsRoot = true
+                IsRoot = true,
+                Columns = config.Columns,
+                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = config.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var mappedData = new DynamicJsonValue
@@ -1843,9 +1877,12 @@ namespace SlowTests.Server.Documents.CdcSink
             var deptJoinMapping = new Dictionary<string, string> { { "company_id", "company_id" } };
             var empJoinMapping = new Dictionary<string, string> { { "dept_id", "dept_id" } };
 
-            var deptSegment = new EmbeddedPathSegment { Config = deptConfig, JoinMapping = deptJoinMapping };
-            var empSegment = new EmbeddedPathSegment { Config = empConfig, JoinMapping = empJoinMapping };
+            var (_, deptLookup) = BuildProcessorLookups(deptConfig.Columns);
+            var (_, empLookup) = BuildProcessorLookups(empConfig.Columns);
+            var deptSegment = new EmbeddedPathSegment { Config = deptConfig, JoinMapping = deptJoinMapping, PropertyLookup = deptLookup };
+            var empSegment = new EmbeddedPathSegment { Config = empConfig, JoinMapping = empJoinMapping, PropertyLookup = empLookup };
 
+            var (empAttachments, empPropLookup) = BuildProcessorLookups(empConfig.Columns);
             var empProcessor = new CdcSinkTableProcessor
             {
                 RootConfig = rootConfig,
@@ -1853,7 +1890,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 IsRoot = false,
                 EmbeddedConfig = empConfig,
                 PathFromRoot = new List<EmbeddedPathSegment> { deptSegment, empSegment },
-                RootJoinColumns = new List<string> { "company_id" }
+                RootJoinColumns = new List<string> { "company_id" },
+                Columns = empConfig.Columns,
+                AttachmentColumns = empAttachments,
+                PropertyLookup = empPropLookup,
             };
 
             return (rootConfig, deptConfig, empConfig, empProcessor);
@@ -1876,7 +1916,7 @@ namespace SlowTests.Server.Documents.CdcSink
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
             using (var tx = setupCtx.OpenWriteTransaction())
             {
-                using var blittable = ToBlittable(setupCtx, """
+                using var blittable = setupCtx.Sync.ReadForMemory("""
                     {
                         "CompanyId": 1,
                         "CompanyName": "Acme Corp",
@@ -1896,7 +1936,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         ],
                         "@metadata": { "@collection": "Companies" }
                     }
-                    """);
+                    """, "test");
                 database.DocumentsStorage.Put(setupCtx, "Companies/1", null, blittable);
                 tx.Commit();
             }
@@ -2209,7 +2249,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = tableConfig,
                 CollectionName = "Items",
-                IsRoot = true
+                IsRoot = true,
+                Columns = tableConfig.Columns,
+                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = tableConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var sinkConfig = new CdcSinkConfiguration
@@ -2320,7 +2365,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = tableConfig,
                 CollectionName = "Items",
-                IsRoot = true
+                IsRoot = true,
+                Columns = tableConfig.Columns,
+                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = tableConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var sinkConfig = new CdcSinkConfiguration
@@ -2416,7 +2466,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = tableConfig,
                 CollectionName = "Items",
-                IsRoot = true
+                IsRoot = true,
+                Columns = tableConfig.Columns,
+                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = tableConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var sinkConfig = new CdcSinkConfiguration
@@ -2509,7 +2564,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = tableConfig,
                 CollectionName = "Items",
-                IsRoot = true
+                IsRoot = true,
+                Columns = tableConfig.Columns,
+                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = tableConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var sinkConfig = new CdcSinkConfiguration
@@ -2581,7 +2641,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = badConfig,
                 CollectionName = "BadOrders",
-                IsRoot = true
+                IsRoot = true,
+                Columns = badConfig.Columns,
+                AttachmentColumns = badConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = badConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var goodConfig = CreateRootTableConfig("GoodOrders");
@@ -2589,7 +2654,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = goodConfig,
                 CollectionName = "GoodOrders",
-                IsRoot = true
+                IsRoot = true,
+                Columns = goodConfig.Columns,
+                AttachmentColumns = goodConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = goodConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             // Build the combined patch request from a config that includes the bad table
@@ -2687,7 +2757,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = config,
                 CollectionName = "Records",
-                IsRoot = true
+                IsRoot = true,
+                Columns = config.Columns,
+                AttachmentColumns = config.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = config.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             // Simulate Npgsql-returned types:
@@ -2794,7 +2869,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 RootConfig = tableConfig,
                 CollectionName = "Orders",
-                IsRoot = true
+                IsRoot = true,
+                Columns = tableConfig.Columns,
+                AttachmentColumns = tableConfig.Columns.Where(c => c.Type == CdcColumnType.Attachment).ToList(),
+                PropertyLookup = tableConfig.Columns
+                    .Where(c => c.Type != CdcColumnType.Attachment)
+                    .ToDictionary(c => c.Column, c => c.Name, StringComparer.OrdinalIgnoreCase),
             };
 
             var sinkConfig = new CdcSinkConfiguration

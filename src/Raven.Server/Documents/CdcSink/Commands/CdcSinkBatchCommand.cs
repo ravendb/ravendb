@@ -268,49 +268,37 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         if (lastPutOp != null) // Store attachments from root table binary columns
-            StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.RootConfig.Columns, prefix: null);
+            StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.AttachmentColumns, prefix: null);
 
         // Handle attachments from embedded table binary columns.
         // Attachment name includes the embedded path and PK values to distinguish
         // attachments from different embedded rows (e.g., "Lines/42/photo").
         foreach (var embOp in pendingEmbeds ?? [])
         {
-            var embConfig = embOp.Processor.EmbeddedConfig;
-            if (HasAttachmentColumns(embConfig.Columns) == false)
+            var attachmentColumns = embOp.Processor.AttachmentColumns;
+            if (attachmentColumns.Count == 0)
                 continue;
 
-            var prefix = BuildEmbeddedAttachmentPrefix(embConfig, embOp.RawData);
+            var prefix = BuildEmbeddedAttachmentPrefix(embOp.Processor.EmbeddedConfig, embOp.RawData);
 
             if (embOp.Operation == CdcSinkOperation.Upsert)
             {
-                StoreAttachments(context, documentId, embOp.RawData, embConfig.Columns, prefix);
+                StoreAttachments(context, documentId, embOp.RawData, attachmentColumns, prefix);
             }
             else
             {
-                DeleteAttachments(context, documentId, embConfig.Columns, prefix);
+                DeleteAttachments(context, documentId, attachmentColumns, prefix);
             }
         }
-    }
-
-    private static bool HasAttachmentColumns(List<CdcColumnMapping> columns)
-    {
-        for (int i = 0; i < columns.Count; i++)
-        {
-            if (columns[i].Type == CdcColumnType.Attachment)
-                return true;
-        }
-        return false;
     }
 
     private void StoreAttachments(
         DocumentsOperationContext context, string documentId,
-        Dictionary<string, object> rawData, List<CdcColumnMapping> columns, string prefix)
+        Dictionary<string, object> rawData, List<CdcColumnMapping> attachmentColumns, string prefix)
     {
-        for (int i = 0; i < columns.Count; i++)
+        for (int i = 0; i < attachmentColumns.Count; i++)
         {
-            var col = columns[i];
-            if (col.Type != CdcColumnType.Attachment)
-                continue;
+            var col = attachmentColumns[i];
 
             if (rawData.TryGetValue(col.Column, out var value) == false || value is null or DBNull)
                 continue;
@@ -370,14 +358,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     private void DeleteAttachments(
         DocumentsOperationContext context, string documentId,
-        List<CdcColumnMapping> columns, string prefix)
+        List<CdcColumnMapping> attachmentColumns, string prefix)
     {
-        for (int i = 0; i < columns.Count; i++)
+        for (int i = 0; i < attachmentColumns.Count; i++)
         {
-            var col = columns[i];
-            if (col.Type != CdcColumnType.Attachment)
-                continue;
-
+            var col = attachmentColumns[i];
             var name = prefix != null ? prefix + col.Name : col.Name;
             _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(
                 context, documentId, name, expectedChangeVector: null, collectionName: out _, updateDocument: true);
@@ -530,7 +515,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             foreach (var arrayVal in existingArray)
             {
                 if (arrayVal is BlittableJsonReaderObject item &&
-                    MatchesPrimaryKey(item, op.MappedData, config))
+                    MatchesPrimaryKey(item, op.MappedData, config, op.Processor.PropertyLookup))
                 {
                     found = true;
 
@@ -584,7 +569,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         // BuildMapKey normalizes the key (lowercased when case-insensitive),
         // so all stored map keys use the same normalization. Direct lookup works.
-        var mapKey = BuildMapKey(op.MappedData, config);
+        var mapKey = BuildMapKey(op.MappedData, config, op.Processor.PropertyLookup);
 
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
@@ -630,7 +615,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// </summary>
     private static bool MatchesPrimaryKey(
         BlittableJsonReaderObject item, DynamicJsonValue candidate,
-        CdcSinkEmbeddedTableConfig config)
+        CdcSinkEmbeddedTableConfig config, Dictionary<string, string> propertyLookup)
     {
         var stringComparison = config.CaseSensitiveKeys
             ? StringComparison.Ordinal
@@ -638,7 +623,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         foreach (var pkCol in config.PrimaryKeyColumns)
         {
-            var mappedName = FindMappedName(config.Columns, pkCol) ?? pkCol;
+            var mappedName = FindMappedName(propertyLookup, pkCol) ?? pkCol;
 
             if (item.TryGetMember(mappedName, out var existingVal) == false)
                 return false;
@@ -656,17 +641,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     }
 
     /// <summary>
-    /// Looks up the mapped property name for a SQL column in the Columns list.
+    /// Looks up the mapped property name for a SQL column using the pre-computed lookup dictionary.
     /// Returns null if the column is not found (caller falls back to the raw column name).
     /// </summary>
-    private static string FindMappedName(List<CdcColumnMapping> columns, string sqlColumn)
+    private static string FindMappedName(Dictionary<string, string> propertyLookup, string sqlColumn)
     {
-        for (int i = 0; i < columns.Count; i++)
-        {
-            if (string.Equals(columns[i].Column, sqlColumn, StringComparison.OrdinalIgnoreCase))
-                return columns[i].Name;
-        }
-        return null;
+        return propertyLookup.TryGetValue(sqlColumn, out var name) ? name : null;
     }
 
     private static bool ComparePrimaryKeyValues(object existingVal, object candidateVal, StringComparison stringComparison)
@@ -703,7 +683,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// Respects the <see cref="CdcSinkEmbeddedTableConfig.CaseSensitiveKeys"/> setting:
     /// when case-insensitive, the key is lowercased for consistent lookup.
     /// </summary>
-    private string BuildMapKey(DynamicJsonValue mappedData, CdcSinkEmbeddedTableConfig config)
+    private string BuildMapKey(DynamicJsonValue mappedData, CdcSinkEmbeddedTableConfig config, Dictionary<string, string> propertyLookup)
     {
         _sb ??= new StringBuilder();
         _sb.Clear();
@@ -712,7 +692,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (i > 0)
                 _sb.Append('/');
             var pkCol = config.PrimaryKeyColumns[i];
-            var mappedName = FindMappedName(config.Columns, pkCol) ?? pkCol;
+            var mappedName = FindMappedName(propertyLookup, pkCol) ?? pkCol;
 
             _sb.Append(mappedData[mappedName]?.ToString() ?? "");
         }
@@ -800,7 +780,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                         }
 
                         // The parent PK column is stored under its mapped property name
-                        var mappedName = FindMappedName(segment.Config.Columns, parentPkCol) ?? parentPkCol;
+                        var mappedName = FindMappedName(segment.PropertyLookup, parentPkCol) ?? parentPkCol;
 
                         if (candidate.TryGetMember(mappedName, out var storedValue) == false)
                         {

@@ -25,7 +25,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
 
     /// <summary>
     /// Column mappings defining how SQL columns are stored in the embedded object.
-    /// Each entry maps a SQL column to a property, JSON field, or attachment.
+    /// Each entry maps a SQL column to a property or an attachment.
     /// </summary>
     public List<CdcColumnMapping> Columns { get; set; } = new();
 
