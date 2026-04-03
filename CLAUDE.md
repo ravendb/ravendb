@@ -113,15 +113,48 @@ Always run tests in Release mode unless debugging specifically requires Debug mo
 
 ## Test Categorization Rules
 
-When writing or modifying tests, use `[RavenFact]`/`[RavenTheory]` with `RavenTestCategory` flags (not plain `[Fact]`/`[Theory]`). Add `using Tests.Infrastructure;` when needed.
+**Every new test must be categorized.** Use `[RavenFact(RavenTestCategory.X)]` / `[RavenTheory(RavenTestCategory.X)]` instead of plain `[Fact]`/`[Theory]`. Add `using Tests.Infrastructure;`. Categories can be combined with `|` for tests spanning multiple areas.
 
-**Key rules:**
+```csharp
+// Single category
+[RavenFact(RavenTestCategory.Querying)]
+public void MyQueryTest() { ... }
+
+// Combined categories
+[RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+public async Task MyClusterShardingTest() { ... }
+
+// Parameterized test
+[RavenTheory(RavenTestCategory.Etl)]
+[InlineData(RavenDatabaseMode.Single, RavenDatabaseMode.Sharded)]
+public void MyEtlTest(RavenDatabaseMode src, RavenDatabaseMode dst) { ... }
+```
+
+### Running tests by category
+
+Categories are published as xUnit traits. Filter with `--filter`:
+
+```bash
+# Run only Querying tests in FastTests
+dotnet test test/FastTests --configuration Release --filter "Category=Querying"
+
+# Run only Cluster tests in SlowTests
+dotnet test test/SlowTests --configuration Release --filter "Category=Cluster"
+
+# Combine with class/method filters
+dotnet test test/FastTests --configuration Release --filter "Category=Voron&FullyQualifiedName~CompactTree"
+```
+
+### Categorization rules
+
 - Categorize based on PRIMARY functionality being tested, not file/directory location
-- Read `test/Tests.Infrastructure/RavenTestCategory.cs` for complete category definitions
+- Read `test/Tests.Infrastructure/RavenTestCategory.cs` for complete category definitions (54+ categories with detailed comments)
 - Prefer specific categories over `RavenTestCategory.Core`
 - After changing test attributes, update the count in `SlowTests.Tests.TestsInheritanceTests.AllTestsShouldUseRavenFactOrRavenTheoryAttributes`
+- Attributes also support `LicenseRequired`, `NightlyBuildRequired`, and `Requires` (for external services like MsSql, ElasticSearch) which auto-skip tests when prerequisites are missing
 
-**Quick categorization:**
+### Quick categorization guide
+
 - `session.Query<>()` / `session.Advanced.DocumentQuery<>()` -> `Querying`
 - `session.Advanced.Patch()` / `PatchByQueryOperation` -> `Patching`
 - `session.Store()` / `session.Load()` basic CRUD -> `ClientApi`
