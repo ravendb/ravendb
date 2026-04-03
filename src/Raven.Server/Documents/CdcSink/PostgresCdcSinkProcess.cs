@@ -74,6 +74,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _dataSource = dataSourceBuilder.Build();
     }
 
+    public override void Dispose()
+    {
+        base.Dispose();
+        _dataSource.Dispose();
+    }
+
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
         await EnsureReplicationSetup(ct);
@@ -169,6 +175,18 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                         """, ex);
                 }
             }
+        }
+
+        // If a previous consumer (e.g., a process that was stopped but whose WAL sender
+        // hasn't timed out yet) is still holding the slot, terminate it so we can connect.
+        // PostgreSQL's default wal_sender_timeout is 60 seconds; without this, we'd have
+        // to wait for it to expire before the new process can stream.
+        await using (var cmd = new NpgsqlCommand(
+            "SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = @slotName AND active_pid IS NOT NULL",
+            conn))
+        {
+            cmd.Parameters.AddWithValue("slotName", _slotName);
+            await cmd.ExecuteScalarAsync(ct);
         }
 
         // Resolve pgvector extension OID so OidToCategory can recognize vector columns
@@ -352,7 +370,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var state = LoadState(context);
             lastLsn = string.IsNullOrEmpty(state.LastLsn)
                 ? new NpgsqlTypes.NpgsqlLogSequenceNumber(0)
-                : new NpgsqlTypes.NpgsqlLogSequenceNumber(ulong.Parse(state.LastLsn));
+                : NpgsqlTypes.NpgsqlLogSequenceNumber.Parse(state.LastLsn);
         }
 
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext))
@@ -824,11 +842,19 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         {
             PostgresTypeCategory.Integer => Convert.ToInt64(value),
             PostgresTypeCategory.BigInt => Convert.ToInt64(value),
-            PostgresTypeCategory.Float => Convert.ToDouble(value),
+            // Float (float4/real): keep as float to preserve precision parity between
+            // initial load (ADO.NET returns float) and CDC streaming (pgoutput text).
+            PostgresTypeCategory.Float => value is float f ? f : Convert.ToSingle(value),
             PostgresTypeCategory.Double => Convert.ToDouble(value),
-            PostgresTypeCategory.Numeric => Convert.ToDouble(value),
-            PostgresTypeCategory.Boolean => Convert.ToBoolean(value),
-            PostgresTypeCategory.DateOnly => System.DateOnly.FromDateTime(Convert.ToDateTime(value)),
+            // Numeric/decimal: keep as decimal to preserve exact representation (trailing
+            // zeros, scale) consistently between initial load and CDC streaming.
+            PostgresTypeCategory.Numeric => value is decimal d ? d : Convert.ToDecimal(value),
+            // pgoutput text protocol sends booleans as "t"/"f" rather than "true"/"false",
+            // which Convert.ToBoolean cannot parse. Handle all Postgres boolean forms.
+            PostgresTypeCategory.Boolean => value is bool b ? b : ParsePostgresBoolean(value),
+            // Npgsql 10+ returns DateOnly natively for date columns; earlier versions or
+            // pgoutput text decoding may return DateTime or string — handle both.
+            PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : DateOnly.FromDateTime(Convert.ToDateTime(value)),
             PostgresTypeCategory.DateTime => Convert.ToDateTime(value),
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,
@@ -837,6 +863,26 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             PostgresTypeCategory.Vector => ParseVectorLiteral(value.ToString(), table, column),
             _ => value,
         };
+    }
+
+    /// <summary>
+    /// Parses a PostgreSQL boolean value. The pgoutput text protocol sends "t"/"f"
+    /// instead of "true"/"false", so Convert.ToBoolean fails. PostgreSQL also accepts
+    /// "yes"/"no", "on"/"off", "1"/"0" in its boolean type.
+    /// </summary>
+    private static bool ParsePostgresBoolean(object value)
+    {
+        if (value is string s)
+        {
+            return s switch
+            {
+                "t" or "T" or "true" or "True" or "TRUE" or "yes" or "on" or "1" => true,
+                "f" or "F" or "false" or "False" or "FALSE" or "no" or "off" or "0" => false,
+                _ => Convert.ToBoolean(s),
+            };
+        }
+
+        return Convert.ToBoolean(value);
     }
 
     /// <summary>

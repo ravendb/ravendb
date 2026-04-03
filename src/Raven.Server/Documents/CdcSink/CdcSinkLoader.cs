@@ -314,12 +314,10 @@ public class CdcSinkLoader : IDisposable
                 toRemoveList.Add(processList[i]);
         }
 
-        LoadProcesses(record, myCdcSinks, toRemoveList);
-
-        if (toRemoveList.Count == 0)
-            return;
-
-        ThreadPool.QueueUserWorkItem(_ =>
+        // Stop old processes BEFORE starting new ones. PostgreSQL replication slots
+        // allow only one consumer, so the old process must release its connection
+        // before the replacement can connect.
+        if (toRemoveList.Count > 0)
         {
             Parallel.ForEach(toRemoveList, process =>
             {
@@ -344,6 +342,8 @@ public class CdcSinkLoader : IDisposable
                             $"Failed to dispose CDC sink process {process.Name} on the database record change", e);
                 }
             });
-        });
+        }
+
+        LoadProcesses(record, myCdcSinks, toRemoveList);
     }
 }

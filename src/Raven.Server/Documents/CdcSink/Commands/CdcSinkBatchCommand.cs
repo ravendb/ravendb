@@ -175,11 +175,30 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
                     if (ignoreThisDelete)
                     {
-                        // IgnoreDeletes: the document survives. Run patches and keep
-                        // the result as currentDoc so modifications (e.g., this.Archived = true)
-                        // persist into subsequent Puts or the final save.
+                        // IgnoreDeletes: the document survives unless the patch explicitly
+                        // calls del(). Run patches and keep the result as currentDoc so
+                        // modifications (e.g., this.Archived = true) persist into subsequent
+                        // Puts or the final save. When RunPatches returns null, it means the
+                        // script called del() or put() — respect that decision by setting
+                        // currentDoc to null so we don't resurrect the document with a Put.
                         if (patches is { Count: > 0 } && currentDoc != null)
-                            currentDoc = RunPatches(context, documentId, currentDoc, patches) ?? currentDoc;
+                        {
+                            var result = RunPatches(context, documentId, currentDoc, patches);
+                            if (result != null)
+                            {
+                                currentDoc = result;
+                            }
+                            else
+                            {
+                                // Script called del()/put() — the document was already
+                                // removed or replaced by the script engine. Clear state
+                                // so we don't issue a spurious Put at the end.
+                                currentDoc = null;
+                                lastPutOp = null;
+                                lastDeleteOp = op;
+                                deletedDoc = null;
+                            }
+                        }
                         patches = null;
                         pendingEmbeds = null;
                     }

@@ -176,13 +176,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             }
             catch (Exception e)
             {
-                _initialLoadTcs.TrySetException(e);
+				//  _initialLoadTcs.TrySetException(e);
+                // Intentionally DOES NOT fault the _initialLoadTcs here — the process will retry after fallback.
+                // If we set TrySetException, a subsequent successful retry can never signal completion.
 
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process failed.", e);
-
-                Statistics.RecordConsumeError(e.Message);
-
                 var alert = AlertRaised.Create(
                     Database.Name, Tag,
                     $"[{Name}] CDC Sink process failed: {e.Message}",
@@ -192,6 +191,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     details: new ExceptionDetails(e));
 
                 Database.NotificationCenter.Add(alert);
+
                 EnterFallbackMode();
             }
         }
@@ -392,7 +392,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         return JsonDeserializationServer.CdcSinkTaskState(doc.Data);
     }
 
-    public void Dispose()
+    public virtual void Dispose()
     {
         var exceptionAggregator = new ExceptionAggregator(Logger, $"Could not dispose {GetType().Name}: '{Name}'");
 
