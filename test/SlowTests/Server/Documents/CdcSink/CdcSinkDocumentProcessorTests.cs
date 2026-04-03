@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using FastTests;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.Documents.CdcSink;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink;
 
-public class CdcSinkDocumentProcessorTests
+public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     private static CdcSinkConfiguration CreateOrdersConfig()
     {
@@ -77,7 +79,7 @@ public class CdcSinkDocumentProcessorTests
         };
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void RootUpsert_ProducesCorrectPut()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -104,7 +106,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.NotNull(result.MappedData);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void RootDelete_ProducesCorrectDelete()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -127,7 +129,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal("Orders/10248", result.DocumentId);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void RootWithLink_ProducesLinkedDocumentId()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -154,7 +156,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal("Customers/ALFKI", result.MappedData["Customer"].ToString());
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void EmbeddedUpsert_Array_ProducesEmbeddedModify()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -185,7 +187,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal(CdcSinkRelationType.Array, result.Processor.EmbeddedConfig.Type);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void EmbeddedDelete_ProducesEmbeddedModifyWithDelete()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -210,7 +212,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal(CdcSinkOperation.Delete, result.Operation);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void UnknownTable_ReturnsNull()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -229,7 +231,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Null(result);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void ColumnMapping_RenamesSqlColumnsToDocumentProperties()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -257,7 +259,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal("Maria Anders", result.MappedData["ContactName"].ToString());
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void RawData_ContainsAllColumnsIncludingUnmapped()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -292,7 +294,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Null(result.MappedData["country"]);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void EmbeddedUpsert_Map_ProducesCorrectConfig()
     {
         var config = new CdcSinkConfiguration
@@ -354,7 +356,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal(CdcSinkRelationType.Map, result.Processor.EmbeddedConfig.Type);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void EmbeddedValue_ManyToOne_ProducesCorrectConfig()
     {
         var config = new CdcSinkConfiguration
@@ -420,7 +422,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal(CdcSinkRelationType.Value, result.Processor.EmbeddedConfig.Type);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void CompositeKey_GeneratesCorrectDocumentId()
     {
         var config = new CdcSinkConfiguration
@@ -466,7 +468,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Equal("OrderDetails/10248/11", result.DocumentId);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void NullLink_ProducesNullProperty()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
@@ -490,7 +492,7 @@ public class CdcSinkDocumentProcessorTests
         Assert.Null(result.MappedData["Customer"]);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Sinks)]
     public void CaseInsensitiveTableLookup()
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
