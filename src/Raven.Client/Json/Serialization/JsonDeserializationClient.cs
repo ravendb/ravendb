@@ -28,6 +28,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -253,6 +254,12 @@ namespace Raven.Client.Json.Serialization
         
         internal static readonly Func<BlittableJsonReaderObject, UpdateQueueSinkOperationResult> UpdateQueueSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateQueueSinkOperationResult>();
 
+        internal static readonly Func<BlittableJsonReaderObject, AddCdcSinkOperationResult> AddCdcSinkOperationResult = GenerateJsonDeserializationRoutine<AddCdcSinkOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, UpdateCdcSinkOperationResult> UpdateCdcSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateCdcSinkOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, CdcSinkProcessState> CdcSinkProcessState = GenerateJsonDeserializationRoutine<CdcSinkProcessState>();
+
         internal static readonly Func<BlittableJsonReaderObject, EtlProcessState> EtlProcessState = GenerateJsonDeserializationRoutine<EtlProcessState>();
         
         internal static readonly Func<BlittableJsonReaderObject, QueueSinkProcessState> QueueSinkProcessState = GenerateJsonDeserializationRoutine<QueueSinkProcessState>();
@@ -349,6 +356,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, AiConnectionString> AiConnectionString = GenerateJsonDeserializationRoutine<AiConnectionString>();
 
         public static readonly Func<BlittableJsonReaderObject, OngoingTaskQueueSink> GetOngoingTaskQueueSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskQueueSink>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskCdcSink> GetOngoingTaskCdcSinkResult = GenerateJsonDeserializationRoutine<OngoingTaskCdcSink>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteRevisionsOperation.Result> DeleteRevisionsResult = GenerateJsonDeserializationRoutine<DeleteRevisionsOperation.Result>();
 
