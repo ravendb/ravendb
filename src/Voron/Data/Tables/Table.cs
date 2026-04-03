@@ -581,6 +581,7 @@ namespace Voron.Data.Tables
                 {
                     _tx.LowLevelTransaction.FreePage(page.PageNumber + i);
                 }
+                _stats.OverflowPageCount -= numberOfPages;
             }
 
             _stats.NumberOfEntries--;
