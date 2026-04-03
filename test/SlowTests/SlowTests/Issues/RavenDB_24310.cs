@@ -1,7 +1,9 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.ServerWide;
@@ -353,6 +355,59 @@ public class RavenDB_24310 : RavenTestBase
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" })));
             Assert.Contains("It is used by", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.BackupExportImport)]
+    public async Task ServerWideConnectionStringFilteredOutDuringSnapshotRestore()
+    {
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+
+        using (var store = GetDocumentStore())
+        {
+            // create server-wide connection string
+            var ravenCS = new ServerWideConnectionString
+            {
+                ConnectionString = new RavenConnectionString
+                {
+                    Name = "MyRavenCS",
+                    Database = "TargetDb",
+                    TopologyDiscoveryUrls = new[] { "http://localhost:8080" }
+                }
+            };
+
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            var expectedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName("MyRavenCS");
+
+            // verify it was propagated
+            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.True(record.RavenConnectionStrings.ContainsKey(expectedName));
+
+            // create a snapshot backup
+            var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+            var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+
+            // delete the server-wide connection string before restore so it won't be re-propagated
+            await store.Maintenance.Server.SendAsync(
+                new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" }));
+
+            // restore to a new database
+            var restoredDbName = $"restored_{store.Database}";
+            var backupDirectory = Directory.GetDirectories(backupPath).First();
+
+            using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+            {
+                BackupLocation = backupDirectory,
+                DatabaseName = restoredDbName
+            }))
+            {
+                // the restored database should NOT contain the server-wide connection string
+                // because FilterOutServerWideTasks strips them during restore
+                var restoredRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDbName));
+                Assert.False(restoredRecord.RavenConnectionStrings.ContainsKey(expectedName),
+                    "Server-wide connection string should have been filtered out during snapshot restore");
+            }
         }
     }
 }
