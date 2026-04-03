@@ -157,7 +157,8 @@ public class CdcSinkTableProcessor
 
     /// <summary>
     /// Parse a string value from a column explicitly marked as JSON into a native
-    /// blittable object or array using the parent JsonOperationContext.
+    /// value. Handles all JSON value types: objects, arrays, strings, numbers,
+    /// booleans, and null.
     /// </summary>
     private static object ParseJsonColumnValue(string s, JsonOperationContext context)
     {
@@ -170,10 +171,38 @@ public class CdcSinkTableProcessor
 
         var first = trimmed[0];
 
-        if (first == '[')
-            return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);
-
-        return context.Sync.ReadForMemory(s, "cdc-json-column");
+        switch (first)
+        {
+            case '{':
+                return context.Sync.ReadForMemory(s, "cdc-json-column");
+            case '[':
+                return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);
+            case '"':
+            {
+                // JSON string — strip the surrounding quotes
+                var inner = s.Trim();
+                if (inner.Length >= 2 && inner[0] == '"' && inner[inner.Length - 1] == '"')
+                    return inner.Substring(1, inner.Length - 2);
+                return s;
+            }
+            case 't' or 'f':
+                if (bool.TryParse(s.Trim(), out var boolVal))
+                    return boolVal;
+                return s;
+            case 'n':
+                if (trimmed.SequenceEqual("null"))
+                    return null;
+                return s;
+            default:
+                // Numeric value
+                var numStr = s.Trim();
+                if (long.TryParse(numStr, out var longVal))
+                    return longVal;
+                if (double.TryParse(numStr, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out var doubleVal))
+                    return doubleVal;
+                return s;
+        }
     }
 
     private static DynamicJsonArray ConvertArrayToJsonArray(Array arr)

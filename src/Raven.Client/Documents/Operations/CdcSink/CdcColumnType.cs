@@ -15,9 +15,11 @@ public enum CdcColumnType
     Default,
 
     /// <summary>
-    /// Parse the string value as a native JSON object or array in the document.
-    /// Use for json/jsonb columns in PostgreSQL, or nvarchar(max) with JSON content
-    /// in SQL Server. Without this type, JSON values are stored as escaped strings.
+    /// Parse the string value as its native JSON type in the document.
+    /// Handles all JSON value types: objects, arrays, strings, numbers, booleans,
+    /// and null. Use for json/jsonb columns in PostgreSQL, or nvarchar(max) with
+    /// JSON content in SQL Server. Without this type, JSON values are stored as
+    /// escaped strings.
     /// </summary>
     Json,
 
