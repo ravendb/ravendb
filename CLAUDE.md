@@ -199,3 +199,4 @@ The Studio (`src/Raven.Studio`) is a **Knockout.js → React hybrid** managed by
 
 - **Custom NuGet packages**: `libs/` folder contains forked packages (Jint, Lucene.NET, Microsoft.Diagnostics.Runtime) referenced via `NuGet.Config`. These must be present for builds to work.
 - **Server dev launch settings**: Local dev runs with `--Features.Availability=Experimental` and `--Security.UnsecuredAccessAllowed=PublicNetwork` (see `src/Raven.Server/Properties/launchSettings.json`)
+- **Documentation**: https://docs.ravendb.net/6.2 (this branch). Latest version docs: https://docs.ravendb.net/7.2
