@@ -187,7 +187,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
         using (var wtx = Env.WriteTransaction())
         {
-            // delete ~36MB of data (pages 7-25), which will create sparse regions after flush
+            // delete ~36MB of data (pages 7-24), which will create sparse regions after flush
             for (int i = 7; i < 25; i++)
             {
                 for (int j = 0; j < 256; j++)
@@ -208,7 +208,7 @@ public class SparseRegions(ITestOutputHelper output) : StorageTest(output)
 
         if (PlatformDetails.RunningOnMacOsx is false)
         {
-            // After hole punching, ActualSpaceInBytes (physical disk space) must be less than AllocatedSpaceInBytes
+            // After hole punching, PhysicalSpaceInBytes (physical disk space) must be less than AllocatedSpaceInBytes
             Assert.True(report.DataFile.PhysicalSpaceInBytes < report.DataFile.AllocatedSpaceInBytes,
                 $"PhysicalSpaceInBytes ({new Size(report.DataFile.PhysicalSpaceInBytes, SizeUnit.Bytes)}) should be less than " +
                 $"AllocatedSpaceInBytes ({new Size(report.DataFile.AllocatedSpaceInBytes, SizeUnit.Bytes)}) after hole punching");
