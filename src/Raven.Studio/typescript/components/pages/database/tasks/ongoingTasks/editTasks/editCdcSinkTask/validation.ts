@@ -9,6 +9,12 @@ const onDeleteSchema = yup
     .nullable()
     .default(null);
 
+const columnMappingSchema = yup.object({
+    column: yup.string().required("SQL column name is required"),
+    name: yup.string().required("Target name is required"),
+    type: yup.string<"Default" | "Json" | "Attachment">().required(),
+});
+
 const embeddedTableSchema: yup.Lazy<any> = yup.lazy(() =>
     yup.object({
         sourceTableSchema: yup.string().nullable(),
@@ -17,8 +23,7 @@ const embeddedTableSchema: yup.Lazy<any> = yup.lazy(() =>
         type: yup.string<"Array" | "Map" | "Value">().required(),
         joinColumns: yup.array().of(yup.string().required()).min(1, "At least one join column is required"),
         primaryKeyColumns: yup.array().of(yup.string().required()),
-        columnsMapping: yup.object(),
-        attachmentNameMapping: yup.object(),
+        columns: yup.array().of(columnMappingSchema),
         patch: yup.string().nullable(),
         onDelete: onDeleteSchema,
         caseSensitiveKeys: yup.boolean(),
@@ -39,12 +44,10 @@ const tableSchema = yup.object({
     name: yup.string().required("Collection name is required"),
     sourceTableSchema: yup.string().nullable(),
     sourceTableName: yup.string().required("Source table name is required"),
-    columnsMapping: yup.object().test(
-        "at-least-one-column",
-        "At least one column mapping is required",
-        (value) => value != null && Object.keys(value).length > 0
-    ),
-    attachmentNameMapping: yup.object(),
+    columns: yup
+        .array()
+        .of(columnMappingSchema)
+        .min(1, "At least one column mapping is required"),
     primaryKeyColumns: yup
         .array()
         .of(yup.string().required())

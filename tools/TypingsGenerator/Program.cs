@@ -596,6 +596,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CdcSinkLinkedTableConfig));
             scripter.AddType(typeof(CdcSinkOnDeleteConfig));
             scripter.AddType(typeof(CdcSinkRelationType));
+            scripter.AddType(typeof(CdcColumnMapping));
+            scripter.AddType(typeof(CdcColumnType));
+            scripter.AddType(typeof(CdcSinkPostgresSettings));
             scripter.AddType(typeof(TestCdcSinkScript));
             scripter.AddType(typeof(TestCdcSinkScriptResult));
             scripter.AddType(typeof(CdcSinkVerificationResult));

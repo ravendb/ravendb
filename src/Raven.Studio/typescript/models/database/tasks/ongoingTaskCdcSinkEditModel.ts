@@ -137,6 +137,7 @@ class ongoingTaskCdcSinkEditModel extends ongoingTaskEditModel {
                     Tables: [],
                     ConnectionStringName: null,
                     Name: null,
+                    SkipInitialLoad: false,
                 },
                 ConnectionStringName: null,
                 FactoryName: null,

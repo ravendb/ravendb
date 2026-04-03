@@ -1,7 +1,7 @@
 import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
 import { FormInput, FormGroup, FormLabel, FormSwitch, FormAceEditor } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { CdcSinkFormData, CdcSinkEmbeddedTableFormData, CdcSinkLinkedTableFormData } from "../types";
+import { CdcSinkFormData, CdcSinkEmbeddedTableFormData, CdcSinkLinkedTableFormData, CdcSinkColumnType } from "../types";
 import { useState } from "react";
 
 interface CdcSinkTableEditorProps {
@@ -93,8 +93,6 @@ export default function CdcSinkTableEditor({ tableIndex, onClose }: CdcSinkTable
 
             <CdcSinkOnDeleteSection tableIndex={tableIndex} />
 
-            <CdcSinkAttachmentMapping tableIndex={tableIndex} />
-
             <CdcSinkEmbeddedTablesSection tableIndex={tableIndex} />
 
             <CdcSinkLinkedTablesSection tableIndex={tableIndex} />
@@ -104,28 +102,28 @@ export default function CdcSinkTableEditor({ tableIndex, onClose }: CdcSinkTable
 
 function CdcSinkColumnMapping({ tableIndex }: { tableIndex: number }) {
     const { control, getValues, setValue } = useFormContext<CdcSinkFormData>();
-    const columnsMapping = useWatch({ control, name: `tables.${tableIndex}.columnsMapping` }) ?? {};
+    const columns = useWatch({ control, name: `tables.${tableIndex}.columns` }) ?? [];
     const [newSqlColumn, setNewSqlColumn] = useState("");
-    const [newDocProperty, setNewDocProperty] = useState("");
-
-    const entries = Object.entries(columnsMapping);
+    const [newTargetName, setNewTargetName] = useState("");
+    const [newType, setNewType] = useState<CdcSinkColumnType>("Default");
 
     const handleAdd = () => {
         if (!newSqlColumn) return;
-        const current = getValues(`tables.${tableIndex}.columnsMapping`) ?? {};
+        const current = getValues(`tables.${tableIndex}.columns`) ?? [];
         setValue(
-            `tables.${tableIndex}.columnsMapping`,
-            { ...current, [newSqlColumn]: newDocProperty || newSqlColumn },
+            `tables.${tableIndex}.columns`,
+            [...current, { column: newSqlColumn, name: newTargetName || newSqlColumn, type: newType }],
             { shouldDirty: true, shouldValidate: true }
         );
         setNewSqlColumn("");
-        setNewDocProperty("");
+        setNewTargetName("");
+        setNewType("Default");
     };
 
-    const handleRemove = (key: string) => {
-        const current = { ...getValues(`tables.${tableIndex}.columnsMapping`) };
-        delete current[key];
-        setValue(`tables.${tableIndex}.columnsMapping`, current, { shouldDirty: true, shouldValidate: true });
+    const handleRemove = (index: number) => {
+        const current = [...(getValues(`tables.${tableIndex}.columns`) ?? [])];
+        current.splice(index, 1);
+        setValue(`tables.${tableIndex}.columns`, current, { shouldDirty: true, shouldValidate: true });
     };
 
     return (
@@ -136,20 +134,22 @@ function CdcSinkColumnMapping({ tableIndex }: { tableIndex: number }) {
                     <thead>
                         <tr>
                             <th>SQL Column</th>
-                            <th>Document Property</th>
+                            <th>Target Name</th>
+                            <th style={{ width: "140px" }}>Type</th>
                             <th style={{ width: "60px" }}></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {entries.map(([sqlCol, docProp]) => (
-                            <tr key={sqlCol}>
-                                <td>{sqlCol}</td>
-                                <td>{docProp}</td>
+                        {columns.map((col, idx) => (
+                            <tr key={idx}>
+                                <td>{col.column}</td>
+                                <td>{col.name}</td>
+                                <td>{col.type}</td>
                                 <td>
                                     <button
                                         type="button"
                                         className="btn btn-sm btn-outline-danger"
-                                        onClick={() => handleRemove(sqlCol)}
+                                        onClick={() => handleRemove(idx)}
                                     >
                                         <Icon icon="trash" />
                                     </button>
@@ -170,10 +170,21 @@ function CdcSinkColumnMapping({ tableIndex }: { tableIndex: number }) {
                                 <input
                                     type="text"
                                     className="form-control form-control-sm"
-                                    placeholder="Document property (defaults to column name)"
-                                    value={newDocProperty}
-                                    onChange={(e) => setNewDocProperty(e.target.value)}
+                                    placeholder="Target name (defaults to column name)"
+                                    value={newTargetName}
+                                    onChange={(e) => setNewTargetName(e.target.value)}
                                 />
+                            </td>
+                            <td>
+                                <select
+                                    className="form-select form-select-sm"
+                                    value={newType}
+                                    onChange={(e) => setNewType(e.target.value as CdcSinkColumnType)}
+                                >
+                                    <option value="Default">Default</option>
+                                    <option value="Json">Json</option>
+                                    <option value="Attachment">Attachment</option>
+                                </select>
                             </td>
                             <td>
                                 <button
@@ -312,101 +323,6 @@ function CdcSinkOnDeleteSection({ tableIndex }: { tableIndex: number }) {
     );
 }
 
-function CdcSinkAttachmentMapping({ tableIndex }: { tableIndex: number }) {
-    const { control, getValues, setValue } = useFormContext<CdcSinkFormData>();
-    const attachmentNameMapping =
-        useWatch({ control, name: `tables.${tableIndex}.attachmentNameMapping` }) ?? {};
-    const [newSqlColumn, setNewSqlColumn] = useState("");
-    const [newAttachmentName, setNewAttachmentName] = useState("");
-
-    const entries = Object.entries(attachmentNameMapping);
-
-    const handleAdd = () => {
-        if (!newSqlColumn) return;
-        const current = getValues(`tables.${tableIndex}.attachmentNameMapping`) ?? {};
-        setValue(
-            `tables.${tableIndex}.attachmentNameMapping`,
-            { ...current, [newSqlColumn]: newAttachmentName || newSqlColumn },
-            { shouldDirty: true }
-        );
-        setNewSqlColumn("");
-        setNewAttachmentName("");
-    };
-
-    const handleRemove = (key: string) => {
-        const current = { ...getValues(`tables.${tableIndex}.attachmentNameMapping`) };
-        delete current[key];
-        setValue(`tables.${tableIndex}.attachmentNameMapping`, current, { shouldDirty: true });
-    };
-
-    return (
-        <div className="card mb-3">
-            <div className="card-body">
-                <h4>Attachment Mapping</h4>
-                {entries.length === 0 && (
-                    <p className="text-muted small">No attachment mappings configured.</p>
-                )}
-                <table className="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>SQL Column</th>
-                            <th>Attachment Name</th>
-                            <th style={{ width: "60px" }}></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {entries.map(([sqlCol, attName]) => (
-                            <tr key={sqlCol}>
-                                <td>{sqlCol}</td>
-                                <td>{attName}</td>
-                                <td>
-                                    <button
-                                        type="button"
-                                        className="btn btn-sm btn-outline-danger"
-                                        onClick={() => handleRemove(sqlCol)}
-                                    >
-                                        <Icon icon="trash" />
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        <tr>
-                            <td>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    placeholder="SQL column"
-                                    value={newSqlColumn}
-                                    onChange={(e) => setNewSqlColumn(e.target.value)}
-                                />
-                            </td>
-                            <td>
-                                <input
-                                    type="text"
-                                    className="form-control form-control-sm"
-                                    placeholder="Attachment name"
-                                    value={newAttachmentName}
-                                    onChange={(e) => setNewAttachmentName(e.target.value)}
-                                />
-                            </td>
-                            <td>
-                                <button
-                                    type="button"
-                                    className="btn btn-sm btn-secondary"
-                                    onClick={handleAdd}
-                                    disabled={!newSqlColumn}
-                                >
-                                    <Icon icon="plus" />
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    );
-}
-
 function CdcSinkEmbeddedTablesSection({ tableIndex }: { tableIndex: number }) {
     const { control } = useFormContext<CdcSinkFormData>();
     const { fields, append, remove } = useFieldArray({
@@ -422,8 +338,7 @@ function CdcSinkEmbeddedTablesSection({ tableIndex }: { tableIndex: number }) {
             type: "Array",
             joinColumns: [],
             primaryKeyColumns: [],
-            columnsMapping: {},
-            attachmentNameMapping: {},
+            columns: [],
             patch: "",
             onDelete: null,
             caseSensitiveKeys: false,

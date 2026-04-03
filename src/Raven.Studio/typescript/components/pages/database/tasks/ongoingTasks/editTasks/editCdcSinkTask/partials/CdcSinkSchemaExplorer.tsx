@@ -92,16 +92,16 @@ export default function CdcSinkSchemaExplorer() {
         const newTables: CdcSinkTableFormData[] = discoveredTables
             .filter((t) => selectedTables.has(getTableKey(t)) && !isTableAlreadyConfigured(t))
             .map((t) => {
-                const columnsMapping: Record<string, string> = {};
-                for (const col of t.Columns) {
-                    columnsMapping[col.Name] = col.Name;
-                }
+                const columns = (t.Columns ?? []).map((col) => ({
+                    column: col.Name,
+                    name: col.Name,
+                    type: "Default" as const,
+                }));
                 return {
                     name: t.TableName,
                     sourceTableSchema: t.Schema ?? "",
                     sourceTableName: t.TableName,
-                    columnsMapping,
-                    attachmentNameMapping: {},
+                    columns,
                     primaryKeyColumns: t.PrimaryKeyColumns ?? [],
                     patch: "",
                     onDelete: null as CdcSinkTableFormData["onDelete"],

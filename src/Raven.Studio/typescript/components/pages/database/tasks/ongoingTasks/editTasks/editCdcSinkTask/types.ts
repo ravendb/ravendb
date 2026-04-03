@@ -1,3 +1,11 @@
+export type CdcSinkColumnType = "Default" | "Json" | "Attachment";
+
+export interface CdcSinkColumnFormData {
+    column: string;
+    name: string;
+    type: CdcSinkColumnType;
+}
+
 export interface CdcSinkFormData {
     name: string;
     connectionStringName: string;
@@ -11,8 +19,7 @@ export interface CdcSinkTableFormData {
     name: string;
     sourceTableSchema: string;
     sourceTableName: string;
-    columnsMapping: Record<string, string>;
-    attachmentNameMapping: Record<string, string>;
+    columns: CdcSinkColumnFormData[];
     primaryKeyColumns: string[];
     patch: string;
     onDelete: CdcSinkOnDeleteFormData | null;
@@ -28,8 +35,7 @@ export interface CdcSinkEmbeddedTableFormData {
     type: "Array" | "Map" | "Value";
     joinColumns: string[];
     primaryKeyColumns: string[];
-    columnsMapping: Record<string, string>;
-    attachmentNameMapping: Record<string, string>;
+    columns: CdcSinkColumnFormData[];
     patch: string;
     onDelete: CdcSinkOnDeleteFormData | null;
     caseSensitiveKeys: boolean;

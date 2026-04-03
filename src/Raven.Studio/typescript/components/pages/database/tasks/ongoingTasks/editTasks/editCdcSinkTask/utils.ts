@@ -4,6 +4,7 @@ import {
     CdcSinkEmbeddedTableFormData,
     CdcSinkLinkedTableFormData,
     CdcSinkOnDeleteFormData,
+    CdcSinkColumnFormData,
 } from "./types";
 
 type CdcSinkConfiguration = Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
@@ -11,6 +12,7 @@ type CdcSinkTableConfig = Raven.Client.Documents.Operations.CdcSink.CdcSinkTable
 type CdcSinkEmbeddedTableConfig = Raven.Client.Documents.Operations.CdcSink.CdcSinkEmbeddedTableConfig;
 type CdcSinkLinkedTableConfig = Raven.Client.Documents.Operations.CdcSink.CdcSinkLinkedTableConfig;
 type CdcSinkOnDeleteConfig = Raven.Client.Documents.Operations.CdcSink.CdcSinkOnDeleteConfig;
+type CdcColumnMapping = Raven.Client.Documents.Operations.CdcSink.CdcColumnMapping;
 
 function mapOnDeleteFromDto(dto: CdcSinkOnDeleteConfig | null | undefined): CdcSinkOnDeleteFormData | null {
     if (!dto) {
@@ -22,6 +24,14 @@ function mapOnDeleteFromDto(dto: CdcSinkOnDeleteConfig | null | undefined): CdcS
     };
 }
 
+function mapColumnsFromDto(dtoColumns: CdcColumnMapping[] | null | undefined): CdcSinkColumnFormData[] {
+    return (dtoColumns ?? []).map((c) => ({
+        column: c.Column ?? "",
+        name: c.Name ?? "",
+        type: c.Type ?? "Default",
+    }));
+}
+
 function mapEmbeddedTableFromDto(dto: CdcSinkEmbeddedTableConfig): CdcSinkEmbeddedTableFormData {
     return {
         sourceTableSchema: dto.SourceTableSchema ?? "",
@@ -30,8 +40,7 @@ function mapEmbeddedTableFromDto(dto: CdcSinkEmbeddedTableConfig): CdcSinkEmbedd
         type: dto.Type ?? "Array",
         joinColumns: dto.JoinColumns ?? [],
         primaryKeyColumns: dto.PrimaryKeyColumns ?? [],
-        columnsMapping: dto.ColumnsMapping ?? {},
-        attachmentNameMapping: dto.AttachmentNameMapping ?? {},
+        columns: mapColumnsFromDto(dto.Columns),
         patch: dto.Patch ?? "",
         onDelete: mapOnDeleteFromDto(dto.OnDelete),
         caseSensitiveKeys: dto.CaseSensitiveKeys ?? false,
@@ -55,8 +64,7 @@ function mapTableFromDto(dto: CdcSinkTableConfig): CdcSinkTableFormData {
         name: dto.Name ?? "",
         sourceTableSchema: dto.SourceTableSchema ?? "",
         sourceTableName: dto.SourceTableName ?? "",
-        columnsMapping: dto.ColumnsMapping ?? {},
-        attachmentNameMapping: dto.AttachmentNameMapping ?? {},
+        columns: mapColumnsFromDto(dto.Columns),
         primaryKeyColumns: dto.PrimaryKeyColumns ?? [],
         patch: dto.Patch ?? "",
         onDelete: mapOnDeleteFromDto(dto.OnDelete),
@@ -98,6 +106,14 @@ function mapOnDeleteToDto(data: CdcSinkOnDeleteFormData | null): CdcSinkOnDelete
     };
 }
 
+function mapColumnsToDto(columns: CdcSinkColumnFormData[]): CdcColumnMapping[] {
+    return columns.map((c) => ({
+        Column: c.column,
+        Name: c.name,
+        Type: c.type,
+    }));
+}
+
 function mapEmbeddedTableToDto(data: CdcSinkEmbeddedTableFormData): CdcSinkEmbeddedTableConfig {
     return {
         SourceTableSchema: data.sourceTableSchema || null,
@@ -106,8 +122,7 @@ function mapEmbeddedTableToDto(data: CdcSinkEmbeddedTableFormData): CdcSinkEmbed
         Type: data.type,
         JoinColumns: data.joinColumns,
         PrimaryKeyColumns: data.primaryKeyColumns,
-        ColumnsMapping: data.columnsMapping,
-        AttachmentNameMapping: data.attachmentNameMapping,
+        Columns: mapColumnsToDto(data.columns),
         Patch: data.patch || null,
         OnDelete: mapOnDeleteToDto(data.onDelete),
         CaseSensitiveKeys: data.caseSensitiveKeys,
@@ -131,8 +146,7 @@ function mapTableToDto(data: CdcSinkTableFormData): CdcSinkTableConfig {
         Name: data.name,
         SourceTableSchema: data.sourceTableSchema || null,
         SourceTableName: data.sourceTableName,
-        ColumnsMapping: data.columnsMapping,
-        AttachmentNameMapping: data.attachmentNameMapping,
+        Columns: mapColumnsToDto(data.columns),
         PrimaryKeyColumns: data.primaryKeyColumns,
         Patch: data.patch || null,
         OnDelete: mapOnDeleteToDto(data.onDelete),

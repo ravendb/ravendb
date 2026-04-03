@@ -28,7 +28,6 @@ class ongoingTaskCdcSinkTableModel {
 
     columns = ko.observableArray<cdcSinkColumnMapping>([]);
     primaryKeyColumns = ko.observableArray<string>([]);
-    columnsMapping = ko.observable<Record<string, string>>({});
 
     displayName: KnockoutComputed<string>;
 
@@ -59,8 +58,7 @@ class ongoingTaskCdcSinkTableModel {
                 Name: name || "",
                 SourceTableSchema: "public",
                 SourceTableName: "",
-                ColumnsMapping: {},
-                AttachmentNameMapping: {},
+                Columns: [],
                 PrimaryKeyColumns: [],
                 Patch: "",
                 Disabled: false,
@@ -73,17 +71,17 @@ class ongoingTaskCdcSinkTableModel {
     static fromSchemaTable(tableSchema: Raven.Server.SqlMigration.Schema.SqlTableSchema): ongoingTaskCdcSinkTableModel {
         const collectionName = ongoingTaskCdcSinkTableModel.tableNameToCollectionName(tableSchema.TableName);
 
-        const columnsMapping: Record<string, string> = {};
-        tableSchema.Columns.forEach(col => {
-            columnsMapping[col.Name] = col.Name;
-        });
+        const columns = tableSchema.Columns.map(col => ({
+            Column: col.Name,
+            Name: col.Name,
+            Type: "Default" as Raven.Client.Documents.Operations.CdcSink.CdcColumnType,
+        }));
 
         const model = new ongoingTaskCdcSinkTableModel({
             Name: collectionName,
             SourceTableSchema: tableSchema.Schema || "public",
             SourceTableName: tableSchema.TableName,
-            ColumnsMapping: columnsMapping,
-            AttachmentNameMapping: {},
+            Columns: columns,
             PrimaryKeyColumns: tableSchema.PrimaryKeyColumns || [],
             Patch: "",
             Disabled: false,
@@ -112,33 +110,17 @@ class ongoingTaskCdcSinkTableModel {
     }
 
     toDto(): Raven.Client.Documents.Operations.CdcSink.CdcSinkTableConfig {
-        const mapping: Record<string, string> = {};
-
-        if (this.columns().length > 0) {
-            this.columns().forEach(col => {
-                const propName = col.propertyName();
-                if (propName && propName !== col.sqlColumnName) {
-                    mapping[col.sqlColumnName] = propName;
-                }
-            });
-        } else {
-            // Use the stored columnsMapping if no columns were fetched
-            const stored = this.columnsMapping();
-            if (stored) {
-                Object.keys(stored).forEach(key => {
-                    if (stored[key] !== key) {
-                        mapping[key] = stored[key];
-                    }
-                });
-            }
-        }
+        const columns: Raven.Client.Documents.Operations.CdcSink.CdcColumnMapping[] = this.columns().map(col => ({
+            Column: col.sqlColumnName,
+            Name: col.propertyName(),
+            Type: "Default" as Raven.Client.Documents.Operations.CdcSink.CdcColumnType,
+        }));
 
         return {
             Name: this.name(),
             SourceTableSchema: this.sourceTableSchema(),
             SourceTableName: this.sourceTableName(),
-            ColumnsMapping: mapping,
-            AttachmentNameMapping: {},
+            Columns: columns,
             PrimaryKeyColumns: this.primaryKeyColumns(),
             Patch: this.patch(),
             Disabled: this.disabled(),
@@ -187,14 +169,13 @@ class ongoingTaskCdcSinkTableModel {
         this.disabled(dto.Disabled || false);
         this.isNew(isNew);
         this.primaryKeyColumns(dto.PrimaryKeyColumns || []);
-        this.columnsMapping(dto.ColumnsMapping || {});
 
-        // Rebuild columns from ColumnsMapping if available
-        if (dto.ColumnsMapping && Object.keys(dto.ColumnsMapping).length > 0) {
+        const dtoColumns = dto.Columns || [];
+        if (dtoColumns.length > 0) {
             const pkCols = dto.PrimaryKeyColumns || [];
-            const mappings = Object.keys(dto.ColumnsMapping).map(sqlCol => {
-                const isPk = pkCols.indexOf(sqlCol) >= 0;
-                return new cdcSinkColumnMapping(sqlCol, "String", dto.ColumnsMapping[sqlCol], isPk);
+            const mappings = dtoColumns.map(col => {
+                const isPk = pkCols.indexOf(col.Column) >= 0;
+                return new cdcSinkColumnMapping(col.Column, col.Type || "Default", col.Name, isPk);
             });
             this.columns(mappings);
         }

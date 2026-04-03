@@ -18,8 +18,7 @@ export default function CdcSinkTableList({ onEditTable }: CdcSinkTableListProps)
             name: "",
             sourceTableSchema: "",
             sourceTableName: "",
-            columnsMapping: {},
-            attachmentNameMapping: {},
+            columns: [],
             primaryKeyColumns: [],
             patch: "",
             onDelete: null,
@@ -55,9 +54,7 @@ export default function CdcSinkTableList({ onEditTable }: CdcSinkTableListProps)
                 <div className="vstack gap-2">
                     {fields.map((field, index) => {
                         const table = field as unknown as CdcSinkTableFormData;
-                        const columnCount = table.columnsMapping
-                            ? Object.keys(table.columnsMapping).length
-                            : 0;
+                        const columnCount = table.columns?.length ?? 0;
                         const embeddedCount = table.embeddedTables?.length ?? 0;
                         const linkedCount = table.linkedTables?.length ?? 0;
 
