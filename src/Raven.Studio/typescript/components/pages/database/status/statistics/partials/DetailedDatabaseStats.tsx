@@ -144,19 +144,12 @@ export function DetailedDatabaseStats() {
                                             message={
                                                 <>
                                                     Data (on disk):{" "}
-                                                    <strong>
-                                                        {genUtils.formatBytesToSize(physicalBytes)}
-                                                    </strong>
+                                                    <strong>{genUtils.formatBytesToSize(physicalBytes)}</strong>
                                                     <br />
                                                     Data (allocated):{" "}
-                                                    <strong>
-                                                        {genUtils.formatBytesToSize(allocatedBytes)}
-                                                    </strong>
+                                                    <strong>{genUtils.formatBytesToSize(allocatedBytes)}</strong>
                                                     <br />
-                                                    Temp:{" "}
-                                                    <strong>
-                                                        {genUtils.formatBytesToSize(tempBytes)}
-                                                    </strong>
+                                                    Temp: <strong>{genUtils.formatBytesToSize(tempBytes)}</strong>
                                                     <br />
                                                     Total (on disk):{" "}
                                                     <strong>
@@ -165,9 +158,7 @@ export function DetailedDatabaseStats() {
                                                 </>
                                             }
                                         >
-                                            <span id={id}>
-                                                {genUtils.formatBytesToSize(physicalBytes + tempBytes)}
-                                            </span>
+                                            <span id={id}>{genUtils.formatBytesToSize(physicalBytes + tempBytes)}</span>
                                         </PopoverWithHoverWrapper>
                                     );
                                 }}
