@@ -201,14 +201,15 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
                 // so just report empty values then
             }
 
-            var size = db?.GetSizeOnDisk() ?? (new Size(0), new Size(0));
+            var size = db?.GetSizeOnDisk() ?? (new Size(0), new Size(0), new Size(0));
 
             var databaseInfo = new DatabaseInfo
             {
                 Name = databaseName,
                 Disabled = disabled,
                 LockMode = lockMode,
-                TotalSize = size.Data,
+                TotalPhysicalSize = size.Physical,
+                TotalAllocatedSize = size.Allocated,
                 TempBuffersSize = size.TempBuffers,
 
                 IsAdmin = true,

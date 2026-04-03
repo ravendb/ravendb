@@ -1330,10 +1330,15 @@ namespace Raven.Server.Documents
                 [nameof(ExtendedDatabaseInfo.IsEncrypted)] = DocumentsStorage.Environment.Options.Encryption.IsEnabled,
                 [nameof(ExtendedDatabaseInfo.Name)] = Name,
                 [nameof(ExtendedDatabaseInfo.Disabled)] = false, //TODO: this value should be overwritten by the studio since it is cached
-                [nameof(ExtendedDatabaseInfo.TotalSize)] = new DynamicJsonValue
+                [nameof(ExtendedDatabaseInfo.TotalPhysicalSize)] = new DynamicJsonValue
                 {
-                    [nameof(Size.HumaneSize)] = sizeOnDisk.Data.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = sizeOnDisk.Data.SizeInBytes
+                    [nameof(Size.HumaneSize)] = sizeOnDisk.Physical.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = sizeOnDisk.Physical.SizeInBytes
+                },
+                [nameof(ExtendedDatabaseInfo.TotalAllocatedSize)] = new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = sizeOnDisk.Allocated.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = sizeOnDisk.Allocated.SizeInBytes
                 },
                 [nameof(ExtendedDatabaseInfo.TempBuffersSize)] = new DynamicJsonValue
                 {
@@ -1964,13 +1969,14 @@ namespace Raven.Server.Documents
             return _lastTopologyIndex > index;
         }
 
-        public (Size Data, Size TempBuffers) GetSizeOnDisk()
+        public (Size Physical, Size Allocated, Size TempBuffers) GetSizeOnDisk()
         {
             var storageEnvironments = GetAllStoragesEnvironment();
             if (storageEnvironments == null)
-                return (new Size(0), new Size(0));
+                return (new Size(0), new Size(0), new Size(0));
 
-            long dataInBytes = 0;
+            long physicalInBytes = 0;
+            long allocatedInBytes = 0;
             long tempBuffersInBytes = 0;
             foreach (var environment in storageEnvironments)
             {
@@ -1978,11 +1984,12 @@ namespace Raven.Server.Documents
                     continue;
 
                 var sizeOnDisk = environment.Environment.GenerateSizeReport(includeTempBuffers: true);
-                dataInBytes += sizeOnDisk.DataFileInBytes + sizeOnDisk.JournalsInBytes;
+                physicalInBytes += sizeOnDisk.DataFilePhysicalSizeInBytes + sizeOnDisk.JournalsInBytes;
+                allocatedInBytes += sizeOnDisk.DataFileAllocatedSizeInBytes + sizeOnDisk.JournalsInBytes;
                 tempBuffersInBytes += sizeOnDisk.TempBuffersInBytes;
             }
 
-            return (new Size(dataInBytes), new Size(tempBuffersInBytes));
+            return (new Size(physicalInBytes), new Size(allocatedInBytes), new Size(tempBuffersInBytes));
         }
 
         public IEnumerable<MountPointUsage> GetMountPointsUsage(bool includeTempBuffers)

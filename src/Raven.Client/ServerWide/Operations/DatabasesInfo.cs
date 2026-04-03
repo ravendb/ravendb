@@ -83,7 +83,8 @@ namespace Raven.Client.ServerWide.Operations
     public class DatabaseState : IDynamicJson
     {
         public string Name { get; set; }
-        public Size TotalSize { get; set; }
+        public Size TotalPhysicalSize { get; set; }
+        public Size TotalAllocatedSize { get; set; }
         public Size TempBuffersSize { get; set; }
         public TimeSpan? UpTime { get; set; }
         public BackupInfo BackupInfo { get; set; }
@@ -99,10 +100,15 @@ namespace Raven.Client.ServerWide.Operations
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
-                [nameof(TotalSize)] = TotalSize != null ? new DynamicJsonValue
+                [nameof(TotalPhysicalSize)] = TotalPhysicalSize != null ? new DynamicJsonValue
                 {
-                    [nameof(Size.HumaneSize)] = TotalSize.HumaneSize,
-                    [nameof(Size.SizeInBytes)] = TotalSize.SizeInBytes
+                    [nameof(Size.HumaneSize)] = TotalPhysicalSize.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = TotalPhysicalSize.SizeInBytes
+                } : null,
+                [nameof(TotalAllocatedSize)] = TotalAllocatedSize != null ? new DynamicJsonValue
+                {
+                    [nameof(Size.HumaneSize)] = TotalAllocatedSize.HumaneSize,
+                    [nameof(Size.SizeInBytes)] = TotalAllocatedSize.SizeInBytes
                 } : null,
                 [nameof(TempBuffersSize)] = TempBuffersSize != null ? new DynamicJsonValue
                 {

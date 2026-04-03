@@ -306,7 +306,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
 
         public static StudioDatabaseState From(string databaseName, StudioDatabaseStatus databaseStatus, DocumentDatabase database, DatabaseInfoCache databaseInfoCache, BackupInfo backupInfo, TimeSpan? upTime, IndexRunningStatus? indexingStatus)
         {
-            Size totalSize = null;
+            Size totalPhysicalSize = null;
+            Size totalAllocatedSize = null;
             Size tempBuffersSize = null;
             long alerts = 0;
             long performanceHints = 0;
@@ -314,8 +315,9 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
             long documentsCount = 0;
             if (database != null)
             {
-                (Size data, Size tempBuffers) = database.GetSizeOnDisk();
-                totalSize = data;
+                (Size physical, Size allocated, Size tempBuffers) = database.GetSizeOnDisk();
+                totalPhysicalSize = physical;
+                totalAllocatedSize = allocated;
                 tempBuffersSize = tempBuffers;
 
                 alerts = database.NotificationCenter.GetAlertCount();
@@ -333,7 +335,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
                          json.TryGet(nameof(IndexingErrors), out indexingErrors);
                          json.TryGet(nameof(DocumentsCount), out documentsCount);
 
-                         totalSize = GetSize(json, nameof(TotalSize));
+                         totalPhysicalSize = GetSize(json, nameof(TotalPhysicalSize));
+                         totalAllocatedSize = GetSize(json, nameof(TotalAllocatedSize));
                          tempBuffersSize = GetSize(json, nameof(TempBuffersSize));
                      }))
             {
@@ -343,7 +346,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
             return new StudioDatabaseState
             {
                 Name = databaseName,
-                TotalSize = totalSize,
+                TotalPhysicalSize = totalPhysicalSize,
+                TotalAllocatedSize = totalAllocatedSize,
                 TempBuffersSize = tempBuffersSize,
                 UpTime = upTime,
                 BackupInfo = backupInfo,

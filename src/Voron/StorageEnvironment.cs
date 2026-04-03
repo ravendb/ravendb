@@ -930,11 +930,10 @@ namespace Voron
                 }
             }
 
-            var numberOfAllocatedPages = GetNumberOfAllocatedPages();
-
             return new SizeReport
             {
-                DataFileInBytes = _currentStateRecord.DataPagerState.TotalDiskSpace,
+                DataFilePhysicalSizeInBytes = _currentStateRecord.DataPagerState.TotalPhysicalSpace,
+                DataFileAllocatedSizeInBytes = _currentStateRecord.DataPagerState.TotalAllocatedSize,
                 JournalsInBytes = journalsSize,
                 TempBuffersInBytes = tempBuffers,
             };
@@ -996,9 +995,8 @@ namespace Voron
 
             return generator.Generate(new ReportInput
             {
-                // we need to use the actual file size (not the disk size), because we are looking at the max
-                // size that the file has been allocated as
-                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalFileSize,
+                AllocatedSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalAllocatedSize,
+                PhysicalSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalPhysicalSpace,
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,
@@ -1267,7 +1265,8 @@ namespace Voron
 
             var detailedReportInput = new DetailedReportInput
             {
-                ActualSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalDiskSpace,
+                AllocatedSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalAllocatedSize,
+                PhysicalSizeInBytes = tx.LowLevelTransaction.CurrentStateRecord.DataPagerState.TotalPhysicalSpace,
                 NumberOfAllocatedPages = numberOfAllocatedPages,
                 NumberOfFreePages = numberOfFreePages,
                 NextPageNumber = NextPageNumber,

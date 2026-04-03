@@ -592,7 +592,7 @@ namespace TimeSeries.Benchmark
             sp.Stop();
             var rate = _numberOfDocs * (TotalMeasuresPerDocument / sp.Elapsed.TotalSeconds);
             var stats = await _store.Maintenance.SendAsync(new GetDetailedStatisticsOperation());
-            return $"Inserting is completed after {sp.Elapsed} with total rate of {(int)rate:N0} measures per second with {stats.SizeOnDisk.HumaneSize} size.";
+            return $"Inserting is completed after {sp.Elapsed} with total rate of {(int)rate:N0} measures per second with {stats.PhysicalSizeOnDisk.HumaneSize} size.";
         }
 
         public async Task BenchmarkInsert(int iterations = 1)
