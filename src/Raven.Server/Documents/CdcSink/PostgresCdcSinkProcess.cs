@@ -78,16 +78,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         var tableNames = Configuration.CollectAllSourceTableNames("public");
 
-        _publicationName = Configuration.Postgres?.PublicationName;
-        _slotName = Configuration.Postgres?.SlotName;
-
-        // Auto-fill if not set (e.g., task created before Postgres settings were introduced)
-        if (_publicationName == null || _slotName == null)
-        {
-            var id = Guid.NewGuid().ToString("N");
-            _publicationName ??= $"rvn_cdc_p_{id}";
-            _slotName ??= $"rvn_cdc_s_{id}";
-        }
+        _publicationName = Configuration.Postgres.PublicationName;
+        _slotName = Configuration.Postgres.SlotName;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);

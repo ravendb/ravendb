@@ -26,6 +26,53 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
+        /// <summary>
+        /// Verifies that the actual document contains all properties from the expected JSON.
+        /// Ignores @metadata and extra properties in the actual document.
+        /// </summary>
+        private static void AssertDocumentMatches(DocumentsOperationContext context, BlittableJsonReaderObject actual, string expectedJson)
+        {
+            using var expected = context.Sync.ReadForMemory(expectedJson, "expected");
+            AssertBlittableMatches(actual, expected, "");
+        }
+
+        private static void AssertBlittableMatches(BlittableJsonReaderObject actual, BlittableJsonReaderObject expected, string path)
+        {
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            for (int i = 0; i < expected.Count; i++)
+            {
+                expected.GetPropertyByIndex(i, ref prop);
+                if (prop.Name == Constants.Documents.Metadata.Key)
+                    continue;
+
+                var fullPath = string.IsNullOrEmpty(path) ? prop.Name : $"{path}.{prop.Name}";
+                Assert.True(actual.TryGetMember(prop.Name, out var actualValue),
+                    $"Missing property '{fullPath}'");
+
+                switch (prop.Value)
+                {
+                    case BlittableJsonReaderObject expectedObj:
+                        Assert.IsType<BlittableJsonReaderObject>(actualValue);
+                        AssertBlittableMatches((BlittableJsonReaderObject)actualValue, expectedObj, fullPath);
+                        break;
+                    case BlittableJsonReaderArray expectedArr:
+                        var actualArr = Assert.IsType<BlittableJsonReaderArray>(actualValue);
+                        Assert.Equal(expectedArr.Length, actualArr.Length);
+                        for (int j = 0; j < expectedArr.Length; j++)
+                        {
+                            if (expectedArr[j] is BlittableJsonReaderObject expItem && actualArr[j] is BlittableJsonReaderObject actItem)
+                                AssertBlittableMatches(actItem, expItem, $"{fullPath}[{j}]");
+                            else
+                                Assert.Equal(expectedArr[j]?.ToString(), actualArr[j]?.ToString());
+                        }
+                        break;
+                    default:
+                        Assert.Equal(prop.Value?.ToString(), actualValue?.ToString());
+                        break;
+                }
+            }
+        }
+
         private static CdcSinkTableConfig CreateRootTableConfig(string collectionName = "Orders", string patch = null)
         {
             return new CdcSinkTableConfig
@@ -146,16 +193,18 @@ namespace SlowTests.Server.Documents.CdcSink
             var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
-            using (var session = store.OpenSession())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
             {
-                var doc = session.Load<dynamic>("Orders/1");
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-                Assert.Equal(1L, (long)doc.OrderId);
-                Assert.Equal("Alice", (string)doc.CustomerName);
-                Assert.Equal(99.5, (double)doc.Amount);
-
-                var metadata = session.Advanced.GetMetadataFor(doc);
-                Assert.Equal("Orders", metadata[Constants.Documents.Metadata.Collection]);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "OrderId": 1,
+                        "CustomerName": "Alice",
+                        "Amount": 99.5
+                    }
+                    """);
             }
         }
 
@@ -255,18 +304,17 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var item = (BlittableJsonReaderObject)lines[0];
-                item.TryGet("LineId", out long lineId);
-                Assert.Equal(10L, lineId);
-                item.TryGet("Product", out string product);
-                Assert.Equal("Widget", product);
-                item.TryGet("Quantity", out long quantity);
-                Assert.Equal(5L, quantity);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "LineId": 10,
+                                "Product": "Widget",
+                                "Quantity": 5
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -343,16 +391,17 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var item = (BlittableJsonReaderObject)lines[0];
-                item.TryGet("Product", out string product);
-                Assert.Equal("SuperWidget", product);
-                item.TryGet("Quantity", out long quantity);
-                Assert.Equal(20L, quantity);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "LineId": 10,
+                                "Product": "SuperWidget",
+                                "Quantity": 20
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -412,9 +461,17 @@ namespace SlowTests.Server.Documents.CdcSink
             using (verifyCtx.OpenReadTransaction())
             {
                 var doc = database.DocumentsStorage.Get(verifyCtx, "Orders/1");
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
+                Assert.NotNull(doc);
+                AssertDocumentMatches(verifyCtx, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "LineId": 10,
+                                "Product": "Widget"
+                            }
+                        ]
+                    }
+                    """);
             }
 
             // Delete the item
@@ -436,10 +493,11 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(0, lines.Length);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Lines": []
+                    }
+                    """);
             }
         }
 
@@ -498,14 +556,15 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                // Map key is built from PK column mapped value: "color"
-                doc.Data.TryGet("Attributes", out BlittableJsonReaderObject attributes);
-                Assert.NotNull(attributes);
-                attributes.TryGet("color", out BlittableJsonReaderObject colorEntry);
-                Assert.NotNull(colorEntry);
-                colorEntry.TryGet("Value", out string value);
-                Assert.Equal("red", value);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Attributes": {
+                            "color": {
+                                "Value": "red"
+                            }
+                        }
+                    }
+                    """);
             }
         }
 
@@ -564,13 +623,14 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("ShippingInfo", out BlittableJsonReaderObject shippingInfo);
-                Assert.NotNull(shippingInfo);
-                shippingInfo.TryGet("Carrier", out string carrier);
-                Assert.Equal("FedEx", carrier);
-                shippingInfo.TryGet("TrackingNumber", out string trackingNumber);
-                Assert.Equal("ABC123", trackingNumber);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "ShippingInfo": {
+                            "Carrier": "FedEx",
+                            "TrackingNumber": "ABC123"
+                        }
+                    }
+                    """);
             }
         }
 
@@ -702,8 +762,11 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("ComputedField", out string computedField);
-                Assert.Equal("rush processed", computedField);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "ComputedField": "rush processed"
+                    }
+                    """);
             }
         }
 
@@ -747,15 +810,20 @@ namespace SlowTests.Server.Documents.CdcSink
             var command = new CdcSinkBatchCommand(database, ops, "test-config", null, null, null, null, null, null);
             await database.TxMerger.Enqueue(command);
 
-            using (var session = store.OpenSession())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
             {
                 // The good document should have been saved
-                var goodDoc = session.Load<dynamic>("Orders/1");
+                var goodDoc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(goodDoc);
-                Assert.Equal("Alice", (string)goodDoc.CustomerName);
+                AssertDocumentMatches(readCtx, goodDoc.Data, """
+                    {
+                        "CustomerName": "Alice"
+                    }
+                    """);
 
                 // The bad document should NOT have been saved
-                var badDoc = session.Load<dynamic>("Products/99");
+                var badDoc = database.DocumentsStorage.Get(readCtx, "Products/99");
                 Assert.Null(badDoc);
             }
         }
@@ -821,11 +889,12 @@ namespace SlowTests.Server.Documents.CdcSink
                 var doc = database.DocumentsStorage.Get(readCtx, "Documents/1");
                 Assert.NotNull(doc);
 
-                // Document should have Id and Name properties
-                doc.Data.TryGet("Id", out long id);
-                Assert.Equal(1L, id);
-                doc.Data.TryGet("Name", out string name);
-                Assert.Equal("doc.pdf", name);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Id": 1,
+                        "Name": "doc.pdf"
+                    }
+                    """);
 
                 // Document should NOT have the binary column as a property
                 Assert.False(doc.Data.TryGet("FileContent", out object _),
@@ -1026,14 +1095,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                // Updated property should reflect the new value
-                doc.Data.TryGet("CustomerName", out string customerName);
-                Assert.Equal("Bob", customerName);
-
-                // ExtraField should still be present (Object.assign retains existing properties)
-                doc.Data.TryGet("ExtraField", out string extraField);
-                Assert.Equal("keep me", extraField);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "CustomerName": "Bob",
+                        "ExtraField": "keep me"
+                    }
+                    """);
             }
         }
 
@@ -1110,22 +1177,17 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var item = (BlittableJsonReaderObject)lines[0];
-                item.TryGet("Product", out string product);
-                Assert.Equal("SuperWidget", product);
-
-                // ExtraInfo should be retained from the original insert
-                item.TryGet("ExtraInfo", out string extraInfo);
-                Assert.Equal("retain this", extraInfo);
-
-                // Quantity should also be retained (it was not in the update)
-                item.TryGet("Quantity", out long quantity);
-                Assert.Equal(5L, quantity);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "Product": "SuperWidget",
+                                "ExtraInfo": "retain this",
+                                "Quantity": 5
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -1200,18 +1262,16 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("Attributes", out BlittableJsonReaderObject attributes);
-                Assert.NotNull(attributes);
-                attributes.TryGet("color", out BlittableJsonReaderObject colorEntry);
-                Assert.NotNull(colorEntry);
-
-                colorEntry.TryGet("Value", out string value);
-                Assert.Equal("blue", value);
-
-                // Source should be retained from the original insert
-                colorEntry.TryGet("Source", out string source);
-                Assert.Equal("user-input", source);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Attributes": {
+                            "color": {
+                                "Value": "blue",
+                                "Source": "user-input"
+                            }
+                        }
+                    }
+                    """);
             }
         }
 
@@ -1285,19 +1345,15 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("ShippingInfo", out BlittableJsonReaderObject shippingInfo);
-                Assert.NotNull(shippingInfo);
-
-                shippingInfo.TryGet("Carrier", out string carrier);
-                Assert.Equal("UPS", carrier);
-
-                // These should be retained from the original insert
-                shippingInfo.TryGet("TrackingNumber", out string trackingNumber);
-                Assert.Equal("ABC123", trackingNumber);
-
-                shippingInfo.TryGet("EstimatedDate", out string estimatedDate);
-                Assert.Equal("2026-04-01", estimatedDate);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "ShippingInfo": {
+                            "Carrier": "UPS",
+                            "TrackingNumber": "ABC123",
+                            "EstimatedDate": "2026-04-01"
+                        }
+                    }
+                    """);
             }
         }
 
@@ -1345,10 +1401,12 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(context, "Orders/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("CustomerName", out string name);
-                Assert.Equal("Bob", name);
-                doc.Data.TryGet("Amount", out double amount);
-                Assert.Equal(75.0, amount);
+                AssertDocumentMatches(context, doc.Data, """
+                    {
+                        "CustomerName": "Bob",
+                        "Amount": 75.0
+                    }
+                    """);
             }
         }
 
@@ -1473,14 +1531,15 @@ namespace SlowTests.Server.Documents.CdcSink
                 doc.Data.TryGet("CustomerName", out string name);
                 Assert.Null(name);
 
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var line = lines[0] as BlittableJsonReaderObject;
-                Assert.NotNull(line);
-                line.TryGet("Product", out string product);
-                Assert.Equal("NewProduct", product);
+                AssertDocumentMatches(context, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "Product": "NewProduct"
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -1547,17 +1606,16 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(context, "Orders/1");
                 Assert.NotNull(doc);
-
-                doc.Data.TryGet("CustomerName", out string name);
-                Assert.Equal("Charlie", name);
-
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var line = lines[0] as BlittableJsonReaderObject;
-                line.TryGet("Product", out string product);
-                Assert.Equal("Widget", product);
+                AssertDocumentMatches(context, doc.Data, """
+                    {
+                        "CustomerName": "Charlie",
+                        "Lines": [
+                            {
+                                "Product": "Widget"
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -1634,15 +1692,16 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(context, "Orders/1");
                 Assert.NotNull(doc);
-
                 // Only the embed after the delete survives
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var line = lines[0] as BlittableJsonReaderObject;
-                line.TryGet("Product", out string product);
-                Assert.Equal("Cherries", product);
+                AssertDocumentMatches(context, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "Product": "Cherries"
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -1686,18 +1745,14 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(context, "Orders/1");
                 Assert.NotNull(doc);
-
-                // First put's fields retained
-                doc.Data.TryGet("OrderId", out long orderId);
-                Assert.Equal(1, orderId);
-                doc.Data.TryGet("CustomerName", out string name);
-                Assert.Equal("Alice", name);
-
-                // Second put's fields added
-                doc.Data.TryGet("Amount", out double amount);
-                Assert.Equal(99.5, amount);
-                doc.Data.TryGet("Status", out string status);
-                Assert.Equal("Confirmed", status);
+                AssertDocumentMatches(context, doc.Data, """
+                    {
+                        "OrderId": 1,
+                        "CustomerName": "Alice",
+                        "Amount": 99.5,
+                        "Status": "Confirmed"
+                    }
+                    """);
             }
         }
 
@@ -2046,20 +2101,20 @@ namespace SlowTests.Server.Documents.CdcSink
                 doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
                 Assert.NotNull(doc);
 
+                // No root data on stub
                 doc.Data.TryGet("CustomerName", out string name);
                 Assert.Null(name);
 
-                doc.Data.TryGet("Amount", out double amount);
-                Assert.Equal(0.0, amount); // no root data on stub
-
                 // Only the embedded data from the post-delete operation survives
-                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
-                Assert.NotNull(lines);
-                Assert.Equal(1, lines.Length);
-
-                var line = lines[0] as BlittableJsonReaderObject;
-                line.TryGet("Product", out string product);
-                Assert.Equal("Resurrected", product);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "Lines": [
+                            {
+                                "Product": "Resurrected"
+                            }
+                        ]
+                    }
+                    """);
             }
         }
 
@@ -2146,11 +2201,14 @@ namespace SlowTests.Server.Documents.CdcSink
                 // Final document should be Delta (not deleted, no pre-delete patches applied)
                 var doc = database.DocumentsStorage.Get(ctx, "Items/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("Name", out string name);
-                Assert.Equal("Delta", name);
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "Name": "Delta"
+                    }
+                    """);
 
                 // All 5 audit entries should exist: Insert(Alpha), Update(Beta), Delete(Beta), Insert(Gamma), Update(Delta)
-                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100);
+                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100, token: TestContext.Current.CancellationToken);
                 var audits = auditDocs.ToList();
                 Assert.Equal(5, audits.Count);
 
@@ -2249,10 +2307,13 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(ctx, "Items/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("Name", out string name);
-                Assert.Equal("Delta", name);
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "Name": "Delta"
+                    }
+                    """);
 
-                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100);
+                var auditDocs = database.DocumentsStorage.GetDocumentsStartingWith(ctx, "AuditLog/", null, null, null, 0, 100, token: TestContext.Current.CancellationToken);
                 var audits = auditDocs.ToList();
 
                 Assert.Equal(5, audits.Count);
@@ -2339,13 +2400,14 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(ctx, "Items/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("Name", out string name);
-                Assert.Equal("Delta", name);
-
                 // Count should be 2 (Gamma + Delta), NOT 4 — pre-delete patches are flushed
                 // on the deleted doc and don't carry forward to the resurrected document.
-                doc.Data.TryGet("Count", out long count);
-                Assert.Equal(2, count);
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "Name": "Delta",
+                        "Count": 2
+                    }
+                    """);
             }
         }
 
@@ -2426,13 +2488,14 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 var doc = database.DocumentsStorage.Get(ctx, "Items/1");
                 Assert.NotNull(doc);
-                doc.Data.TryGet("Name", out string name);
-                Assert.Equal("Delta", name);
-
                 // Count should be 5: all patches accumulate because IgnoreDeletes keeps the
                 // document alive. Alpha(1) + Beta(2) + OnDelete(3) + Gamma(4) + Delta(5).
-                doc.Data.TryGet("Count", out long count);
-                Assert.Equal(5, count);
+                AssertDocumentMatches(ctx, doc.Data, """
+                    {
+                        "Name": "Delta",
+                        "Count": 5
+                    }
+                    """);
             }
         }
 
@@ -2507,14 +2570,19 @@ namespace SlowTests.Server.Documents.CdcSink
             // The good document should succeed despite the other document hitting MaxSteps
             Assert.Equal(1, command.ProcessedSuccessfully);
 
-            using (var session = store.OpenSession())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
             {
-                var good = session.Load<dynamic>("GoodOrders/2");
+                var good = database.DocumentsStorage.Get(readCtx, "GoodOrders/2");
                 Assert.NotNull(good);
-                Assert.Equal("Alice", (string)good.CustomerName);
+                AssertDocumentMatches(readCtx, good.Data, """
+                    {
+                        "CustomerName": "Alice"
+                    }
+                    """);
 
                 // The bad document should NOT have been saved
-                var bad = session.Load<dynamic>("BadOrders/1");
+                var bad = database.DocumentsStorage.Get(readCtx, "BadOrders/1");
                 Assert.Null(bad);
             }
 
@@ -2690,11 +2758,16 @@ namespace SlowTests.Server.Documents.CdcSink
             await database.TxMerger.Enqueue(putCmd);
 
             // Verify the order exists
-            using (var session = store.OpenSession())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext verifyCtx))
+            using (verifyCtx.OpenReadTransaction())
             {
-                var order = session.Load<dynamic>("Orders/42");
+                var order = database.DocumentsStorage.Get(verifyCtx, "Orders/42");
                 Assert.NotNull(order);
-                Assert.Equal("Acme Corp", (string)order.Customer);
+                AssertDocumentMatches(verifyCtx, order.Data, """
+                    {
+                        "Customer": "Acme Corp"
+                    }
+                    """);
             }
 
             // Step 2: Delete the document — the OnDelete.Patch should create a DeletedOrders document
@@ -2713,22 +2786,25 @@ namespace SlowTests.Server.Documents.CdcSink
                 statsScope: null, statistics: null, logger: null);
             await database.TxMerger.Enqueue(deleteCmd);
 
-            // The original order should be deleted
-            using (var session = store.OpenSession())
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
             {
-                var order = session.Load<dynamic>("Orders/42");
+                // The original order should be deleted
+                var order = database.DocumentsStorage.Get(readCtx, "Orders/42");
                 Assert.Null(order);
-            }
 
-            // The DeletedOrders document should exist with the original order's properties
-            using (var session = store.OpenSession())
-            {
-                var deleted = session.Load<dynamic>("DeletedOrders/42");
+                // The DeletedOrders document should exist with the original order's properties
+                var deleted = database.DocumentsStorage.Get(readCtx, "DeletedOrders/42");
                 Assert.NotNull(deleted);
-                Assert.Equal("Orders/42", (string)deleted.OriginalId);
-                Assert.Equal("Acme Corp", (string)deleted.Customer);
-                Assert.Equal(1500.0, (double)deleted.Total);
-                Assert.NotNull((string)deleted.DeletedAt);
+                AssertDocumentMatches(readCtx, deleted.Data, """
+                    {
+                        "OriginalId": "Orders/42",
+                        "Customer": "Acme Corp",
+                        "Total": 1500
+                    }
+                    """);
+                deleted.Data.TryGet("DeletedAt", out string deletedAt);
+                Assert.NotNull(deletedAt);
             }
         }
 
