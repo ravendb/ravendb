@@ -137,7 +137,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
     private SortedDictionary<string, List<CdcSinkProcess>> GetProcessesToReportOn()
     {
         var names = HttpContext.Request.Query["name"];
-        var sinks = new SortedDictionary<string, List<CdcSinkProcess>>(StringComparer.Ordinal);
+        var sinks = new SortedDictionary<string, List<CdcSinkProcess>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var process in Database.CdcSinkLoader.Processes)
         {

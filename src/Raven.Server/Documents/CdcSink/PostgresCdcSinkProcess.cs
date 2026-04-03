@@ -772,17 +772,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// <summary>
     /// Normalizes raw CLR values from <see cref="System.Data.Common.DbDataReader.GetValue"/> during
     /// initial load to match the types produced by <see cref="ConvertPostgresValue"/> during CDC
-    /// streaming. Without this, the same column would have different CLR types depending on the path
-    /// (e.g. int vs long, decimal vs double), causing inconsistent JSON serialization.
-    /// DateOnly is preserved as-is (Npgsql returns it for 'date' columns and the CDC path also
-    /// converts to DateOnly).
+    /// streaming.
     /// </summary>
     private static object NormalizeReaderValue(object value)
     {
         return value switch
         {
             null or DBNull => null,
-            DateOnly => value,                                 // preserve DateOnly for 'date' columns
+            DateOnly => value,
             DateTimeOffset dto => dto.UtcDateTime,             // DateTimeOffset → DateTime UTC
             byte or short or int => Convert.ToInt64(value),    // small ints → long
             float f => (double)f,                              // float → double
