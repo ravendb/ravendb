@@ -178,6 +178,7 @@
     <PackageReference Include="NCrontab.Advanced" />
     <PackageReference Include="NLog.Web.AspNetCore" />
     <PackageReference Include="Npgsql" />
+    <PackageReference Include="Pgvector" />
     <PackageReference Include="NuGet.Commands" Alias="NGC" />
     <PackageReference Include="NuGet.ProjectModel" />
     <PackageReference Include="NuGet.Resolver" />

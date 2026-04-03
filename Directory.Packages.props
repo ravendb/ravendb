@@ -94,6 +94,7 @@
     <PackageVersion Include="NJsonSchema" Version="11.5.2" />
     <PackageVersion Include="NodaTime" Version="3.3.1" />
     <PackageVersion Include="Npgsql" Version="10.0.1" />
+    <PackageVersion Include="Pgvector" Version="0.3.2" />
     <PackageVersion Include="NuGet.Commands" Version="7.3.0" />
     <PackageVersion Include="NuGet.PackageManagement" Version="7.3.0" />
     <PackageVersion Include="NuGet.ProjectModel" Version="7.3.0" />

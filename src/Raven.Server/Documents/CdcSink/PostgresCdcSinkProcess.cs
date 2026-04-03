@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Npgsql.Replication;
+using Pgvector.Npgsql;
 using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -51,6 +52,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 {
     private readonly CdcSinkDocumentProcessor _documentProcessor;
     private readonly string _connectionString;
+    private readonly NpgsqlDataSource _dataSource;
     private string _publicationName;
     private string _slotName;
 
@@ -63,6 +65,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         _documentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
         _connectionString = configuration.Connection.ConnectionString;
+
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
+        dataSourceBuilder.UseVector();
+        _dataSource = dataSourceBuilder.Build();
     }
 
     protected override async Task RunInternalAsync(CancellationToken ct)
@@ -81,14 +87,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         _publicationName = Configuration.Postgres.PublicationName;
         _slotName = Configuration.Postgres.SlotName;
 
-        await using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = _dataSource.CreateConnection();
         await conn.OpenAsync(ct);
 
         // --- Publication: create if missing, verify table coverage if exists ---
         bool publicationExists;
         await using (var cmd = new NpgsqlCommand("SELECT 1 FROM pg_publication WHERE pubname = @pubName", conn))
         {
-            AddParameter(cmd, "@pubName", _publicationName);
+            cmd.Parameters.AddWithValue("pubName", _publicationName);
             publicationExists = await cmd.ExecuteScalarAsync(ct) != null;
         }
 
@@ -123,7 +129,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await using (var cmd = new NpgsqlCommand(
             "SELECT plugin FROM pg_replication_slots WHERE slot_name = @slotName", conn))
         {
-            AddParameter(cmd, "@slotName", _slotName);
+            cmd.Parameters.AddWithValue("slotName", _slotName);
             var plugin = (string)await cmd.ExecuteScalarAsync(ct);
 
             if (plugin != null)
@@ -175,7 +181,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             WHERE pr.prpubid = (SELECT oid FROM pg_publication WHERE pubname = @pubName)
             """, conn))
         {
-            AddParameter(cmd, "@pubName", _publicationName);
+            cmd.Parameters.AddWithValue("pubName", _publicationName);
             await using var reader = await cmd.ExecuteReaderAsync(ct);
             while (await reader.ReadAsync(ct))
                 publishedTables.Add(reader.GetString(0));
@@ -261,7 +267,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         if (embeddedTables.Count == 0)
             return;
 
-        await using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = _dataSource.CreateConnection();
         await conn.OpenAsync(ct);
 
         foreach (var embedded in embeddedTables)
@@ -616,7 +622,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         // Single connection for the entire initial load of this table.
         // Read one batch at a time with LIMIT; while the previous batch
         // is being applied by the TxMerger, we read the next batch.
-        await using var conn = new NpgsqlConnection(_connectionString);
+        await using var conn = _dataSource.CreateConnection();
         await conn.OpenAsync(ct);
 
         // Fetch column types once for the entire initial load — used for keyset pagination parameter types
@@ -674,7 +680,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             for (int i = 0; i < pkColumns.Count; i++)
             {
                 var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
-                AddParameter(cmd, $"@k{i}", value);
+                cmd.Parameters.AddWithValue($"k{i}", value);
             }
         }
         else
@@ -696,6 +702,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 for (int i = 0; i < reader.FieldCount; i++)
                 {
                     var name = reader.GetName(i);
+                    var dataTypeName = reader.GetDataTypeName(i);
+                    if (dataTypeName == "-.-")
+                        throw new InvalidOperationException(
+                            $"Column '{name}' in table '{tableInfo.FullName}' has an unmapped Postgres extension type " +
+                            $"that cannot be read during initial load. You should exclude this column from the CDC Sink " +
+                            $"column mappings or report this as an issue.");
+
                     var value = reader.IsDBNull(i) ? null : NormalizeReaderValue(reader.GetValue(i));
                     data[name] = value;
                 }
@@ -735,9 +748,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     WHERE table_schema = @schema AND table_name = @table AND column_name = ANY(@columns)";
 
         await using var cmd = new NpgsqlCommand(sql, conn);
-        AddParameter(cmd, "@schema", schema);
-        AddParameter(cmd, "@table", tableName);
-        AddParameter(cmd, "@columns", columns.ToArray());
+        cmd.Parameters.AddWithValue("schema", schema);
+        cmd.Parameters.AddWithValue("table", tableName);
+        cmd.Parameters.AddWithValue("columns", columns.ToArray());
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
@@ -777,6 +790,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             float f => (double)f,                              // float → double
             decimal d => (double)d,                            // decimal → double
             Guid g => g.ToString(),                            // Guid → string
+            Pgvector.Vector v => v.ToArray(),                     // pgvector → float[]
             _ => value,
         };
     }

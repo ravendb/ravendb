@@ -402,19 +402,25 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             var isDelete = embedOp.Operation == CdcSinkOperation.Delete;
             var embeddedConfig = embedOp.Processor.EmbeddedConfig;
 
-            // IgnoreDeletes means we want $old for the patch but keep the item in the document.
-            // We run ApplyEmbeddedOperation either way (to compute $old), but discard the
-            // resulting document when IgnoreDeletes is set.
-            bool skipApply = isDelete && includeOnDelete
-                             && embeddedConfig.OnDelete?.IgnoreDeletes == true;
+            // IgnoreDeletes: the item stays in the document, but we still need $old for
+            // the OnDelete.Patch. We peek at the existing item without applying the delete,
+            // because ApplyEmbeddedOperation mutates the document's Modifications in place.
+            if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.IgnoreDeletes == true)
+            {
+                if (embeddedConfig.OnDelete.Patch != null)
+                {
+                    var existingItem = FindExistingEmbeddedItem(context, currentDoc, embedOp);
+                    patches ??= [];
+                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embeddedConfig.SourceTableName), embedOp.RawData, embeddedConfig.OnDelete.Patch, existingItem));
+                }
+                continue;
+            }
 
             var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
-            if (skipApply == false)
-                currentDoc = updatedDoc;
+            currentDoc = updatedDoc;
 
             // Patch collection — three cases:
             //   Delete + includeOnDelete + OnDelete.Patch → run the OnDelete.Patch with $old
-            //     (regardless of IgnoreDeletes — patch runs for side effects either way)
             //   Delete without includeOnDelete → no patch (mid-group flush, not final)
             //   Upsert + Patch → run the embedded Patch with $old (null on insert, previous item on update)
             if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
@@ -430,6 +436,47 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         return currentDoc;
+    }
+
+    /// <summary>
+    /// Read-only lookup of the existing embedded item for IgnoreDeletes scenarios.
+    /// Returns a cloned blittable for use as $old without modifying the parent document.
+    /// </summary>
+    private BlittableJsonReaderObject FindExistingEmbeddedItem(
+        DocumentsOperationContext context, BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
+    {
+        var config = op.Processor.EmbeddedConfig;
+
+        if (parentDoc == null || parentDoc.TryGetMember(config.PropertyName, out var existing) == false || existing == null)
+            return null;
+
+        switch (config.Type)
+        {
+            case CdcSinkRelationType.Value:
+                return existing is BlittableJsonReaderObject valObj ? context.ReadObject(valObj, "cdc-old-item") : null;
+
+            case CdcSinkRelationType.Array:
+                if (existing is not BlittableJsonReaderArray arr)
+                    return null;
+                foreach (var item in arr)
+                {
+                    if (item is BlittableJsonReaderObject obj &&
+                        MatchesPrimaryKey(obj, op.MappedData, config, op.Processor.MappedPrimaryKeyNames))
+                        return context.ReadObject(obj, "cdc-old-item");
+                }
+                return null;
+
+            case CdcSinkRelationType.Map:
+                if (existing is not BlittableJsonReaderObject map)
+                    return null;
+                var mapKey = BuildMapKey(op.MappedData, config, op.Processor.MappedPrimaryKeyNames);
+                if (map.TryGetMember(mapKey, out var entry) && entry is BlittableJsonReaderObject entryObj)
+                    return context.ReadObject(entryObj, "cdc-old-item");
+                return null;
+
+            default:
+                return null;
+        }
     }
 
     /// <summary>

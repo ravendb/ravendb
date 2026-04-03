@@ -163,7 +163,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "price", Name = "Price" }
                         }
@@ -226,7 +226,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "product_id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "product_id", Name = "Id" },
+                            new CdcColumnMapping { Column = "product_id", Name = "DbId" },
                             new CdcColumnMapping { Column = "product_name", Name = "Name" }
                         }
                     }
@@ -277,7 +277,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "description", Name = "Description" }
                         }
                     }
@@ -329,7 +329,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "content", Name = "Content" }
                         }
                     }
@@ -389,7 +389,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "title", Name = "Title" }
                         }
                     }
@@ -457,7 +457,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -542,7 +542,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" }
+                            new CdcColumnMapping { Column = "id", Name = "DbId" }
                         },
                         Patch = "this.FullName = $row.first_name + ' ' + $row.last_name;"
                     }
@@ -605,7 +605,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "total", Name = "Total" }
                         },
                         LinkedTables = new List<CdcSinkLinkedTableConfig>
@@ -671,7 +671,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -769,7 +769,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -871,7 +871,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -963,7 +963,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -1069,7 +1069,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -1215,7 +1215,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "value", Name = "Value" }
                         }
@@ -1270,7 +1270,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         }
                     }
@@ -1323,7 +1323,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "price", Name = "Price" }
                         }
@@ -1405,7 +1405,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -1491,7 +1491,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "email", Name = "Email" }
                         }
@@ -1563,7 +1563,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -1673,7 +1673,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "title", Name = "Title" }
                         },
                         Patch = @"
@@ -1723,7 +1723,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "content", Name = "file", Type = CdcColumnType.Attachment }
                         }
@@ -1792,7 +1792,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer", Name = "Customer" }
                         },
                         Patch = "this.DiscountPct = $row.discount_pct;",
@@ -1875,7 +1875,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -1969,7 +1969,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -2060,7 +2060,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         // Patch reads base_price and tax_rate (unmapped) and computes TotalPrice
@@ -2112,7 +2112,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -2205,7 +2205,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -2293,7 +2293,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         OnDelete = new CdcSinkOnDeleteConfig
@@ -2376,7 +2376,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -2490,7 +2490,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         // Root patch: read the unmapped 'country' column
@@ -2647,7 +2647,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer", Name = "Customer" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -2763,7 +2763,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         OnDelete = new CdcSinkOnDeleteConfig
@@ -2821,7 +2821,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         OnDelete = new CdcSinkOnDeleteConfig
@@ -2882,7 +2882,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" },
                             new CdcColumnMapping { Column = "status", Name = "Status" }
                         },
@@ -2960,7 +2960,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -3055,7 +3055,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
                         },
                         EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
@@ -3140,7 +3140,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         OnDelete = new CdcSinkOnDeleteConfig
@@ -3206,7 +3206,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" }
                         },
                         // On upsert: record the operation in an audit document
@@ -3445,14 +3445,14 @@ namespace SlowTests.Server.Documents.CdcSink
 
         private class EmployeeRecord
         {
-            public int Id { get; set; }
+            public int DbId { get; set; }
             public string Name { get; set; }
             public string Department { get; set; }
         }
 
         private class Car
         {
-            public int Id { get; set; }
+            public int DbId { get; set; }
             public string Make { get; set; }
             public string Model { get; set; }
         }
@@ -3511,7 +3511,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "department", Name = "Department" }
                         }
@@ -3564,7 +3564,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 PrimaryKeyColumns = new List<string> { "id" },
                 Columns = new List<CdcColumnMapping>
                 {
-                    new CdcColumnMapping { Column = "id", Name = "Id" },
+                    new CdcColumnMapping { Column = "id", Name = "DbId" },
                     new CdcColumnMapping { Column = "make", Name = "Make" },
                     new CdcColumnMapping { Column = "model", Name = "Model" }
                 }
@@ -3625,11 +3625,11 @@ namespace SlowTests.Server.Documents.CdcSink
 
         private class ComplexDoc
         {
-            public int Id { get; set; }
+            public int DbId { get; set; }
             public string Name { get; set; }
             public string Metadata { get; set; }    // json/jsonb → string
             public string Settings { get; set; }    // jsonb → string
-            public string Tags { get; set; }        // text[] → string (via ToString)
+            public List<string> Tags { get; set; }    // text[] → string array
             public string SearchVector { get; set; } // tsvector → string
             public string IpAddress { get; set; }   // inet → string
             public float[] Embedding { get; set; }  // vector(5) → float[] → array of numbers
@@ -3686,7 +3686,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "metadata", Name = "Metadata" },
                             new CdcColumnMapping { Column = "settings", Name = "Settings" },
@@ -3771,7 +3771,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
         private class TextAttachmentDoc
         {
-            public int Id { get; set; }
+            public int DbId { get; set; }
             public string Title { get; set; }
         }
 
@@ -3821,7 +3821,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "title", Name = "Title" },
                             new CdcColumnMapping { Column = "body", Name = "article-body.txt", Type = CdcColumnType.Attachment },
                             new CdcColumnMapping { Column = "summary", Name = "summary.txt", Type = CdcColumnType.Attachment },
@@ -3947,7 +3947,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "birthday", Name = "Birthday" },
                             new CdcColumnMapping { Column = "salary", Name = "Salary" },
@@ -4071,7 +4071,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
                         {
-                            new CdcColumnMapping { Column = "id", Name = "Id" },
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
                             new CdcColumnMapping { Column = "name", Name = "Name" },
                             new CdcColumnMapping { Column = "settings", Name = "Settings", Type = CdcColumnType.Json },
                             new CdcColumnMapping { Column = "tags", Name = "Tags", Type = CdcColumnType.Json },
@@ -4142,7 +4142,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
         private class ConfigDoc
         {
-            public int Id { get; set; }
+            public int DbId { get; set; }
             public string Name { get; set; }
             public ConfigSettings Settings { get; set; }
             public List<string> Tags { get; set; }
