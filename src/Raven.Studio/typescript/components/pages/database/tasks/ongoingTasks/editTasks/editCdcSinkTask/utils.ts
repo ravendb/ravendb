@@ -165,6 +165,8 @@ const mapToDto = (data: CdcSinkFormData, taskId?: number): CdcSinkConfiguration 
         MentorNode: data.isSetResponsibleNode ? data.responsibleNode : null,
         PinToMentorNode: false,
         Tables: data.tables.map(mapTableToDto),
+        Postgres: null,
+        SkipInitialLoad: false,
     };
 };
 
