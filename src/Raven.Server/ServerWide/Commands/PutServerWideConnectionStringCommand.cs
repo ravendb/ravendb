@@ -37,10 +37,8 @@ namespace Raven.Server.ServerWide.Commands
 
             if (previousValue != null)
             {
-                previousValue.Modifications ??= new DynamicJsonValue();
-
-                var modifications = new DynamicJsonValue(previousValue);
-                modifications[Value.Name] = Value.ToJson();
+                previousValue.Modifications = new DynamicJsonValue(previousValue);
+                previousValue.Modifications[Value.Name] = Value.ToJson();
                 return context.ReadObject(previousValue, Name);
             }
 
@@ -55,11 +53,6 @@ namespace Raven.Server.ServerWide.Commands
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
             AssertClusterAdmin(isClusterAdmin);
-        }
-
-        public static string GetDatabaseRecordConnectionStringName(string name)
-        {
-            return ServerWideConnectionString.GetDatabaseRecordConnectionStringName(name);
         }
 
         internal static string GetConnectionStringDictionaryPropertyName(ConnectionStringType type)

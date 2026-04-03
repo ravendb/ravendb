@@ -25,15 +25,15 @@ public sealed partial class ClusterStateMachine
 {
     public sealed partial class ServerWideConfigurationKey
     {
-        public static string ConnectionStringRaven = "server-wide/connection-strings/raven";
-        public static string ConnectionStringSql = "server-wide/connection-strings/sql";
-        public static string ConnectionStringOlap = "server-wide/connection-strings/olap";
-        public static string ConnectionStringElasticSearch = "server-wide/connection-strings/elasticsearch";
-        public static string ConnectionStringQueue = "server-wide/connection-strings/queue";
-        public static string ConnectionStringSnowflake = "server-wide/connection-strings/snowflake";
-        public static string ConnectionStringAi = "server-wide/connection-strings/ai";
+        public static readonly string ConnectionStringRaven = "server-wide/connection-strings/raven";
+        public static readonly string ConnectionStringSql = "server-wide/connection-strings/sql";
+        public static readonly string ConnectionStringOlap = "server-wide/connection-strings/olap";
+        public static readonly string ConnectionStringElasticSearch = "server-wide/connection-strings/elasticsearch";
+        public static readonly string ConnectionStringQueue = "server-wide/connection-strings/queue";
+        public static readonly string ConnectionStringSnowflake = "server-wide/connection-strings/snowflake";
+        public static readonly string ConnectionStringAi = "server-wide/connection-strings/ai";
 
-        public static string[] AllConnectionStringKeys = new[]
+        public static readonly string[] AllConnectionStringKeys = new[]
         {
             ConnectionStringRaven,
             ConnectionStringSql,
@@ -80,12 +80,8 @@ public sealed partial class ClusterStateMachine
 
         var dbKey = Constants.Documents.Prefix;
         var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
-        var databaseRecordCSName = PutServerWideConnectionStringCommand.GetDatabaseRecordConnectionStringName(serverWideConnectionString.Name);
+        var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideConnectionString.Name);
         var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(serverWideConnectionString.Type);
-
-        // create the connection string JSON with the prefixed name
-        var csJson = serverWideConnectionString.ConnectionString.ToJson();
-        csJson[nameof(ConnectionString.Name)] = databaseRecordCSName;
 
         using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
         {
@@ -98,9 +94,11 @@ public sealed partial class ClusterStateMachine
 
                 if (serverWideConnectionString.IsExcluded(databaseName) == false)
                 {
+                    var csJson = serverWideConnectionString.ConnectionString.ToJson();
+                    csJson[nameof(ConnectionString.Name)] = databaseRecordCSName;
+
                     if (hasConnectionStrings)
                     {
-                        connectionStrings.Modifications ??= new DynamicJsonValue();
                         connectionStrings.Modifications = new DynamicJsonValue(connectionStrings)
                         {
                             [databaseRecordCSName] = csJson
@@ -169,7 +167,7 @@ public sealed partial class ClusterStateMachine
 
         var dbKey = Constants.Documents.Prefix;
         var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
-        var databaseRecordCSName = PutServerWideConnectionStringCommand.GetDatabaseRecordConnectionStringName(deleteConfiguration.ConnectionStringName);
+        var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(deleteConfiguration.ConnectionStringName);
         var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(deleteConfiguration.Type);
 
         using (Slice.From(context.Allocator, dbKey, out var loweredPrefix))
@@ -333,14 +331,14 @@ public sealed partial class ClusterStateMachine
                 if (serverWideConnectionStrings.TryGet(propertyName, out BlittableJsonReaderObject configurationBlittable) == false)
                     continue;
 
-                if (IsExcluded(configurationBlittable, addDatabaseCommand.Name))
+                if (IsExcluded(configurationBlittable, addDatabaseCommand.Name, nameof(ServerWideConnectionString.ExcludedDatabases)))
                     continue;
 
                 var serverWideCS = ServerWideConnectionString.FromBlittable(configurationBlittable);
                 if (serverWideCS?.ConnectionString == null)
                     continue;
 
-                var databaseRecordCSName = PutServerWideConnectionStringCommand.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
+                var databaseRecordCSName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(serverWideCS.Name);
                 serverWideCS.ConnectionString.Name = databaseRecordCSName;
 
                 switch (serverWideCS.Type)
