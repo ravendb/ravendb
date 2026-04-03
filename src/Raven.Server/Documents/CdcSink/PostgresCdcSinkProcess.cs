@@ -98,11 +98,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
         else
         {
-            var tableList = string.Join(", ", tableNames.Select(t =>
-            {
-                var parts = t.Split('.');
-                return parts.Length == 2 ? $"{parts[0]}.{parts[1]}" : t;
-            }));
+            var tableList = string.Join(", ", tableNames);
 
             try
             {
