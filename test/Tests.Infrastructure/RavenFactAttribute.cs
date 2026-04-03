@@ -89,6 +89,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         set => Requires = value ? Requires | RavenServiceRequirement.Azure : Requires & ~RavenServiceRequirement.Azure;
     }
 
+    public bool MsSqlCdcRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.MsSqlCdc);
+        set => Requires = value ? Requires | RavenServiceRequirement.MsSqlCdc : Requires & ~RavenServiceRequirement.MsSqlCdc;
+    }
+
     public new string Skip
     {
         get => ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires);
@@ -132,6 +138,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
             return skip;
 
         if (serviceRequirement.HasFlag(RavenServiceRequirement.Azure) && ShouldSkipAzure(out skip))
+            return skip;
+
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.MsSqlCdc) && ShouldSkipMsSqlCdc(out skip))
             return skip;
 
         return null;
@@ -183,6 +192,34 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
 
     private static bool ShouldSkipMsSql(out string skipMessage) =>
         ShouldSkipService(() => MsSqlConnectionString.Instance.CanConnect, "MsSQL database", out skipMessage);
+
+    private static bool ShouldSkipMsSqlCdc(out string skipMessage)
+    {
+        if (ShouldSkipMsSql(out skipMessage))
+            return true;
+
+        try
+        {
+            using var conn = new Microsoft.Data.SqlClient.SqlConnection(MsSqlConnectionString.Instance.VerifiedConnectionString.Value);
+            conn.Open();
+            using var cmd = new Microsoft.Data.SqlClient.SqlCommand("SELECT CAST(SERVERPROPERTY('EngineEdition') AS INT)", conn);
+            var engineEdition = (int)cmd.ExecuteScalar();
+            // EngineEdition 4 = Express, which does not support CDC
+            if (engineEdition == 4)
+            {
+                skipMessage = "Test requires SQL Server with CDC support (Enterprise, Developer, or Standard edition — Express edition does not support CDC)";
+                return true;
+            }
+        }
+        catch (Exception e)
+        {
+            skipMessage = $"Failed to determine SQL Server edition: {e.Message}";
+            return true;
+        }
+
+        skipMessage = null;
+        return false;
+    }
 
     private static bool ShouldSkipOracleSql(out string skipMessage) =>
         ShouldSkipService(() => OracleConnectionString.Instance.CanConnect, "Oracle database", out skipMessage);

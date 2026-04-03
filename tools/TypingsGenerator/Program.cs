@@ -31,6 +31,7 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -93,6 +94,8 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
+using Raven.Server.Documents.CdcSink;
+using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -586,6 +589,21 @@ namespace TypingsGenerator
             scripter.AddType(typeof(KafkaConnectionSettings));
             scripter.AddType(typeof(TestQueueSinkScript));
             scripter.AddType(typeof(TestQueueSinkScriptResult));
+
+            // ongoing tasks - CDC Sink
+            scripter.AddType(typeof(OngoingTaskCdcSink));
+            scripter.AddType(typeof(CdcSinkConfiguration));
+            scripter.AddType(typeof(CdcSinkTableConfig));
+            scripter.AddType(typeof(CdcSinkEmbeddedTableConfig));
+            scripter.AddType(typeof(CdcSinkLinkedTableConfig));
+            scripter.AddType(typeof(CdcSinkOnDeleteConfig));
+            scripter.AddType(typeof(CdcSinkRelationType));
+            scripter.AddType(typeof(CdcColumnMapping));
+            scripter.AddType(typeof(CdcColumnType));
+            scripter.AddType(typeof(CdcSinkPostgresSettings));
+            scripter.AddType(typeof(TestCdcSinkScript));
+            scripter.AddType(typeof(TestCdcSinkScriptResult));
+            scripter.AddType(typeof(CdcSinkVerificationResult));
 
             // ongoing tasks - Snowflake ETL
             scripter.AddType(typeof(OngoingTaskSnowflakeEtl));
