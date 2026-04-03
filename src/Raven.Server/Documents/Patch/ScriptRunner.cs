@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public string OriginalDocumentId;
-            public bool RefreshOriginalDocument;
+            public bool RefreshOriginalDocument, OriginalDocumentUpdatedOrDeleted;
             private readonly ConcurrentLruRegexCache _regexCache;
             public HashSet<string> DocumentCountersToUpdate;
             public HashSet<string> DocumentTimeSeriesToUpdate;
@@ -319,6 +319,9 @@ namespace Raven.Server.Documents.Patch
                         .LocalTimeZone(TimeZoneInfo.Utc)
                         .Host.StringCompilationAllowed = _configuration.Patching.AllowStringCompilation;
                 });
+
+                Console.WriteLine("Debugger listening on ws://127.0.0.1:9222");
+                Console.WriteLine("Open Chrome and go to: chrome://inspect");
 
                 JavaScriptUtils = new JavaScriptUtils(_runner, ScriptEngine);
                 ScriptEngine.SetClrFunc(GetMetadataMethod, JavaScriptUtils.GetMetadata);
@@ -1375,8 +1378,11 @@ namespace Raven.Server.Documents.Patch
                         });
                     }
 
-                    if (RefreshOriginalDocument == false && string.Equals(putResult.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(putResult.Id, OriginalDocumentId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        OriginalDocumentUpdatedOrDeleted = true;
                         RefreshOriginalDocument = true;
+                    }
 
                     return putResult.Id;
                 }
@@ -1437,8 +1443,11 @@ namespace Raven.Server.Documents.Patch
 
                 var result = _database.DocumentsStorage.Delete(_docsCtx, id, changeVector);
 
-                if (RefreshOriginalDocument && string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(OriginalDocumentId, id, StringComparison.OrdinalIgnoreCase))
+                {
+                    OriginalDocumentUpdatedOrDeleted = true;
                     RefreshOriginalDocument = false;
+                }
 
                 if (DebugMode)
                 {
@@ -2378,6 +2387,7 @@ namespace Raven.Server.Documents.Patch
                 UnarchiveCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
+                OriginalDocumentUpdatedOrDeleted = false;
                 ScriptEngine.Advanced.ResetCallStack();
                 ScriptEngine.Constraints.Reset();
             }
@@ -2461,6 +2471,7 @@ namespace Raven.Server.Documents.Patch
 
                 _run.OriginalDocumentId = null;
                 _run.RefreshOriginalDocument = false;
+                _run.OriginalDocumentUpdatedOrDeleted = false;
 
                 _run.DocumentCountersToUpdate?.Clear();
                 _run.DocumentTimeSeriesToUpdate?.Clear();
