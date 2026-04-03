@@ -84,17 +84,19 @@ describe("ValidDatabasePropertiesPanel", () => {
                 const dbStates: locationAwareLoadableData<DatabaseLocalInfo>[] = [
                     getDatabaseLocalInfo({
                         location: { nodeTag: "A" },
-                        totalSize: { SizeInBytes: 1, HumaneSize: "1 B" },
+                        totalPhysicalSize: { SizeInBytes: 1, HumaneSize: "1 B" },
+                        totalAllocatedSize: { SizeInBytes: 1, HumaneSize: "1 B" },
                         tempBuffersSize: { SizeInBytes: 2, HumaneSize: "2 B" },
                     }),
                     getDatabaseLocalInfo({
                         location: { nodeTag: "B" },
-                        totalSize: { SizeInBytes: 3, HumaneSize: "3 B" },
+                        totalPhysicalSize: { SizeInBytes: 3, HumaneSize: "3 B" },
+                        totalAllocatedSize: { SizeInBytes: 3, HumaneSize: "3 B" },
                         tempBuffersSize: { SizeInBytes: 4, HumaneSize: "4 B" },
                     }),
                 ];
 
-                // totalSizeWithTempBuffers is totalSize + tempBuffersSize
+                // totalSizeWithTempBuffers is totalPhysicalSize + tempBuffersSize
                 expect(getLocalGeneralInfo(dbStates, "A").totalSizeWithTempBuffers).toBe(3);
                 expect(getLocalGeneralInfo(dbStates, "B").totalSizeWithTempBuffers).toEqual(7);
             });
@@ -170,17 +172,19 @@ describe("ValidDatabasePropertiesPanel", () => {
                 const dbStates: locationAwareLoadableData<DatabaseLocalInfo>[] = [
                     getDatabaseLocalInfo({
                         location: { nodeTag: "A", shardNumber: 0 },
-                        totalSize: { SizeInBytes: 1, HumaneSize: "1 B" },
+                        totalPhysicalSize: { SizeInBytes: 1, HumaneSize: "1 B" },
+                        totalAllocatedSize: { SizeInBytes: 1, HumaneSize: "1 B" },
                         tempBuffersSize: { SizeInBytes: 2, HumaneSize: "2 B" },
                     }),
                     getDatabaseLocalInfo({
                         location: { nodeTag: "A", shardNumber: 1 },
-                        totalSize: { SizeInBytes: 3, HumaneSize: "3 B" },
+                        totalPhysicalSize: { SizeInBytes: 3, HumaneSize: "3 B" },
+                        totalAllocatedSize: { SizeInBytes: 3, HumaneSize: "3 B" },
                         tempBuffersSize: { SizeInBytes: 4, HumaneSize: "4 B" },
                     }),
                 ];
 
-                // totalSizeWithTempBuffers is totalSize + tempBuffersSize
+                // totalSizeWithTempBuffers is totalPhysicalSize + tempBuffersSize
 
                 const shard0TotalSize = 3;
                 const shard1TotalSize = 7;
@@ -222,7 +226,8 @@ describe("ValidDatabasePropertiesPanel", () => {
             status = "success",
             location,
             loadError,
-            totalSize,
+            totalPhysicalSize,
+            totalAllocatedSize,
             tempBuffersSize,
             documentsCount,
             backupInfo,
@@ -232,7 +237,8 @@ describe("ValidDatabasePropertiesPanel", () => {
             loadError?: string;
             documentsCount?: number;
             tempBuffersSize?: Raven.Client.Util.Size;
-            totalSize?: Raven.Client.Util.Size;
+            totalPhysicalSize?: Raven.Client.Util.Size;
+            totalAllocatedSize?: Raven.Client.Util.Size;
             backupInfo?: BackupInfo;
         }): locationAwareLoadableData<DatabaseLocalInfo> {
             return {
@@ -243,7 +249,8 @@ describe("ValidDatabasePropertiesPanel", () => {
                     databaseStatus: "Online",
                     indexingStatus: "Running",
                     documentsCount,
-                    totalSize,
+                    totalPhysicalSize,
+                    totalAllocatedSize,
                     tempBuffersSize,
                     location,
                     indexingErrors: null,

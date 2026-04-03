@@ -21,7 +21,8 @@ export interface DatabaseLocalInfo {
     indexingStatus: IndexRunningStatus;
     documentsCount: number;
     tempBuffersSize: Raven.Client.Util.Size;
-    totalSize: Raven.Client.Util.Size;
+    totalPhysicalSize: Raven.Client.Util.Size;
+    totalAllocatedSize: Raven.Client.Util.Size;
     upTime?: string;
     backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
     databaseStatus: Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseStatus;

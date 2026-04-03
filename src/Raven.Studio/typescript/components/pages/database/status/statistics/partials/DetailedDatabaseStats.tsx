@@ -136,36 +136,37 @@ export function DetailedDatabaseStats() {
                             <DetailsBlock>
                                 {(data, location) => {
                                     const id = "js-size-on-disk-" + location.nodeTag + "-" + location.shardNumber;
+                                    const physicalBytes = data.PhysicalSizeOnDisk.SizeInBytes;
+                                    const allocatedBytes = data.AllocatedSizeOnDisk.SizeInBytes;
+                                    const tempBytes = data.TempBuffersSizeOnDisk.SizeInBytes;
                                     return (
                                         <PopoverWithHoverWrapper
                                             message={
                                                 <>
-                                                    Data:{" "}
+                                                    Data (on disk):{" "}
                                                     <strong>
-                                                        {genUtils.formatBytesToSize(data.SizeOnDisk.SizeInBytes)}
+                                                        {genUtils.formatBytesToSize(physicalBytes)}
+                                                    </strong>
+                                                    <br />
+                                                    Data (allocated):{" "}
+                                                    <strong>
+                                                        {genUtils.formatBytesToSize(allocatedBytes)}
                                                     </strong>
                                                     <br />
                                                     Temp:{" "}
                                                     <strong>
-                                                        {genUtils.formatBytesToSize(
-                                                            data.TempBuffersSizeOnDisk.SizeInBytes
-                                                        )}
+                                                        {genUtils.formatBytesToSize(tempBytes)}
                                                     </strong>
                                                     <br />
-                                                    Total:{" "}
+                                                    Total (on disk):{" "}
                                                     <strong>
-                                                        {genUtils.formatBytesToSize(
-                                                            data.SizeOnDisk.SizeInBytes +
-                                                                data.TempBuffersSizeOnDisk.SizeInBytes
-                                                        )}
+                                                        {genUtils.formatBytesToSize(physicalBytes + tempBytes)}
                                                     </strong>
                                                 </>
                                             }
                                         >
                                             <span id={id}>
-                                                {genUtils.formatBytesToSize(
-                                                    data.SizeOnDisk.SizeInBytes + data.TempBuffersSizeOnDisk.SizeInBytes
-                                                )}
+                                                {genUtils.formatBytesToSize(physicalBytes + tempBytes)}
                                             </span>
                                         </PopoverWithHoverWrapper>
                                     );

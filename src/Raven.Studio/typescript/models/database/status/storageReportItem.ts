@@ -8,6 +8,7 @@ class storageReportItem {
     type: string;
     internalChildren: storageReportItem[];
     size?: number;
+    physicalSize?: number;
     length?: number;
     x?: number;
     y?: number;

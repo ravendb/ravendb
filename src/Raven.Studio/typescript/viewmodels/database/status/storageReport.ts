@@ -49,6 +49,9 @@ class storageReport extends shardViewModelBase {
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
+    showOnDiskColumn: KnockoutObservable<boolean>;
+    allocatedNodeSize: KnockoutComputed<string>;
+    onDiskNodeSize: KnockoutComputed<string>;
 
     documentsCompressionUrl: KnockoutComputed<string>;
 
@@ -105,7 +108,17 @@ class storageReport extends shardViewModelBase {
         
         this.showTempFiles = ko.pureComputed(() => {
             return this.node() == this.root;
-        })
+        });
+
+        this.showOnDiskColumn = ko.pureComputed(() =>
+            !!(this.node().internalChildren || []).find(x => x.physicalSize != null)
+        );
+        this.allocatedNodeSize = ko.pureComputed(() =>
+            generalUtils.formatBytesToSize(this.node().size)
+        );
+        this.onDiskNodeSize = ko.pureComputed(() =>
+            generalUtils.formatBytesToSize(this.node().physicalSize ?? this.node().size)
+        );
 
         this.documentsCompressionUrl = ko.pureComputed(() => appUrl.forDocumentsCompression(this.db));
     }
@@ -115,7 +128,9 @@ class storageReport extends shardViewModelBase {
 
         const mappedData = data.map(x => this.mapReport(x));
         const totalSize = mappedData.reduce((p, c) => p + c.size, 0);
+        const totalPhysicalSize = mappedData.reduce((p, c) => p + (c.physicalSize ?? c.size), 0);
         const item = new storageReportItem("/", "Database", false, totalSize, mappedData);
+        item.physicalSize = totalPhysicalSize;
 
         this.root = item;
 
@@ -137,11 +152,17 @@ class storageReport extends shardViewModelBase {
         const journals = this.mapJournals(reportItem.Report);
         const tempFiles = this.mapTempFiles(reportItem.Report);
 
-        return new storageReportItem(reportItem.Name,
+        const item = new storageReportItem(reportItem.Name,
             reportItem.Type.toLowerCase(),
             storageReport.showDisplayReportType(reportItem.Type),
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
+
+        if (dataFile.physicalSize != null) {
+            item.physicalSize = dataFile.physicalSize + journals.size + tempFiles.size;
+        }
+
+        return item;
     }
 
     private static showDisplayReportType(reportType: string): boolean {
@@ -153,6 +174,7 @@ class storageReport extends shardViewModelBase {
 
         const storageItem = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
         storageItem.lazyLoadChildren = true;
+        storageItem.physicalSize = dataFile.PhysicalSpaceInBytes;
 
         return storageItem;
     }
@@ -164,6 +186,18 @@ class storageReport extends shardViewModelBase {
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
         const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
+
+        const sparseRegionsSavings = report.DataFile.AllocatedSpaceInBytes - report.DataFile.PhysicalSpaceInBytes;
+        if (sparseRegionsSavings > 0) {
+            const freeFormatted = generalUtils.formatBytesToSize(report.DataFile.FreeSpaceInBytes);
+            const savingsFormatted = generalUtils.formatBytesToSize(sparseRegionsSavings);
+            freeSpace.customSizeProvider = (header: boolean) => {
+                if (header) {
+                    return freeFormatted;
+                }
+                return `${freeFormatted} <small>(Sparse regions: ${savingsFormatted})</small>`;
+            };
+        }
 
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
     }
@@ -677,6 +711,10 @@ class storageReport extends shardViewModelBase {
 
         const tempFiles = item.internalChildren.find(x => x.type === "tempFiles");
         return generalUtils.formatBytesToSize(tempFiles.size);
+    }
+
+    onDiskSizeFormatted(item: storageReportItem) {
+        return generalUtils.formatBytesToSize(item.physicalSize ?? item.size);
     }
 
     compactDatabase() {

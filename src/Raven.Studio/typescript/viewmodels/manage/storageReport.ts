@@ -37,6 +37,9 @@ class storageReport extends viewModelBase {
     showPagesColumn: KnockoutObservable<boolean>;
     showEntriesColumn: KnockoutObservable<boolean>;
     showTempFiles: KnockoutObservable<boolean>;
+    showOnDiskColumn: KnockoutObservable<boolean>;
+    allocatedNodeSize: KnockoutComputed<string>;
+    onDiskNodeSize: KnockoutComputed<string>;
 
     constructor() {
         super();
@@ -89,7 +92,17 @@ class storageReport extends viewModelBase {
         
         this.showTempFiles = ko.pureComputed(() => {
             return this.node() == this.root;
-        })
+        });
+
+        this.showOnDiskColumn = ko.pureComputed(() =>
+            !!(this.node().internalChildren || []).find(x => x.physicalSize != null)
+        );
+        this.allocatedNodeSize = ko.pureComputed(() =>
+            generalUtils.formatBytesToSize(this.node().size)
+        );
+        this.onDiskNodeSize = ko.pureComputed(() =>
+            generalUtils.formatBytesToSize(this.node().physicalSize ?? this.node().size)
+        );
     }
 
     private processData() {
@@ -113,24 +126,44 @@ class storageReport extends viewModelBase {
         const journals = this.mapJournals(reportItem.Report);
         const tempFiles = this.mapTempFiles(reportItem.Report);
 
-        return new storageReportItem(reportItem.Environment,
+        const item = new storageReportItem(reportItem.Environment,
             reportItem.Type.toLowerCase(),
             true,
             dataFile.size + journals.size + tempFiles.size,
             [dataFile, journals, tempFiles]);
+
+        if (dataFile.physicalSize != null) {
+            item.physicalSize = dataFile.physicalSize + journals.size + tempFiles.size;
+        }
+
+        return item;
     }
 
     private mapDataFile(report: Voron.Debugging.DetailedStorageReport): storageReportItem {
         const dataFile = report.DataFile;
 
         const d = new storageReportItem("Datafile", "data", false, dataFile.AllocatedSpaceInBytes);
+        d.physicalSize = dataFile.PhysicalSpaceInBytes;
+
         const tables = this.mapTables(report.Tables);
         const trees = this.mapTrees(report.Trees, "Trees");
         const freeSpace = new storageReportItem("Free", "free", false, report.DataFile.FreeSpaceInBytes, []);
         const preallocatedBuffers = this.mapPreAllocatedBuffers(report.PreAllocatedBuffers);
 
+        const sparseRegionsSavings = dataFile.AllocatedSpaceInBytes - dataFile.PhysicalSpaceInBytes;
+        if (sparseRegionsSavings > 0) {
+            const freeFormatted = generalUtils.formatBytesToSize(report.DataFile.FreeSpaceInBytes);
+            const savingsFormatted = generalUtils.formatBytesToSize(sparseRegionsSavings);
+            freeSpace.customSizeProvider = (header: boolean) => {
+                if (header) {
+                    return freeFormatted;
+                }
+                return `${freeFormatted} <small>(Sparse regions: ${savingsFormatted})</small>`;
+            };
+        }
+
         d.internalChildren = [tables, trees, freeSpace, preallocatedBuffers];
-        
+
         return d;
     }
 
@@ -493,6 +526,10 @@ class storageReport extends viewModelBase {
         this.tooltip.transition()
             .duration(500)
             .style("opacity", 0);
+    }
+
+    onDiskSizeFormatted(item: storageReportItem) {
+        return generalUtils.formatBytesToSize(item.physicalSize ?? item.size);
     }
 }
 
