@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
-using Raven.Server.Smuggler.Documents;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -281,50 +279,37 @@ namespace FastTests.Client
                     $"for {nameof(ConnectionStringType)}.{type}");
             }
 
-            // every connection string dictionary must be filtered in DatabaseSource.GetDatabaseRecordAsync during smuggler export
-            var getDatabaseRecordMethod = typeof(DatabaseSource).GetMethod(nameof(DatabaseSource.GetDatabaseRecordAsync), BindingFlags.Instance | BindingFlags.Public);
-            Assert.True(getDatabaseRecordMethod != null, $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} method not found");
-
-            var methodBody = getDatabaseRecordMethod.GetMethodBody();
-            Assert.True(methodBody != null, $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} has no method body");
-
-            var ilBytes = methodBody.GetILAsByteArray();
-            Assert.True(ilBytes != null, $"Could not get IL bytes for {nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)}");
-
-            // resolve field tokens from IL to verify each connection string dictionary is referenced
-            var module = typeof(DatabaseSource).Module;
-            var referencedFieldNames = new HashSet<string>();
-            for (int i = 0; i < ilBytes.Length; i++)
+            // every connection string dictionary on DatabaseRecord must be accounted for
+            // if a new *ConnectionStrings field is added to DatabaseRecord, this test will fail
+            // reminding you to also handle it in DatabaseSource.GetDatabaseRecordAsync and RestoreSnapshotTask.FilterOutServerWideConnectionStrings
+            var expectedConnectionStringFields = new HashSet<string>
             {
-                // ldfld and ldflda opcodes use a 4-byte metadata token
-                if (ilBytes[i] == 0x7B || ilBytes[i] == 0x7C) // ldfld or ldflda
-                {
-                    if (i + 4 < ilBytes.Length)
-                    {
-                        var token = BitConverter.ToInt32(ilBytes, i + 1);
-                        try
-                        {
-                            var resolvedField = module.ResolveField(token);
-                            if (resolvedField != null)
-                                referencedFieldNames.Add(resolvedField.Name);
-                        }
-                        catch
-                        {
-                            // ignore tokens that can't be resolved
-                        }
-                    }
-                }
-            }
+                nameof(DatabaseRecord.RavenConnectionStrings),
+                nameof(DatabaseRecord.SqlConnectionStrings),
+                nameof(DatabaseRecord.OlapConnectionStrings),
+                nameof(DatabaseRecord.ElasticSearchConnectionStrings),
+                nameof(DatabaseRecord.QueueConnectionStrings),
+                nameof(DatabaseRecord.SnowflakeConnectionStrings),
+                nameof(DatabaseRecord.AiConnectionStrings)
+            };
 
-            foreach (var type in connectionStringTypes)
-            {
-                var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(type);
-                Assert.True(referencedFieldNames.Contains(propertyName),
-                    $"{nameof(DatabaseSource)}.{nameof(DatabaseSource.GetDatabaseRecordAsync)} does not filter " +
-                    $"server-wide connection strings from {nameof(DatabaseRecord)}.{propertyName} " +
-                    $"for {nameof(ConnectionStringType)}.{type}. " +
-                    $"Please add FilterOutServerWideConnectionStrings(databaseRecord.{propertyName}) to the method.");
-            }
+            var actualConnectionStringFields = typeof(DatabaseRecord)
+                .GetFields()
+                .Where(f => f.Name.Contains("ConnectionStrings"))
+                .Select(f => f.Name)
+                .ToHashSet();
+
+            var missingFromExpected = actualConnectionStringFields.Except(expectedConnectionStringFields).ToList();
+            var extraInExpected = expectedConnectionStringFields.Except(actualConnectionStringFields).ToList();
+
+            Assert.True(missingFromExpected.Count == 0,
+                $"New connection string fields found on {nameof(DatabaseRecord)} that are not handled: {string.Join(", ", missingFromExpected)}.{Environment.NewLine}" +
+                $"Please update this test's expected list AND add FilterOutServerWideConnectionStrings calls in:{Environment.NewLine}" +
+                $"  - DatabaseSource.GetDatabaseRecordAsync (smuggler export){Environment.NewLine}" +
+                $"  - RestoreSnapshotTask.FilterOutServerWideConnectionStrings (snapshot restore)");
+
+            Assert.True(extraInExpected.Count == 0,
+                $"Connection string fields listed in test but no longer on {nameof(DatabaseRecord)}: {string.Join(", ", extraInExpected)}. Please update this test.");
         }
     }
 }
