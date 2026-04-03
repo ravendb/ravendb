@@ -71,6 +71,9 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             if (blittable == null)
                 return null;
 
+            if (blittable.TryGet(nameof(Type), out string _) == false)
+                return null;
+
             var type = ConnectionString.GetConnectionStringType(blittable);
             var connectionString = DeserializeConnectionString(blittable, type);
 
