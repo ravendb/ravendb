@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -11,14 +12,12 @@ using Raven.Client.Documents.Operations.ETL.Snowflake;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
-using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron;
-using Voron.Data;
 
 namespace Raven.Server.ServerWide;
 
@@ -244,25 +243,35 @@ public sealed partial class ClusterStateMachine
             case ConnectionStringType.Ai:
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.EmbeddingsGenerations), connectionStringName, databaseName);
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.GenAis), connectionStringName, databaseName);
-                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.AiAgents), connectionStringName, databaseName);
+                CheckAiAgentsUseConnectionString(databaseRecord, connectionStringName, databaseName);
                 break;
         }
     }
 
     private static void CheckTasksUseConnectionString(BlittableJsonReaderObject databaseRecord, string tasksPropertyName, string connectionStringName, string databaseName)
     {
-        if (databaseRecord.TryGet(tasksPropertyName, out BlittableJsonReaderArray tasks) == false || tasks == null)
+        CheckUseConnectionString(databaseRecord, tasksPropertyName, nameof(EtlConfiguration<>.ConnectionStringName), nameof(EtlConfiguration<>.Name), connectionStringName, databaseName);
+    }
+
+    private static void CheckAiAgentsUseConnectionString(BlittableJsonReaderObject databaseRecord, string connectionStringName, string databaseName)
+    {
+        CheckUseConnectionString(databaseRecord, nameof(DatabaseRecord.AiAgents), nameof(AiAgentConfiguration.ConnectionStringName), nameof(AiAgentConfiguration.Name), connectionStringName, databaseName);
+    }
+
+    private static void CheckUseConnectionString(BlittableJsonReaderObject databaseRecord, string arrayPropertyName, string connectionStringPropertyName, string namePropertyName, string connectionStringName, string databaseName)
+    {
+        if (databaseRecord.TryGet(arrayPropertyName, out BlittableJsonReaderArray items) == false || items == null)
             return;
 
-        foreach (BlittableJsonReaderObject task in tasks)
+        foreach (BlittableJsonReaderObject item in items)
         {
-            if (task.TryGet(nameof(EtlConfiguration<ConnectionString>.ConnectionStringName), out string taskConnectionStringName) &&
-                string.Equals(taskConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase))
+            if (item.TryGet(connectionStringPropertyName, out string itemConnectionStringName) &&
+                string.Equals(itemConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase))
             {
-                task.TryGet(nameof(EtlConfiguration<ConnectionString>.Name), out string taskName);
+                item.TryGet(namePropertyName, out string itemName);
                 throw new RachisApplyException(
                     $"Can't delete server-wide connection string '{connectionStringName}'. " +
-                    $"It is used by task '{taskName}' in database '{databaseName}'");
+                    $"It is used by '{itemName}' in database '{databaseName}'");
             }
         }
     }

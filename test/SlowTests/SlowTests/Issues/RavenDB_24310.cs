@@ -352,7 +352,7 @@ public class RavenDB_24310 : RavenTestBase
             // attempt to delete server-wide connection string should fail
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" })));
-            Assert.Contains("used by task", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("It is used by", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
     }
 }
