@@ -3769,6 +3769,166 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        /// <summary>
+        /// Verifies that patch scripts can read and manipulate complex PostgreSQL types
+        /// via $row: json/jsonb arrive as strings (requiring JSON.parse), text arrays
+        /// arrive as JS arrays of strings, and pgvector arrives as a JS array of numbers.
+        /// The patch script uses these to compute derived properties on the document.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchScript_ComplexTypes_Json_Array_Vector()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, """
+                CREATE EXTENSION IF NOT EXISTS vector;
+                CREATE TABLE items (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    metadata JSON,
+                    settings JSONB,
+                    tags TEXT[],
+                    embedding vector(3)
+                );
+                INSERT INTO items (id, name, metadata, settings, tags, embedding)
+                VALUES (
+                    1,
+                    'TestItem',
+                    '{"priority": 5, "label": "urgent"}',
+                    '{"enabled": true, "retries": 3}',
+                    ARRAY['alpha', 'beta', 'gamma'],
+                    '[0.1, 0.2, 0.3]'
+                );
+                """);
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-patch-complex",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        Name = "Items",
+                        SourceTableSchema = "public",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        },
+                        // $row.metadata and $row.settings are strings — must JSON.parse()
+                        // $row.tags is a JS array of strings
+                        // $row.embedding is a JS array of numbers
+                        Patch = @"
+                            var meta = JSON.parse($row.metadata);
+                            var settings = JSON.parse($row.settings);
+
+                            this.Priority = meta.priority;
+                            this.Label = meta.label;
+                            this.Enabled = settings.enabled;
+                            this.Retries = settings.retries;
+                            this.TagCount = $row.tags.length;
+                            this.FirstTag = $row.tags[0];
+                            this.Tags = $row.tags;
+                            this.EmbeddingSum = $row.embedding.reduce(function(a, b) { return a + b; }, 0);
+                            this.Embedding = $row.embedding;
+                        "
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // --- Verify initial load: patch runs on each row ---
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<PatchedComplexItem>("Items/1");
+                return doc?.Name;
+            }, "TestItem", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<PatchedComplexItem>("Items/1");
+                Assert.NotNull(doc);
+
+                // JSON fields parsed by the script
+                Assert.Equal(5, doc.Priority);
+                Assert.Equal("urgent", doc.Label);
+                Assert.Equal(true, doc.Enabled);
+                Assert.Equal(3, doc.Retries);
+
+                // Text array accessed as JS array
+                Assert.Equal(3, doc.TagCount);
+                Assert.Equal("alpha", doc.FirstTag);
+                Assert.Equal(new[] { "alpha", "beta", "gamma" }, doc.Tags);
+
+                // Vector accessed as JS array of numbers
+                Assert.True(Math.Abs(0.6 - doc.EmbeddingSum) < 0.001, $"Expected ~0.6, got {doc.EmbeddingSum}");
+                Assert.Equal(3, doc.Embedding.Length);
+            }
+
+            // --- Verify CDC streaming: update triggers patch with new values ---
+            ExecuteNpgSql(connectionString, """
+                UPDATE items SET
+                    metadata = '{"priority": 10, "label": "low"}',
+                    settings = '{"enabled": false, "retries": 0}',
+                    tags = ARRAY['delta'],
+                    embedding = '[0.9, 0.8, 0.7]'
+                WHERE id = 1;
+                """);
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<PatchedComplexItem>("Items/1");
+                return doc?.Label;
+            }, "low", timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<PatchedComplexItem>("Items/1");
+                Assert.NotNull(doc);
+
+                // Updated JSON values
+                Assert.Equal(10, doc.Priority);
+                Assert.Equal("low", doc.Label);
+                Assert.Equal(false, doc.Enabled);
+                Assert.Equal(0, doc.Retries);
+
+                // Updated array
+                Assert.Equal(1, doc.TagCount);
+                Assert.Equal("delta", doc.FirstTag);
+                Assert.Equal(new[] { "delta" }, doc.Tags);
+
+                // Updated vector
+                Assert.True(Math.Abs(2.4 - doc.EmbeddingSum) < 0.001, $"Expected ~2.4, got {doc.EmbeddingSum}");
+            }
+        }
+
+        private class PatchedComplexItem
+        {
+            public int DbId { get; set; }
+            public string Name { get; set; }
+            // From JSON.parse($row.metadata)
+            public int Priority { get; set; }
+            public string Label { get; set; }
+            // From JSON.parse($row.settings)
+            public bool Enabled { get; set; }
+            public int Retries { get; set; }
+            // From $row.tags (JS array)
+            public int TagCount { get; set; }
+            public string FirstTag { get; set; }
+            public string[] Tags { get; set; }
+            // From $row.embedding (JS array of floats)
+            public double EmbeddingSum { get; set; }
+            public float[] Embedding { get; set; }
+        }
+
         private class TextAttachmentDoc
         {
             public int DbId { get; set; }
