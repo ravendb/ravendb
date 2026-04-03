@@ -111,9 +111,11 @@ Always run tests in Release mode unless debugging specifically requires Debug mo
 - **Background/** - Background tasks and operations
 - **Smuggler/** - Import/export functionality
 
-## Test Categorization Rules
+## Test Rules
 
-**Every new test must be categorized.** Use `[RavenFact(RavenTestCategory.X)]` / `[RavenTheory(RavenTestCategory.X)]` instead of plain `[Fact]`/`[Theory]`. Add `using Tests.Infrastructure;`. Categories can be combined with `|` for tests spanning multiple areas.
+**Every new test must:**
+1. Inherit from `RavenTestBase` (most common), `ClusterTestBase`, `ReplicationTestBase`, or another appropriate base class from `Tests.Infrastructure`. CI enforces that test classes implement `IDisposable` (which the base classes provide).
+2. Use `[RavenFact(RavenTestCategory.X)]` / `[RavenTheory(RavenTestCategory.X)]` instead of plain `[Fact]`/`[Theory]`. CI will fail if standard xUnit attributes are used. Add `using Tests.Infrastructure;`. Categories can be combined with `|` for tests spanning multiple areas.
 
 ```csharp
 // Single category
@@ -171,9 +173,29 @@ dotnet test test/FastTests --configuration Release --filter "Category=Voron&Full
 GetDocumentStore(new Options { SearchEngine = RavenSearchEngineMode.Lucene })
 ```
 
+## Studio Architecture
+
+The Studio (`src/Raven.Studio`) is a **Knockout.js → React hybrid** managed by Durandal as the SPA shell:
+- **Legacy**: Knockout.js viewmodels in `typescript/viewmodels/`, paired with HTML views
+- **Modern**: React components in `typescript/components/` (pages, common, hooks), using Redux Toolkit, React Hook Form, TanStack Table
+- New UI work should use React. Storybook is available (`npm run storybook`, port 6006).
+
 ## Code Conventions
 
+### C# style (enforced by `.editorconfig`)
+- Private/internal fields: `_camelCase` prefix
+- Newlines before all braces
+- Explicit types preferred (avoid `var`)
+- C# preview language features enabled (`LangVersion: preview`)
+- Warnings treated as errors
+
+### General
 - Code marked as `PERF` is performance-sensitive - do not modify unless explicitly required; notify the user if changes are needed
 - Remove copyright notices from files (project no longer uses them)
 - Remove UTF-8 BOM markers when found
-- Follow `.editorconfig` formatting rules and `RavenDB.ruleset` analysis rules
+- Server HTTP handlers must inherit from `ServerRequestHandler`, `DatabaseRequestHandler`, or `ShardedDatabaseRequestHandler` (not `RequestHandler` directly) - CI enforces this
+
+## Other Notes
+
+- **Custom NuGet packages**: `libs/` folder contains forked packages (Jint, Lucene.NET, Microsoft.Diagnostics.Runtime) referenced via `NuGet.Config`. These must be present for builds to work.
+- **Server dev launch settings**: Local dev runs with `--Features.Availability=Experimental` and `--Security.UnsecuredAccessAllowed=PublicNetwork` (see `src/Raven.Server/Properties/launchSettings.json`)
