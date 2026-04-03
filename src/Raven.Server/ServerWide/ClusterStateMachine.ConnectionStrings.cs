@@ -25,13 +25,13 @@ public sealed partial class ClusterStateMachine
 {
     public sealed partial class ServerWideConfigurationKey
     {
-        public static readonly string ConnectionStringRaven = "server-wide/connection-strings/raven";
-        public static readonly string ConnectionStringSql = "server-wide/connection-strings/sql";
-        public static readonly string ConnectionStringOlap = "server-wide/connection-strings/olap";
-        public static readonly string ConnectionStringElasticSearch = "server-wide/connection-strings/elasticsearch";
-        public static readonly string ConnectionStringQueue = "server-wide/connection-strings/queue";
-        public static readonly string ConnectionStringSnowflake = "server-wide/connection-strings/snowflake";
-        public static readonly string ConnectionStringAi = "server-wide/connection-strings/ai";
+        public const string ConnectionStringRaven = "server-wide/connection-strings/raven";
+        public const string ConnectionStringSql = "server-wide/connection-strings/sql";
+        public const string ConnectionStringOlap = "server-wide/connection-strings/olap";
+        public const string ConnectionStringElasticSearch = "server-wide/connection-strings/elasticsearch";
+        public const string ConnectionStringQueue = "server-wide/connection-strings/queue";
+        public const string ConnectionStringSnowflake = "server-wide/connection-strings/snowflake";
+        public const string ConnectionStringAi = "server-wide/connection-strings/ai";
 
         public static readonly string[] AllConnectionStringKeys = new[]
         {
