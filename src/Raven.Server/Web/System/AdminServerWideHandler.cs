@@ -242,19 +242,10 @@ namespace Raven.Server.Web.System
             {
                 if (string.IsNullOrWhiteSpace(name))
                     throw new BadRequestException($"'{nameof(name)}' must have a non empty value");
-
-                if (Enum.TryParse(typeAsString, true, out ConnectionStringType parsedType) == false)
-                    throw new BadRequestException($"Unknown connection string type: {typeAsString}");
-
-                type = parsedType;
             }
-            else if (typeAsString != null)
-            {
-                if (Enum.TryParse(typeAsString, true, out ConnectionStringType parsedType) == false)
-                    throw new BadRequestException($"Unknown connection string type: {typeAsString}");
 
-                type = parsedType;
-            }
+            if (typeAsString != null)
+                type = ParseConnectionStringType(typeAsString);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -280,8 +271,7 @@ namespace Raven.Server.Web.System
             var name = GetStringQueryString("connectionString", required: true);
             var typeAsString = GetStringQueryString("type", required: true);
 
-            if (Enum.TryParse(typeAsString, true, out ConnectionStringType type) == false)
-                throw new NotSupportedException($"Unknown connection string type: {typeAsString}");
+            var type = ParseConnectionStringType(typeAsString);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -308,6 +298,14 @@ namespace Raven.Server.Web.System
                     });
                 }
             }
+        }
+
+        private static ConnectionStringType ParseConnectionStringType(string typeAsString)
+        {
+            if (Enum.TryParse(typeAsString, true, out ConnectionStringType type) == false)
+                throw new BadRequestException($"Unknown connection string type: {typeAsString}");
+
+            return type;
         }
 
         private async Task DeleteServerWideTaskCommand(OngoingTaskType taskType)

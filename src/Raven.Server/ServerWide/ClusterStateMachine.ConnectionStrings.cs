@@ -1,6 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -71,7 +79,7 @@ public sealed partial class ClusterStateMachine
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-        const string dbKey = "db/";
+        var dbKey = Constants.Documents.Prefix;
         var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
         var databaseRecordCSName = PutServerWideConnectionStringCommand.GetDatabaseRecordConnectionStringName(serverWideConnectionString.Name);
         var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(serverWideConnectionString.Type);
@@ -160,7 +168,7 @@ public sealed partial class ClusterStateMachine
 
         var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-        const string dbKey = "db/";
+        var dbKey = Constants.Documents.Prefix;
         var toUpdate = new List<(string Key, BlittableJsonReaderObject DatabaseRecord, string DatabaseName, object)>();
         var databaseRecordCSName = PutServerWideConnectionStringCommand.GetDatabaseRecordConnectionStringName(deleteConfiguration.ConnectionStringName);
         var propertyName = PutServerWideConnectionStringCommand.GetConnectionStringDictionaryPropertyName(deleteConfiguration.Type);
@@ -236,6 +244,7 @@ public sealed partial class ClusterStateMachine
             case ConnectionStringType.Ai:
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.EmbeddingsGenerations), connectionStringName, databaseName);
                 CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.GenAis), connectionStringName, databaseName);
+                CheckTasksUseConnectionString(databaseRecord, nameof(DatabaseRecord.AiAgents), connectionStringName, databaseName);
                 break;
         }
     }
@@ -247,10 +256,10 @@ public sealed partial class ClusterStateMachine
 
         foreach (BlittableJsonReaderObject task in tasks)
         {
-            if (task.TryGet("ConnectionStringName", out string taskConnectionStringName) &&
+            if (task.TryGet(nameof(EtlConfiguration<ConnectionString>.ConnectionStringName), out string taskConnectionStringName) &&
                 string.Equals(taskConnectionStringName, connectionStringName, StringComparison.OrdinalIgnoreCase))
             {
-                task.TryGet("Name", out string taskName);
+                task.TryGet(nameof(EtlConfiguration<ConnectionString>.Name), out string taskName);
                 throw new RachisApplyException(
                     $"Can't delete server-wide connection string '{connectionStringName}'. " +
                     $"It is used by task '{taskName}' in database '{databaseName}'");
@@ -328,25 +337,25 @@ public sealed partial class ClusterStateMachine
                 switch (serverWideCS.Type)
                 {
                     case ConnectionStringType.Raven:
-                        addDatabaseCommand.Record.RavenConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.RavenConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.RavenConnectionStrings[databaseRecordCSName] = (RavenConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Sql:
-                        addDatabaseCommand.Record.SqlConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.SqlConnectionStrings[databaseRecordCSName] = (SqlConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Olap:
-                        addDatabaseCommand.Record.OlapConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.OLAP.OlapConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.OlapConnectionStrings[databaseRecordCSName] = (OlapConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.ElasticSearch:
-                        addDatabaseCommand.Record.ElasticSearchConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.ElasticSearchConnectionStrings[databaseRecordCSName] = (ElasticSearchConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Queue:
-                        addDatabaseCommand.Record.QueueConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.QueueConnectionStrings[databaseRecordCSName] = (QueueConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Snowflake:
-                        addDatabaseCommand.Record.SnowflakeConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.SnowflakeConnectionStrings[databaseRecordCSName] = (SnowflakeConnectionString)serverWideCS.ConnectionString;
                         break;
                     case ConnectionStringType.Ai:
-                        addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = (Raven.Client.Documents.Operations.AI.AiConnectionString)serverWideCS.ConnectionString;
+                        addDatabaseCommand.Record.AiConnectionStrings[databaseRecordCSName] = (AiConnectionString)serverWideCS.ConnectionString;
                         break;
                 }
 

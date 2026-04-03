@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Json.Serialization;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -58,7 +59,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         public DynamicJsonValue ToJson()
         {
             var json = ConnectionString?.ToJson() ?? new DynamicJsonValue();
-            json["Type"] = Type.ToString();
+            json[nameof(Type)] = Type.ToString();
             json[nameof(ExcludedDatabases)] = ExcludedDatabases;
             return json;
         }
@@ -94,19 +95,19 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             switch (type)
             {
                 case ConnectionStringType.Raven:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.RavenConnectionString>()(blittable);
+                    return JsonDeserializationClient.RavenConnectionString(blittable);
                 case ConnectionStringType.Sql:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.SQL.SqlConnectionString>()(blittable);
+                    return JsonDeserializationClient.SqlConnectionString(blittable);
                 case ConnectionStringType.Olap:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.OLAP.OlapConnectionString>()(blittable);
+                    return JsonDeserializationClient.OlapConnectionString(blittable);
                 case ConnectionStringType.ElasticSearch:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.ElasticSearch.ElasticSearchConnectionString>()(blittable);
+                    return JsonDeserializationClient.ElasticSearchConnectionString(blittable);
                 case ConnectionStringType.Queue:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.Queue.QueueConnectionString>()(blittable);
+                    return JsonDeserializationClient.QueueConnectionString(blittable);
                 case ConnectionStringType.Snowflake:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.ETL.Snowflake.SnowflakeConnectionString>()(blittable);
+                    return JsonDeserializationClient.SnowflakeConnectionString(blittable);
                 case ConnectionStringType.Ai:
-                    return JsonDeserializationBase.GenerateJsonDeserializationRoutine<Documents.Operations.AI.AiConnectionString>()(blittable);
+                    return JsonDeserializationClient.AiConnectionString(blittable);
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {type}");
             }
