@@ -644,38 +644,57 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
 
         var lastBatch = Task.CompletedTask;
+        IDisposable previousBatchCtx = null;
+        IDisposable currentBatchCtx = null;
 
-        while (true)
+        try
         {
-            ct.ThrowIfCancellationRequested();
-
-            var (ops, newLastKeys) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
-
-            if (ops.Count == 0)
+            while (true)
             {
-                await lastBatch;
+                ct.ThrowIfCancellationRequested();
 
-                var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                var (ops, newLastKeys, batchCtx) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
+                currentBatchCtx = batchCtx;
+
+                if (ops.Count == 0)
                 {
-                    [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
+                    await lastBatch;
+                    previousBatchCtx?.Dispose();
+                    previousBatchCtx = null;
+                    currentBatchCtx.Dispose();
+                    currentBatchCtx = null;
+
+                    var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                    {
+                        [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
+                    };
+                    await SubmitBatch([], tableLoadUpdates: finalUpdate);
+                    return;
+                }
+
+                // Wait for previous batch to finish, then release its context
+                await lastBatch;
+                previousBatchCtx?.Dispose();
+
+                var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                {
+                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = [.. newLastKeys] }
                 };
-                await SubmitBatch([], tableLoadUpdates: finalUpdate);
-                return;
+
+                lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
+                lastKeys = newLastKeys;
+                previousBatchCtx = currentBatchCtx;
+                currentBatchCtx = null;
             }
-
-            await lastBatch;
-
-            var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
-            {
-                [tableKey] = new CdcSinkTableLoadState { LastKeyValues = [.. newLastKeys] }
-            };
-
-            lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
-            lastKeys = newLastKeys;
+        }
+        finally
+        {
+            previousBatchCtx?.Dispose();
+            currentBatchCtx?.Dispose();
         }
     }
 
-    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys)> ReadOneBatch(
+    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context)> ReadOneBatch(
         NpgsqlConnection conn, CdcSinkConfiguration.TableInfo tableInfo,
         List<string> pkColumns, string[] lastKeys, int maxBatchSize,
         Dictionary<string, string> columnTypes, CancellationToken ct)
@@ -707,7 +726,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await using (cmd)
         {
             await using var reader = await cmd.ExecuteReaderAsync(ct);
-            using var __ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
+
+            // Context must outlive this method — blittable objects created by ProcessRow
+            // (for CdcColumnType.Json columns) reference the context's memory. The caller
+            // is responsible for disposing it after the batch has been processed.
+            var ctxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
 
             var ops = new List<CdcSinkDocumentOp>();
 
@@ -754,7 +777,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
             }
 
-            return (ops, newLastKeys);
+            return (ops, newLastKeys, ctxHolder);
         }
     }
 
