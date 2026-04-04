@@ -1,13 +1,16 @@
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.SqlServer.Types;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Util;
 using Raven.Server.Documents.CdcSink.Commands;
 using Raven.Server.Documents.CdcSink.Stats;
+using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -42,14 +45,12 @@ namespace Raven.Server.Documents.CdcSink;
 /// </summary>
 public class SqlServerCdcSinkProcess : CdcSinkProcess
 {
-    private readonly CdcSinkDocumentProcessor _documentProcessor;
     private readonly string _connectionString;
     private readonly string _factoryName;
 
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
     {
-        _documentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
         _connectionString = configuration.Connection.ConnectionString;
         _factoryName = configuration.Connection.FactoryName;
     }
@@ -175,25 +176,30 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         var pollInterval = Database.Configuration.CdcSink.PollInterval.AsTimeSpan;
 
         await using var conn = await OpenConnectionAsync(ct);
-        using var ___ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
         bool shouldWait = false;
+        Task lastBatch = Task.CompletedTask;
+        IDisposable previousBatchCtx = null;
 
-        while (true)
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
 
-            if (shouldWait)
-                await Task.Delay(pollInterval, ct);
-            shouldWait = true;
+                if (shouldWait)
+                    await Task.Delay(pollInterval, ct);
+                shouldWait = true;
 
-            // Use a transaction per iteration to get a consistent snapshot of the CDC state.
-            // All LSN reads and change queries within a single iteration see the same point in time.
-            // The transaction is read-only, so disposal (implicit rollback) is fine — no need to commit.
-            await using var tx = await conn.BeginTransactionAsync(ct);
-                var lsnInfo = await GetLsnBounds(conn, tx, captureInstances, lastLsn, ct);
+                var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
 
                 if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
                     continue;
+
+                // Per-batch context: blittable objects created by ProcessRow (for CdcColumnType.Json
+                // columns) reference this context's memory, so it must stay alive until SubmitBatch
+                // completes. We pipeline: while TxMerger processes the current batch, we can read
+                // the next batch with a new context.
+                var batchCtxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
 
                 var batch = new List<CdcSinkDocumentOp>();
                 bool hasChanges = false;
@@ -205,12 +211,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         continue;
 
                     // fn_cdc_get_all_changes requires fromLsn >= fn_cdc_get_min_lsn(), otherwise it errors.
-                    // This can happen when the CDC cleanup job purges old entries and our saved position
-                    // points to an LSN that no longer exists in the change table.
                     var effectiveFromLsn = CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0 ? lsnInfo.FromLsn : tableMinLsn;
 
                     await using var cmd = conn.CreateCommand();
-                    cmd.Transaction = tx;
                     cmd.CommandText = ci.Query;
                     AddParameter(cmd, "@from_lsn", effectiveFromLsn);
                     AddParameter(cmd, "@to_lsn", lsnInfo.MaxLsn);
@@ -219,12 +222,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     var columns = ci.Columns;
                     while (await reader.ReadAsync(ct))
                     {
-                        // __$operation is at ordinal 0 in our query (we select it first)
                         var operation = reader.GetInt32(0);
-
                         var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
 
-                        // Columns start at ordinal 1 (after __$operation), in the same order as ci.Columns
                         var data = new Dictionary<string, object>(columns.Length);
                         for (int i = 0; i < columns.Length; i++)
                         {
@@ -240,21 +240,32 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                             Data = data,
                         };
 
-                        var op = _documentProcessor.ProcessRow(row, jsonParsingContext);
-                        if (op != null)
-                        {
-                            batch.Add(op);
-                            hasChanges = true;
-                        }
+                        batch.Add(DocumentProcessor.ProcessRow(row, jsonParsingContext));
+                        hasChanges = true;
                     }
                 }
 
                 if (hasChanges)
                 {
+                    // Wait for previous batch to complete, then release its context
+                    await lastBatch;
+                    previousBatchCtx?.Dispose();
+
                     var lsnHex = Convert.ToHexString(lsnInfo.MaxLsn);
-                    await SubmitBatch(batch, lsnHex);
+                    lastBatch = SubmitBatch(batch, lsnHex);
                     lastLsn = lsnInfo.MaxLsn;
+                    previousBatchCtx = batchCtxHolder;
                 }
+                else
+                {
+                    // No changes — dispose this iteration's context immediately
+                    batchCtxHolder.Dispose();
+                }
+            }
+        }
+        finally
+        {
+            previousBatchCtx?.Dispose();
         }
     }
 
@@ -264,7 +275,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     /// (the CDC log is empty, so fn_cdc_get_max_lsn returns 0x00...00).
     /// </summary>
     private static async Task<(byte[] MaxLsn, byte[] FromLsn, Dictionary<string, byte[]> TableMinLsns)> GetLsnBounds(
-        DbConnection conn, DbTransaction tx,
+        DbConnection conn,
         List<CaptureInstanceInfo> captureInstances,
         byte[] lastLsn, CancellationToken ct)
     {
@@ -280,7 +291,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             sb.Append($", sys.fn_cdc_get_min_lsn('{ci.CaptureInstance}') AS [{ci.CaptureInstance}_min]");
 
         await using var cmd = conn.CreateCommand();
-        cmd.Transaction = tx;
         cmd.CommandText = sb.ToString();
 
         if (lastLsn != null)
@@ -363,15 +373,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             }
 
             // Fetch the captured column names so we can build an explicit SELECT
-            // and read by ordinal instead of calling GetName()/skipping __$ at runtime.
+            // and read by ordinal instead of calling GetName()/skipping __$ at runtime
             var columns = new List<string>();
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
-                    SELECT column_name
-                    FROM cdc.captured_columns
-                    WHERE capture_instance = @capture
-                    ORDER BY column_ordinal";
+                    SELECT cc.column_name
+                    FROM cdc.captured_columns cc
+                    JOIN cdc.change_tables ct ON cc.object_id = ct.object_id
+                    WHERE ct.capture_instance = @capture
+                    ORDER BY cc.column_ordinal";
 
                 AddParameter(cmd, "@capture", captureInstance);
                 await using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -410,210 +421,34 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
 
 
-    private async Task HandleInitialLoad(CancellationToken ct)
+    protected override string GetDefaultSchema() => "dbo";
+
+    protected override Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct) => OpenConnectionAsync(ct);
+
+    protected override char StartQuote => '[';
+    protected override char EndQuote => ']';
+    protected override bool UsesTopN => true;
+
+    private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
+
+    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
     {
-        CdcSinkTaskState state;
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (context.OpenReadTransaction())
+        if (_columnTypesCache.TryGetValue(tableInfo.FullName, out var columnTypes) == false)
         {
-            state = LoadState(context);
+            columnTypes = await GetColumnTypes(cmd.Connection, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+            _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
 
-        var allTables = Configuration.CollectAllTablesFlat("dbo");
-
-        if (Configuration.SkipInitialLoad)
-        {
-            var updates = new Dictionary<string, CdcSinkTableLoadState>();
-            foreach (var tableInfo in allTables)
-            {
-                var tableKey = tableInfo.FullName;
-                if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
-                    continue;
-                updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
-            }
-
-            if (updates.Count > 0)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] SkipInitialLoad is set — marking {updates.Count} table(s) as complete without scanning.");
-                await SubmitBatch([], tableLoadUpdates: updates);
-            }
-
-            return;
-        }
-
-        foreach (var tableInfo in allTables)
-        {
-            var tableKey = tableInfo.FullName;
-
-            if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
-                continue;
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] Starting initial load for table {tableInfo.FullName}");
-
-            await ProcessTableInitialLoad(tableInfo, tableKey, tableState, ct);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] Completed initial load for table {tableInfo.FullName}");
-        }
-    }
-
-    /// <summary>
-    /// Reads one table in batches using TOP N with keyset pagination,
-    /// overlapping reads with TxMerger writes (same pattern as PostgresCdcSinkProcess).
-    /// </summary>
-    private async Task ProcessTableInitialLoad(
-        CdcSinkConfiguration.TableInfo tableInfo, string tableKey,
-        CdcSinkTableLoadState resumeState, CancellationToken ct)
-    {
-        var pkColumns = tableInfo.PrimaryKeyColumns;
-        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
-
-        string[] lastKeys = null;
-        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
-        {
-            lastKeys = new string[resumeState.LastKeyValues.Count];
-            for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
-                lastKeys[i] = resumeState.LastKeyValues[i];
-        }
-
-        // Single connection for the entire initial load of this table.
-        await using var conn = await OpenConnectionAsync(ct);
-
-        // Fetch column types once for the entire initial load — used for keyset pagination parameter types
-        var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
-
-        var lastBatch = Task.CompletedTask;
-
-        while (true)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var (ops, newLastKeys) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
-
-            if (ops.Count == 0)
-            {
-                await lastBatch;
-
-                var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
-                {
-                    [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
-                };
-                await SubmitBatch(new List<CdcSinkDocumentOp>(), tableLoadUpdates: finalUpdate);
-                break;
-            }
-
-            await lastBatch;
-
-            var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
-            {
-                [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys) }
-            };
-
-            lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
-            lastKeys = newLastKeys;
-        }
-
-        await lastBatch;
-    }
-
-    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys)> ReadOneBatch(
-        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
-        string[] lastKeys, int maxBatchSize, Dictionary<string, string> columnTypes, CancellationToken ct)
-    {
-        // Build ORDER BY clause with bracket-quoted column names
-        var orderByParts = new string[pkColumns.Count];
         for (int i = 0; i < pkColumns.Count; i++)
-            orderByParts[i] = $"[{pkColumns[i]}]";
-        var orderBy = string.Join(", ", orderByParts);
-
-        DbCommand cmd;
-        if (lastKeys != null)
         {
-            // Keyset pagination with row-value comparison: WHERE (col1, col2) > (@k0, @k1)
-            var paramPlaceholders = new string[pkColumns.Count];
-            for (int i = 0; i < pkColumns.Count; i++)
-                paramPlaceholders[i] = $"@k{i}";
-
-            var columnList = string.Join(", ", orderByParts);
-            var paramList = string.Join(", ", paramPlaceholders);
-
-            var query = $"SELECT TOP ({maxBatchSize}) * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] " +
-                        $"WHERE ({columnList}) > ({paramList}) ORDER BY {orderBy}";
-
-            cmd = conn.CreateCommand();
-            cmd.CommandText = query;
-
-            for (int i = 0; i < pkColumns.Count; i++)
-            {
-                var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "nvarchar"));
-                AddParameter(cmd, $"@k{i}", value);
-            }
-        }
-        else
-        {
-            var query = $"SELECT TOP ({maxBatchSize}) * FROM [{tableInfo.Schema}].[{tableInfo.TableName}] ORDER BY {orderBy}";
-            cmd = conn.CreateCommand();
-            cmd.CommandText = query;
-        }
-
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            using var ____ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
-
-            var ops = new List<CdcSinkDocumentOp>();
-
-            while (await reader.ReadAsync(ct))
-            {
-                var data = new Dictionary<string, object>();
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    var name = reader.GetName(i);
-                    var value = reader.IsDBNull(i) ? null : ConvertSqlServerValue(reader.GetValue(i));
-                    data[name] = value;
-                }
-
-                var row = new CdcSinkRow
-                {
-                    TableSchema = tableInfo.Schema,
-                    TableName = tableInfo.TableName,
-                    Operation = CdcSinkOperation.Upsert,
-                    Data = data,
-                };
-
-                var op = _documentProcessor.ProcessRow(row, jsonParsingCtx);
-                if (op != null)
-                    ops.Add(op);
-            }
-
-            // Extract last keys from the last row's RawData for keyset pagination resume
-            string[] newLastKeys = null;
-            if (ops.Count > 0)
-            {
-                var lastRowData = ops[ops.Count - 1].RawData;
-                newLastKeys = new string[pkColumns.Count];
-                for (int i = 0; i < pkColumns.Count; i++)
-                    newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
-            }
-
-            return (ops, newLastKeys);
+            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "nvarchar"));
+            AddParameter(cmd, $"@k{i}", value);
         }
     }
 
-    private async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
-        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
     {
-        var command = new CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, lastLsn,
-            tableLoadUpdates: tableLoadUpdates,
-            patchRequest: _documentProcessor.CombinedPatchRequest,
-            statsScope: null, statistics: Statistics, logger: Logger);
-
-        await Database.TxMerger.Enqueue(command);
-
-        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
+        return ConvertSqlServerValue(reader.GetValue(ordinal));
     }
 
     private async Task<DbConnection> OpenConnectionAsync(CancellationToken ct)
@@ -680,6 +515,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     /// <summary>
     /// Normalizes SQL Server values for consistent storage in RavenDB.
     /// Integers are normalized to long, floats to double.
+    /// Spatial types (SqlGeometry, SqlGeography) are converted to their WKT string representation.
     /// </summary>
     private static object ConvertSqlServerValue(object value)
     {
@@ -699,6 +535,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             byte[] => value,
             DateTime => value,
             DateTimeOffset => value,
+            SqlGeometry geom => geom.STAsText().ToSqlString().Value,
+            SqlGeography geog => geog.STAsText().ToSqlString().Value,
+            SqlHierarchyId hid => hid.ToString(),
             _ => value,
         };
     }

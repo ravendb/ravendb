@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +52,6 @@ namespace Raven.Server.Documents.CdcSink;
 /// </summary>
 public class PostgresCdcSinkProcess : CdcSinkProcess
 {
-    private readonly CdcSinkDocumentProcessor _documentProcessor;
     private readonly string _connectionString;
     private readonly NpgsqlDataSource _dataSource;
     private string _publicationName;
@@ -66,7 +66,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
     {
-        _documentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
         _connectionString = configuration.Connection.ConnectionString;
 
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
@@ -373,9 +372,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 : NpgsqlTypes.NpgsqlLogSequenceNumber.Parse(state.LastLsn);
         }
 
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext))
-        {
-
         await using var conn = new LogicalReplicationConnection(_connectionString);
         await conn.Open(ct);
 
@@ -391,95 +387,116 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         int rowsSinceLastAck = 0;
         int maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
 
-        await using var enumerator = replicationStream.GetAsyncEnumerator(ct);
-        while (true)
+        // Per-batch context: blittable objects created by DecodeRow → ProcessRow (for CdcColumnType.Json
+        // columns) reference this context's memory. We rotate contexts at each SubmitBatch call —
+        // the previous context stays alive until its batch completes in the TxMerger.
+        IDisposable previousBatchCtx = null;
+        var currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
+
+        try
         {
-            ct.ThrowIfCancellationRequested();
-
-            var moveNext = enumerator.MoveNextAsync();
-
-            if (moveNext.IsCompleted == false)
+            await using var enumerator = replicationStream.GetAsyncEnumerator(ct);
+            while (true)
             {
-                var moveTask = moveNext.AsTask();
+                ct.ThrowIfCancellationRequested();
 
-                // Race: wait for either the next message or the previous batch to complete.
-                // This allows reading ahead while the TxMerger processes the previous batch.
-                await Task.WhenAny(moveTask, lastBatch);
+                var moveNext = enumerator.MoveNextAsync();
 
-                if (lastBatch.IsCompleted)
+                if (moveNext.IsCompleted == false)
                 {
-                    await lastBatch;
+                    var moveTask = moveNext.AsTask();
 
-                    // PostgreSQL retains WAL segments until the replication slot confirms receipt.
-                    // We must ack promptly after processing rows so WAL doesn't accumulate,
-                    // but avoid re-acking the same LSN on an idle stream. The rowsSinceLastAck
-                    // guard ensures we ack exactly once after a batch, then stay silent until
-                    // new data arrives.
-                    if (rowsSinceLastAck is not 0)
-                    {
-                        conn.SetReplicationStatus(lastLsn);
-                        await conn.SendStatusUpdate(ct);
-                        rowsSinceLastAck = 0;
-                    }
+                    // Race: wait for either the next message or the previous batch to complete.
+                    // This allows reading ahead while the TxMerger processes the previous batch.
+                    await Task.WhenAny(moveTask, lastBatch);
 
-                    if (batch.Count > 0)
-                    {
-                        lastBatch = SubmitBatch(batch, lastLsn.ToString());
-                        batch = new List<CdcSinkDocumentOp>();
-                    }
-                }
-
-                await moveTask;
-            }
-
-            var message = enumerator.Current;
-
-            switch (message)
-            {
-                case InsertMessage insert:
-                    AddIfNotNull(pending, await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
-                    break;
-                case UpdateMessage update:
-                    AddIfNotNull(pending, await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
-                    break;
-                case KeyDeleteMessage keyDel:
-                    AddIfNotNull(pending, await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, jsonParsingContext));
-                    break;
-                case FullDeleteMessage fullDel:
-                    AddIfNotNull(pending, await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, jsonParsingContext));
-                    break;
-                case BeginMessage:
-                    break;
-                case CommitMessage commit:
-                    batch.AddRange(pending);
-                    pending.Clear();
-
-                    if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
+                    if (lastBatch.IsCompleted)
                     {
                         await lastBatch;
+                        previousBatchCtx?.Dispose();
+                        previousBatchCtx = null;
 
-                        if (batch.Count > 0)
-                        {
-                            rowsSinceLastAck += batch.Count;
-                            lastBatch = SubmitBatch(batch, commit.CommitLsn.ToString());
-                            lastLsn = commit.CommitLsn;
-                            batch = new List<CdcSinkDocumentOp>();
-                        }
-
-                        // Acknowledge to PostgreSQL periodically — when we've persisted enough rows,
-                        // rather than on every batch flush. We'll either consume a enough records to
-                        // flush, or go idle and send the update higher in this method
-                        if (rowsSinceLastAck >= maxBatchSize)
+                        // PostgreSQL retains WAL segments until the replication slot confirms receipt.
+                        // We must ack promptly after processing rows so WAL doesn't accumulate,
+                        // but avoid re-acking the same LSN on an idle stream. The rowsSinceLastAck
+                        // guard ensures we ack exactly once after a batch, then stay silent until
+                        // new data arrives.
+                        if (rowsSinceLastAck is not 0)
                         {
                             conn.SetReplicationStatus(lastLsn);
                             await conn.SendStatusUpdate(ct);
                             rowsSinceLastAck = 0;
                         }
-                    }
-                    break;
-            }
-        }
 
+                        if (batch.Count > 0)
+                        {
+                            lastBatch = SubmitBatch(batch, lastLsn.ToString());
+                            previousBatchCtx = currentBatchCtx;
+                            currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out jsonParsingContext);
+                            batch = new List<CdcSinkDocumentOp>();
+                        }
+                    }
+
+                    await moveTask;
+                }
+
+                var message = enumerator.Current;
+
+                switch (message)
+                {
+                    case InsertMessage insert:
+                        pending.Add(await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
+                        break;
+                    case UpdateMessage update:
+                        pending.Add(await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
+                        break;
+                    case KeyDeleteMessage keyDel:
+                        pending.Add(await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, jsonParsingContext));
+                        break;
+                    case FullDeleteMessage fullDel:
+                        pending.Add(await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, jsonParsingContext));
+                        break;
+                    case BeginMessage:
+                        break;
+                    case CommitMessage commit:
+                        batch.AddRange(pending);
+                        pending.Clear();
+
+                        if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
+                        {
+                            await lastBatch;
+                            previousBatchCtx?.Dispose();
+                            previousBatchCtx = null;
+
+                            if (batch.Count == 0)
+                                continue;
+                                
+                            rowsSinceLastAck += batch.Count;
+                            lastBatch = SubmitBatch(batch, commit.CommitLsn.ToString());
+                            lastLsn = commit.CommitLsn;
+                            previousBatchCtx = currentBatchCtx;
+                            currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out jsonParsingContext);
+                            batch = new List<CdcSinkDocumentOp>();
+
+                                // Acknowledge to PostgreSQL periodically — when we've persisted enough rows,
+                            // rather than on every batch flush. We'll either consume a enough records to
+                            // flush, or go idle and send the update higher in this method
+                            if (rowsSinceLastAck >= maxBatchSize)
+                            {
+                                conn.SetReplicationStatus(lastLsn);
+                                await conn.SendStatusUpdate(ct);
+                                rowsSinceLastAck = 0;
+                            }
+                        }
+                        break;
+                }
+            }
+
+        }
+        finally
+        {
+            previousBatchCtx?.Dispose();
+            currentBatchCtx?.Dispose();
         }
     }
 
@@ -515,7 +532,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             Data = data,
         };
 
-        return _documentProcessor.ProcessRow(cdcRow, jsonParsingContext);
+        return DocumentProcessor.ProcessRow(cdcRow, jsonParsingContext);
     }
 
     /// <summary>
@@ -575,228 +592,50 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         Vector
     }
 
-    private async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
-        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
+    protected override string GetDefaultSchema() => "public";
+
+
+    protected override async Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct)
     {
-        var command = new CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, lastLsn,
-            tableLoadUpdates: tableLoadUpdates,
-            patchRequest: _documentProcessor.CombinedPatchRequest,
-            statsScope: null, statistics: Statistics, logger: Logger);
-
-        await Database.TxMerger.Enqueue(command);
-
-        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
-    }
-
-    private async Task HandleInitialLoad(CancellationToken ct)
-    {
-        CdcSinkTaskState state;
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            state = LoadState(context);
-        }
-
-        var allTables = Configuration.CollectAllTablesFlat("public");
-
-        if (Configuration.SkipInitialLoad)
-        {
-            var updates = new Dictionary<string, CdcSinkTableLoadState>();
-            foreach (var tableInfo in allTables)
-            {
-                var tableKey = tableInfo.FullName;
-                if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
-                    continue;
-                updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
-            }
-
-            if (updates.Count > 0)
-            {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] SkipInitialLoad is set — marking {updates.Count} table(s) as complete without scanning.");
-                await SubmitBatch([], tableLoadUpdates: updates);
-            }
-
-            return;
-        }
-
-        foreach (var tableInfo in allTables)
-        {
-            var tableKey = tableInfo.FullName;
-
-            if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
-                continue;
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] Starting initial load for table {tableInfo.FullName}");
-
-            await ProcessTableInitialLoad(tableInfo, tableKey, tableState, ct);
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"[{Name}] Completed initial load for table {tableInfo.FullName}");
-        }
-    }
-
-    private async Task ProcessTableInitialLoad(
-        CdcSinkConfiguration.TableInfo tableInfo, string tableKey, CdcSinkTableLoadState resumeState, CancellationToken ct)
-    {
-        var pkColumns = tableInfo.PrimaryKeyColumns;
-        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
-
-        string[] lastKeys = null;
-        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
-        {
-            lastKeys = new string[resumeState.LastKeyValues.Count];
-            for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
-                lastKeys[i] = resumeState.LastKeyValues[i];
-        }
-
-        // Single connection for the entire initial load of this table.
-        // Read one batch at a time with LIMIT; while the previous batch
-        // is being applied by the TxMerger, we read the next batch.
-        await using var conn = _dataSource.CreateConnection();
+        var conn = _dataSource.CreateConnection();
         await conn.OpenAsync(ct);
+        return conn;
+    }
 
-        // Fetch column types once for the entire initial load — used for keyset pagination parameter types
-        var columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+    protected override char StartQuote => '"';
+    protected override char EndQuote => '"';
 
-        var lastBatch = Task.CompletedTask;
-        IDisposable previousBatchCtx = null;
-        IDisposable currentBatchCtx = null;
+    private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
 
-        try
+    protected override async Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
+    {
+        var npgsqlCmd = (NpgsqlCommand)cmd;
+
+        if (_columnTypesCache.TryGetValue(tableInfo.FullName, out var columnTypes) == false)
         {
-            while (true)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var (ops, newLastKeys, batchCtx) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, columnTypes, ct);
-                currentBatchCtx = batchCtx;
-
-                if (ops.Count == 0)
-                {
-                    await lastBatch;
-                    previousBatchCtx?.Dispose();
-                    previousBatchCtx = null;
-                    currentBatchCtx.Dispose();
-                    currentBatchCtx = null;
-
-                    var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
-                    {
-                        [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
-                    };
-                    await SubmitBatch([], tableLoadUpdates: finalUpdate);
-                    return;
-                }
-
-                // Wait for previous batch to finish, then release its context
-                await lastBatch;
-                previousBatchCtx?.Dispose();
-
-                var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
-                {
-                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = [.. newLastKeys] }
-                };
-
-                lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
-                lastKeys = newLastKeys;
-                previousBatchCtx = currentBatchCtx;
-                currentBatchCtx = null;
-            }
+            var conn = (NpgsqlConnection)cmd.Connection;
+            columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+            _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
-        finally
+
+        for (int i = 0; i < pkColumns.Count; i++)
         {
-            previousBatchCtx?.Dispose();
-            currentBatchCtx?.Dispose();
+            var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
+            npgsqlCmd.Parameters.AddWithValue($"k{i}", value);
         }
     }
 
-    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context)> ReadOneBatch(
-        NpgsqlConnection conn, CdcSinkConfiguration.TableInfo tableInfo,
-        List<string> pkColumns, string[] lastKeys, int maxBatchSize,
-        Dictionary<string, string> columnTypes, CancellationToken ct)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
     {
-        var orderBy = string.Join(", ", pkColumns);
+        var dataTypeName = reader.GetDataTypeName(ordinal);
+        if (dataTypeName == "-.-")
+            throw new InvalidOperationException(
+                $"Column '{reader.GetName(ordinal)}' has an unmapped Postgres extension type " +
+                $"that cannot be read during initial load. Exclude this column from the CDC Sink column mappings.");
 
-        NpgsqlCommand cmd;
-        if (lastKeys != null)
-        {
-            var paramPlaceholders = new string[pkColumns.Count];
-            for (int i = 0; i < pkColumns.Count; i++)
-                paramPlaceholders[i] = $"@k{i}";
-
-            var query = $"SELECT * FROM {tableInfo.FullName} WHERE ({string.Join(", ", pkColumns)}) > ({string.Join(", ", paramPlaceholders)}) ORDER BY {orderBy} LIMIT {maxBatchSize}";
-            cmd = new NpgsqlCommand(query, conn);
-
-            for (int i = 0; i < pkColumns.Count; i++)
-            {
-                var value = ConvertStringToType(lastKeys[i], columnTypes.GetValueOrDefault(pkColumns[i], "text"));
-                cmd.Parameters.AddWithValue($"k{i}", value);
-            }
-        }
-        else
-        {
-            var query = $"SELECT * FROM {tableInfo.FullName} ORDER BY {orderBy} LIMIT {maxBatchSize}";
-            cmd = new NpgsqlCommand(query, conn);
-        }
-
-        await using (cmd)
-        {
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-
-            // Context must outlive this method — blittable objects created by ProcessRow
-            // (for CdcColumnType.Json columns) reference the context's memory. The caller
-            // is responsible for disposing it after the batch has been processed.
-            var ctxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
-
-            var ops = new List<CdcSinkDocumentOp>();
-
-            while (await reader.ReadAsync(ct))
-            {
-                var data = new Dictionary<string, object>();
-                for (int i = 0; i < reader.FieldCount; i++)
-                {
-                    var name = reader.GetName(i);
-                    var dataTypeName = reader.GetDataTypeName(i);
-                    if (dataTypeName == "-.-")
-                        throw new InvalidOperationException(
-                            $"Column '{name}' in table '{tableInfo.FullName}' has an unmapped Postgres extension type " +
-                            $"that cannot be read during initial load. You should exclude this column from the CDC Sink " +
-                            $"column mappings or report this as an issue.");
-
-                    object rawValue = reader.IsDBNull(i) ? null : reader.GetValue(i);
-                    // pgvector returns Pgvector.Vector which NormalizeForJson doesn't know about.
-                    // Convert to float[] here so it flows through as a standard CLR array.
-                    var value = rawValue is Pgvector.Vector v ? (object)v.ToArray() : rawValue;
-                    data[name] = value;
-                }
-
-                var row = new CdcSinkRow
-                {
-                    TableSchema = tableInfo.Schema,
-                    TableName = tableInfo.TableName,
-                    Operation = CdcSinkOperation.Upsert,
-                    Data = data,
-                };
-
-                var op = _documentProcessor.ProcessRow(row, jsonParsingCtx);
-                if (op != null)
-                    ops.Add(op);
-            }
-
-            // Extract last keys from the last row's RawData for keyset pagination resume
-            string[] newLastKeys = null;
-            if (ops.Count > 0)
-            {
-                var lastRowData = ops[ops.Count - 1].RawData;
-                newLastKeys = new string[pkColumns.Count];
-                for (int i = 0; i < pkColumns.Count; i++)
-                    newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
-            }
-
-            return (ops, newLastKeys, ctxHolder);
-        }
+        var rawValue = reader.GetValue(ordinal);
+        // pgvector returns Pgvector.Vector which NormalizeForJson doesn't know about.
+        return rawValue is Pgvector.Vector v ? (object)v.ToArray() : rawValue;
     }
 
     private static async Task<Dictionary<string, string>> GetColumnTypes(
@@ -1017,9 +856,4 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return result.ToArray();
     }
 
-    private static void AddIfNotNull(List<CdcSinkDocumentOp> list, CdcSinkDocumentOp op)
-    {
-        if (op != null)
-            list.Add(op);
-    }
 }

@@ -89,6 +89,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         set => Requires = value ? Requires | RavenServiceRequirement.Azure : Requires & ~RavenServiceRequirement.Azure;
     }
 
+    public bool MySqlRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.MySql);
+        set => Requires = value ? Requires | RavenServiceRequirement.MySql : Requires & ~RavenServiceRequirement.MySql;
+    }
+
     public bool MsSqlCdcRequired
     {
         get => Requires.HasFlag(RavenServiceRequirement.MsSqlCdc);

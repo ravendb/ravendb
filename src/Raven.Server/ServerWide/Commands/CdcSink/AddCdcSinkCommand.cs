@@ -71,6 +71,7 @@ namespace Raven.Server.ServerWide.Commands.CdcSink
             }
         }
 
+
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);

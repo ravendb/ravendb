@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Data.Common;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -56,6 +58,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     private readonly ConcurrentQueue<CdcSinkStatsAggregator> _lastCdcSinkStats = new();
 
+    protected readonly CdcSinkDocumentProcessor DocumentProcessor;
+
     protected CdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
@@ -64,6 +68,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Configuration = configuration;
         Name = Configuration.Name;
         Statistics = new CdcSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
+        DocumentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
     }
 
     protected CancellationToken CancellationToken => _cts.Token;
@@ -76,6 +81,17 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// </summary>
     internal Task InitialLoadCompleted => _initialLoadTcs.Task;
     protected readonly TaskCompletionSource _initialLoadTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    /// Raised each time RunInternalAsync fails with an exception (before entering fallback mode).
+    /// Useful for tests that need to observe process errors without polling the notification center.
+    /// </summary>
+    internal event Action<Exception> ProcessError;
+
+    /// <summary>
+    /// The last exception thrown by RunInternalAsync (null if the process hasn't failed).
+    /// </summary>
+    internal Exception LastProcessException { get; private set; }
 
     public CdcSinkProcessStatistics Statistics { get; }
 
@@ -176,9 +192,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             }
             catch (Exception e)
             {
-				//  _initialLoadTcs.TrySetException(e);
+                //  _initialLoadTcs.TrySetException(e);
                 // Intentionally DOES NOT fault the _initialLoadTcs here — the process will retry after fallback.
                 // If we set TrySetException, a subsequent successful retry can never signal completion.
+
+                LastProcessException = e;
+                ProcessError?.Invoke(e);
 
                 if (Logger.IsErrorEnabled)
                     Logger.Error($"[{Name}] CDC Sink process failed.", e);
@@ -334,6 +353,254 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 Database.Configuration.CdcSink
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
                 Math.Max(5, secondsSinceLastError * 2)));
+        }
+    }
+
+    protected async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
+    {
+        // Compact nulls — streaming paths add null entries for rows from unconfigured tables
+        int pos = 0;
+        for (int i = 0; i < ops.Count; i++)
+        {
+            ops[pos] = ops[i];
+            pos+= (ops[i] != null).ToInt32();
+        }
+        ops.RemoveRange(pos, ops.Count - pos);
+
+        var command = new Commands.CdcSinkBatchCommand(
+            Database, ops, Configuration.Name, lastLsn,
+            tableLoadUpdates: tableLoadUpdates,
+            patchRequest: DocumentProcessor.CombinedPatchRequest,
+            statsScope: null, statistics: Statistics, logger: Logger);
+
+        await Database.TxMerger.Enqueue(command);
+
+        Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
+    }
+
+    /// <summary>
+    /// Returns the default schema name for this database provider (e.g. "public" for PostgreSQL,
+    /// "dbo" for SQL Server, database name for MySQL).
+    /// </summary>
+    protected abstract string GetDefaultSchema();
+
+    /// <summary>
+    /// Opens a database connection for the initial load phase. Called once before all tables
+    /// are loaded. The connection is passed to <see cref="ReadOneBatch"/> and disposed after
+    /// the load completes.
+    /// </summary>
+    protected abstract Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct);
+
+    /// <summary>Opening quote character for SQL identifiers (e.g. '"' for Postgres, '[' for SQL Server, '`' for MySQL).</summary>
+    protected abstract char StartQuote { get; }
+
+    /// <summary>Closing quote character for SQL identifiers (e.g. '"' for Postgres, ']' for SQL Server, '`' for MySQL).</summary>
+    protected abstract char EndQuote { get; }
+
+    /// <summary>
+    /// Whether this provider uses SELECT TOP(N) (SQL Server) vs LIMIT N (Postgres/MySQL).
+    /// </summary>
+    protected virtual bool UsesTopN => false;
+
+    private string BuildBatchQuery(
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        string[] lastKeys, int maxBatchSize)
+    {
+        var table = $"{StartQuote}{tableInfo.Schema}{EndQuote}.{StartQuote}{tableInfo.TableName}{EndQuote}";
+        var pkCols = string.Join(", ", pkColumns.Select(c => $"{StartQuote}{c}{EndQuote}"));
+        var where = lastKeys != null
+            ? $" WHERE ({pkCols}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})"
+            : "";
+
+        return UsesTopN
+            ? $"SELECT TOP ({maxBatchSize}) * FROM {table} {where} ORDER BY {pkCols}"
+            : $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
+    }
+
+    /// <summary>
+    /// Binds keyset pagination parameters to the command. Postgres and SQL Server
+    /// convert string keys to typed values; MySQL passes raw strings.
+    /// Only called when <paramref name="lastKeys"/> is not null.
+    /// </summary>
+    protected abstract Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct);
+
+    /// <summary>
+    /// Converts a single column value from the initial load DbDataReader to a
+    /// normalized CLR type for the document processor pipeline.
+    /// </summary>
+    protected abstract object ConvertInitialLoadValue(DbDataReader reader, int ordinal);
+
+    private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context)> ReadOneBatch(
+        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        string[] lastKeys, int maxBatchSize, CancellationToken ct)
+    {
+        var query = BuildBatchQuery(tableInfo, pkColumns, lastKeys, maxBatchSize);
+
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = query;
+
+        if (lastKeys != null)
+            await BindKeysetParameters(cmd, tableInfo, pkColumns, lastKeys, ct);
+
+        await using var reader = await cmd.ExecuteReaderAsync(ct);
+
+        // Context must outlive this method — blittable objects created by ProcessRow
+        // (for CdcColumnType.Json columns) reference the context's memory. The caller
+        // is responsible for disposing it after the batch has been processed.
+        var ctxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingCtx);
+
+        var ops = new List<CdcSinkDocumentOp>();
+
+        while (await reader.ReadAsync(ct))
+        {
+            var data = new Dictionary<string, object>();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                data[reader.GetName(i)] = reader.IsDBNull(i) ? null : ConvertInitialLoadValue(reader, i);
+            }
+
+            var row = new CdcSinkRow
+            {
+                TableSchema = tableInfo.Schema,
+                TableName = tableInfo.TableName,
+                Operation = CdcSinkOperation.Upsert,
+                Data = data,
+            };
+
+            var op = DocumentProcessor.ProcessRow(row, jsonParsingCtx);
+            if (op != null)
+                ops.Add(op);
+        }
+
+        // Extract last keys from the last row's RawData for keyset pagination resume
+        string[] newLastKeys = null;
+        if (ops.Count > 0)
+        {
+            var lastRowData = ops[ops.Count - 1].RawData;
+            newLastKeys = new string[pkColumns.Count];
+            for (int i = 0; i < pkColumns.Count; i++)
+                newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
+        }
+
+        return (ops, newLastKeys, ctxHolder);
+    }
+
+    protected async Task HandleInitialLoad(CancellationToken ct)
+    {
+        CdcSinkTaskState state;
+        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            state = LoadState(context);
+        }
+
+        var allTables = Configuration.CollectAllTablesFlat(GetDefaultSchema());
+
+        if (Configuration.SkipInitialLoad)
+        {
+            var updates = new Dictionary<string, CdcSinkTableLoadState>();
+            foreach (var tableInfo in allTables)
+            {
+                var tableKey = tableInfo.FullName;
+                if (state.Tables.TryGetValue(tableKey, out var ts) && ts.InitialLoadCompleted)
+                    continue;
+                updates[tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true };
+            }
+
+            if (updates.Count > 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"[{Name}] SkipInitialLoad is set — marking {updates.Count} table(s) as complete without scanning.");
+                await SubmitBatch([], tableLoadUpdates: updates);
+            }
+
+            return;
+        }
+
+        // Single connection for the entire initial load — reused across all tables
+        await using var conn = await OpenInitialLoadConnection(ct);
+
+        foreach (var tableInfo in allTables)
+        {
+            var tableKey = tableInfo.FullName;
+
+            if (state.Tables.TryGetValue(tableKey, out var tableState) && tableState.InitialLoadCompleted)
+                continue;
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Starting initial load for table {tableInfo.FullName}");
+
+            await ProcessTableInitialLoad(conn, tableInfo, tableKey, tableState, ct);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"[{Name}] Completed initial load for table {tableInfo.FullName}");
+        }
+    }
+
+    private async Task ProcessTableInitialLoad(
+        DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, string tableKey,
+        CdcSinkTableLoadState resumeState, CancellationToken ct)
+    {
+        var pkColumns = tableInfo.PrimaryKeyColumns;
+        var maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
+
+        string[] lastKeys = null;
+        if (resumeState?.LastKeyValues != null && resumeState.LastKeyValues.Count == pkColumns.Count)
+        {
+            lastKeys = new string[resumeState.LastKeyValues.Count];
+            for (int i = 0; i < resumeState.LastKeyValues.Count; i++)
+                lastKeys[i] = resumeState.LastKeyValues[i];
+        }
+
+        var lastBatch = Task.CompletedTask;
+        IDisposable previousBatchCtx = null;
+        IDisposable currentBatchCtx = null;
+
+        try
+        {
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var (ops, newLastKeys, batchCtx) = await ReadOneBatch(conn, tableInfo, pkColumns, lastKeys, maxBatchSize, ct);
+                currentBatchCtx = batchCtx;
+
+                if (ops.Count == 0)
+                {
+                    currentBatchCtx?.Dispose();
+                    currentBatchCtx = null;
+
+                    await lastBatch;
+                    previousBatchCtx?.Dispose();
+                    previousBatchCtx = null;
+
+                    var finalUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                    {
+                        [tableKey] = new CdcSinkTableLoadState { InitialLoadCompleted = true }
+                    };
+                    await SubmitBatch(new List<CdcSinkDocumentOp>(), tableLoadUpdates: finalUpdate);
+                    return;
+                }
+
+                await lastBatch;
+                previousBatchCtx?.Dispose();
+
+                var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
+                {
+                    [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys) }
+                };
+
+                lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
+                previousBatchCtx = currentBatchCtx;
+                currentBatchCtx = null;
+                lastKeys = newLastKeys;
+            }
+        }
+        finally
+        {
+            previousBatchCtx?.Dispose();
+            currentBatchCtx?.Dispose();
         }
     }
 
