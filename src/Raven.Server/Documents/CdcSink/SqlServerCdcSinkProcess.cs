@@ -1,5 +1,5 @@
 using System;
-using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text;
@@ -7,14 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.SqlServer.Types;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Util;
-using Raven.Server.Documents.CdcSink.Commands;
-using Raven.Server.Documents.CdcSink.Stats;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
-using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -60,7 +54,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         await EnsureCdcEnabled(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
-        await PollForChanges(ct);
+        await ProcessCdcStream(ct);
     }
 
     /// <summary>
@@ -160,7 +154,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    private async Task PollForChanges(CancellationToken ct)
+    protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
     {
         byte[] lastLsn;
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -177,95 +171,85 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         await using var conn = await OpenConnectionAsync(ct);
         bool shouldWait = false;
-        Task lastBatch = Task.CompletedTask;
-        IDisposable previousBatchCtx = null;
 
-        try
+        while (true)
         {
-            while (true)
+            ct.ThrowIfCancellationRequested();
+
+            if (shouldWait)
+                await Task.Delay(pollInterval, ct);
+            shouldWait = true;
+
+            var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
+
+            if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
+                continue;
+
+            // Read ALL tables into a buffer, then sort by (__$start_lsn, __$seqval) for
+            // cross-table transaction ordering. This ensures parent rows (e.g. orders) are
+            // processed before child rows (e.g. order_lines) within the same transaction.
+            var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
+
+            foreach (var ci in captureInstances)
             {
-                ct.ThrowIfCancellationRequested();
-
-                if (shouldWait)
-                    await Task.Delay(pollInterval, ct);
-                shouldWait = true;
-
-                var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
-
-                if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
+                var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
+                if (tableMinLsn == null || IsAllZero(tableMinLsn))
                     continue;
 
-                // Per-batch context: blittable objects created by ProcessRow (for CdcColumnType.Json
-                // columns) reference this context's memory, so it must stay alive until SubmitBatch
-                // completes. We pipeline: while TxMerger processes the current batch, we can read
-                // the next batch with a new context.
-                var batchCtxHolder = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
+                var effectiveFromLsn = CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0 ? lsnInfo.FromLsn : tableMinLsn;
 
-                var batch = new List<CdcSinkDocumentOp>();
-                bool hasChanges = false;
+                await using var cmd = conn.CreateCommand();
+                cmd.CommandText = ci.Query;
+                AddParameter(cmd, "@from_lsn", effectiveFromLsn);
+                AddParameter(cmd, "@to_lsn", lsnInfo.MaxLsn);
 
-                foreach (var ci in captureInstances)
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                var columns = ci.Columns;
+                // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
+
+                while (await reader.ReadAsync(ct))
                 {
-                    var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
-                    if (tableMinLsn == null || IsAllZero(tableMinLsn))
-                        continue;
+                    var rowLsn = reader[0] as byte[];
+                    var rowSeq = reader[1] as byte[];
+                    var operation = reader.GetInt32(2);
+                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
 
-                    // fn_cdc_get_all_changes requires fromLsn >= fn_cdc_get_min_lsn(), otherwise it errors.
-                    var effectiveFromLsn = CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0 ? lsnInfo.FromLsn : tableMinLsn;
-
-                    await using var cmd = conn.CreateCommand();
-                    cmd.CommandText = ci.Query;
-                    AddParameter(cmd, "@from_lsn", effectiveFromLsn);
-                    AddParameter(cmd, "@to_lsn", lsnInfo.MaxLsn);
-
-                    await using var reader = await cmd.ExecuteReaderAsync(ct);
-                    var columns = ci.Columns;
-                    while (await reader.ReadAsync(ct))
+                    var data = new Dictionary<string, object>(columns.Length);
+                    for (int i = 0; i < columns.Length; i++)
                     {
-                        var operation = reader.GetInt32(0);
-                        var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
-
-                        var data = new Dictionary<string, object>(columns.Length);
-                        for (int i = 0; i < columns.Length; i++)
-                        {
-                            int ordinal = i + 1;
-                            data[columns[i]] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
-                        }
-
-                        var row = new CdcSinkRow
-                        {
-                            TableSchema = ci.TableInfo.Schema,
-                            TableName = ci.TableInfo.TableName,
-                            Operation = cdcOperation,
-                            Data = data,
-                        };
-
-                        batch.Add(DocumentProcessor.ProcessRow(row, jsonParsingContext));
-                        hasChanges = true;
+                        int ordinal = i + 3;
+                        data[columns[i]] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
                     }
-                }
 
-                if (hasChanges)
-                {
-                    // Wait for previous batch to complete, then release its context
-                    await lastBatch;
-                    previousBatchCtx?.Dispose();
+                    var row = new CdcSinkRow
+                    {
+                        TableSchema = ci.TableInfo.Schema,
+                        TableName = ci.TableInfo.TableName,
+                        Operation = cdcOperation,
+                        Data = data,
+                    };
 
-                    var lsnHex = Convert.ToHexString(lsnInfo.MaxLsn);
-                    lastBatch = SubmitBatch(batch, lsnHex);
-                    lastLsn = lsnInfo.MaxLsn;
-                    previousBatchCtx = batchCtxHolder;
-                }
-                else
-                {
-                    // No changes — dispose this iteration's context immediately
-                    batchCtxHolder.Dispose();
+                    var op = DocumentProcessor.ProcessRow(row, StreamingJsonContext);
+                    var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
+                    buffer.Add((rowLsn, rowSeq, new CdcEvent(eventType, op, null)));
                 }
             }
-        }
-        finally
-        {
-            previousBatchCtx?.Dispose();
+
+            if (buffer.Count > 0)
+            {
+                // Sort by (LSN, seqval) to preserve cross-table transaction order
+                buffer.Sort((a, b) =>
+                {
+                    int cmp = CompareLsn(a.Lsn, b.Lsn);
+                    return cmp != 0 ? cmp : CompareLsn(a.SeqVal, b.SeqVal);
+                });
+
+                foreach (var (_, _, evt) in buffer)
+                    yield return evt;
+
+                yield return new CdcEvent(CdcEventType.TransactionCommit, null, Convert.ToHexString(lsnInfo.MaxLsn));
+                lastLsn = lsnInfo.MaxLsn;
+            }
         }
     }
 
@@ -402,7 +386,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
             // We filter out pre-update images (3) at the SQL level to avoid transferring rows we'd discard.
             var query = $@"
-                SELECT __$operation, {columnList}
+                SELECT __$start_lsn, __$seqval, __$operation, {columnList}
                 FROM cdc.fn_cdc_get_all_changes_{captureInstance}(@from_lsn, @to_lsn, N'all')
                 WHERE __$operation <> 3
                 ORDER BY __$start_lsn, __$seqval";

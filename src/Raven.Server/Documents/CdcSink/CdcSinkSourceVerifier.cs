@@ -179,10 +179,10 @@ public static class CdcSinkSourceVerifier
                 }
 
                 result.Errors.Add(
-                    $"User '{currentUser}' does not have the REPLICATION privilege and the following are missing: " +
-                    $"{string.Join(", ", missing)}. " +
-                    $"Either grant the privilege with: ALTER ROLE {currentUser} REPLICATION; " +
-                    $"or have an administrator run:\n{string.Join("\n", commands)}");
+                    $"""
+                    User '{currentUser}' does not have the REPLICATION privilege and the following are missing: {string.Join(", ", missing)}. Either grant the privilege with: ALTER ROLE {currentUser} REPLICATION; or have an administrator run:
+                    {string.Join("\n", commands)}
+                    """);
             }
         }
 
@@ -218,11 +218,13 @@ public static class CdcSinkSourceVerifier
             if (error != null)
             {
                 result.Errors.Add(
-                    $"Embedded table '{schema}.{table}': {error} " +
-                    $"The join column(s) ({joinCols}) are not part of the primary key, so DELETE events " +
-                    $"must include them for routing to the parent document. Either:\n\n" +
-                    $"  ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;\n\n" +
-                    $"Or set OnDelete.IgnoreDeletes = true on this embedded table configuration to skip delete processing.");
+                    $"""
+                    Embedded table '{schema}.{table}': {error} The join column(s) ({joinCols}) are not part of the primary key, so DELETE events must include them for routing to the parent document. Either:
+
+                      ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;
+
+                    Or set OnDelete.IgnoreDeletes = true on this embedded table configuration to skip delete processing.
+                    """);
             }
         }
 

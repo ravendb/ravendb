@@ -41,6 +41,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     public int ProcessedSuccessfully { get; private set; }
 
+    /// <summary>
+    /// Raised for each document that fails during batch processing.
+    /// The event provides the document ID and the exception.
+    /// </summary>
+    internal event Action<string, Exception> DocumentProcessingError;
+
     public CdcSinkBatchCommand(
         DocumentDatabase database,
         List<CdcSinkDocumentOp> ops,
@@ -84,6 +90,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 if (_logger?.IsErrorEnabled == true)
                     _logger.Error($"Failed to process CDC operations for document '{documentId}'.", e);
 
+                DocumentProcessingError?.Invoke(documentId, e);
                 _statsScope?.RecordScriptProcessingError();
 
                 // RecordPartialConsumeError tracks cumulative error/success counts and throws

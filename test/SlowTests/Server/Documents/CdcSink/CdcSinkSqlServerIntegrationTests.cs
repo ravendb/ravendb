@@ -41,7 +41,7 @@ namespace SlowTests.Server.Documents.CdcSink
     /// </list>
     /// </summary>
     [Collection(nameof(CdcSinkSqlServerTests))]
-    public class CdcSinkSqlServerIntegrationTests : SqlAwareTestBase
+    public class CdcSinkSqlServerIntegrationTests : CdcSinkIntegrationTestBase
     {
         public CdcSinkSqlServerIntegrationTests(ITestOutputHelper output) : base(output)
         {
@@ -115,11 +115,6 @@ namespace SlowTests.Server.Documents.CdcSink
             return sqlCs;
         }
 
-        private AddCdcSinkOperationResult AddCdcSink(IDocumentStore store, CdcSinkConfiguration config)
-        {
-            return store.Maintenance.Send(new AddCdcSinkOperation(config));
-        }
-
         /// <summary>
         /// Gets the CDC Sink process for the given store and config name.
         /// Throws if no process exists yet (call after AddCdcSink).
@@ -146,7 +141,7 @@ namespace SlowTests.Server.Documents.CdcSink
         /// Waits for the CDC Sink's initial load phase to complete.
         /// Fails immediately if the process encounters an error.
         /// </summary>
-        private async Task WaitForCdcInitialLoadAsync(IDocumentStore store, string configName, int timeoutMs = 60_000)
+        private new async Task WaitForCdcInitialLoadAsync(IDocumentStore store, string configName, int timeoutMs = 60_000)
         {
             var process = await GetCdcProcessAsync(store, configName);
             if (process == null)
@@ -3757,198 +3752,8 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // DTOs
+        // SQL Server-specific DTO (different complex type fields)
         // ─────────────────────────────────────────────────────────────────────
-
-        private class Product
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public decimal Price { get; set; }
-            public double TotalPrice { get; set; }
-        }
-
-        private class Item
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-        }
-
-        private class Event
-        {
-            public string Id { get; set; }
-            public string Description { get; set; }
-            public string Title { get; set; }
-        }
-
-        private class Note
-        {
-            public string Id { get; set; }
-            public string Content { get; set; }
-        }
-
-        private class Record
-        {
-            public string Id { get; set; }
-            public string Title { get; set; }
-        }
-
-        private class OrderLine
-        {
-            public int LineNum { get; set; }
-            public string LineId { get; set; }
-            public string Product { get; set; }
-            public int Quantity { get; set; }
-        }
-
-        private class Order
-        {
-            public string Id { get; set; }
-            public string CustomerName { get; set; }
-            public string Customer { get; set; }
-            public decimal Total { get; set; }
-            public List<OrderLine> Lines { get; set; }
-        }
-
-        private class Person
-        {
-            public string Id { get; set; }
-            public string FullName { get; set; }
-        }
-
-        private class Customer
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public string Email { get; set; }
-            public string InternalNotes { get; set; }
-        }
-
-        private class Employee
-        {
-            public int EmpId { get; set; }
-            public string EmpName { get; set; }
-        }
-
-        private class Department
-        {
-            public int DeptId { get; set; }
-            public string DeptName { get; set; }
-            public List<Employee> Employees { get; set; }
-        }
-
-        private class Company
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public List<Department> Departments { get; set; }
-        }
-
-        private class Counter
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public int Value { get; set; }
-        }
-
-        private class InvoiceLine
-        {
-            public int LineNum { get; set; }
-            public string Description { get; set; }
-        }
-
-        private class Invoice
-        {
-            public string Id { get; set; }
-            public string Customer { get; set; }
-            public double DiscountPct { get; set; }
-            public double LineAmount { get; set; }
-            public List<InvoiceLine> Lines { get; set; }
-        }
-
-        private class FileDoc
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-        }
-
-        private class TextAttachmentDoc
-        {
-            public int DbId { get; set; }
-            public string Title { get; set; }
-        }
-
-        private class OrderWithStatus
-        {
-            public string Id { get; set; }
-            public string CustomerName { get; set; }
-            public string Status { get; set; }
-        }
-
-        private class ArchivedOrder
-        {
-            public string Id { get; set; }
-            public string CustomerName { get; set; }
-            public bool Archived { get; set; }
-            public string ArchivedAt { get; set; }
-        }
-
-        private class OrderWithDeleteTracking
-        {
-            public string Id { get; set; }
-            public string CustomerName { get; set; }
-            public List<OrderLine> Lines { get; set; }
-            public int LastDeletedLine { get; set; }
-            public int DeleteCount { get; set; }
-            public int LastArchivedLine { get; set; }
-            public int ArchiveCount { get; set; }
-        }
-
-        private class EmployeeStringFields
-        {
-            public string Name { get; set; }
-            public string Birthday { get; set; }
-            public string Salary { get; set; }
-            public string EmployeeId { get; set; }
-            public bool Active { get; set; }
-            public string Age { get; set; }
-            public string Score { get; set; }
-        }
-
-        private class EmployeeRecord
-        {
-            public int DbId { get; set; }
-            public string Name { get; set; }
-            public string Department { get; set; }
-        }
-
-        private class Car
-        {
-            public int DbId { get; set; }
-            public string Make { get; set; }
-            public string Model { get; set; }
-        }
-
-        private class ConfigDoc
-        {
-            public int DbId { get; set; }
-            public string Name { get; set; }
-            public ConfigSettings Settings { get; set; }
-            public List<string> Tags { get; set; }
-            public string Description { get; set; }
-        }
-
-        private class ConfigSettings
-        {
-            public string Theme { get; set; }
-            public NotificationSettings Notifications { get; set; }
-        }
-
-        private class NotificationSettings
-        {
-            public bool Email { get; set; }
-            public bool Sms { get; set; }
-        }
 
         private class ComplexDoc
         {
@@ -3961,42 +3766,6 @@ namespace SlowTests.Server.Documents.CdcSink
             public string ExtraXml { get; set; }
             public string BigNumber { get; set; }
             public string CreatedAt { get; set; }
-        }
-
-        private class Photo
-        {
-            public int PhotoNum { get; set; }
-            public string Title { get; set; }
-        }
-
-        private class Album
-        {
-            public string Id { get; set; }
-            public string Name { get; set; }
-            public List<Photo> Photos { get; set; }
-        }
-
-        private class InvoiceWithTotal
-        {
-            public string Id { get; set; }
-            public string Customer { get; set; }
-            public double TotalAmount { get; set; }
-            public List<InvoiceLineWithAmount> Lines { get; set; }
-        }
-
-        private class InvoiceLineWithAmount
-        {
-            public int LineNum { get; set; }
-            public string Description { get; set; }
-            public decimal Amount { get; set; }
-        }
-
-        private class AuditEntry
-        {
-            public string Op { get; set; }
-            public string Name { get; set; }
-            public string PreviousName { get; set; }
-            public string Timestamp { get; set; }
         }
     }
 }

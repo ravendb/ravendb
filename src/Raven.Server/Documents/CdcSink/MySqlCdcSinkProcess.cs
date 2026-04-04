@@ -1,7 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlCdc;
@@ -11,7 +11,6 @@ using MySqlCdc.Providers.MariaDb;
 using MySqlCdc.Providers.MySql;
 using MySqlConnector;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.CdcSink;
@@ -40,7 +39,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private readonly string _connectionString;
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
-    private long _serverId;     // Unique server ID for binlog replication, selected at runtime
 
     private readonly record struct ColumnInfo(string Name, bool IsText);
 
@@ -63,7 +61,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
-        await StartListening(ct);
+        await ProcessCdcStream(ct);
     }
 
     /// <summary>
@@ -158,64 +156,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             _serverGtid = (string)await cmd.ExecuteScalarAsync(ct);
         }
 
-        // Select a unique server ID for binlog replication. The ID must not conflict
-        // with the source server or any other replica currently connected.
-        _serverId = await SelectUniqueServerId(conn, ct);
-    }
-
-    /// <summary>
-    /// Selects a random server ID that doesn't conflict with the source server or existing replicas.
-    /// MySQL requires each replica to have a unique server_id (range 1 to 2^32-1). If our ID matches
-    /// the source server, MySQL filters out the very events we're trying to capture.
-    /// </summary>
-    private async Task<long> SelectUniqueServerId(MySqlConnection conn, CancellationToken ct)
-    {
-        var usedIds = new List<long>();
-
-        // Get the source server's own ID — we must NOT use this one
-        await using (var cmd = conn.CreateCommand())
-        {
-            cmd.CommandText = "SELECT @@server_id";
-            var result = await cmd.ExecuteScalarAsync(ct);
-            if (result != null && result != DBNull.Value)
-                usedIds.Add(Convert.ToInt64(result));
-        }
-
-        // Get IDs of other replicas currently connected.
-        // Try SHOW SLAVE HOSTS first (works on all MySQL versions including 8.4 where
-        // it's deprecated but still functional). Fall back to SHOW REPLICAS (MySQL 8.0.22+)
-        // if the older syntax is removed in a future version.
-        if (await TryCollectReplicaIds(conn, "SHOW SLAVE HOSTS", usedIds, ct) == false)
-            await TryCollectReplicaIds(conn, "SHOW REPLICAS", usedIds, ct);
-
-        // Find the first gap in the sorted ID list, starting from 2 (1 is often the source server)
-        usedIds.Sort();
-        long candidate = 2;
-        foreach (var id in usedIds)
-        {
-            if (id > candidate)
-                break;
-            if (id >= candidate)
-                candidate = id + 1; // id+1 for [1, 1, 2, 2, 5] handling
-        }
-        return candidate;
-    }
-
-    private static async Task<bool> TryCollectReplicaIds(MySqlConnection conn, string command, List<long> usedIds, CancellationToken ct)
-    {
-        try
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = command;
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
-                usedIds.Add(reader.GetInt64(0)); // Server_id is the first column
-            return true;
-        }
-        catch (MySqlException)
-        {
-            return false;
-        }
     }
 
     /// <summary>
@@ -267,9 +207,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return builder.Database ?? "mysql";
     }
 
-    #region Initial Load
-
-
     protected override async Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct)
     {
         var conn = new MySqlConnection(_connectionString);
@@ -292,11 +229,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return ConvertMySqlValue(reader.GetValue(ordinal));
     }
 
-    #endregion
-
-    #region Binlog Streaming
-
-    private async Task StartListening(CancellationToken ct)
+    protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
     {
         string savedGtid;
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -306,31 +239,33 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             savedGtid = state.LastLsn;
         }
 
-        // Parse connection string to extract host/port/credentials for the binlog client
         var csBuilder = new MySqlConnectionStringBuilder(_connectionString);
 
-        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext))
+        var client = new BinlogClient(options =>
         {
-            var client = new BinlogClient(options =>
-            {
                 options.Hostname = csBuilder.Server;
                 options.Port = (int)csBuilder.Port;
                 options.Username = csBuilder.UserID;
                 options.Password = csBuilder.Password;
                 options.Database = csBuilder.Database;
-                options.ServerId = _serverId;
+                // Each binlog client needs a unique server_id in the MySQL replication topology.
+                // We pick a random value from a ~2 billion range on every connection attempt.
+                // Collision probability between two nodes is ~1/2B (birthday paradox is irrelevant
+                // at these scales). If a collision does occur, MySQL kills the older connection
+                // and lets the new one in. Since RunWithRetryAsync calls RunInternalAsync
+                // on every retry, each attempt picks a fresh random ID, so collisions self-resolve
+                // within one retry cycle.
+                options.ServerId = Random.Shared.NextInt64(2, int.MaxValue);
                 options.Blocking = true;
                 options.HeartbeatInterval = TimeSpan.FromSeconds(30);
                 options.SslMode = csBuilder.SslMode switch
                 {
                     MySqlSslMode.Required or MySqlSslMode.VerifyCA or MySqlSslMode.VerifyFull
-                        => MySqlCdc.Constants.SslMode.RequireVerifyCa,
-                    MySqlSslMode.Preferred => MySqlCdc.Constants.SslMode.IfAvailable,
-                    _ => MySqlCdc.Constants.SslMode.Disabled,
+                        => SslMode.RequireVerifyCa,
+                    MySqlSslMode.Preferred => SslMode.IfAvailable,
+                    _ => SslMode.Disabled,
                 };
 
-                // Resume from saved GTID or start from the server's current GTID position
-                // (fetched during EnsureBinlogConfiguration).
                 var gtidToResume = savedGtid ?? _serverGtid;
                 if (string.IsNullOrEmpty(gtidToResume) == false)
                 {
@@ -340,71 +275,55 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                 }
                 else
                 {
-                    // No GTID available — start from beginning (rare edge case)
                     options.Binlog = BinlogOptions.FromStart();
                 }
             });
 
-            var batch = new List<CdcSinkDocumentOp>();
-            var pending = new List<CdcSinkDocumentOp>();
-            Task lastBatch = Task.CompletedTask;
-            int maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
+            var defaultSchema = GetDefaultSchema();
 
-            // TableMapEvent cache: tableId → (database, table, columnTypes)
+            // MySQL streams binlog events for ALL databases on the server, not just ours.
+            // Only cache TableMapEvents for our database — row events for uncached table IDs are skipped.
+            // Note that the table is _global_, but we get TableMapEvents for each transaction, we filter to only
+            // those in our database, then the filter for row events that we don't care about is done in ProcessRow().
             var tableMapCache = new Dictionary<long, (string Database, string Table, byte[] ColumnTypes)>();
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))
             {
-                ct.ThrowIfCancellationRequested();
-
                 switch (binlogEvent)
                 {
                     case TableMapEvent tableMap:
-                        tableMapCache[tableMap.TableId] = (tableMap.DatabaseName, tableMap.TableName, tableMap.ColumnTypes);
+                        if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase))
+                            tableMapCache[tableMap.TableId] = (tableMap.DatabaseName, tableMap.TableName, tableMap.ColumnTypes);
                         break;
 
                     case WriteRowsEvent writeRows:
                         if (tableMapCache.TryGetValue(writeRows.TableId, out var wTable) == false)
                             break;
                         foreach (var row in writeRows.Rows)
-                            pending.Add(DecodeRow(wTable.Database, wTable.Table, row.Cells, wTable.ColumnTypes, CdcSinkOperation.Upsert, jsonParsingContext));
+                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(wTable.Database, wTable.Table, row.Cells, wTable.ColumnTypes, CdcSinkOperation.Upsert, StreamingJsonContext), null);
                         break;
 
                     case UpdateRowsEvent updateRows:
                         if (tableMapCache.TryGetValue(updateRows.TableId, out var uTable) == false)
                             break;
                         foreach (var row in updateRows.Rows)
-                            pending.Add(DecodeRow(uTable.Database, uTable.Table, row.AfterUpdate.Cells, uTable.ColumnTypes, CdcSinkOperation.Upsert, jsonParsingContext));
+                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(uTable.Database, uTable.Table, row.AfterUpdate.Cells, uTable.ColumnTypes, CdcSinkOperation.Upsert, StreamingJsonContext), null);
                         break;
 
                     case DeleteRowsEvent deleteRows:
                         if (tableMapCache.TryGetValue(deleteRows.TableId, out var dTable) == false)
                             break;
                         foreach (var row in deleteRows.Rows)
-                            pending.Add(DecodeRow(dTable.Database, dTable.Table, row.Cells, dTable.ColumnTypes, CdcSinkOperation.Delete, jsonParsingContext));
+                            yield return new CdcEvent(CdcEventType.Delete, DecodeRow(dTable.Database, dTable.Table, row.Cells, dTable.ColumnTypes, CdcSinkOperation.Delete, StreamingJsonContext), null);
                         break;
 
                     case XidEvent:
-                        // Transaction committed — move pending rows to the batch
-                        batch.AddRange(pending);
-                        pending.Clear();
-
-                        if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
-                        {
-                            await lastBatch;
-
-                            if (batch.Count > 0)
-                            {
-                                // Save GTID state as checkpoint — it's an opaque string
-                                var gtidCheckpoint = client.State?.ToString();
-                                lastBatch = SubmitBatch(batch, gtidCheckpoint);
-                                batch = new List<CdcSinkDocumentOp>();
-                            }
-                        }
+                        var gtid = client.State?.GtidState?.ToString()
+                            ?? throw new InvalidOperationException("MySQL binlog client has no GTID state after XidEvent — GTID mode may not be enabled on the server.");
+                        yield return new CdcEvent(CdcEventType.TransactionCommit, null, gtid);
                         break;
                 }
             }
-        }
     }
 
     private CdcSinkDocumentOp DecodeRow(
@@ -415,36 +334,39 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     {
         var tableKey = $"{database}.{tableName}";
         if (_tableColumns.TryGetValue(tableKey, out var columns) == false)
+        {
             return null;
+        }
 
         var data = new Dictionary<string, object>(columns.Length);
         for (int i = 0; i < columns.Length && i < cells.Count; i++)
         {
+            var type = columnTypes != null && i < columnTypes.Length ? (ColumnType)columnTypes[i]  : ColumnType.String;
             var col = columns[i];
             var value = cells[i];
-            if (value == null)
-            {
-                data[col.Name] = null;
-                continue;
-            }
 
-            if (value is byte[] bytes)
+            data[col.Name] = value switch
             {
+                null or DBNull => null,
+
+                // MySqlCdc may return numeric types as strings (BCD-encoded internally).
+                // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
+                string s when type is ColumnType.NewDecimal or ColumnType.Decimal
+                    && decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec)
+                    => dec,
+
                 // MySQL stores JSON in a proprietary binary format in the binlog.
                 // Use MySqlCdc's JsonParser to convert to a JSON string.
-                if (columnTypes != null && i < columnTypes.Length && columnTypes[i] == (byte)ColumnType.Json)
-                {
-                    value = MySqlCdc.Providers.MySql.JsonParser.Parse(bytes);
-                }
+                byte[] bytes when type == ColumnType.Json
+                    => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
+                
                 // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
                 // TEXT columns should be UTF-8 decoded; true binary columns pass through.
-                else if (col.IsText)
-                {
-                    value = System.Text.Encoding.UTF8.GetString(bytes);
-                }
-            }
+                byte[] bytes when col.IsText
+                    => System.Text.Encoding.UTF8.GetString(bytes),
 
-            data[col.Name] = ConvertMySqlValue(value);
+                _ => ConvertMySqlValue(value),
+            };
         }
 
         var row = new CdcSinkRow
@@ -458,9 +380,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return DocumentProcessor.ProcessRow(row, jsonParsingContext);
     }
 
-    #endregion
 
-    #region Type Conversion
 
     /// <summary>
     /// Normalizes MySQL CLR values from both ADO.NET (initial load) and MySqlCdc (binlog)
@@ -513,5 +433,4 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         };
     }
 
-    #endregion
 }

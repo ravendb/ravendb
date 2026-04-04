@@ -19,7 +19,7 @@ public class CdcSinkLoader : IDisposable
 {
     private const string AlertTitle = "CDC Sink loader";
 
-    private CdcSinkProcess[] _processes = new CdcSinkProcess[0];
+    private CdcSinkProcess[] _processes = [];
 
     private readonly HashSet<string> _uniqueConfigurationNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 

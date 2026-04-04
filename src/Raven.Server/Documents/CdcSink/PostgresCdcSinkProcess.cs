@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Data.Common;
 using System.Buffers;
 using System.Collections.Generic;
@@ -7,15 +8,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Npgsql;
 using Npgsql.Replication;
-using Pgvector.Npgsql;
 using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Util;
-using Raven.Server.Documents.CdcSink.Commands;
-using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.NotificationCenter.Notifications;
-using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -85,7 +81,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await EnsureReplicaIdentityForEmbeddedTables(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
-        await StartListening(ct);
+        await ProcessCdcStream(ct);
     }
 
     private async Task EnsureReplicationSetup(CancellationToken ct)
@@ -124,7 +120,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             {
                 throw new InvalidOperationException(
                     $"""
-                    Insufficient permissions to create publication '{_publicationName}'. The database user must have CREATE permission on the database, or an administrator can create the publication manually:
+                    Insufficient permissions to create publication '{_publicationName}'. 
+                    The database user must have CREATE permission on the database, or an administrator can create the publication manually:
 
                       CREATE PUBLICATION {_publicationName} FOR TABLE {tableList};
 
@@ -145,9 +142,13 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 if (string.Equals(plugin, "pgoutput", StringComparison.OrdinalIgnoreCase) == false)
                 {
                     throw new InvalidOperationException(
-                        $"Replication slot '{_slotName}' exists but uses plugin '{plugin}' instead of 'pgoutput'. " +
-                        $"CDC Sink requires the pgoutput plugin. Drop the existing slot and let the task recreate it, " +
-                        $"or create a new slot manually: SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');");
+                        $"""
+                        Replication slot '{_slotName}' exists but uses plugin '{plugin}' instead of 'pgoutput'. 
+                        CDC Sink requires the 'pgoutput' plugin to function.
+                        Drop the existing slot and let the task recreate it, or create a new slot manually: 
+                        
+                            SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');
+                        """);
                 }
             }
             else
@@ -166,7 +167,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 {
                     throw new InvalidOperationException(
                         $"""
-                        Insufficient permissions to create replication slot '{_slotName}'. The database user must have the REPLICATION role attribute, or an administrator can create the slot manually:
+                        Insufficient permissions to create replication slot '{_slotName}'. 
+                        The database user must have the REPLICATION role attribute, or an administrator can create the slot manually:
 
                           SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput');
 
@@ -238,9 +240,9 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             catch (PostgresException ex)
             {
                 throw new InvalidOperationException(
-                    $"Publication '{_publicationName}' does not include tables: {tableList}. " +
-                    $"Attempted to add them automatically but failed ({ex.MessageText}). " +
-                    $"Ask a database administrator to run: ALTER PUBLICATION {_publicationName} ADD TABLE {tableList};", ex);
+                    $"""
+                    Publication '{_publicationName}' does not include tables: {tableList}. Attempted to add them automatically but failed ({ex.MessageText}). Ask a database administrator to run: ALTER PUBLICATION {_publicationName} ADD TABLE {tableList};
+                    """, ex);
             }
         }
 
@@ -325,13 +327,18 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             catch (PostgresException ex) when (ex.SqlState == "42501")
             {
                 throw new InvalidOperationException(
-                    $"Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. " +
-                    $"The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of " +
-                    $"the primary key, so DELETE events need REPLICA IDENTITY FULL to include the join columns " +
-                    $"for routing to the parent document. An administrator can run:\n\n" +
-                    $"  ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;\n\n" +
-                    $"Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.\n\n" +
-                    $"PostgreSQL error: {ex.MessageText}", ex);
+                    $"""
+                    Insufficient permissions to set REPLICA IDENTITY FULL on '{schema}.{table}'. 
+                    The embedded table's join column(s) ({string.Join(", ", embedded.JoinColumns)}) are not part of the primary key.
+                    DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
+                    An administrator can run:
+
+                      ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;
+
+                    Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
+
+                    PostgreSQL error: {ex.MessageText}
+                    """, ex);
             }
         }
     }
@@ -360,143 +367,74 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return result;
     }
 
-    private async Task StartListening(CancellationToken ct)
+    private LogicalReplicationConnection _replicationConn;
+    private NpgsqlTypes.NpgsqlLogSequenceNumber _lastLsn;
+    private int _rowsSinceLastAck;
+
+    protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
     {
-        NpgsqlTypes.NpgsqlLogSequenceNumber lastLsn;
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
             var state = LoadState(context);
-            lastLsn = string.IsNullOrEmpty(state.LastLsn)
+            _lastLsn = string.IsNullOrEmpty(state.LastLsn)
                 ? new NpgsqlTypes.NpgsqlLogSequenceNumber(0)
                 : NpgsqlTypes.NpgsqlLogSequenceNumber.Parse(state.LastLsn);
         }
 
+        _rowsSinceLastAck = 0;
         await using var conn = new LogicalReplicationConnection(_connectionString);
         await conn.Open(ct);
+        _replicationConn = conn;
 
         var replicationStream = conn.StartReplication(
             new PgOutputReplicationSlot(_slotName),
             new PgOutputReplicationOptions(_publicationName, PgOutputProtocolVersion.V1),
             ct,
-            lastLsn);
+            _lastLsn);
 
-        var batch = new List<CdcSinkDocumentOp>();
-        var pending = new List<CdcSinkDocumentOp>();
-        Task lastBatch = Task.CompletedTask;
-        int rowsSinceLastAck = 0;
-        int maxBatchSize = Database.Configuration.CdcSink.MaxBatchSize;
-
-        // Per-batch context: blittable objects created by DecodeRow → ProcessRow (for CdcColumnType.Json
-        // columns) reference this context's memory. We rotate contexts at each SubmitBatch call —
-        // the previous context stays alive until its batch completes in the TxMerger.
-        IDisposable previousBatchCtx = null;
-        var currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonParsingContext);
-
-        try
+        await foreach (var message in replicationStream.WithCancellation(ct))
         {
-            await using var enumerator = replicationStream.GetAsyncEnumerator(ct);
-            while (true)
+            switch (message)
             {
-                ct.ThrowIfCancellationRequested();
-
-                var moveNext = enumerator.MoveNextAsync();
-
-                if (moveNext.IsCompleted == false)
-                {
-                    var moveTask = moveNext.AsTask();
-
-                    // Race: wait for either the next message or the previous batch to complete.
-                    // This allows reading ahead while the TxMerger processes the previous batch.
-                    await Task.WhenAny(moveTask, lastBatch);
-
-                    if (lastBatch.IsCompleted)
-                    {
-                        await lastBatch;
-                        previousBatchCtx?.Dispose();
-                        previousBatchCtx = null;
-
-                        // PostgreSQL retains WAL segments until the replication slot confirms receipt.
-                        // We must ack promptly after processing rows so WAL doesn't accumulate,
-                        // but avoid re-acking the same LSN on an idle stream. The rowsSinceLastAck
-                        // guard ensures we ack exactly once after a batch, then stay silent until
-                        // new data arrives.
-                        if (rowsSinceLastAck is not 0)
-                        {
-                            conn.SetReplicationStatus(lastLsn);
-                            await conn.SendStatusUpdate(ct);
-                            rowsSinceLastAck = 0;
-                        }
-
-                        if (batch.Count > 0)
-                        {
-                            lastBatch = SubmitBatch(batch, lastLsn.ToString());
-                            previousBatchCtx = currentBatchCtx;
-                            currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out jsonParsingContext);
-                            batch = new List<CdcSinkDocumentOp>();
-                        }
-                    }
-
-                    await moveTask;
-                }
-
-                var message = enumerator.Current;
-
-                switch (message)
-                {
-                    case InsertMessage insert:
-                        pending.Add(await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
-                        break;
-                    case UpdateMessage update:
-                        pending.Add(await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, jsonParsingContext));
-                        break;
-                    case KeyDeleteMessage keyDel:
-                        pending.Add(await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, jsonParsingContext));
-                        break;
-                    case FullDeleteMessage fullDel:
-                        pending.Add(await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, jsonParsingContext));
-                        break;
-                    case BeginMessage:
-                        break;
-                    case CommitMessage commit:
-                        batch.AddRange(pending);
-                        pending.Clear();
-
-                        if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
-                        {
-                            await lastBatch;
-                            previousBatchCtx?.Dispose();
-                            previousBatchCtx = null;
-
-                            if (batch.Count == 0)
-                                continue;
-                                
-                            rowsSinceLastAck += batch.Count;
-                            lastBatch = SubmitBatch(batch, commit.CommitLsn.ToString());
-                            lastLsn = commit.CommitLsn;
-                            previousBatchCtx = currentBatchCtx;
-                            currentBatchCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out jsonParsingContext);
-                            batch = new List<CdcSinkDocumentOp>();
-
-                                // Acknowledge to PostgreSQL periodically — when we've persisted enough rows,
-                            // rather than on every batch flush. We'll either consume a enough records to
-                            // flush, or go idle and send the update higher in this method
-                            if (rowsSinceLastAck >= maxBatchSize)
-                            {
-                                conn.SetReplicationStatus(lastLsn);
-                                await conn.SendStatusUpdate(ct);
-                                rowsSinceLastAck = 0;
-                            }
-                        }
-                        break;
-                }
+                case InsertMessage insert:
+                    yield return new CdcEvent(CdcEventType.Upsert,
+                        await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                    break;
+                case UpdateMessage update:
+                    yield return new CdcEvent(CdcEventType.Upsert,
+                        await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                    break;
+                case KeyDeleteMessage keyDel:
+                    yield return new CdcEvent(CdcEventType.Delete,
+                        await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                    break;
+                case FullDeleteMessage fullDel:
+                    yield return new CdcEvent(CdcEventType.Delete,
+                        await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                    break;
+                case CommitMessage commit:
+                    _lastLsn = commit.CommitLsn;
+                    yield return new CdcEvent(CdcEventType.TransactionCommit, null, commit.CommitLsn.ToString());
+                    break;
             }
-
         }
-        finally
+    }
+
+    protected override async Task OnBatchFlushed(string checkpoint, int rows)
+    {
+        // PostgreSQL retains WAL segments until the replication slot confirms receipt.
+        // We ack periodically (every maxBatchSize rows) to balance WAL retention against
+        // protocol overhead.
+        _rowsSinceLastAck += rows;
+        // If rows is 0, it means the batch was empty (e.g., a transaction with no relevant changes, or all changes were filtered out).
+        // Even in this case, we want to ack the LSN to advance the replication slot and allow WAL cleanup, otherwise a stream of 
+        // empty transactions could stall the slot indefinitely.
+        if (rows is 0 || _rowsSinceLastAck >= Database.Configuration.CdcSink.MaxBatchSize)
         {
-            previousBatchCtx?.Dispose();
-            currentBatchCtx?.Dispose();
+            _replicationConn.SetReplicationStatus(_lastLsn);
+            await _replicationConn.SendStatusUpdate(CancellationToken);
+            _rowsSinceLastAck = 0;
         }
     }
 
@@ -795,7 +733,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     }
 
     private static readonly SearchValues<char> QuoteOrComma = SearchValues.Create("\",");
-    private static readonly SearchValues<char> QuoteOrBackslash = SearchValues.Create("\"\\"); 
+    private static readonly SearchValues<char> QuoteOrBackslash = SearchValues.Create("\"\\");
 
     private string[] ParsePostgresArrayLiteralQuoted(ReadOnlySpan<char> span)
     {

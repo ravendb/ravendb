@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using System.IO;
@@ -14,19 +15,14 @@ using Raven.Client.Util;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Memory;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Server.Logging;
@@ -34,14 +30,13 @@ using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Raven.Server.Documents.CdcSink;
 
 public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 {
     internal const string Tag = "CDC Sink";
-
-    private const int MinBatchSize = 16;
 
     private CancellationTokenSource _cts;
     private PoolOfThreads.LongRunningWork _longRunningWork;
@@ -147,17 +142,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
     /// <summary>
-    /// The actual work for a single iteration: setup, initial load, streaming.
+    /// The actual work for the CDC setup, initial load, streaming.
     /// Throwing exits the current attempt; the retry loop in <see cref="Run"/>
     /// will enter fallback mode and call this again after the backoff period.
     /// <see cref="OperationCanceledException"/> exits the process cleanly.
     /// </summary>
     protected abstract Task RunInternalAsync(CancellationToken ct);
-
-    private void Run()
-    {
-        AsyncHelpers.RunSync(() => RunWithRetryAsync(CancellationToken));
-    }
 
     private async Task RunWithRetryAsync(CancellationToken ct)
     {
@@ -245,7 +235,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             {
                 ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadName, Logger);
                 NativeMemory.EnsureRegistered();
-                Run();
+                AsyncHelpers.RunSync(() => RunWithRetryAsync(_cts.Token));
             }
             catch (Exception e)
             {
@@ -342,21 +332,21 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected void EnterFallbackMode()
     {
-        if (Statistics.LastConsumeErrorTime == null)
-            FallbackTime = TimeSpan.FromSeconds(5);
-        else
+        if (Statistics.LastConsumeErrorTime is DateTime lastErrorTime)
         {
             var secondsSinceLastError =
-                (Database.Time.GetUtcNow() - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
+                (Database.Time.GetUtcNow() - lastErrorTime).TotalSeconds;
 
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(
-                Database.Configuration.CdcSink
-                    .MaxFallbackTime.AsTimeSpan.TotalSeconds,
-                Math.Max(5, secondsSinceLastError * 2)));
+            var maxSeconds = Database.Configuration.CdcSink.MaxFallbackTime.AsTimeSpan.TotalSeconds;
+            FallbackTime = TimeSpan.FromSeconds(Math.Min(maxSeconds, Math.Max(5, secondsSinceLastError * 2)));
+        }
+        else
+        {
+            FallbackTime = TimeSpan.FromSeconds(5);
         }
     }
 
-    protected async Task SubmitBatch(List<CdcSinkDocumentOp> ops, string lastLsn = null,
+    protected async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
         Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
     {
         // Compact nulls — streaming paths add null entries for rows from unconfigured tables
@@ -364,19 +354,165 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         for (int i = 0; i < ops.Count; i++)
         {
             ops[pos] = ops[i];
-            pos+= (ops[i] != null).ToInt32();
+            pos += (ops[i] != null).ToInt32();
         }
         ops.RemoveRange(pos, ops.Count - pos);
 
+        // We *intentionally* submit the command here, even if we have no entries
+        // to update the checkpoint and table load state in a timely manner
+
         var command = new Commands.CdcSinkBatchCommand(
-            Database, ops, Configuration.Name, lastLsn,
+            Database, ops, Configuration.Name, checkpoint,
             tableLoadUpdates: tableLoadUpdates,
             patchRequest: DocumentProcessor.CombinedPatchRequest,
             statsScope: null, statistics: Statistics, logger: Logger);
 
+        var start = Stopwatch.GetTimestamp();
         await Database.TxMerger.Enqueue(command);
 
+        if (Logger.IsDebugEnabled)
+            Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
+
         Database.CdcSinkLoader.OnBatchCompleted(Configuration.Name, Name, Statistics);
+        return (checkpoint, ops.Count);
+    }
+
+
+    protected enum CdcEventType { Upsert, Delete, TransactionCommit }
+
+    protected readonly record struct CdcEvent(CdcEventType Type, CdcSinkDocumentOp Op, string Checkpoint);
+
+    /// <summary>
+    /// Returns an async stream of CDC events from the source database.
+    /// Each subclass converts provider-specific events into <see cref="CdcEvent"/>:
+    /// <list type="bullet">
+    /// <item>Insert/Update → <see cref="CdcEventType.Upsert"/> with the decoded op</item>
+    /// <item>Delete → <see cref="CdcEventType.Delete"/> with the decoded op</item>
+    /// <item>Transaction boundary → <see cref="CdcEventType.TransactionCommit"/> with checkpoint string</item>
+    /// </list>
+    /// </summary>
+    protected abstract IAsyncEnumerable<CdcEvent> GetCdcEvents(CancellationToken ct);
+
+    /// <summary>
+    /// Called after each batch is submitted to the TxMerger. Subclasses can override to
+    /// perform provider-specific acknowledgment (e.g. PostgreSQL WAL status update).
+    /// </summary>
+    protected virtual Task OnBatchFlushed(string checkpoint, int rows) => Task.CompletedTask;
+
+    /// <summary>
+    /// Common streaming loop shared by all providers. Uses MoveNextAsync + Task.WhenAny
+    /// to overlap event reading with batch processing — when the TxMerger finishes a batch
+    /// while we're waiting for the next event, we immediately flush any accumulated ops
+    /// without waiting for another event to arrive.
+    /// </summary>
+    /// <summary>
+    /// The current JSON parsing context for CDC streaming. Subclasses use this in
+    /// <see cref="GetCdcEvents"/> when decoding rows. Rotated on each batch flush
+    /// so that blittable objects from the previous batch stay alive until the TxMerger
+    /// finishes writing them.
+    /// </summary>
+    protected DocumentsOperationContext StreamingJsonContext { get; private set; }
+
+    protected async Task ProcessCdcStream(CancellationToken ct)
+    {
+        var batch = new List<CdcSinkDocumentOp>();
+        var pending = new List<CdcSinkDocumentOp>();
+        var emptyTask = Task.FromResult<(string, int)>((null, 0));
+        Task<(string, int)> lastBatch = emptyTask;
+        string lastCheckpoint = null;
+
+        // Context rotation: blittable objects created by ProcessRow reference the context's
+        // memory. We allocate a new context per batch so the previous one stays alive until
+        // the TxMerger finishes writing it.
+        IDisposable previousCtx = null;
+        var currentCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+        StreamingJsonContext = ctx;
+
+        async Task FlushBatch()
+        {
+            (string completedCheckpoint, int rows) = await lastBatch;
+            if (completedCheckpoint is not null)
+                await OnBatchFlushed(completedCheckpoint, rows);
+
+            // Rotate context: previous batch's blittables stay alive in previousCtx
+            // until the next FlushBatch call disposes it after awaiting lastBatch.
+            // Safe to dispose the context, since we just awaited on the previous batch's completion that used it
+            previousCtx?.Dispose();
+            previousCtx = currentCtx;
+            currentCtx = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out ctx);
+            StreamingJsonContext = ctx;
+
+            if (batch.Count is 0)
+            {
+                // drop  reference to the last batch, in case it holds any resources / memory
+                lastBatch = emptyTask;
+                return;
+            }
+
+            lastBatch = SubmitBatch(batch, lastCheckpoint);
+            batch = [];
+        }
+
+        try
+        {
+            await using var enumerator = GetCdcEvents(ct).GetAsyncEnumerator(ct);
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var moveNext = enumerator.MoveNextAsync();
+
+                bool moveNextResult = false;
+
+                if (moveNext.IsCompleted == false)
+                {
+                    var moveTask = moveNext.AsTask();
+
+                    // Race: wait for either the next event or the previous batch to complete.
+                    // This allows flushing accumulated ops while the source is idle or slow.
+                    await Task.WhenAny(moveTask, lastBatch);
+
+                    if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
+                        await FlushBatch();
+
+                    moveNextResult = await moveTask;
+                }
+                else
+                {
+                    moveNextResult = await moveNext;
+                }
+                
+                if (moveNextResult is false)
+                    break; // enumerator is completed (cancelled, probably)
+
+                var evt = enumerator.Current;
+
+                switch (evt.Type)
+                {
+                    case CdcEventType.Upsert or CdcEventType.Delete:
+                        pending.Add(evt.Op);
+                        break;
+
+                    case CdcEventType.TransactionCommit:
+                        batch.AddRange(pending);
+                        pending.Clear();
+                        lastCheckpoint = evt.Checkpoint;
+                        break;
+                }
+            }
+
+            // Stream ended — flush remaining ops, then wait for the final batch to complete
+            await FlushBatch();
+            (string finalCheckpoint, int rows) = await lastBatch;
+            if (finalCheckpoint is not null) // force a flush, ensure the last LSN is acknowledged for PostgreSQL and similar providers.
+                await OnBatchFlushed(finalCheckpoint, Database.Configuration.CdcSink.MaxBatchSize + 1); 
+        }
+        finally
+        {
+            previousCtx?.Dispose();
+            currentCtx?.Dispose();
+            StreamingJsonContext = null;
+        }
     }
 
     /// <summary>
@@ -468,23 +604,26 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 Data = data,
             };
 
-            var op = DocumentProcessor.ProcessRow(row, jsonParsingCtx);
-            if (op != null)
-                ops.Add(op);
+            ops.Add(DocumentProcessor.ProcessRow(row, jsonParsingCtx));
         }
 
-        // Extract last keys from the last row's RawData for keyset pagination resume
+        // Extract last keys from the last non-null op's RawData for keyset pagination resume.
+        // Ops can contain nulls from DocumentProcessor.ProcessRow for unconfigured tables.
         string[] newLastKeys = null;
-        if (ops.Count > 0)
+        for (int j = ops.Count - 1; j >= 0; j--)
         {
-            var lastRowData = ops[ops.Count - 1].RawData;
+            if (ops[j]?.RawData == null)
+                continue;
+            var lastRowData = ops[j].RawData;
             newLastKeys = new string[pkColumns.Count];
             for (int i = 0; i < pkColumns.Count; i++)
                 newLastKeys[i] = lastRowData.TryGetValue(pkColumns[i], out var v) ? v?.ToString() ?? "" : "";
+            break;
         }
 
         return (ops, newLastKeys, ctxHolder);
     }
+
 
     protected async Task HandleInitialLoad(CancellationToken ct)
     {
@@ -633,13 +772,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         if (batchSize >= Database.Configuration.CdcSink.MaxBatchSize)
             return true;
 
-        if (_lowMemoryFlag.IsRaised() && batchSize >= MinBatchSize)
-            return true;
-
-        if (Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised())
-            return true;
-
-        return false;
+        // we are always called with a full transaction, so no point in 
+        // trying to fill a whole batch in low mem state
+        return _lowMemoryFlag.IsRaised() ||
+            Database.ServerStore.Server.CpuCreditsBalance.BackgroundTasksAlertRaised.IsRaised();
     }
 
 
@@ -681,7 +817,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         _lowMemoryFlag.Lower();
     }
 
-    internal static void AddParameter(System.Data.Common.DbCommand cmd, string name, object value)
+    internal static void AddParameter(DbCommand cmd, string name, object value)
     {
         var param = cmd.CreateParameter();
         param.ParameterName = name;
