@@ -149,6 +149,7 @@ namespace Raven.Server.Documents
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
                 TableValueReader tvr = default;
+                var parentHasFilteredPullFlag = false;
                 if (fromSmuggler == false)
                 {
                     // This will validate that we cannot put an attachment on a conflicted document
@@ -158,6 +159,7 @@ namespace Raven.Server.Documents
                     var flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr);
                     if (flags.HasFlag(DocumentFlags.Artificial))
                         throw new InvalidOperationException($"Cannot put attachment {name} on artificial document '{documentId}'.");
+                    parentHasFilteredPullFlag = flags.Contain(DocumentFlags.FromFilteredPullReplicationHub);
                 }
 
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice namePtr))
@@ -168,9 +170,19 @@ namespace Raven.Server.Documents
                 {
                     Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
+                    var tombstone = GetAttachmentTombstoneByKey(context, keySlice);
+                    var tombstoneChangeVector = tombstone?.ChangeVector;
+                    tombstone?.Dispose();
+
+                    // When the parent document has FromFilteredPullReplicationHub and no exact-match tombstone
+                    // was found (e.g., the attachment is being replaced with different content/hash), search for
+                    // a tombstone with the same doc+name prefix so lineage is preserved from the prior version.
+                    if (string.IsNullOrEmpty(tombstoneChangeVector) && parentHasFilteredPullFlag)
+                        tombstoneChangeVector = FindTombstoneChangeVectorByDocNamePrefix(context, lowerDocumentId, lowerName);
+
                     DeleteTombstoneIfNeeded(context, keySlice);
 
-                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                    var changeVector = GetAttachmentChangeVectorForLocalPut(context, tombstoneChangeVector, attachmentEtag, parentHasFilteredPullFlag);
                     Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -1034,6 +1046,19 @@ namespace Raven.Server.Documents
             return null;
         }
 
+        private string FindTombstoneChangeVectorByDocNamePrefix(DocumentsOperationContext context, Slice lowerDocumentId, Slice lowerName)
+        {
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
+
+            using (AttachmentKey.GetPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, changeVector: null, out Slice partialKeySlice))
+            {
+                if (tombstoneTable.SeekOnePrimaryKeyPrefix(partialKeySlice, out var tvr))
+                    return TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr);
+            }
+
+            return null;
+        }
+
         public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
             string expectedChangeVector, string changeVector, long lastModifiedTicks)
         {
@@ -1108,6 +1133,25 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.DocumentsStorage.TombstonesSchema, AttachmentsTombstonesSlice);
             table.DeleteByKey(keySlice);
+        }
+
+        private string GetAttachmentChangeVectorForLocalPut(DocumentsOperationContext context, string tombstoneChangeVector, long attachmentEtag, bool parentHasFilteredPullFlag)
+        {
+            if (string.IsNullOrEmpty(tombstoneChangeVector))
+            {
+                return parentHasFilteredPullFlag
+                 ? ChangeVectorUtils.NewChangeVector(_documentsStorage.DocumentDatabase, attachmentEtag, context)
+                 : _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+            }
+
+            // Advance the local DB CV entry conservatively, then preserve the sibling lineage from the tombstone itself
+            _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+
+            var changeVector = context.GetChangeVector(tombstoneChangeVector);
+            changeVector = changeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, attachmentEtag, context);
+            changeVector = changeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, attachmentEtag, context);
+            var preservedChangeVector = changeVector.AsString();
+            return preservedChangeVector;
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,

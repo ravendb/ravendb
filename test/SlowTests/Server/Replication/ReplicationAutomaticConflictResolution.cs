@@ -483,21 +483,20 @@ return out;
 
         private static void VerifyRevisionsAfterConflictResolving(IDocumentSession session)
         {
-            var revision = session.Advanced.Revisions.GetFor<User>("users/1");
-            Assert.Equal(3, revision.Count);
+            var revisionsCount = WaitForValue(() => session.Advanced.Revisions.GetMetadataFor("users/1").Count, expectedVal: 3, interval: 128);
+            Assert.Equal(3, revisionsCount);
 
-            var metadata = session.Advanced.GetMetadataFor(revision[0]);
-            var flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            var revisionsMetadata = session.Advanced.Revisions.GetMetadataFor("users/1");
+            Assert.Equal(3, revisionsMetadata.Count);
+
+            var flags = revisionsMetadata[0].GetString(Constants.Documents.Metadata.Flags);
             Assert.Contains(DocumentFlags.Resolved.ToString(), flags);
 
-            metadata = session.Advanced.GetMetadataFor(revision[1]);
-            flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            flags = revisionsMetadata[1].GetString(Constants.Documents.Metadata.Flags);
             Assert.Contains(DocumentFlags.Conflicted.ToString(), flags);
 
-            metadata = session.Advanced.GetMetadataFor(revision[2]);
-            flags = metadata.GetString(Constants.Documents.Metadata.Flags);
+            flags = revisionsMetadata[2].GetString(Constants.Documents.Metadata.Flags);
             Assert.Contains(DocumentFlags.Conflicted.ToString(), flags);
         }
-
     }
 }

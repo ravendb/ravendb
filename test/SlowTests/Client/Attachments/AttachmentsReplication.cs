@@ -252,7 +252,7 @@ namespace SlowTests.Client.Attachments
                 store1.Operations.Send(new DeleteAttachmentOperation("users/1", "file2"));
 
                 await SetupAttachmentReplicationAsync(store1, store2);
-                await AssertAttachmentCount(store2, 2);
+                await AssertAttachmentCountAfterReplicationAsync(store2, options, 2);
 
                 using (var session = store2.OpenSession())
                 {
@@ -300,8 +300,28 @@ namespace SlowTests.Client.Attachments
                     session.SaveChanges();
                 }
                 Assert.True(WaitForDocument(store2, "users/1$marker2"));
-                await AssertAttachmentCount(store2, 0);
+                await AssertAttachmentCountAfterReplicationAsync(store2, options, uniqueAttachmentCount: 0);
             }
+        }
+
+        private async ValueTask AssertAttachmentCountAfterReplicationAsync(DocumentStore store, Options options, long uniqueAttachmentCount, long? attachmentCount = null, long? documentsCount = null)
+        {
+            if (options.DatabaseMode != RavenDatabaseMode.Sharded)
+            {
+                await AssertAttachmentCount(store, uniqueAttachmentCount, attachmentCount, documentsCount);
+                return;
+            }
+
+            var expectedAttachmentCount = attachmentCount ?? uniqueAttachmentCount;
+
+            // In sharded mode a marker can arrive before the orchestrator essential stats reflect the owning shard state.
+            Assert.True(await WaitForValueAsync(async () =>
+            {
+                var statistics = await GetDatabaseStatisticsAsync(store);
+                return statistics.CountOfAttachments == expectedAttachmentCount &&
+                       statistics.CountOfUniqueAttachments == uniqueAttachmentCount &&
+                       (documentsCount == null || statistics.CountOfDocuments == documentsCount.Value);
+            }, true));
         }
 
         public async ValueTask AssertAttachmentCount(DocumentStore store, long uniqueAttachmentCount, long? attachmentCount = null, long? documentsCount = null)
@@ -417,6 +437,30 @@ namespace SlowTests.Client.Attachments
                 session.SaveChanges();
             }
             Assert.True(WaitForDocument(store2, id));
+        }
+
+        private async Task WaitForResolvedAttachmentConflictStateAsync(IDocumentStore store, string expectedName, string expectedHash, string expectedContentType, long expectedSize)
+        {
+            // In sharded mode the marker can arrive before the bucket-local conflict resolution is fully observable to LoadAsync().
+            Assert.True(await WaitForValueAsync(async () =>
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    if (user?.Name != expectedName)
+                        return false;
+
+                    var attachments = session.Advanced.Attachments.GetNames(user);
+                    if (attachments.Length != 1)
+                        return false;
+
+                    var attachment = attachments[0];
+                    return attachment.Name == "a1" &&
+                           attachment.Hash == expectedHash &&
+                           attachment.ContentType == expectedContentType &&
+                           attachment.Size == expectedSize;
+                }
+            }, true, Debugger.IsAttached ? 60000 : 30000, interval: 333));
         }
 
         private async ValueTask AssertDeleteAsync(DocumentStore store1, DocumentStore store2, string name, long expectedUniqueAttachments, long? expectedAttachments = null)
@@ -1653,8 +1697,8 @@ namespace SlowTests.Client.Attachments
 
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForMarker(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -1715,8 +1759,8 @@ namespace SlowTests.Client.Attachments
 
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForMarker(store1, store2);
 
                 using (var session = store1.OpenAsyncSession())
@@ -1779,6 +1823,16 @@ namespace SlowTests.Client.Attachments
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForMarker(store1, store2);
+                await WaitForResolvedAttachmentConflictStateAsync(store1,
+                    expectedName: "EGOR",
+                    expectedHash: "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=",
+                    expectedContentType: "a2/jpeg",
+                    expectedSize: 3);
+                await WaitForResolvedAttachmentConflictStateAsync(store2,
+                    expectedName: "EGOR",
+                    expectedHash: "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=",
+                    expectedContentType: "a2/jpeg",
+                    expectedSize: 3);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -1840,6 +1894,16 @@ namespace SlowTests.Client.Attachments
                 WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForMarker(store1, store2);
+                await WaitForResolvedAttachmentConflictStateAsync(store1,
+                    expectedName: "EGOR",
+                    expectedHash: "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=",
+                    expectedContentType: "a2/jpeg",
+                    expectedSize: 3);
+                await WaitForResolvedAttachmentConflictStateAsync(store2,
+                    expectedName: "EGOR",
+                    expectedHash: "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=",
+                    expectedContentType: "a2/jpeg",
+                    expectedSize: 3);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -1892,8 +1956,15 @@ namespace SlowTests.Client.Attachments
                 await db1.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
                 await db2.ServerStore.Cluster.WaitForIndexNotification(res2.RaftCommandIndex);
 
-                Assert.True(await WaitForValueAsync(() => replicationConnection1.IsConnectionDisposed, true));
-                Assert.True(await WaitForValueAsync(() => replicationConnection2.IsConnectionDisposed, true));
+                // Disabling external replication removes handlers synchronously, but the actual Dispose()
+                // is queued on the ThreadPool by ReplicationLoader. Under looped replication runs we need
+                // to wait for that async disposal window before creating the divergent attachment state.
+                var disposeTimeout = Debugger.IsAttached ? 120_000 : 30_000;
+                var connection1DisposedTask = WaitForValueAsync(() => replicationConnection1.IsConnectionDisposed, true, timeout: disposeTimeout);
+                var connection2DisposedTask = WaitForValueAsync(() => replicationConnection2.IsConnectionDisposed, true, timeout: disposeTimeout);
+
+                Assert.True(await connection1DisposedTask, "Expected the first external replication connection to be disposed after disabling the task.");
+                Assert.True(await connection2DisposedTask, "Expected the second external replication connection to be disposed after disabling the task.");
 
                 await using (var a1 = new MemoryStream(new byte[] { 1, 2, 3, 4 }))
                 {
@@ -1927,6 +1998,16 @@ namespace SlowTests.Client.Attachments
                 }
 
                 WaitForMarker(store1, store2);
+                await WaitForResolvedAttachmentConflictStateAsync(store1,
+                    expectedName: "EGOR",
+                    expectedHash: "XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=",
+                    expectedContentType: "a1/jpeg",
+                    expectedSize: 4);
+                await WaitForResolvedAttachmentConflictStateAsync(store2,
+                    expectedName: "EGOR",
+                    expectedHash: "XiUNwy+pPQdTVBunU26rVydiLOd3Iqgtz4lkmZVfSs4=",
+                    expectedContentType: "a1/jpeg",
+                    expectedSize: 4);
 
                 using (var session = store1.OpenAsyncSession())
                 {
@@ -2323,8 +2404,8 @@ namespace SlowTests.Client.Attachments
                 var orderedDocsByEtag = cvs;
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
-                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
-                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store1, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
+                WaitForDocumentWithAttachmentToReplicate<User>(store2, "users/1", "RESOLVED_#0_a1", Debugger.IsAttached ? 60000 : 15000);
                 WaitForMarker(store1, store2);
 
                 var name = orderedDocsByEtag.First().Item1;

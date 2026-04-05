@@ -81,10 +81,20 @@ public class RavenDB_20423 : ReplicationTestBase
             {
                 var doc = await session.LoadAsync<User>(id);
                 Assert.Null(doc); // doc has been deleted, So it should load null (even its revisions exist in the revisions bin).
+            }
 
-                // Deleted doc has 4 revisions, the last is 'Delete Revision'
-                var revisionsCount = await session.Advanced.Revisions.GetCountForAsync(id);
-                Assert.Equal(4, revisionsCount);
+            // EnsureReplicatingAsync waits for a marker document. On a sharded destination the
+            // revision bin entries can lag behind that marker, so wait for the expected revision count
+            // before asserting revision metadata and attachment payloads.
+            var revisionsCount = await WaitForValueAsync(async () =>
+            {
+                using var session = destination.OpenAsyncSession();
+                return await session.Advanced.Revisions.GetCountForAsync(id);
+            }, expectedVal: 4, timeout: 15_000);
+
+            using (var session = destination.OpenAsyncSession())
+            {
+                Assert.Equal(4, revisionsCount); // Deleted doc has 4 revisions, the last is 'Delete Revision'
 
                 var revisionsMetadata = await session.Advanced.Revisions.GetMetadataForAsync(id);
                 Assert.Equal(4, revisionsMetadata.Count);
@@ -112,7 +122,6 @@ public class RavenDB_20423 : ReplicationTestBase
                         AssertAttachmntStream(context, db, id, cv);
                     }
                 }
-
             }
         }
     }
@@ -128,4 +137,3 @@ public class RavenDB_20423 : ReplicationTestBase
         Assert.NotNull(stream);
     }
 }
-

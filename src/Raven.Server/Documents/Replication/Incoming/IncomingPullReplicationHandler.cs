@@ -1,6 +1,5 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Replication.Messages;
@@ -110,10 +109,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override string ReplaceUnknownEntriesWithSinkIfNeeded(DocumentsOperationContext context,string changeVector)
         {
-            var isHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub;
-            if (isHub && string.IsNullOrEmpty(changeVector) == false)
+            var isFilteredHub = _incomingPullReplicationParams.Mode == PullReplicationMode.SinkToHub &&
+                                _incomingPullReplicationParams.AllowedPaths is { Length: > 0 };
+            if (isFilteredHub && string.IsNullOrEmpty(changeVector) == false)
             {
-                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector);
+                changeVector = MergedDocumentForPullReplicationCommand.ReplaceUnknownEntriesWithSinkTag(context, ref changeVector, ConnectionInfo.SourceDatabaseBase64Id, out _);
             }
 
             return changeVector;
@@ -140,14 +140,18 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             private readonly bool _isHub;
             private readonly bool _isSink;
+            private readonly bool _isFilteredHub;
             private readonly PreventDeletionsMode? _preventDeletionsMode;
+            private readonly string _sourceDatabaseBase64Id;
 
             public MergedDocumentForPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag,
                 ReplicationLoader.PullReplicationParams pullReplicationParams) : base(replicationInfo, lastEtag)
             {
                 _isHub = pullReplicationParams.Mode == PullReplicationMode.SinkToHub;
                 _isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
+                _isFilteredHub = _isHub && pullReplicationParams.AllowedPaths is { Length: > 0 };
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
+                _sourceDatabaseBase64Id = replicationInfo.IncomingHandler?.ConnectionInfo?.SourceDatabaseBase64Id;
             }
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
@@ -155,11 +159,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (_isSink) 
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
 
-                var changeVectorToMerge = item.ChangeVector;
+                if (_isHub == false || _isFilteredHub == false)
+                    return context.GetChangeVector(item.ChangeVector);
 
-                if (_isHub) 
-                    changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
+                var changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector, _sourceDatabaseBase64Id, out var hasSiblingEntries);
 
+                if (hasSiblingEntries && item is DocumentReplicationItem doc)
+                    doc.Flags |= DocumentFlags.FromFilteredPullReplicationHub;
+
+                // Keep sink and sibling lineage on the document itself.
+                // Filtered sink-to-hub traffic must not advance the hub DB change vector.
                 return context.GetChangeVector(changeVectorToMerge);
             }
 
@@ -186,51 +195,73 @@ namespace Raven.Server.Documents.Replication.Incoming
                 }
             }
 
-            internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
+            internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector, string sourceDatabaseBase64Id, out bool hasSiblingEntries)
             {
-                var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
+                hasSiblingEntries = false;
                 var incoming = changeVector.ToChangeVectorList();
+                var localDbId = context.DocumentDatabase.DbBase64Id;
+                var globalDbIds = GetKnownGlobalDbIds(context);
                 var knownEntries = new List<ChangeVectorEntry>();
                 var newIncoming = new List<ChangeVectorEntry>();
 
                 foreach (var entry in incoming)
                 {
-                    if (globalDbIds?.Contains(entry.DbId) == true)
+                    if (entry.DbId == localDbId || entry.NodeTag == ChangeVectorParser.RaftInt)
                     {
                         newIncoming.Add(entry);
                         knownEntries.Add(entry);
                     }
+                    else if (entry.DbId == sourceDatabaseBase64Id)
+                    {
+                        newIncoming.Add(entry with { NodeTag = ChangeVectorParser.SinkInt });
+                    }
                     else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
                     {
                         // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
-                        continue;
+                        newIncoming.Add(entry with { NodeTag = ChangeVectorParser.TrxnInt });
+                    }
+                    else if (globalDbIds?.Contains(entry.DbId) == true)
+                    {
+                        newIncoming.Add(entry);
+                        hasSiblingEntries = true;
                     }
                     else
                     {
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.SinkInt
-                        });
+                        newIncoming.Add(entry with { NodeTag = ChangeVectorParser.SinkInt });
 
-                        context.DbIdsToIgnore ??= new HashSet<string>();
+                        context.DbIdsToIgnore ??= [];
                         context.DbIdsToIgnore.Add(entry.DbId);
+                        hasSiblingEntries = true;
                     }
                 }
 
                 changeVector = newIncoming.SerializeVector();
 
-                return knownEntries.Count > 0 ? 
-                    knownEntries.SerializeVector() : 
-                    null;
+                var changeVectorToMerge = knownEntries.Count > 0
+                    ? knownEntries.SerializeVector()
+                    : null;
+
+                return changeVectorToMerge;
+            }
+
+            private static HashSet<string> GetKnownGlobalDbIds(DocumentsOperationContext context)
+            {
+                var fullChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(context);
+                if (string.IsNullOrEmpty(fullChangeVector))
+                    return null;
+
+                var entries = fullChangeVector.ToChangeVectorList();
+                var knownDbIds = new HashSet<string>(capacity: entries.Count);
+                foreach (var entry in entries)
+                {
+                    if (entry.NodeTag == ChangeVectorParser.SinkInt ||
+                        entry.NodeTag == ChangeVectorParser.TrxnInt)
+                        continue;
+
+                    knownDbIds.Add(entry.DbId);
+                }
+
+                return knownDbIds;
             }
 
             private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
@@ -306,7 +337,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub && _pullReplicationParams.AllowedPaths is { Length: > 0 })
                     return false;
 
                 return base.TryUpdateChangeVector(context);

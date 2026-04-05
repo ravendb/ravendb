@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.Replication
         public string Message { get; set; }
         public string MessageType { get; set; }
         public string DatabaseChangeVector { get; set; }
+        public string FullDatabaseChangeVector { get; set; }
         
         public string[] AcceptablePaths { get; set; }
 
@@ -25,5 +26,6 @@ namespace Raven.Server.Documents.Replication
         public string DatabaseId { get; set; }
         public string NodeTag { get; set; }
         public long CurrentEtag { get; set; }
+        public long MatchingRegularChangeVectorEtag { get; set; }
     }
 }

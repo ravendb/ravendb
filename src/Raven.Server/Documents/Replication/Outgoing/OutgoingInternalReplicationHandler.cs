@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents.Replication.Senders;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -16,6 +17,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
     public sealed class OutgoingInternalReplicationHandler : DatabaseOutgoingReplicationHandler
     {
         private long _lastDestinationEtag;
+        internal string LastAcceptedFullChangeVector { get; private set; }
 
         public OutgoingInternalReplicationHandler(ReplicationLoader parent, DocumentDatabase database, InternalReplication node,
             TcpConnectionInfo connectionInfo) :
@@ -28,11 +30,40 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return new InternalReplicationDocumentSender(stream, this, logger);
         }
 
+        protected override void ProcessHandshakeResponse((ReplicationMessageReply.ReplyType ReplyType, ReplicationMessageReply Reply) response)
+        {
+            base.ProcessHandshakeResponse(response);
+
+            if (response.ReplyType == ReplicationMessageReply.ReplyType.Ok)
+                LastAcceptedFullChangeVector = response.Reply.FullDatabaseChangeVector ?? response.Reply.DatabaseChangeVector;
+        }
+
         protected override void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             UpdateSibling(replicationBatchReply);
             base.UpdateDestinationChangeVectorHeartbeat(replicationBatchReply);
+            LastAcceptedFullChangeVector = replicationBatchReply.FullDatabaseChangeVector ?? replicationBatchReply.DatabaseChangeVector;
         }
+
+        protected override string GetDestinationChangeVectorForPendingWork() => LastAcceptedFullChangeVector ?? LastAcceptedChangeVector;
+
+        protected override string GetCurrentChangeVectorForPendingWork(DocumentsOperationContext context) => DocumentsStorage.GetFullDatabaseChangeVector(context);
+
+        internal override string GetDestinationChangeVectorFor(ReplicationBatchItem item) =>
+            ShouldUseFullDestinationChangeVector(item)
+                ? LastAcceptedFullChangeVector ?? LastAcceptedChangeVector
+                : LastAcceptedChangeVector;
+
+        private static bool ShouldUseFullDestinationChangeVector(ReplicationBatchItem item) =>
+            item.Type switch
+            {
+                ReplicationBatchItem.ReplicationItemType.Attachment => true,
+                ReplicationBatchItem.ReplicationItemType.AttachmentTombstone => true,
+                ReplicationBatchItem.ReplicationItemType.CounterGroup => true,
+                ReplicationBatchItem.ReplicationItemType.TimeSeriesSegment => true,
+                ReplicationBatchItem.ReplicationItemType.DeletedTimeSeriesRange => true,
+                _ => false
+            };
 
         public void UpdateSibling(ReplicationMessageReply replicationBatchReply)
         {
@@ -92,55 +123,98 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
             internal bool DryRun(DocumentsOperationContext context)
             {
-                var changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                var regularCurrentEtag =
+                    _replicationBatchReply.MatchingRegularChangeVectorEtag > 0
+                        ? _replicationBatchReply.MatchingRegularChangeVectorEtag
+                        : _replicationBatchReply.CurrentEtag;
 
-                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
-                    changeVector);
+                var currentFullChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(context);
+                var destinationFullChangeVector = _replicationBatchReply.FullDatabaseChangeVector ?? _replicationBatchReply.DatabaseChangeVector;
 
-                if (status != ConflictStatus.AlreadyMerged)
-                    return false;
+                var fullStatus = ChangeVectorUtils.GetConflictStatus(destinationFullChangeVector, currentFullChangeVector);
+                var canAdvanceFull = false;
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, changeVector);
-                return result.IsValid;
+                if (fullStatus == ConflictStatus.AlreadyMerged)
+                {
+                    var fullResult = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.GetChangeVector(currentFullChangeVector));
+                    canAdvanceFull = fullResult.IsValid;
+                }
+
+                var currentRegularChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                var destinationRegularChangeVector = _replicationBatchReply.DatabaseChangeVector;
+                var regularStatus = ChangeVectorUtils.GetConflictStatus(destinationRegularChangeVector, currentRegularChangeVector);
+                var canAdvanceRegular = false;
+
+                if (regularStatus == ConflictStatus.AlreadyMerged)
+                {
+                    var regularResult = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, regularCurrentEtag, context.GetChangeVector(currentRegularChangeVector));
+                    canAdvanceRegular = regularResult.IsValid;
+                }
+
+                return canAdvanceRegular || canAdvanceFull;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
-                    context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                var regularCurrentEtag =
+                    _replicationBatchReply.MatchingRegularChangeVectorEtag > 0
+                        ? _replicationBatchReply.MatchingRegularChangeVectorEtag
+                        : _replicationBatchReply.CurrentEtag;
 
-                var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
-                    context.LastDatabaseChangeVector);
+                var currentFullChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(context);
+                var destinationFullChangeVector = _replicationBatchReply.FullDatabaseChangeVector ?? _replicationBatchReply.DatabaseChangeVector;
 
-                if (status != ConflictStatus.AlreadyMerged)
-                    return 0;
+                var fullStatus = ChangeVectorUtils.GetConflictStatus(destinationFullChangeVector, currentFullChangeVector);
+                var fullResult = default((bool IsValid, string ChangeVector));
+                var canAdvanceFull = false;
 
-                var result = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag,
-                    context.LastDatabaseChangeVector);
-                if (result.IsValid)
+                if (fullStatus == ConflictStatus.AlreadyMerged)
                 {
-                    context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
-                    if (context.LastReplicationEtagFrom.ContainsKey(_replicationBatchReply.DatabaseId) == false)
-                    {
-                        context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
-                    }
-
-                    context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
-
-                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
-                    {
-                        try
-                        {
-                            _trigger.Set();
-                        }
-                        catch
-                        {
-                            //
-                        }
-                    };
+                    fullResult = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, context.GetChangeVector(currentFullChangeVector));
+                    canAdvanceFull = fullResult.IsValid;
                 }
 
-                return result.IsValid ? 1 : 0;
+                var currentRegularChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                var destinationRegularChangeVector = _replicationBatchReply.DatabaseChangeVector;
+                var regularStatus = ChangeVectorUtils.GetConflictStatus(destinationRegularChangeVector, currentRegularChangeVector);
+                var regularResult = default((bool IsValid, string ChangeVector));
+                var canAdvanceRegular = false;
+
+                if (regularStatus == ConflictStatus.AlreadyMerged)
+                {
+                    regularResult = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, regularCurrentEtag, context.GetChangeVector(currentRegularChangeVector));
+                    canAdvanceRegular = regularResult.IsValid;
+                }
+
+                if (canAdvanceRegular == false && canAdvanceFull == false)
+                    return 0;
+
+                context.LastReplicationEtagFrom ??= new Dictionary<string, long>();
+                context.LastReplicationEtagFrom[_replicationBatchReply.DatabaseId] = _replicationBatchReply.CurrentEtag;
+
+                if (canAdvanceRegular)
+                {
+                    var regularChangeVector = context.GetChangeVector(regularResult.ChangeVector);
+                    context.LastDatabaseChangeVector = regularChangeVector;
+                    context.DocumentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, regularChangeVector);
+                }
+
+                if (canAdvanceFull)
+                    context.DocumentDatabase.DocumentsStorage.SetFullDatabaseChangeVector(context, fullResult.ChangeVector);
+
+                context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                {
+                    try
+                    {
+                        _trigger.Set();
+                    }
+                    catch
+                    {
+                        //
+                    }
+                };
+
+                return 1;
             }
 
             public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)

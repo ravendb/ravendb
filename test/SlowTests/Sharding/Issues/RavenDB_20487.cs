@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
+using System;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Replication;
@@ -145,6 +146,8 @@ namespace SlowTests.Sharding.Issues
         [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task ReplicationWithCountersToShardedAndThenToNonShardedShouldWork()
         {
+            const int initialMarkerTimeout = 60 * 1000;
+
             using (var store1 = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = r =>
@@ -172,7 +175,18 @@ namespace SlowTests.Sharding.Issues
                 }
 
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
+
+                var markerId = "marker/" + Guid.NewGuid();
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new { }, markerId);
+                    session.SaveChanges();
+                }
+
+                // This precondition sits behind a deliberately throttled replication backlog (MaxItemsCount=1),
+                // so full-suite load can stretch the initial catch-up well past a coarse 30s bound.
+                var marker = await Replication.WaitForDocumentToReplicateAsync<object>(store2, markerId, initialMarkerTimeout);
+                Assert.NotNull(marker);
 
                 var replication = await ShardedReplicationTestBase.ShardedReplicationManager.GetShardedReplicationManager(await Sharding.GetShardingConfigurationAsync(store2),
                     new List<RavenServer>() { Server }, store2.Database, new ReplicationManager.ReplicationOptions
@@ -209,6 +223,8 @@ namespace SlowTests.Sharding.Issues
         [RavenFact(RavenTestCategory.Replication)]
         public async Task ReplicationToShardedAndThenToNonShardedShouldWork2()
         {
+            const int initialMarkerTimeout = 60 * 1000;
+
             using (var store1 = GetDocumentStore(new Options
             {
                 ModifyDatabaseRecord = r =>
@@ -223,7 +239,18 @@ namespace SlowTests.Sharding.Issues
                                                                                  DatabaseItemType.Attachments | DatabaseItemType.Tombstones | DatabaseItemType.CounterGroups));
               
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
+
+                var markerId = "marker/" + Guid.NewGuid();
+                using (var session = store1.OpenSession())
+                {
+                    session.Store(new { }, markerId);
+                    session.SaveChanges();
+                }
+
+                // This precondition sits behind a deliberately throttled replication backlog (MaxItemsCount=1),
+                // so full-suite load can stretch the initial catch-up well past a coarse 30s bound.
+                var marker = await Replication.WaitForDocumentToReplicateAsync<object>(store2, markerId, initialMarkerTimeout);
+                Assert.NotNull(marker);
 
                 var replication = await ShardedReplicationTestBase.ShardedReplicationManager.GetShardedReplicationManager(await Sharding.GetShardingConfigurationAsync(store2),
                     new List<RavenServer>() { Server }, store2.Database, new ReplicationManager.ReplicationOptions

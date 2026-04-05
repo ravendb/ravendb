@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Server.Config;
@@ -296,11 +296,10 @@ namespace SlowTests.Issues
 
                 await AssertRevisionsCountAsync(storeA, 3);
                 await AssertRevisionsCountAsync(storeB, 3);
-
                 // RavenDB-20322  
                 // after the fix for RavenDB-20322, we expect 10 revisions (instead of 8):  
                 // - 2 extra conflicted revisions are created due to resolving one more time, even though the document content was identical
-                await AssertRevisionsCountAsync(storeC, 10);
+                await WaitForRevisionsCountAsync(storeC, 10);
 
                 using (var session = storeA.OpenSession())
                 {
@@ -311,7 +310,7 @@ namespace SlowTests.Issues
 
                 Assert.True(WaitForDocument<User>(storeC, "users/shiran", u => u.Age == 30));
 
-                await AssertRevisionsCountAsync(storeC, 10);
+                await WaitForRevisionsCountAsync(storeC, 10);
             }
         }
 
@@ -406,6 +405,17 @@ namespace SlowTests.Issues
                 var revisionsCount = await session.Advanced.Revisions.GetCountForAsync("users/shiran");
                 Assert.Equal(expectedNumberOfRevisions, revisionsCount);
             }
+        }
+
+        private static async Task WaitForRevisionsCountAsync(IDocumentStore store, int expectedNumberOfRevisions, int timeout = 15_000)
+        {
+            var count = await WaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                return await session.Advanced.Revisions.GetCountForAsync("users/shiran");
+            }, expectedNumberOfRevisions, timeout);
+
+            Assert.Equal(expectedNumberOfRevisions, count);
         }
     }
 }

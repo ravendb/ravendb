@@ -986,7 +986,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = GetTombstoneCleanupEtag(state);
 
                 // the default in this case is '0', which means that nothing of this node was consumed and therefore we cannot delete anything
                 if (transform.ApplyToAllDocuments)
@@ -1019,7 +1019,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = GetTombstoneCleanupEtag(state);
 
                 if (transform.ApplyToAllDocuments)
                 {
@@ -1042,7 +1042,7 @@ namespace Raven.Server.Documents.ETL
             foreach (var transform in config.Transforms)
             {
                 var state = EtlProcess.GetProcessState(_database, config.Name, transform.Name);
-                var etag = ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
+                var etag = GetTombstoneCleanupEtag(state);
 
                 if (transform.ApplyToAllDocuments)
                 {
@@ -1070,6 +1070,7 @@ namespace Raven.Server.Documents.ETL
             var min = Math.Min(value, old);
             dic[key] = min;
         }
+
         private void AddOrUpdateInfo(Dictionary<string, LastTombstoneInfo> dic, string name, string collection, long value, ITombstoneAware.TombstoneDeletionBlockerType type)
         {
             if (dic == null)
@@ -1083,6 +1084,13 @@ namespace Raven.Server.Documents.ETL
             {
                 old.Etag = value;
             }
+        }
+
+        private long GetTombstoneCleanupEtag(EtlProcessState state)
+        {
+            return state.LastProcessedEtagPerDbId is { Count: > 0 }
+                ? state.LastProcessedEtagPerDbId.Values.Max()
+                : ChangeVectorUtils.GetEtagById(state.ChangeVector, _database.DbBase64Id);
         }
     }
 }

@@ -883,14 +883,29 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 void AssertValues(IDocumentStore store)
                 {
-                    using (var session = store.OpenSession())
+                    (DateTime Timestamp, double Value, string Tag)[] lastValues = null;
+                    var settled = WaitForValue(() =>
                     {
-                        var val = session.TimeSeriesFor("users/ayende", "Heartrate").Get().Single();
+                        using (var session = store.OpenSession())
+                        {
+                            lastValues = session.TimeSeriesFor("users/ayende", "Heartrate")
+                                .Get(DateTime.MinValue, DateTime.MaxValue)
+                                .Select(x => (x.Timestamp, x.Value, x.Tag))
+                                .ToArray();
+                        }
 
-                        Assert.Equal(60, val.Value);
-                        Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                    }
+                        return lastValues.Length == 1 &&
+                               lastValues[0].Value == 60 &&
+                               lastValues[0].Tag == "watches/fitbit" &&
+                               RavenTestHelper.DateTimeComparer.Instance.Equals(lastValues[0].Timestamp, baseline.AddMinutes(1));
+                    }, true, timeout: 15_000, interval: 100);
+
+                    Assert.True(settled, $"Expected a single surviving entry with value 60 at {baseline.AddMinutes(1):O}, but got: {string.Join(", ", lastValues.Select(x => $"{x.Timestamp:O}:{x.Value}:{x.Tag}"))}");
+
+                    var val = Assert.Single(lastValues);
+                    Assert.Equal(60, val.Value);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }
@@ -939,14 +954,29 @@ namespace SlowTests.Client.TimeSeries.Replication
 
                 void AssertValues(IDocumentStore store)
                 {
-                    using (var session = store.OpenSession())
+                    (DateTime Timestamp, double Value, string Tag)[] lastValues = null;
+                    var settled = WaitForValue(() =>
                     {
-                        var val = session.TimeSeriesFor("users/ayende", "Heartrate").Get().Single();
+                        using (var session = store.OpenSession())
+                        {
+                            lastValues = session.TimeSeriesFor("users/ayende", "Heartrate")
+                                .Get(DateTime.MinValue, DateTime.MaxValue)
+                                .Select(x => (x.Timestamp, x.Value, x.Tag))
+                                .ToArray();
+                        }
 
-                        Assert.Equal(60, val.Value);
-                        Assert.Equal("watches/fitbit", val.Tag);
-                        Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
-                    }
+                        return lastValues.Length == 1 &&
+                               lastValues[0].Value == 60 &&
+                               lastValues[0].Tag == "watches/fitbit" &&
+                               RavenTestHelper.DateTimeComparer.Instance.Equals(lastValues[0].Timestamp, baseline.AddMinutes(1));
+                    }, true, timeout: 15_000, interval: 100);
+
+                    Assert.True(settled, $"Expected a single surviving entry with value 60 at {baseline.AddMinutes(1):O}, but got: {string.Join(", ", lastValues.Select(x => $"{x.Timestamp:O}:{x.Value}:{x.Tag}"))}");
+
+                    var val = Assert.Single(lastValues);
+                    Assert.Equal(60, val.Value);
+                    Assert.Equal("watches/fitbit", val.Tag);
+                    Assert.Equal(baseline.AddMinutes(1), val.Timestamp, RavenTestHelper.DateTimeComparer.Instance);
                 }
             }
         }

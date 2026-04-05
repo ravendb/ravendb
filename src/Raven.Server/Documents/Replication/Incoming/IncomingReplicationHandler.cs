@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -160,11 +160,20 @@ namespace Raven.Server.Documents.Replication.Incoming
             {
                 var current = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
+                var canBumpSourceEntryFromIncomingChangeVector = _connectionInfo.ReplicationsType is
+                    ReplicationLatestEtagRequest.ReplicationType.Internal or
+                    ReplicationLatestEtagRequest.ReplicationType.Sharded;
+
+                var sourceEtagFromIncomingChangeVector = string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id)
+                    ? 0
+                    : ChangeVectorUtils.GetEtagById(_changeVector, _connectionInfo.SourceDatabaseBase64Id);
                 if (conflictStatus != ConflictStatus.Update)
                 {
-                    if (string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false)
+                    if (canBumpSourceEntryFromIncomingChangeVector &&
+                        string.IsNullOrEmpty(_connectionInfo.SourceDatabaseBase64Id) == false &&
+                        sourceEtagFromIncomingChangeVector > 0)
                     {
-                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, _lastDocumentEtag, current);
+                        var result = ChangeVectorUtils.TryUpdateChangeVector(_connectionInfo.SourceTag, _connectionInfo.SourceDatabaseBase64Id, sourceEtagFromIncomingChangeVector, current);
                         if (result.IsValid)
                         {
                             context.LastDatabaseChangeVector = context.GetChangeVector(result.ChangeVector);
@@ -216,9 +225,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     lastEtag = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, ConnectionInfo.SourceDatabaseId);
                     lastChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                    changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
                 }
-
-                changeVector = ReplaceUnknownEntriesWithSinkIfNeeded(documentsContext, changeVector);
 
                 var status = ChangeVectorUtils.GetConflictStatus(changeVector, lastChangeVector);
                 if (status == ConflictStatus.Update || _lastDocumentEtag > lastEtag)
@@ -264,8 +272,10 @@ namespace Raven.Server.Documents.Replication.Incoming
 
         protected override DynamicJsonValue GetHeartbeatStatusMessage(DocumentsOperationContext documentsContext, long lastDocumentEtag, string handledMessageType)
         {
-            string databaseChangeVector;
-            long currentLastEtagMatchingChangeVector;
+            string regularDatabaseChangeVector;
+            string fullDatabaseChangeVector = null;
+            long currentLastEtagMatchingRegularChangeVector;
+            long currentLastDatabaseEtag;
 
             using (documentsContext.OpenReadTransaction())
             {
@@ -273,19 +283,33 @@ namespace Raven.Server.Documents.Replication.Incoming
                 // is the same or higher then ours, and if so, we'll update the change vector on the sibling to reflect
                 // our own latest etag. This allows us to have effective synchronization points, since each change will
                 // be able to tell (roughly) where it is at on the entire cluster.
-                databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-                currentLastEtagMatchingChangeVector = _database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
+                regularDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+
+                if (ReplicationType == ReplicationLatestEtagRequest.ReplicationType.Internal)
+                    fullDatabaseChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
+
+                currentLastDatabaseEtag = _database.DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
+                currentLastEtagMatchingRegularChangeVector = ChangeVectorUtils.GetEtagById(regularDatabaseChangeVector, _database.DbBase64Id);
             }
 
             if (Logger.IsInfoEnabled)
             {
                 Logger.Info($"Sending heartbeat ok => {FromToString} with last document etag = {lastDocumentEtag}, " +
-                            $"last document change vector: {databaseChangeVector}");
+                            $"last document change vector: {regularDatabaseChangeVector}");
             }
 
             var heartbeat = base.GetHeartbeatStatusMessage(documentsContext, lastDocumentEtag, handledMessageType);
-            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] = currentLastEtagMatchingChangeVector;
-            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector;
+
+            // Internal sibling advancement needs the destination's actual latest etag, not just
+            // the etag currently reflected by its DB change vector.
+            heartbeat[nameof(ReplicationMessageReply.CurrentEtag)] =
+                ReplicationType is ReplicationLatestEtagRequest.ReplicationType.Internal
+                    ? currentLastDatabaseEtag
+                    : currentLastEtagMatchingRegularChangeVector;
+
+            heartbeat[nameof(ReplicationMessageReply.MatchingRegularChangeVectorEtag)] = currentLastEtagMatchingRegularChangeVector;
+            heartbeat[nameof(ReplicationMessageReply.DatabaseChangeVector)] = regularDatabaseChangeVector;
+            heartbeat[nameof(ReplicationMessageReply.FullDatabaseChangeVector)] = fullDatabaseChangeVector;
             heartbeat[nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString();
 
             LastHeartbeatTicks = _database.Time.GetUtcNow().Ticks;
@@ -308,17 +332,22 @@ namespace Raven.Server.Documents.Replication.Incoming
             private readonly long _lastEtag;
             private readonly bool _isInternal;
             private readonly DataForReplicationCommand _replicationInfo;
+            private readonly HashSet<string> _flaggedDocumentIds;
+            private readonly Dictionary<string, bool> _flaggedParentLookupCache = new(StringComparer.OrdinalIgnoreCase);
 
             public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool isInternal = false)
             {
                 _replicationInfo = replicationInfo;
                 _lastEtag = lastEtag;
                 _isInternal = isInternal;
+                _flaggedDocumentIds = isInternal ? BuildFlaggedDocumentIds(replicationInfo) : null;
             }
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                return context.GetChangeVector(item.ChangeVector).Order;
+                return ShouldSkipDatabaseChangeVectorMerge(context, item)
+                    ? context.GetChangeVector(null)
+                    : context.GetChangeVector(item.ChangeVector).Order;
             }
 
             protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
@@ -339,6 +368,78 @@ namespace Raven.Server.Documents.Replication.Incoming
             protected virtual void SetIsIncomingReplication()
             {
                 IsIncomingInternalReplication = _isInternal;
+            }
+
+            private static HashSet<string> BuildFlaggedDocumentIds(DataForReplicationCommand replicationInfo)
+            {
+                var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var item in replicationInfo.ReplicatedItems)
+                {
+                    if (item is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub))
+                        result.Add(doc.Id);
+                }
+
+                return result;
+            }
+
+            private bool ShouldSkipDatabaseChangeVectorMerge(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
+                if (_isInternal == false)
+                    return false;
+
+                if (item is DocumentReplicationItem doc && doc.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub))
+                    return true;
+
+                if (TryGetParentDocumentId(item, out string parentDocumentId) == false)
+                    return false;
+
+                if (_flaggedDocumentIds?.Contains(parentDocumentId) == true)
+                    return true;
+
+                if (_flaggedParentLookupCache.TryGetValue(parentDocumentId, out var isFlagged))
+                    return isFlagged;
+
+                isFlagged = HasFilteredPullReplicationHubFlag(context, parentDocumentId);
+
+                _flaggedParentLookupCache[parentDocumentId] = isFlagged;
+                return isFlagged;
+            }
+
+            private static bool TryGetParentDocumentId(ReplicationBatchItem item, out string parentDocumentId)
+            {
+                parentDocumentId = null;
+
+                switch (item)
+                {
+                    case AttachmentReplicationItem attachment:
+                        parentDocumentId = CompoundKeyHelper.ExtractDocumentId(attachment.Key);
+                        return true;
+                    case AttachmentTombstoneReplicationItem attachmentTombstone:
+                        parentDocumentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key);
+                        return true;
+                    case CounterReplicationItem counter:
+                        parentDocumentId = counter.Id;
+                        return true;
+                    case TimeSeriesReplicationItem timeSeries:
+                        parentDocumentId = CompoundKeyHelper.ExtractDocumentId(timeSeries.Key);
+                        return true;
+                    case TimeSeriesDeletedRangeItem deletedRange:
+                        parentDocumentId = CompoundKeyHelper.ExtractDocumentId(deletedRange.Key);
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
+            private static bool HasFilteredPullReplicationHubFlag(DocumentsOperationContext context, string documentId)
+            {
+                var documentOrTombstone = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, documentId, DocumentFields.Default, throwOnConflict: false);
+
+                using var document = documentOrTombstone.Document;
+                using var tombstone = documentOrTombstone.Tombstone;
+
+                return document?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == true ||
+                       tombstone?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == true;
             }
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
@@ -373,7 +474,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                         var changeVectorVersion = incomingChangeVector.Version;
 
-                        context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
+                        if (changeVectorToMerge?.IsNullOrEmpty == false)
+                            context.LastDatabaseChangeVector = ChangeVector.Merge(cv1: changeVectorToMerge, cv2: context.LastDatabaseChangeVector, context);
 
                         TimeSeriesStorage tss;
                         LazyStringValue docId;
@@ -501,8 +603,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 
                                 if (tss.TryAppendEntireSegment(context, segment, docId, segment.Name, incomingChangeVector, baseline))
                                 {
-                                    var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
-                                    context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, changeVectorToMerge, context);
+                                    if (changeVectorToMerge != null)
+                                    {
+                                        var databaseChangeVector = context.LastDatabaseChangeVector ?? DocumentsStorage.GetDatabaseChangeVector(context);
+                                        context.LastDatabaseChangeVector = ChangeVector.Merge(databaseChangeVector, changeVectorToMerge, context);
+                                    }
+
                                     continue;
                                 }
 
@@ -514,7 +620,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 var values = segment.Segment.YieldAllValues(context, context.Allocator, baseline);
                                 var changeVector = tss.AppendTimestamp(context, docId, segment.Collection, segment.Name, values, options);
-                                context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(changeVector, context);
+                                if (changeVectorToMerge != null)
+                                    context.LastDatabaseChangeVector = changeVectorToMerge.MergeWith(changeVector, context);
 
                                 break;
 

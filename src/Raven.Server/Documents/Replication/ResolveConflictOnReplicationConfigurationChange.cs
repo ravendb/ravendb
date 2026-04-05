@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -135,6 +135,8 @@ namespace Raven.Server.Documents.Replication
                                         resolvedConflict: out resolved))
                                 {
                                     resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
+                                    if (ShouldPreserveFilteredPullReplicationHubFlag(conflicts))
+                                        resolved.Flags |= DocumentFlags.FromFilteredPullReplicationHub;
                                     resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: false));
 
                                     //stats.AddResolvedBy(collection + " Script", conflictList.Count);
@@ -146,6 +148,8 @@ namespace Raven.Server.Documents.Replication
                             {
                                 resolved = ResolveToLatest(context, conflicts);
                                 resolved.Flags = resolved.Flags.Strip(DocumentFlags.FromReplication);
+                                if (ShouldPreserveFilteredPullReplicationHubFlag(conflicts))
+                                    resolved.Flags |= DocumentFlags.FromFilteredPullReplicationHub;
                                 resolvedConflicts.Add((resolved, maxConflictEtag, ResolvedToLatest: true));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
@@ -483,6 +487,9 @@ namespace Raven.Server.Documents.Replication
 
             return latestDoc;
         }
+
+        private static bool ShouldPreserveFilteredPullReplicationHubFlag(List<DocumentConflict> conflicts) =>
+            conflicts.Any(conflict => conflict.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub));
 
         private void ResolveAttachmentsConflicts(DocumentsOperationContext context, DocumentConflict resolved, bool resolvedToLatest)
         {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Buffers.Text;
 using System.Collections;
@@ -229,7 +229,8 @@ namespace Raven.Server.Documents.TimeSeries
             }
             else
             {
-                (changeVector, etag) = _documentsStorage.GetNewChangeVector(context);
+                etag = _documentsStorage.GenerateNextEtag();
+                changeVector = GetDeletedRangeChangeVectorForLocalDelete(context, documentId, name, from, to, etag);
             }
 
             var hash = (long)Hashing.XXHash64.Calculate(changeVector.Version, Encoding.UTF8);
@@ -263,6 +264,88 @@ namespace Raven.Server.Documents.TimeSeries
                 }
 
                 return changeVector;
+            }
+        }
+
+        private ChangeVector GetDeletedRangeChangeVectorForLocalDelete(
+            DocumentsOperationContext context,
+            string documentId,
+            string name,
+            DateTime from,
+            DateTime to,
+            long etag)
+        {
+            var localChangeVector = _documentsStorage.GetNewChangeVector(context, etag);
+            if (TryGetPriorDeletedRangeLineage(context, documentId, name, from, to, out var priorDeletedRangeChangeVector) == false ||
+                string.IsNullOrEmpty(priorDeletedRangeChangeVector))
+            {
+                if (TryGetFlaggedParentDocumentLineage(context, documentId, out var parentDocumentChangeVector) == false)
+                    return context.GetChangeVector(localChangeVector);
+
+                var parentChangeVector = context.GetChangeVector(parentDocumentChangeVector);
+                if (parentChangeVector is not { IsNullOrEmpty: false })
+                    return context.GetChangeVector(localChangeVector);
+
+                parentChangeVector = parentChangeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context);
+                parentChangeVector = parentChangeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context);
+                return parentChangeVector;
+            }
+
+            var changeVector = context.GetChangeVector(priorDeletedRangeChangeVector);
+            if (changeVector is not { IsNullOrEmpty: false })
+                return context.GetChangeVector(localChangeVector);
+
+            changeVector = changeVector.UpdateVersion(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context);
+            changeVector = changeVector.UpdateOrder(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbBase64Id, etag, context);
+            return changeVector;
+        }
+
+        private bool TryGetPriorDeletedRangeLineage(
+            DocumentsOperationContext context,
+            string documentId,
+            string name,
+            DateTime from,
+            DateTime to,
+            out string changeVector)
+        {
+            changeVector = null;
+            using var requestedName = context.GetLazyString(name);
+
+            foreach (var deletedRange in GetDeletedRangesForDoc(context, documentId))
+            {
+                using (deletedRange)
+                {
+                    if (deletedRange.From != from || deletedRange.To != to)
+                        continue;
+
+                    TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out _, out var existingName);
+                    if (existingName?.EqualsOrdinalIgnoreCase(requestedName) != true)
+                        continue;
+
+                    if (string.IsNullOrEmpty(deletedRange.ChangeVector))
+                        continue;
+
+                    changeVector = deletedRange.ChangeVector;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryGetFlaggedParentDocumentLineage(DocumentsOperationContext context, string documentId, out string changeVector)
+        {
+            changeVector = null;
+            using (var document = _documentsStorage.Get(context, documentId, DocumentFields.ChangeVector, throwOnConflict: false))
+            {
+                if (document?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) != true)
+                    return false;
+
+                if (string.IsNullOrEmpty(document.ChangeVector))
+                    return false;
+
+                changeVector = document.ChangeVector;
+                return true;
             }
         }
 
@@ -379,11 +462,11 @@ namespace Raven.Server.Documents.TimeSeries
                         if (baseline > end)
                             return false;
 
-                            if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
-                            {
-                                // the deleted range is older than this segment, so we don't touch this segment
-                                return false;
-                            }
+                        if (ChangeVectorUtils.GetConflictStatus(remoteChangeVector, holder.ReadOnlyChangeVector) == ConflictStatus.AlreadyMerged)
+                        {
+                            // the deleted range is older than this segment, so we don't touch this segment
+                            return false;
+                        }
 
                         if (readOnlySegment.NumberOfLiveEntries == 0)
                             return true; // nothing to delete here
@@ -996,24 +1079,54 @@ namespace Raven.Server.Documents.TimeSeries
                 if (ReadOnlyChangeVector == null)
                 {
                     // append new segment - take change vector from replication or create a new one
-                    return ChangeVectorFromReplication ?? _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+                    var newSegmentChangeVector = ChangeVectorFromReplication ?? _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+
+                    if (ChangeVectorFromReplication == null && IsParentDocumentFilteredPullHub())
+                        newSegmentChangeVector = ChangeVectorUtils.NewChangeVector(_tss._documentsStorage.DocumentDatabase, _currentEtag, _context);
+
+                    return newSegmentChangeVector;
                 }
 
                 if (ChangeVectorFromReplication == null)
                 {
+                    if (IsParentDocumentFilteredPullHub())
+                    {
+                        // Advance DB CV but use local-only CV for the segment to prevent sibling lineage contamination
+                        _tss._documentsStorage.GetNewChangeVector(_context, _currentEtag);
+                        var localOnlyCv = ChangeVectorUtils.NewChangeVector(_tss._documentsStorage.DocumentDatabase, _currentEtag, _context);
+                        return localOnlyCv;
+                    }
+
                     // local change - merge existing change vector with new database change vector
-                    return ChangeVector.MergeWithNewDatabaseChangeVector(_context, ReadOnlyChangeVector, _currentEtag);
+                    var mergedLocalChangeVector = ChangeVector.MergeWithNewDatabaseChangeVector(_context, ReadOnlyChangeVector, _currentEtag);
+                    return mergedLocalChangeVector;
                 }
 
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(ChangeVectorFromReplication, ReadOnlyChangeVector);
+                if (conflictStatus != ConflictStatus.AlreadyMerged && ShouldPreserveIncomingFilteredLineage())
+                    return ChangeVectorFromReplication;
+
                 ChangeVector mergedChangeVector = ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
-                return ChangeVectorUtils.GetConflictStatus(ChangeVectorFromReplication, ReadOnlyChangeVector) switch
+                var result = conflictStatus switch
                 {
                     ConflictStatus.Update => mergedChangeVector,
                     ConflictStatus.Conflict => ChangeVector.MergeWithNewDatabaseChangeVector(_context, mergedChangeVector, _currentEtag),
                     ConflictStatus.AlreadyMerged => ReadOnlyChangeVector,
                     _ => throw new ArgumentOutOfRangeException()
                 };
+                return result;
             }
+
+            private bool IsParentDocumentFilteredPullHub()
+            {
+                using var document = _tss._documentsStorage.Get(_context, _docId, DocumentFields.Default, throwOnConflict: false);
+                return document?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == true;
+            }
+
+            private bool ShouldPreserveIncomingFilteredLineage() =>
+                ChangeVectorFromReplication?.IsSingle == true &&
+                ReadOnlyChangeVector?.IsSingle == false &&
+                IsParentDocumentFilteredPullHub();
 
             public long AppendExistingSegment(TimeSeriesValuesSegment newValueSegment)
             {
@@ -1126,7 +1239,10 @@ namespace Raven.Server.Documents.TimeSeries
                     return;
 
                 _currentEtag = _tss._documentsStorage.GenerateNextEtag();
-                _currentChangeVector = ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
+                _currentChangeVector =
+                    ShouldPreserveIncomingFilteredLineage()
+                        ? ChangeVectorFromReplication
+                        : ChangeVector.Merge(ReadOnlyChangeVector, ChangeVectorFromReplication, _context);
 
                 if (segment.RecomputeRequired)
                     segment = segment.Recompute(_context.Allocator);

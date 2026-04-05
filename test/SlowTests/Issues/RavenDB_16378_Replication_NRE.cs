@@ -61,11 +61,11 @@ namespace SlowTests.Issues
 
                     await SetupReplicationAsync(sourceOfRestoredDb, destination);
 
-                    WaitForDocument(destination, "marker");
+                    Assert.True(WaitForDocument(destination, "marker"));
 
-                    var stats = destination.Maintenance.Send(new GetStatisticsOperation());
+                    var replicatedDocumentCount = WaitForValue(() => destination.Maintenance.Send(new GetStatisticsOperation()).CountOfDocuments, expectedVal: 6);
 
-                    Assert.Equal(6, stats.CountOfDocuments);
+                    Assert.Equal(6, replicatedDocumentCount);
                 }
             }
         }

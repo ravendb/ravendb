@@ -103,6 +103,17 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return _lastStats;
         }
 
+        internal virtual string GetDestinationChangeVectorFor(ReplicationBatchItem item) => LastAcceptedChangeVector;
+
+        protected virtual string GetDestinationChangeVectorForPendingWork() => LastAcceptedChangeVector;
+
+        protected virtual string GetCurrentChangeVectorForPendingWork(DocumentsOperationContext context) => DocumentsStorage.GetDatabaseChangeVector(context);
+
+        protected override void OnBeforeSendHeartbeat()
+        {
+            ForTestingPurposes?.OnBeforeOutgoingHeartbeat?.Invoke();
+        }
+
         protected override void AssertDatabaseNotDisposed()
         {
             var database = _parent.Database;
@@ -262,10 +273,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         else
                         {
                             //Send a heartbeat first so we will get an updated CV of the destination
-                            var currentChangeVector = DocumentsStorage.GetDatabaseChangeVector(ctx);
+                            var currentChangeVector = GetCurrentChangeVectorForPendingWork(ctx);
                             SendHeartbeat(null);
-                            //If our previous CV is already merged to the destination wait a bit more
-                            if (ChangeVectorUtils.GetConflictStatus(LastAcceptedChangeVector, currentChangeVector) ==
+
+                            //If our previous CV is already merged to the destination, wait a bit more
+                            if (ChangeVectorUtils.GetConflictStatus(GetDestinationChangeVectorForPendingWork(), currentChangeVector) ==
                                 ConflictStatus.AlreadyMerged)
                             {
                                 continue;
@@ -422,6 +434,8 @@ namespace Raven.Server.Documents.Replication.Outgoing
         internal sealed class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
+
+            public Action OnBeforeOutgoingHeartbeat;
 
             public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
 

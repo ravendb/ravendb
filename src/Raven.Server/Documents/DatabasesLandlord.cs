@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -137,16 +137,24 @@ namespace Raven.Server.Documents
 
                         if (rawRecord.IsSharded)
                         {
+                            DatabaseRecord shardedRecordForOrchestrator = null;
+                            var topology = rawRecord.Sharding.Orchestrator.Topology;
+                            if (topology.RelevantFor(_serverStore.NodeTag))
+                            {
+                                // GetShardedDatabaseRecords() materializes per-shard records by mutating the raw record in-place.
+                                // Keep a stable snapshot for the orchestrator context before iterating shards.
+                                shardedRecordForOrchestrator = JsonDeserializationCluster.DatabaseRecord(rawRecord.Raw);
+                            }
+
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
                             {
                                 await HandleSpecificClusterDatabaseChanged(
                                     shardRawRecord.DatabaseName, index, type, changeType, context, shardRawRecord, changeState);
                             }
 
-                            var topology = rawRecord.Sharding.Orchestrator.Topology;
                             if (topology.RelevantFor(_serverStore.NodeTag))
                             {
-                                if (rawRecord.IsDisabled)
+                                if (ShouldUnloadShardedDatabaseContext(databaseName, rawRecord, out var deletionInProgress))
                                 {
                                     if (ShardedDatabasesCache.TryGetValue(databaseName, out var shardedDatabaseTask) == false)
                                         return; // sharded database was already unloaded
@@ -157,8 +165,8 @@ namespace Raven.Server.Documents
 
                                 // we need to update this upon any shard topology change
                                 // and upon migration completion
-                                var databaseContext = GetOrAddShardedDatabaseContext(databaseName, rawRecord);
-                                await databaseContext.UpdateDatabaseRecordAsync(rawRecord, index, type, changeType);
+                                var databaseContext = GetOrAddShardedDatabaseContext(databaseName, shardedRecordForOrchestrator);
+                                await databaseContext.UpdateDatabaseRecordAsync(shardedRecordForOrchestrator, index, type, changeType);
                             }
                             else
                             {
@@ -413,6 +421,18 @@ namespace Raven.Server.Documents
                 DeleteDatabase(dbName, deletionInProgress, record);
 
             return true;
+        }
+
+        private bool ShouldUnloadShardedDatabaseContext(string databaseName, RawDatabaseRecord rawRecord, out DeletionInProgressStatus deletionInProgress)
+        {
+            deletionInProgress = DeletionInProgressStatus.No;
+
+            if (rawRecord.IsDisabled)
+                return true;
+
+            return rawRecord.DeletionInProgress != null &&
+                   TryGetDeletionInProgress(rawRecord.DeletionInProgress, databaseName, _serverStore.NodeTag, out deletionInProgress) &&
+                   deletionInProgress != DeletionInProgressStatus.No;
         }
 
         public void DeleteDatabase(string dbName, DeletionInProgressStatus deletionInProgress, DatabaseRecord record)

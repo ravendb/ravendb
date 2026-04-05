@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -409,6 +409,9 @@ namespace Raven.Server.Documents
                     var groupEtag = _documentsStorage.GenerateNextEtag();
                     var changeVector = _documentsStorage.GetNewChangeVector(context, groupEtag);
 
+                    if (IsParentDocumentFilteredPullHub(context, documentId))
+                        changeVector = ChangeVectorUtils.NewChangeVector(_documentsStorage.DocumentDatabase, groupEtag, context);
+
                     using (countersGroupKeyScope)
                     {
                         using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -471,6 +474,12 @@ namespace Raven.Server.Documents
             throw new ArgumentException(
                 $"Counter name cannot exceed {DocumentIdWorker.MaxIdSize} bytes, but counter name has {name.Length} characters. " +
                 $"The invalid counter name is '{name}'.", nameof(name));
+        }
+
+        private bool IsParentDocumentFilteredPullHub(DocumentsOperationContext context, string documentId)
+        {
+            using var doc = _documentsStorage.Get(context, documentId, DocumentFields.Default, throwOnConflict: false);
+            return doc?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == true;
         }
 
         private static void SplitCounterGroup(DocumentsOperationContext context, CollectionName collectionName, Table table, Slice documentKeyPrefix,

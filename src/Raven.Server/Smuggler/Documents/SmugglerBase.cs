@@ -1165,7 +1165,7 @@ namespace Raven.Server.Smuggler.Documents
 
         protected void SetDocumentOrTombstoneFlags(ref DocumentFlags flags, ref NonPersistentDocumentFlags nonPersistentFlags, BuildVersionType buildType)
         {
-            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication);
+            flags = flags.Strip(DocumentFlags.FromClusterTransaction | DocumentFlags.FromReplication | DocumentFlags.FromFilteredPullReplicationHub);
             nonPersistentFlags |= NonPersistentDocumentFlags.FromSmuggler;
 
             if (_options.SkipRevisionCreation)

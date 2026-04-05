@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -131,7 +131,9 @@ namespace Raven.Server.Documents.Replication
                     foreach (var external in externals)
                     {
                         var state = GetExternalReplicationState(_server, Database.Name, external.TaskId, ctx);
-                        var myEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, Database.DbBase64Id);
+                        var sourceChangeVectorEtag = ChangeVectorUtils.GetEtagById(state.SourceChangeVector, Database.DbBase64Id);
+                        var myEtag = state.LastSentEtag > 0 ? state.LastSentEtag : sourceChangeVectorEtag;
+
                         minEtag = Math.Min(myEtag, minEtag);
                         AddOrUpdateLastEtag(lastProcessedTombstonesInfo, collection, external.Name, myEtag, ITombstoneAware.TombstoneDeletionBlockerType.ExternalReplication);
                     }
@@ -705,21 +707,33 @@ namespace Raven.Server.Documents.Replication
             using (configurationContext.OpenReadTransaction())
             {
                 string changeVector = null;
+                string fullChangeVector = null;
                 long lastEtagFromSrc = 0;
 
                 if (getLatestEtagMessage.ReplicationsType != ReplicationLatestEtagRequest.ReplicationType.Migration)
                 {
-                    changeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
+                    // DatabaseChangeVector remains the regular DB CV for both external and internal handshakes.
+                    // Internal replication gets the full DB CV separately, so document fan-out decisions can stay
+                    // on the regular lineage while non-document sibling propagation can still reason over the full lineage.
+                    changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                    if (getLatestEtagMessage.ReplicationsType == ReplicationLatestEtagRequest.ReplicationType.Internal)
+                        fullChangeVector = DocumentsStorage.GetFullDatabaseChangeVector(documentsContext);
 
-                    lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(
-                        documentsContext, getLatestEtagMessage.SourceDatabaseId);
+                    lastEtagFromSrc = DocumentsStorage.GetLastReplicatedEtagFrom(documentsContext, getLatestEtagMessage.SourceDatabaseId);
+
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"GetLastEtag response, last etag: {lastEtagFromSrc}");
+                        _logger.Info(
+                            $"GetLastEtag response node='{_server.NodeTag}', type='{getLatestEtagMessage.ReplicationsType}', " +
+                            $"sourceTag='{getLatestEtagMessage.SourceTag}', sourceDb='{getLatestEtagMessage.SourceDatabaseName}', " +
+                            $"sourceDbId='{getLatestEtagMessage.SourceDatabaseId}', sourceBase64='{getLatestEtagMessage.SourceDatabaseBase64Id}', " +
+                            $"sourceUrl='{getLatestEtagMessage.SourceUrl}', lastEtagAccepted={lastEtagFromSrc}, " +
+                            $"regularDbCv='{changeVector ?? "<null>"}', fullDbCv='{fullChangeVector ?? "<null>"}'.");
                 }
 
                 var response = base.GetInitialRequestMessage(getLatestEtagMessage, replParams);
                 response[nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc;
                 response[nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector;
+                response[nameof(ReplicationMessageReply.FullDatabaseChangeVector)] = fullChangeVector;
 
                 return response;
             }

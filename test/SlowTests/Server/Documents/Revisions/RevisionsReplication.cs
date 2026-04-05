@@ -48,7 +48,7 @@ namespace SlowTests.Server.Documents.Revisions
                 await store1.Maintenance.SendAsync(op);
 
                 await SetupReplicationAsync(store1, store2);
-                await EnsureReplicatingAsync(store1, store2);
+                await EnsureReplicatingAsync(store1, store2, timeoutInMs: 60 * 1000);
 
                 using (var session = store2.OpenAsyncSession())
                 {

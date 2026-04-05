@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -116,16 +116,6 @@ namespace Raven.Server.Documents.Replication.Senders
                     _lastEtag = _parent._lastSentDocumentEtag;
                     ChangeVector mergedChangeVector = documentsContext.GetEmptyChangeVector();
                     ChangeVector itemChangeVector = documentsContext.GetEmptyChangeVector();
-
-                    var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
-                    if (lastEtagFromDestinationChangeVector > _lastEtag)
-                    {
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"We jump to get items from etag {lastEtagFromDestinationChangeVector} instead of {_lastEtag}, because we got a bigger etag for the destination database change vector ({_parent.LastAcceptedChangeVector})");
-                        }
-                        _lastEtag = lastEtagFromDestinationChangeVector;
-                    }
 
                     _parent.CancellationToken.ThrowIfCancellationRequested();
 
@@ -482,6 +472,8 @@ namespace Raven.Server.Documents.Replication.Senders
             if (ShouldSkip(context, item, stats, skippedReplicationItemsInfo))
                 return false;
 
+            TryAddFlaggedParentItemToBatch(context, item, stats, state, skippedReplicationItemsInfo);
+
             if (skippedReplicationItemsInfo.SkippedItems > 0)
             {
                 if (Log.IsInfoEnabled)
@@ -504,6 +496,75 @@ namespace Raven.Server.Documents.Replication.Senders
 
             _orderedReplicaItems.Add(item.Etag, item);
             return true;
+        }
+
+        private void TryAddFlaggedParentItemToBatch(
+            DocumentsOperationContext context,
+            ReplicationBatchItem item,
+            OutgoingReplicationStatsScope stats,
+            ReplicationBatchState state,
+            SkippedReplicationItemsInfo skippedReplicationItemsInfo)
+        {
+            if (item is DocumentReplicationItem or RevisionTombstoneReplicationItem)
+                return;
+
+            if (TryGetParentDocumentId(item, out var parentDocumentId) == false)
+                return;
+
+            var parentDocument = _parent._database.DocumentsStorage.Get(context, parentDocumentId, fields: DocumentFields.All, throwOnConflict: false);
+            DocumentReplicationItem parentItem = null;
+
+            try
+            {
+                if (parentDocument?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) != true)
+                    return;
+
+                parentItem = DocumentReplicationItem.From(parentDocument, context);
+                parentDocument = null; // ownership transferred to parentItem
+
+                if (parentItem.Etag >= item.Etag)
+                    return;
+
+                if (_orderedReplicaItems.ContainsKey(parentItem.Etag))
+                    return;
+
+                if (AddReplicationItemToBatch(context, parentItem, stats, state, skippedReplicationItemsInfo) == false)
+                    return;
+
+                state._size += parentItem.Size;
+                state._numberOfItemsSent++;
+                parentItem = null; // ownership transferred to _orderedReplicaItems
+            }
+            finally
+            {
+                parentItem?.Dispose();
+                parentDocument?.Dispose();
+            }
+        }
+
+        private static bool TryGetParentDocumentId(ReplicationBatchItem item, out string parentDocumentId)
+        {
+            switch (item)
+            {
+                case AttachmentReplicationItem attachment:
+                    parentDocumentId = CompoundKeyHelper.ExtractDocumentId(attachment.Key);
+                    return true;
+                case AttachmentTombstoneReplicationItem attachmentTombstone:
+                    parentDocumentId = CompoundKeyHelper.ExtractDocumentId(attachmentTombstone.Key);
+                    return true;
+                case CounterReplicationItem counter:
+                    parentDocumentId = counter.Id;
+                    return true;
+                case TimeSeriesReplicationItem timeSeries:
+                    parentDocumentId = CompoundKeyHelper.ExtractDocumentId(timeSeries.Key);
+                    return true;
+                case TimeSeriesDeletedRangeItem deletedRange:
+                    parentDocumentId = CompoundKeyHelper.ExtractDocumentId(deletedRange.Key);
+                    return true;
+                default:
+                    parentDocumentId = null;
+                    return false;
+            }
         }
 
         private bool ShouldSendAttachmentStream(AttachmentReplicationItem attachment)
@@ -593,8 +654,14 @@ namespace Raven.Server.Documents.Replication.Senders
                     break;
             }
 
+            var destinationChangeVector = _parent.GetDestinationChangeVectorFor(item);
+            var conflictStatus = _parent._database.DocumentsStorage.GetConflictStatusForOrder(context, item.ChangeVector, destinationChangeVector);
+
+            var flaggedDocument = item as DocumentReplicationItem;
+            var shouldForceSendFlaggedDocument = flaggedDocument?.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) is true;
+
             // destination already has it
-            if (_parent._database.DocumentsStorage.GetConflictStatusForOrder(context ,item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if (conflictStatus == ConflictStatus.AlreadyMerged && shouldForceSendFlaggedDocument == false)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);
@@ -626,6 +693,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             stats.RecordLastEtag(_lastEtag);
             stats.RecordLastAcceptedChangeVector(_parent.LastAcceptedChangeVector);
+
             _parent.WriteToServer(headerJson);
 
             foreach (var item in _orderedReplicaItems)
@@ -660,8 +728,8 @@ namespace Raven.Server.Documents.Replication.Senders
                 MissingAttachmentsInLastBatch = true;
                 return;
             }
-            _parent._lastSentDocumentEtag = _lastEtag;
 
+            _parent._lastSentDocumentEtag = _lastEtag;
             _parent._lastDocumentSentTime = DateTime.UtcNow;
         }
 

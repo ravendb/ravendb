@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -312,6 +312,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             {
                 //The first time we start replication we need to register the destination current CV
                 case ReplicationMessageReply.ReplyType.Ok:
+                    _lastSentDocumentEtag = response.Reply.LastEtagAccepted;
                     LastAcceptedChangeVector = response.Reply.DatabaseChangeVector;
                     break;
 
@@ -545,6 +546,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
 
         internal void SendHeartbeat(string changeVector)
         {
+            OnBeforeSendHeartbeat();
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
 
             using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -596,6 +598,10 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     throw;
                 }
             }
+        }
+
+        protected virtual void OnBeforeSendHeartbeat()
+        {
         }
 
         public string GetNode()

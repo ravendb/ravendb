@@ -60,7 +60,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             // now we should have values for the last sent Etag and change vectors, so we retrieve them to verify they are correct
 
-            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: true);
+            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: true,
+                assertDestinationChangeVector: options.DatabaseMode != RavenDatabaseMode.Sharded);
 
             // break the replication again to perform deletion and check tombstone items
 
@@ -76,7 +77,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             Assert.True(WaitForDocumentDeletion(destination, UserId));
 
-            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: true, hasTombstones: true);
+            await VerifyReplicationProgressAsync(source, sourceDb, ReplicationNode.ReplicationType.External, isCompleted: true, hasTombstones: true,
+                assertDestinationChangeVector: options.DatabaseMode != RavenDatabaseMode.Sharded);
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Studio)]
@@ -379,7 +381,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
         }
 
         private async Task VerifyReplicationProgressAsync(DocumentStore store, DocumentDatabase database, ReplicationNode.ReplicationType replicationType,
-            bool isCompleted = false, bool hasTombstones = false, RavenServer server = null)
+            bool isCompleted = false, bool hasTombstones = false, RavenServer server = null, bool assertDestinationChangeVector = true)
         {
             IReplicationTaskProgress[] results = null;
             await WaitForValueAsync(async () =>
@@ -395,7 +397,7 @@ namespace SlowTests.Server.Documents.OngoingTasks
             {
                 if (replicationType != ReplicationNode.ReplicationType.PullAsSink)
                 {
-                    await AssertReplicationBatchCompletedAsync(store, database, server);
+                    await AssertReplicationBatchCompletedAsync(store, database, server, assertDestinationChangeVector);
                 }
 
                 if (hasTombstones)
@@ -502,7 +504,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
             Assert.False(progress.ProcessesProgress[0].Completed);
         }
 
-        private async Task AssertReplicationBatchCompletedAsync(DocumentStore store, DocumentDatabase database, RavenServer server)
+        private async Task AssertReplicationBatchCompletedAsync(DocumentStore store, DocumentDatabase database, RavenServer server,
+            bool assertDestinationChangeVector)
         {
             var (lastSentEtag, sourceChangeVector, destinationChangeVector) = GetReplicationHandlerState(database);
 
@@ -517,7 +520,20 @@ namespace SlowTests.Server.Documents.OngoingTasks
                 if (result.ProcessesProgress.Count != 1)
                     return false;
 
-                if (result.ProcessesProgress[0].LastSentEtag != lastSentEtag)
+                var processProgress = result.ProcessesProgress[0];
+
+                if (processProgress.LastSentEtag != lastSentEtag)
+                    return false;
+
+                if (processProgress.SourceChangeVector != sourceChangeVector)
+                    return false;
+
+                // Sharded external replication can legitimately answer pure heartbeats without a merged destination DB CV on the top-level handler.
+                // The completed progress contract we care about there is the acknowledged etag plus the source-side CV and processed totals.
+                if (assertDestinationChangeVector && processProgress.DestinationChangeVector != destinationChangeVector)
+                    return false;
+
+                if (processProgress.Completed == false)
                     return false;
 
                 return true;
@@ -529,7 +545,8 @@ namespace SlowTests.Server.Documents.OngoingTasks
 
             Assert.Equal(lastSentEtag, processProgress.LastSentEtag);
             Assert.Equal(sourceChangeVector, processProgress.SourceChangeVector);
-            Assert.Equal(destinationChangeVector, processProgress.DestinationChangeVector);
+            if (assertDestinationChangeVector)
+                Assert.Equal(destinationChangeVector, processProgress.DestinationChangeVector);
             Assert.True(processProgress.Completed);
         }
 

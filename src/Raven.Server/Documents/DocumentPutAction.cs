@@ -137,8 +137,12 @@ namespace Raven.Server.Documents
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
+                ChangeVector tombstoneChangeVector = null;
+                var tombstoneFlags = DocumentFlags.None;
                 if (knownNewId == false)
                 {
+                    TryGetTombstoneChangeVectorAndFlags(context, collectionName, lowerId.Content.Ptr, lowerId.Size, out tombstoneChangeVector, out tombstoneFlags);
+
                     // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
                     DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
 
@@ -149,6 +153,16 @@ namespace Raven.Server.Documents
                 ChangeVector oldChangeVector = null;
                 if (oldValue.Pointer == null)
                 {
+                    if (tombstoneChangeVector != null)
+                    {
+                        var tombstoneFilteredFlags = tombstoneFlags & DocumentFlags.FromFilteredPullReplicationHub;
+                        if (tombstoneFilteredFlags != 0)
+                        {
+                            oldChangeVector = tombstoneChangeVector;
+                            newFlags = GetFlagsFromOldDocumentForPut(context, newFlags, tombstoneFilteredFlags, nonPersistentFlags, oldChangeVector);
+                        }
+                    }
+
                     // expectedChangeVector being null means we don't care, 
                     // and empty means that it must be new
                     if (string.IsNullOrEmpty(expectedChangeVector) == false)
@@ -178,7 +192,7 @@ namespace Raven.Server.Documents
 
                     var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
-                    newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
+                    newFlags = GetFlagsFromOldDocumentForPut(context, newFlags, oldFlags, nonPersistentFlags, oldChangeVector);
                     
                     // if doc was Archived and isn't currently unarchived, leave the Archived flag
                     // unless it is a replication operation, in which case we want to replicate the drop of the Archived flag
@@ -194,7 +208,8 @@ namespace Raven.Server.Documents
 
                 nonPersistentFlags |= result.NonPersistentFlags;
 
-                if (UpdateLastDatabaseChangeVector(context, result.ChangeVector, newFlags, nonPersistentFlags))
+                var updatedDbCv = UpdateLastDatabaseChangeVector(context, result.ChangeVector, newFlags, nonPersistentFlags);
+                if (updatedDbCv)
                     changeVector = result.ChangeVector;
 
                 if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.Resolved))
@@ -720,6 +735,35 @@ namespace Raven.Server.Documents
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
                 DeleteTombstone(tombstoneTable, id);
+            }
+        }
+
+        private void TryGetTombstoneChangeVectorAndFlags(
+            DocumentsOperationContext context,
+            CollectionName collectionName,
+            byte* lowerId,
+            int lowerSize,
+            out ChangeVector changeVector,
+            out DocumentFlags flags)
+        {
+            changeVector = null;
+            flags = DocumentFlags.None;
+
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            if (tombstoneTable.NumberOfEntries == 0)
+                return;
+
+            using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
+            {
+                foreach ((Slice tombstoneKey, Table.TableValueHolder tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, startAfter: Slices.Empty, skip: 0))
+                {
+                    if (IsTombstoneOfId(tombstoneKey, id) == false)
+                        return;
+
+                    changeVector = TableValueToChangeVector(context, (int)Schemas.Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
+                    flags = TableValueToFlags((int)Schemas.Tombstones.TombstoneTable.Flags, ref tvh.Reader);
+                    return;
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -1749,7 +1749,7 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, doc.Data);
 
-                var flags = GetFlagsFromOldDocumentForDelete(newFlags, doc.Flags, nonPersistentFlags);
+                var flags = GetFlagsFromOldDocumentForDelete(context, newFlags, doc.Flags, nonPersistentFlags, context.GetChangeVector(doc.ChangeVector));
 
                 var table = context.Transaction.InnerTransaction.OpenTable(DocumentDatabase.GetDocsSchemaForCollection(collectionName, flags), collectionName.GetTableName(CollectionTableType.Documents));
 
@@ -2681,7 +2681,7 @@ namespace Raven.Server.Documents
             if (changeVector != null)
                 return (changeVector, nonPersistentFlags);
 
-            if (fromReplication == false)
+            if (fromReplication == false && flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == false)
             {
                 oldChangeVector = ChangeVector.MergeWithDatabaseChangeVector(context, oldChangeVector);
             }
@@ -2693,10 +2693,17 @@ namespace Raven.Server.Documents
 
         public static bool UpdateLastDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
-            // if arrived from replication we keep the document with its original change vector
+            // if arrived from replication, we keep the document with its original change vector
             // in that case the updating of the global change vector should happened upper in the stack
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return false;
+
+            if (flags.Contain(DocumentFlags.FromFilteredPullReplicationHub))
+            {
+                var localEtag = ChangeVectorUtils.GetEtagById(changeVector.AsString(), context.DocumentDatabase.DbBase64Id);
+                context.DocumentDatabase.DocumentsStorage.GetNewChangeVector(context, localEtag);
+                return true;
+            }
 
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
 
@@ -2732,12 +2739,14 @@ namespace Raven.Server.Documents
             return ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);
         }
 
-        public DocumentFlags GetFlagsFromOldDocumentForPut(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        public static DocumentFlags GetFlagsFromOldDocumentForPut(DocumentsOperationContext context, DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector oldChangeVector = null)
         {
             if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication))
                 return newFlags;
 
-            newFlags = newFlags.Strip(DocumentFlags.FromReplication);
+            newFlags = newFlags.Strip(DocumentFlags.FromReplication | DocumentFlags.FromFilteredPullReplicationHub);
+            if (ShouldPreserveFilteredPullReplicationHubFlag(context, oldChangeVector, oldFlags))
+                newFlags |= DocumentFlags.FromFilteredPullReplicationHub;
 
             if (newFlags.Contain(DocumentFlags.Reverted))
             {
@@ -2777,13 +2786,33 @@ namespace Raven.Server.Documents
             return newFlags;
         }
 
-        public DocumentFlags GetFlagsFromOldDocumentForDelete(DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        public static DocumentFlags GetFlagsFromOldDocumentForDelete(DocumentsOperationContext context, DocumentFlags newFlags, DocumentFlags oldFlags, NonPersistentDocumentFlags nonPersistentFlags, ChangeVector oldChangeVector = null)
         {
-            var flags = GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
+            var flags = GetFlagsFromOldDocumentForPut(context, newFlags, oldFlags, nonPersistentFlags, oldChangeVector);
+
+            // A local delete must keep the filtered-pull lineage on the tombstone so a later
+            // recreate can still recover sibling entries from the tombstone itself.
+            if (oldFlags.Contain(DocumentFlags.FromFilteredPullReplicationHub))
+                flags |= DocumentFlags.FromFilteredPullReplicationHub;
+
             if (oldFlags.Contain(DocumentFlags.Artificial))
                 flags |= DocumentFlags.Artificial;
 
             return flags;
+        }
+
+        private static bool ShouldPreserveFilteredPullReplicationHubFlag(DocumentsOperationContext context, ChangeVector oldChangeVector, DocumentFlags oldFlags)
+        {
+            if (oldChangeVector == null)
+                return false;
+
+            if (oldFlags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == false)
+                return false;
+
+            var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
+            var documentChangeVector = oldChangeVector.StripSinkTags(currentGlobalChangeVector?.AsString(), context);
+            var status = ChangeVectorUtils.GetConflictStatus(documentChangeVector, currentGlobalChangeVector, mode: ChangeVectorMode.Order);
+            return status != ConflictStatus.AlreadyMerged;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

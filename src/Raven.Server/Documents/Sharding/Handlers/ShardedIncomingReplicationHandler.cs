@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication.Messages;
@@ -319,12 +319,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 }
 
                 int shardNumber = GetShardNumberForReplicationItem(context, item);
-                batches[shardNumber].Items.Add(item);
-                if (item is AttachmentReplicationItem attachmentReplicationItem && attachmentReplicationItem.Stream == null)
+                if (batches.TryGetValue(shardNumber, out var shardBatch) == false)
                 {
-                    batches[shardNumber].AttachmentStreams ??= new(SliceComparer.Instance);
-                    batches[shardNumber].AttachmentStreams.TryAdd(attachmentReplicationItem.Base64Hash, null);
+                    var itemDocId = _documentInfoHelper.GetDocumentId(item) ?? "<null>";
+                    throw new InvalidOperationException($"Cannot route replication item '{item.GetType().Name}' with id '{itemDocId}' to shard '{shardNumber}'. Available shard keys: {string.Join(",", batches.Keys)}");
                 }
+
+                shardBatch.Items.Add(item);
+                if (item is not AttachmentReplicationItem { Stream: null } attachmentReplicationItem)
+                    continue;
+
+                shardBatch.AttachmentStreams ??= new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
+                shardBatch.AttachmentStreams.TryAdd(attachmentReplicationItem.Base64Hash, null);
             }
 
             if (dataForReplicationCommand.ReplicatedAttachmentStreams != null)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -144,7 +144,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst)
+        public async Task EnsureReplicatingAsync(IDocumentStore src, IDocumentStore dst, int timeoutInMs = 30 * 1000)
         {
             var sharding = await Sharding.GetShardingConfigurationAsync(src);
             if (sharding == null)
@@ -155,7 +155,11 @@ namespace Tests.Infrastructure
                     s.Store(new { }, id);
                     s.SaveChanges();
                 }
-                Assert.NotNull(await WaitForDocumentToReplicateAsync<object>(dst, id, 15 * 1000));
+
+                // Large replication backlogs can leave the marker queued behind thousands of etags,
+                // so keep the non-sharded readiness wait aligned with the sharded path.
+                var replicated = await WaitForDocumentToReplicateAsync<object>(dst, id, timeoutInMs);
+                Assert.NotNull(replicated);
                 return;
             }
 
@@ -170,7 +174,7 @@ namespace Tests.Infrastructure
                     s.SaveChanges();
                 }
 
-                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, 30 * 1000);
+                var r = await Replication.WaitForDocumentToReplicateAsync<object>(dst, id, timeoutInMs);
                 Assert.NotNull(r);
             }
         }

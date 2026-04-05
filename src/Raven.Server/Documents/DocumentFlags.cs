@@ -19,7 +19,7 @@ namespace Raven.Server.Documents
         FromIndex = 0x10,
         Revision = 0x20,
         FromReplication = 0x40,
-        Reserved3 = 0x80,
+        FromFilteredPullReplicationHub = 0x80,
 
         HasAttachments = 0x100,
         Resolved = 0x200,
