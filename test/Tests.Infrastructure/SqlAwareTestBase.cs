@@ -393,11 +393,31 @@ namespace Tests.Infrastructure
 
                         // Drop any logical replication slots for this database.
                         // PostgreSQL refuses to drop a database that has active slots.
-                        dbCommand.CommandText = $@"
-                            SELECT pg_drop_replication_slot(slot_name)
-                            FROM pg_replication_slots
-                            WHERE database = '{dbName}';";
-                        dbCommand.ExecuteNonQuery();
+                        // pg_terminate_backend is asynchronous — the WAL sender may need
+                        // a moment to release the slot after being terminated. Retry briefly.
+                        for (int attempt = 0; attempt < 5; attempt++)
+                        {
+                            try
+                            {
+                                dbCommand.CommandText = $@"
+                                    SELECT pg_drop_replication_slot(slot_name)
+                                    FROM pg_replication_slots
+                                    WHERE database = '{dbName}';";
+                                dbCommand.ExecuteNonQuery();
+                                break;
+                            }
+                            catch (PostgresException ex) when (ex.SqlState == "55006")
+                            {
+                                // 55006 = object_in_use (slot is still active)
+                                Thread.Sleep(500);
+                            }
+                            catch (PostgresException)
+                            {
+                                // Ignore other exceptions, such as "slot does not exist". 
+                                // We want to make sure the database is dropped, even if we fail to drop the slots.
+                                break;
+                            }
+                        }
 
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
