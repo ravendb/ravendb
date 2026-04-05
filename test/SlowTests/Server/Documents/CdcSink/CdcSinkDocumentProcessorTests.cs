@@ -20,7 +20,7 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
             {
                 new()
                 {
-                    Name = "Orders",
+                    CollectionName = "Orders",
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
@@ -63,7 +63,7 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
                 },
                 new()
                 {
-                    Name = "Customers",
+                    CollectionName = "Customers",
                     SourceTableSchema = "public",
                     SourceTableName = "customers",
                     PrimaryKeyColumns = new List<string> { "customer_id" },
@@ -304,7 +304,7 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
             {
                 new()
                 {
-                    Name = "Orders",
+                    CollectionName = "Orders",
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
@@ -366,7 +366,7 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
             {
                 new()
                 {
-                    Name = "Orders",
+                    CollectionName = "Orders",
                     SourceTableSchema = "public",
                     SourceTableName = "orders",
                     PrimaryKeyColumns = new List<string> { "order_id" },
@@ -432,7 +432,7 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
             {
                 new()
                 {
-                    Name = "OrderDetails",
+                    CollectionName = "OrderDetails",
                     SourceTableSchema = "public",
                     SourceTableName = "order_details",
                     PrimaryKeyColumns = new List<string> { "order_id", "product_id" },

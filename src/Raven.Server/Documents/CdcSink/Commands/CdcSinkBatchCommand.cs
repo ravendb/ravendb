@@ -278,9 +278,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             currentDoc = RunPatches(context, documentId, currentDoc, patches);
         }
 
-        // currentDoc may be null if the patch in RunPatches did a del() / put() on the doc, in which case
-        // we won't do anything here since the patch already handled the update. Otherwise, save the updated document with applied puts and embeds.
-        if (currentDoc is not null)
+        if (currentDoc is null)
+        {
+            // RunPatches returned null — the script called del() or put().
+            // If del(): document is gone, skip attachments.
+            // If put(): script replaced the document; attachments should still be stored
+            //   since the script may have called put(id(this), modified) to save a
+            //   transformed version but still expects binary columns as attachments.
+            if (_database.DocumentsStorage.Get(context, documentId) == null)
+                return; // document was deleted, nothing to attach to
+        }
+        else
         {
             _database.DocumentsStorage.Put(context, documentId, expectedChangeVector: null, currentDoc);
         }
@@ -348,6 +356,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         string name, string contentType, ReadOnlySpan<byte> data)
     {
         var hash = AttachmentsStorageHelper.CalculateHash(data);
+
+        if (data.Length == 0) // empty buffer means empty attachment
+        {
+            using var stream = new MemoryStream([], 0, 0, writable: false);
+            _database.DocumentsStorage.AttachmentsStorage.PutAttachment(
+                context, documentId, name, contentType,
+                hash, 0, remoteParams: null, stream: stream);
+            return;
+        }
+
         fixed (byte* ptr = data)
         {
             using var stream = new UnmanagedMemoryStream(ptr, data.Length);
@@ -408,15 +426,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// with $old for each operation that has a patch script.
     ///
     /// This method is called twice per document group:
-    ///   1. Before a root-level delete (includeOnDelete = true) — we need to flush any
-    ///      OnDelete.Patch scripts for their side effects (audit trails, counters) before
-    ///      the parent document is removed. IgnoreDeletes is respected here: the embedded
-    ///      item stays in the document but the patch still runs.
-    ///   2. At the end of the group (includeOnDelete = false) — we apply the remaining
-    ///      upsert operations to build the final document state. Delete ops are still
-    ///      applied (items removed) but OnDelete patches are NOT collected, because they
-    ///      were already handled in the pre-delete flush or aren't relevant when the
-    ///      parent survives.
+    ///   1. Before a root-level delete (includeOnDelete = false, the default) — we flush
+    ///      pending embed upserts/deletes but do NOT collect OnDelete patches yet, because
+    ///      the root delete handler manages those separately.
+    ///   2. At the end of the group (includeOnDelete = true) — we apply the remaining
+    ///      embedded operations and DO collect OnDelete.Patch entries for embedded deletes,
+    ///      because this is the final pass where all patches are gathered before execution.
     /// </summary>
     private BlittableJsonReaderObject FlushPendingEmbeds(
         DocumentsOperationContext context, string documentId,
@@ -636,7 +651,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         {
             o.FastSetDataProperty(kvp.Key, kvp.Value switch
             {
-                null or DBNull => null,
+                null or DBNull => JsValue.Null,
                 byte[] bytes => Convert.ToBase64String(bytes),
                 Guid guid => guid.ToString(),
                 _ => JsValue.FromObject(engine, kvp.Value)

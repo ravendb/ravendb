@@ -72,6 +72,20 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     public override void Dispose()
     {
         base.Dispose();
+
+        // Ensure the replication connection is closed even if the async iterator
+        // didn't dispose cleanly (e.g., due to sync-over-async in Stop()).
+        // Without this, the WAL sender may keep the slot active, preventing
+        // database drops in test scenarios.
+        try
+        {
+            _replicationConn?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(5));
+        }
+        catch
+        {
+            // best effort — the connection may already be disposed by the iterator
+        }
+
         _dataSource.Dispose();
     }
 
@@ -86,7 +100,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
     private async Task EnsureReplicationSetup(CancellationToken ct)
     {
-        var tableNames = Configuration.CollectAllSourceTableNames("public");
+        var allTables = Configuration.CollectAllTablesFlat("public");
 
         _publicationName = Configuration.Postgres.PublicationName;
         _slotName = Configuration.Postgres.SlotName;
@@ -104,26 +118,28 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         if (publicationExists)
         {
-            await VerifyPublicationTableCoverage(conn, tableNames, ct);
+            await VerifyPublicationTableCoverage(conn, allTables, ct);
         }
         else
         {
-            var tableList = string.Join(", ", tableNames);
+            var quotedTableList = QuoteTableList(allTables);
 
             try
             {
+                var quotedPubName = CommandBuilder.QuoteIdentifier(_publicationName);
                 await using var createCmd = new NpgsqlCommand(
-                    $"CREATE PUBLICATION {_publicationName} FOR TABLE {string.Join(", ", tableList)}", conn);
+                    $"CREATE PUBLICATION {quotedPubName} FOR TABLE {quotedTableList}", conn);
                 await createCmd.ExecuteNonQueryAsync(ct);
             }
             catch (PostgresException ex) when (ex.SqlState == "42501")
             {
+                var quotedPubName = CommandBuilder.QuoteIdentifier(_publicationName);
                 throw new InvalidOperationException(
                     $"""
-                    Insufficient permissions to create publication '{_publicationName}'. 
+                    Insufficient permissions to create publication '{_publicationName}'.
                     The database user must have CREATE permission on the database, or an administrator can create the publication manually:
 
-                      CREATE PUBLICATION {_publicationName} FOR TABLE {tableList};
+                      CREATE PUBLICATION {quotedPubName} FOR TABLE {quotedTableList};
 
                     PostgreSQL error: {ex.MessageText}
                     """, ex);
@@ -199,7 +215,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    private async Task VerifyPublicationTableCoverage(NpgsqlConnection conn, List<string> configuredTableNames, CancellationToken ct)
+    private async Task VerifyPublicationTableCoverage(NpgsqlConnection conn, List<CdcSinkConfiguration.TableInfo> configuredTables, CancellationToken ct)
     {
         var publishedTables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -218,37 +234,38 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
 
         // Check for configured tables missing from the publication
-        var missing = new List<string>();
-        foreach (var table in configuredTableNames)
+        var missing = new List<CdcSinkConfiguration.TableInfo>();
+        foreach (var table in configuredTables)
         {
-            if (publishedTables.Contains(table) == false)
+            if (publishedTables.Contains(table.FullName) == false)
                 missing.Add(table);
         }
 
         if (missing.Count > 0)
         {
-            var tableList = string.Join(", ", missing);
+            var quotedMissing = QuoteTableList(missing);
+            var quotedPubName = CommandBuilder.QuoteIdentifier(_publicationName);
             try
             {
                 await using var alterCmd = new NpgsqlCommand(
-                    $"ALTER PUBLICATION {_publicationName} ADD TABLE {tableList}", conn);
+                    $"ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing}", conn);
                 await alterCmd.ExecuteNonQueryAsync(ct);
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"[{Name}] Added missing tables to publication '{_publicationName}': {tableList}");
+                    Logger.Info($"[{Name}] Added missing tables to publication '{_publicationName}': {quotedMissing}");
             }
             catch (PostgresException ex)
             {
                 throw new InvalidOperationException(
                     $"""
-                    Publication '{_publicationName}' does not include tables: {tableList}. Attempted to add them automatically but failed ({ex.MessageText}). Ask a database administrator to run: ALTER PUBLICATION {_publicationName} ADD TABLE {tableList};
+                    Publication '{_publicationName}' does not include tables: {quotedMissing}. Attempted to add them automatically but failed ({ex.MessageText}). Ask a database administrator to run: ALTER PUBLICATION {quotedPubName} ADD TABLE {quotedMissing};
                     """, ex);
             }
         }
 
         // Warn about extra tables in the publication that aren't in the configuration
         var extra = new List<string>();
-        var configuredSet = new HashSet<string>(configuredTableNames, StringComparer.OrdinalIgnoreCase);
+        var configuredSet = new HashSet<string>(configuredTables.Select(t => t.FullName), StringComparer.OrdinalIgnoreCase);
         foreach (var table in publishedTables)
         {
             if (configuredSet.Contains(table) == false)
@@ -314,10 +331,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 continue;
 
             // Replica identity is insufficient — set to FULL so DELETE events include join columns
+            var quotedTable = $"{CommandBuilder.QuoteIdentifier(schema)}.{CommandBuilder.QuoteIdentifier(table)}";
             try
             {
                 await using var alterCmd = new NpgsqlCommand(
-                    $"ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL", conn);
+                    $"ALTER TABLE {quotedTable} REPLICA IDENTITY FULL", conn);
                 await alterCmd.ExecuteNonQueryAsync(ct);
 
                 if (Logger.IsInfoEnabled)
@@ -333,7 +351,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     DELETE events need REPLICA IDENTITY FULL to include the join columns for routing to the parent document. 
                     An administrator can run:
 
-                      ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;
+                      ALTER TABLE {quotedTable} REPLICA IDENTITY FULL;
 
                     Alternatively, set OnDelete.IgnoreDeletes = true on this embedded table to skip delete processing.
 
@@ -530,6 +548,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         Vector
     }
 
+    private string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)
+    {
+        return string.Join(", ", tables.Select(t =>
+            $"{CommandBuilder.QuoteIdentifier(t.Schema)}.{CommandBuilder.QuoteIdentifier(t.TableName)}"));
+    }
+
+    protected override DbCommandBuilder CommandBuilder { get; } = new NpgsqlCommandBuilder();
+
     protected override string GetDefaultSchema() => "public";
 
 
@@ -540,8 +566,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return conn;
     }
 
-    protected override char StartQuote => '"';
-    protected override char EndQuote => '"';
+
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
 
@@ -602,14 +627,19 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         return normalizedType switch
         {
-            "smallint" or "integer" or "serial" or "bigint" or "bigserial" => long.Parse(value),
-            "real" or "double precision" or "numeric" or "decimal" => double.Parse(value),
+            "smallint" or "integer" or "serial" or "bigint" or "bigserial" => long.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "real" or "double precision" or "numeric" or "decimal" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             "boolean" => bool.Parse(value),
             "uuid" => Guid.Parse(value),
             _ => value,
         };
     }
 
+    /// <summary>
+    /// Normalizes PostgreSQL values for consistent storage in RavenDB.
+    /// Note: PostgreSQL has no unsigned integer types, so ulong/uint are not handled here
+    /// (unlike MySQL which has BIGINT UNSIGNED).
+    /// </summary>
     private object ConvertPostgresValue(PostgresTypeCategory category, object value, string table, string column)
     {
         if (value is null || value == DBNull.Value)

@@ -98,14 +98,14 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(SourceTableSchema)] = SourceTableSchema,
             [nameof(SourceTableName)] = SourceTableName,
             [nameof(PropertyName)] = PropertyName,
-            [nameof(Columns)] = new DynamicJsonArray(Columns.Select(x => x.ToJson())),
-            [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
-            [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns),
+            [nameof(Columns)] = new DynamicJsonArray(Columns?.Select(x => x.ToJson()) ?? []),
+            [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns ?? []),
+            [nameof(JoinColumns)] = new DynamicJsonArray(JoinColumns ?? []),
             [nameof(Type)] = Type.ToString(),
             [nameof(Patch)] = Patch,
             [nameof(OnDelete)] = OnDelete?.ToJson(),
             [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
-            [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
+            [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables?.Select(x => x.ToJson()) ?? []),
         };
     }
 }

@@ -9,6 +9,7 @@ using Microsoft.SqlServer.Types;
 using Raven.Client.Documents.Operations.CdcSink;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
 using Raven.Server.ServerWide.Context;
+using Microsoft.Data.SqlClient;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -171,6 +172,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         await using var conn = await OpenConnectionAsync(ct);
         bool shouldWait = false;
+        var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
 
         while (true)
         {
@@ -188,7 +190,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             // Read ALL tables into a buffer, then sort by (__$start_lsn, __$seqval) for
             // cross-table transaction ordering. This ensures parent rows (e.g. orders) are
             // processed before child rows (e.g. order_lines) within the same transaction.
-            var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
+            //
+            // Note: we intentionally do NOT use a snapshot transaction here. CDC change tables
+            // are append-only and queried by LSN range (from_lsn..to_lsn), so each table read
+            // is already bounded to the same LSN window. Snapshot isolation would require
+            // ALLOW_SNAPSHOT_ISOLATION on the database and can interfere with CDC reads.
+            buffer.Clear();
 
             foreach (var ci in captureInstances)
             {
@@ -271,14 +278,17 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         if (lastLsn != null)
             sb.Append(", sys.fn_cdc_increment_lsn(@last_lsn) AS from_lsn");
 
-        foreach (var ci in captureInstances)
-            sb.Append($", sys.fn_cdc_get_min_lsn('{ci.CaptureInstance}') AS [{ci.CaptureInstance}_min]");
+        for (int i = 0; i < captureInstances.Count; i++)
+            sb.Append($", sys.fn_cdc_get_min_lsn(@ci{i}) AS ci{i}_min");
 
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = sb.ToString();
 
         if (lastLsn != null)
             AddParameter(cmd, "@last_lsn", lastLsn);
+
+        for (int i = 0; i < captureInstances.Count; i++)
+            AddParameter(cmd, $"@ci{i}", captureInstances[i].CaptureInstance);
 
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         if (await reader.ReadAsync(ct) == false)
@@ -297,9 +307,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         {
             // No previous LSN — find the global minimum across all capture instances
             fromLsn = null;
-            foreach (var ci in captureInstances)
+            for (int i = 0; i < captureInstances.Count; i++)
             {
-                var minLsn = reader[$"{ci.CaptureInstance}_min"] as byte[];
+                var minLsn = reader[$"ci{i}_min"] as byte[];
                 if (minLsn == null || IsAllZero(minLsn))
                     continue;
                 if (fromLsn == null || CompareLsn(minLsn, fromLsn) < 0)
@@ -308,10 +318,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
 
         var tableMinLsns = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
-        foreach (var ci in captureInstances)
+        for (int i = 0; i < captureInstances.Count; i++)
         {
-            var minLsn = reader[$"{ci.CaptureInstance}_min"] as byte[];
-            tableMinLsns[ci.CaptureInstance] = minLsn;
+            var minLsn = reader[$"ci{i}_min"] as byte[];
+            tableMinLsns[captureInstances[i].CaptureInstance] = minLsn;
         }
 
         return (maxLsn, fromLsn, tableMinLsns);
@@ -381,13 +391,15 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
             var quotedColumns = new string[columns.Count];
             for (int i = 0; i < columns.Count; i++)
-                quotedColumns[i] = $"[{columns[i]}]";
+                quotedColumns[i] = CommandBuilder.QuoteIdentifier(columns[i]);
             var columnList = string.Join(", ", quotedColumns);
+
             // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
             // We filter out pre-update images (3) at the SQL level to avoid transferring rows we'd discard.
+            var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
-                FROM cdc.fn_cdc_get_all_changes_{captureInstance}(@from_lsn, @to_lsn, N'all')
+                FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'all')
                 WHERE __$operation <> 3
                 ORDER BY __$start_lsn, __$seqval";
 
@@ -409,8 +421,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct) => OpenConnectionAsync(ct);
 
-    protected override char StartQuote => '[';
-    protected override char EndQuote => ']';
+    protected override DbCommandBuilder CommandBuilder { get; } = new SqlCommandBuilder();
+
     protected override bool UsesTopN => true;
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
@@ -483,13 +495,13 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         return normalizedType switch
         {
-            "tinyint" => byte.Parse(value),
-            "smallint" => short.Parse(value),
-            "int" => int.Parse(value),
-            "bigint" => long.Parse(value),
-            "real" => float.Parse(value),
-            "float" => double.Parse(value),
-            "decimal" or "numeric" or "money" or "smallmoney" => decimal.Parse(value),
+            "tinyint" => byte.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "smallint" => short.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "int" => int.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "bigint" => long.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "real" => float.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "float" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "decimal" or "numeric" or "money" or "smallmoney" => decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             "bit" => bool.Parse(value),
             "uniqueidentifier" => Guid.Parse(value),
             _ => value,
@@ -498,8 +510,11 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     /// <summary>
     /// Normalizes SQL Server values for consistent storage in RavenDB.
-    /// Integers are normalized to long, floats to double.
+    /// Integers are normalized to long, floats to double, decimals are preserved.
     /// Spatial types (SqlGeometry, SqlGeography) are converted to their WKT string representation.
+    /// Note: SQL Server has no unsigned integer types, so ulong/uint are not handled here
+    /// (unlike MySQL which has BIGINT UNSIGNED). If a provider-specific type appears,
+    /// the fallback (_ => value) passes it through unchanged.
     /// </summary>
     private static object ConvertSqlServerValue(object value)
     {
@@ -514,7 +529,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             long => value,
             float f => (double)f,
             double => value,
-            decimal d => (double)d,
+            decimal => value,
             Guid g => g.ToString(),
             byte[] => value,
             DateTime => value,

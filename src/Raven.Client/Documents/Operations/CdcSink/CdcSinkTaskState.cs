@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.CdcSink;
@@ -24,6 +25,7 @@ public class CdcSinkTaskState : IDynamicJson
     /// <summary>
     /// Per-table initial load state. Key is "schema.tableName".
     /// </summary>
+    [JsonDeserializationStringDictionary(StringComparison.OrdinalIgnoreCase)]
     public Dictionary<string, CdcSinkTableLoadState> Tables { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>

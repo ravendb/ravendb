@@ -29,8 +29,7 @@ using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Threading;
 using Sparrow.Utils;
-using Size = Sparrow.Size;
-using Google.Protobuf.WellKnownTypes;
+
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -41,11 +40,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     private CancellationTokenSource _cts;
     private PoolOfThreads.LongRunningWork _longRunningWork;
 
-    private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
-
-    private NativeMemory.ThreadStats _threadAllocations;
     private readonly MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
-    private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
     protected readonly RavenLogger Logger;
 
@@ -328,6 +323,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         if (longRunningWork != PoolOfThreads.LongRunningWork.Current)
             longRunningWork.Join(int.MaxValue);
+
+        _cts.Dispose();
     }
 
     protected void EnterFallbackMode()
@@ -528,11 +525,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// </summary>
     protected abstract Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct);
 
-    /// <summary>Opening quote character for SQL identifiers (e.g. '"' for Postgres, '[' for SQL Server, '`' for MySQL).</summary>
-    protected abstract char StartQuote { get; }
-
-    /// <summary>Closing quote character for SQL identifiers (e.g. '"' for Postgres, ']' for SQL Server, '`' for MySQL).</summary>
-    protected abstract char EndQuote { get; }
 
     /// <summary>
     /// Whether this provider uses SELECT TOP(N) (SQL Server) vs LIMIT N (Postgres/MySQL).
@@ -543,8 +535,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
         string[] lastKeys, int maxBatchSize)
     {
-        var table = $"{StartQuote}{tableInfo.Schema}{EndQuote}.{StartQuote}{tableInfo.TableName}{EndQuote}";
-        var pkCols = string.Join(", ", pkColumns.Select(c => $"{StartQuote}{c}{EndQuote}"));
+        var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
+        var pkCols = string.Join(", ", pkColumns.Select(c => CommandBuilder.QuoteIdentifier(c)));
         var where = lastKeys != null
             ? $" WHERE ({pkCols}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})"
             : "";
@@ -779,11 +771,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
 
-    protected void EnsureThreadAllocationStats()
-    {
-        _threadAllocations = NativeMemory.CurrentThreadStats;
-    }
-
     protected CdcSinkTaskState LoadState(DocumentsOperationContext context)
     {
         var stateDocId = CdcSinkTaskState.GetDocumentId(Configuration.Name);
@@ -803,12 +790,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         exceptionAggregator.Execute(() => _cts.Dispose());
 
+        exceptionAggregator.Execute(() => CommandBuilder.Dispose());
+
         exceptionAggregator.ThrowIfNeeded();
     }
 
     public void LowMemory(LowMemorySeverity lowMemorySeverity)
     {
-        _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         _lowMemoryFlag.Raise();
     }
 
@@ -824,4 +812,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         param.Value = value ?? DBNull.Value;
         cmd.Parameters.Add(param);
     }
+
+    /// <summary>
+    /// Provider-specific command builder for safe identifier quoting via
+    /// <see cref="DbCommandBuilder.QuoteIdentifier"/>. Disposed with the process.
+    /// </summary>
+    protected abstract DbCommandBuilder CommandBuilder { get; }
 }

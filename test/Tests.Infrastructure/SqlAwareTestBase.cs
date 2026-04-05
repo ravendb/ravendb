@@ -390,6 +390,15 @@ namespace Tests.Infrastructure
       AND pid <> pg_backend_pid();";
 
                         dbCommand.ExecuteNonQuery();
+
+                        // Drop any logical replication slots for this database.
+                        // PostgreSQL refuses to drop a database that has active slots.
+                        dbCommand.CommandText = $@"
+                            SELECT pg_drop_replication_slot(slot_name)
+                            FROM pg_replication_slots
+                            WHERE database = '{dbName}';";
+                        dbCommand.ExecuteNonQuery();
+
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();

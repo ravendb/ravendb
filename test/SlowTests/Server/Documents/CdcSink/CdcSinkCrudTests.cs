@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.CdcSink
@@ -37,7 +38,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "public",
                         SourceTableName = "orders",
                         Columns = new List<CdcColumnMapping>
@@ -51,7 +52,7 @@ namespace SlowTests.Server.Documents.CdcSink
             };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task CanAddCdcSink()
         {
             using var store = GetDocumentStore();
@@ -72,7 +73,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(connectionString.Name, record.CdcSinks[0].ConnectionStringName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task CanUpdateCdcSink()
         {
             using var store = GetDocumentStore();
@@ -95,7 +96,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("updated_orders", record.CdcSinks[0].Tables[0].SourceTableName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task CanDeleteCdcSink()
         {
             using var store = GetDocumentStore();
@@ -112,7 +113,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal(0, record.CdcSinks.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public void CanGetCdcSinkTaskInfo()
         {
             using var store = GetDocumentStore();
@@ -138,7 +139,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Null(nullTaskInfo);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task CanToggleCdcSinkState()
         {
             using var store = GetDocumentStore();
@@ -162,7 +163,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.False(record.CdcSinks[0].Disabled);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task CanAddMultipleCdcSinks()
         {
             using var store = GetDocumentStore();

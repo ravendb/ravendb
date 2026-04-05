@@ -40,7 +40,7 @@ public class CdcSinkDocumentProcessor
             {
                 Key = rootKey,
                 RootConfig = table,
-                CollectionName = table.Name,
+                CollectionName = table.CollectionName,
                 IsRoot = true,
                 Columns = table.Columns,
                 AttachmentColumns = FilterAttachmentColumns(table.Columns),
@@ -203,7 +203,7 @@ public class CdcSinkDocumentProcessor
             {
                 Key = key,
                 RootConfig = rootConfig,
-                CollectionName = rootConfig.Name,
+                CollectionName = rootConfig.CollectionName,
                 IsRoot = false,
                 EmbeddedConfig = embedded,
                 PathFromRoot = path,
@@ -279,7 +279,7 @@ public class CdcSinkDocumentProcessor
 
         mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
         {
-            [Constants.Documents.Metadata.Collection] = config.Name,
+            [Constants.Documents.Metadata.Collection] = config.CollectionName,
         };
 
         return new CdcSinkDocumentOp

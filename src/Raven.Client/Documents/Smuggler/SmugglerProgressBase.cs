@@ -262,6 +262,9 @@ public abstract class SmugglerProgressBase : IOperationProgress
             if (QueueSinksUpdated)
                 json[nameof(QueueSinksUpdated)] = QueueSinksUpdated;
 
+            if (CdcSinksUpdated)
+                json[nameof(CdcSinksUpdated)] = CdcSinksUpdated;
+
             return json;
         }
 

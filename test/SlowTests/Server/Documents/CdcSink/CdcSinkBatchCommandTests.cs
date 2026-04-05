@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.CdcSink
         {
             return new CdcSinkTableConfig
             {
-                Name = collectionName,
+                CollectionName = collectionName,
                 SourceTableSchema = "public",
                 SourceTableName = "orders",
                 Columns = new List<CdcColumnMapping>
@@ -838,7 +838,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkTableConfig
             {
-                Name = "Documents",
+                CollectionName = "Documents",
                 SourceTableSchema = "public",
                 SourceTableName = "documents",
                 Columns = new List<CdcColumnMapping>
@@ -924,7 +924,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkTableConfig
             {
-                Name = "Products",
+                CollectionName = "Products",
                 SourceTableSchema = "public",
                 SourceTableName = "products",
                 Columns = new List<CdcColumnMapping>
@@ -997,7 +997,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkTableConfig
             {
-                Name = "Articles",
+                CollectionName = "Articles",
                 SourceTableSchema = "public",
                 SourceTableName = "articles",
                 Columns = new List<CdcColumnMapping>
@@ -1796,7 +1796,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var rootConfig = new CdcSinkTableConfig
             {
-                Name = "Companies",
+                CollectionName = "Companies",
                 SourceTableSchema = "public",
                 SourceTableName = "companies",
                 Columns = new List<CdcColumnMapping>
@@ -2132,7 +2132,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var tableConfig = new CdcSinkTableConfig
             {
-                Name = "Items",
+                CollectionName = "Items",
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
@@ -2239,7 +2239,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var tableConfig = new CdcSinkTableConfig
             {
-                Name = "Items",
+                CollectionName = "Items",
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
@@ -2348,7 +2348,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var tableConfig = new CdcSinkTableConfig
             {
-                Name = "Items",
+                CollectionName = "Items",
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
@@ -2432,7 +2432,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var tableConfig = new CdcSinkTableConfig
             {
-                Name = "Items",
+                CollectionName = "Items",
                 SourceTableSchema = "public",
                 SourceTableName = "items",
                 PrimaryKeyColumns = new List<string> { "id" },
@@ -2604,7 +2604,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var config = new CdcSinkTableConfig
             {
-                Name = "Records",
+                CollectionName = "Records",
                 SourceTableSchema = "public",
                 SourceTableName = "records",
                 Columns = new List<CdcColumnMapping>
@@ -2703,7 +2703,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var tableConfig = new CdcSinkTableConfig
             {
-                Name = "Orders",
+                CollectionName = "Orders",
                 SourceTableSchema = "public",
                 SourceTableName = "orders",
                 PrimaryKeyColumns = new List<string> { "order_id" },
@@ -3038,6 +3038,70 @@ namespace SlowTests.Server.Documents.CdcSink
                         "RemovedKeys": ["high"]
                     }
                     """);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task PatchWithNullColumn_NullComparison()
+        {
+            // Verifies that null CDC column values are passed as JsValue.Null to scripts,
+            // so $row.column === null evaluates to true (not false as with C# null).
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var tableConfig = CreateRootTableConfig(patch: @"
+                this.MiddleNameIsNull = ($row.middle_name === null);
+                this.MiddleNameValue = $row.middle_name;
+            ");
+            var processor = CreateRootProcessor(tableConfig);
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { tableConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            var mappedData = new DynamicJsonValue
+            {
+                ["OrderId"] = 1,
+                ["CustomerName"] = "Alice",
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Collection] = "Orders"
+                }
+            };
+
+            var rawData = new Dictionary<string, object>
+            {
+                { "order_id", 1 },
+                { "customer_name", "Alice" },
+                { "middle_name", null }  // null column value
+            };
+
+            var ops = new List<CdcSinkDocumentOp>
+            {
+                CreatePutOp("Orders/1", mappedData, rawData, processor)
+            };
+
+            var command = new CdcSinkBatchCommand(database, ops, "test-config", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(command);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Orders/1");
+                Assert.NotNull(doc);
+                AssertDocumentMatches(readCtx, doc.Data, """
+                    {
+                        "MiddleNameIsNull": true
+                    }
+                    """);
+                // MiddleNameValue should be null (not stored in blittable)
+                Assert.False(doc.Data.TryGetMember("MiddleNameValue", out var val) && val != null,
+                    "Expected MiddleNameValue to be null or absent");
             }
         }
 

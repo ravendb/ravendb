@@ -214,8 +214,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return conn;
     }
 
-    protected override char StartQuote => '`';
-    protected override char EndQuote => '`';
+    protected override DbCommandBuilder CommandBuilder { get; } = new MySqlCommandBuilder();
 
     protected override Task BindKeysetParameters(DbCommand cmd, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns, string[] lastKeys, CancellationToken ct)
     {
@@ -400,7 +399,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             int i => (long)i,
             uint ui => (long)ui,
             long l => l,
-            ulong ul => (long)ul,
+            ulong ul => ul,
 
             // Floating point — preserve precision
             float => value,

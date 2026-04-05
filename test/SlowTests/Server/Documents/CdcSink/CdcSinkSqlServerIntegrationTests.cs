@@ -246,13 +246,14 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE products (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
-                    price DECIMAL(10,2) NOT NULL
+                    price DECIMAL(12,2) NOT NULL
                 )");
 
             ExecuteMsSql(connectionString, @"
                 INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
                 INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 19.99);
-                INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);");
+                INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);
+                INSERT INTO products (id, name, price) VALUES (4, 'Precision', 123456789.01);");
 
             EnableCdcOnTables(connectionString, ("dbo", "products"));
 
@@ -266,7 +267,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Products",
+                        CollectionName = "Products",
                         SourceTableSchema = "dbo",
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -282,8 +283,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             AddCdcSink(store, config);
 
-            var count = await WaitForDocumentCountAsync(store, "Products", expectedCount: 3, timeoutMs: 60_000);
-            Assert.Equal(3, count);
+            var count = await WaitForDocumentCountAsync(store, "Products", expectedCount: 4, timeoutMs: 60_000);
+            Assert.Equal(4, count);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -300,6 +301,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.NotNull(p3);
                 Assert.Equal("Doohickey", p3.Name);
                 Assert.Equal(29.99m, p3.Price);
+
+                // Precision-sensitive value: 123456789.01 cannot survive a decimal→double→decimal round-trip
+                var p4 = await session.LoadAsync<Product>("Products/4");
+                Assert.NotNull(p4);
+                Assert.Equal(123456789.01m, p4.Price);
             }
         }
 
@@ -333,7 +339,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Items",
+                        CollectionName = "Items",
                         SourceTableSchema = "dbo",
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "product_id" },
@@ -389,7 +395,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Events",
+                        CollectionName = "Events",
                         SourceTableSchema = "dbo",
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -441,7 +447,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Notes",
+                        CollectionName = "Notes",
                         SourceTableSchema = "dbo",
                         SourceTableName = "notes",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -500,7 +506,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Records",
+                        CollectionName = "Records",
                         SourceTableSchema = "dbo",
                         SourceTableName = "records",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -572,7 +578,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -660,7 +666,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -753,7 +759,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -858,7 +864,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -948,7 +954,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1041,7 +1047,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "People",
+                        CollectionName = "People",
                         SourceTableSchema = "dbo",
                         SourceTableName = "people",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1097,7 +1103,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Products",
+                        CollectionName = "Products",
                         SourceTableSchema = "dbo",
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1150,7 +1156,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Invoices",
+                        CollectionName = "Invoices",
                         SourceTableSchema = "dbo",
                         SourceTableName = "invoices",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1225,7 +1231,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Events",
+                        CollectionName = "Events",
                         SourceTableSchema = "dbo",
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1291,7 +1297,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Customers",
+                        CollectionName = "Customers",
                         SourceTableSchema = "dbo",
                         SourceTableName = "customers",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1303,7 +1309,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     },
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1379,7 +1385,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Companies",
+                        CollectionName = "Companies",
                         SourceTableSchema = "dbo",
                         SourceTableName = "companies",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1505,7 +1511,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Counters",
+                        CollectionName = "Counters",
                         SourceTableSchema = "dbo",
                         SourceTableName = "counters",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1558,7 +1564,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Items",
+                        CollectionName = "Items",
                         SourceTableSchema = "dbo",
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1608,7 +1614,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Products",
+                        CollectionName = "Products",
                         SourceTableSchema = "dbo",
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1670,7 +1676,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1758,7 +1764,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Customers",
+                        CollectionName = "Customers",
                         SourceTableSchema = "dbo",
                         SourceTableName = "customers",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1830,7 +1836,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -1931,7 +1937,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2022,7 +2028,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2111,7 +2117,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Files",
+                        CollectionName = "Files",
                         SourceTableSchema = "dbo",
                         SourceTableName = "files",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2184,7 +2190,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Articles",
+                        CollectionName = "Articles",
                         SourceTableSchema = "dbo",
                         SourceTableName = "articles",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2274,7 +2280,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2341,7 +2347,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2396,7 +2402,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2453,7 +2459,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2525,7 +2531,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2613,7 +2619,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2719,7 +2725,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "TypeEmployees",
+                        CollectionName = "TypeEmployees",
                         SourceTableSchema = "dbo",
                         SourceTableName = "employees",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2826,7 +2832,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Configs",
+                        CollectionName = "Configs",
                         SourceTableSchema = "dbo",
                         SourceTableName = "configs",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -2953,7 +2959,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "ComplexDocs",
+                        CollectionName = "ComplexDocs",
                         SourceTableSchema = "dbo",
                         SourceTableName = "complex_docs",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3076,7 +3082,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Albums",
+                        CollectionName = "Albums",
                         SourceTableSchema = "dbo",
                         SourceTableName = "albums",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3170,7 +3176,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Albums",
+                        CollectionName = "Albums",
                         SourceTableSchema = "dbo",
                         SourceTableName = "albums",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3269,7 +3275,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Invoices",
+                        CollectionName = "Invoices",
                         SourceTableSchema = "dbo",
                         SourceTableName = "invoices",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3371,7 +3377,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Items",
+                        CollectionName = "Items",
                         SourceTableSchema = "dbo",
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3487,7 +3493,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Orders",
+                        CollectionName = "Orders",
                         SourceTableSchema = "dbo",
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3569,7 +3575,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Items",
+                        CollectionName = "Items",
                         SourceTableSchema = "dbo",
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3648,7 +3654,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     new CdcSinkTableConfig
                     {
-                        Name = "Employees",
+                        CollectionName = "Employees",
                         SourceTableSchema = "dbo",
                         SourceTableName = "employees",
                         PrimaryKeyColumns = new List<string> { "id" },
@@ -3692,7 +3698,7 @@ namespace SlowTests.Server.Documents.CdcSink
             config.TaskId = addResult.TaskId;
             config.Tables.Add(new CdcSinkTableConfig
             {
-                Name = "Cars",
+                CollectionName = "Cars",
                 SourceTableSchema = "dbo",
                 SourceTableName = "cars",
                 PrimaryKeyColumns = new List<string> { "id" },

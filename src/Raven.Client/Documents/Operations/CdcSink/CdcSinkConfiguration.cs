@@ -77,24 +77,24 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         foreach (var table in Tables)
         {
-            if (string.IsNullOrWhiteSpace(table.Name))
+            if (string.IsNullOrWhiteSpace(table.CollectionName))
                 errors.Add("Table collection name must not be empty");
 
             if (string.IsNullOrWhiteSpace(table.SourceTableName))
-                errors.Add($"Table '{table.Name}' must have a source table name");
+                errors.Add($"Table '{table.CollectionName}' must have a source table name");
 
             if (table.PrimaryKeyColumns == null || table.PrimaryKeyColumns.Count == 0)
-                errors.Add($"Table '{table.Name}' must have at least one primary key column");
+                errors.Add($"Table '{table.CollectionName}' must have at least one primary key column");
 
             if (table.Columns == null || table.Columns.Count == 0)
-                errors.Add($"Table '{table.Name}' must have at least one column mapping");
+                errors.Add($"Table '{table.CollectionName}' must have at least one column mapping");
 
-            if (uniqueNames.Add(table.Name) == false)
-                errors.Add($"Table name '{table.Name}' is already defined. Table names must be unique");
+            if (uniqueNames.Add(table.CollectionName) == false)
+                errors.Add($"Table name '{table.CollectionName}' is already defined. Table names must be unique");
 
-            ValidateColumnsAndPropertyNames(table.Name, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
-            ValidateEmbeddedTables(table.EmbeddedTables, table.Name, errors);
-            ValidateLinkedTables(table.LinkedTables, table.Name, errors);
+            ValidateColumnsAndPropertyNames(table.CollectionName, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
+            ValidateEmbeddedTables(table.EmbeddedTables, table.CollectionName, errors);
+            ValidateLinkedTables(table.LinkedTables, table.CollectionName, errors);
         }
 
         return errors.Count == 0;
@@ -268,9 +268,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
 
         // Sort copies by name for stable comparison
         var localTables = new List<CdcSinkTableConfig>(Tables);
-        localTables.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        localTables.Sort((a, b) => string.Compare(a.CollectionName, b.CollectionName, StringComparison.OrdinalIgnoreCase));
         var remoteTables = new List<CdcSinkTableConfig>(config.Tables);
-        remoteTables.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+        remoteTables.Sort((a, b) => string.Compare(a.CollectionName, b.CollectionName, StringComparison.OrdinalIgnoreCase));
 
         var count = localTables.Count < remoteTables.Count ? localTables.Count : remoteTables.Count;
         for (int i = 0; i < count; i++)
@@ -278,22 +278,22 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             var local = localTables[i];
             var remote = remoteTables[i];
 
-            if (string.Equals(local.Name, remote.Name, StringComparison.OrdinalIgnoreCase) == false)
+            if (string.Equals(local.CollectionName, remote.CollectionName, StringComparison.OrdinalIgnoreCase) == false)
             {
                 differences |= CdcSinkConfigurationCompareDifferences.TableName;
-                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableName));
+                tableDiffs?.Add((local.CollectionName, CdcSinkConfigurationCompareDifferences.TableName));
             }
 
             if (local.Disabled != remote.Disabled)
             {
                 differences |= CdcSinkConfigurationCompareDifferences.TableDisabled;
-                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableDisabled));
+                tableDiffs?.Add((local.CollectionName, CdcSinkConfigurationCompareDifferences.TableDisabled));
             }
 
             if (HasTableConfigChanged(local, remote))
             {
                 differences |= CdcSinkConfigurationCompareDifferences.TableConfig;
-                tableDiffs?.Add((local.Name, CdcSinkConfigurationCompareDifferences.TableConfig));
+                tableDiffs?.Add((local.CollectionName, CdcSinkConfigurationCompareDifferences.TableConfig));
             }
         }
 
@@ -332,10 +332,13 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (local.Patch != remote.Patch)
             return true;
 
+        if (HasOnDeleteChanged(local.OnDelete, remote.OnDelete))
+            return true;
+
         if (HaveColumnsChanged(local.Columns, remote.Columns))
             return true;
 
-        if (local.PrimaryKeyColumns.SequenceEqual(remote.PrimaryKeyColumns) == false)
+        if ((local.PrimaryKeyColumns?.SequenceEqual(remote.PrimaryKeyColumns ?? []) ?? remote.PrimaryKeyColumns == null) == false)
             return true;
 
         if (HaveEmbeddedTablesChanged(local.EmbeddedTables, remote.EmbeddedTables))
@@ -345,6 +348,15 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             return true;
 
         return false;
+    }
+
+    private static bool HasOnDeleteChanged(CdcSinkOnDeleteConfig local, CdcSinkOnDeleteConfig remote)
+    {
+        if (local == null && remote == null)
+            return false;
+        if (local == null || remote == null)
+            return true;
+        return local.Patch != remote.Patch || local.IgnoreDeletes != remote.IgnoreDeletes;
     }
 
     private static bool HaveEmbeddedTablesChanged(List<CdcSinkEmbeddedTableConfig> local, List<CdcSinkEmbeddedTableConfig> remote)
@@ -376,6 +388,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
                 l.CaseSensitiveKeys != r.CaseSensitiveKeys)
                 return true;
 
+            if (HasOnDeleteChanged(l.OnDelete, r.OnDelete))
+                return true;
+
             if (l.PrimaryKeyColumns.SequenceEqual(r.PrimaryKeyColumns) == false)
                 return true;
 
@@ -390,24 +405,6 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Collects fully-qualified source table names (schema.table) from all configured tables,
-    /// including embedded tables recursively.
-    /// </summary>
-    /// <param name="defaultSchema">Default schema when SourceTableSchema is null (e.g., "public" for PostgreSQL, "dbo" for SQL Server).</param>
-    public List<string> CollectAllSourceTableNames(string defaultSchema)
-    {
-        var names = new List<string>();
-        foreach (var table in Tables)
-        {
-            var schema = table.SourceTableSchema ?? defaultSchema;
-            names.Add($"{schema}.{table.SourceTableName}");
-            ForEachEmbeddedTable(table.EmbeddedTables, e =>
-                names.Add($"{(e.SourceTableSchema ?? defaultSchema)}.{e.SourceTableName}"));
-        }
-        return names;
     }
 
     /// <summary>

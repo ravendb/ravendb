@@ -9,7 +9,7 @@ public class CdcSinkTableConfig : IDynamicJson
     /// <summary>
     /// RavenDB collection name (e.g., "Orders").
     /// </summary>
-    public string Name { get; set; }
+    public string CollectionName { get; set; }
 
     /// <summary>
     /// SQL schema name (e.g., "dbo", "public").
@@ -63,16 +63,16 @@ public class CdcSinkTableConfig : IDynamicJson
     {
         return new DynamicJsonValue
         {
-            [nameof(Name)] = Name,
+            [nameof(CollectionName)] = CollectionName,
             [nameof(SourceTableSchema)] = SourceTableSchema,
             [nameof(SourceTableName)] = SourceTableName,
-            [nameof(Columns)] = new DynamicJsonArray(Columns.Select(x => x.ToJson())),
-            [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns),
+            [nameof(Columns)] = new DynamicJsonArray(Columns?.Select(x => x.ToJson()) ?? []),
+            [nameof(PrimaryKeyColumns)] = new DynamicJsonArray(PrimaryKeyColumns ?? []),
             [nameof(Patch)] = Patch,
             [nameof(OnDelete)] = OnDelete?.ToJson(),
             [nameof(Disabled)] = Disabled,
-            [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables.Select(x => x.ToJson())),
-            [nameof(LinkedTables)] = new DynamicJsonArray(LinkedTables.Select(x => x.ToJson())),
+            [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables?.Select(x => x.ToJson()) ?? []),
+            [nameof(LinkedTables)] = new DynamicJsonArray(LinkedTables?.Select(x => x.ToJson()) ?? []),
         };
     }
 }
