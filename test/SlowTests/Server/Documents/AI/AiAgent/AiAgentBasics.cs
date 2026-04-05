@@ -345,6 +345,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 _userPrompt = userPrompt;
                 _options = options;
                 _actionResponses = actionResponses;
+                _context = context;
             }
 
             public override RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
