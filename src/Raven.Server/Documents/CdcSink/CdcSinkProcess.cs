@@ -404,12 +404,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     protected virtual Task OnBatchFlushed(string checkpoint, int rows) => Task.CompletedTask;
 
     /// <summary>
-    /// Common streaming loop shared by all providers. Uses MoveNextAsync + Task.WhenAny
-    /// to overlap event reading with batch processing — when the TxMerger finishes a batch
-    /// while we're waiting for the next event, we immediately flush any accumulated ops
-    /// without waiting for another event to arrive.
-    /// </summary>
-    /// <summary>
     /// The current JSON parsing context for CDC streaming. Subclasses use this in
     /// <see cref="GetCdcEvents"/> when decoding rows. Rotated on each batch flush
     /// so that blittable objects from the previous batch stay alive until the TxMerger
@@ -417,6 +411,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// </summary>
     protected DocumentsOperationContext StreamingJsonContext { get; private set; }
 
+    /// <summary>
+    /// Common streaming loop shared by all providers. Uses MoveNextAsync + Task.WhenAny
+    /// to overlap event reading with batch processing — when the TxMerger finishes a batch
+    /// while we're waiting for the next event, we immediately flush any accumulated ops
+    /// without waiting for another event to arrive.
+    /// </summary>
     protected async Task ProcessCdcStream(CancellationToken ct)
     {
         var batch = new List<CdcSinkDocumentOp>();

@@ -491,7 +491,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     {
         var config = op.Processor.EmbeddedConfig;
 
-        if (parentDoc == null || parentDoc.TryGetMember(config.PropertyName, out var existing) == false || existing == null)
+        // For deeply nested embedded tables (depth >= 2), we need to navigate to the
+        // correct parent level first. E.g., Company → Departments[10] → Employees[100]:
+        // we must walk to the matching Department before looking up the Employee.
+        var (_, navigatedParent) = NavigateToEmbeddedParent(parentDoc, null, op.Processor.PathFromRoot, op, readOnly: true);
+
+        if (navigatedParent == null || navigatedParent.TryGetMember(config.PropertyName, out var existing) == false || existing == null)
             return null;
 
         switch (config.Type)
@@ -818,9 +823,14 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// A tuple of (target DynamicJsonValue for modifications, the BlittableJsonReaderObject at the navigated level).
     /// The blittable may be null if the intermediate didn't exist and was created as a stub.
     /// </returns>
+    /// <param name="readOnly">
+    /// When true, only reads existing data without creating stubs or setting Modifications.
+    /// Used by FindExistingEmbeddedItem to locate the parent level for $old lookups.
+    /// Returns (null, blittable) — the Target is unused in read-only mode.
+    /// </param>
     private static (DynamicJsonValue Target, BlittableJsonReaderObject Blittable) NavigateToEmbeddedParent(
         BlittableJsonReaderObject rootDoc, DynamicJsonValue rootModifications,
-        List<EmbeddedPathSegment> path, CdcSinkDocumentOp op)
+        List<EmbeddedPathSegment> path, CdcSinkDocumentOp op, bool readOnly = false)
     {
         if (path == null || path.Count <= 1)
             return (rootModifications, rootDoc);
@@ -837,6 +847,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             // so create a stub object to attach the embedded data to.
             if (currentBlittable == null || currentBlittable.TryGetMember(propName, out var nested) == false)
             {
+                if (readOnly)
+                    return (null, null);
+
                 var nestedMod = new DynamicJsonValue();
                 current[propName] = nestedMod;
                 current = nestedMod;
@@ -846,18 +859,25 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
             if (nested is BlittableJsonReaderObject nestedObj)
             {
-                // Value or Map type — e.g., navigating into Company.Address (a single object)
-                if (nestedObj.Modifications != null)
+                if (readOnly)
                 {
-                    current = nestedObj.Modifications;
+                    currentBlittable = nestedObj;
                 }
                 else
                 {
-                    var nestedMod = new DynamicJsonValue(nestedObj);
-                    nestedObj.Modifications = nestedMod;
-                    current = nestedMod;
+                    // Value or Map type — e.g., navigating into Company.Address (a single object)
+                    if (nestedObj.Modifications != null)
+                    {
+                        current = nestedObj.Modifications;
+                    }
+                    else
+                    {
+                        var nestedMod = new DynamicJsonValue(nestedObj);
+                        nestedObj.Modifications = nestedMod;
+                        current = nestedMod;
+                    }
+                    currentBlittable = nestedObj;
                 }
-                currentBlittable = nestedObj;
             }
             else if (nested is BlittableJsonReaderArray nestedArray)
             {
@@ -909,9 +929,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 // Matched — e.g., found the Department where DeptId == the employee's dept_id
                 if (matchedItem != null)
                 {
-                    matchedItem.Modifications ??= new DynamicJsonValue(matchedItem);
-                    current = matchedItem.Modifications;
+                    if (readOnly == false)
+                    {
+                        matchedItem.Modifications ??= new DynamicJsonValue(matchedItem);
+                        current = matchedItem.Modifications;
+                    }
                     currentBlittable = matchedItem;
+                }
+                else if (readOnly)
+                {
+                    return (null, null);
                 }
                 else
                 {
@@ -926,6 +953,10 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     current = stubElement;
                     currentBlittable = null;
                 }
+            }
+            else if (readOnly)
+            {
+                return (null, null);
             }
             else
             {

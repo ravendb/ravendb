@@ -3102,5 +3102,144 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task DeepNesting_OnDelete_IgnoreDeletes_OldHasPreviousValue()
+        {
+            // FindExistingEmbeddedItem looks up config.PropertyName directly on the root document.
+            // For depth >= 2 (Company → Departments[] → Employees[]), "Employees" is nested inside
+            // a specific Department, not at the root. So FindExistingEmbeddedItem returns null,
+            // and $old is null in the OnDelete.Patch for the employee — losing the previous value.
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Seed the document with a company, one department, one employee
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext setupCtx))
+            using (var tx = setupCtx.OpenWriteTransaction())
+            {
+                using var blittable = setupCtx.Sync.ReadForMemory("""
+                    {
+                        "CompanyId": 1,
+                        "CompanyName": "Acme Corp",
+                        "FiredEmployees": [],
+                        "Departments": [
+                            {
+                                "DeptId": 10,
+                                "DeptName": "Engineering",
+                                "Employees": [
+                                    { "EmpId": 100, "EmpName": "Alice" }
+                                ]
+                            }
+                        ],
+                        "@metadata": { "@collection": "Companies" }
+                    }
+                    """, "test");
+                database.DocumentsStorage.Put(setupCtx, "Companies/1", null, blittable);
+                tx.Commit();
+            }
+
+            // Build config with OnDelete.IgnoreDeletes + Patch on the depth-2 employee table
+            var empConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "employees",
+                PropertyName = "Employees",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new CdcColumnMapping { Column = "emp_id", Name = "EmpId" },
+                    new CdcColumnMapping { Column = "emp_name", Name = "EmpName" }
+                },
+                PrimaryKeyColumns = new List<string> { "emp_id" },
+                JoinColumns = new List<string> { "dept_id" },
+                Type = CdcSinkRelationType.Array,
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    IgnoreDeletes = true,
+                    // Record the fired employee's name. $old must have the previous value.
+                    Patch = "this.FiredEmployees.push($old ? $old.EmpName : 'MISSING');"
+                }
+            };
+
+            var deptConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "departments",
+                PropertyName = "Departments",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new CdcColumnMapping { Column = "dept_id", Name = "DeptId" },
+                    new CdcColumnMapping { Column = "dept_name", Name = "DeptName" }
+                },
+                PrimaryKeyColumns = new List<string> { "dept_id" },
+                JoinColumns = new List<string> { "company_id" },
+                Type = CdcSinkRelationType.Array,
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { empConfig }
+            };
+
+            var rootConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "Companies",
+                SourceTableSchema = "public",
+                SourceTableName = "companies",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new CdcColumnMapping { Column = "company_id", Name = "CompanyId" },
+                    new CdcColumnMapping { Column = "company_name", Name = "CompanyName" }
+                },
+                PrimaryKeyColumns = new List<string> { "company_id" },
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { deptConfig }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-config",
+                Tables = new List<CdcSinkTableConfig> { rootConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var empProcessor = docProcessor.GetProcessor("public", "employees");
+
+            // Delete employee Alice (emp_id=100) from dept_id=10
+            var deleteData = new DynamicJsonValue { ["EmpId"] = 100 };
+            var rawDelete = new Dictionary<string, object>
+            {
+                { "company_id", 1 }, // root join column (denormalized FK)
+                { "dept_id", 10 },   // parent join column
+                { "emp_id", 100 },
+                { "emp_name", "Alice" }
+            };
+
+            var deleteOp = new CdcSinkDocumentOp
+            {
+                Type = CdcSinkDocumentOpType.EmbeddedModify,
+                DocumentId = "Companies/1",
+                Processor = empProcessor,
+                MappedData = deleteData,
+                RawData = rawDelete,
+                Operation = CdcSinkOperation.Delete
+            };
+
+            var cmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { deleteOp },
+                "test-config", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(cmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(readCtx, "Companies/1");
+                Assert.NotNull(doc);
+
+                // IgnoreDeletes=true means Alice stays in the Employees array.
+                // The OnDelete.Patch should have pushed "Alice" (from $old.EmpName) into FiredEmployees.
+                // BUG: FindExistingEmbeddedItem doesn't navigate the nested path, so $old is null,
+                // and the patch pushes "MISSING" instead of "Alice".
+                doc.Data.TryGet("FiredEmployees", out BlittableJsonReaderArray fired);
+                Assert.NotNull(fired);
+                Assert.Equal(1, fired.Length);
+                Assert.Equal("Alice", fired[0].ToString());
+            }
+        }
+
     }
 }

@@ -236,12 +236,6 @@ public class CdcSinkTableProcessor
 
     /// <summary>
     /// Resolves FK columns in the row to document ID references in the target collection.
-    /// For example, if the row has customer_id=42 and there's a linked table config pointing
-    /// to collection "Customers", this writes "Customer": "Customers/42" into the document.
-    /// Only Value (single document ID) links are supported.
-    /// </summary>
-    /// <summary>
-    /// Resolves FK columns in the row to document ID references in the target collection.
     ///
     /// Given a row with FK columns (e.g., customer_id=42) and a linked table config
     /// pointing to collection "Customers", writes the property as a document ID reference:
