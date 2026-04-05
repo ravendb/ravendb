@@ -5,9 +5,11 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal abstract class AbstractOpenAiChatCompletionClientSettings : AbstractChatCompletionClientSettings
 {
-    private readonly OpenAiBaseSettings _settings;
+    protected readonly OpenAiBaseSettings _settings;
 
-    protected AbstractOpenAiChatCompletionClientSettings(OpenAiBaseSettings settings) 
+    public override bool EnablePromptCaching => _settings.EnablePromptCache ?? true;
+
+    protected AbstractOpenAiChatCompletionClientSettings(OpenAiBaseSettings settings)
         : base(settings)
     {
         _settings = settings;

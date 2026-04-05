@@ -521,7 +521,7 @@ public class ChatCompletionClient : IDisposable
             writer.WriteEndObject();
         }
 
-        if (promptCacheKey != null)
+        if (promptCacheKey != null && _settings.EnablePromptCaching)
         {
             writer.WriteComma();
             writer.WritePropertyName(Constants.RequestFields.PromptCacheKey);

@@ -21,14 +21,15 @@ internal class MockLlmConversationHandler(
     Raven.Server.ServerWide.ServerStore server,
     DocumentDatabase database,
     Func<JObject, HttpResponseMessage> onRequest = null,
-    Func<JObject, string, HttpResponseMessage> onToolResult = null)
+    Func<JObject, string, HttpResponseMessage> onToolResult = null,
+    AbstractChatCompletionClientSettings clientSettings = null)
     : ConversationHandler(server, database)
 {
     private readonly DocumentDatabase _database = database;
 
     protected internal override ChatCompletionClient CreateClient()
     {
-        var settings = new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
+        var settings = clientSettings ?? new OpenAiChatCompletionClientSettings(new OpenAiSettings("fake-key", "https://fake.openai.com", "gpt-4o"));
         return new MockLlm(_database.DocumentsStorage.ContextPool, settings, onRequest, onToolResult, ChatCompletionClient.ConventionsToUse);
     }
 }

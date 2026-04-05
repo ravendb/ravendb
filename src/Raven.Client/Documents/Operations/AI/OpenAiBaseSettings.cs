@@ -62,6 +62,14 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
     /// </summary>
     public double? Temperature { get; set; } = null;
 
+    /// <summary>
+    /// Enables sending a <c>prompt_cache_key</c> field in chat completion requests,
+    /// allowing providers that support it to cache and reuse prompt prefixes across
+    /// requests with the same key.
+    /// When <c>null</c>, the server applies a provider-specific default
+    /// </summary>
+    public bool? EnablePromptCache { get; set; }
+
     public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
@@ -100,6 +108,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
             (Temperature.HasValue && openAiSettings.Temperature.HasValue && Temperature.Value.AlmostEquals(openAiSettings.Temperature.Value) == false))
             differences |= AiSettingsCompareDifferences.EndpointConfiguration;
 
+        if (EnablePromptCache != openAiSettings.EnablePromptCache)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
         return differences;
     }
 
@@ -117,6 +128,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 
         if (Temperature.HasValue)
             json[nameof(Temperature)] = Temperature;
+
+        if (EnablePromptCache.HasValue)
+            json[nameof(EnablePromptCache)] = EnablePromptCache.Value;
 
         return json;
     }
