@@ -107,6 +107,8 @@ export function useStudioSearchAsyncRegister(props: UseStudioSearchAsyncRegister
                         return getUrlFromProvider(appUrl.forEditEmbeddingsGeneration);
                     case "GenAi":
                         return getUrlFromProvider(appUrl.forEditGenAi);
+                    case "CdcSink":
+                        return null; // TODO: add CDC Sink edit URL when Studio UI is implemented
                     default:
                         assertUnreachable(taskType);
                 }
