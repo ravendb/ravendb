@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
@@ -23,6 +23,8 @@ namespace Raven.Server.ServerWide.Commands
         {
             if (PullReplicationAsSink == null)
                 return ;
+
+            PullReplicationPathFilterUtils.NormalizeAndValidate(ref PullReplicationAsSink.AllowedHubToSinkPaths, ref PullReplicationAsSink.AllowedSinkToHubPaths, PullReplicationAsSink.Name ?? PullReplicationAsSink.HubName);
 
             if (PullReplicationAsSink.TaskId == 0)
             {

@@ -197,6 +197,41 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task Can_setup_filtered_replication_trimming_whitespace_in_hub_access_paths()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbNameA = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var storeA = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbNameA
+            });
+
+            var pullCert = certificates.ClientCertificate2.Value;
+            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pull",
+                WithFiltering = true
+            }));
+            await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
+                new ReplicationHubAccess
+                {
+                    Name = "Arava",
+                    CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                    AllowedHubToSinkPaths = new[] { " users/ayende/* ", "   " },
+                    AllowedSinkToHubPaths = new[] { " orders/1 ", "\t" }
+                }));
+
+            var access = Assert.Single(await storeA.Maintenance.SendAsync(new GetReplicationHubAccessOperation("pull")));
+            Assert.Equal(new[] { "users/ayende/*" }, access.AllowedHubToSinkPaths);
+            Assert.Equal(new[] { "orders/1" }, access.AllowedSinkToHubPaths);
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
         public async Task Cannot_setup_partial_filtered_replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1494,6 +1529,93 @@ namespace SlowTests.Issues
                    })
                ));
 
+            Assert.Contains("Either AllowedSinkToHubPaths or AllowedHubToSinkPaths must have a value, but both were null or empty", ex.InnerException.Message);
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task Can_setup_filtered_replication_trimming_whitespace_in_sink_paths()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var hubStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+            });
+
+            var pullCert = certificates.ClientCertificate2.Value;
+            await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pull",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                WithFiltering = true
+            }));
+
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = hubStore.Database,
+                Name = "HubConStr",
+                TopologyDiscoveryUrls = hubStore.Urls
+            }));
+
+            var result = await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+            {
+                ConnectionStringName = "HubConStr",
+                CertificateWithPrivateKey = Convert.ToBase64String(pullCert.Export(X509ContentType.Pfx)),
+                HubName = "pull",
+                Mode = PullReplicationMode.SinkToHub | PullReplicationMode.HubToSink,
+                AllowedHubToSinkPaths = [" issues/ABCD/* ", "   "],
+                AllowedSinkToHubPaths = [" DeliveryApprovals/* ", "\t"]
+            }));
+
+            var sinkTask = (OngoingTaskPullReplicationAsSink)await sinkStore.Maintenance.SendAsync(
+                new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.PullReplicationAsSink));
+
+            Assert.Equal(new[] { "issues/ABCD/*" }, sinkTask.AllowedHubToSinkPaths);
+            Assert.Equal(new[] { "DeliveryApprovals/*" }, sinkTask.AllowedSinkToHubPaths);
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task Must_use_access_paths_if_filtering_is_set_even_when_values_trim_to_empty()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbNameA = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
+                .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+
+            using var storeA = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = s => dbNameA
+            });
+
+            var pullCert = certificates.ClientCertificate2.Value;
+            await storeA.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition
+            {
+                Name = "pull",
+                WithFiltering = true
+            }));
+
+            var ex = await Assert.ThrowsAsync<RavenException>(async () =>
+               await storeA.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull",
+                   new ReplicationHubAccess
+                   {
+                       Name = "Arava",
+                       CertificateBase64 = Convert.ToBase64String(pullCert.Export(X509ContentType.Cert)),
+                       AllowedHubToSinkPaths = ["   ", "\t"],
+                       AllowedSinkToHubPaths = [" "]
+                   })
+               ));
+
+            Assert.True(ex.InnerException != null, "ex.InnerException is null but expected an exception");
             Assert.Contains("Either AllowedSinkToHubPaths or AllowedHubToSinkPaths must have a value, but both were null or empty", ex.InnerException.Message);
         }
 

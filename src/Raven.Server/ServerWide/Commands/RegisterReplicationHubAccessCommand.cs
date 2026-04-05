@@ -62,6 +62,7 @@ namespace Raven.Server.ServerWide.Commands
             CertificateBase64 = access.CertificateBase64;
             AllowedHubToSinkPaths = access.AllowedHubToSinkPaths;
             AllowedSinkToHubPaths = access.AllowedSinkToHubPaths;
+            PullReplicationPathFilterUtils.NormalizeAndValidate(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths, Name);
 
             if (certificate != null)
             {
@@ -97,6 +98,8 @@ namespace Raven.Server.ServerWide.Commands
 
         public DynamicJsonValue PrepareForStorage()
         {
+            PullReplicationPathFilterUtils.NormalizeAndValidate(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths, Name);
+
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
