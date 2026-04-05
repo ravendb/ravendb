@@ -26,7 +26,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// (for array: the matched item, for value: the existing object) — null for inserts. Previous value for deletes and updates.
     /// Provides $old in scripts for delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
     /// </summary>
-    private readonly record struct PatchEntry(string TableName, Dictionary<string, object> RawData, string PatchScript, BlittableJsonReaderObject Old);
+    private readonly record struct PatchEntry(string TableName, string[] ColumnNames, object[] Values, string PatchScript, BlittableJsonReaderObject Old);
 
     private readonly DocumentDatabase _database;
     private readonly List<CdcSinkDocumentOp> _ops;
@@ -144,7 +144,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     if (op.Processor.RootConfig.Patch != null)
                     {
                         patches ??= [];
-                        patches.Add(new PatchEntry(op.Processor.Key, op.RawData, op.Processor.RootConfig.Patch, currentDoc));
+                        patches.Add(new PatchEntry(op.Processor.Key, op.Processor.SourceColumnNames, op.RawValues, op.Processor.RootConfig.Patch, currentDoc));
                     }
 
                     if (currentDoc != null)
@@ -177,7 +177,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     if (deleteScript != null)
                     {
                         patches ??= [];
-                        patches.Add(new PatchEntry(op.Processor.KeyOnDelete, op.RawData, deleteScript, currentDoc));
+                        patches.Add(new PatchEntry(op.Processor.KeyOnDelete, op.Processor.SourceColumnNames, op.RawValues, deleteScript, currentDoc));
                     }
 
                     if (ignoreThisDelete)
@@ -294,7 +294,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         if (lastPutOp != null) // Store attachments from root table binary columns
-            StoreAttachments(context, documentId, lastPutOp.RawData, lastPutOp.Processor.AttachmentColumns, prefix: null);
+            StoreAttachments(context, documentId, lastPutOp.RawValues, lastPutOp.Processor, prefix: null);
 
         // Handle attachments from embedded table binary columns.
         // Attachment name includes the embedded path and PK values to distinguish
@@ -305,11 +305,11 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (attachmentColumns.Count == 0)
                 continue;
 
-            var prefix = BuildEmbeddedAttachmentPrefix(embOp.Processor.EmbeddedConfig, embOp.RawData);
+            var prefix = BuildEmbeddedAttachmentPrefix(embOp.Processor, embOp.RawValues);
 
             if (embOp.Operation == CdcSinkOperation.Upsert)
             {
-                StoreAttachments(context, documentId, embOp.RawData, attachmentColumns, prefix);
+                StoreAttachments(context, documentId, embOp.RawValues, embOp.Processor, prefix);
             }
             else
             {
@@ -320,13 +320,16 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
     private void StoreAttachments(
         DocumentsOperationContext context, string documentId,
-        Dictionary<string, object> rawData, List<CdcColumnMapping> attachmentColumns, string prefix)
+        object[] values, CdcSinkTableProcessor processor, string prefix)
     {
+        var attachmentColumns = processor.AttachmentColumns;
+        var indices = processor.AttachmentColumnIndices;
         for (int i = 0; i < attachmentColumns.Count; i++)
         {
             var col = attachmentColumns[i];
-
-            if (rawData.TryGetValue(col.Column, out var value) == false || value is null or DBNull)
+            var idx = indices[i];
+            var value = values[idx];
+            if (value is null or DBNull)
                 continue;
 
             var name = prefix != null ? prefix + col.Name : col.Name;
@@ -405,17 +408,18 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
     }
 
-    private string BuildEmbeddedAttachmentPrefix(CdcSinkEmbeddedTableConfig config, Dictionary<string, object> rawData)
+    private string BuildEmbeddedAttachmentPrefix(CdcSinkTableProcessor processor, object[] values)
     {
         _sb ??= new StringBuilder();
         _sb.Clear();
-        _sb.Append(config.PropertyName).Append('/');
-        for (int j = 0; j < config.PrimaryKeyColumns.Count; j++)
+        _sb.Append(processor.EmbeddedConfig.PropertyName).Append('/');
+        var pkIndices = processor.PrimaryKeyIndices;
+        for (int j = 0; j < pkIndices.Length; j++)
         {
             if (j > 0)
                 _sb.Append('/');
-            var pkCol = config.PrimaryKeyColumns[j];
-            _sb.Append(rawData.TryGetValue(pkCol, out var v) ? v?.ToString() ?? "" : "");
+            var val = values[pkIndices[j]];
+            _sb.Append(val is null or DBNull ? "null" : val.ToString());
         }
         _sb.Append('/');
         return _sb.ToString();
@@ -452,7 +456,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 {
                     var existingItem = FindExistingEmbeddedItem(context, currentDoc, embedOp);
                     patches ??= [];
-                    patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.RawData, embeddedConfig.OnDelete.Patch, existingItem));
+                    patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.OnDelete.Patch, existingItem));
                 }
                 continue;
             }
@@ -470,12 +474,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
             {
                 patches ??= [];
-                patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.RawData, embeddedConfig.OnDelete.Patch, old));
+                patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.OnDelete.Patch, old));
             }
             else if (!isDelete && embeddedConfig.Patch != null)
             {
                 patches ??= [];
-                patches.Add(new PatchEntry(embedOp.Processor.Key, embedOp.RawData, embeddedConfig.Patch, old));
+                patches.Add(new PatchEntry(embedOp.Processor.Key, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.Patch, old));
             }
         }
 
@@ -652,17 +656,17 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         return old;
     }
 
-    private static JsObject DictionaryToJint(Jint.Engine engine, Dictionary<string, object> rawData)
+    private static JsObject RowDataToJint(Jint.Engine engine, string[] names, object[] values)
     {
         var o = new JsObject(engine);
-        foreach (var kvp in rawData)
+        for (int i = 0; i < names.Length && i < values.Length; i++)
         {
-            o.FastSetDataProperty(kvp.Key, kvp.Value switch
+            o.FastSetDataProperty(names[i], values[i] switch
             {
                 null or DBNull => JsValue.Null,
                 byte[] bytes => Convert.ToBase64String(bytes),
                 Guid guid => guid.ToString(),
-                _ => JsValue.FromObject(engine, kvp.Value)
+                _ => JsValue.FromObject(engine, values[i])
             });
         }
         return o;
@@ -896,12 +900,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     int pkIdx = 0;
                     foreach (var (childFkCol, _) in nextSegment.JoinMapping)
                     {
-                        // Get the FK value from the CDC row
-                        if (op.RawData.TryGetValue(childFkCol, out var fkValue) == false)
-                        {
-                            matches = false;
-                            break;
-                        }
+                        // Get the FK value from the CDC row by column name lookup
+                        var fkIdx = CdcSinkTableProcessor.FindColumnIndex(op.Processor.SourceColumnNames, childFkCol);
+                        var fkValue = op.RawValues[fkIdx];
 
                         // The parent PK column is stored under its mapped property name
                         var mappedName = segment.MappedPrimaryKeyNames[pkIdx++];
@@ -1011,7 +1012,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     var old = patch.Old == null ? null : new BlittableObjectInstance(runner.ScriptEngine, null, patch.Old, null, null, null);
 
                     row.FastSetDataProperty("table", patch.TableName);
-                    row.FastSetDataProperty("row", DictionaryToJint(runner.ScriptEngine, patch.RawData));
+                    row.FastSetDataProperty("row", RowDataToJint(runner.ScriptEngine, patch.ColumnNames, patch.Values));
                     row.FastSetDataProperty("old", old);
                     rowsArray.Push(row);
                 }
@@ -1085,26 +1086,28 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
             var rawDjv = new DynamicJsonValue();
             DynamicJsonValue binaryDjv = null;
-            if (op.RawData != null)
+            if (op.RawValues != null && op.Processor?.SourceColumnNames != null)
             {
-                foreach (var kvp in op.RawData)
+                var names = op.Processor.SourceColumnNames;
+                var values = op.RawValues;
+                for (int j = 0; j < names.Length && j < values.Length; j++)
                 {
-                    switch (kvp.Value)
+                    switch (values[j])
                     {
                         case null or DBNull:
-                            rawDjv[kvp.Key] = null;
+                            rawDjv[names[j]] = null;
                             break;
                         case byte[] bytes:
                             // Store binary columns separately so we can restore them as byte[]
                             // on deserialization without ambiguity (vs regular string values).
                             binaryDjv ??= new DynamicJsonValue();
-                            binaryDjv[kvp.Key] = Convert.ToBase64String(bytes);
+                            binaryDjv[names[j]] = Convert.ToBase64String(bytes);
                             break;
                         case Guid guid:
-                            rawDjv[kvp.Key] = guid.ToString();
+                            rawDjv[names[j]] = guid.ToString();
                             break;
                         default:
-                            rawDjv[kvp.Key] = kvp.Value;
+                            rawDjv[names[j]] = values[j];
                             break;
                     }
                 }
@@ -1176,26 +1179,30 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             {
                 var serialized = Ops[i];
                 var mappedDjv = serialized.MappedData != null ? new DynamicJsonValue(serialized.MappedData) : null;
-                var rawData = new Dictionary<string, object>();
+                var processor = docProcessor.GetProcessor(serialized.ProcessorSchema, serialized.ProcessorTable);
 
-                if (serialized.RawData != null)
+                // Rebuild object[] from the serialized blittable using processor's column name order
+                object[] rawValues = null;
+                if (serialized.RawData != null && processor.SourceColumnNames != null)
                 {
+                    rawValues = new object[processor.SourceColumnNames.Length];
                     var prop = new BlittableJsonReaderObject.PropertyDetails();
                     for (int j = 0; j < serialized.RawData.Count; j++)
                     {
                         serialized.RawData.GetPropertyByIndex(j, ref prop);
-                        rawData[prop.Name] = prop.Value;
+                        var idx = CdcSinkTableProcessor.FindColumnIndex(processor.SourceColumnNames, prop.Name.ToString());
+                        rawValues[idx] = prop.Value;
                     }
-                }
 
-                // Restore binary columns from the separate BinaryData blittable
-                if (serialized.BinaryData != null)
-                {
-                    var prop = new BlittableJsonReaderObject.PropertyDetails();
-                    for (int j = 0; j < serialized.BinaryData.Count; j++)
+                    // Restore binary columns from the separate BinaryData blittable
+                    if (serialized.BinaryData != null)
                     {
-                        serialized.BinaryData.GetPropertyByIndex(j, ref prop);
-                        rawData[prop.Name] = Convert.FromBase64String(prop.Value.ToString());
+                        for (int j = 0; j < serialized.BinaryData.Count; j++)
+                        {
+                            serialized.BinaryData.GetPropertyByIndex(j, ref prop);
+                            var idx = CdcSinkTableProcessor.FindColumnIndex(processor.SourceColumnNames, prop.Name.ToString());
+                            rawValues[idx] = Convert.FromBase64String(prop.Value.ToString());
+                        }
                     }
                 }
 
@@ -1204,9 +1211,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     Type = serialized.Type,
                     DocumentId = serialized.DocumentId,
                     Operation = serialized.Operation,
-                    Processor = docProcessor.GetProcessor(serialized.ProcessorSchema, serialized.ProcessorTable),
+                    Processor = processor,
                     MappedData = mappedDjv,
-                    RawData = rawData,
+                    RawValues = rawValues,
                 });
             }
 

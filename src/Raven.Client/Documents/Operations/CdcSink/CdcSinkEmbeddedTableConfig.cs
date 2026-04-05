@@ -73,6 +73,13 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
     /// </summary>
     public List<CdcSinkEmbeddedTableConfig> EmbeddedTables { get; set; } = new();
 
+    /// <summary>
+    /// Tables referenced by document ID link within this embedded table's items.
+    /// Works identically to root-level LinkedTables: FK columns in the embedded row
+    /// are resolved to document ID references in the target collection.
+    /// </summary>
+    public List<CdcSinkLinkedTableConfig> LinkedTables { get; set; } = new();
+
     public void FillFromBlittableJson(BlittableJsonReaderObject json)
     {
         var config = DocumentConventions.Default.Serialization.DefaultConverter
@@ -89,6 +96,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
         OnDelete = config.OnDelete;
         CaseSensitiveKeys = config.CaseSensitiveKeys;
         EmbeddedTables = config.EmbeddedTables;
+        LinkedTables = config.LinkedTables;
     }
 
     public DynamicJsonValue ToJson()
@@ -106,6 +114,7 @@ public class CdcSinkEmbeddedTableConfig : IFillFromBlittableJson, IDynamicJson
             [nameof(OnDelete)] = OnDelete?.ToJson(),
             [nameof(CaseSensitiveKeys)] = CaseSensitiveKeys,
             [nameof(EmbeddedTables)] = new DynamicJsonArray(EmbeddedTables?.Select(x => x.ToJson()) ?? []),
+            [nameof(LinkedTables)] = new DynamicJsonArray(LinkedTables?.Select(x => x.ToJson()) ?? []),
         };
     }
 }

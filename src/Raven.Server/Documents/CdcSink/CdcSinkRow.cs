@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Raven.Server.Documents.CdcSink;
 
 /// <summary>
@@ -23,12 +21,11 @@ public class CdcSinkRow
     public CdcSinkOperation Operation { get; set; }
 
     /// <summary>
-    /// All column values from the CDC message or initial load row.
-    /// For INSERT/UPDATE: all columns with new values.
-    /// For DELETE: at least primary key columns (may have all columns with REPLICA IDENTITY FULL).
-    /// Keys are the original SQL column names.
+    /// Column values from the CDC message or initial load row, in positional order
+    /// matching the table's <see cref="CdcSinkTableProcessor.SourceColumnNames"/>.
+    /// Indices correspond 1:1 with the processor's column name array.
     /// </summary>
-    public Dictionary<string, object> Data { get; set; }
+    public object[] Data { get; set; }
 }
 
 public enum CdcSinkOperation

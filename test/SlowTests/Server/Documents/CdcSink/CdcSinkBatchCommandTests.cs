@@ -100,7 +100,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            return docProcessor.GetProcessor(config.SourceTableSchema ?? "public", config.SourceTableName);
+            var processor = docProcessor.GetProcessor(config.SourceTableSchema ?? "public", config.SourceTableName);
+            SetSourceColumnNamesFromConfig(processor, config.Columns);
+            return processor;
         }
 
         private static CdcSinkTableProcessor CreateEmbeddedProcessor(
@@ -116,19 +118,116 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            return docProcessor.GetProcessor(embeddedConfig.SourceTableSchema ?? "", embeddedConfig.SourceTableName);
+
+            // Set column names on root processor too
+            var rootProcessor = docProcessor.GetProcessor(rootConfig.SourceTableSchema ?? "public", rootConfig.SourceTableName);
+            SetSourceColumnNamesFromConfig(rootProcessor, rootConfig.Columns);
+
+            var processor = docProcessor.GetProcessor(embeddedConfig.SourceTableSchema ?? "", embeddedConfig.SourceTableName);
+            SetSourceColumnNamesFromConfig(processor, embeddedConfig.Columns);
+            return processor;
+        }
+
+        /// <summary>
+        /// Sets SourceColumnNames from the processor's configuration.
+        /// In production, providers set these from DB schema metadata; in tests we derive
+        /// them from config by collecting all referenced column names (mappings, PKs, joins).
+        /// </summary>
+        private static void SetSourceColumnNamesFromConfig(CdcSinkTableProcessor processor, List<CdcColumnMapping> columns)
+        {
+            var nameSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var nameList = new List<string>();
+
+            void Add(string name)
+            {
+                if (nameSet.Add(name))
+                    nameList.Add(name);
+            }
+
+            // Mapped columns
+            for (int i = 0; i < columns.Count; i++)
+                Add(columns[i].Column);
+
+            // PK columns
+            var pkColumns = processor.IsRoot ? processor.RootConfig.PrimaryKeyColumns : processor.EmbeddedConfig?.PrimaryKeyColumns;
+            if (pkColumns != null)
+                foreach (var pk in pkColumns)
+                    Add(pk);
+
+            // Join columns (embedded → root)
+            if (processor.RootJoinColumns != null)
+                foreach (var jc in processor.RootJoinColumns)
+                    Add(jc);
+
+            // Linked table join columns
+            if (processor.LinkedTables != null)
+                foreach (var lt in processor.LinkedTables)
+                    foreach (var jc in lt.JoinColumns)
+                        Add(jc);
+
+            processor.SetSourceColumnNames(nameList.ToArray());
+        }
+
+        internal static (string[] Names, object[] Values) DictToValues(Dictionary<string, object> dict)
+        {
+            var names = new string[dict.Count];
+            var values = new object[dict.Count];
+            int i = 0;
+            foreach (var kvp in dict)
+            {
+                names[i] = kvp.Key;
+                values[i] = kvp.Value;
+                i++;
+            }
+            return (names, values);
+        }
+
+        private static object[] ToRawValues(Dictionary<string, object> dict, CdcSinkTableProcessor processor)
+        {
+            if (dict == null || dict.Count == 0)
+                return processor.SourceColumnNames != null ? new object[processor.SourceColumnNames.Length] : Array.Empty<object>();
+
+            // In production, SourceColumnNames comes from the DB schema and includes ALL columns.
+            // In tests, the dict may have extra columns not in the config (e.g., unmapped columns
+            // accessed via $row in patches). Extend the column names to include them.
+            var existingNames = processor.SourceColumnNames;
+            var allNames = new List<string>(existingNames ?? Array.Empty<string>());
+            foreach (var key in dict.Keys)
+            {
+                bool found = false;
+                for (int i = 0; i < allNames.Count; i++)
+                {
+                    if (string.Equals(allNames[i], key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                    allNames.Add(key);
+            }
+
+            if (existingNames == null || allNames.Count != existingNames.Length)
+                processor.SetSourceColumnNames(allNames.ToArray());
+
+            var columnNames = processor.SourceColumnNames;
+            var values = new object[columnNames.Length];
+            for (int i = 0; i < columnNames.Length; i++)
+                dict.TryGetValue(columnNames[i], out values[i]);
+            return values;
         }
 
         private static CdcSinkDocumentOp CreatePutOp(string documentId, DynamicJsonValue mappedData,
             Dictionary<string, object> rawData = null, CdcSinkTableProcessor processor = null)
         {
+            processor ??= CreateRootProcessor();
             return new CdcSinkDocumentOp
             {
                 Type = CdcSinkDocumentOpType.Put,
                 DocumentId = documentId,
-                Processor = processor ?? CreateRootProcessor(),
+                Processor = processor,
                 MappedData = mappedData,
-                RawData = rawData ?? new Dictionary<string, object>(),
+                RawValues = ToRawValues(rawData, processor),
                 Operation = CdcSinkOperation.Upsert
             };
         }
@@ -136,13 +235,14 @@ namespace SlowTests.Server.Documents.CdcSink
         private static CdcSinkDocumentOp CreateDeleteOp(string documentId, CdcSinkTableProcessor processor = null,
             Dictionary<string, object> rawData = null)
         {
+            processor ??= CreateRootProcessor();
             return new CdcSinkDocumentOp
             {
                 Type = CdcSinkDocumentOpType.Delete,
                 DocumentId = documentId,
-                Processor = processor ?? CreateRootProcessor(),
+                Processor = processor,
                 MappedData = new DynamicJsonValue(),
-                RawData = rawData ?? new Dictionary<string, object>(),
+                RawValues = ToRawValues(rawData, processor),
                 Operation = CdcSinkOperation.Delete
             };
         }
@@ -160,7 +260,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 DocumentId = documentId,
                 Processor = embeddedProcessor,
                 MappedData = mappedData,
-                RawData = rawData ?? new Dictionary<string, object>(),
+                RawValues = ToRawValues(rawData, embeddedProcessor),
                 Operation = operation
             };
         }
@@ -1880,7 +1980,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 DocumentId = "Companies/1",
                 Processor = empProcessor,
                 MappedData = empData,
-                RawData = rawData,
+                RawValues = ToRawValues(rawData, empProcessor),
                 Operation = CdcSinkOperation.Upsert
             };
 
@@ -1979,7 +2079,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 DocumentId = "Companies/1",
                 Processor = empProcessor,
                 MappedData = empData,
-                RawData = rawData,
+                RawValues = ToRawValues(rawData, empProcessor),
                 Operation = CdcSinkOperation.Upsert
             };
 
@@ -2640,7 +2740,9 @@ namespace SlowTests.Server.Documents.CdcSink
             DynamicJsonValue mappedData;
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext jsonCtx))
             {
-                mappedData = processor.MapColumns(rawData, config.Columns, jsonCtx);
+                var (colNames, colValues) = DictToValues(rawData);
+                processor.SetSourceColumnNames(colNames);
+                mappedData = processor.MapColumns(colValues, jsonCtx);
                 mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
                     { [Constants.Documents.Metadata.Collection] = "Records" };
 
@@ -2857,8 +2959,8 @@ namespace SlowTests.Server.Documents.CdcSink
             // Step 2: Insert line with Amount=100, then delete it
             var insertData = new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 100 };
             var deleteData = new DynamicJsonValue { ["LineId"] = 1 };
-            var rawInsert = new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } };
-            var rawDelete = new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } };
+            var rawInsert = new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "amount", 100 } };
+            var rawDelete = new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "amount", 100 } };
 
             var ops = new List<CdcSinkDocumentOp>
             {
@@ -2934,8 +3036,8 @@ namespace SlowTests.Server.Documents.CdcSink
             // Step 2: Insert the embedded value, then delete it
             var insertData = new DynamicJsonValue { ["DetailId"] = 1, ["Product"] = "Widget" };
             var deleteData = new DynamicJsonValue { ["DetailId"] = 1 };
-            var rawInsert = new Dictionary<string, object> { { "detail_id", 1 }, { "product", "Widget" } };
-            var rawDelete = new Dictionary<string, object> { { "detail_id", 1 }, { "product", "Widget" } };
+            var rawInsert = new Dictionary<string, object> { { "order_id", 1 }, { "detail_id", 1 }, { "product", "Widget" } };
+            var rawDelete = new Dictionary<string, object> { { "order_id", 1 }, { "detail_id", 1 }, { "product", "Widget" } };
 
             var ops = new List<CdcSinkDocumentOp>
             {
@@ -3011,8 +3113,8 @@ namespace SlowTests.Server.Documents.CdcSink
             // Step 2: Insert a tag, then delete it
             var insertData = new DynamicJsonValue { ["TagKey"] = "priority", ["TagValue"] = "high" };
             var deleteData = new DynamicJsonValue { ["TagKey"] = "priority" };
-            var rawInsert = new Dictionary<string, object> { { "tag_key", "priority" }, { "tag_value", "high" } };
-            var rawDelete = new Dictionary<string, object> { { "tag_key", "priority" }, { "tag_value", "high" } };
+            var rawInsert = new Dictionary<string, object> { { "order_id", 1 }, { "tag_key", "priority" }, { "tag_value", "high" } };
+            var rawDelete = new Dictionary<string, object> { { "order_id", 1 }, { "tag_key", "priority" }, { "tag_value", "high" } };
 
             var ops = new List<CdcSinkDocumentOp>
             {
@@ -3213,7 +3315,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 DocumentId = "Companies/1",
                 Processor = empProcessor,
                 MappedData = deleteData,
-                RawData = rawDelete,
+                RawValues = ToRawValues(rawDelete, empProcessor),
                 Operation = CdcSinkOperation.Delete
             };
 

@@ -50,6 +50,7 @@ public class CdcSinkDocumentProcessor
                 AttachmentColumns = FilterAttachmentColumns(table.Columns),
                 PropertyLookup = rootPropertyLookup,
                 MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(table.PrimaryKeyColumns, rootPropertyLookup),
+                LinkedTables = table.LinkedTables,
             };
 
             _tableIndex[(table.SourceTableSchema ?? "", table.SourceTableName)] = rootProcessor;
@@ -219,6 +220,7 @@ public class CdcSinkDocumentProcessor
                 AttachmentColumns = FilterAttachmentColumns(embedded.Columns),
                 PropertyLookup = embeddedPropertyLookup,
                 MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(embedded.PrimaryKeyColumns, embeddedPropertyLookup),
+                LinkedTables = embedded.LinkedTables,
             };
 
             _tableIndex[(embedded.SourceTableSchema ?? "", embedded.SourceTableName)] = processor;
@@ -238,6 +240,19 @@ public class CdcSinkDocumentProcessor
         return processor;
     }
 
+    public void SetSourceColumnNames(string schema, string table, string[] columnNames)
+    {
+        if (_tableIndex.TryGetValue((schema ?? "", table), out var processor) == false)
+            throw new InvalidOperationException($"Cannot set source column names for unknown table '{schema}.{table}'.");
+        processor.SetSourceColumnNames(columnNames);
+    }
+
+    public void ClearValuePools()
+    {
+        foreach (var (_, processor) in _tableIndex)
+            processor.ClearPool();
+    }
+
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
         if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processor) == false)
@@ -247,23 +262,23 @@ public class CdcSinkDocumentProcessor
             return null;
         }
 
-        if (processor.IsRoot)
-            return ProcessRootRow(row, processor, context);
-
-        return ProcessEmbeddedRow(row, processor, context);
+        return ProcessRow(processor, row.Operation, row.Data, context);
     }
 
-    private CdcSinkDocumentOp ProcessRootRow(CdcSinkRow row, CdcSinkTableProcessor processor, JsonOperationContext context)
+    public CdcSinkDocumentOp ProcessRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
+    {
+        if (processor.IsRoot)
+            return ProcessRootRow(processor, operation, data, context);
+
+        return ProcessEmbeddedRow(processor, operation, data, context);
+    }
+
+    private CdcSinkDocumentOp ProcessRootRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
     {
         var config = processor.RootConfig;
-        var documentId = processor.GenerateDocumentId(row.Data, config.PrimaryKeyColumns);
+        var documentId = processor.GenerateDocumentId(data);
 
-        if (documentId == null)
-            throw new InvalidOperationException(
-                $"Cannot generate document ID for table '{config.SourceTableSchema}.{config.SourceTableName}': " +
-                $"one or more primary key columns ({string.Join(", ", config.PrimaryKeyColumns)}) are missing or null in the CDC row.");
-
-        if (row.Operation == CdcSinkOperation.Delete)
+        if (operation == CdcSinkOperation.Delete)
         {
             var onDelete = config.OnDelete;
             if (onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
@@ -275,12 +290,12 @@ public class CdcSinkDocumentProcessor
                 DocumentId = documentId,
                 Processor = processor,
                 Operation = CdcSinkOperation.Delete,
-                RawData = row.Data,
+                RawValues = data,
             };
         }
 
-        var mappedData = processor.MapColumns(row.Data, config.Columns, context);
-        processor.ApplyLinks(mappedData, row.Data);
+        var mappedData = processor.MapColumns(data, context);
+        processor.ApplyLinks(mappedData, data);
 
         mappedData[Constants.Documents.Metadata.Key] = new DynamicJsonValue
         {
@@ -293,24 +308,20 @@ public class CdcSinkDocumentProcessor
             DocumentId = documentId,
             Processor = processor,
             MappedData = mappedData,
-            RawData = row.Data,
+            RawValues = data,
             Operation = CdcSinkOperation.Upsert,
         };
     }
 
-    private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkRow row, CdcSinkTableProcessor processor, JsonOperationContext context)
+    private CdcSinkDocumentOp ProcessEmbeddedRow(CdcSinkTableProcessor processor, CdcSinkOperation operation, object[] data, JsonOperationContext context)
     {
         var onDelete = processor.EmbeddedConfig.OnDelete;
-        if (row.Operation == CdcSinkOperation.Delete && onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
+        if (operation == CdcSinkOperation.Delete && onDelete?.IgnoreDeletes == true && onDelete.Patch == null)
             return null; // silently ignore — no patch, no delete
 
-        var parentDocumentId = processor.GetParentDocumentId(row.Data);
-
-        if (parentDocumentId == null)
-            throw new InvalidOperationException(
-                $"Cannot determine parent document ID for embedded table '{processor.EmbeddedConfig.SourceTableSchema}.{processor.EmbeddedConfig.SourceTableName}': " +
-                $"root join columns ({string.Join(", ", processor.RootJoinColumns)}) are missing or null in the CDC row.");
-        var mappedData = processor.MapColumns(row.Data, processor.EmbeddedConfig.Columns, context);
+        var parentDocumentId = processor.GetParentDocumentId(data);
+        var mappedData = processor.MapColumns(data, context);
+        processor.ApplyLinks(mappedData, data);
 
         return new CdcSinkDocumentOp
         {
@@ -318,8 +329,8 @@ public class CdcSinkDocumentProcessor
             DocumentId = parentDocumentId,
             Processor = processor,
             MappedData = mappedData,
-            RawData = row.Data,
-            Operation = row.Operation,
+            RawValues = data,
+            Operation = operation,
         };
     }
 
@@ -371,21 +382,5 @@ public class CdcSinkDocumentProcessor
                 lookup[col.Column] = col.Name;
         }
         return lookup;
-    }
-
-    private sealed class TableKeyComparer : IEqualityComparer<(string Schema, string Table)>
-    {
-        public static readonly TableKeyComparer Instance = new();
-
-        public bool Equals((string Schema, string Table) x, (string Schema, string Table) y) =>
-            string.Equals(x.Schema, y.Schema, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(x.Table, y.Table, StringComparison.OrdinalIgnoreCase);
-
-        public int GetHashCode((string Schema, string Table) obj)
-        {
-            var h1 = StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Schema ?? "");
-            var h2 = StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Table ?? "");
-            return HashCode.Combine(h1, h2);
-        }
     }
 }

@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.CdcSink;
@@ -23,7 +22,7 @@ public class CdcSinkDocumentOp
 
     /// <summary>
     /// The per-table processor context (shared across all rows for the same table, not allocated per row).
-    /// Contains table config, collection name, path from root, etc.
+    /// Contains table config, collection name, path from root, column name mapping, etc.
     /// </summary>
     public CdcSinkTableProcessor Processor { get; set; }
 
@@ -35,10 +34,11 @@ public class CdcSinkDocumentOp
     public DynamicJsonValue MappedData { get; set; }
 
     /// <summary>
-    /// All columns from the CDC row (original SQL column names, including unmapped ones).
-    /// Used for $row access in JS patches.
+    /// All column values from the CDC row, in positional order matching
+    /// <see cref="Processor"/>.<see cref="CdcSinkTableProcessor.SourceColumnNames"/>.
+    /// Used for $row access in JS patches, attachment storage, and FK lookups.
     /// </summary>
-    public Dictionary<string, object> RawData { get; set; }
+    public object[] RawValues { get; set; }
 
     /// <summary>
     /// The operation (Upsert/Delete) — relevant for embedded operations.

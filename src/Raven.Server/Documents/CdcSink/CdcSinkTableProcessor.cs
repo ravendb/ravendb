@@ -90,48 +90,154 @@ public class CdcSinkTableProcessor
     public string[] MappedPrimaryKeyNames { get; init; }
 
     /// <summary>
-    /// Generate a document ID from row data using primary key values.
+    /// All SQL column names for this table, in positional order matching the source.
+    /// Set once by the provider before initial load or streaming begins.
+    ///
+    /// Order guarantee: this array's indices correspond 1:1 with the object[] values
+    /// in each CdcSinkRow/CdcSinkDocumentOp. The provider sets this from the same
+    /// source it uses to decode rows:
+    ///   - Postgres: RelationMessage.Columns (positional)
+    ///   - SQL Server: cdc.captured_columns ORDER BY column_ordinal
+    ///   - MySQL: INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION
+    ///   - Initial load: SELECT * returns columns in table-definition order (same as above)
+    ///
+    /// All pre-computed index arrays (PrimaryKeyIndices, ColumnMappingIndices, etc.)
+    /// are derived from this array and recomputed when it is set.
+    /// </summary>
+    public string[] SourceColumnNames { get; private set; }
+
+    /// <summary>Pre-computed indices into SourceColumnNames for primary key columns.</summary>
+    public int[] PrimaryKeyIndices { get; private set; }
+
+    /// <summary>Pre-computed indices into SourceColumnNames for each non-attachment CdcColumnMapping.</summary>
+    public int[] ColumnMappingIndices { get; private set; }
+
+    /// <summary>Pre-computed indices into SourceColumnNames for attachment columns.</summary>
+    public int[] AttachmentColumnIndices { get; private set; }
+
+    /// <summary>For embedded tables: indices of root join FK columns in SourceColumnNames.</summary>
+    public int[] RootJoinIndices { get; private set; }
+
+    /// <summary>Per linked table: indices of FK columns in SourceColumnNames.</summary>
+    public int[][] LinkedTableJoinIndices { get; private set; }
+
+    /// <summary>
+    /// Linked table configurations for this processor (root or embedded).
+    /// </summary>
+    public List<CdcSinkLinkedTableConfig> LinkedTables { get; init; }
+
+    private readonly Queue<object[]> _valuesPool = new();
+
+    public object[] RentValues()
+    {
+        return _valuesPool.TryDequeue(out var arr) ? arr : new object[SourceColumnNames.Length];
+    }
+
+    public void ReturnValues(object[] arr)
+    {
+        _valuesPool.Enqueue(arr);
+    }
+
+    public void ClearPool()
+    {
+        foreach (var arr in _valuesPool)
+        {
+            // we want to return the arrays, but we need to clear
+            // the contents to release references and allow them to be GC'd
+            Array.Clear(arr, 0, arr.Length);
+        }
+    }
+
+    public void SetSourceColumnNames(string[] names)
+    {
+        SourceColumnNames = names;
+
+        // Compute PrimaryKeyIndices
+        var pkColumns = IsRoot ? RootConfig.PrimaryKeyColumns : EmbeddedConfig.PrimaryKeyColumns;
+        PrimaryKeyIndices = new int[pkColumns.Count];
+        for (int i = 0; i < pkColumns.Count; i++)
+            PrimaryKeyIndices[i] = FindColumnIndex(names, pkColumns[i]);
+
+        // Compute ColumnMappingIndices (one per non-attachment column)
+        ColumnMappingIndices = new int[Columns.Count - AttachmentColumns.Count];
+        int mapIdx = 0;
+        for (int i = 0; i < Columns.Count; i++)
+        {
+            if (Columns[i].Type != CdcColumnType.Attachment)
+                ColumnMappingIndices[mapIdx++] = FindColumnIndex(names, Columns[i].Column);
+        }
+
+        // Compute AttachmentColumnIndices
+        AttachmentColumnIndices = new int[AttachmentColumns.Count];
+        for (int i = 0; i < AttachmentColumns.Count; i++)
+            AttachmentColumnIndices[i] = FindColumnIndex(names, AttachmentColumns[i].Column);
+
+        // Compute RootJoinIndices (for embedded tables)
+        if (RootJoinColumns != null)
+        {
+            RootJoinIndices = new int[RootJoinColumns.Count];
+            for (int i = 0; i < RootJoinColumns.Count; i++)
+                RootJoinIndices[i] = FindColumnIndex(names, RootJoinColumns[i]);
+        }
+
+        // Compute LinkedTableJoinIndices
+        if (LinkedTables is { Count: > 0 })
+        {
+            LinkedTableJoinIndices = new int[LinkedTables.Count][];
+            for (int lt = 0; lt < LinkedTables.Count; lt++)
+            {
+                var linked = LinkedTables[lt];
+                LinkedTableJoinIndices[lt] = new int[linked.JoinColumns.Count];
+                for (int j = 0; j < linked.JoinColumns.Count; j++)
+                    LinkedTableJoinIndices[lt][j] = FindColumnIndex(names, linked.JoinColumns[j]);
+            }
+        }
+    }
+
+    internal static int FindColumnIndex(string[] names, string columnName)
+    {
+        for (int i = 0; i < names.Length; i++)
+        {
+            if (string.Equals(names[i], columnName, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+        throw new InvalidOperationException($"Column '{columnName}' not found in source columns: [{string.Join(", ", names)}]");
+    }
+
+    /// <summary>
+    /// Generate a document ID from positional row values using pre-computed PrimaryKeyIndices.
     /// Format: "{CollectionName}/{pk1}/{pk2}/..."
     /// </summary>
-    public string GenerateDocumentId(Dictionary<string, object> rowData, List<string> pkColumns)
+    public string GenerateDocumentId(object[] values) => BuildId(PrimaryKeyIndices, values);
+
+    public string GetParentDocumentId(object[] values) => BuildId(RootJoinIndices, values);
+
+    private string BuildId(int[] indices, object[] values)
     {
         _sb.Clear();
         _sb.Append(CollectionName);
 
-        for (int i = 0; i < pkColumns.Count; i++)
+        for (int i = 0; i < indices.Length; i++)
         {
-            if (rowData.TryGetValue(pkColumns[i], out var val) == false || val == null)
-                return null;
-
             _sb.Append('/');
-            _sb.Append(val);
+            _sb.Append(values[indices[i]] ?? "null");
         }
 
         return _sb.ToString();
     }
 
-    public string GetParentDocumentId(Dictionary<string, object> rowData)
-    {
-        if (RootJoinColumns == null || RootJoinColumns.Count == 0)
-            throw new InvalidOperationException("Cannot compute parent document ID: no root join columns defined");
-
-        return GenerateDocumentId(rowData, RootJoinColumns);
-    }
-
-    public DynamicJsonValue MapColumns(Dictionary<string, object> rowData, List<CdcColumnMapping> columns, JsonOperationContext context)
+    public DynamicJsonValue MapColumns(object[] values, JsonOperationContext context)
     {
         var result = new DynamicJsonValue();
-        for (int i = 0; i < columns.Count; i++)
+        var columns = Columns;
+        for (int i = 0, mapIdx = 0; i < columns.Count; i++)
         {
             var col = columns[i];
             if (col.Type == CdcColumnType.Attachment)
                 continue; // attachments are handled separately by the batch command
 
-            if (rowData.TryGetValue(col.Column, out var value) == false)
-                continue;
-
-            bool isJsonColumn = col.Type == CdcColumnType.Json;
-            result[col.Name] = NormalizeForJson(value, isJsonColumn, context);
+            var value = values[ColumnMappingIndices[mapIdx++]];
+            result[col.Name] = NormalizeForJson(value, col.Type == CdcColumnType.Json, context);
         }
         return result;
     }
@@ -242,31 +348,33 @@ public class CdcSinkTableProcessor
     ///   Before: { "customer_id": 42, "CompanyName": "Acme" }
     ///   After:  { "customer_id": 42, "CompanyName": "Acme", "Customer": "Customers/42" }
     ///
-    /// If any FK column is null, the link property is set to null.
+    /// If all FK columns are null, the link property is set to null (no relationship).
+    /// If only some are null (compound FK referencing a row with a null PK component),
+    /// the ID is built as-is with "null" segments.
     /// </summary>
-    public void ApplyLinks(DynamicJsonValue doc, Dictionary<string, object> rowData)
+    public void ApplyLinks(DynamicJsonValue doc, object[] values)
     {
-        if (RootConfig.LinkedTables == null)
+        if (LinkedTables is not { Count: > 0 })
             return;
 
-        foreach (var linked in RootConfig.LinkedTables)
+        for (int lt = 0; lt < LinkedTables.Count; lt++)
         {
+            var linked = LinkedTables[lt];
+            var joinIndices = LinkedTableJoinIndices[lt];
             _sb.Clear();
             _sb.Append(linked.LinkedCollectionName);
 
-            bool hasNull = false;
-            for (int i = 0; i < linked.JoinColumns.Count; i++)
+            bool allNull = true;
+            for (int i = 0; i < joinIndices.Length; i++)
             {
-                if (rowData.TryGetValue(linked.JoinColumns[i], out var v) == false || v == null || v is DBNull)
-                {
-                    hasNull = true;
-                    break;
-                }
+                var v = values[joinIndices[i]];
+                if (v is not null and not DBNull)
+                    allNull = false;
                 _sb.Append('/');
-                _sb.Append(v);
+                _sb.Append(v ?? "null");
             }
 
-            doc[linked.PropertyName] = hasNull ? null : _sb.ToString();
+            doc[linked.PropertyName] = allNull ? null : _sb.ToString();
         }
     }
 }

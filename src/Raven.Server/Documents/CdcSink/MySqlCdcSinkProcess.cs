@@ -40,14 +40,23 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
 
-    private readonly record struct ColumnInfo(string Name, bool IsText);
+    private enum MySqlColumnCategory { Other, Text, Decimal, Json }
 
-    // Cache column metadata per table (database.table → column info array).
-    // Binlog row events don't include column names — only positional values.
-    // We also track whether each column is text-based because MySQL's binlog uses
-    // the same BLOB type codes for TEXT and BLOB columns; text columns need UTF-8
-    // decoding from byte[]. Resolved from INFORMATION_SCHEMA.COLUMNS during startup.
-    private readonly Dictionary<string, ColumnInfo[]> _tableColumns = new(StringComparer.OrdinalIgnoreCase);
+    private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category);
+
+    /// <summary>
+    /// Cached table metadata resolved from INFORMATION_SCHEMA during startup.
+    /// Binlog row events carry only positional values (no column names), so we
+    /// need the column list + IsText flags to decode them. The processor is also
+    /// cached here to avoid per-row dictionary lookups during streaming.
+    /// </summary>
+    private sealed class TableInfo
+    {
+        public required ColumnInfo[] Columns { get; init; }
+        public required CdcSinkTableProcessor Processor { get; init; }
+    }
+
+    private readonly Dictionary<(string Schema, string Table), TableInfo> _resolvedTables = new(TableKeyComparer.Instance);
 
     public MySqlCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
         : base(configuration, database)
@@ -57,7 +66,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
-        _tableColumns.Clear();
+        _resolvedTables.Clear();
         await EnsureBinlogConfiguration(ct);
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
@@ -174,10 +183,6 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
         foreach (var tableInfo in allTables)
         {
-            var tableKey = $"{tableInfo.Schema}.{tableInfo.TableName}";
-            if (_tableColumns.ContainsKey(tableKey))
-                continue;
-
             var columns = new List<ColumnInfo>();
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
@@ -193,12 +198,32 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 var colName = reader.GetString(0);
                 var dataType = reader.GetString(1).ToLowerInvariant();
-                var isText = dataType is "text" or "tinytext" or "mediumtext" or "longtext"
-                    or "char" or "varchar" or "enum" or "set" or "json";
-                columns.Add(new ColumnInfo(colName, isText));
+                var category = dataType switch
+                {
+                    "json" => MySqlColumnCategory.Json,
+                    "decimal" or "numeric" => MySqlColumnCategory.Decimal,
+                    "text" or "tinytext" or "mediumtext" or "longtext"
+                        or "char" or "varchar" or "enum" or "set" => MySqlColumnCategory.Text,
+                    _ => MySqlColumnCategory.Other,
+                };
+                columns.Add(new ColumnInfo(colName, category));
             }
 
-            _tableColumns[tableKey] = columns.ToArray();
+            var columnsArray = columns.ToArray();
+
+            var columnNames = new string[columnsArray.Length];
+            for (int i = 0; i < columnsArray.Length; i++)
+                columnNames[i] = columnsArray[i].Name;
+
+            var processor = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
+            processor.SetSourceColumnNames(columnNames);
+
+            var tableKey = (tableInfo.Schema, tableInfo.TableName);
+            _resolvedTables[tableKey] = new TableInfo
+            {
+                Columns = columnsArray,
+                Processor = processor,
+            };
         }
     }
 
@@ -296,39 +321,39 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var defaultSchema = GetDefaultSchema();
 
             // MySQL streams binlog events for ALL databases on the server, not just ours.
-            // Only cache TableMapEvents for our database — row events for uncached table IDs are skipped.
-            // Note that the table is _global_, but we get TableMapEvents for each transaction, we filter to only
-            // those in our database, then the filter for row events that we don't care about is done in ProcessRow().
-            var tableMapCache = new Dictionary<long, (string Database, string Table, byte[] ColumnTypes)>();
+            // Only cache TableMapEvents for configured tables in our database — row events
+            // for uncached table IDs are skipped automatically by the TryGetValue check.
+            var tableMapCache = new Dictionary<long, TableInfo>();
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))
             {
                 switch (binlogEvent)
                 {
                     case TableMapEvent tableMap:
-                        if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase))
-                            tableMapCache[tableMap.TableId] = (tableMap.DatabaseName, tableMap.TableName, tableMap.ColumnTypes);
+                        if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase)
+                            && _resolvedTables.TryGetValue((tableMap.DatabaseName, tableMap.TableName), out var info))
+                            tableMapCache[tableMap.TableId] = info;
                         break;
 
                     case WriteRowsEvent writeRows:
                         if (tableMapCache.TryGetValue(writeRows.TableId, out var wTable) == false)
                             break;
                         foreach (var row in writeRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(wTable.Database, wTable.Table, row.Cells, wTable.ColumnTypes, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(wTable, row.Cells, CdcSinkOperation.Upsert, StreamingJsonContext), null);
                         break;
 
                     case UpdateRowsEvent updateRows:
                         if (tableMapCache.TryGetValue(updateRows.TableId, out var uTable) == false)
                             break;
                         foreach (var row in updateRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(uTable.Database, uTable.Table, row.AfterUpdate.Cells, uTable.ColumnTypes, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(uTable, row.AfterUpdate.Cells, CdcSinkOperation.Upsert, StreamingJsonContext), null);
                         break;
 
                     case DeleteRowsEvent deleteRows:
                         if (tableMapCache.TryGetValue(deleteRows.TableId, out var dTable) == false)
                             break;
                         foreach (var row in deleteRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Delete, DecodeRow(dTable.Database, dTable.Table, row.Cells, dTable.ColumnTypes, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                            yield return new CdcEvent(CdcEventType.Delete, DecodeRow(dTable, row.Cells, CdcSinkOperation.Delete, StreamingJsonContext), null);
                         break;
 
                     case XidEvent:
@@ -341,57 +366,42 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     }
 
     private CdcSinkDocumentOp DecodeRow(
-        string database, string tableName,
-        IReadOnlyList<object> cells, byte[] columnTypes,
-        CdcSinkOperation operation,
-        DocumentsOperationContext jsonParsingContext)
+        TableInfo tableInfo, IReadOnlyList<object> cells,
+        CdcSinkOperation operation, DocumentsOperationContext jsonParsingContext)
     {
-        var tableKey = $"{database}.{tableName}";
-        if (_tableColumns.TryGetValue(tableKey, out var columns) == false)
-        {
-            return null;
-        }
-
-        var data = new Dictionary<string, object>(columns.Length);
+        var columns = tableInfo.Columns;
+        var processor = tableInfo.Processor;
+        var values = processor.RentValues();
         for (int i = 0; i < columns.Length && i < cells.Count; i++)
         {
-            var type = columnTypes != null && i < columnTypes.Length ? (ColumnType)columnTypes[i]  : ColumnType.String;
             var col = columns[i];
             var value = cells[i];
 
-            data[col.Name] = value switch
+            values[i] = value switch
             {
                 null or DBNull => null,
 
                 // MySqlCdc may return numeric types as strings (BCD-encoded internally).
                 // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
-                string s when type is ColumnType.NewDecimal or ColumnType.Decimal
+                string s when col.Category is MySqlColumnCategory.Decimal
                     && decimal.TryParse(s, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var dec)
                     => dec,
 
                 // MySQL stores JSON in a proprietary binary format in the binlog.
                 // Use MySqlCdc's JsonParser to convert to a JSON string.
-                byte[] bytes when type == ColumnType.Json
+                byte[] bytes when col.Category is MySqlColumnCategory.Json
                     => MySqlCdc.Providers.MySql.JsonParser.Parse(bytes),
-                
+
                 // MySQL's binlog uses the same BLOB type codes for TEXT and BLOB columns.
                 // TEXT columns should be UTF-8 decoded; true binary columns pass through.
-                byte[] bytes when col.IsText
+                byte[] bytes when col.Category is MySqlColumnCategory.Text
                     => System.Text.Encoding.UTF8.GetString(bytes),
 
                 _ => ConvertMySqlValue(value),
             };
         }
 
-        var row = new CdcSinkRow
-        {
-            TableSchema = database,
-            TableName = tableName,
-            Operation = operation,
-            Data = data,
-        };
-
-        return DocumentProcessor.ProcessRow(row, jsonParsingContext);
+        return DocumentProcessor.ProcessRow(processor, operation, values, jsonParsingContext);
     }
 
 

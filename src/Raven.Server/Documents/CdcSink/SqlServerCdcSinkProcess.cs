@@ -217,6 +217,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                 await using var reader = await cmd.ExecuteReaderAsync(ct);
                 var columns = ci.Columns;
+                var processor = DocumentProcessor.GetProcessor(ci.TableInfo.Schema, ci.TableInfo.TableName);
                 // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
 
                 while (await reader.ReadAsync(ct))
@@ -226,22 +227,14 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     var operation = reader.GetInt32(2);
                     var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
 
-                    var data = new Dictionary<string, object>(columns.Length);
+                    var values = processor.RentValues();
                     for (int i = 0; i < columns.Length; i++)
                     {
                         int ordinal = i + 3;
-                        data[columns[i]] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
+                        values[i] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
                     }
 
-                    var row = new CdcSinkRow
-                    {
-                        TableSchema = ci.TableInfo.Schema,
-                        TableName = ci.TableInfo.TableName,
-                        Operation = cdcOperation,
-                        Data = data,
-                    };
-
-                    var op = DocumentProcessor.ProcessRow(row, StreamingJsonContext);
+                    var op = DocumentProcessor.ProcessRow(processor, cdcOperation, values, StreamingJsonContext);
                     var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
                     buffer.Add((rowLsn, rowSeq, new CdcEvent(eventType, op, null)));
                 }
@@ -429,13 +422,17 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 WHERE __$operation <> 3
                 ORDER BY __$start_lsn, __$seqval";
 
+            var columnsArray = columns.ToArray();
+
             result.Add(new CaptureInstanceInfo
             {
                 TableInfo = tableInfo,
                 CaptureInstance = captureInstance,
                 Query = query,
-                Columns = columns.ToArray(),
+                Columns = columnsArray,
             });
+
+            DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnsArray);
         }
 
         return result;

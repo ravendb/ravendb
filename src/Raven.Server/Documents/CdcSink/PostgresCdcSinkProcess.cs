@@ -54,9 +54,15 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private string _slotName;
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
-    // Cache resolved type categories per RelationMessage OID layout.
+    // Cache resolved type categories + processor per RelationMessage.
     // Column types are fixed per relation in the replication stream.
-    private readonly Dictionary<string, PostgresTypeCategory[]> _relationTypeCache = new();
+    private sealed class RelationInfo
+    {
+        public required PostgresTypeCategory[] TypeCategories { get; init; }
+        public required CdcSinkTableProcessor Processor { get; init; }
+    }
+
+    private readonly Dictionary<string, RelationInfo> _relationCache = new();
     private System.Text.StringBuilder _reusableSb;
 
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
@@ -494,34 +500,37 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         var relationKey = $"{relation.Namespace}.{relation.RelationName}";
 
-        if (_relationTypeCache.TryGetValue(relationKey, out var typeCategories) == false)
+        if (_relationCache.TryGetValue(relationKey, out var relationInfo) == false)
         {
-            typeCategories = BuildTypeCategoriesFromRelation(relation);
-            _relationTypeCache[relationKey] = typeCategories;
+            var typeCategories = BuildTypeCategoriesFromRelation(relation);
+
+            // Set source column names from the RelationMessage (sent before first row for each relation)
+            var columnNames = new string[relation.Columns.Count];
+            for (int i = 0; i < relation.Columns.Count; i++)
+                columnNames[i] = relation.Columns[i].ColumnName;
+
+            var processor = DocumentProcessor.GetProcessor(relation.Namespace, relation.RelationName);
+            processor.SetSourceColumnNames(columnNames);
+
+            relationInfo = new RelationInfo
+            {
+                TypeCategories = typeCategories,
+                Processor = processor,
+            };
+            _relationCache[relationKey] = relationInfo;
         }
 
-        var data = new Dictionary<string, object>();
+        var values = relationInfo.Processor.RentValues();
         int columnIndex = 0;
 
         await foreach (var item in row)
         {
-            var columnName = item.GetFieldName();
-            var category = columnIndex < typeCategories.Length ? typeCategories[columnIndex] : PostgresTypeCategory.Other;
             var value = item.IsDBNull ? null : await item.Get(ct);
-            data[columnName] = ConvertPostgresValue(category, value, relationKey, columnName);
-
+            values[columnIndex] = ConvertPostgresValue(relationInfo.TypeCategories[columnIndex], value, relationKey, item.GetFieldName());
             columnIndex++;
         }
 
-        var cdcRow = new CdcSinkRow
-        {
-            TableSchema = relation.Namespace,
-            TableName = relation.RelationName,
-            Operation = operation,
-            Data = data,
-        };
-
-        return DocumentProcessor.ProcessRow(cdcRow, jsonParsingContext);
+        return DocumentProcessor.ProcessRow(relationInfo.Processor, operation, values, jsonParsingContext);
     }
 
     /// <summary>

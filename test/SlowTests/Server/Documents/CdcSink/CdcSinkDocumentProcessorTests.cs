@@ -10,6 +10,8 @@ namespace SlowTests.Server.Documents.CdcSink;
 
 public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
+    private static (string[] Names, object[] Values) DictToValues(Dictionary<string, object> dict) => CdcSinkBatchCommandTests.DictToValues(dict);
+
     private static CdcSinkConfiguration CreateOrdersConfig()
     {
         return new CdcSinkConfiguration
@@ -83,17 +85,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "customer_id", "ALFKI" },
+            { "order_date", "2024-01-15" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "orders", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "orders",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "customer_id", "ALFKI" },
-                { "order_date", "2024-01-15" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -110,15 +116,23 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        // Full column set (as providers always supply), with null values for non-PK columns.
+        // Deletes only carry PK values, but SourceColumnNames is the full schema.
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "customer_id", null },
+            { "order_date", null },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "orders", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "orders",
             Operation = CdcSinkOperation.Delete,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -133,17 +147,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "customer_id", "ALFKI" },
+            { "order_date", "2024-01-15" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "orders", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "orders",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "customer_id", "ALFKI" },
-                { "order_date", "2024-01-15" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -160,19 +178,23 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "product_id", 11 },
+            { "unit_price", 14.0 },
+            { "quantity", 12 },
+            { "discount", 0.0 },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "order_details", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "order_details",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "product_id", 11 },
-                { "unit_price", 14.0 },
-                { "quantity", 12 },
-                { "discount", 0.0 },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -191,16 +213,24 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        // Full column set — deletes only carry PK values but SourceColumnNames is the full schema
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "product_id", 11 },
+            { "unit_price", null },
+            { "quantity", null },
+            { "discount", null },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "order_details", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "order_details",
             Operation = CdcSinkOperation.Delete,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "product_id", 11 },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -216,12 +246,13 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        // Unknown table — no SetSourceColumnNames call (providers only resolve configured tables)
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "nonexistent_table",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object> { { "id", 1 } }
+            Data = new object[] { 1 }
         };
 
         // Unknown tables are gracefully skipped (returns null) instead of throwing,
@@ -235,17 +266,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "customer_id", "ALFKI" },
+            { "company_name", "Alfreds Futterkiste" },
+            { "contact_name", "Maria Anders" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "customers", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "customers",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "customer_id", "ALFKI" },
-                { "company_name", "Alfreds Futterkiste" },
-                { "contact_name", "Maria Anders" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -263,30 +298,36 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "customer_id", "ALFKI" },
+            { "company_name", "Alfreds Futterkiste" },
+            { "contact_name", "Maria Anders" },
+            { "phone", "+49 123 456" },       // Not in ColumnsMapping
+            { "country", "Germany" },           // Not in ColumnsMapping
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "customers", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "customers",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "customer_id", "ALFKI" },
-                { "company_name", "Alfreds Futterkiste" },
-                { "contact_name", "Maria Anders" },
-                { "phone", "+49 123 456" },       // Not in ColumnsMapping
-                { "country", "Germany" },           // Not in ColumnsMapping
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
 
         Assert.NotNull(result);
-        // RawData should have ALL columns, including unmapped ones
-        Assert.NotNull(result.RawData);
-        Assert.NotNull(result.RawData["phone"]);
-        Assert.Equal("+49 123 456", result.RawData["phone"].ToString());
-        Assert.NotNull(result.RawData["country"]);
-        Assert.Equal("Germany", result.RawData["country"].ToString());
+        // Verify RawValues contains all columns (including unmapped)
+        Assert.NotNull(result.RawValues);
+        var sourceNames = result.Processor.SourceColumnNames;
+        var rawDict = new Dictionary<string, object>();
+        for (int i = 0; i < sourceNames.Length; i++)
+            rawDict[sourceNames[i]] = result.RawValues[i];
+        Assert.Equal("+49 123 456", rawDict["phone"].ToString());
+        Assert.Equal("Germany", rawDict["country"].ToString());
 
         // MappedData should NOT have unmapped columns
         Assert.Null(result.MappedData["phone"]);
@@ -335,17 +376,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
 
         var processor = new CdcSinkDocumentProcessor(config);
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "product_id", 11 },
+            { "quantity", 12 },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "order_details", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "order_details",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "product_id", 11 },
-                { "quantity", 12 },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -399,18 +444,22 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
 
         var processor = new CdcSinkDocumentProcessor(config);
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "shipping_id", 5 },
+            { "carrier", "FedEx" },
+            { "tracking_number", "1Z999AA10123456784" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "shipping_info", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "shipping_info",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "shipping_id", 5 },
-                { "carrier", "FedEx" },
-                { "tracking_number", "1Z999AA10123456784" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -448,17 +497,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
 
         var processor = new CdcSinkDocumentProcessor(config);
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "product_id", 11 },
+            { "quantity", 12 },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "order_details", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "order_details",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "product_id", 11 },
-                { "quantity", 12 },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -472,17 +525,21 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "customer_id", null },
+            { "order_date", "2024-01-15" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "orders", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "public",
             TableName = "orders",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "customer_id", null },
-                { "order_date", "2024-01-15" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
@@ -496,21 +553,106 @@ public class CdcSinkDocumentProcessorTests(ITestOutputHelper output) : NoDisposa
     {
         var processor = new CdcSinkDocumentProcessor(CreateOrdersConfig());
 
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "customer_id", "ALFKI" },
+            { "order_date", "2024-01-15" },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("PUBLIC", "ORDERS", names);
+
         var row = new CdcSinkRow
         {
             TableSchema = "PUBLIC",
             TableName = "ORDERS",
             Operation = CdcSinkOperation.Upsert,
-            Data = new Dictionary<string, object>
-            {
-                { "order_id", 10248 },
-                { "customer_id", "ALFKI" },
-                { "order_date", "2024-01-15" },
-            }
+            Data = values
         };
 
         var result = processor.ProcessRow(row, null);
         Assert.NotNull(result);
         Assert.Equal("Orders/10248", result.DocumentId);
+    }
+
+    [RavenFact(RavenTestCategory.Sinks)]
+    public void EmbeddedWithLinkedTable_ProducesLinkedDocumentId()
+    {
+        var config = new CdcSinkConfiguration
+        {
+            Name = "TestCdc",
+            ConnectionStringName = "TestSql",
+            Tables = new List<CdcSinkTableConfig>
+            {
+                new()
+                {
+                    CollectionName = "Orders",
+                    SourceTableSchema = "public",
+                    SourceTableName = "orders",
+                    PrimaryKeyColumns = new List<string> { "order_id" },
+                    Columns = new List<CdcColumnMapping>
+                    {
+                        new CdcColumnMapping { Column = "order_id", Name = "OrderId" }
+                    },
+                    EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                    {
+                        new()
+                        {
+                            SourceTableSchema = "public",
+                            SourceTableName = "order_details",
+                            PropertyName = "Lines",
+                            PrimaryKeyColumns = new List<string> { "detail_id" },
+                            JoinColumns = new List<string> { "order_id" },
+                            Type = CdcSinkRelationType.Array,
+                            Columns = new List<CdcColumnMapping>
+                            {
+                                new CdcColumnMapping { Column = "detail_id", Name = "DetailId" },
+                                new CdcColumnMapping { Column = "product_id", Name = "ProductId" },
+                                new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                            },
+                            LinkedTables = new List<CdcSinkLinkedTableConfig>
+                            {
+                                new()
+                                {
+                                    SourceTableSchema = "public",
+                                    SourceTableName = "products",
+                                    PropertyName = "Product",
+                                    JoinColumns = new List<string> { "product_id" },
+                                    LinkedCollectionName = "Products",
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var processor = new CdcSinkDocumentProcessor(config);
+
+        var dict = new Dictionary<string, object>
+        {
+            { "order_id", 10248 },
+            { "detail_id", 1 },
+            { "product_id", 42 },
+            { "quantity", 5 },
+        };
+        var (names, values) = DictToValues(dict);
+        processor.SetSourceColumnNames("public", "order_details", names);
+
+        var row = new CdcSinkRow
+        {
+            TableSchema = "public",
+            TableName = "order_details",
+            Operation = CdcSinkOperation.Upsert,
+            Data = values
+        };
+
+        var result = processor.ProcessRow(row, null);
+
+        Assert.NotNull(result);
+        Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, result.Type);
+        Assert.Equal("Orders/10248", result.DocumentId);
+        Assert.NotNull(result.MappedData["Product"]);
+        Assert.Equal("Products/42", result.MappedData["Product"].ToString());
     }
 }
