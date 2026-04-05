@@ -3903,10 +3903,99 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         /// <summary>
-        /// DTO with all fields as strings to detect serialization differences.
-        /// If initial load writes a date as "1990-06-15" but CDC writes "1990-06-15T00:00:00.0000000",
-        /// this class will capture both representations exactly.
+        /// Verifies that NUMERIC columns with high precision (more digits than double can represent)
+        /// survive both initial load (keyset pagination) and CDC streaming without precision loss.
+        /// Before the fix, ConvertStringToType parsed NUMERIC as double (15-17 significant digits),
+        /// silently losing precision for values like 1234567890.123456789.
         /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task NumericPrecision_InitialLoadAndCdcStream_NoLoss()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE accounts (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    balance NUMERIC(28,12) NOT NULL
+                )");
+
+            // Value that exceeds double precision (15-17 significant digits).
+            // double would produce 1234567890.12346 (5 decimal digits), losing 7 digits of precision.
+            ExecuteNpgSql(connectionString, @"
+                INSERT INTO accounts (id, name, balance)
+                VALUES (1, 'Precision Test', 1234567890.123456789012),
+                       (2, 'Second Row', 9999999999999999.999999999999)");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-numeric-precision",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Accounts",
+                        SourceTableSchema = "public",
+                        SourceTableName = "accounts",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" },
+                            new CdcColumnMapping { Column = "balance", Name = "Balance" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load (exercises ConvertStringToType with NUMERIC → decimal.Parse)
+            var count = await WaitForDocumentCountAsync(store, "Accounts", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            // Verify precision survived initial load
+            string initialBalance;
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<AccountDoc>("Accounts/1");
+                Assert.NotNull(doc);
+                Assert.Equal("Precision Test", doc.Name);
+                // decimal preserves trailing zeros and full precision
+                Assert.Equal(1234567890.123456789012M, doc.Balance);
+                initialBalance = doc.Balance.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // Update via CDC stream — triggers ConvertPostgresValue (PostgresTypeCategory.Numeric → decimal)
+            ExecuteNpgSql(connectionString, @"
+                UPDATE accounts SET name = 'Precision Updated' WHERE id = 1");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<AccountDoc>("Accounts/1");
+                return doc?.Name;
+            }, "Precision Updated", timeout: 60_000);
+
+            // Verify precision is identical after CDC update
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<AccountDoc>("Accounts/1");
+                Assert.NotNull(doc);
+                var cdcBalance = doc.Balance.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                Assert.Equal(initialBalance, cdcBalance);
+            }
+        }
+
+        private class AccountDoc
+        {
+            public string Name { get; set; }
+            public decimal Balance { get; set; }
+        }
+
         /// <summary>
         /// Verifies that JSON and JSONB columns declared with CdcColumnType.Json are stored as
         /// native JSON objects/arrays in the RavenDB document (not as escaped strings).

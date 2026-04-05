@@ -91,6 +91,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
+        // in case of error, we'll re-learn the schema (it may have changed).
+        _columnTypesCache.Clear();
         await EnsureReplicationSetup(ct);
         await EnsureReplicaIdentityForEmbeddedTables(ct);
         await HandleInitialLoad(ct);
@@ -400,6 +402,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 : NpgsqlTypes.NpgsqlLogSequenceNumber.Parse(state.LastLsn);
         }
 
+        await VerifyNoGapsInLsn(ct);
+
         _rowsSinceLastAck = 0;
         await using var conn = new LogicalReplicationConnection(_connectionString);
         await conn.Open(ct);
@@ -417,19 +421,19 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             {
                 case InsertMessage insert:
                     yield return new CdcEvent(CdcEventType.Upsert,
-                        await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                        await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
                     break;
                 case UpdateMessage update:
                     yield return new CdcEvent(CdcEventType.Upsert,
-                        await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                        await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
                     break;
                 case KeyDeleteMessage keyDel:
                     yield return new CdcEvent(CdcEventType.Delete,
-                        await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                        await DecodeRow(keyDel.Relation, keyDel.Key, CdcSinkOperation.Delete, StreamingJsonContext, ct), null);
                     break;
                 case FullDeleteMessage fullDel:
                     yield return new CdcEvent(CdcEventType.Delete,
-                        await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, StreamingJsonContext), null);
+                        await DecodeRow(fullDel.Relation, fullDel.OldRow, CdcSinkOperation.Delete, StreamingJsonContext, ct), null);
                     break;
                 case CommitMessage commit:
                     _lastLsn = commit.CommitLsn;
@@ -437,6 +441,35 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     break;
             }
         }
+    }
+
+    private async Task VerifyNoGapsInLsn(CancellationToken ct)
+    {
+        if (_lastLsn <= new NpgsqlTypes.NpgsqlLogSequenceNumber(0))
+            return;
+
+        // Detect stale LSN: if the slot was recreated (e.g., after restore), its restart_lsn
+        // will be ahead of our saved position. Changes in the gap are permanently lost.
+        await using var checkConn = _dataSource.CreateConnection();
+        await checkConn.OpenAsync(ct);
+        await using var checkCmd = new NpgsqlCommand(
+            "SELECT restart_lsn FROM pg_replication_slots WHERE slot_name = @slotName", checkConn);
+        checkCmd.Parameters.AddWithValue("slotName", _slotName);
+        var slotLsn = await checkCmd.ExecuteScalarAsync(ct);
+        if (slotLsn is not NpgsqlTypes.NpgsqlLogSequenceNumber restartLsn || restartLsn <= _lastLsn)
+            return;
+
+        var msg = $"[{Name}] Replication slot '{_slotName}' restart LSN ({restartLsn}) is ahead of " +
+                  $"our saved position ({_lastLsn}). Changes between these positions are lost. " +
+                  "This can happen when the slot is recreated after a backup restore. " +
+                  "Consider resetting the task state to trigger a full initial reload.";
+
+        if (Logger.IsErrorEnabled)
+            Logger.Error(msg);
+
+        Database.NotificationCenter.Add(AlertRaised.Create(
+            Database.Name, Tag, msg, AlertReason.CdcSink_Error,
+            NotificationSeverity.Warning, key: $"{Tag}/{Name}/stale-lsn"));
     }
 
     protected override async Task OnBatchFlushed(string checkpoint, int rows)
@@ -457,7 +490,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     }
 
     private async Task<CdcSinkDocumentOp> DecodeRow(
-        RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext)
+        RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext, CancellationToken ct = default)
     {
         var relationKey = $"{relation.Namespace}.{relation.RelationName}";
 
@@ -474,7 +507,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         {
             var columnName = item.GetFieldName();
             var category = columnIndex < typeCategories.Length ? typeCategories[columnIndex] : PostgresTypeCategory.Other;
-            var value = item.IsDBNull ? null : await item.Get();
+            var value = item.IsDBNull ? null : await item.Get(ct);
             data[columnName] = ConvertPostgresValue(category, value, relationKey, columnName);
 
             columnIndex++;
@@ -562,8 +595,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     protected override async Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct)
     {
         var conn = _dataSource.CreateConnection();
-        await conn.OpenAsync(ct);
-        return conn;
+        try
+        {
+            await conn.OpenAsync(ct);
+            return conn;
+        }
+        catch
+        {
+            await conn.DisposeAsync();
+            throw;
+        }
     }
 
 
@@ -628,7 +669,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         return normalizedType switch
         {
             "smallint" or "integer" or "serial" or "bigint" or "bigserial" => long.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
-            "real" or "double precision" or "numeric" or "decimal" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "real" or "double precision" => double.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "numeric" or "decimal" => decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             "boolean" => bool.Parse(value),
             "uuid" => Guid.Parse(value),
             _ => value,
@@ -662,7 +704,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             // Npgsql 10+ returns DateOnly natively for date columns; earlier versions or
             // pgoutput text decoding may return DateTime or string — handle both.
             PostgresTypeCategory.DateOnly => value is DateOnly dateOnly ? dateOnly : DateOnly.FromDateTime(Convert.ToDateTime(value)),
-            PostgresTypeCategory.DateTime => Convert.ToDateTime(value),
+            PostgresTypeCategory.DateTime => value is DateTime dt ? dt : DateTime.Parse(value.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
             PostgresTypeCategory.Uuid => value.ToString(),
             PostgresTypeCategory.Bytea => value,
             PostgresTypeCategory.Json => value.ToString(),

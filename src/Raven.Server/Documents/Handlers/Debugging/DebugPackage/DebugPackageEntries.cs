@@ -160,6 +160,14 @@ public class DebugPackageEntries
                                 return JsonSerializer.Deserialize<OngoingTaskPullReplicationAsSink>(jsonObject, options);
                             case OngoingTaskType.QueueSink:
                                 return JsonSerializer.Deserialize<OngoingTaskQueueSink>(jsonObject, options);
+                            case OngoingTaskType.CdcSink:
+                                return JsonSerializer.Deserialize<OngoingTaskCdcSink>(jsonObject, options);
+                            case OngoingTaskType.SnowflakeEtl:
+                                return JsonSerializer.Deserialize<OngoingTaskSnowflakeEtl>(jsonObject, options);
+                            case OngoingTaskType.EmbeddingsGeneration:
+                                return JsonSerializer.Deserialize<EmbeddingsGeneration>(jsonObject, options);
+                            case OngoingTaskType.GenAi:
+                                return JsonSerializer.Deserialize<GenAi>(jsonObject, options);
                             default:
                                 throw new JsonException($"Unknown task type: {type}");
                         }

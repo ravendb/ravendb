@@ -169,6 +169,8 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         {
             if (string.IsNullOrWhiteSpace(embedded.SourceTableName))
                 errors.Add($"Embedded table under '{parentName}' must have a source table name");
+            else if (string.Equals(embedded.SourceTableName, parentName, StringComparison.OrdinalIgnoreCase))
+                errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' cannot reference its own parent table");
 
             if (string.IsNullOrWhiteSpace(embedded.PropertyName))
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have a property name");
@@ -472,10 +474,13 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         if (local == null)
             return false;
 
-        for (int i = 0; i < local.Count; i++)
+        var sortedLocal = local.OrderBy(x => x.Column, StringComparer.OrdinalIgnoreCase).ToList();
+        var sortedRemote = remote.OrderBy(x => x.Column, StringComparer.OrdinalIgnoreCase).ToList();
+
+        for (int i = 0; i < sortedLocal.Count; i++)
         {
-            var l = local[i];
-            var r = remote[i];
+            var l = sortedLocal[i];
+            var r = sortedRemote[i];
 
             if (string.Equals(l.Column, r.Column, StringComparison.OrdinalIgnoreCase) == false ||
                 string.Equals(l.Name, r.Name, StringComparison.OrdinalIgnoreCase) == false ||

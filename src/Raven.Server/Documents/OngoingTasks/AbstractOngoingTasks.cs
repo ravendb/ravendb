@@ -337,7 +337,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             case OngoingTaskType.CdcSink:
 
                 var cdcSink = taskName != null
-                    ? databaseRecord.CdcSinks.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
+                    ? databaseRecord.CdcSinks?.Find(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase))
                     : databaseRecord.CdcSinks?.Find(x => x.TaskId == taskId);
 
                 if (cdcSink == null)

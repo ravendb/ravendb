@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.CdcSink;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
 using Raven.Server.ServerWide.Context;
 using Microsoft.Data.SqlClient;
+using Raven.Server.NotificationCenter.Notifications;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -52,6 +53,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
+        // in case of error, we'll re-learn the schema (it may have changed).
+        _columnTypesCache.Clear();
         await EnsureCdcEnabled(ct);
         await HandleInitialLoad(ct);
         _initialLoadTcs.TrySetResult();
@@ -203,6 +206,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 if (tableMinLsn == null || IsAllZero(tableMinLsn))
                     continue;
 
+                VerifyNoGapsInLsn(lsnInfo, ci, tableMinLsn);
+
                 var effectiveFromLsn = CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0 ? lsnInfo.FromLsn : tableMinLsn;
 
                 await using var cmd = conn.CreateCommand();
@@ -258,6 +263,27 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 lastLsn = lsnInfo.MaxLsn;
             }
         }
+    }
+
+    private void VerifyNoGapsInLsn((byte[] MaxLsn, byte[] FromLsn, Dictionary<string, byte[]> TableMinLsns) lsnInfo, CaptureInstanceInfo ci, byte[] tableMinLsn)
+    {
+        if (CompareLsn(lsnInfo.FromLsn, tableMinLsn) >= 0)
+            return;
+            
+        if (Logger.IsErrorEnabled)
+            Logger.Error($"[{Name}] CDC changes for capture instance '{ci.CaptureInstance}' " +
+                $"(table {ci.TableInfo.FullName}) have been purged between our saved LSN " +
+                $"({Convert.ToHexString(lsnInfo.FromLsn)}) and the table's min LSN " +
+                $"({Convert.ToHexString(tableMinLsn)}). Changes in this gap are lost. " +
+                "This can happen when the CDC cleanup job runs while the task is stopped, " +
+                "or after a backup restore.");
+
+        Database.NotificationCenter.Add(AlertRaised.Create(
+            Database.Name, Tag,
+            $"[{Name}] CDC changes purged for table {ci.TableInfo.FullName} — " +
+            "gap detected between saved position and earliest available changes.",
+            AlertReason.CdcSink_Error, NotificationSeverity.Warning,
+            key: $"{Tag}/{Name}/stale-lsn/{ci.CaptureInstance}"));
     }
 
     /// <summary>
@@ -452,8 +478,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         var factory = DbProviderFactories.GetFactory(_factoryName);
         var conn = factory.CreateConnection();
         conn.ConnectionString = _connectionString;
-        await conn.OpenAsync(ct);
-        return conn;
+        try
+        {
+            await conn.OpenAsync(ct);
+            return conn;
+        }
+        catch
+        {
+            await conn.DisposeAsync();
+            throw;
+        }
     }
 
 
@@ -504,6 +538,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             "decimal" or "numeric" or "money" or "smallmoney" => decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             "bit" => bool.Parse(value),
             "uniqueidentifier" => Guid.Parse(value),
+            "date" => DateTime.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
+            "datetime" or "datetime2" or "smalldatetime" => DateTime.Parse(value, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+            "datetimeoffset" => DateTimeOffset.Parse(value, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+            "time" => TimeSpan.Parse(value, System.Globalization.CultureInfo.InvariantCulture),
             _ => value,
         };
     }
@@ -556,14 +594,14 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         return MemoryExtensions.ContainsAnyExcept((ReadOnlySpan<byte>)bytes, (byte)0) == false;
     }
 
-    private static string BuildEnableTablesScript(List<CdcSinkConfiguration.TableInfo> tables)
+    private string BuildEnableTablesScript(List<CdcSinkConfiguration.TableInfo> tables)
     {
         var sb = new StringBuilder();
         foreach (var table in tables)
         {
-            sb.Append("  EXEC sys.sp_cdc_enable_table @source_schema = N'").Append(table.Schema)
-              .Append("', @source_name = N'").Append(table.TableName)
-              .Append("', @role_name = NULL;\n");
+            sb.Append("  EXEC sys.sp_cdc_enable_table @source_schema = ").Append(CommandBuilder.QuoteIdentifier(table.Schema))
+              .Append(", @source_name = ").Append(CommandBuilder.QuoteIdentifier(table.TableName))
+              .Append(", @role_name = NULL;\n");
         }
         sb.Append('\n');
         return sb.ToString();

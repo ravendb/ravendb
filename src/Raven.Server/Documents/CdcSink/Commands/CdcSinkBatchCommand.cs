@@ -26,7 +26,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// (for array: the matched item, for value: the existing object) — null for inserts. Previous value for deletes and updates.
     /// Provides $old in scripts for delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
     /// </summary>
-    private record PatchEntry(string TableName, Dictionary<string, object> RawData, string PatchScript, BlittableJsonReaderObject Old);
+    private readonly record struct PatchEntry(string TableName, Dictionary<string, object> RawData, string PatchScript, BlittableJsonReaderObject Old);
 
     private readonly DocumentDatabase _database;
     private readonly List<CdcSinkDocumentOp> _ops;
@@ -144,7 +144,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     if (op.Processor.RootConfig.Patch != null)
                     {
                         patches ??= [];
-                        patches.Add(new PatchEntry(op.Processor.RootConfig.SourceTableName, op.RawData, op.Processor.RootConfig.Patch, currentDoc));
+                        patches.Add(new PatchEntry(op.Processor.Key, op.RawData, op.Processor.RootConfig.Patch, currentDoc));
                     }
 
                     if (currentDoc != null)
@@ -177,7 +177,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     if (deleteScript != null)
                     {
                         patches ??= [];
-                        patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(op.Processor.RootConfig.SourceTableName), op.RawData, deleteScript, currentDoc));
+                        patches.Add(new PatchEntry(op.Processor.KeyOnDelete, op.RawData, deleteScript, currentDoc));
                     }
 
                     if (ignoreThisDelete)
@@ -452,12 +452,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 {
                     var existingItem = FindExistingEmbeddedItem(context, currentDoc, embedOp);
                     patches ??= [];
-                    patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embeddedConfig.SourceTableName), embedOp.RawData, embeddedConfig.OnDelete.Patch, existingItem));
+                    patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.RawData, embeddedConfig.OnDelete.Patch, existingItem));
                 }
                 continue;
             }
 
-            var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp);
+            bool needsOld = (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null) ||
+                            (!isDelete && embeddedConfig.Patch != null);
+
+            var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp, needsOld);
             currentDoc = updatedDoc;
 
             // Patch collection — three cases:
@@ -467,12 +470,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
             {
                 patches ??= [];
-                patches.Add(new PatchEntry(CdcSinkDocumentProcessor.OnDeleteKey(embeddedConfig.SourceTableName), embedOp.RawData, embeddedConfig.OnDelete.Patch, old));
+                patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.RawData, embeddedConfig.OnDelete.Patch, old));
             }
             else if (!isDelete && embeddedConfig.Patch != null)
             {
                 patches ??= [];
-                patches.Add(new PatchEntry(embeddedConfig.SourceTableName, embedOp.RawData, embeddedConfig.Patch, old));
+                patches.Add(new PatchEntry(embedOp.Processor.Key, embedOp.RawData, embeddedConfig.Patch, old));
             }
         }
 
@@ -528,7 +531,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     /// </summary>
     private (BlittableJsonReaderObject Document, BlittableJsonReaderObject Old) ApplyEmbeddedOperation(
         DocumentsOperationContext context, string documentId,
-        BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op)
+        BlittableJsonReaderObject parentDoc, CdcSinkDocumentOp op, bool needsOld = true)
     {
         parentDoc.Modifications ??= new DynamicJsonValue(parentDoc);
         var (target, targetBlittable) = NavigateToEmbeddedParent(parentDoc, parentDoc.Modifications, op.Processor.PathFromRoot, op);
@@ -539,15 +542,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         switch (config.Type)
         {
             case CdcSinkRelationType.Array:
-                old = ApplyArrayOperation(context, targetBlittable, target, config, op);
+                old = ApplyArrayOperation(context, targetBlittable, target, config, op, needsOld);
                 break;
 
             case CdcSinkRelationType.Map:
-                old = ApplyMapOperation(context, targetBlittable, target, config, op);
+                old = ApplyMapOperation(context, targetBlittable, target, config, op, needsOld);
                 break;
 
             case CdcSinkRelationType.Value:
-                old = ApplyValueOperation(context, targetBlittable, target, config, op);
+                old = ApplyValueOperation(context, targetBlittable, target, config, op, needsOld);
                 break;
         }
 
@@ -563,12 +566,12 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private static BlittableJsonReaderObject ApplyValueOperation(
         DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
-        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
+        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op, bool needsOld = true)
     {
         if (op.Operation != CdcSinkOperation.Upsert)
         {
             BlittableJsonReaderObject old = null;
-            if (parentDoc != null &&
+            if (needsOld && parentDoc != null &&
                 parentDoc.TryGetMember(config.PropertyName, out var deletedValue) &&
                 deletedValue is BlittableJsonReaderObject deletedObj)
             {
@@ -583,7 +586,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingObj)
         {
-            var old = context.ReadObject(existingObj, "cdc-old-item"); // clone before modification
+            var old = needsOld ? context.ReadObject(existingObj, "cdc-old-item") : null; // clone before modification only if patch needs $old
             existingObj.Modifications = new DynamicJsonValue(existingObj);
             foreach (var (name, value) in op.MappedData.Properties)
                 existingObj.Modifications[name] = value;
@@ -601,7 +604,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private static BlittableJsonReaderObject ApplyArrayOperation(
         DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
-        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
+        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op, bool needsOld = true)
     {
         var newArray = new DynamicJsonArray();
         bool found = false;
@@ -619,7 +622,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     found = true;
 
                     // Clone BEFORE any modification so we have the previous state for $old.
-                    old = context.ReadObject(item, "cdc-old-item");
+                    old = needsOld ? context.ReadObject(item, "cdc-old-item") : null;
 
                     if (op.Operation == CdcSinkOperation.Upsert)
                     {
@@ -664,7 +667,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private BlittableJsonReaderObject ApplyMapOperation(
         DocumentsOperationContext context,
         BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
-        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op)
+        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op, bool needsOld = true)
     {
         // BuildMapKey normalizes the key (lowercased when case-insensitive),
         // so all stored map keys use the same normalization. Direct lookup works.
@@ -682,7 +685,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 entryValue is BlittableJsonReaderObject entry)
             {
                 existingEntry = entry;
-                old = context.ReadObject(existingEntry, "cdc-old-item");
+                old = needsOld ? context.ReadObject(existingEntry, "cdc-old-item") : null;
             }
 
             if (op.Operation == CdcSinkOperation.Upsert)
@@ -1050,29 +1053,44 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 mappedBlittable = context.ReadObject(op.MappedData, op.DocumentId);
 
             var rawDjv = new DynamicJsonValue();
+            DynamicJsonValue binaryDjv = null;
             if (op.RawData != null)
             {
                 foreach (var kvp in op.RawData)
                 {
-                    rawDjv[kvp.Key] = kvp.Value switch
+                    switch (kvp.Value)
                     {
-                        null or DBNull => null,
-                        byte[] bytes => Convert.ToBase64String(bytes),
-                        Guid guid => guid.ToString(),
-                        _ => kvp.Value
-                    };
+                        case null or DBNull:
+                            rawDjv[kvp.Key] = null;
+                            break;
+                        case byte[] bytes:
+                            // Store binary columns separately so we can restore them as byte[]
+                            // on deserialization without ambiguity (vs regular string values).
+                            binaryDjv ??= new DynamicJsonValue();
+                            binaryDjv[kvp.Key] = Convert.ToBase64String(bytes);
+                            break;
+                        case Guid guid:
+                            rawDjv[kvp.Key] = guid.ToString();
+                            break;
+                        default:
+                            rawDjv[kvp.Key] = kvp.Value;
+                            break;
+                    }
                 }
             }
             var rawBlittable = context.ReadObject(rawDjv, "cdc-raw-data");
+            var binaryBlittable = binaryDjv != null ? context.ReadObject(binaryDjv, "cdc-binary-data") : null;
 
             serializedOps.Add(new SerializedCdcSinkOp
             {
                 Type = op.Type,
                 DocumentId = op.DocumentId,
                 Operation = op.Operation,
-                ProcessorKey = op.Processor?.Key,
+                ProcessorSchema = op.Processor?.Schema,
+                ProcessorTable = op.Processor?.Table,
                 MappedData = mappedBlittable,
                 RawData = rawBlittable,
+                BinaryData = binaryBlittable,
             });
         }
 
@@ -1091,9 +1109,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         public CdcSinkDocumentOpType Type { get; set; }
         public string DocumentId { get; set; }
         public CdcSinkOperation Operation { get; set; }
-        public string ProcessorKey { get; set; }
+        public string ProcessorSchema { get; set; }
+        public string ProcessorTable { get; set; }
         public BlittableJsonReaderObject MappedData { get; set; }
         public BlittableJsonReaderObject RawData { get; set; }
+        /// <summary>
+        /// Binary columns (byte[]) serialized as Base64 strings, stored separately
+        /// from RawData so they can be restored as byte[] on deserialization.
+        /// </summary>
+        public BlittableJsonReaderObject BinaryData { get; set; }
     }
 
     public class Dto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand>
@@ -1133,12 +1157,23 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                     }
                 }
 
+                // Restore binary columns from the separate BinaryData blittable
+                if (serialized.BinaryData != null)
+                {
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+                    for (int j = 0; j < serialized.BinaryData.Count; j++)
+                    {
+                        serialized.BinaryData.GetPropertyByIndex(j, ref prop);
+                        rawData[prop.Name] = Convert.FromBase64String(prop.Value.ToString());
+                    }
+                }
+
                 ops.Add(new CdcSinkDocumentOp
                 {
                     Type = serialized.Type,
                     DocumentId = serialized.DocumentId,
                     Operation = serialized.Operation,
-                    Processor = docProcessor.GetProcessor(serialized.ProcessorKey),
+                    Processor = docProcessor.GetProcessor(serialized.ProcessorSchema, serialized.ProcessorTable),
                     MappedData = mappedDjv,
                     RawData = rawData,
                 });

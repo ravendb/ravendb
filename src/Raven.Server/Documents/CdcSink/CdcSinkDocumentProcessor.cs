@@ -18,7 +18,8 @@ namespace Raven.Server.Documents.CdcSink;
 public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
-    private readonly Dictionary<string, CdcSinkTableProcessor> _tableIndex;
+    private readonly Dictionary<(string Schema, string Table), CdcSinkTableProcessor> _tableIndex;
+
     internal RavenLogger Logger { get; set; }
 
     /// <summary>
@@ -29,7 +30,7 @@ public class CdcSinkDocumentProcessor
     public CdcSinkDocumentProcessor(CdcSinkConfiguration config)
     {
         _config = config;
-        _tableIndex = new Dictionary<string, CdcSinkTableProcessor>(StringComparer.OrdinalIgnoreCase);
+        _tableIndex = new Dictionary<(string, string), CdcSinkTableProcessor>(TableKeyComparer.Instance);
 
         foreach (var table in config.Tables)
         {
@@ -39,6 +40,9 @@ public class CdcSinkDocumentProcessor
             var rootProcessor = new CdcSinkTableProcessor
             {
                 Key = rootKey,
+                KeyOnDelete = rootKey + "__on_delete",
+                Schema = table.SourceTableSchema ?? "",
+                Table = table.SourceTableName,
                 RootConfig = table,
                 CollectionName = table.CollectionName,
                 IsRoot = true,
@@ -48,7 +52,7 @@ public class CdcSinkDocumentProcessor
                 MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(table.PrimaryKeyColumns, rootPropertyLookup),
             };
 
-            _tableIndex[rootKey] = rootProcessor;
+            _tableIndex[(table.SourceTableSchema ?? "", table.SourceTableName)] = rootProcessor;
 
             // Register all embedded tables recursively
             if (table.EmbeddedTables != null)
@@ -72,17 +76,17 @@ public class CdcSinkDocumentProcessor
         foreach (var table in _config.Tables)
         {
             if (table.Patch != null)
-                tableScripts.TryAdd(table.SourceTableName, table.Patch);
+                tableScripts.TryAdd(MakeKey(table.SourceTableSchema, table.SourceTableName), table.Patch);
 
             if (table.OnDelete?.Patch != null)
-                tableScripts.TryAdd(OnDeleteKey(table.SourceTableName), table.OnDelete.Patch);
+                tableScripts.TryAdd(OnDeleteKey(table.SourceTableSchema, table.SourceTableName), table.OnDelete.Patch);
 
             CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
             {
                 if (e.Patch != null)
-                    tableScripts.TryAdd(e.SourceTableName, e.Patch);
+                    tableScripts.TryAdd(MakeKey(e.SourceTableSchema, e.SourceTableName), e.Patch);
                 if (e.OnDelete?.Patch != null)
-                    tableScripts.TryAdd(OnDeleteKey(e.SourceTableName), e.OnDelete.Patch);
+                    tableScripts.TryAdd(OnDeleteKey(e.SourceTableSchema, e.SourceTableName), e.OnDelete.Patch);
             });
         }
 
@@ -135,7 +139,7 @@ public class CdcSinkDocumentProcessor
         return sb.ToString();
     }
 
-    private static string EscapeJsString(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    private static string EscapeJsString(string s) => System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(s);
 
     private void RegisterEmbeddedTables(
         CdcSinkTableConfig rootConfig,
@@ -202,6 +206,9 @@ public class CdcSinkDocumentProcessor
             var processor = new CdcSinkTableProcessor
             {
                 Key = key,
+                KeyOnDelete = key + "__on_delete",
+                Schema = embedded.SourceTableSchema ?? "",
+                Table = embedded.SourceTableName,
                 RootConfig = rootConfig,
                 CollectionName = rootConfig.CollectionName,
                 IsRoot = false,
@@ -214,7 +221,7 @@ public class CdcSinkDocumentProcessor
                 MappedPrimaryKeyNames = BuildMappedPrimaryKeyNames(embedded.PrimaryKeyColumns, embeddedPropertyLookup),
             };
 
-            _tableIndex[key] = processor;
+            _tableIndex[(embedded.SourceTableSchema ?? "", embedded.SourceTableName)] = processor;
 
             // Recurse for deep nesting
             if (embedded.EmbeddedTables != null && embedded.EmbeddedTables.Count > 0)
@@ -224,21 +231,19 @@ public class CdcSinkDocumentProcessor
         }
     }
 
-    public CdcSinkTableProcessor GetProcessor(string processorKey)
+    public CdcSinkTableProcessor GetProcessor(string schema, string table)
     {
-        if (_tableIndex.TryGetValue(processorKey, out var processor) == false)
-            throw new InvalidOperationException($"No processor found for table key '{processorKey}'.");
+        if (_tableIndex.TryGetValue((schema ?? "", table), out var processor) == false)
+            throw new InvalidOperationException($"No processor found for table '{schema}.{table}'.");
         return processor;
     }
 
     public CdcSinkDocumentOp ProcessRow(CdcSinkRow row, JsonOperationContext context)
     {
-        var key = MakeKey(row.TableSchema, row.TableName);
-
-        if (_tableIndex.TryGetValue(key, out var processor) == false)
+        if (_tableIndex.TryGetValue((row.TableSchema ?? "", row.TableName), out var processor) == false)
         {
             if (Logger?.IsDebugEnabled == true)
-                Logger.Debug($"Discarding CDC row for table '{key}' — not configured in the CDC Sink task.");
+                Logger.Debug($"Discarding CDC row for table '{row.TableSchema}.{row.TableName}' — not configured in the CDC Sink task.");
             return null;
         }
 
@@ -322,7 +327,7 @@ public class CdcSinkDocumentProcessor
     /// Dispatch key for OnDelete.Patch scripts in the combined patch request,
     /// distinct from the regular Patch key for the same table.
     /// </summary>
-    internal static string OnDeleteKey(string tableName) => tableName + "__on_delete";
+    internal static string OnDeleteKey(string schema, string tableName) => MakeKey(schema, tableName) + "__on_delete";
 
     private static string MakeKey(string schema, string tableName)
     {
@@ -366,5 +371,21 @@ public class CdcSinkDocumentProcessor
                 lookup[col.Column] = col.Name;
         }
         return lookup;
+    }
+
+    private sealed class TableKeyComparer : IEqualityComparer<(string Schema, string Table)>
+    {
+        public static readonly TableKeyComparer Instance = new();
+
+        public bool Equals((string Schema, string Table) x, (string Schema, string Table) y) =>
+            string.Equals(x.Schema, y.Schema, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(x.Table, y.Table, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string Schema, string Table) obj)
+        {
+            var h1 = StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Schema ?? "");
+            var h2 = StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Table ?? "");
+            return HashCode.Combine(h1, h2);
+        }
     }
 }

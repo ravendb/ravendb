@@ -57,6 +57,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
     protected override async Task RunInternalAsync(CancellationToken ct)
     {
+        _tableColumns.Clear();
         await EnsureBinlogConfiguration(ct);
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
@@ -210,8 +211,16 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     protected override async Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct)
     {
         var conn = new MySqlConnection(_connectionString);
-        await conn.OpenAsync(ct);
-        return conn;
+        try
+        {
+            await conn.OpenAsync(ct);
+            return conn;
+        }
+        catch
+        {
+            await conn.DisposeAsync();
+            throw;
+        }
     }
 
     protected override DbCommandBuilder CommandBuilder { get; } = new MySqlCommandBuilder();
@@ -237,6 +246,12 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var state = LoadState(context);
             savedGtid = state.LastLsn;
         }
+
+        // No explicit GTID gap detection here — unlike PostgreSQL (replication slot) and SQL Server
+        // (fn_cdc_get_min_lsn), MySQL gives a clear fatal error when the binlog client connects with
+        // a GTID that references purged binlogs: "the master has purged binary logs containing GTIDs
+        // that the slave requires". The retry loop surfaces this as a notification, and the admin can
+        // reset the task state to trigger a fresh initial load.
 
         var csBuilder = new MySqlConnectionStringBuilder(_connectionString);
 
@@ -413,7 +428,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             DateTime => value,
             DateOnly => value,
             TimeSpan ts => ts.ToString(), // TIME type → string to avoid precision loss
-            DateTimeOffset dto => dto.DateTime,
+            DateTimeOffset => value,
 
             // Strings pass through
             string => value,

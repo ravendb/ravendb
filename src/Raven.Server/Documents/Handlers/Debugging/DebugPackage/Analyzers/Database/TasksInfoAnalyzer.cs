@@ -134,6 +134,9 @@ public class TasksInfoAnalyzer(
                 case OngoingTaskType.GenAi:
                     taskCounts.GenAiCount++;
                     break;
+                case OngoingTaskType.CdcSink:
+                    taskCounts.CdcSinkCount++;
+                    break;
                 default:
                     throw new NotSupportedException($"Unknown task type: {ongoingTask.TaskType}");
             }

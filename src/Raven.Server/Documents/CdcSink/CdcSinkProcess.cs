@@ -70,7 +70,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// so tests can await it without racing against the process start.
     /// </summary>
     internal Task InitialLoadCompleted => _initialLoadTcs.Task;
-    protected readonly TaskCompletionSource _initialLoadTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    protected TaskCompletionSource _initialLoadTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// Raised each time RunInternalAsync fails with an exception (before entering fallback mode).
@@ -196,7 +196,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                 Database.NotificationCenter.Add(alert);
 
+                // Read the error time BEFORE recording the new error.
                 EnterFallbackMode();
+                Statistics.RecordConsumeError(e.ToString());
             }
         }
     }
@@ -219,7 +221,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         if (Configuration.Disabled)
             return;
 
+        _cts?.Dispose();
         _cts = CancellationTokenSource.CreateLinkedTokenSource(Database.DatabaseShutdown);
+
+        // Callers should re-read the InitialLoadCompleted property after this Start() returns.
+        _initialLoadTcs.TrySetCanceled();
+        _initialLoadTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
 
@@ -497,6 +504,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                         break;
                 }
             }
+
+            if (pending.Count > 0 && Logger.IsDebugEnabled)
+                Logger.Debug($"[{Name}] Discarding {pending.Count} pending op(s) from incomplete transaction at stream end.");
 
             // Stream ended — flush remaining ops, then wait for the final batch to complete
             await FlushBatch();

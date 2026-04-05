@@ -23,6 +23,15 @@ public class CdcSinkTableProcessor
     /// </summary>
     public string Key { get; init; }
 
+    /// <summary>Source table schema (e.g. "public", "dbo"). Empty string when not specified.</summary>
+    public string Schema { get; init; }
+
+    /// <summary>Source table name.</summary>
+    public string Table { get; init; }
+
+    /// <summary>Pre-computed Key + "__on_delete" for the OnDelete dispatch path.</summary>
+    public string KeyOnDelete { get; init; }
+
     /// <summary>
     /// The root table configuration this processor belongs to.
     /// </summary>
@@ -179,11 +188,15 @@ public class CdcSinkTableProcessor
                 return context.ParseBufferToArray(s, "cdc-json-column", BlittableJsonDocumentBuilder.UsageMode.None);
             case '"':
             {
-                // JSON string — strip the surrounding quotes
-                var inner = s.Trim();
-                if (inner.Length >= 2 && inner[0] == '"' && inner[inner.Length - 1] == '"')
-                    return inner.Substring(1, inner.Length - 2);
-                return s;
+                // JSON string — use System.Text.Json to properly unescape JSON escape sequences
+                try
+                {
+                    return System.Text.Json.JsonSerializer.Deserialize<string>(s);
+                }
+                catch
+                {
+                    return s;
+                }
             }
             case 't' or 'f':
                 if (bool.TryParse(s.Trim(), out var boolVal))

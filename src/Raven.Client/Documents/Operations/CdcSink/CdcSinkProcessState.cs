@@ -20,6 +20,6 @@ public class CdcSinkProcessState : IDatabaseTaskStatus
 
     public static string GenerateItemName(string databaseName, string configurationName)
     {
-        return $"values/{databaseName}/cdcsink/{configurationName.ToLowerInvariant()}";
+        return $"values/{databaseName}/cdcsink/{configurationName}";
     }
 }

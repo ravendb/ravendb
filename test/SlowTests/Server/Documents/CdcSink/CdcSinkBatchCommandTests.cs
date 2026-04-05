@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            return docProcessor.GetProcessor($"{config.SourceTableSchema ?? "public"}.{config.SourceTableName}");
+            return docProcessor.GetProcessor(config.SourceTableSchema ?? "public", config.SourceTableName);
         }
 
         private static CdcSinkTableProcessor CreateEmbeddedProcessor(
@@ -116,10 +116,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var key = string.IsNullOrEmpty(embeddedConfig.SourceTableSchema)
-                ? embeddedConfig.SourceTableName
-                : $"{embeddedConfig.SourceTableSchema}.{embeddedConfig.SourceTableName}";
-            return docProcessor.GetProcessor(key);
+            return docProcessor.GetProcessor(embeddedConfig.SourceTableSchema ?? "", embeddedConfig.SourceTableName);
         }
 
         private static CdcSinkDocumentOp CreatePutOp(string documentId, DynamicJsonValue mappedData,
@@ -856,7 +853,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.documents");
+            var processor = docProcessor.GetProcessor("public", "documents");
 
             var mappedData = new DynamicJsonValue
             {
@@ -942,7 +939,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.products");
+            var processor = docProcessor.GetProcessor("public", "products");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1015,7 +1012,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.articles");
+            var processor = docProcessor.GetProcessor("public", "articles");
 
             var mappedData = new DynamicJsonValue
             {
@@ -1814,7 +1811,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { rootConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var empProcessor = docProcessor.GetProcessor("public.employees");
+            var empProcessor = docProcessor.GetProcessor("public", "employees");
 
             return (rootConfig, deptConfig, empConfig, empProcessor);
         }
@@ -2166,7 +2163,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.items");
+            var processor = docProcessor.GetProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2274,7 +2271,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.items");
+            var processor = docProcessor.GetProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2367,7 +2364,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.items");
+            var processor = docProcessor.GetProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2455,7 +2452,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.items");
+            var processor = docProcessor.GetProcessor("public", "items");
 
             DynamicJsonValue MakeMapped(string name) => new DynamicJsonValue
             {
@@ -2527,8 +2524,8 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { badConfig, goodConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var badProcessor = docProcessor.GetProcessor("public.bad_orders");
-            var goodProcessor = docProcessor.GetProcessor("public.good_orders");
+            var badProcessor = docProcessor.GetProcessor("public", "bad_orders");
+            var goodProcessor = docProcessor.GetProcessor("public", "good_orders");
 
             var badData = new DynamicJsonValue
             {
@@ -2624,7 +2621,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { config }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.records");
+            var processor = docProcessor.GetProcessor("public", "records");
 
             // Simulate Npgsql-returned types:
             // json/jsonb → string containing JSON
@@ -2732,7 +2729,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 Tables = new List<CdcSinkTableConfig> { tableConfig }
             };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var processor = docProcessor.GetProcessor("public.orders");
+            var processor = docProcessor.GetProcessor("public", "orders");
 
             // Step 1: Create the document via a Put
             var putMapped = new DynamicJsonValue
@@ -2849,7 +2846,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public.order_lines");
+            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,
@@ -2926,7 +2923,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public.order_detail");
+            var embProcessor = docProcessor.GetProcessor("public", "order_detail");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,
@@ -3003,7 +3000,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
             var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
-            var embProcessor = docProcessor.GetProcessor("public.order_tags");
+            var embProcessor = docProcessor.GetProcessor("public", "order_tags");
 
             // Step 1: Create parent
             var putCmd = new CdcSinkBatchCommand(database,

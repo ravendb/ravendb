@@ -2789,6 +2789,114 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         /// <summary>
+        /// Verifies that datetime-family types (DATETIME2, DATETIMEOFFSET, TIME) survive
+        /// both initial load (keyset pagination via ConvertStringToType) and CDC polling
+        /// without type errors or precision loss.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task DateTimeTypes_InitialLoadAndCdcPolling_Consistency()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, @"
+                CREATE TABLE events (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(200) NOT NULL,
+                    created_at DATETIME2(3) NOT NULL,
+                    scheduled_at DATETIMEOFFSET NOT NULL,
+                    duration TIME NOT NULL,
+                    event_date DATE NOT NULL,
+                    amount DECIMAL(18,6) NOT NULL
+                );
+                INSERT INTO events (id, name, created_at, scheduled_at, duration, event_date, amount)
+                VALUES (1, 'Launch', '2025-03-15T14:30:45.123', '2025-03-15T14:30:45.1234567+05:30', '02:15:30.5000000', '2025-03-15', 123456.789012),
+                       (2, 'Review', '2025-06-01T09:00:00.000', '2025-06-01T09:00:00.0000000-08:00', '01:00:00.0000000', '2025-06-01', 999999.999999);");
+
+            EnableCdcOnTables(connectionString, ("dbo", "events"));
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-datetime-types",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Events",
+                        SourceTableSchema = "dbo",
+                        SourceTableName = "events",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" },
+                            new CdcColumnMapping { Column = "created_at", Name = "CreatedAt" },
+                            new CdcColumnMapping { Column = "scheduled_at", Name = "ScheduledAt" },
+                            new CdcColumnMapping { Column = "duration", Name = "Duration" },
+                            new CdcColumnMapping { Column = "event_date", Name = "EventDate" },
+                            new CdcColumnMapping { Column = "amount", Name = "Amount" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Wait for initial load (exercises ConvertStringToType with datetime types)
+            var count = await WaitForDocumentCountAsync(store, "Events", expectedCount: 2, timeoutMs: 60_000);
+            Assert.Equal(2, count);
+
+            // Capture initial load representations
+            string initialCreatedAt, initialScheduledAt, initialDuration, initialEventDate, initialAmount;
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<EventStringFields>("Events/1");
+                Assert.NotNull(doc);
+                Assert.Equal("Launch", doc.Name);
+                initialCreatedAt = doc.CreatedAt;
+                initialScheduledAt = doc.ScheduledAt;
+                initialDuration = doc.Duration;
+                initialEventDate = doc.EventDate;
+                initialAmount = doc.Amount;
+            }
+
+            // Update via CDC — only change name to trigger a CDC row with all columns
+            ExecuteMsSql(connectionString, @"UPDATE events SET name = 'Launch v2' WHERE id = 1");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<EventStringFields>("Events/1");
+                return doc?.Name;
+            }, "Launch v2", timeout: 60_000);
+
+            // Verify datetime representations are identical between initial load and CDC
+            using (var session = store.OpenAsyncSession())
+            {
+                var doc = await session.LoadAsync<EventStringFields>("Events/1");
+                Assert.NotNull(doc);
+                Assert.Equal("Launch v2", doc.Name);
+                Assert.Equal(initialCreatedAt, doc.CreatedAt);
+                Assert.Equal(initialScheduledAt, doc.ScheduledAt);
+                Assert.Equal(initialDuration, doc.Duration);
+                Assert.Equal(initialEventDate, doc.EventDate);
+                Assert.Equal(initialAmount, doc.Amount);
+            }
+        }
+
+        private class EventStringFields
+        {
+            public string Name { get; set; }
+            public string CreatedAt { get; set; }
+            public string ScheduledAt { get; set; }
+            public string Duration { get; set; }
+            public string EventDate { get; set; }
+            public string Amount { get; set; }
+        }
+
+        /// <summary>
         /// Verifies that NVARCHAR(MAX) columns declared with CdcColumnType.Json are stored as
         /// native JSON objects/arrays in the RavenDB document (not as escaped strings).
         /// Tests both initial load and CDC polling to confirm both paths handle

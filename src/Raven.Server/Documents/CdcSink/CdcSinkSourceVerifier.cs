@@ -95,6 +95,8 @@ public static class CdcSinkSourceVerifier
 
     private static async Task VerifyPostgreSqlAsync(DbConnection connection, List<string> tableNames, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
     {
+        using var qb = new Npgsql.NpgsqlCommandBuilder();
+
         // Check wal_level = logical
         await using (var cmd = connection.CreateCommand())
         {
@@ -169,7 +171,7 @@ public static class CdcSinkSourceVerifier
                 {
                     missing.Add($"publication '{expectedPubName}'");
                     var tables = tableNames != null ? string.Join(", ", tableNames) : "ALL TABLES";
-                    commands.Add($"CREATE PUBLICATION {expectedPubName} FOR TABLE {tables};");
+                    commands.Add($"CREATE PUBLICATION {qb.QuoteIdentifier(expectedPubName)} FOR TABLE {tables};");
                 }
 
                 if (slotExists == false)
@@ -180,7 +182,7 @@ public static class CdcSinkSourceVerifier
 
                 result.Errors.Add(
                     $"""
-                    User '{currentUser}' does not have the REPLICATION privilege and the following are missing: {string.Join(", ", missing)}. Either grant the privilege with: ALTER ROLE {currentUser} REPLICATION; or have an administrator run:
+                    User '{currentUser}' does not have the REPLICATION privilege and the following are missing: {string.Join(", ", missing)}. Either grant the privilege with: ALTER ROLE {qb.QuoteIdentifier(currentUser)} REPLICATION; or have an administrator run:
                     {string.Join("\n", commands)}
                     """);
             }
@@ -217,11 +219,12 @@ public static class CdcSinkSourceVerifier
             var error = await CheckReplicaIdentityCoversColumns(connection, schema, table, requiredColumns);
             if (error != null)
             {
+                using var embQb = new Npgsql.NpgsqlCommandBuilder();
                 result.Errors.Add(
                     $"""
                     Embedded table '{schema}.{table}': {error} The join column(s) ({joinCols}) are not part of the primary key, so DELETE events must include them for routing to the parent document. Either:
 
-                      ALTER TABLE {schema}.{table} REPLICA IDENTITY FULL;
+                      ALTER TABLE {embQb.QuoteIdentifier(schema)}.{embQb.QuoteIdentifier(table)} REPLICA IDENTITY FULL;
 
                     Or set OnDelete.IgnoreDeletes = true on this embedded table configuration to skip delete processing.
                     """);
@@ -338,6 +341,8 @@ public static class CdcSinkSourceVerifier
 
     private static async Task VerifySqlServerAsync(DbConnection connection, List<string> tableNames, CdcSinkVerificationResult result)
     {
+        using var qb = new Microsoft.Data.SqlClient.SqlCommandBuilder();
+
         // Get database name for error messages
         string dbName;
         await using (var cmd = connection.CreateCommand())
@@ -484,10 +489,10 @@ public static class CdcSinkSourceVerifier
                 else
                 {
                     result.Errors.Add(
-                        $"CDC tracking is not enabled for table '{schema}.{table}' in database '{dbName}' " +
+                        $"CDC tracking is not enabled for table {qb.QuoteIdentifier(schema)}.{qb.QuoteIdentifier(table)} in database '{dbName}' " +
                         "and the current user does not have db_owner permissions. " +
                         $"Ask a database administrator to run: EXEC sys.sp_cdc_enable_table " +
-                        $"@source_schema = '{schema}', @source_name = '{table}', @role_name = NULL;");
+                        $"@source_schema = {qb.QuoteIdentifier(schema)}, @source_name = {qb.QuoteIdentifier(table)}, @role_name = NULL;");
                 }
             }
         }
