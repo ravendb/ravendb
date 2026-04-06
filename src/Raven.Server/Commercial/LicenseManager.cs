@@ -881,10 +881,11 @@ namespace Raven.Server.Commercial
         public async Task<LicenseLeaseResult> LeaseLicense(string raftRequestId, bool throwOnError)
         {
             var leaseStatus = new LicenseLeaseResult { Status = LeaseStatus.NotModified };
-            if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
-                return leaseStatus;
 
             if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                return leaseStatus;
+
+            if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
                 return leaseStatus;
 
             try
@@ -892,10 +893,10 @@ namespace Raven.Server.Commercial
                 var loadedLicense = _serverStore.LoadLicense();
                 if (loadedLicense == null && (_serverStore.Configuration.Licensing.DisableAutoUpdate || _serverStore.Configuration.Licensing.DisableAutoUpdateFromApi == false))
                 {
-                    // the cluster was bootstraped, and we don't have an activated license.
+                    // the cluster was bootstrapped, and we don't have an activated license.
                     // we skip trying to get a new license in case of:
                     // - the license auto update is disabled.
-                    // - the auto update from api.ravendb.net is disabled.
+                    // - the auto update from api.ravendb.net is enabled - in that case we cannot auto update anyway because we don't have the previous license.
                     return leaseStatus;
                 }
 
