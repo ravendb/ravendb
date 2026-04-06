@@ -87,7 +87,7 @@ namespace Sparrow.Binary
                 if (result == 0)
                     continue;
 
-                index += LeadingZeroes(result);
+                index += TrailingZeroes(result);
                 goto Done;
             }
 
@@ -118,7 +118,7 @@ namespace Sparrow.Binary
                 if (result == 0)
                     continue;
 
-                index += LeadingZeroes(result);
+                index += TrailingZeroes(result);
                 goto Done;
             }
 
@@ -149,8 +149,10 @@ namespace Sparrow.Binary
                 if (input == 0)
                     continue;
 
-                value = LeadingZeroes(input);
-                return (value < sizeof(long) * 8) ? (int)index * 8 + value : -1;
+                // On little-endian, the first non-zero byte (lowest address) is in the LSB.
+                // TrailingZeroesInBytes finds the byte index of the first non-zero byte.
+                index += TrailingZeroesInBytes(input);
+                goto Done;
             }
 
             for (; index < lengthInBytes; index++)

@@ -36,7 +36,14 @@ namespace Sparrow.Binary
                     8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
                 };
 
-        private static readonly byte[] DeBruijnBytePos64 = 
+        // De Bruijn lookup table for 32-bit trailing zero count (constant 0x077CB531)
+        private static readonly byte[] TrailingZeroDeBruijnBitPosition =
+                {
+                    0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
+                    31, 27, 13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9
+                };
+
+        private static readonly byte[] DeBruijnBytePos64 =
             {
                 0, 0, 0, 0, 0, 1, 1, 2, 0, 3, 1, 3, 1, 4, 2, 7, 0, 2, 3, 6, 1, 5, 3, 5, 1, 3, 4, 4, 2, 5, 6, 7,
                 7, 0, 1, 2, 3, 3, 4, 6, 2, 6, 5, 5, 3, 4, 5, 6, 7, 1, 2, 4, 6, 4, 4, 5, 7, 2, 6, 5, 7, 6, 7, 7
@@ -188,6 +195,18 @@ namespace Sparrow.Binary
             if (n == 0)
                 return 64;
             return 63 - MostSignificantBit(n);
+#endif
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int TrailingZeroes(uint n)
+        {
+#if NET6_0_OR_GREATER
+            return BitOperations.TrailingZeroCount(n);
+#else
+            if (n == 0)
+                return 32;
+            return TrailingZeroDeBruijnBitPosition[((n & (uint)(-(int)n)) * 0x077CB531U) >> 27];
 #endif
         }
 

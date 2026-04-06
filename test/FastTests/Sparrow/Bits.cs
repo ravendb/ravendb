@@ -167,6 +167,48 @@ namespace FastTests.Sparrow
 
 
         [RavenFact(RavenTestCategory.Core)]
+        public void BitVector_IndexOfFirstSetBit_Scalar()
+        {
+            for (int bitIdx = 0; bitIdx < 256; bitIdx++)
+            {
+                var storage = new byte[32];
+                var bv = new BitVector(storage);
+                bv.Set(bitIdx);
+
+                ref byte storageRef = ref MemoryMarshal.GetReference(storage.AsSpan());
+                Assert.Equal(bitIdx, BitVector.IndexOfFirstSetBitScalar(ref storageRef, storage.Length));
+            }
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.Core, RavenIntrinsics.Sse)]
+        public void BitVector_IndexOfFirstSetBit_Sse2()
+        {
+            for (int bitIdx = 0; bitIdx < 256; bitIdx++)
+            {
+                var storage = new byte[32];
+                var bv = new BitVector(storage);
+                bv.Set(bitIdx);
+
+                ref byte storageRef = ref MemoryMarshal.GetReference(storage.AsSpan());
+                Assert.Equal(bitIdx, BitVector.IndexOfFirstSetBitSse2(ref storageRef, storage.Length));
+            }
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.Core, RavenIntrinsics.Avx256)]
+        public void BitVector_IndexOfFirstSetBit_Avx2()
+        {
+            for (int bitIdx = 0; bitIdx < 256; bitIdx++)
+            {
+                var storage = new byte[32];
+                var bv = new BitVector(storage);
+                bv.Set(bitIdx);
+
+                ref byte storageRef = ref MemoryMarshal.GetReference(storage.AsSpan());
+                Assert.Equal(bitIdx, BitVector.IndexOfFirstSetBitAvx2(ref storageRef, storage.Length));
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
         public void BitReaderEquivalence()
         {
             for (int i = 0; i <= 255; i++)
