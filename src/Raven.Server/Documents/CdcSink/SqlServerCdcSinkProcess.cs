@@ -158,6 +158,21 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
+    private static async Task VerifyAgentIsRunning(DbConnection conn, CancellationToken ct)
+    {
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE program_name LIKE N'SQLAgent%'";
+        var result = await cmd.ExecuteScalarAsync(ct);
+        if (result is int count && count > 0)
+            return;
+
+        throw new InvalidOperationException(
+            "SQL Server Agent is not running. CDC change capture requires the Agent to process " +
+            "capture jobs that populate the change tables. Without it, no CDC events will be delivered. " +
+            "For Docker containers, start with: -e 'MSSQL_AGENT_ENABLED=true'. " +
+            "For on-premises installations, start the SQL Server Agent service.");
+    }
+
     protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
     {
         byte[] lastLsn;
@@ -174,6 +189,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         var pollInterval = Database.Configuration.CdcSink.PollInterval.AsTimeSpan;
 
         await using var conn = await OpenConnectionAsync(ct);
+
+        await VerifyAgentIsRunning(conn, ct);
         bool shouldWait = false;
         var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
 

@@ -208,18 +208,30 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
         {
             using var conn = new Microsoft.Data.SqlClient.SqlConnection(MsSqlConnectionString.Instance.VerifiedConnectionString.Value);
             conn.Open();
-            using var cmd = new Microsoft.Data.SqlClient.SqlCommand("SELECT CAST(SERVERPROPERTY('EngineEdition') AS INT)", conn);
-            var engineEdition = (int)cmd.ExecuteScalar();
+            using var cmd = conn.CreateCommand();
+
             // EngineEdition 4 = Express, which does not support CDC
+            cmd.CommandText = "SELECT CAST(SERVERPROPERTY('EngineEdition') AS INT)";
+            var engineEdition = (int)cmd.ExecuteScalar();
             if (engineEdition == 4)
             {
                 skipMessage = "Test requires SQL Server with CDC support (Enterprise, Developer, or Standard edition — Express edition does not support CDC)";
                 return true;
             }
+
+            // CDC capture requires the SQL Server Agent to be running
+            cmd.CommandText = "SELECT COUNT(*) FROM sys.dm_exec_sessions WHERE program_name LIKE N'SQLAgent%'";
+            var agentSessions = (int)cmd.ExecuteScalar();
+            if (agentSessions == 0)
+            {
+                skipMessage = "Test requires SQL Server Agent to be running (needed for CDC capture jobs). " +
+                    "For Docker, start the container with -e 'MSSQL_AGENT_ENABLED=true' or start the SQL Server Agent service manually.";
+                return true;
+            }
         }
         catch (Exception e)
         {
-            skipMessage = $"Failed to determine SQL Server edition: {e.Message}";
+            skipMessage = $"Failed to determine SQL Server CDC readiness: {e.Message}";
             return true;
         }
 
