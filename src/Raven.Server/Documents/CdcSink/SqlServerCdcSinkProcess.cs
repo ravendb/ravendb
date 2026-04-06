@@ -202,6 +202,20 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 await Task.Delay(pollInterval, ct);
             shouldWait = true;
 
+            // Note: we intentionally do NOT wrap these reads in a transaction. A ReadCommitted transaction
+            // (the SQL Server default) provides no additional guarantees over auto-commit — shared locks are
+            // released as soon as each row is read, so the cleanup job can still purge CDC entries between our
+            // metadata read (GetLsnBounds) and the change table queries. Snapshot isolation would give a
+            // consistent point-in-time view, but requires ALLOW_SNAPSHOT_ISOLATION to be enabled on the database,
+            // which is a server-wide setting we don't want to impose on users.
+            //
+            // Instead, correctness is ensured by:
+            // 1. GetLsnBounds fetches max LSN and all per-table min LSNs in a single batch query (one statement
+            //    = one consistent read even without an explicit transaction).
+            // 2. effectiveFromLsn clamping (below) ensures we never request an LSN range below the table's min,
+            //    even if cleanup advanced the min between the metadata read and the change query.
+            // 3. VerifyNoGapsInLsn detects and warns when our saved position has been purged past recovery.
+
             var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
             LastActivityTime = Database.Time.GetUtcNow();
 
@@ -211,11 +225,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             // Read ALL tables into a buffer, then sort by (__$start_lsn, __$seqval) for
             // cross-table transaction ordering. This ensures parent rows (e.g. orders) are
             // processed before child rows (e.g. order_lines) within the same transaction.
-            //
-            // Note: we intentionally do NOT use a snapshot transaction here. CDC change tables
-            // are append-only and queried by LSN range (from_lsn..to_lsn), so each table read
-            // is already bounded to the same LSN window. Snapshot isolation would require
-            // ALLOW_SNAPSHOT_ISOLATION on the database and can interfere with CDC reads.
             buffer.Clear();
 
             foreach (var ci in captureInstances)
