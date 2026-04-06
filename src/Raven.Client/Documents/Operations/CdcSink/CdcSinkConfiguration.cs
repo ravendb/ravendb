@@ -117,7 +117,9 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
         {
             if (columnNames.Contains(primaryKeyColumns[i]) == false)
                 errors.Add($"Table '{tableName}': primary key column '{primaryKeyColumns[i]}' is not listed in the column mappings. " +
-                    "Add a column mapping for this column or correct the primary key column name.");
+                    "Primary key columns must be included in the column mappings so they are stored in the document — " +
+                    "without them, the system cannot identify which array element to update or delete on subsequent changes. " +
+                    "Add a column mapping for this column (e.g. {{ Column = \"{primaryKeyColumns[i]}\", Name = \"...\" }}) or correct the primary key column name.");
         }
     }
 

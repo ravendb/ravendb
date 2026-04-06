@@ -17,12 +17,73 @@ using Xunit;
 namespace SlowTests.Server.Documents.CdcSink
 {
     /// <summary>
-    /// SQL Server CDC capture instances are database-scoped — tests that enable/disable CDC
-    /// and create capture instances can interfere when running in parallel.
-    /// This collection ensures CDC Sink SQL Server tests run sequentially.
+    /// Creates a single shared SQL Server database for all CDC tests in the collection.
+    /// Enables CDC and creates a dummy table to bootstrap the SQL Agent capture/cleanup jobs
+    /// (which takes ~6.5 seconds). Subsequent sp_cdc_enable_table calls are ~230ms.
     /// </summary>
+    public class CdcSqlServerFixture : IDisposable
+    {
+        public string ConnectionString { get; }
+        private readonly string _databaseName;
+
+        public CdcSqlServerFixture()
+        {
+            _databaseName = "CdcTest_" + Guid.NewGuid();
+            var masterCs = MsSqlConnectionString.Instance.VerifiedConnectionString.Value;
+            ConnectionString = masterCs + $";Initial Catalog={_databaseName}";
+
+            using (var conn = new SqlConnection(masterCs))
+            {
+                conn.Open();
+                using var cmd = new SqlCommand($"CREATE DATABASE [{_databaseName}]", conn);
+                cmd.CommandTimeout = 120;
+                cmd.ExecuteNonQuery();
+            }
+
+            // Enable CDC + create a dummy table to pay the ~6.5s Agent job creation cost once
+            using (var conn = new SqlConnection(ConnectionString))
+            {
+                conn.Open();
+
+                using (var cmd = new SqlCommand("EXEC sys.sp_cdc_enable_db", conn))
+                {
+                    cmd.CommandTimeout = 120;
+                    cmd.ExecuteNonQuery();
+                }
+
+                using (var cmd = new SqlCommand("CREATE TABLE _cdc_bootstrap (id INT PRIMARY KEY)", conn))
+                    cmd.ExecuteNonQuery();
+
+                using (var cmd = new SqlCommand(
+                    "EXEC sys.sp_cdc_enable_table @source_schema = N'dbo', @source_name = N'_cdc_bootstrap', @role_name = NULL", conn))
+                {
+                    cmd.CommandTimeout = 120;
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                var masterCs = MsSqlConnectionString.Instance.VerifiedConnectionString.Value;
+                using var conn = new SqlConnection(masterCs);
+                conn.Open();
+                using var cmd = new SqlCommand(
+                    $"ALTER DATABASE [{_databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{_databaseName}]", conn);
+                cmd.CommandTimeout = 120;
+                cmd.ExecuteNonQuery();
+            }
+            catch
+            {
+                // best-effort cleanup
+            }
+        }
+    }
+
     [CollectionDefinition(nameof(CdcSinkSqlServerTests), DisableParallelization = true)]
-    public class CdcSinkSqlServerTests;
+    public class CdcSinkSqlServerTests : ICollectionFixture<CdcSqlServerFixture>;
 
     /// <summary>
     /// Integration tests for the SQL Server CDC Sink process.
@@ -43,40 +104,48 @@ namespace SlowTests.Server.Documents.CdcSink
     [Collection(nameof(CdcSinkSqlServerTests))]
     public class CdcSinkSqlServerIntegrationTests : CdcSinkIntegrationTestBase
     {
-        public CdcSinkSqlServerIntegrationTests(ITestOutputHelper output) : base(output)
+        private readonly string _connectionString;
+
+        public CdcSinkSqlServerIntegrationTests(ITestOutputHelper output, CdcSqlServerFixture fixture) : base(output)
         {
+            _connectionString = fixture.ConnectionString;
         }
 
-        private void ExecuteMsSql(string connectionString, string sql)
+        /// <summary>
+        /// Creates a unique schema for this test, named after the calling test method.
+        /// Must be called at the start of each test before any SQL operations.
+        /// </summary>
+        private string CreateTestSchema([System.Runtime.CompilerServices.CallerMemberName] string testName = null)
         {
-            using var connection = new SqlConnection(connectionString);
+            ExecuteMsSql($"CREATE SCHEMA [{testName}]");
+            return testName;
+        }
+
+        private void ExecuteMsSql(string sql)
+        {
+            using var connection = new SqlConnection(_connectionString);
             connection.Open();
             using var cmd = new SqlCommand(sql, connection);
             cmd.CommandTimeout = 120;
             cmd.ExecuteNonQuery();
         }
 
-        private void EnableCdc(string connectionString)
+        private void EnableCdcOnTable(string schema, string tableName)
         {
-            ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_enable_db");
-        }
-
-        private void EnableCdcOnTable(string connectionString, string schema, string tableName)
-        {
-            ExecuteMsSql(connectionString,
+            ExecuteMsSql(
                 $"EXEC sys.sp_cdc_enable_table @source_schema = N'{schema}', @source_name = N'{tableName}', @role_name = NULL");
 
             // SQL Server creates the capture instance asynchronously via SQL Agent.
             // Wait for it to become available before proceeding.
-            WaitForCdcCaptureInstance(connectionString, schema, tableName);
+            WaitForCdcCaptureInstance(schema, tableName);
         }
 
-        private void WaitForCdcCaptureInstance(string connectionString, string schema, string tableName)
+        private void WaitForCdcCaptureInstance(string schema, string tableName)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < 30_000)
             {
-                using var connection = new SqlConnection(connectionString);
+                using var connection = new SqlConnection(_connectionString);
                 connection.Open();
                 using var cmd = new SqlCommand(
                     "SELECT capture_instance FROM cdc.change_tables WHERE source_object_id = OBJECT_ID(@name)", connection);
@@ -92,23 +161,22 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         /// <summary>
-        /// Enables CDC on the database and on all specified tables.
-        /// Convenience helper for tests that create multiple tables.
+        /// Enables CDC tracking on the specified tables.
+        /// The database-level CDC and Agent jobs are already set up by the shared fixture.
         /// </summary>
-        private void EnableCdcOnTables(string connectionString, params (string Schema, string Table)[] tables)
+        private void EnableCdcOnTables(params (string Schema, string Table)[] tables)
         {
-            EnableCdc(connectionString);
             foreach (var (schema, table) in tables)
-                EnableCdcOnTable(connectionString, schema, table);
+                EnableCdcOnTable(schema, table);
         }
 
-        private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string connectionString, string name = "mssql-cdc-test")
+        private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string name = "mssql-cdc-test")
         {
             var sqlCs = new SqlConnectionString
             {
                 Name = name,
                 FactoryName = "Microsoft.Data.SqlClient",
-                ConnectionString = connectionString
+                ConnectionString = _connectionString
             };
 
             store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlCs));
@@ -177,7 +245,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     var doc = await session.LoadAsync<T>(docId);
                     if (doc != null)
+                    {
                         return doc;
+                    }
                 }
 
                 await Task.Delay(250);
@@ -199,7 +269,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     var doc = await session.LoadAsync<object>(docId);
                     if (doc == null)
+                    {
                         return true;
+                    }
                 }
 
                 await Task.Delay(250);
@@ -222,7 +294,9 @@ namespace SlowTests.Server.Documents.CdcSink
                 {
                     count = await session.Query<dynamic>(collectionName: collectionName).CountAsync();
                     if (count >= expectedCount)
+                    {
                         return count;
+                    }
                 }
 
                 await Task.Delay(250);
@@ -240,24 +314,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task InitialLoad_RootTable()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE products (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].products (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     price DECIMAL(12,2) NOT NULL
                 )");
 
-            ExecuteMsSql(connectionString, @"
-                INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
-                INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 19.99);
-                INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);
-                INSERT INTO products (id, name, price) VALUES (4, 'Precision', 123456789.01);");
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].products (id, name, price) VALUES (1, 'Widget', 9.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (2, 'Gadget', 19.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (3, 'Doohickey', 29.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (4, 'Precision', 123456789.01);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "products"));
+            EnableCdcOnTables((schema, "products"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -268,7 +342,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Products",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -313,23 +387,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task InitialLoad_WithColumnMapping()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE items (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].items (
                     product_id INT PRIMARY KEY IDENTITY(1,1),
                     product_name NVARCHAR(200) NOT NULL
                 )");
 
-            ExecuteMsSql(connectionString, @"
-                SET IDENTITY_INSERT items ON;
-                INSERT INTO items (product_id, product_name) VALUES (1, 'Alpha');
-                INSERT INTO items (product_id, product_name) VALUES (2, 'Beta');
-                SET IDENTITY_INSERT items OFF;");
+            ExecuteMsSql($@"
+                SET IDENTITY_INSERT [{schema}].items ON;
+                INSERT INTO [{schema}].items (product_id, product_name) VALUES (1, 'Alpha');
+                INSERT INTO [{schema}].items (product_id, product_name) VALUES (2, 'Beta');
+                SET IDENTITY_INSERT [{schema}].items OFF;");
 
-            EnableCdcOnTables(connectionString, ("dbo", "items"));
+            EnableCdcOnTables((schema, "items"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -340,7 +414,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Items",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "product_id" },
                         Columns = new List<CdcColumnMapping>
@@ -373,19 +447,19 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE events (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].events (
                     id INT PRIMARY KEY,
                     description NVARCHAR(200) NOT NULL
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "events"));
+            EnableCdcOnTables((schema, "events"));
 
-            ExecuteMsSql(connectionString, @"INSERT INTO events (id, description) VALUES (1, 'Initial Event');");
+            ExecuteMsSql($@"INSERT INTO [{schema}].events (id, description) VALUES (1, 'Initial Event');");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -396,7 +470,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Events",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -414,7 +488,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(initialDoc);
 
             // Insert a new row to be captured via CDC polling
-            ExecuteMsSql(connectionString, @"INSERT INTO events (id, description) VALUES (2, 'Streamed Event');");
+            ExecuteMsSql($@"INSERT INTO [{schema}].events (id, description) VALUES (2, 'Streamed Event');");
 
             var newDoc = await WaitForDocumentAsync<Event>(store, "Events/2", timeoutMs: 60_000);
             Assert.NotNull(newDoc);
@@ -425,19 +499,19 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task CdcStreaming_Update()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE notes (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].notes (
                     id INT PRIMARY KEY,
                     content NVARCHAR(500) NOT NULL
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "notes"));
+            EnableCdcOnTables((schema, "notes"));
 
-            ExecuteMsSql(connectionString, @"INSERT INTO notes (id, content) VALUES (1, 'Original Content');");
+            ExecuteMsSql($@"INSERT INTO [{schema}].notes (id, content) VALUES (1, 'Original Content');");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -448,7 +522,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Notes",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "notes",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -466,7 +540,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc);
             Assert.Equal("Original Content", doc.Content);
 
-            ExecuteMsSql(connectionString, @"UPDATE notes SET content = 'Updated Content' WHERE id = 1;");
+            ExecuteMsSql($@"UPDATE [{schema}].notes SET content = 'Updated Content' WHERE id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -480,23 +554,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task CdcStreaming_Delete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE records (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].records (
                     id INT PRIMARY KEY,
                     title NVARCHAR(200) NOT NULL
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "records"));
+            EnableCdcOnTables((schema, "records"));
 
             // Note: Unlike PostgreSQL, no REPLICA IDENTITY FULL needed — SQL Server CDC
             // always captures all tracked columns on DELETE.
-            ExecuteMsSql(connectionString, @"
-                INSERT INTO records (id, title) VALUES (1, 'To Be Deleted');
-                INSERT INTO records (id, title) VALUES (2, 'To Keep');");
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].records (id, title) VALUES (1, 'To Be Deleted');
+                INSERT INTO [{schema}].records (id, title) VALUES (2, 'To Keep');");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -507,7 +581,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Records",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "records",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -524,7 +598,7 @@ namespace SlowTests.Server.Documents.CdcSink
             var count = await WaitForDocumentCountAsync(store, "Records", expectedCount: 2, timeoutMs: 60_000);
             Assert.Equal(2, count);
 
-            ExecuteMsSql(connectionString, @"DELETE FROM records WHERE id = 1;");
+            ExecuteMsSql($@"DELETE FROM [{schema}].records WHERE id = 1;");
 
             var deleted = await WaitForDocumentDeletionAsync(store, "Records/1", timeoutMs: 60_000);
             Assert.True(deleted, "Document Records/1 should have been deleted after CDC DELETE");
@@ -545,30 +619,30 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
                     customer_name NVARCHAR(200) NOT NULL
                 )");
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE order_lines (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].order_lines (
                     id INT PRIMARY KEY,
-                    order_id INT NOT NULL REFERENCES orders(id),
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     product NVARCHAR(200) NOT NULL,
                     quantity INT NOT NULL
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            ExecuteMsSql(connectionString, @"
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
-                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (2, 1, 'Bananas', 3);");
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (2, 1, 'Bananas', 3);");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -579,7 +653,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -591,7 +665,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -599,6 +673,7 @@ namespace SlowTests.Server.Documents.CdcSink
                                 PrimaryKeyColumns = new List<string> { "id" },
                                 Columns = new List<CdcColumnMapping>
                                 {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
                                     new CdcColumnMapping { Column = "product", Name = "Product" },
                                     new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
                                 }
@@ -638,26 +713,26 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray_CdcStreaming_Insert()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
                     customer_name NVARCHAR(200) NOT NULL
                 );
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     quantity INT NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            ExecuteMsSql(connectionString, "INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');");
+            ExecuteMsSql($"INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-emb-cdc-insert",
@@ -667,7 +742,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -679,7 +754,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -703,7 +778,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc);
 
             // INSERT embedded rows via CDC polling (after initial load)
-            ExecuteMsSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);");
+            ExecuteMsSql($"INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -726,30 +801,30 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray_Delete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
                     customer_name NVARCHAR(200) NOT NULL
                 );
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     quantity INT NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            ExecuteMsSql(connectionString, @"
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
-                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);
-                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 3, 'Cherries', 7);");
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 3, 'Cherries', 7);");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -760,7 +835,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -772,7 +847,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -801,7 +876,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
 
             // Delete one embedded row via CDC
-            ExecuteMsSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE order_id = 1 AND line_num = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -832,29 +907,29 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray_Delete_NonCompositePK()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
                     customer_name NVARCHAR(200) NOT NULL
                 );
-                CREATE TABLE order_lines (
+                CREATE TABLE [{schema}].order_lines (
                     id INT PRIMARY KEY IDENTITY(1,1),
-                    order_id INT NOT NULL REFERENCES orders(id),
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     product NVARCHAR(200) NOT NULL,
                     quantity INT NOT NULL
                 )");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            ExecuteMsSql(connectionString, @"
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, product, quantity) VALUES (1, 'Apples', 5);
-                INSERT INTO order_lines (order_id, product, quantity) VALUES (1, 'Bananas', 3);
-                INSERT INTO order_lines (order_id, product, quantity) VALUES (1, 'Cherries', 7);");
+            ExecuteMsSql($@"
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, product, quantity) VALUES (1, 'Apples', 5);
+                INSERT INTO [{schema}].order_lines (order_id, product, quantity) VALUES (1, 'Bananas', 3);
+                INSERT INTO [{schema}].order_lines (order_id, product, quantity) VALUES (1, 'Cherries', 7);");
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -865,7 +940,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -877,7 +952,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -905,7 +980,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 3, timeout: 60_000);
 
             // Delete by simple PK — works because SQL Server CDC sends all columns on delete
-            ExecuteMsSql(connectionString, "DELETE FROM order_lines WHERE id = 2;");
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE id = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -928,24 +1003,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray_Update()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     quantity INT NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
-                INSERT INTO order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 1, 'Apples', 5);
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 2, 'Bananas', 3);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-embedded-update",
@@ -955,7 +1030,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -967,7 +1042,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -995,7 +1070,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order.Lines.Count;
             }, 2, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, "UPDATE order_lines SET quantity = 99, product = 'Bananas (Updated)' WHERE order_id = 1 AND line_num = 2;");
+            ExecuteMsSql($"UPDATE [{schema}].order_lines SET quantity = 99, product = 'Bananas (Updated)' WHERE order_id = 1 AND line_num = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -1024,20 +1099,20 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PatchWithDollarRow()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE people (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].people (
                     id INT PRIMARY KEY,
                     first_name NVARCHAR(100) NOT NULL,
                     last_name NVARCHAR(100) NOT NULL
                 );
-                INSERT INTO people (id, first_name, last_name) VALUES (1, 'John', 'Doe');
-                INSERT INTO people (id, first_name, last_name) VALUES (2, 'Jane', 'Smith');");
+                INSERT INTO [{schema}].people (id, first_name, last_name) VALUES (1, 'John', 'Doe');
+                INSERT INTO [{schema}].people (id, first_name, last_name) VALUES (2, 'Jane', 'Smith');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "people"));
+            EnableCdcOnTables((schema, "people"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -1048,7 +1123,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "People",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "people",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1081,20 +1156,20 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PatchScript_ModifiesMappedData()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE products (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].products (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     base_price DECIMAL(10,2) NOT NULL,
                     tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0
                 );
-                INSERT INTO products (id, name, base_price, tax_rate) VALUES (1, 'Widget', 100.00, 0.20);");
+                INSERT INTO [{schema}].products (id, name, base_price, tax_rate) VALUES (1, 'Widget', 100.00, 0.20);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "products"));
+            EnableCdcOnTables((schema, "products"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-patch-modifies",
@@ -1104,7 +1179,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Products",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1130,24 +1205,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PatchScript_CombinedRootAndEmbedded()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE invoices (id INT PRIMARY KEY, customer NVARCHAR(200) NOT NULL, discount_pct DECIMAL(5,2) DEFAULT 0);
-                CREATE TABLE invoice_lines (
-                    invoice_id INT NOT NULL REFERENCES invoices(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].invoices (id INT PRIMARY KEY, customer NVARCHAR(200) NOT NULL, discount_pct DECIMAL(5,2) DEFAULT 0);
+                CREATE TABLE [{schema}].invoice_lines (
+                    invoice_id INT NOT NULL REFERENCES [{schema}].invoices(id),
                     line_num INT NOT NULL,
                     description NVARCHAR(200) NOT NULL,
                     amount DECIMAL(10,2) NOT NULL,
                     PRIMARY KEY (invoice_id, line_num)
                 );
-                INSERT INTO invoices (id, customer, discount_pct) VALUES (1, 'Big Corp', 10.00);
-                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
-                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);");
+                INSERT INTO [{schema}].invoices (id, customer, discount_pct) VALUES (1, 'Big Corp', 10.00);
+                INSERT INTO [{schema}].invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
+                INSERT INTO [{schema}].invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "invoices"), ("dbo", "invoice_lines"));
+            EnableCdcOnTables((schema, "invoices"), (schema, "invoice_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-combined-patch",
@@ -1157,7 +1232,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Invoices",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "invoices",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1170,7 +1245,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "invoice_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -1214,15 +1289,15 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task MetadataExpires_ViaPatch()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE events (id INT PRIMARY KEY, title NVARCHAR(200) NOT NULL, expires_at DATETIME);
-                INSERT INTO events (id, title, expires_at) VALUES (1, 'Flash Sale', '2099-12-31 23:59:59');");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].events (id INT PRIMARY KEY, title NVARCHAR(200) NOT NULL, expires_at DATETIME);
+                INSERT INTO [{schema}].events (id, title, expires_at) VALUES (1, 'Flash Sale', '2099-12-31 23:59:59');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "events"));
+            EnableCdcOnTables((schema, "events"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-expires-patch",
@@ -1232,7 +1307,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Events",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1270,24 +1345,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task LinkedTable()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE customers (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].customers (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL
                 );
-                CREATE TABLE orders (
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
-                    customer_id INT NOT NULL REFERENCES customers(id),
+                    customer_id INT NOT NULL REFERENCES [{schema}].customers(id),
                     total DECIMAL(10,2) NOT NULL
                 );
-                INSERT INTO customers (id, name) VALUES (42, 'Big Corp');
-                INSERT INTO orders (id, customer_id, total) VALUES (1, 42, 150.00);");
+                INSERT INTO [{schema}].customers (id, name) VALUES (42, 'Big Corp');
+                INSERT INTO [{schema}].orders (id, customer_id, total) VALUES (1, 42, 150.00);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "customers"), ("dbo", "orders"));
+            EnableCdcOnTables((schema, "customers"), (schema, "orders"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             var config = new CdcSinkConfiguration
             {
@@ -1298,7 +1373,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Customers",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "customers",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1310,7 +1385,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1322,7 +1397,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkLinkedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "customers",
                                 PropertyName = "Customer",
                                 LinkedCollectionName = "Customers",
@@ -1349,34 +1424,34 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task ThreeWayNesting()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE companies (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
-                CREATE TABLE departments (
-                    company_id INT NOT NULL REFERENCES companies(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].companies (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].departments (
+                    company_id INT NOT NULL REFERENCES [{schema}].companies(id),
                     dept_id INT NOT NULL,
                     dept_name NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (company_id, dept_id)
                 );
-                CREATE TABLE employees (
+                CREATE TABLE [{schema}].employees (
                     company_id INT NOT NULL,
                     dept_id INT NOT NULL,
                     emp_id INT NOT NULL,
                     emp_name NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (company_id, dept_id, emp_id),
-                    FOREIGN KEY (company_id, dept_id) REFERENCES departments(company_id, dept_id)
+                    FOREIGN KEY (company_id, dept_id) REFERENCES [{schema}].departments(company_id, dept_id)
                 );
-                INSERT INTO companies (id, name) VALUES (1, 'Acme Corp');
-                INSERT INTO departments (company_id, dept_id, dept_name) VALUES (1, 10, 'Engineering');
-                INSERT INTO departments (company_id, dept_id, dept_name) VALUES (1, 20, 'Sales');
-                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 1, 'Alice');
-                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 2, 'Bob');
-                INSERT INTO employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 20, 3, 'Charlie');");
+                INSERT INTO [{schema}].companies (id, name) VALUES (1, 'Acme Corp');
+                INSERT INTO [{schema}].departments (company_id, dept_id, dept_name) VALUES (1, 10, 'Engineering');
+                INSERT INTO [{schema}].departments (company_id, dept_id, dept_name) VALUES (1, 20, 'Sales');
+                INSERT INTO [{schema}].employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 1, 'Alice');
+                INSERT INTO [{schema}].employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 10, 2, 'Bob');
+                INSERT INTO [{schema}].employees (company_id, dept_id, emp_id, emp_name) VALUES (1, 20, 3, 'Charlie');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "companies"), ("dbo", "departments"), ("dbo", "employees"));
+            EnableCdcOnTables((schema, "companies"), (schema, "departments"), (schema, "employees"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-3-way-nesting",
@@ -1386,7 +1461,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Companies",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "companies",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1398,7 +1473,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "departments",
                                 PropertyName = "Departments",
                                 Type = CdcSinkRelationType.Array,
@@ -1413,7 +1488,7 @@ namespace SlowTests.Server.Documents.CdcSink
                                 {
                                     new CdcSinkEmbeddedTableConfig
                                     {
-                                        SourceTableSchema = "dbo",
+                                        SourceTableSchema = schema,
                                         SourceTableName = "employees",
                                         PropertyName = "Employees",
                                         Type = CdcSinkRelationType.Array,
@@ -1463,7 +1538,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
 
             // Delete one employee from Engineering
-            ExecuteMsSql(connectionString, "DELETE FROM employees WHERE company_id = 1 AND dept_id = 10 AND emp_id = 1;");
+            ExecuteMsSql($"DELETE FROM [{schema}].employees WHERE company_id = 1 AND dept_id = 10 AND emp_id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -1494,15 +1569,15 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task MultipleUpdates_SameRow_SameTransaction()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE counters (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, value INT NOT NULL);
-                INSERT INTO counters (id, name, value) VALUES (1, 'hits', 0);");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].counters (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, value INT NOT NULL);
+                INSERT INTO [{schema}].counters (id, name, value) VALUES (1, 'hits', 0);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "counters"));
+            EnableCdcOnTables((schema, "counters"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-multi-update",
@@ -1512,7 +1587,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Counters",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "counters",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1531,11 +1606,11 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc);
 
             // Multiple updates in a single transaction — last one should win
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                UPDATE counters SET value = 1 WHERE id = 1;
-                UPDATE counters SET value = 2 WHERE id = 1;
-                UPDATE counters SET value = 3 WHERE id = 1;
+                UPDATE [{schema}].counters SET value = 1 WHERE id = 1;
+                UPDATE [{schema}].counters SET value = 2 WHERE id = 1;
+                UPDATE [{schema}].counters SET value = 3 WHERE id = 1;
                 COMMIT;");
 
             await AssertWaitForValueAsync(async () =>
@@ -1550,12 +1625,12 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task Transaction_InsertUpdateDeleteInsert_SameRow()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"CREATE TABLE items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
-            EnableCdcOnTables(connectionString, ("dbo", "items"));
+            ExecuteMsSql($@"CREATE TABLE [{schema}].items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
+            EnableCdcOnTables((schema, "items"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-insert-delete-insert",
@@ -1565,7 +1640,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Items",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1580,12 +1655,12 @@ namespace SlowTests.Server.Documents.CdcSink
             AddCdcSink(store, config);
             await WaitForCdcInitialLoadAsync(store, "test-insert-delete-insert");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                INSERT INTO items (id, name) VALUES (1, 'First');
-                UPDATE items SET name = 'Second' WHERE id = 1;
-                DELETE FROM items WHERE id = 1;
-                INSERT INTO items (id, name) VALUES (1, 'Final');
+                INSERT INTO [{schema}].items (id, name) VALUES (1, 'First');
+                UPDATE [{schema}].items SET name = 'Second' WHERE id = 1;
+                DELETE FROM [{schema}].items WHERE id = 1;
+                INSERT INTO [{schema}].items (id, name) VALUES (1, 'Final');
                 COMMIT;");
 
             await AssertWaitForValueAsync(async () =>
@@ -1600,12 +1675,12 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task Transaction_MultipleDistinctRootDocuments()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"CREATE TABLE products (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, price DECIMAL(10,2) NOT NULL)");
-            EnableCdcOnTables(connectionString, ("dbo", "products"));
+            ExecuteMsSql($@"CREATE TABLE [{schema}].products (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, price DECIMAL(10,2) NOT NULL)");
+            EnableCdcOnTables((schema, "products"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-multi-root",
@@ -1615,7 +1690,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Products",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "products",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1631,11 +1706,11 @@ namespace SlowTests.Server.Documents.CdcSink
             AddCdcSink(store, config);
             await WaitForCdcInitialLoadAsync(store, "test-multi-root");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                INSERT INTO products (id, name, price) VALUES (1, 'Widget', 9.99);
-                INSERT INTO products (id, name, price) VALUES (2, 'Gadget', 19.99);
-                INSERT INTO products (id, name, price) VALUES (3, 'Doohickey', 29.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (1, 'Widget', 9.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (2, 'Gadget', 19.99);
+                INSERT INTO [{schema}].products (id, name, price) VALUES (3, 'Doohickey', 29.99);
                 COMMIT;");
 
             var count = await WaitForDocumentCountAsync(store, "Products", expectedCount: 3, timeoutMs: 60_000);
@@ -1654,20 +1729,20 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task Transaction_MultipleRootAndEmbedded()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-root-and-embedded",
@@ -1677,7 +1752,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1689,7 +1764,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -1709,13 +1784,13 @@ namespace SlowTests.Server.Documents.CdcSink
             AddCdcSink(store, config);
             await WaitForCdcInitialLoadAsync(store, "test-root-and-embedded");
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (2, 1, 'Cherries');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (2, 1, 'Cherries');
                 COMMIT;");
 
             var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
@@ -1747,15 +1822,15 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PropertyRetention_OnUpdate()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE customers (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, email NVARCHAR(200));
-                INSERT INTO customers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].customers (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, email NVARCHAR(200));
+                INSERT INTO [{schema}].customers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "customers"));
+            EnableCdcOnTables((schema, "customers"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-property-retention",
@@ -1765,7 +1840,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Customers",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "customers",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1791,7 +1866,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 await session.SaveChangesAsync();
             }
 
-            ExecuteMsSql(connectionString, "UPDATE customers SET name = 'Alice Updated' WHERE id = 1;");
+            ExecuteMsSql($"UPDATE [{schema}].customers SET name = 'Alice Updated' WHERE id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -1812,22 +1887,22 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task UpdateParentAndEmbeddedTogether()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-update-parent-embedded",
@@ -1837,7 +1912,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1849,7 +1924,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -1876,11 +1951,11 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order.Lines.Count;
             }, 1, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                UPDATE orders SET customer_name = 'Alice Updated' WHERE id = 1;
-                UPDATE order_lines SET product = 'Oranges' WHERE order_id = 1 AND line_num = 1;
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Grapes');
+                UPDATE [{schema}].orders SET customer_name = 'Alice Updated' WHERE id = 1;
+                UPDATE [{schema}].order_lines SET product = 'Oranges' WHERE order_id = 1 AND line_num = 1;
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Grapes');
                 COMMIT;");
 
             await AssertWaitForValueAsync(async () =>
@@ -1912,23 +1987,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EmbeddedArray_AddAndRemoveInSameTransaction()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-add-remove-txn",
@@ -1938,7 +2013,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -1950,7 +2025,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -1977,10 +2052,10 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order.Lines.Count;
             }, 2, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                DELETE FROM order_lines WHERE order_id = 1 AND line_num = 1;
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 3, 'Cherries');
+                DELETE FROM [{schema}].order_lines WHERE order_id = 1 AND line_num = 1;
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 3, 'Cherries');
                 COMMIT;");
 
             await AssertWaitForValueAsync(async () =>
@@ -2005,21 +2080,21 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task ChildBeforeParent()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
             // Create tables without FK constraint so we can insert child before parent
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
                     order_id INT NOT NULL,
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-child-before-parent",
@@ -2029,7 +2104,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2041,7 +2116,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -2062,7 +2137,7 @@ namespace SlowTests.Server.Documents.CdcSink
             await WaitForCdcInitialLoadAsync(store, "test-child-before-parent");
 
             // Insert child row FIRST
-            ExecuteMsSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");
+            ExecuteMsSql($"INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2073,7 +2148,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 1, timeout: 60_000);
 
             // Now insert the parent
-            ExecuteMsSql(connectionString, "INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');");
+            ExecuteMsSql($"INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2100,15 +2175,15 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task BinaryColumn_RootAttachment()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE files (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, content VARBINARY(MAX));
-                INSERT INTO files (id, name, content) VALUES (1, 'readme.txt', 0x48656C6C6F20576F726C64);");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].files (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL, content VARBINARY(MAX));
+                INSERT INTO [{schema}].files (id, name, content) VALUES (1, 'readme.txt', 0x48656C6C6F20576F726C64);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "files"));
+            EnableCdcOnTables((schema, "files"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-binary-attachment",
@@ -2118,7 +2193,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Files",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "files",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2160,17 +2235,17 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task TextAndBinaryColumns_AsAttachments()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE articles (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].articles (
                     id INT PRIMARY KEY,
                     title NVARCHAR(200) NOT NULL,
                     body NVARCHAR(MAX),
                     summary NVARCHAR(1000),
                     thumbnail VARBINARY(MAX)
                 );
-                INSERT INTO articles (id, title, body, summary, thumbnail)
+                INSERT INTO [{schema}].articles (id, title, body, summary, thumbnail)
                 VALUES (
                     1,
                     'Hello World',
@@ -2179,9 +2254,9 @@ namespace SlowTests.Server.Documents.CdcSink
                     0x89504E470D0A1A0A
                 );");
 
-            EnableCdcOnTables(connectionString, ("dbo", "articles"));
+            EnableCdcOnTables((schema, "articles"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-text-attachments",
@@ -2191,7 +2266,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Articles",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "articles",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2259,19 +2334,19 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PatchOnDelete_RootTable_ArchivePattern()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (
                     id INT PRIMARY KEY,
                     customer_name NVARCHAR(200) NOT NULL
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"));
+            EnableCdcOnTables((schema, "orders"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-archive-root",
@@ -2281,7 +2356,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2303,7 +2378,7 @@ namespace SlowTests.Server.Documents.CdcSink
             var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
             Assert.Equal(2, count);
 
-            ExecuteMsSql(connectionString, "DELETE FROM orders WHERE id = 1;");
+            ExecuteMsSql($"DELETE FROM [{schema}].orders WHERE id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2329,16 +2404,16 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Root_PatchOnly_AuditThenDelete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"));
+            EnableCdcOnTables((schema, "orders"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-root-patch-only",
@@ -2348,7 +2423,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2368,7 +2443,7 @@ namespace SlowTests.Server.Documents.CdcSink
             var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
             Assert.Equal(2, count);
 
-            ExecuteMsSql(connectionString, "DELETE FROM orders WHERE id = 1;");
+            ExecuteMsSql($"DELETE FROM [{schema}].orders WHERE id = 1;");
 
             var deleted = await WaitForDocumentDeletionAsync(store, "Orders/1", timeoutMs: 60_000);
             Assert.True(deleted, "Document Orders/1 should be deleted (Patch runs but IgnoreDeletes is false)");
@@ -2385,15 +2460,15 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Root_IgnoreDeletesOnly_SilentIgnore()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"));
+            EnableCdcOnTables((schema, "orders"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-root-ignore-only",
@@ -2403,7 +2478,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2423,8 +2498,8 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<Order>(store, "Orders/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
-            ExecuteMsSql(connectionString, "DELETE FROM orders WHERE id = 1;");
-            ExecuteMsSql(connectionString, "INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');");
+            ExecuteMsSql($"DELETE FROM [{schema}].orders WHERE id = 1;");
+            ExecuteMsSql($"INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');");
 
             var doc2 = await WaitForDocumentAsync<Order>(store, "Orders/2", timeoutMs: 60_000);
             Assert.NotNull(doc2);
@@ -2441,16 +2516,16 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Root_ConditionalDelete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL, status NVARCHAR(50) NOT NULL);
-                INSERT INTO orders (id, customer_name, status) VALUES (1, 'Alice', 'Sent');
-                INSERT INTO orders (id, customer_name, status) VALUES (2, 'Bob', 'Pending');");
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL, status NVARCHAR(50) NOT NULL);
+                INSERT INTO [{schema}].orders (id, customer_name, status) VALUES (1, 'Alice', 'Sent');
+                INSERT INTO [{schema}].orders (id, customer_name, status) VALUES (2, 'Bob', 'Pending');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"));
+            EnableCdcOnTables((schema, "orders"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-root-conditional",
@@ -2460,7 +2535,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2485,10 +2560,10 @@ namespace SlowTests.Server.Documents.CdcSink
             var count = await WaitForDocumentCountAsync(store, "Orders", expectedCount: 2, timeoutMs: 60_000);
             Assert.Equal(2, count);
 
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                DELETE FROM orders WHERE id = 1;
-                DELETE FROM orders WHERE id = 2;
+                DELETE FROM [{schema}].orders WHERE id = 1;
+                DELETE FROM [{schema}].orders WHERE id = 2;
                 COMMIT;");
 
             var deleted = await WaitForDocumentDeletionAsync(store, "Orders/1", timeoutMs: 60_000);
@@ -2506,23 +2581,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task PatchOnDelete_EmbeddedTable()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-patchondelete-embedded",
@@ -2532,7 +2607,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2544,7 +2619,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -2571,7 +2646,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order?.Lines?.Count ?? 0;
             }, 2, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE order_id = 1 AND line_num = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2594,23 +2669,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Embedded_IgnoreDeletesOnly()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-emb-ignore-only",
@@ -2620,7 +2695,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2632,7 +2707,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -2661,8 +2736,8 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order?.Lines?.Count ?? 0;
             }, 2, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 1;");
-            ExecuteMsSql(connectionString, "INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 3, 'Cherries');");
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE order_id = 1 AND line_num = 1;");
+            ExecuteMsSql($"INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 3, 'Cherries');");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2698,10 +2773,10 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task SqlServerTypeConsistency_InitialLoadVsCdcPolling()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE employees (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].employees (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     birthday DATE NOT NULL,
@@ -2711,12 +2786,12 @@ namespace SlowTests.Server.Documents.CdcSink
                     age INT NOT NULL,
                     score REAL NOT NULL
                 );
-                INSERT INTO employees (id, name, birthday, salary, employee_id, active, age, score)
+                INSERT INTO [{schema}].employees (id, name, birthday, salary, employee_id, active, age, score)
                 VALUES (1, 'Alice', '1990-06-15', 75000.50, 'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE', 1, 33, 4.5);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "employees"));
+            EnableCdcOnTables((schema, "employees"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-type-consistency",
@@ -2726,7 +2801,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "TypeEmployees",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "employees",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2764,7 +2839,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 initialScore = emp.Score;
             }
 
-            ExecuteMsSql(connectionString, @"UPDATE employees SET name = 'Alice Updated' WHERE id = 1");
+            ExecuteMsSql($@"UPDATE [{schema}].employees SET name = 'Alice Updated' WHERE id = 1");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2797,10 +2872,10 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task DateTimeTypes_InitialLoadAndCdcPolling_Consistency()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE events (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].events (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     created_at DATETIME2(3) NOT NULL,
@@ -2809,13 +2884,13 @@ namespace SlowTests.Server.Documents.CdcSink
                     event_date DATE NOT NULL,
                     amount DECIMAL(18,6) NOT NULL
                 );
-                INSERT INTO events (id, name, created_at, scheduled_at, duration, event_date, amount)
+                INSERT INTO [{schema}].events (id, name, created_at, scheduled_at, duration, event_date, amount)
                 VALUES (1, 'Launch', '2025-03-15T14:30:45.123', '2025-03-15T14:30:45.1234567+05:30', '02:15:30.5000000', '2025-03-15', 123456.789012),
                        (2, 'Review', '2025-06-01T09:00:00.000', '2025-06-01T09:00:00.0000000-08:00', '01:00:00.0000000', '2025-06-01', 999999.999999);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "events"));
+            EnableCdcOnTables((schema, "events"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-datetime-types",
@@ -2825,7 +2900,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Events",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "events",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2863,7 +2938,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
 
             // Update via CDC — only change name to trigger a CDC row with all columns
-            ExecuteMsSql(connectionString, @"UPDATE events SET name = 'Launch v2' WHERE id = 1");
+            ExecuteMsSql($@"UPDATE [{schema}].events SET name = 'Launch v2' WHERE id = 1");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -2910,28 +2985,28 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task JsonColumns_StoredAsNativeJsonObjects()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE configs (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].configs (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     settings NVARCHAR(MAX) NOT NULL,
                     tags NVARCHAR(MAX),
                     description NVARCHAR(MAX)
                 );
-                INSERT INTO configs (id, name, settings, tags, description)
+                INSERT INTO [{schema}].configs (id, name, settings, tags, description)
                 VALUES (
                     1,
                     'AppConfig',
-                    '{""theme"": ""dark"", ""notifications"": {""email"": true, ""sms"": false}}',
+                    '{{""theme"": ""dark"", ""notifications"": {{""email"": true, ""sms"": false}}}}',
                     '[""production"", ""v2""]',
                     'Main application configuration'
                 );");
 
-            EnableCdcOnTables(connectionString, ("dbo", "configs"));
+            EnableCdcOnTables((schema, "configs"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-json-columns",
@@ -2941,7 +3016,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Configs",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "configs",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -2978,9 +3053,9 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("v2", doc.Tags[1]);
 
             // CDC polling: update the JSON columns
-            ExecuteMsSql(connectionString, @"
-                UPDATE configs SET
-                    settings = '{""theme"": ""light"", ""notifications"": {""email"": false, ""sms"": true}, ""newField"": 42}',
+            ExecuteMsSql($@"
+                UPDATE [{schema}].configs SET
+                    settings = '{{""theme"": ""light"", ""notifications"": {{""email"": false, ""sms"": true}}, ""newField"": 42}}',
                     tags = '[""staging"", ""v3"", ""beta""]'
                 WHERE id = 1;");
 
@@ -3029,10 +3104,10 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task ComplexTypes_Json_Geometry_Guid_Xml()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE complex_docs (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].complex_docs (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     metadata NVARCHAR(MAX),
@@ -3043,12 +3118,12 @@ namespace SlowTests.Server.Documents.CdcSink
                     big_number BIGINT,
                     created_at DATETIMEOFFSET
                 );
-                INSERT INTO complex_docs (id, name, metadata, settings, location, doc_guid, extra_xml, big_number, created_at)
+                INSERT INTO [{schema}].complex_docs (id, name, metadata, settings, location, doc_guid, extra_xml, big_number, created_at)
                 VALUES (
                     1,
                     'TestDoc',
-                    '{""key"": ""value"", ""nested"": {""a"": 1}}',
-                    '{""theme"": ""dark"", ""lang"": ""en""}',
+                    '{{""key"": ""value"", ""nested"": {{""a"": 1}}}}',
+                    '{{""theme"": ""dark"", ""lang"": ""en""}}',
                     geometry::Point(47.6062, -122.3321, 4326),
                     'AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE',
                     '<config><setting name=""mode"">test</setting></config>',
@@ -3056,9 +3131,9 @@ namespace SlowTests.Server.Documents.CdcSink
                     '2026-01-15T10:30:00+02:00'
                 );");
 
-            EnableCdcOnTables(connectionString, ("dbo", "complex_docs"));
+            EnableCdcOnTables((schema, "complex_docs"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-complex-types",
@@ -3068,7 +3143,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "ComplexDocs",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "complex_docs",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3125,10 +3200,10 @@ namespace SlowTests.Server.Documents.CdcSink
             var initialGuid = initialDoc.DocGuid;
 
             // --- CDC polling: update complex columns ---
-            ExecuteMsSql(connectionString, @"
-                UPDATE complex_docs SET
-                    metadata = '{""key"": ""updated"", ""extra"": true}',
-                    settings = '{""theme"": ""light"", ""lang"": ""fr""}',
+            ExecuteMsSql($@"
+                UPDATE [{schema}].complex_docs SET
+                    metadata = '{{""key"": ""updated"", ""extra"": true}}',
+                    settings = '{{""theme"": ""light"", ""lang"": ""fr""}}',
                     location = geometry::Point(48.8566, 2.3522, 4326),
                     doc_guid = '11111111-2222-3333-4444-555555555555',
                     extra_xml = '<config><setting name=""mode"">production</setting></config>',
@@ -3164,24 +3239,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task BinaryColumn_EmbeddedAttachment()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE albums (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
-                CREATE TABLE photos (
-                    album_id INT NOT NULL REFERENCES albums(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].albums (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].photos (
+                    album_id INT NOT NULL REFERENCES [{schema}].albums(id),
                     photo_num INT NOT NULL,
                     title NVARCHAR(200) NOT NULL,
                     thumbnail VARBINARY(MAX),
                     PRIMARY KEY (album_id, photo_num)
                 );
-                INSERT INTO albums (id, name) VALUES (1, 'Vacation');
-                INSERT INTO photos (album_id, photo_num, title, thumbnail) VALUES (1, 1, 'Beach', 0x89504E47);
-                INSERT INTO photos (album_id, photo_num, title, thumbnail) VALUES (1, 2, 'Mountain', 0xFFD8FFE0);");
+                INSERT INTO [{schema}].albums (id, name) VALUES (1, 'Vacation');
+                INSERT INTO [{schema}].photos (album_id, photo_num, title, thumbnail) VALUES (1, 1, 'Beach', 0x89504E47);
+                INSERT INTO [{schema}].photos (album_id, photo_num, title, thumbnail) VALUES (1, 2, 'Mountain', 0xFFD8FFE0);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "albums"), ("dbo", "photos"));
+            EnableCdcOnTables((schema, "albums"), (schema, "photos"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-embedded-attachment",
@@ -3191,7 +3266,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Albums",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "albums",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3203,7 +3278,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "photos",
                                 PropertyName = "Photos",
                                 Type = CdcSinkRelationType.Array,
@@ -3258,24 +3333,24 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task DeleteAttachment_OnEmbeddedDelete()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE albums (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
-                CREATE TABLE photos (
-                    album_id INT NOT NULL REFERENCES albums(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].albums (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].photos (
+                    album_id INT NOT NULL REFERENCES [{schema}].albums(id),
                     photo_num INT NOT NULL,
                     title NVARCHAR(200) NOT NULL,
                     thumbnail VARBINARY(MAX),
                     PRIMARY KEY (album_id, photo_num)
                 );
-                INSERT INTO albums (id, name) VALUES (1, 'Vacation');
-                INSERT INTO photos (album_id, photo_num, title, thumbnail) VALUES (1, 1, 'Beach', 0x89504E47);
-                INSERT INTO photos (album_id, photo_num, title, thumbnail) VALUES (1, 2, 'Mountain', 0xFFD8FFE0);");
+                INSERT INTO [{schema}].albums (id, name) VALUES (1, 'Vacation');
+                INSERT INTO [{schema}].photos (album_id, photo_num, title, thumbnail) VALUES (1, 1, 'Beach', 0x89504E47);
+                INSERT INTO [{schema}].photos (album_id, photo_num, title, thumbnail) VALUES (1, 2, 'Mountain', 0xFFD8FFE0);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "albums"), ("dbo", "photos"));
+            EnableCdcOnTables((schema, "albums"), (schema, "photos"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-delete-attachment",
@@ -3285,7 +3360,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Albums",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "albums",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3297,7 +3372,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "photos",
                                 PropertyName = "Photos",
                                 Type = CdcSinkRelationType.Array,
@@ -3327,7 +3402,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, 2, timeout: 60_000);
 
             // Delete one photo — its attachment should also be removed
-            ExecuteMsSql(connectionString, "DELETE FROM photos WHERE album_id = 1 AND photo_num = 1;");
+            ExecuteMsSql($"DELETE FROM [{schema}].photos WHERE album_id = 1 AND photo_num = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -3357,24 +3432,24 @@ namespace SlowTests.Server.Documents.CdcSink
             // When an embedded line item's amount changes, the parent's TotalAmount
             // is adjusted by the delta (new - old), not the absolute new value.
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE invoices (id INT PRIMARY KEY, customer NVARCHAR(200) NOT NULL);
-                CREATE TABLE invoice_lines (
-                    invoice_id INT NOT NULL REFERENCES invoices(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].invoices (id INT PRIMARY KEY, customer NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].invoice_lines (
+                    invoice_id INT NOT NULL REFERENCES [{schema}].invoices(id),
                     line_num INT NOT NULL,
                     description NVARCHAR(200) NOT NULL,
                     amount DECIMAL(10,2) NOT NULL,
                     PRIMARY KEY (invoice_id, line_num)
                 );
-                INSERT INTO invoices (id, customer) VALUES (1, 'Acme');
-                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
-                INSERT INTO invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);");
+                INSERT INTO [{schema}].invoices (id, customer) VALUES (1, 'Acme');
+                INSERT INTO [{schema}].invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 1, 'Service A', 100.00);
+                INSERT INTO [{schema}].invoice_lines (invoice_id, line_num, description, amount) VALUES (1, 2, 'Service B', 200.00);");
 
-            EnableCdcOnTables(connectionString, ("dbo", "invoices"), ("dbo", "invoice_lines"));
+            EnableCdcOnTables((schema, "invoices"), (schema, "invoice_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-old-row-delta",
@@ -3384,7 +3459,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Invoices",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "invoices",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3396,7 +3471,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "invoice_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -3430,7 +3505,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Update line 1: amount changes from 100 to 150
             // Delta = 150 - 100 = +50, so TotalAmount should go from 300 to 350
-            ExecuteMsSql(connectionString, "UPDATE invoice_lines SET amount = 150.00 WHERE invoice_id = 1 AND line_num = 1;");
+            ExecuteMsSql($"UPDATE [{schema}].invoice_lines SET amount = 150.00 WHERE invoice_id = 1 AND line_num = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -3441,7 +3516,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Update line 2: amount changes from 200 to 50
             // Delta = 50 - 200 = -150, so TotalAmount should go from 350 to 200
-            ExecuteMsSql(connectionString, "UPDATE invoice_lines SET amount = 50.00 WHERE invoice_id = 1 AND line_num = 2;");
+            ExecuteMsSql($"UPDATE [{schema}].invoice_lines SET amount = 50.00 WHERE invoice_id = 1 AND line_num = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -3471,12 +3546,12 @@ namespace SlowTests.Server.Documents.CdcSink
             // operations via put(), and that the sequence matches the SQL transaction order:
             // INSERT → UPDATE → DELETE → INSERT → UPDATE
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"CREATE TABLE items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
-            EnableCdcOnTables(connectionString, ("dbo", "items"));
+            ExecuteMsSql($@"CREATE TABLE [{schema}].items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
+            EnableCdcOnTables((schema, "items"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-audit-trail",
@@ -3486,7 +3561,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Items",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3523,13 +3598,13 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Execute the full sequence in a single transaction:
             // INSERT → UPDATE → DELETE → INSERT → UPDATE
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                INSERT INTO items (id, name) VALUES (1, 'Alpha');
-                UPDATE items SET name = 'Beta' WHERE id = 1;
-                DELETE FROM items WHERE id = 1;
-                INSERT INTO items (id, name) VALUES (1, 'Gamma');
-                UPDATE items SET name = 'Delta' WHERE id = 1;
+                INSERT INTO [{schema}].items (id, name) VALUES (1, 'Alpha');
+                UPDATE [{schema}].items SET name = 'Beta' WHERE id = 1;
+                DELETE FROM [{schema}].items WHERE id = 1;
+                INSERT INTO [{schema}].items (id, name) VALUES (1, 'Gamma');
+                UPDATE [{schema}].items SET name = 'Delta' WHERE id = 1;
                 COMMIT;");
 
             // Wait for the final state
@@ -3576,23 +3651,23 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Embedded_PatchAndIgnoreDeletes_Archive()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
-                CREATE TABLE order_lines (
-                    order_id INT NOT NULL REFERENCES orders(id),
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
                     line_num INT NOT NULL,
                     product NVARCHAR(200) NOT NULL,
                     PRIMARY KEY (order_id, line_num)
                 );
-                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
-                INSERT INTO order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 1, 'Apples');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product) VALUES (1, 2, 'Bananas');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "orders"), ("dbo", "order_lines"));
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-emb-archive",
@@ -3602,7 +3677,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Orders",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "orders",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3614,7 +3689,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         {
                             new CdcSinkEmbeddedTableConfig
                             {
-                                SourceTableSchema = "dbo",
+                                SourceTableSchema = schema,
                                 SourceTableName = "order_lines",
                                 PropertyName = "Lines",
                                 Type = CdcSinkRelationType.Array,
@@ -3644,7 +3719,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 return order?.Lines?.Count ?? 0;
             }, 2, timeout: 60_000);
 
-            ExecuteMsSql(connectionString, "DELETE FROM order_lines WHERE order_id = 1 AND line_num = 2;");
+            ExecuteMsSql($"DELETE FROM [{schema}].order_lines WHERE order_id = 1 AND line_num = 2;");
 
             // Wait for the patch side-effect
             await AssertWaitForValueAsync(async () =>
@@ -3669,12 +3744,12 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task OnDelete_Root_InsertThenDeleteInSameTransaction()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"CREATE TABLE items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
-            EnableCdcOnTables(connectionString, ("dbo", "items"));
+            ExecuteMsSql($@"CREATE TABLE [{schema}].items (id INT PRIMARY KEY, name NVARCHAR(200) NOT NULL)");
+            EnableCdcOnTables((schema, "items"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
             var config = new CdcSinkConfiguration
             {
                 Name = "test-insert-delete-patch",
@@ -3684,7 +3759,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Items",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "items",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3704,14 +3779,14 @@ namespace SlowTests.Server.Documents.CdcSink
             await WaitForCdcInitialLoadAsync(store, "test-insert-delete-patch");
 
             // In a single transaction: insert then immediately delete
-            ExecuteMsSql(connectionString, @"
+            ExecuteMsSql($@"
                 BEGIN TRANSACTION;
-                INSERT INTO items (id, name) VALUES (1, 'Ephemeral');
-                DELETE FROM items WHERE id = 1;
+                INSERT INTO [{schema}].items (id, name) VALUES (1, 'Ephemeral');
+                DELETE FROM [{schema}].items WHERE id = 1;
                 COMMIT;");
 
             // Insert another item to prove CDC advanced past the transaction
-            ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'Permanent');");
+            ExecuteMsSql($"INSERT INTO [{schema}].items (id, name) VALUES (2, 'Permanent');");
             var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
             Assert.NotNull(doc2);
 
@@ -3731,27 +3806,27 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task EditTask_AddSecondTable_InitialLoadAndCdcWorkForBoth()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            var schema = CreateTestSchema();
 
-            ExecuteMsSql(connectionString, @"
-                CREATE TABLE employees (
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].employees (
                     id INT PRIMARY KEY,
                     name NVARCHAR(200) NOT NULL,
                     department NVARCHAR(200)
                 );
-                CREATE TABLE cars (
+                CREATE TABLE [{schema}].cars (
                     id INT PRIMARY KEY,
                     make NVARCHAR(200) NOT NULL,
                     model NVARCHAR(200) NOT NULL
                 );
-                INSERT INTO employees (id, name, department) VALUES (1, 'Alice', 'Engineering');
-                INSERT INTO employees (id, name, department) VALUES (2, 'Bob', 'Marketing');
-                INSERT INTO cars (id, make, model) VALUES (1, 'Toyota', 'Camry');
-                INSERT INTO cars (id, make, model) VALUES (2, 'Honda', 'Civic');");
+                INSERT INTO [{schema}].employees (id, name, department) VALUES (1, 'Alice', 'Engineering');
+                INSERT INTO [{schema}].employees (id, name, department) VALUES (2, 'Bob', 'Marketing');
+                INSERT INTO [{schema}].cars (id, make, model) VALUES (1, 'Toyota', 'Camry');
+                INSERT INTO [{schema}].cars (id, make, model) VALUES (2, 'Honda', 'Civic');");
 
-            EnableCdcOnTables(connectionString, ("dbo", "employees"), ("dbo", "cars"));
+            EnableCdcOnTables((schema, "employees"), (schema, "cars"));
 
-            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var sqlCs = SetupSqlConnectionString(store);
 
             // Phase 1: Create CDC task with Employees only
             var config = new CdcSinkConfiguration
@@ -3763,7 +3838,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     new CdcSinkTableConfig
                     {
                         CollectionName = "Employees",
-                        SourceTableSchema = "dbo",
+                        SourceTableSchema = schema,
                         SourceTableName = "employees",
                         PrimaryKeyColumns = new List<string> { "id" },
                         Columns = new List<CdcColumnMapping>
@@ -3793,7 +3868,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
 
             // Phase 2: Verify CDC polling for employees
-            ExecuteMsSql(connectionString, "UPDATE employees SET department = 'Management' WHERE id = 1;");
+            ExecuteMsSql($"UPDATE [{schema}].employees SET department = 'Management' WHERE id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -3807,7 +3882,7 @@ namespace SlowTests.Server.Documents.CdcSink
             config.Tables.Add(new CdcSinkTableConfig
             {
                 CollectionName = "Cars",
-                SourceTableSchema = "dbo",
+                SourceTableSchema = schema,
                 SourceTableName = "cars",
                 PrimaryKeyColumns = new List<string> { "id" },
                 Columns = new List<CdcColumnMapping>
@@ -3845,7 +3920,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }
 
             // Phase 4: Verify CDC polling works for Cars
-            ExecuteMsSql(connectionString, "UPDATE cars SET model = 'Accord' WHERE id = 2;");
+            ExecuteMsSql($"UPDATE [{schema}].cars SET model = 'Accord' WHERE id = 2;");
 
             await AssertWaitForValueAsync(async () =>
             {
@@ -3855,7 +3930,7 @@ namespace SlowTests.Server.Documents.CdcSink
             }, "Accord", timeout: 60_000);
 
             // Phase 5: Verify CDC polling still works for Employees
-            ExecuteMsSql(connectionString, "UPDATE employees SET name = 'Alice Smith' WHERE id = 1;");
+            ExecuteMsSql($"UPDATE [{schema}].employees SET name = 'Alice Smith' WHERE id = 1;");
 
             await AssertWaitForValueAsync(async () =>
             {

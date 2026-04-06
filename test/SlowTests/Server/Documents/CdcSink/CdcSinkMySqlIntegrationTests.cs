@@ -495,6 +495,7 @@ namespace SlowTests.Server.Documents.CdcSink
                                 PrimaryKeyColumns = new List<string> { "id" },
                                 Columns = new List<CdcColumnMapping>
                                 {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
                                     new CdcColumnMapping { Column = "product", Name = "Product" },
                                     new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
                                 }

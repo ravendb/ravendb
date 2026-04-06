@@ -221,26 +221,5 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc2);
             Assert.Equal("During Stop", doc2.Name);
         }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // LSN Gap Tests
-        // ─────────────────────────────────────────────────────────────────────
-
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true, Skip = "MySQL GTID gap detection requires purging binlogs " +
-            "which needs SUPER/BINLOG_ADMIN privilege and is destructive to the server. " +
-            "MySQL gives a clear fatal error when connecting with a purged GTID, which " +
-            "the retry loop surfaces as a notification. Manual testing recommended.")]
-        public async Task LsnGap_DetectedWhenBinlogsPurged()
-        {
-            // MySQL's binlog gap detection is fundamentally different from PostgreSQL/SQL Server:
-            // when the binlog client connects with a GTID that references purged binlogs, MySQL
-            // returns a fatal error: "the master has purged binary logs containing GTIDs that
-            // the slave requires". This error is caught by RunWithRetryAsync and surfaced as
-            // an alert. There's no "silent gap" scenario — it's always a hard failure.
-            //
-            // Testing this requires PURGE BINARY LOGS which is destructive and needs elevated
-            // privileges. The behavior is verified by the existing retry/fallback infrastructure.
-            await Task.CompletedTask;
-        }
     }
 }
