@@ -9,7 +9,7 @@ namespace FastTests.Sparrow
     public class FastCollectionTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
         [RavenFact(RavenTestCategory.Core)]
-        public void FastStack_CopyTo_UpdatesDestinationCount()
+        public void FastStack_CopyFrom_UpdatesDestinationCount()
         {
             var src = new FastStack<int>();
             src.Push(10);
@@ -20,13 +20,13 @@ namespace FastTests.Sparrow
             dst.Push(1);
             dst.Push(2);
 
-            dst.CopyTo(src);
+            dst.CopyFrom(src);
 
             Assert.Equal(5, dst.Count);
         }
 
         [RavenFact(RavenTestCategory.Core)]
-        public void FastStack_CopyTo_ElementsAccessibleAfterCopy()
+        public void FastStack_CopyFrom_ElementsAccessibleAfterCopy()
         {
             var src = new FastStack<int>();
             src.Push(10);
@@ -35,7 +35,7 @@ namespace FastTests.Sparrow
             var dst = new FastStack<int>();
             dst.Push(1);
 
-            dst.CopyTo(src);
+            dst.CopyFrom(src);
 
             Assert.Equal(3, dst.Count);
             // Pop should return the last-pushed (copied) element

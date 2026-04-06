@@ -337,7 +337,7 @@ namespace Sparrow
             var textLength = text.Length;
             var comparisonLength = Offset + Length - textLength;
 
-            if (HasValue && comparisonLength > 0)
+            if (HasValue && Length >= textLength)
             {
                 result = string.Compare(Buffer, comparisonLength, text, 0, textLength, comparisonType) == 0;
             }
@@ -549,7 +549,7 @@ namespace Sparrow
         {
             var index = -1;
 
-            if (HasValue)
+            if (HasValue && Length > 0)
             {
                 index = Buffer.LastIndexOf(value, Offset + Length - 1, Length);
                 if (index != -1)

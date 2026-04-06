@@ -92,7 +92,7 @@ namespace Sparrow.Collections
                 array[--dstIndex] = _array[srcIndex++];
         }
 
-        public void CopyTo(FastStack<T> srcStack)
+        public void CopyFrom(FastStack<T> srcStack)
         {
             Debug.Assert(srcStack._array != _array);
 
@@ -110,6 +110,7 @@ namespace Sparrow.Collections
                 destArray[dstIndex++] = srcArray[srcIndex++];
 
             _size += srcSize;
+            _version++;
         }
 
         // Returns an IEnumerator for this Stack.
