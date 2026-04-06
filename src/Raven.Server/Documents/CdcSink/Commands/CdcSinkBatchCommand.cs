@@ -584,7 +584,7 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         ref Dictionary<string, DynamicJsonArray> arrayStates)
     {
         arrayStates ??= new Dictionary<string, DynamicJsonArray>(StringComparer.Ordinal);
-        var stateKey = op.Processor.Key + ":" + config.PropertyName;
+        var stateKey = BuildArrayStateKey(op, config);
 
         if (arrayStates.TryGetValue(stateKey, out var workingArray) == false)
         {
@@ -601,40 +601,105 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             target[config.PropertyName] = workingArray;
         }
 
-        // Scan the working array for a PK match
+        // Scan the working array for a PK match.
+        // Items may be BlittableJsonReaderObject (loaded from existing doc) or
+        // DynamicJsonValue (inserted by a prior op in this same deferred batch).
         BlittableJsonReaderObject old = null;
         bool found = false;
         var items = workingArray.Items;
 
         for (int i = 0; i < items.Count; i++)
         {
-            if (items[i] is BlittableJsonReaderObject item &&
-                MatchesPrimaryKey(item, op.MappedData, config, op.Processor.MappedPrimaryKeyNames))
+            switch (items[i])
             {
-                found = true;
-                old = needsOld ? context.ReadObject(item, "cdc-old-item") : null;
+                case BlittableJsonReaderObject item
+                    when MatchesPrimaryKey(item, op.MappedData, config, op.Processor.MappedPrimaryKeyNames):
+                    found = true;
+                    old = needsOld ? context.ReadObject(item, "cdc-old-item") : null;
 
-                if (op.Operation == CdcSinkOperation.Upsert)
-                {
-                    // Accumulate modifications — use ??= so multiple updates on the same item
-                    // stack their changes instead of overwriting each other.
-                    item.Modifications ??= new DynamicJsonValue(item);
-                    foreach (var (name, value) in op.MappedData.Properties)
-                        item.Modifications[name] = value;
-                }
-                else
-                {
-                    // Delete: remove from working array
-                    items.RemoveAt(i);
-                }
-                break;
+                    if (op.Operation == CdcSinkOperation.Upsert)
+                    {
+                        // Accumulate modifications — use ??= so multiple updates on the same item
+                        // stack their changes instead of overwriting each other.
+                        item.Modifications ??= new DynamicJsonValue(item);
+                        foreach (var (name, value) in op.MappedData.Properties)
+                            item.Modifications[name] = value;
+                    }
+                    else
+                    {
+                        items.RemoveAt(i);
+                    }
+                    break;
+
+                case DynamicJsonValue djvItem
+                    when MatchesPrimaryKeyDynamic(djvItem, op.MappedData, config, op.Processor.MappedPrimaryKeyNames):
+                    found = true;
+                    old = needsOld ? context.ReadObject(djvItem, "cdc-old-item") : null;
+
+                    if (op.Operation == CdcSinkOperation.Upsert)
+                    {
+                        // Merge new values into the existing DJV in-place
+                        foreach (var (newName, newValue) in op.MappedData.Properties)
+                        {
+                            bool replaced = false;
+                            for (int j = 0; j < djvItem.Properties.Count; j++)
+                            {
+                                if (djvItem.Properties[j].Name == newName)
+                                {
+                                    djvItem.Properties[j] = (newName, newValue);
+                                    replaced = true;
+                                    break;
+                                }
+                            }
+                            if (replaced == false)
+                                djvItem.Properties.Add((newName, newValue));
+                        }
+                    }
+                    else
+                    {
+                        items.RemoveAt(i);
+                    }
+                    break;
+
+                default:
+                    continue;
             }
+            break;
         }
 
         if (found == false && op.Operation == CdcSinkOperation.Upsert)
             workingArray.Add(op.MappedData);
 
         return old;
+    }
+
+    /// <summary>
+    /// Builds the cache key for arrayStates, including parent FK values for nested paths.
+    /// For depth-1 embedded tables (e.g., Order → Lines[]), the key is just "schema.table:PropertyName".
+    /// For deeper nesting (e.g., Company → Departments[] → Employees[]), the key includes
+    /// the FK values that identify which parent element the array belongs to, so that
+    /// employees in different departments get separate working arrays.
+    /// </summary>
+    private static string BuildArrayStateKey(CdcSinkDocumentOp op, CdcSinkEmbeddedTableConfig config)
+    {
+        var baseKey = op.Processor.Key + ":" + config.PropertyName;
+        var path = op.Processor.PathFromRoot;
+        if (path == null || path.Count <= 1)
+            return baseKey;
+
+        // Append FK values for each intermediate level to distinguish arrays under
+        // different parent elements (e.g., Employees under Engineering vs Sales).
+        var sb = new StringBuilder(baseKey);
+        for (int seg = 0; seg < path.Count - 1; seg++)
+        {
+            var nextSeg = path[seg + 1];
+            foreach (var (childFkCol, _) in nextSeg.JoinMapping)
+            {
+                var fkIdx = CdcSinkTableProcessor.FindColumnIndex(op.Processor.SourceColumnNames, childFkCol);
+                sb.Append('/').Append(op.RawValues[fkIdx]);
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>
@@ -731,22 +796,53 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         if (op.Operation != CdcSinkOperation.Upsert)
         {
             BlittableJsonReaderObject old = null;
-            if (needsOld && parentDoc != null &&
-                parentDoc.TryGetMember(config.PropertyName, out var deletedValue) &&
-                deletedValue is BlittableJsonReaderObject deletedObj)
+            if (needsOld)
             {
-                old = context.ReadObject(deletedObj, "cdc-old-item");
+                // Check modifications first — a prior op in the deferred batch may have set the value
+                old = target[config.PropertyName] switch
+                {
+                    DynamicJsonValue djv => context.ReadObject(djv, "cdc-old-item"),
+                    BlittableJsonReaderObject modObj => context.ReadObject(modObj, "cdc-old-item"),
+                    _ when parentDoc != null &&
+                           parentDoc.TryGetMember(config.PropertyName, out var deletedValue) &&
+                           deletedValue is BlittableJsonReaderObject deletedObj
+                        => context.ReadObject(deletedObj, "cdc-old-item"),
+                    _ => null
+                };
             }
             target[config.PropertyName] = null;
             return old;
         }
 
-        // Merge new values onto existing embedded object
+        // Merge new values onto existing embedded object.
+        // Check modifications first — a prior op in the deferred batch may have set a DJV here.
+        var existingMod = target[config.PropertyName];
+        if (existingMod is DynamicJsonValue existingDjv)
+        {
+            var old = needsOld ? context.ReadObject(existingDjv, "cdc-old-item") : null;
+            foreach (var (newName, newValue) in op.MappedData.Properties)
+            {
+                bool replaced = false;
+                for (int j = 0; j < existingDjv.Properties.Count; j++)
+                {
+                    if (existingDjv.Properties[j].Name == newName)
+                    {
+                        existingDjv.Properties[j] = (newName, newValue);
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (replaced == false)
+                    existingDjv.Properties.Add((newName, newValue));
+            }
+            return old;
+        }
+
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingObj)
         {
-            var old = needsOld ? context.ReadObject(existingObj, "cdc-old-item") : null; // clone before modification only if patch needs $old
+            var old = needsOld ? context.ReadObject(existingObj, "cdc-old-item") : null;
             existingObj.Modifications = new DynamicJsonValue(existingObj);
             foreach (var (name, value) in op.MappedData.Properties)
                 existingObj.Modifications[name] = value;
@@ -834,27 +930,82 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         var mapKey = BuildMapKey(op.MappedData, config, op.Processor.MappedPrimaryKeyNames);
         BlittableJsonReaderObject old = null;
 
+        // Check modifications first — a prior op in the deferred batch may have set a DJV map here.
+        var existingMod = target[config.PropertyName];
+        if (existingMod is DynamicJsonValue djvMap)
+        {
+            var existingEntry = djvMap[mapKey];
+            if (existingEntry != null && needsOld)
+            {
+                if (existingEntry is DynamicJsonValue djvEntry)
+                    old = context.ReadObject(djvEntry, "cdc-old-item");
+                else if (existingEntry is BlittableJsonReaderObject blitEntry)
+                    old = context.ReadObject(blitEntry, "cdc-old-item");
+            }
+
+            if (op.Operation == CdcSinkOperation.Upsert)
+            {
+                if (existingEntry is DynamicJsonValue djvEntryToUpdate)
+                {
+                    foreach (var (newName, newValue) in op.MappedData.Properties)
+                    {
+                        bool replaced = false;
+                        for (int j = 0; j < djvEntryToUpdate.Properties.Count; j++)
+                        {
+                            if (djvEntryToUpdate.Properties[j].Name == newName)
+                            {
+                                djvEntryToUpdate.Properties[j] = (newName, newValue);
+                                replaced = true;
+                                break;
+                            }
+                        }
+                        if (replaced == false)
+                            djvEntryToUpdate.Properties.Add((newName, newValue));
+                    }
+                }
+                else
+                {
+                    djvMap[mapKey] = op.MappedData;
+                }
+            }
+            else
+            {
+                // Remove the entry from Properties directly — DJV.Remove() requires a source
+                // blittable, but this DJV was created by a prior op without one.
+                for (int j = 0; j < djvMap.Properties.Count; j++)
+                {
+                    if (djvMap.Properties[j].Name == mapKey)
+                    {
+                        djvMap.Properties.RemoveAt(j);
+                        break;
+                    }
+                }
+            }
+
+            return old;
+        }
+
         if (parentDoc != null &&
             parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
             existingValue is BlittableJsonReaderObject existingMap)
         {
             existingMap.Modifications = new DynamicJsonValue(existingMap);
 
-            BlittableJsonReaderObject existingEntry = null;
+            BlittableJsonReaderObject existingBlitEntry = null;
             if (existingMap.TryGetMember(mapKey, out var entryValue) &&
                 entryValue is BlittableJsonReaderObject entry)
             {
-                existingEntry = entry;
-                old = needsOld ? context.ReadObject(existingEntry, "cdc-old-item") : null;
+                existingBlitEntry = entry;
+                old = needsOld ? context.ReadObject(existingBlitEntry, "cdc-old-item") : null;
             }
 
             if (op.Operation == CdcSinkOperation.Upsert)
             {
-                if (existingEntry is not null)
+                if (existingBlitEntry is not null)
                 {
-                    existingEntry.Modifications = new DynamicJsonValue(existingEntry);
+                    existingBlitEntry.Modifications = new DynamicJsonValue(existingBlitEntry);
                     foreach (var (name, value) in op.MappedData.Properties)
-                        existingEntry.Modifications[name] = value;
+                        existingBlitEntry.Modifications[name] = value;
                 }
                 else
                 {
@@ -879,6 +1030,53 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         }
 
         return old;
+    }
+
+    /// <summary>
+    /// Compares primary key values between two DynamicJsonValue items.
+    /// Used in the deferred array path where a prior op inserted a DJV that a later op targets.
+    /// </summary>
+    private static bool MatchesPrimaryKeyDynamic(
+        DynamicJsonValue item, DynamicJsonValue candidate,
+        CdcSinkEmbeddedTableConfig config, string[] mappedPrimaryKeyNames)
+    {
+        var stringComparison = config.CaseSensitiveKeys
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
+
+        for (int i = 0; i < mappedPrimaryKeyNames.Length; i++)
+        {
+            var mappedName = mappedPrimaryKeyNames[i];
+
+            // Must check existence explicitly — DJV getter returns null both for
+            // missing properties and for properties with a null value. Without this,
+            // two items that both lack the PK field would incorrectly match.
+            if (FindPropertyInDjv(item, mappedName, out var existingVal) == false)
+                return false;
+
+            var candidateVal = candidate[mappedName];
+            if (candidateVal == null && existingVal == null)
+                continue;
+            if (candidateVal == null || existingVal == null)
+                return false;
+            if (ComparePrimaryKeyValues(existingVal, candidateVal, stringComparison) == false)
+                return false;
+        }
+        return true;
+    }
+
+    private static bool FindPropertyInDjv(DynamicJsonValue djv, string name, out object value)
+    {
+        for (int i = 0; i < djv.Properties.Count; i++)
+        {
+            if (djv.Properties[i].Name == name)
+            {
+                value = djv.Properties[i].Value;
+                return true;
+            }
+        }
+        value = null;
+        return false;
     }
 
     /// <summary>

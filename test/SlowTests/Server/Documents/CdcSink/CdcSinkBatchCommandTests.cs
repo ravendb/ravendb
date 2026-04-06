@@ -3392,7 +3392,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 seedOps.Add(CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = i, ["Product"] = $"Product{i}", ["Quantity"] = i * 10 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", i }, { "product", $"Product{i}" }, { "quantity", i * 10 } }));
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", i }, { "product", $"Product{i}" }, { "quantity", i * 10 } }));
             }
             var seedCmd = new CdcSinkBatchCommand(database, seedOps, "test", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
@@ -3410,27 +3410,27 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 1, ["Product"] = "Widget", ["Quantity"] = 10 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 1 }, { "product", "Widget" }, { "quantity", 10 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "product", "Widget" }, { "quantity", 10 } }),
 
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 2, ["Product"] = "Product2", ["Quantity"] = 99 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 2 }, { "product", "Product2" }, { "quantity", 99 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 2 }, { "product", "Product2" }, { "quantity", 99 } }),
 
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 3 },
                     CdcSinkOperation.Delete, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 3 }, { "product", "Product3" }, { "quantity", 30 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 3 }, { "product", "Product3" }, { "quantity", 30 } }),
 
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 4, ["Product"] = "NewItem4", ["Quantity"] = 40 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 4 }, { "product", "NewItem4" }, { "quantity", 40 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 4 }, { "product", "NewItem4" }, { "quantity", 40 } }),
 
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 5, ["Product"] = "NewItem5", ["Quantity"] = 50 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 5 }, { "product", "NewItem5" }, { "quantity", 50 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 5 }, { "product", "NewItem5" }, { "quantity", 50 } }),
             };
             var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test", null,
                 tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
@@ -3525,7 +3525,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 100 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } })
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "amount", 100 } })
             };
             var seedCmd = new CdcSinkBatchCommand(database, seedOps, "test", null,
                 tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
@@ -3541,12 +3541,12 @@ namespace SlowTests.Server.Documents.CdcSink
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 200 },
                     CdcSinkOperation.Upsert, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 200 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "amount", 200 } }),
 
                 CreateEmbeddedOp("Orders/1",
                     new DynamicJsonValue { ["LineId"] = 1 },
                     CdcSinkOperation.Delete, embProcessor,
-                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 200 } }),
+                    new Dictionary<string, object> { { "order_id", 1 }, { "line_id", 1 }, { "amount", 200 } }),
             };
             var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test", null,
                 tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
