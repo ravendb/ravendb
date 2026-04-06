@@ -120,12 +120,12 @@ namespace FastTests.Sparrow
 
             byte* stack = stackalloc byte[16];
 
-            for (int i = 0; i < byte.MaxValue; i++)
+            for (int i = 0; i <= byte.MaxValue; i++)
             {
                 VariableSizeEncoding.Write(stack, (byte)i);
-                var v1 = ReadVariableSizeInt(stack, 0, out _);
-                var v2 = VariableSizeEncoding.Read<byte>(stack, out _);
-                Assert.Equal(v1, v2);
+                var v = VariableSizeEncoding.Read<byte>(stack, out int offset);
+                Assert.Equal((byte)i, v);
+                Assert.Equal(1, offset);
             }
 
             var rnd = new Random(seed);

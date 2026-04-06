@@ -152,5 +152,74 @@ namespace FastTests.Sparrow
             }
         }
 
+        [RavenFact(RavenTestCategory.Core)]
+        public void VariableSize_ReadSpanWithPos_ReturnsCorrectOffset()
+        {
+            Span<byte> buffer = new byte[16];
+
+            // Value 16384 requires 3 bytes in varint
+            int written = VariableSizeEncoding.Write<int>(buffer, 16384);
+            Assert.True(written >= 3);
+
+            ReadOnlySpan<byte> roBuffer = buffer;
+            int result = VariableSizeEncoding.Read<int>(roBuffer, 0, out int offset, out bool success);
+            Assert.True(success);
+            Assert.Equal(16384, result);
+            Assert.Equal(written, offset);
+
+            // Also test with int.MaxValue (5 byte varint)
+            buffer.Clear();
+            written = VariableSizeEncoding.Write<int>(buffer, int.MaxValue);
+            roBuffer = buffer;
+            result = VariableSizeEncoding.Read<int>(roBuffer, 0, out offset, out success);
+            Assert.True(success);
+            Assert.Equal(int.MaxValue, result);
+            Assert.Equal(written, offset);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void VariableSize_ReadSByte_DoesNotThrow()
+        {
+            Span<byte> buffer = new byte[4];
+            buffer[0] = 42;
+
+            ReadOnlySpan<byte> roBuffer = buffer;
+            sbyte result = VariableSizeEncoding.Read<sbyte>(roBuffer, out int offset);
+            Assert.Equal((sbyte)42, result);
+            Assert.Equal(1, offset);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void VariableSize_Byte_WriteRead_OffsetConsistency()
+        {
+            Span<byte> buffer = new byte[16];
+            byte[] testValues = { 0, 1, 127, 128, 200, 255 };
+            foreach (var value in testValues)
+            {
+                buffer.Clear();
+                int written = VariableSizeEncoding.Write<byte>(buffer, value);
+                ReadOnlySpan<byte> roBuffer = buffer;
+                byte result = VariableSizeEncoding.Read<byte>(roBuffer, out int readLen);
+                Assert.Equal(value, result);
+                Assert.Equal(written, readLen);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void VariableSize_Byte_WriteManyReadMany_Roundtrip()
+        {
+            byte[] values = { 100, 200, 150, 255, 128, 0, 1, 127 };
+            Span<byte> buffer = new byte[64];
+            byte[] readBack = new byte[values.Length];
+
+            int totalWritten = VariableSizeEncoding.WriteMany<byte>(buffer, values.AsSpan());
+            ReadOnlySpan<byte> roBuffer = buffer;
+            int totalRead = VariableSizeEncoding.ReadMany<byte>(roBuffer, values.Length, readBack.AsSpan());
+
+            Assert.Equal(totalWritten, totalRead);
+            for (int i = 0; i < values.Length; i++)
+                Assert.Equal(values[i], readBack[i]);
+        }
+
     }
 }
