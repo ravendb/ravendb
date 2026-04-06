@@ -259,13 +259,15 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
                                     Logger.Error(msg, e);
 
                                 readScope.RecordReadError();
-                                Statistics.RecordConsumeError(e.Message);
-
+                                
                                 if (batchStarted == false)
                                 {
+                                    // Need to check this before RecordConsumeError
                                     // failed to consume any message, let's do the fallback then
                                     EnterFallbackMode();
                                 }
+
+                                Statistics.RecordConsumeError(e.Message);
                             }
                         }
                     }

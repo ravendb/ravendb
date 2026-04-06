@@ -3343,5 +3343,232 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task BatchedEmbeddedArray_ManyOps_MatchesSequentialResult()
+        {
+            // Verifies that the deferred-materialization path (multiple embedded ops in one batch)
+            // produces the same result as applying ops one at a time. Tests insert, update, and
+            // delete in a single batch to exercise all code paths in ApplyArrayOperationDeferred.
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var parentData = new DynamicJsonValue
+            {
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "product", Name = "Product" },
+                    new() { Column = "quantity", Name = "Quantity" }
+                },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                JoinColumns = new List<string> { "order_id" },
+                Type = CdcSinkRelationType.Array
+            };
+            var rootConfig = CreateRootTableConfig("Orders");
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { embeddedConfig };
+            var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
+
+            // Seed with existing lines
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // Seed 3 existing lines
+            var seedOps = new List<CdcSinkDocumentOp>();
+            for (int i = 1; i <= 3; i++)
+            {
+                seedOps.Add(CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = i, ["Product"] = $"Product{i}", ["Quantity"] = i * 10 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", i }, { "product", $"Product{i}" }, { "quantity", i * 10 } }));
+            }
+            var seedCmd = new CdcSinkBatchCommand(database, seedOps, "test", null,
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(seedCmd);
+
+            // Now apply a batch with many ops:
+            // - Update line 1 (Product1 → Widget)
+            // - Update line 2 (quantity 20 → 99)
+            // - Delete line 3
+            // - Insert line 4
+            // - Insert line 5
+            // This exercises the deferred materialization path (5 ops > 1 → batched)
+            var batchOps = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 1, ["Product"] = "Widget", ["Quantity"] = 10 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 1 }, { "product", "Widget" }, { "quantity", 10 } }),
+
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 2, ["Product"] = "Product2", ["Quantity"] = 99 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 2 }, { "product", "Product2" }, { "quantity", 99 } }),
+
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 3 },
+                    CdcSinkOperation.Delete, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 3 }, { "product", "Product3" }, { "quantity", 30 } }),
+
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 4, ["Product"] = "NewItem4", ["Quantity"] = 40 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 4 }, { "product", "NewItem4" }, { "quantity", 40 } }),
+
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 5, ["Product"] = "NewItem5", ["Quantity"] = 50 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 5 }, { "product", "NewItem5" }, { "quantity", 50 } }),
+            };
+            var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test", null,
+                tableLoadUpdates: null, patchRequest: null, statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(batchCmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(doc);
+
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+
+                // 3 original - 1 deleted + 2 inserted = 4
+                Assert.Equal(4, lines.Length);
+
+                // Line 1: updated product
+                var line1 = lines[0] as BlittableJsonReaderObject;
+                Assert.NotNull(line1);
+                line1.TryGet("Product", out string product1);
+                Assert.Equal("Widget", product1);
+                line1.TryGet("Quantity", out int qty1);
+                Assert.Equal(10, qty1);
+
+                // Line 2: updated quantity
+                var line2 = lines[1] as BlittableJsonReaderObject;
+                Assert.NotNull(line2);
+                line2.TryGet("Quantity", out int qty2);
+                Assert.Equal(99, qty2);
+
+                // Line 3 deleted — lines[2] should be one of the new inserts
+                var line4 = lines[2] as BlittableJsonReaderObject;
+                Assert.NotNull(line4);
+                line4.TryGet("Product", out string product4);
+                Assert.Equal("NewItem4", product4);
+
+                var line5 = lines[3] as BlittableJsonReaderObject;
+                Assert.NotNull(line5);
+                line5.TryGet("Product", out string product5);
+                Assert.Equal("NewItem5", product5);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task BatchedEmbeddedArray_UpdateThenDelete_SamePK_CorrectOrder()
+        {
+            // Two ops on the same PK in one batch: update then delete.
+            // The delete must see the updated item as $old. The item must be removed.
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            var parentData = new DynamicJsonValue
+            {
+                ["Total"] = 0,
+                [Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                    { [Constants.Documents.Metadata.Collection] = "Orders" }
+            };
+            var embeddedConfig = new CdcSinkEmbeddedTableConfig
+            {
+                SourceTableSchema = "public",
+                SourceTableName = "order_lines",
+                PropertyName = "Lines",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "line_id", Name = "LineId" },
+                    new() { Column = "amount", Name = "Amount" }
+                },
+                PrimaryKeyColumns = new List<string> { "line_id" },
+                JoinColumns = new List<string> { "order_id" },
+                Type = CdcSinkRelationType.Array,
+                Patch = "this.Total += $row.amount - ($old ? $old.Amount : 0);",
+                OnDelete = new CdcSinkOnDeleteConfig
+                {
+                    Patch = "this.Total -= $old ? $old.Amount : 0;"
+                }
+            };
+            var rootConfig = CreateRootTableConfig("Orders");
+            rootConfig.EmbeddedTables = new List<CdcSinkEmbeddedTableConfig> { embeddedConfig };
+            var sinkConfig = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { rootConfig } };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+            var embProcessor = docProcessor.GetProcessor("public", "order_lines");
+
+            // Seed parent + one line with Amount=100
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { CreatePutOp("Orders/1", parentData) },
+                "test", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            var seedOps = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 100 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 100 } })
+            };
+            var seedCmd = new CdcSinkBatchCommand(database, seedOps, "test", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(seedCmd);
+
+            // Batch: update Amount to 200, then delete — two ops on same PK
+            // Insert patch: Total += 100 - 0 = 100 (from seed)
+            // Update patch: Total += 200 - 100 = 100 → Total = 200
+            // Delete patch: Total -= 200 → Total = 0
+            var batchOps = new List<CdcSinkDocumentOp>
+            {
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 1, ["Amount"] = 200 },
+                    CdcSinkOperation.Upsert, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 200 } }),
+
+                CreateEmbeddedOp("Orders/1",
+                    new DynamicJsonValue { ["LineId"] = 1 },
+                    CdcSinkOperation.Delete, embProcessor,
+                    new Dictionary<string, object> { { "line_id", 1 }, { "amount", 200 } }),
+            };
+            var batchCmd = new CdcSinkBatchCommand(database, batchOps, "test", null,
+                tableLoadUpdates: null, patchRequest: docProcessor.CombinedPatchRequest,
+                statsScope: null, statistics: null, logger: null);
+            await database.TxMerger.Enqueue(batchCmd);
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                var doc = database.DocumentsStorage.Get(ctx, "Orders/1");
+                Assert.NotNull(doc);
+
+                // Array should be empty (item inserted, updated, then deleted)
+                doc.Data.TryGet("Lines", out BlittableJsonReaderArray lines);
+                Assert.NotNull(lines);
+                Assert.Equal(0, lines.Length);
+
+                // Total = 100 (seed insert) + 100 (update delta) - 200 (delete) = 0
+                doc.Data.TryGet("Total", out int total);
+                Assert.Equal(0, total);
+            }
+        }
+
     }
 }

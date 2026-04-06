@@ -442,14 +442,33 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         BlittableJsonReaderObject currentDoc, List<CdcSinkDocumentOp> pendingEmbeds,
         ref List<PatchEntry> patches, bool includeOnDelete = false)
     {
-        foreach (var embedOp in pendingEmbeds ?? [])
+        if (pendingEmbeds == null || pendingEmbeds.Count == 0)
+            return currentDoc;
+
+        // Fast path: single op, no batching overhead needed
+        if (pendingEmbeds.Count == 1)
+            return FlushSingleEmbed(context, documentId, currentDoc, pendingEmbeds[0], ref patches, includeOnDelete);
+
+        // Deferred materialization: accumulate all Modifications on the same root blittable,
+        // then materialize once at the end. This avoids k full-document ReadObject calls
+        // (O(k * docSize)) and replaces them with a single one (O(docSize)).
+        //
+        // For array-type embedded properties, we maintain a per-property DynamicJsonArray
+        // working copy so that subsequent ops on the same array see the accumulated state
+        // (inserts, deletes, updates from earlier ops in the same batch).
+        currentDoc.Modifications ??= new DynamicJsonValue(currentDoc);
+
+        // Cache of working arrays per property, keyed by processor Key (which includes schema.table).
+        // Avoids re-reading the array from the blittable for each op targeting the same property.
+        Dictionary<string, DynamicJsonArray> arrayStates = null;
+
+        bool modified = false;
+        foreach (var embedOp in pendingEmbeds)
         {
             var isDelete = embedOp.Operation == CdcSinkOperation.Delete;
             var embeddedConfig = embedOp.Processor.EmbeddedConfig;
 
-            // IgnoreDeletes: the item stays in the document, but we still need $old for
-            // the OnDelete.Patch. We peek at the existing item without applying the delete,
-            // because ApplyEmbeddedOperation mutates the document's Modifications in place.
+            // IgnoreDeletes: the item stays, peek $old without mutating
             if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.IgnoreDeletes == true)
             {
                 if (embeddedConfig.OnDelete.Patch != null)
@@ -464,13 +483,30 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             bool needsOld = (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null) ||
                             (!isDelete && embeddedConfig.Patch != null);
 
-            var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp, needsOld);
-            currentDoc = updatedDoc;
+            var (target, targetBlittable) = NavigateToEmbeddedParent(
+                currentDoc, currentDoc.Modifications, embedOp.Processor.PathFromRoot, embedOp);
 
-            // Patch collection — three cases:
-            //   Delete + includeOnDelete + OnDelete.Patch → run the OnDelete.Patch with $old
-            //   Delete without includeOnDelete → no patch (mid-group flush, not final)
-            //   Upsert + Patch → run the embedded Patch with $old (null on insert, previous item on update)
+            BlittableJsonReaderObject old;
+
+            switch (embeddedConfig.Type)
+            {
+                case CdcSinkRelationType.Array:
+                    old = ApplyArrayOperationDeferred(context, targetBlittable, target,
+                        embeddedConfig, embedOp, needsOld, ref arrayStates);
+                    break;
+                case CdcSinkRelationType.Map:
+                    old = ApplyMapOperation(context, targetBlittable, target, embeddedConfig, embedOp, needsOld);
+                    break;
+                case CdcSinkRelationType.Value:
+                    old = ApplyValueOperation(context, targetBlittable, target, embeddedConfig, embedOp, needsOld);
+                    break;
+                default:
+                    old = null;
+                    break;
+            }
+
+            modified = true;
+
             if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
             {
                 patches ??= [];
@@ -483,7 +519,122 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             }
         }
 
+        // Single materialization for all embedded ops
+        if (modified)
+            currentDoc = context.ReadObject(currentDoc, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
         return currentDoc;
+    }
+
+    /// <summary>
+    /// Fast path for a single embedded op — no deferred materialization needed.
+    /// </summary>
+    private BlittableJsonReaderObject FlushSingleEmbed(
+        DocumentsOperationContext context, string documentId,
+        BlittableJsonReaderObject currentDoc, CdcSinkDocumentOp embedOp,
+        ref List<PatchEntry> patches, bool includeOnDelete)
+    {
+        var isDelete = embedOp.Operation == CdcSinkOperation.Delete;
+        var embeddedConfig = embedOp.Processor.EmbeddedConfig;
+
+        if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.IgnoreDeletes == true)
+        {
+            if (embeddedConfig.OnDelete.Patch != null)
+            {
+                var existingItem = FindExistingEmbeddedItem(context, currentDoc, embedOp);
+                patches ??= [];
+                patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.OnDelete.Patch, existingItem));
+            }
+            return currentDoc;
+        }
+
+        bool needsOld = (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null) ||
+                        (!isDelete && embeddedConfig.Patch != null);
+
+        var (updatedDoc, old) = ApplyEmbeddedOperation(context, documentId, currentDoc, embedOp, needsOld);
+
+        if (isDelete && includeOnDelete && embeddedConfig.OnDelete?.Patch != null)
+        {
+            patches ??= [];
+            patches.Add(new PatchEntry(embedOp.Processor.KeyOnDelete, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.OnDelete.Patch, old));
+        }
+        else if (!isDelete && embeddedConfig.Patch != null)
+        {
+            patches ??= [];
+            patches.Add(new PatchEntry(embedOp.Processor.Key, embedOp.Processor.SourceColumnNames, embedOp.RawValues, embeddedConfig.Patch, old));
+        }
+
+        return updatedDoc;
+    }
+
+    /// <summary>
+    /// Array operation with deferred materialization. Instead of rebuilding the array from the
+    /// blittable on every op, maintains a working <see cref="DynamicJsonArray"/> per property.
+    /// The first op for a property reads the existing array into the working copy; subsequent
+    /// ops operate on the same working copy. This avoids O(n) array copies per op.
+    ///
+    /// $old is captured by cloning the matched item before modification, same as the non-deferred path.
+    /// For same-PK sequential ops (e.g., update then delete), the second op sees the first op's
+    /// modifications via the accumulated Modifications chain on the blittable item.
+    /// </summary>
+    private static BlittableJsonReaderObject ApplyArrayOperationDeferred(
+        DocumentsOperationContext context,
+        BlittableJsonReaderObject parentDoc, DynamicJsonValue target,
+        CdcSinkEmbeddedTableConfig config, CdcSinkDocumentOp op, bool needsOld,
+        ref Dictionary<string, DynamicJsonArray> arrayStates)
+    {
+        arrayStates ??= new Dictionary<string, DynamicJsonArray>(StringComparer.Ordinal);
+        var stateKey = op.Processor.Key + ":" + config.PropertyName;
+
+        if (arrayStates.TryGetValue(stateKey, out var workingArray) == false)
+        {
+            // First op for this array — initialize working copy from blittable
+            workingArray = new DynamicJsonArray();
+            if (parentDoc != null &&
+                parentDoc.TryGetMember(config.PropertyName, out var existingValue) &&
+                existingValue is BlittableJsonReaderArray existingArray)
+            {
+                foreach (var item in existingArray)
+                    workingArray.Add(item);
+            }
+            arrayStates[stateKey] = workingArray;
+            target[config.PropertyName] = workingArray;
+        }
+
+        // Scan the working array for a PK match
+        BlittableJsonReaderObject old = null;
+        bool found = false;
+        var items = workingArray.Items;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i] is BlittableJsonReaderObject item &&
+                MatchesPrimaryKey(item, op.MappedData, config, op.Processor.MappedPrimaryKeyNames))
+            {
+                found = true;
+                old = needsOld ? context.ReadObject(item, "cdc-old-item") : null;
+
+                if (op.Operation == CdcSinkOperation.Upsert)
+                {
+                    // Accumulate modifications — use ??= so multiple updates on the same item
+                    // stack their changes instead of overwriting each other.
+                    item.Modifications ??= new DynamicJsonValue(item);
+                    foreach (var (name, value) in op.MappedData.Properties)
+                        item.Modifications[name] = value;
+                }
+                else
+                {
+                    // Delete: remove from working array
+                    items.RemoveAt(i);
+                }
+                break;
+            }
+        }
+
+        if (found == false && op.Operation == CdcSinkOperation.Upsert)
+            workingArray.Add(op.MappedData);
+
+        return old;
     }
 
     /// <summary>

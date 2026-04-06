@@ -180,7 +180,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 try
                 {
                     await using var createCmd = new NpgsqlCommand(
-                        $"SELECT pg_create_logical_replication_slot('{_slotName}', 'pgoutput')", conn);
+                        $"SELECT pg_create_logical_replication_slot(@slotName, 'pgoutput')", conn);
+                    createCmd.Parameters.AddWithValue("slotName", _slotName);
                     await createCmd.ExecuteNonQueryAsync(ct);
                 }
                 catch (PostgresException ex) when (ex.SqlState == "42710")
