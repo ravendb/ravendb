@@ -94,5 +94,63 @@ namespace FastTests.Sparrow
             Assert.Equal(0, values.SequenceCompareTo(decodedValues));
         }
 
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(-1)]
+        [InlineData(-2)]
+        [InlineData(-3)]
+        [InlineData(-127)]
+        [InlineData(-128)]
+        [InlineData(-1000)]
+        [InlineData(int.MinValue)]
+        public void ZigZag_Int_Roundtrip(int expected)
+        {
+            Span<byte> buffer = new byte[16];
+            ZigZagEncoding.Encode<int>(buffer, expected);
+            int decoded = ZigZagEncoding.Decode<int>(buffer);
+            Assert.Equal(expected, decoded);
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData((short)-1)]
+        [InlineData((short)-2)]
+        [InlineData((short)-128)]
+        [InlineData(short.MinValue)]
+        public void ZigZag_Short_Roundtrip(short expected)
+        {
+            Span<byte> buffer = new byte[16];
+            ZigZagEncoding.Encode<short>(buffer, expected);
+            short decoded = ZigZagEncoding.Decode<short>(buffer);
+            Assert.Equal(expected, decoded);
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData((sbyte)-1)]
+        [InlineData((sbyte)-2)]
+        [InlineData(sbyte.MinValue)]
+        public void ZigZag_SByte_Roundtrip(sbyte expected)
+        {
+            Span<byte> buffer = new byte[16];
+            ZigZagEncoding.Encode<sbyte>(buffer, expected);
+            sbyte decoded = ZigZagEncoding.Decode<sbyte>(buffer);
+            Assert.Equal(expected, decoded);
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public void ZigZag_Int_PointerOverload_NegativeValues_Roundtrip()
+        {
+            Span<byte> buffer = new byte[16];
+            fixed (byte* ptr = buffer)
+            {
+                int[] values = { -1, -2, -1000, int.MinValue };
+                foreach (var expected in values)
+                {
+                    buffer.Clear();
+                    ZigZagEncoding.Encode<int>(ptr, expected);
+                    int decoded = ZigZagEncoding.Decode<int>(ptr, out _);
+                    Assert.Equal(expected, decoded);
+                }
+            }
+        }
+
     }
 }
