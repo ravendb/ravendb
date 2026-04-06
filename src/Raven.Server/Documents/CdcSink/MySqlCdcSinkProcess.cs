@@ -54,6 +54,11 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     {
         public required ColumnInfo[] Columns { get; init; }
         public required CdcSinkTableProcessor Processor { get; init; }
+        /// <summary>
+        /// Column type codes from the first TableMapEvent for this table.
+        /// Used to detect schema changes (column reorders, type changes) mid-stream.
+        /// </summary>
+        public byte[] BinlogColumnTypes { get; set; }
     }
 
     private readonly Dictionary<(string Schema, string Table), TableInfo> _resolvedTables = new(TableKeyComparer.Instance);
@@ -332,7 +337,31 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                     case TableMapEvent tableMap:
                         if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase)
                             && _resolvedTables.TryGetValue((tableMap.DatabaseName, tableMap.TableName), out var info))
+                        {
+                            if (info.BinlogColumnTypes == null)
+                            {
+                                // First TableMapEvent for this table — store the column types
+                                // for future schema change detection.
+                                if (tableMap.ColumnTypes.Length != info.Columns.Length)
+                                {
+                                    throw new InvalidOperationException(
+                                        $"Column count mismatch for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
+                                        $"expected {info.Columns.Length} columns but binlog reports {tableMap.ColumnTypes.Length}. " +
+                                        "The table schema may have changed. The process will retry with updated column metadata.");
+                                }
+                                info.BinlogColumnTypes = [.. tableMap.ColumnTypes];
+                            }
+                            else if (info.BinlogColumnTypes.AsSpan().SequenceEqual(tableMap.ColumnTypes) == false)
+                            {
+                                // Schema changed mid-stream: column count, types, or order differ.
+                                // Force a restart to re-learn the schema.
+                                throw new InvalidOperationException(
+                                    $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
+                                    $"binlog column types no longer match the cached metadata. " +
+                                    "The process will retry with updated column metadata.");
+                            }
                             tableMapCache[tableMap.TableId] = info;
+                        }
                         break;
 
                     case WriteRowsEvent writeRows:

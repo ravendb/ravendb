@@ -92,12 +92,33 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (uniqueNames.Add(table.CollectionName) == false)
                 errors.Add($"Table name '{table.CollectionName}' is already defined. Table names must be unique");
 
+            ValidatePrimaryKeyColumnsExist(table.CollectionName, table.PrimaryKeyColumns, table.Columns, errors);
             ValidateColumnsAndPropertyNames(table.CollectionName, table.Columns, table.EmbeddedTables, table.LinkedTables, errors);
             ValidateEmbeddedTables(table.EmbeddedTables, table.CollectionName, errors);
             ValidateLinkedTables(table.LinkedTables, table.CollectionName, errors);
         }
 
         return errors.Count == 0;
+    }
+
+    private static void ValidatePrimaryKeyColumnsExist(string tableName, List<string> primaryKeyColumns, List<CdcColumnMapping> columns, List<string> errors)
+    {
+        if (primaryKeyColumns == null || columns == null)
+            return;
+
+        var columnNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < columns.Count; i++)
+        {
+            if (columns[i].Column != null)
+                columnNames.Add(columns[i].Column);
+        }
+
+        for (int i = 0; i < primaryKeyColumns.Count; i++)
+        {
+            if (columnNames.Contains(primaryKeyColumns[i]) == false)
+                errors.Add($"Table '{tableName}': primary key column '{primaryKeyColumns[i]}' is not listed in the column mappings. " +
+                    "Add a column mapping for this column or correct the primary key column name.");
+        }
     }
 
     private static void ValidateColumnsAndPropertyNames(string tableName,
@@ -186,6 +207,7 @@ public class CdcSinkConfiguration : IDynamicJson, IDatabaseTask
             if (embedded.Columns == null || embedded.Columns.Count == 0)
                 errors.Add($"Embedded table '{embedded.SourceTableName}' under '{parentName}' must have at least one column mapping");
 
+            ValidatePrimaryKeyColumnsExist(embedded.SourceTableName, embedded.PrimaryKeyColumns, embedded.Columns, errors);
             ValidateColumnsAndPropertyNames(embedded.SourceTableName, embedded.Columns, embedded.EmbeddedTables, linkedTables: null, errors);
 
             ValidateEmbeddedTables(embedded.EmbeddedTables, embedded.SourceTableName, errors);

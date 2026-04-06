@@ -138,14 +138,22 @@ public class CdcSinkTableProcessor
         _valuesPool.Enqueue(arr);
     }
 
-    public void ClearPool()
+    /// <summary>
+    /// Clears array contents to release references for GC, but keeps
+    /// the arrays in the pool for reuse on the next burst.
+    /// </summary>
+    public void ClearPoolArrays()
     {
         foreach (var arr in _valuesPool)
-        {
-            // we want to return the arrays, but we need to clear
-            // the contents to release references and allow them to be GC'd
             Array.Clear(arr, 0, arr.Length);
-        }
+    }
+
+    /// <summary>
+    /// Releases all pooled arrays entirely.
+    /// </summary>
+    public void ClearPool()
+    {
+        _valuesPool.Clear();
     }
 
     public void SetSourceColumnNames(string[] names)

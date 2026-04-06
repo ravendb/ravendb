@@ -497,10 +497,14 @@ public abstract class QueueSinkProcess : IDisposable, ILowMemoryHandler
             var secondsSinceLastError =
                 (Database.Time.GetUtcNow() - Statistics.LastConsumeErrorTime.Value).TotalSeconds;
 
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(
+            // Jitter: add up to 10% random variation to avoid synchronized retries
+            // across multiple processes when a shared source goes down.
+            var baseSeconds = Math.Min(
                 Database.Configuration.QueueSink
                     .MaxFallbackTime.AsTimeSpan.TotalSeconds,
-                Math.Max(5, secondsSinceLastError * 2)));
+                Math.Max(5, secondsSinceLastError * 2));
+            var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
+            FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
         }
     }
 

@@ -18,7 +18,6 @@ using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.ServerWide.Commands.CdcSink;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -122,18 +121,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
             return new CdcSinkProcessState();
         }
-    }
-
-    protected void UpdateProcessState(CdcSinkProcessState state)
-    {
-        var command = new UpdateCdcSinkProcessStateCommand(Database.Name, state, Database.ServerStore.LicenseManager.HasHighlyAvailableTasks(), RaftIdGenerator.NewId());
-
-        var sendToLeaderTask = Database.ServerStore.SendToLeaderAsync(command);
-
-        sendToLeaderTask.Wait(CancellationToken);
-        var (etag, _) = sendToLeaderTask.Result;
-
-        Database.RachisLogIndexNotifications.WaitForIndexNotification(etag, Database.ServerStore.Engine.OperationTimeout).Wait(CancellationToken);
     }
 
     /// <summary>
@@ -342,7 +329,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 (Database.Time.GetUtcNow() - lastErrorTime).TotalSeconds;
 
             var maxSeconds = Database.Configuration.CdcSink.MaxFallbackTime.AsTimeSpan.TotalSeconds;
-            FallbackTime = TimeSpan.FromSeconds(Math.Min(maxSeconds, Math.Max(5, secondsSinceLastError * 2)));
+            // Jitter: add up to 10% random variation to avoid synchronized retries
+            // across multiple CDC Sink processes when a shared source goes down.
+            var baseSeconds = Math.Min(maxSeconds, Math.Max(5, secondsSinceLastError * 2));
+            var jitter = baseSeconds * Random.Shared.NextDouble() * 0.1;
+            FallbackTime = TimeSpan.FromSeconds(baseSeconds + jitter);
         }
         else
         {
@@ -351,7 +342,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
     protected async Task<(string Checkpoint, int Rows)> SubmitBatch(List<CdcSinkDocumentOp> ops, string checkpoint = null,
-        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null)
+        Dictionary<string, CdcSinkTableLoadState> tableLoadUpdates = null,
+        Commands.CdcSinkBatchCommand.DocumentGrouper grouper = null)
     {
         // Compact nulls — streaming paths add null entries for rows from unconfigured tables
         int pos = 0;
@@ -369,10 +361,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             Database, ops, Configuration.Name, checkpoint,
             tableLoadUpdates: tableLoadUpdates,
             patchRequest: DocumentProcessor.CombinedPatchRequest,
-            statsScope: null, statistics: Statistics, logger: Logger);
+            statsScope: null, statistics: Statistics, logger: Logger,
+            grouper: grouper);
 
         var start = Stopwatch.GetTimestamp();
         await Database.TxMerger.Enqueue(command);
+
+        DocumentProcessor.ReturnBatchValues(ops);
 
         if (Logger.IsDebugEnabled)
             Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
@@ -423,6 +418,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         var pending = new List<CdcSinkDocumentOp>();
         var emptyTask = Task.FromResult<(string, int)>((null, 0));
         Task<(string, int)> lastBatch = emptyTask;
+        // Two groupers for the two concurrent batches in the pipeline (current + previous).
+        var groupers = new[] { new Commands.CdcSinkBatchCommand.DocumentGrouper(), new Commands.CdcSinkBatchCommand.DocumentGrouper() };
+        int grouperIndex = 0;
         string lastCheckpoint = null;
 
         // Context rotation: blittable objects created by ProcessRow reference the context's
@@ -453,7 +451,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 return;
             }
 
-            lastBatch = SubmitBatch(batch, lastCheckpoint);
+            lastBatch = SubmitBatch(batch, lastCheckpoint, grouper: groupers[grouperIndex]);
+            grouperIndex ^= 1; // alternate between the two groupers
             batch = [];
         }
 
@@ -478,6 +477,18 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
                     if (lastBatch.IsCompleted || ShouldFlushBatch(batch.Count))
                         await FlushBatch();
+
+                    if (moveTask.IsCompleted == false)
+                    {
+                        // Source is idle — clear array contents immediately to release
+                        // references for GC, but keep the arrays in the pool for reuse.
+                        DocumentProcessor.ClearValuePoolArrays();
+
+                        // If still idle after 1 minute, release the pooled arrays entirely.
+                        var completed = await moveTask.WaitFor(TimeSpan.FromMinutes(1), ct);
+                        if (completed != moveTask)
+                            DocumentProcessor.ClearValuePools();
+                    }
 
                     moveNextResult = await moveTask;
                 }

@@ -247,6 +247,32 @@ public class CdcSinkDocumentProcessor
         processor.SetSourceColumnNames(columnNames);
     }
 
+    /// <summary>
+    /// Returns all row value arrays from the completed batch back to their per-table pools.
+    /// Called after the TxMerger finishes processing a batch.
+    /// </summary>
+    public void ReturnBatchValues(List<CdcSinkDocumentOp> ops)
+    {
+        foreach (var op in ops)
+        {
+            if (op?.RawValues != null && op.Processor != null)
+                op.Processor.ReturnValues(op.RawValues);
+        }
+    }
+
+    /// <summary>
+    /// Clears the contents of pooled arrays (releases references for GC) but keeps
+    /// the arrays in the pool for reuse. Use when idle for a short period.
+    /// </summary>
+    public void ClearValuePoolArrays()
+    {
+        foreach (var (_, processor) in _tableIndex)
+            processor.ClearPoolArrays();
+    }
+
+    /// <summary>
+    /// Releases all pooled arrays entirely. Use when idle for a longer period.
+    /// </summary>
     public void ClearValuePools()
     {
         foreach (var (_, processor) in _tableIndex)

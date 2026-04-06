@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -37,15 +38,71 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
     private readonly CdcSinkStatsScope _statsScope;
     private readonly CdcSinkProcessStatistics _statistics;
     private readonly RavenLogger _logger;
+    private readonly DocumentGrouper _grouper;
     private StringBuilder _sb;
 
     public int ProcessedSuccessfully { get; private set; }
 
     /// <summary>
-    /// Raised for each document that fails during batch processing.
-    /// The event provides the document ID and the exception.
+    /// Reusable helper for grouping ops by document ID without per-batch allocations.
+    /// The caller maintains two instances (matching the two concurrent batches in the
+    /// streaming pipeline) and passes one to each batch command.
     /// </summary>
-    internal event Action<string, Exception> DocumentProcessingError;
+    public sealed class DocumentGrouper
+    {
+        private readonly List<(string DocumentId, List<CdcSinkDocumentOp> Ops)> _groups = new();
+        private readonly Dictionary<string, int> _index = new(StringComparer.OrdinalIgnoreCase);
+        private readonly List<List<CdcSinkDocumentOp>> _listPool = new();
+
+        public List<(string DocumentId, List<CdcSinkDocumentOp> Ops)> GroupByDocumentId(List<CdcSinkDocumentOp> ops)
+        {
+            Debug.Assert(_groups.Count == 0, "Grouper should be cleared before reuse.");
+            
+            foreach (var op in ops)
+            {
+                if (_index.TryGetValue(op.DocumentId, out var idx))
+                {
+                    _groups[idx].Ops.Add(op);
+                }
+                else
+                {
+                    _index[op.DocumentId] = _groups.Count;
+                    var list = RentList();
+                    list.Add(op);
+                    _groups.Add((op.DocumentId, list));
+                }
+            }
+
+            return _groups;
+        }
+
+        /// <summary>
+        /// Releases references held by the grouper so GC can collect them.
+        /// Called after the batch is processed to avoid holding onto document ops
+        /// longer than necessary (the grouper outlives the batch).
+        /// </summary>
+        public void Clear()
+        {
+            for (int i = 0; i < _groups.Count; i++)
+            {
+                _groups[i].Ops.Clear();
+                _listPool.Add(_groups[i].Ops);
+            }
+            _groups.Clear();
+            _index.Clear();
+        }
+
+        private List<CdcSinkDocumentOp> RentList()
+        {
+            if (_listPool.Count > 0)
+            {
+                var list = _listPool[_listPool.Count - 1];
+                _listPool.RemoveAt(_listPool.Count - 1);
+                return list;
+            }
+            return new List<CdcSinkDocumentOp>();
+        }
+    }
 
     public CdcSinkBatchCommand(
         DocumentDatabase database,
@@ -56,7 +113,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         PatchRequest patchRequest,
         CdcSinkStatsScope statsScope,
         CdcSinkProcessStatistics statistics,
-        RavenLogger logger)
+        RavenLogger logger,
+        DocumentGrouper grouper = null)
     {
         _database = database;
         _ops = ops;
@@ -67,14 +125,15 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         _statsScope = statsScope;
         _statistics = statistics;
         _logger = logger;
+        _grouper = grouper ?? new DocumentGrouper();
     }
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        var groups = GroupByDocumentId(_ops);
+        using var _ = _statistics?.NewBatch();
         int batchErrors = 0;
 
-        foreach (var (documentId, ops) in groups)
+        foreach (var (documentId, ops) in _grouper.GroupByDocumentId(_ops))
         {
             try
             {
@@ -90,7 +149,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 if (_logger?.IsErrorEnabled == true)
                     _logger.Error($"Failed to process CDC operations for document '{documentId}'.", e);
 
-                DocumentProcessingError?.Invoke(documentId, e);
                 _statsScope?.RecordScriptProcessingError();
 
                 // RecordPartialConsumeError tracks cumulative error/success counts and throws
@@ -108,7 +166,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             UpdateState(context);
         }
 
+        _grouper.Clear();
         return _ops.Count;
+        } // using NewBatch
     }
 
     /// <summary>
@@ -1337,14 +1397,32 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
         {
             var documentInstance = (BlittableObjectInstance)runner.Translate(context,
                 new Document { Data = document, Id = context.GetLazyString(documentId) }).AsObject();
-            
-            using (var result = runner.Run(context, context, "execute", documentId, [documentInstance, CreateRows()]))
+
+            try
             {
-                // explicitly called del() / put() here - don't save the returned patched document since the script
-                // may have done its own put()
-                if (runner.OriginalDocumentUpdatedOrDeleted)
-                    return null; 
-                return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                using (var result = runner.Run(context, context, "execute", documentId, [documentInstance, CreateRows()]))
+                {
+                    // explicitly called del() / put() here - don't save the returned patched document since the script
+                    // may have done its own put()
+                    if (runner.OriginalDocumentUpdatedOrDeleted)
+                        return null;
+                    return result.TranslateToObject(context, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                }
+            }
+            catch (Exception e)
+            {
+                _sb ??= new StringBuilder();
+                _sb.Clear();
+                _sb.Append("CDC Sink patch execution failed for document '").Append(documentId).Append("'. Tables: [");
+                for (int i = 0; i < patches.Count; i++)
+                {
+                    if (i > 0) _sb.Append(", ");
+                    _sb.Append(patches[i].TableName);
+                }
+                _sb.Append("]. Patch count: ").Append(patches.Count);
+                var enriched = new InvalidOperationException(_sb.ToString(), e);
+                _statistics?.RecordScriptExecutionError(enriched);
+                throw enriched;
             }
 
 
@@ -1399,27 +1477,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         using var stateBlittable = context.ReadObject(stateJson, stateDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         _database.DocumentsStorage.Put(context, stateDocId, expectedChangeVector: null, stateBlittable);
-    }
-
-    private static List<(string DocumentId, List<CdcSinkDocumentOp> Ops)> GroupByDocumentId(List<CdcSinkDocumentOp> ops)
-    {
-        var groups = new List<(string, List<CdcSinkDocumentOp>)>();
-        var index = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var op in ops)
-        {
-            if (index.TryGetValue(op.DocumentId, out var idx))
-            {
-                groups[idx].Item2.Add(op);
-            }
-            else
-            {
-                index[op.DocumentId] = groups.Count;
-                groups.Add((op.DocumentId, [op]));
-            }
-        }
-
-        return groups;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)

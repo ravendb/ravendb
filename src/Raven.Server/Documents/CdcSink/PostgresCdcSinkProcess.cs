@@ -485,12 +485,12 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         // We ack periodically (every maxBatchSize rows) to balance WAL retention against
         // protocol overhead.
         _rowsSinceLastAck += rows;
+        _replicationConn.SetReplicationStatus(_lastLsn);
         // If rows is 0, it means the batch was empty (e.g., a transaction with no relevant changes, or all changes were filtered out).
         // Even in this case, we want to ack the LSN to advance the replication slot and allow WAL cleanup, otherwise a stream of 
         // empty transactions could stall the slot indefinitely.
         if (rows is 0 || _rowsSinceLastAck >= Database.Configuration.CdcSink.MaxBatchSize)
         {
-            _replicationConn.SetReplicationStatus(_lastLsn);
             await _replicationConn.SendStatusUpdate(CancellationToken);
             _rowsSinceLastAck = 0;
         }
