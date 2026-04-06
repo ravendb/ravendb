@@ -95,7 +95,7 @@ namespace Sparrow.Collections
         public void CopyTo(FastStack<T> srcStack)
         {
             Debug.Assert(srcStack._array != _array);
-           
+
             int srcSize = srcStack._size;
             int dstIndex = _size;
             if (dstIndex + srcSize > _array.Length)
@@ -108,6 +108,8 @@ namespace Sparrow.Collections
             int srcIndex = 0;
             for (int i = 0; i < srcSize; i++)
                 destArray[dstIndex++] = srcArray[srcIndex++];
+
+            _size += srcSize;
         }
 
         // Returns an IEnumerator for this Stack.
@@ -154,7 +156,7 @@ namespace Sparrow.Collections
 
         public bool TryPeek(int depth, out T result)
         {
-            if (_size < depth)
+            if (_size < depth || depth <= 0)
             {
                 result = default(T);
                 return false;

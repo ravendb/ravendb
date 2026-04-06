@@ -300,6 +300,8 @@ namespace Sparrow.Collections
 
             if (index < _size)
                 Array.Copy(_items, index + 1, _items, index, (int)_size - index);
+
+            _items[_size] = default;
             return;
 
             ERROR:
