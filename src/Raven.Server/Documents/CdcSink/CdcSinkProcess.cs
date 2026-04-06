@@ -92,6 +92,33 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public TimeSpan? FallbackTime { get; protected set; }
 
+    /// <summary>
+    /// UTC time of the last successfully completed batch. Null if no batch has completed yet.
+    /// Used by the dashboard to compute replication lag.
+    /// </summary>
+    public DateTime? LastBatchTime { get; private set; }
+
+    /// <summary>
+    /// The last successfully persisted checkpoint (LSN/GTID string).
+    /// Null before the first batch completes.
+    /// </summary>
+    public string LastCheckpoint { get; private set; }
+
+    /// <summary>
+    /// UTC time of the last activity from the source — poll iteration (SQL Server),
+    /// replication message/keepalive (PostgreSQL), or binlog event/heartbeat (MySQL).
+    /// Distinguishes "no changes at source" (LastActivityTime recent, LastBatchTime old)
+    /// from "connection silently dead" (LastActivityTime stale).
+    /// </summary>
+    public DateTime? LastActivityTime { get; protected set; }
+
+    /// <summary>
+    /// Checks whether the CDC Sink process is healthy. Returns true if healthy,
+    /// false with a diagnostic message explaining the problem.
+    /// Each provider implements its own logic based on its communication model.
+    /// </summary>
+    public abstract bool IsHealthy(out string issue);
+
     public OngoingTaskConnectionStatus GetConnectionStatus()
     {
         if (Configuration.Disabled || CancellationToken.IsCancellationRequested)
@@ -369,6 +396,10 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
         DocumentProcessor.ReturnBatchValues(ops);
 
+        LastBatchTime = Database.Time.GetUtcNow();
+        if (checkpoint != null)
+            LastCheckpoint = checkpoint;
+
         if (Logger.IsDebugEnabled)
             Logger.Debug($"[{Name}] SubmitBatch: {command.ProcessedSuccessfully} ops persisted in {Stopwatch.GetElapsedTime(start).TotalMilliseconds:#,#} ms, checkpoint={checkpoint ?? "(none)"}");
 
@@ -501,6 +532,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     break; // enumerator is completed (cancelled, probably)
 
                 var evt = enumerator.Current;
+                LastActivityTime = Database.Time.GetUtcNow();
 
                 switch (evt.Type)
                 {

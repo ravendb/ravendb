@@ -374,7 +374,9 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     
     protected abstract OngoingTaskConnectionStatus GetQueueSinkTaskConnectionStatus(DatabaseRecord record, QueueSinkConfiguration config, out string tag, out string error);
 
-    protected abstract OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config, out string tag, out string error);
+    protected abstract OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
+        out string tag, out string error, out DateTime? lastBatchTime, out string lastCheckpoint,
+        out DateTime? lastActivityTime, out string healthIssue);
 
     protected abstract (string Url, OngoingTaskConnectionStatus Status) GetReplicationTaskConnectionStatus<T>(DatabaseTopology databaseTopology, ClusterTopology clusterTopology,
         T replication, Dictionary<string, RavenConnectionString> connectionStrings, out ExternalReplicationState replicationState, 
@@ -693,8 +695,10 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
     {
         databaseRecord.SqlConnectionStrings.TryGetValue(cdcSink.ConnectionStringName, out var connection);
 
-        var connectionStatus = GetCdcSinkTaskConnectionStatus(databaseRecord, cdcSink, out var tag, out var error);
+        var connectionStatus = GetCdcSinkTaskConnectionStatus(databaseRecord, cdcSink, out var tag, out var error,
+            out var lastBatchTime, out var lastCheckpoint, out var lastActivityTime, out var healthIssue);
         var taskState = OngoingTasksHandler.GetCdcSinkTaskState(cdcSink);
+        var now = DateTime.UtcNow;
 
         return new OngoingTaskCdcSink
         {
@@ -708,7 +712,13 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             Error = error,
             Configuration = cdcSink,
             ConnectionStringName = cdcSink.ConnectionStringName,
-            FactoryName = connection?.FactoryName
+            FactoryName = connection?.FactoryName,
+            LastBatchTime = lastBatchTime,
+            LastCheckpoint = lastCheckpoint,
+            SecondsSinceLastBatch = lastBatchTime.HasValue ? (now - lastBatchTime.Value).TotalSeconds : null,
+            LastActivityTime = lastActivityTime,
+            SecondsSinceLastActivity = lastActivityTime.HasValue ? (now - lastActivityTime.Value).TotalSeconds : null,
+            HealthIssue = healthIssue,
         };
     }
 

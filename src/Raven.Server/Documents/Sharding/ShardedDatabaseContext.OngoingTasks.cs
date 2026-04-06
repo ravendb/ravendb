@@ -54,10 +54,16 @@ public partial class ShardedDatabaseContext
             return OngoingTaskConnectionStatus.None;
         }
 
-        protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config, out string tag, out string error)
+        protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
+            out string tag, out string error, out DateTime? lastBatchTime, out string lastCheckpoint,
+            out DateTime? lastActivityTime, out string healthIssue)
         {
             tag = null;
             error = null;
+            lastBatchTime = null;
+            lastCheckpoint = null;
+            lastActivityTime = null;
+            healthIssue = null;
             return OngoingTaskConnectionStatus.None;
         }
 

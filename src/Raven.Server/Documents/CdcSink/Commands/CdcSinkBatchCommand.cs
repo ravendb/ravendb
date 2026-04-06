@@ -168,7 +168,6 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
 
         _grouper.Clear();
         return _ops.Count;
-        } // using NewBatch
     }
 
     /// <summary>

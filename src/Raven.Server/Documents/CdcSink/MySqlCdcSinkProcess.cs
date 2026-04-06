@@ -232,6 +232,38 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         }
     }
 
+    /// <summary>
+    /// MySQL sends HeartbeatEvent every 30s (HeartbeatInterval) even when the source is idle.
+    /// These events fall through our switch statement but still update LastActivityTime.
+    /// If LastActivityTime goes stale beyond ~90s (3x heartbeat), the binlog connection is dead.
+    /// </summary>
+    public override bool IsHealthy(out string issue)
+    {
+        issue = null;
+
+        if (FallbackTime != null)
+        {
+            issue = $"Process is in error recovery (fallback mode). Last error: {Statistics.LastConsumeErrorTime:O}. " +
+                    $"Next retry in: {FallbackTime.Value.TotalSeconds:F0}s.";
+            return false;
+        }
+
+        if (LastActivityTime == null)
+            return true; // still initializing
+
+        var silentFor = Database.Time.GetUtcNow() - LastActivityTime.Value;
+        // HeartbeatInterval is 30s. Allow 3x before flagging.
+        if (silentFor > TimeSpan.FromSeconds(90))
+        {
+            issue = $"No binlog activity for {silentFor.TotalSeconds:F0}s " +
+                    "(expected heartbeat every 30s). " +
+                    "The MySQL binlog connection may be dead.";
+            return false;
+        }
+
+        return true;
+    }
+
     protected override string GetDefaultSchema()
     {
         var builder = new MySqlConnectionStringBuilder(_connectionString);
@@ -332,6 +364,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
             await foreach (var (header, binlogEvent) in client.Replicate(ct))
             {
+                // MySQL sends HeartbeatEvent every HeartbeatInterval (30s) when the source
+                // we record them here to track connection liveness. 
+                LastActivityTime = Database.Time.GetUtcNow();
+
                 switch (binlogEvent)
                 {
                     case TableMapEvent tableMap:

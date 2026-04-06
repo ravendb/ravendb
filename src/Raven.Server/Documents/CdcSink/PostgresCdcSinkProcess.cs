@@ -424,6 +424,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
         await foreach (var message in replicationStream.WithCancellation(ct))
         {
+            LastActivityTime = Database.Time.GetUtcNow();
+
             switch (message)
             {
                 case InsertMessage insert:
@@ -598,6 +600,38 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     }
 
     protected override DbCommandBuilder CommandBuilder { get; } = new NpgsqlCommandBuilder();
+
+    /// <summary>
+    /// PostgreSQL keepalives are handled internally by Npgsql at the protocol level and
+    /// do NOT surface as messages in the replication stream. LastActivityTime only updates
+    /// on actual data messages (Insert, Update, Delete, Commit, Relation, etc.).
+    ///
+    /// If the connection dies, Npgsql's WalReceiverTimeout (default 60s) will throw an
+    /// exception, which triggers fallback mode. Therefore:
+    ///   - FallbackTime set → connection is dead, Npgsql detected it
+    ///   - FallbackTime null + stale LastActivityTime → source is idle, connection is alive
+    ///     (Npgsql would have thrown otherwise)
+    ///
+    /// We do NOT flag stale LastActivityTime as unhealthy for PostgreSQL because we have
+    /// no way to distinguish "idle source" from "slow source" without protocol-level keepalive
+    /// visibility. Npgsql handles that for us via WalReceiverTimeout.
+    /// </summary>
+    public override bool IsHealthy(out string issue)
+    {
+        issue = null;
+
+        if (FallbackTime != null)
+        {
+            issue = $"Process is in error recovery (fallback mode). Last error: {Statistics.LastConsumeErrorTime:O}. " +
+                    $"Next retry in: {FallbackTime.Value.TotalSeconds:F0}s.";
+            return false;
+        }
+
+        // For PostgreSQL, if we're not in fallback mode, the connection is alive —
+        // Npgsql's WalReceiverTimeout (60s) would have thrown and put us in fallback
+        // if the server stopped responding. Stale LastActivityTime just means no data changes.
+        return true;
+    }
 
     protected override string GetDefaultSchema() => "public";
 

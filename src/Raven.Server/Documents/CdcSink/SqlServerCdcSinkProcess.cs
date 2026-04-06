@@ -203,6 +203,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             shouldWait = true;
 
             var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
+            LastActivityTime = Database.Time.GetUtcNow();
 
             if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
                 continue;
@@ -456,6 +457,40 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     }
 
 
+
+    /// <summary>
+    /// SQL Server uses a polling model — we query for new LSNs every PollInterval
+    /// (configurable, default 1s). LastActivityTime is updated on every poll iteration,
+    /// even when there are no changes. If it goes stale, the poll loop has stopped.
+    /// </summary>
+    public override bool IsHealthy(out string issue)
+    {
+        issue = null;
+
+        if (FallbackTime != null)
+        {
+            issue = $"Process is in error recovery (fallback mode). Last error: {Statistics.LastConsumeErrorTime:O}. " +
+                    $"Next retry in: {FallbackTime.Value.TotalSeconds:F0}s.";
+            return false;
+        }
+
+        if (LastActivityTime == null)
+            return true; // still initializing
+
+        var silentFor = Database.Time.GetUtcNow() - LastActivityTime.Value;
+        var pollInterval = Database.Configuration.CdcSink.PollInterval.AsTimeSpan;
+        // Allow 3x the poll interval before flagging — accounts for GC pauses and
+        // transient delays in the poll loop.
+        if (silentFor > TimeSpan.FromTicks(pollInterval.Ticks * 3))
+        {
+            issue = $"No poll activity for {silentFor.TotalSeconds:F0}s " +
+                    $"(expected every {pollInterval.TotalSeconds:F0}s). " +
+                    "The CDC polling loop may have stopped.";
+            return false;
+        }
+
+        return true;
+    }
 
     protected override string GetDefaultSchema() => "dbo";
 

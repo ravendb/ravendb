@@ -144,10 +144,15 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
     }
 
     protected override OngoingTaskConnectionStatus GetCdcSinkTaskConnectionStatus(DatabaseRecord record, CdcSinkConfiguration config,
-        out string tag, out string error)
+        out string tag, out string error, out DateTime? lastBatchTime, out string lastCheckpoint,
+        out DateTime? lastActivityTime, out string healthIssue)
     {
         var connectionStatus = OngoingTaskConnectionStatus.None;
         error = null;
+        lastBatchTime = null;
+        lastCheckpoint = null;
+        lastActivityTime = null;
+        healthIssue = null;
 
         var processState = CdcSinkProcess.GetProcessState(_database, config.Name);
 
@@ -158,7 +163,13 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
             var process = _database.CdcSinkLoader.Processes.FirstOrDefault(x => x.Configuration.Name == config.Name);
 
             if (process != null)
+            {
                 connectionStatus = process.GetConnectionStatus();
+                lastBatchTime = process.LastBatchTime;
+                lastCheckpoint = process.LastCheckpoint;
+                lastActivityTime = process.LastActivityTime;
+                process.IsHealthy(out healthIssue);
+            }
             else
             {
                 if (config.Disabled)
