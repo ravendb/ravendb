@@ -115,6 +115,14 @@ public class CdcSinkTableProcessor
     /// <summary>Pre-computed indices into SourceColumnNames for attachment columns.</summary>
     public int[] AttachmentColumnIndices { get; private set; }
 
+    /// <summary>
+    /// The minimum number of leading column positions that must be present and type-stable
+    /// in binlog events for this table's mapped columns to be safely decoded.
+    /// Computed as max(all index arrays) + 1 after SetSourceColumnNames.
+    /// Used by MySQL CDC for prefix comparison of TableMapEvent column types.
+    /// </summary>
+    public int RequiredPrefixLength { get; private set; }
+
     /// <summary>For embedded tables: indices of root join FK columns in SourceColumnNames.</summary>
     public int[] RootJoinIndices { get; private set; }
 
@@ -130,7 +138,14 @@ public class CdcSinkTableProcessor
 
     public object[] RentValues()
     {
-        return _valuesPool.TryDequeue(out var arr) ? arr : new object[SourceColumnNames.Length];
+        var expectedLen = SourceColumnNames.Length;
+        while (_valuesPool.TryDequeue(out var arr))
+        {
+            if (arr.Length == expectedLen)
+                return arr;
+            // Discard stale array from before a schema change (wrong size)
+        }
+        return new object[expectedLen];
     }
 
     public void ReturnValues(object[] arr)
@@ -158,6 +173,9 @@ public class CdcSinkTableProcessor
 
     public void SetSourceColumnNames(string[] names)
     {
+        if (SourceColumnNames != null && SourceColumnNames.Length != names.Length)
+            _valuesPool.Clear();
+
         SourceColumnNames = names;
 
         // Compute PrimaryKeyIndices
@@ -200,6 +218,26 @@ public class CdcSinkTableProcessor
                     LinkedTableJoinIndices[lt][j] = FindColumnIndex(names, linked.JoinColumns[j]);
             }
         }
+
+        // Compute RequiredPrefixLength — the minimum number of leading column positions
+        // that must be present in binlog events for all mapped columns to be safely decoded.
+        // Used by MySQL CDC for prefix comparison of TableMapEvent column types.
+        int maxOrdinal = -1;
+        foreach (var idx in PrimaryKeyIndices)
+            if (idx > maxOrdinal) maxOrdinal = idx;
+        foreach (var idx in ColumnMappingIndices)
+            if (idx > maxOrdinal) maxOrdinal = idx;
+        if (AttachmentColumnIndices != null)
+            foreach (var idx in AttachmentColumnIndices)
+                if (idx > maxOrdinal) maxOrdinal = idx;
+        if (RootJoinIndices != null)
+            foreach (var idx in RootJoinIndices)
+                if (idx > maxOrdinal) maxOrdinal = idx;
+        if (LinkedTableJoinIndices != null)
+            foreach (var arr in LinkedTableJoinIndices)
+                foreach (var idx in arr)
+                    if (idx > maxOrdinal) maxOrdinal = idx;
+        RequiredPrefixLength = maxOrdinal + 1;
     }
 
     internal static int FindColumnIndex(string[] names, string columnName)

@@ -49,7 +49,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     protected readonly CdcSinkDocumentProcessor DocumentProcessor;
 
-    protected CdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
+    protected CdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database, string defaultSchema)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(database.DatabaseShutdown);
         Logger = database.Loggers.GetLogger(GetType());
@@ -57,7 +57,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         Configuration = configuration;
         Name = Configuration.Name;
         Statistics = new CdcSinkProcessStatistics(Tag, Name, Database.NotificationCenter);
-        DocumentProcessor = new CdcSinkDocumentProcessor(configuration) { Logger = Logger };
+        DocumentProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema) { Logger = Logger };
     }
 
     protected CancellationToken CancellationToken => _cts.Token;
@@ -292,7 +292,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         using (context.OpenWriteTransaction())
         {
             // Build the same combined patch request used in production.
-            var docProcessor = new CdcSinkDocumentProcessor(testScript.Configuration);
+            var docProcessor = new CdcSinkDocumentProcessor(testScript.Configuration, defaultSchema: "");
             var patchRequest = docProcessor.CombinedPatchRequest
                 ?? throw new InvalidOperationException("The table has no patch script configured.");
 
@@ -570,6 +570,8 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     /// "dbo" for SQL Server, database name for MySQL).
     /// </summary>
     protected abstract string GetDefaultSchema();
+
+    public string DefaultSchema => GetDefaultSchema();
 
     /// <summary>
     /// Opens a database connection for the initial load phase. Called once before all tables

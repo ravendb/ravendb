@@ -2,6 +2,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -1577,7 +1578,9 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
                 ?? throw new InvalidOperationException(
                     $"Cannot replay CDC Sink batch: configuration '{ConfigurationName}' was not found. " +
                     "It may have been deleted since the batch was originally executed.");
-            var docProcessor = new CdcSinkDocumentProcessor(config);
+            var process = database.CdcSinkLoader.Processes.FirstOrDefault(p => string.Equals(p.Name, ConfigurationName, StringComparison.OrdinalIgnoreCase));
+            var defaultSchema = process?.DefaultSchema ?? "";
+            var docProcessor = new CdcSinkDocumentProcessor(config, defaultSchema);
 
             var ops = new List<CdcSinkDocumentOp>(Ops.Count);
             for (int i = 0; i < Ops.Count; i++)

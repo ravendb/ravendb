@@ -27,21 +27,23 @@ public class CdcSinkDocumentProcessor
     /// </summary>
     public PatchRequest CombinedPatchRequest { get; }
 
-    public CdcSinkDocumentProcessor(CdcSinkConfiguration config)
+    public CdcSinkDocumentProcessor(CdcSinkConfiguration config, string defaultSchema = "")
     {
         _config = config;
         _tableIndex = new Dictionary<(string, string), CdcSinkTableProcessor>(TableKeyComparer.Instance);
 
         foreach (var table in config.Tables)
         {
+            var schema = table.SourceTableSchema ?? defaultSchema;
+
             // Register the root table
-            var rootKey = MakeKey(table.SourceTableSchema, table.SourceTableName);
+            var rootKey = MakeKey(schema, table.SourceTableName);
             var rootPropertyLookup = BuildPropertyLookup(table.Columns);
             var rootProcessor = new CdcSinkTableProcessor
             {
                 Key = rootKey,
                 KeyOnDelete = rootKey + "__on_delete",
-                Schema = table.SourceTableSchema ?? "",
+                Schema = schema,
                 Table = table.SourceTableName,
                 RootConfig = table,
                 CollectionName = table.CollectionName,
@@ -53,12 +55,12 @@ public class CdcSinkDocumentProcessor
                 LinkedTables = table.LinkedTables,
             };
 
-            _tableIndex[(table.SourceTableSchema ?? "", table.SourceTableName)] = rootProcessor;
+            _tableIndex[(schema, table.SourceTableName)] = rootProcessor;
 
             // Register all embedded tables recursively
             if (table.EmbeddedTables != null)
             {
-                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, rootPropertyLookup, new List<EmbeddedPathSegment>());
+                RegisterEmbeddedTables(table, table.EmbeddedTables, table.PrimaryKeyColumns, rootPropertyLookup, new List<EmbeddedPathSegment>(), defaultSchema);
             }
         }
 
@@ -147,7 +149,8 @@ public class CdcSinkDocumentProcessor
         List<CdcSinkEmbeddedTableConfig> embeddedTables,
         List<string> parentPkColumns,
         Dictionary<string, string> parentPropertyLookup,
-        List<EmbeddedPathSegment> currentPath)
+        List<EmbeddedPathSegment> currentPath,
+        string defaultSchema)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -202,13 +205,14 @@ public class CdcSinkDocumentProcessor
             //   This requires that ALL descendant tables carry the root's FK (company_id) as a denormalized column.
             var rootJoinColumns = path[0].Config.JoinColumns;
 
-            var key = MakeKey(embedded.SourceTableSchema, embedded.SourceTableName);
+            var embeddedSchema = embedded.SourceTableSchema ?? defaultSchema;
+            var key = MakeKey(embeddedSchema, embedded.SourceTableName);
             var embeddedPropertyLookup = BuildPropertyLookup(embedded.Columns);
             var processor = new CdcSinkTableProcessor
             {
                 Key = key,
                 KeyOnDelete = key + "__on_delete",
-                Schema = embedded.SourceTableSchema ?? "",
+                Schema = embeddedSchema,
                 Table = embedded.SourceTableName,
                 RootConfig = rootConfig,
                 CollectionName = rootConfig.CollectionName,
@@ -223,12 +227,12 @@ public class CdcSinkDocumentProcessor
                 LinkedTables = embedded.LinkedTables,
             };
 
-            _tableIndex[(embedded.SourceTableSchema ?? "", embedded.SourceTableName)] = processor;
+            _tableIndex[(embeddedSchema, embedded.SourceTableName)] = processor;
 
             // Recurse for deep nesting
             if (embedded.EmbeddedTables != null && embedded.EmbeddedTables.Count > 0)
             {
-                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, embeddedPropertyLookup, path);
+                RegisterEmbeddedTables(rootConfig, embedded.EmbeddedTables, embedded.PrimaryKeyColumns, embeddedPropertyLookup, path, defaultSchema);
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Data.Common;
 using System.Buffers;
@@ -54,19 +55,38 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private string _slotName;
     private uint _vectorOid = uint.MaxValue; // pgvector extension OID, resolved at setup time. MaxValue = not installed.
 
-    // Cache resolved type categories + processor per RelationMessage.
-    // Column types are fixed per relation in the replication stream.
-    private sealed class RelationInfo
-    {
-        public required PostgresTypeCategory[] TypeCategories { get; init; }
-        public required CdcSinkTableProcessor Processor { get; init; }
-    }
+    /// <summary>
+    /// Lightweight per-relation state: type categories for value decoding and the processor
+    /// for column mapping. Keyed by the real (un-sentinel'd) RelationId.
+    /// Rebuilt when Npgsql calls Populate() on the RelationMessage (schema change).
+    /// </summary>
+    private readonly Dictionary<uint, (PostgresTypeCategory[] Types, CdcSinkTableProcessor Processor)> _relationProcessors = new();
 
-    private readonly Dictionary<string, RelationInfo> _relationCache = new();
+    /// <summary>
+    /// Schema change detection via RelationId sentinel bit.
+    ///
+    /// Npgsql reuses the same RelationMessage object per table and calls Populate() to update
+    /// it in-place only when PostgreSQL sends a new Relation message (schema change or first
+    /// encounter). We exploit this:
+    ///
+    /// After processing a RelationMessage, we flip the high bit of RelationId via reflection.
+    /// On subsequent rows, if the high bit is set, the schema hasn't changed (fast path).
+    /// If Populate() was called (schema change), it overwrites RelationId with the real value
+    /// (high bit clear) — we detect this and rebuild the column mapping.
+    ///
+    /// Cost: one bitwise AND per row on the hot path. Rebuild only on actual schema changes.
+    /// </summary>
+    private const uint RelationIdSentinelBit = 0x80000000;
+    private static readonly FieldInfo RelationIdBackingField =
+        typeof(RelationMessage).GetField("<RelationId>k__BackingField", BindingFlags.NonPublic | BindingFlags.Instance)
+        ?? throw new InvalidOperationException(
+            "Cannot find RelationMessage.RelationId backing field. " +
+            "This may indicate an incompatible Npgsql version.");
+
     private System.Text.StringBuilder _reusableSb;
 
     public PostgresCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
-        : base(configuration, database)
+        : base(configuration, database, "public")
     {
         _connectionString = configuration.Connection.ConnectionString;
 
@@ -99,6 +119,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     {
         // in case of error, we'll re-learn the schema (it may have changed).
         _columnTypesCache.Clear();
+        _relationProcessors.Clear();
         await EnsureReplicationSetup(ct);
         await EnsureReplicaIdentityForEmbeddedTables(ct);
         await HandleInitialLoad(ct);
@@ -501,13 +522,17 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private async Task<CdcSinkDocumentOp> DecodeRow(
         RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext, CancellationToken ct = default)
     {
-        var relationKey = $"{relation.Namespace}.{relation.RelationName}";
+        var relationId = relation.RelationId;
 
-        if (_relationCache.TryGetValue(relationKey, out var relationInfo) == false)
+        if ((relationId & RelationIdSentinelBit) == 0)
         {
+            // RelationId doesn't have our sentinel bit — either first time seeing this relation,
+            // or Npgsql called Populate() because PostgreSQL sent a new RelationMessage (schema change).
+            // (Re)build the column mapping from the current RelationMessage contents.
+            var realId = relationId;
+
             var typeCategories = BuildTypeCategoriesFromRelation(relation);
 
-            // Set source column names from the RelationMessage (sent before first row for each relation)
             var columnNames = new string[relation.Columns.Count];
             for (int i = 0; i < relation.Columns.Count; i++)
                 columnNames[i] = relation.Columns[i].ColumnName;
@@ -515,25 +540,28 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             var processor = DocumentProcessor.GetProcessor(relation.Namespace, relation.RelationName);
             processor.SetSourceColumnNames(columnNames);
 
-            relationInfo = new RelationInfo
-            {
-                TypeCategories = typeCategories,
-                Processor = processor,
-            };
-            _relationCache[relationKey] = relationInfo;
+            _relationProcessors[realId] = (typeCategories, processor);
+
+            // Set the sentinel bit via reflection so subsequent rows skip this rebuild.
+            // Npgsql's Populate() will overwrite RelationId with the real value on schema change,
+            // clearing our sentinel and triggering a rebuild on the next row.
+            RelationIdBackingField.SetValue(relation, realId | RelationIdSentinelBit);
         }
 
-        var values = relationInfo.Processor.RentValues();
+        var (types, proc) = _relationProcessors[relationId & ~RelationIdSentinelBit];
+
+        var values = proc.RentValues();
         int columnIndex = 0;
+        var relationKey = $"{relation.Namespace}.{relation.RelationName}";
 
         await foreach (var item in row)
         {
             var value = item.IsDBNull ? null : await item.Get(ct);
-            values[columnIndex] = ConvertPostgresValue(relationInfo.TypeCategories[columnIndex], value, relationKey, item.GetFieldName());
+            values[columnIndex] = ConvertPostgresValue(types[columnIndex], value, relationKey, item.GetFieldName());
             columnIndex++;
         }
 
-        return DocumentProcessor.ProcessRow(relationInfo.Processor, operation, values, jsonParsingContext);
+        return DocumentProcessor.ProcessRow(proc, operation, values, jsonParsingContext);
     }
 
     /// <summary>
