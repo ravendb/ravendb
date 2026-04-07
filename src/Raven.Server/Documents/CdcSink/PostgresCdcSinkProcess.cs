@@ -50,6 +50,8 @@ namespace Raven.Server.Documents.CdcSink;
 public class PostgresCdcSinkProcess : CdcSinkProcess
 {
     private readonly string _connectionString;
+    private readonly string _replicationConnectionString;
+    private readonly TimeSpan _replicationTimeout;
     private readonly NpgsqlDataSource _dataSource;
     private string _publicationName;
     private string _slotName;
@@ -89,6 +91,14 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         : base(configuration, database, "public")
     {
         _connectionString = configuration.Connection.ConnectionString;
+        _replicationTimeout = Database.Configuration.CdcSink.PostgresReplicationTimeout.AsTimeSpan;
+
+        var csb = new NpgsqlConnectionStringBuilder(_connectionString);
+        var walSenderMs = (int)_replicationTimeout.TotalMilliseconds;
+        csb.Options = string.IsNullOrEmpty(csb.Options)
+            ? $"-c wal_sender_timeout={walSenderMs}"
+            : $"{csb.Options} -c wal_sender_timeout={walSenderMs}";
+        _replicationConnectionString = csb.ToString();
 
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(_connectionString);
         dataSourceBuilder.UseVector();
@@ -443,7 +453,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await VerifyNoGapsInLsn(ct);
 
         _rowsSinceLastAck = 0;
-        await using var conn = new LogicalReplicationConnection(_connectionString);
+        await using var conn = new LogicalReplicationConnection(_replicationConnectionString);
+        conn.WalReceiverTimeout = _replicationTimeout;
         await conn.Open(ct);
         _replicationConn = conn;
 
@@ -644,9 +655,11 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     /// do NOT surface as messages in the replication stream. LastActivityTime only updates
     /// on actual data messages (Insert, Update, Delete, Commit, Relation, etc.).
     ///
-    /// If the connection dies, Npgsql's WalReceiverTimeout (default 60s) will throw an
-    /// exception, which triggers fallback mode. Therefore:
-    ///   - FallbackTime set → connection is dead, Npgsql detected it
+    /// If the connection dies, WalReceiverTimeout (configured via CdcSink.Postgres.ReplicationTimeoutInSec)
+    /// will throw an exception, which triggers fallback mode. The server-side
+    /// wal_sender_timeout is set to match, so keepalives arrive at roughly half that interval.
+    /// Therefore:
+    ///   - FallbackTime set → connection is dead, detected within ReplicationTimeout
     ///   - FallbackTime null + stale LastActivityTime → source is idle, connection is alive
     ///     (Npgsql would have thrown otherwise)
     ///
@@ -666,8 +679,8 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
 
         // For PostgreSQL, if we're not in fallback mode, the connection is alive —
-        // Npgsql's WalReceiverTimeout (60s) would have thrown and put us in fallback
-        // if the server stopped responding. Stale LastActivityTime just means no data changes.
+        // WalReceiverTimeout would have thrown and put us in fallback if the server
+        // stopped responding. Stale LastActivityTime just means no data changes.
         return true;
     }
 

@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Server.Config;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -168,7 +169,11 @@ namespace SlowTests.Server.Documents.CdcSink
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ConnectionFailure_RecoversAfterReplicationConnectionKilled()
         {
-            using var store = GetDocumentStore();
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDatabaseRecord = record =>
+                    record.Settings[RavenConfiguration.GetKey(x => x.CdcSink.PostgresReplicationTimeout)] = "5"
+            });
             using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
 
             ExecuteNpgSql(connectionString, @"
@@ -186,14 +191,28 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
-            // Kill the replication connection by terminating the WAL sender backend
+            // Kill the replication connection by terminating the WAL sender backend.
+            // Retry in a loop because under heavy load the slot's active_pid may briefly
+            // be NULL (between a reconnect cycle), causing pg_terminate_backend to be a no-op.
             var errorTask = await WaitForNextProcessError(store, "test-conn-failure");
 
-            ExecuteNpgSql(connectionString,
-                $"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = '{config.Postgres.SlotName}' AND active_pid IS NOT NULL");
+            var killed = false;
+            for (int attempt = 0; attempt < 10 && killed == false; attempt++)
+            {
+                if (attempt > 0)
+                    await Task.Delay(1_000);
 
-            // pg_terminate_backend sends TCP RST — Npgsql detects it on the next read
-            await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
+                using var killConn = new NpgsqlConnection(connectionString);
+                await killConn.OpenAsync();
+                await using var cmd = new NpgsqlCommand(
+                    $"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = '{config.Postgres.SlotName}' AND active_pid IS NOT NULL", killConn);
+                await using var reader = await cmd.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                    killed = reader.GetBoolean(0);
+            }
+
+            Assert.True(killed, "Failed to terminate the WAL sender backend after 10 attempts");
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(30));
 
             // Insert a new row while the process is recovering
             ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Kill')");
