@@ -42,7 +42,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
     private enum MySqlColumnCategory { Other, Text, Decimal, Json }
 
-    private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category);
+    private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category, string DataType);
 
     /// <summary>
     /// Cached table metadata resolved from INFORMATION_SCHEMA during startup.
@@ -54,19 +54,94 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     {
         public required ColumnInfo[] Columns { get; init; }
         public required CdcSinkTableProcessor Processor { get; init; }
+
         /// <summary>
-        /// Column type codes from the first TableMapEvent for this table.
-        /// Used to detect schema changes (column reorders, type changes) mid-stream.
+        /// Expected binlog type bytes for column positions 0..RequiredPrefixLength-1,
+        /// computed from INFORMATION_SCHEMA DATA_TYPE at resolve time. Used for prefix
+        /// comparison on each TableMapEvent to detect schema changes.
         /// </summary>
-        public byte[] BinlogColumnTypes { get; set; }
+        public required byte[] ExpectedTypesPrefix { get; init; }
+
+        /// <summary>
+        /// The TableId from the last TableMapEvent that matched our expected schema.
+        /// Set to -1 when no valid table has been seen yet (startup, or replaying old events).
+        /// When a new TableMapEvent has a different TableId and the prefix matches, we update this.
+        /// When it doesn't match: if ValidTableId == -1 we skip (old events), if != -1 we throw (live change).
+        /// </summary>
+        public long ValidTableId { get; set; } = -1;
+    }
+
+    /// <summary>
+    /// Maps MySQL INFORMATION_SCHEMA.DATA_TYPE strings to binlog ColumnType byte values.
+    /// These are the type codes that appear in TableMapEvent.ColumnTypes.
+    /// </summary>
+    private static readonly Dictionary<string, byte> MySqlDataTypeToBinlogType = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Integer types
+        ["tinyint"]    = 1,   // MYSQL_TYPE_TINY
+        ["smallint"]   = 2,   // MYSQL_TYPE_SHORT
+        ["mediumint"]  = 9,   // MYSQL_TYPE_INT24
+        ["int"]        = 3,   // MYSQL_TYPE_LONG
+        ["integer"]    = 3,   // alias for int
+        ["bigint"]     = 8,   // MYSQL_TYPE_LONGLONG
+
+        // Floating point
+        ["float"]      = 4,   // MYSQL_TYPE_FLOAT
+        ["double"]     = 5,   // MYSQL_TYPE_DOUBLE
+        ["decimal"]    = 246, // MYSQL_TYPE_NEWDECIMAL
+        ["numeric"]    = 246, // alias for decimal
+
+        // String types
+        ["char"]       = 254, // MYSQL_TYPE_STRING
+        ["varchar"]    = 15,  // MYSQL_TYPE_VARCHAR
+        ["tinytext"]   = 252, // MYSQL_TYPE_BLOB (text types share BLOB type code)
+        ["text"]       = 252, // MYSQL_TYPE_BLOB
+        ["mediumtext"] = 252, // MYSQL_TYPE_BLOB
+        ["longtext"]   = 252, // MYSQL_TYPE_BLOB
+        ["tinyblob"]   = 252, // MYSQL_TYPE_BLOB
+        ["blob"]       = 252, // MYSQL_TYPE_BLOB
+        ["mediumblob"] = 252, // MYSQL_TYPE_BLOB
+        ["longblob"]   = 252, // MYSQL_TYPE_BLOB
+        ["binary"]     = 254, // MYSQL_TYPE_STRING
+        ["varbinary"]  = 15,  // MYSQL_TYPE_VARCHAR
+
+        // Date/time types
+        ["date"]       = 14,  // MYSQL_TYPE_NEWDATE
+        ["time"]       = 19,  // MYSQL_TYPE_TIME2
+        ["datetime"]   = 18,  // MYSQL_TYPE_DATETIME2
+        ["timestamp"]  = 17,  // MYSQL_TYPE_TIMESTAMP2
+        ["year"]       = 13,  // MYSQL_TYPE_YEAR
+
+        // Other types
+        ["bit"]        = 16,  // MYSQL_TYPE_BIT
+        ["enum"]       = 254, // MYSQL_TYPE_STRING (encoded as string)
+        ["set"]        = 254, // MYSQL_TYPE_STRING (encoded as string)
+        ["json"]       = 245, // MYSQL_TYPE_JSON
+        ["geometry"]   = 255, // MYSQL_TYPE_GEOMETRY
+    };
+
+    internal static byte MapDataTypeToBinlogType(string dataType)
+    {
+        if (MySqlDataTypeToBinlogType.TryGetValue(dataType, out var binlogType))
+            return binlogType;
+
+        // Unknown types are not fatal — we just can't do prefix comparison for this position.
+        // Use 0 as a wildcard that won't match anything, forcing a restart if it matters.
+        return 0;
     }
 
     private readonly Dictionary<(string Schema, string Table), TableInfo> _resolvedTables = new(TableKeyComparer.Instance);
 
     public MySqlCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
-        : base(configuration, database)
+        : base(configuration, database, GetDefaultSchemaFromConnectionString(configuration.Connection.ConnectionString))
     {
         _connectionString = configuration.Connection.ConnectionString;
+    }
+
+    private static string GetDefaultSchemaFromConnectionString(string connectionString)
+    {
+        var builder = new MySqlConnectionStringBuilder(connectionString);
+        return builder.Database ?? "mysql";
     }
 
     protected override async Task RunInternalAsync(CancellationToken ct)
@@ -211,7 +286,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         or "char" or "varchar" or "enum" or "set" => MySqlColumnCategory.Text,
                     _ => MySqlColumnCategory.Other,
                 };
-                columns.Add(new ColumnInfo(colName, category));
+                columns.Add(new ColumnInfo(colName, category, dataType));
             }
 
             var columnsArray = columns.ToArray();
@@ -223,11 +298,20 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var processor = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
             processor.SetSourceColumnNames(columnNames);
 
+            // Build the expected type prefix covering all mapped column positions.
+            // RequiredPrefixLength is computed by SetSourceColumnNames — it's the max
+            // ordinal of any column we actually read (PK, mapped, join, attachment) + 1.
+            var requiredLen = processor.RequiredPrefixLength;
+            var expectedPrefix = new byte[requiredLen];
+            for (int i = 0; i < requiredLen && i < columnsArray.Length; i++)
+                expectedPrefix[i] = MapDataTypeToBinlogType(columnsArray[i].DataType);
+
             var tableKey = (tableInfo.Schema, tableInfo.TableName);
             _resolvedTables[tableKey] = new TableInfo
             {
                 Columns = columnsArray,
                 Processor = processor,
+                ExpectedTypesPrefix = expectedPrefix,
             };
         }
     }
@@ -264,11 +348,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return true;
     }
 
-    protected override string GetDefaultSchema()
-    {
-        var builder = new MySqlConnectionStringBuilder(_connectionString);
-        return builder.Database ?? "mysql";
-    }
+    protected override string GetDefaultSchema() => GetDefaultSchemaFromConnectionString(_connectionString);
 
     protected override async Task<DbConnection> OpenInitialLoadConnection(CancellationToken ct)
     {
@@ -374,29 +454,65 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         if (string.Equals(tableMap.DatabaseName, defaultSchema, StringComparison.OrdinalIgnoreCase)
                             && _resolvedTables.TryGetValue((tableMap.DatabaseName, tableMap.TableName), out var info))
                         {
-                            if (info.BinlogColumnTypes == null)
+                            // Schema change detection via TableId tracking + prefix comparison.
+                            //
+                            // MySQL assigns a new TableId on every ALTER TABLE. We compare the
+                            // binlog column types prefix (covering only mapped positions) against
+                            // our baseline from INFORMATION_SCHEMA.
+                            //
+                            // ValidTableId == -1: haven't seen a matching schema yet (startup/replay).
+                            //   Mismatches are expected (old events) → skip.
+                            // ValidTableId != -1: had a valid schema, TableId changed → live change.
+                            //   If prefix still matches → accept new TableId.
+                            //   If prefix doesn't match → throw (structural change in mapped region).
+
+                            if (tableMap.TableId == info.ValidTableId)
                             {
-                                // First TableMapEvent for this table — store the column types
-                                // for future schema change detection.
-                                if (tableMap.ColumnTypes.Length != info.Columns.Length)
-                                {
+                                // Same TableId as before — no schema change. Fast path.
+                                tableMapCache[tableMap.TableId] = info;
+                                break;
+                            }
+
+                            var expectedPrefix = info.ExpectedTypesPrefix;
+                            var binlogTypes = tableMap.ColumnTypes;
+
+                            if (binlogTypes.Length < expectedPrefix.Length)
+                            {
+                                // Not enough columns to cover mapped positions.
+                                if (info.ValidTableId != -1)
                                     throw new InvalidOperationException(
-                                        $"Column count mismatch for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
-                                        $"expected {info.Columns.Length} columns but binlog reports {tableMap.ColumnTypes.Length}. " +
-                                        "The table schema may have changed. The process will retry with updated column metadata.");
-                                }
-                                info.BinlogColumnTypes = [.. tableMap.ColumnTypes];
+                                        $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
+                                        $"binlog event has {binlogTypes.Length} columns but mapped columns require at least {expectedPrefix.Length}. " +
+                                        "The process will restart and re-resolve the schema.");
+
+                                // No valid table seen yet — skip old-schema events
+                                tableMapCache.Remove(tableMap.TableId);
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"[{Name}] Skipping old-schema TableMapEvent for {tableMap.DatabaseName}.{tableMap.TableName} " +
+                                        $"({binlogTypes.Length} columns, need {expectedPrefix.Length}). Waiting for current-schema events.");
+                                break;
                             }
-                            else if (info.BinlogColumnTypes.AsSpan().SequenceEqual(tableMap.ColumnTypes) == false)
+
+                            if (expectedPrefix.AsSpan().SequenceEqual(binlogTypes.AsSpan(0, expectedPrefix.Length)))
                             {
-                                // Schema changed mid-stream: column count, types, or order differ.
-                                // Force a restart to re-learn the schema.
-                                throw new InvalidOperationException(
-                                    $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
-                                    $"binlog column types no longer match the cached metadata. " +
-                                    "The process will retry with updated column metadata.");
+                                // Prefix matches — all mapped positions are type-stable. Accept.
+                                info.ValidTableId = tableMap.TableId;
+                                tableMapCache[tableMap.TableId] = info;
                             }
-                            tableMapCache[tableMap.TableId] = info;
+                            else
+                            {
+                                if (info.ValidTableId != -1)
+                                    throw new InvalidOperationException(
+                                        $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
+                                        $"column types changed in mapped region (positions 0..{expectedPrefix.Length - 1}). " +
+                                        "The process will restart and re-resolve the schema.");
+
+                                // No valid table seen yet — skip old-schema events
+                                tableMapCache.Remove(tableMap.TableId);
+                                if (Logger.IsInfoEnabled)
+                                    Logger.Info($"[{Name}] Skipping old-schema TableMapEvent for {tableMap.DatabaseName}.{tableMap.TableName} " +
+                                        "(column type prefix mismatch). Waiting for current-schema events.");
+                            }
                         }
                         break;
 
