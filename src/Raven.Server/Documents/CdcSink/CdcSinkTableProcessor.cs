@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Amqp;
 using Raven.Client.Documents.Operations.CdcSink;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -173,7 +174,7 @@ public class CdcSinkTableProcessor
 
     public void SetSourceColumnNames(string[] names)
     {
-        if (SourceColumnNames != null && SourceColumnNames.Length != names.Length)
+        if (SourceColumnNames?.Length != names.Length)
             _valuesPool.Clear();
 
         SourceColumnNames = names;
@@ -222,23 +223,25 @@ public class CdcSinkTableProcessor
         // Compute RequiredPrefixLength — the minimum number of leading column positions
         // that must be present in binlog events for all mapped columns to be safely decoded.
         // Used by MySQL CDC for prefix comparison of TableMapEvent column types.
-        int maxOrdinal = -1;
-        foreach (var idx in PrimaryKeyIndices)
-            if (idx > maxOrdinal) maxOrdinal = idx;
-        foreach (var idx in ColumnMappingIndices)
-            if (idx > maxOrdinal) maxOrdinal = idx;
-        if (AttachmentColumnIndices != null)
-            foreach (var idx in AttachmentColumnIndices)
-                if (idx > maxOrdinal) maxOrdinal = idx;
-        if (RootJoinIndices != null)
-            foreach (var idx in RootJoinIndices)
-                if (idx > maxOrdinal) maxOrdinal = idx;
-        if (LinkedTableJoinIndices != null)
-            foreach (var arr in LinkedTableJoinIndices)
+
+        var maxLinkedIdx = ComputeMaxOrdinal(LinkedTableJoinIndices);
+        var maxColIdx = ComputeMaxOrdinal(PrimaryKeyIndices, ColumnMappingIndices, AttachmentColumnIndices, RootJoinIndices);
+        RequiredPrefixLength = Math.Max(maxLinkedIdx, maxColIdx) + 1;
+
+        static int ComputeMaxOrdinal(params ReadOnlySpan<int[]> arrays)
+        {
+            int max = -1;
+            foreach (var arr in arrays)
+            {
+                if (arr == null)
+                    continue;
                 foreach (var idx in arr)
-                    if (idx > maxOrdinal) maxOrdinal = idx;
-        RequiredPrefixLength = maxOrdinal + 1;
+                    if (idx > max) max = idx;
+            }
+            return max;
+        }
     }
+
 
     internal static int FindColumnIndex(string[] names, string columnName)
     {
