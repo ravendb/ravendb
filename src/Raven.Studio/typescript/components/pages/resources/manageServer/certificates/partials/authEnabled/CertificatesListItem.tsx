@@ -10,7 +10,6 @@ import {
     RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
-    RichPanelNameMultiLine,
 } from "components/common/RichPanel";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
@@ -51,12 +50,13 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const state = certificatesUtils.getState(certificate.NotAfter, certificate.Disabled);
+    const state = certificatesUtils.getState(certificate);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
     const isServerCertForCommunication = certificate.Thumbprints.includes(serverCertificateForCommunicationThumbprint);
     const isCurrentBrowserCert = certificate.Thumbprints.includes(clientCertificateThumbprint);
     const has2fa = certificate.HasTwoFactor ?? false;
+    const certDisplayName = certificate.Name ?? "<empty name>";
 
     const isDisabled = certificate.Disabled ?? false;
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
@@ -116,7 +116,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const handleToggleDisable = async () => {
         const isConfirmed = await confirm({
-            icon: isDisabled ? "unlock" : "disable",
+            icon: isDisabled ? "play" : "stop",
             title: isDisabled ? "Do you want to enable this certificate?" : "Do you want to disable this certificate?",
             message: (
                 <span>
@@ -125,7 +125,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                     Thumbprint: <code>{certificate.Thumbprint}</code>
                 </span>
             ),
-            actionColor: isDisabled ? "primary" : "warning",
+            actionColor: isDisabled ? "success" : "warning",
             confirmText: isDisabled ? "Enable certificate" : "Disable certificate",
         });
 
@@ -165,19 +165,19 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
             <CertificatesItemStatus state={state} />
             <div className="flex-grow">
                 <RichPanelHeader>
-                    <div>
-                        <RichPanelNameMultiLine className="d-flex align-items-center">
-                            {certificate.Name ?? "<empty name>"}
+                    <div className="flex-grow">
+                        <div className="d-flex align-items-center justify-content-start flex-wrap w-100">
+                            <span className="fs-4 text-truncate" title={certDisplayName} style={{ maxWidth: "400px" }}>
+                                {certDisplayName}
+                            </span>
                             {state === "About to expire" && (
                                 <Badge
                                     bg="warning"
-                                    className="ms-1 fs-6 hstack"
+                                    className="ms-1 fs-6"
                                     pill
                                     title="This certificate is about to expire"
-                                    style={{ gap: "2px" }}
                                 >
-                                    <Icon icon="clock" margin="m-0" />
-                                    About to expire
+                                    <Icon icon="clock" margin="m-0" /> About to expire
                                 </Badge>
                             )}
                             {isCurrentBrowserCert && (
@@ -190,11 +190,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     Current browser
                                 </Badge>
                             )}
-                            {isDisabled && (
-                                <Badge bg="danger" className="ms-1 fs-6" pill title="This certificate is disabled">
-                                    Disabled
-                                </Badge>
-                            )}
                             {has2fa && (
                                 <Badge
                                     bg="2fa"
@@ -205,7 +200,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     2FA
                                 </Badge>
                             )}
-                        </RichPanelNameMultiLine>
+                        </div>
                         {certificate.Thumbprints.join(", ")}
                         <Button
                             variant="link"
@@ -244,7 +239,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                 title={isDisabled ? "Enable certificate" : "Disable certificate"}
                                 variant={isDisabled ? "success" : "warning"}
                                 onClick={handleToggleDisable}
-                                icon={isDisabled ? "unlock" : "lock"}
+                                icon={isDisabled ? "play" : "stop"}
                                 isSpinning={asyncToggleDisable.loading}
                             />
                         )}

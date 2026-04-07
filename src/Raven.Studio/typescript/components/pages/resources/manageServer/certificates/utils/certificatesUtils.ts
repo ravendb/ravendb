@@ -37,12 +37,12 @@ function getClearance(
     }
 }
 
-function getState(notAfter: string, disabled?: boolean): CertificatesState {
-    if (disabled) {
+function getState(cert: CertificateItem): CertificatesState {
+    if (cert.Disabled) {
         return "Disabled";
     }
 
-    const expirationDate = moment.utc(notAfter);
+    const expirationDate = moment.utc(cert.NotAfter);
     const nowPlusExpirationThreshold = moment
         .utc()
         .add(serverSettings.default.certificateExpiringThresholdInDays(), "days");
@@ -58,11 +58,11 @@ function getState(notAfter: string, disabled?: boolean): CertificatesState {
 
 function getStateDateColor(state: CertificatesState): ThemeColor {
     switch (state) {
-        case "Disabled":
         case "Expired":
             return "danger";
         case "About to expire":
             return "warning";
+        case "Disabled":
         case "Valid":
             return null;
         default:
@@ -73,6 +73,7 @@ function getStateDateColor(state: CertificatesState): ThemeColor {
 function getStateColor(state: CertificatesState): ThemeColor {
     switch (state) {
         case "Disabled":
+            return "warning";
         case "Expired":
             return "danger";
         case "About to expire":

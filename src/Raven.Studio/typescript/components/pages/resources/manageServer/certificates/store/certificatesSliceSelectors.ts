@@ -41,8 +41,8 @@ const selectStateFilterOptions = createSelector(
             expiredCount = 0,
             disabledCount = 0;
 
-        certificates.forEach(({ NotAfter, Disabled }) => {
-            const state = certificatesUtils.getState(NotAfter, Disabled);
+        certificates.forEach((cert) => {
+            const state = certificatesUtils.getState(cert);
 
             if (state === "Valid") {
                 validCount++;
@@ -98,7 +98,7 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
-            const state = certificatesUtils.getState(cert.NotAfter, cert.Disabled);
+            const state = certificatesUtils.getState(cert);
             if (stateFilter.includes("Valid") && (state === "Valid" || state === "About to expire")) {
                 return true;
             }

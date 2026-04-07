@@ -613,7 +613,7 @@ export class ManageServerStubs {
                     HasTwoFactor: false,
                 },
                 {
-                    Name: "About to expire cert",
+                    Name: "About to expire certAbout to expire certAbout to expire certAbout to expire certAbout to expire certAbout to expire certAbout to expire certAbout to expire cert",
                     Thumbprint: "05576326B5A2EC2CC59B4CDBFE51243ADC56187B",
                     SecurityClearance: "ValidUser",
                     Permissions: {
@@ -646,6 +646,23 @@ export class ManageServerStubs {
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: "tYDktnF7XEos5gOGMC4t4eBi5MDSAHDpFqX1rV9oLCE=",
                     HasTwoFactor: false,
+                },
+                {
+                    Name: "Disabled cert",
+                    Thumbprint: "7C19B1CD3171F10C55A7CC58E4E993D8524332B2",
+                    SecurityClearance: "Operator",
+                    Permissions: {},
+                    NotAfter: moment()
+                        .add(-5 as const, "days")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-20 as const, "days")
+                        .format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: "uYDktnF7XEos5gOGMC4t4eBi5MDSAHDpFqX1rV9oLCE=",
+                    HasTwoFactor: false,
+                    Disabled: true,
                 },
                 {
                     Name: "Server Certificate for communication A",
