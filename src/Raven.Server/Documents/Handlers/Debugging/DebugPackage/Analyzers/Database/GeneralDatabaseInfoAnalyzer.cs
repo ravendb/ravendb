@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Database;
@@ -43,6 +44,17 @@ public class GeneralDatabaseInfoAnalyzer(
             {
                 AddWarning($"Could not retrieve database statistics for '{DatabaseName}' database. Skipping it.");
                 return false;
+            }
+
+            if (stats.PhysicalSizeOnDisk is null && stats.AllocatedSizeOnDisk is null)
+            {
+                // old format of stats - no distinction between allocated and actual size on disk
+
+                if (databaseEntries.TryGetValue<StatsHandler, LegacyDatabaseStatistics>(x => x.Stats(), out var oldStats))
+                {
+                    stats.PhysicalSizeOnDisk = oldStats.SizeOnDisk;
+                    stats.AllocatedSizeOnDisk = oldStats.SizeOnDisk;
+                }
             }
         }
         catch (Exception e)
@@ -119,5 +131,10 @@ public class GeneralDatabaseInfoAnalyzer(
                     IssueCategory.Database));
             }
         }
+    }
+
+    private class LegacyDatabaseStatistics : DatabaseStatistics
+    {
+        public Size SizeOnDisk { get; set; }
     }
 }
