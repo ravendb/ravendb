@@ -64,12 +64,18 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
         /// <summary>
         /// The TableId from the last TableMapEvent that matched our expected schema.
-        /// Set to -1 when no valid table has been seen yet (startup, or replaying old events).
-        /// When a new TableMapEvent has a different TableId and the prefix matches, we update this.
-        /// When it doesn't match: if ValidTableId == -1 we skip (old events), if != -1 we throw (live change).
+        /// <see cref="TableIdReplayingOldEvents"/>: replaying from an old GTID, skip mismatches (old-schema events expected).
+        /// <see cref="TableIdExpectCurrentSchema"/>: checkpoint is recent, throw on mismatch (schema changed since we started).
+        /// Any other value: cached real TableId from the last matching TableMapEvent.
         /// </summary>
-        public long ValidTableId { get; set; } = -1;
+        public long ValidTableId { get; set; } = TableIdReplayingOldEvents;
     }
+
+    /// <summary>No valid schema seen yet — replaying from old GTID, skip mismatched TableMapEvents.</summary>
+    private const long TableIdReplayingOldEvents = -1;
+
+    /// <summary>Checkpoint is at a recent position — any TableMapEvent mismatch is a real schema change, throw.</summary>
+    private const long TableIdExpectCurrentSchema = -2;
 
     /// <summary>
     /// Maps MySQL INFORMATION_SCHEMA.DATA_TYPE strings to binlog ColumnType byte values.
@@ -150,6 +156,14 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         await EnsureBinlogConfiguration(ct);
         await ResolveColumnNames(ct);
         await HandleInitialLoad(ct);
+
+        // After initial load, the checkpoint is at a recent GTID position.
+        // Mark all tables as expecting the current schema (-2) so that
+        // TableMapEvent mismatches throw immediately instead of being
+        // silently skipped. 
+        foreach (var table in _resolvedTables.Values)
+            table.ValidTableId = TableIdExpectCurrentSchema;
+
         _initialLoadTcs.TrySetResult();
         await ProcessCdcStream(ct);
     }
@@ -459,11 +473,8 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                             // binlog column types prefix (covering only mapped positions) against
                             // our baseline from INFORMATION_SCHEMA.
                             //
-                            // ValidTableId == -1: haven't seen a matching schema yet (startup/replay).
-                            //   Mismatches are expected (old events) → skip.
-                            // ValidTableId != -1: had a valid schema, TableId changed → live change.
-                            //   If prefix still matches → accept new TableId.
-                            //   If prefix doesn't match → throw (structural change in mapped region).
+                            // TableIdReplayingOldEvents (-1): replaying from old GTID, skip mismatches.
+                            // TableIdExpectCurrentSchema (-2) or real TableId: throw on mismatch.
 
                             if (tableMap.TableId == info.ValidTableId)
                             {
@@ -478,7 +489,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                             if (binlogTypes.Length < expectedPrefix.Length)
                             {
                                 // Not enough columns to cover mapped positions.
-                                if (info.ValidTableId != -1)
+                                if (info.ValidTableId != TableIdReplayingOldEvents)
                                     throw new InvalidOperationException(
                                         $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
                                         $"binlog event has {binlogTypes.Length} columns but mapped columns require at least {expectedPrefix.Length}. " +
@@ -500,7 +511,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                             }
                             else
                             {
-                                if (info.ValidTableId != -1)
+                                if (info.ValidTableId != TableIdReplayingOldEvents)
                                     throw new InvalidOperationException(
                                         $"Schema change detected for table {tableMap.DatabaseName}.{tableMap.TableName}: " +
                                         $"column types changed in mapped region (positions 0..{expectedPrefix.Length - 1}). " +
