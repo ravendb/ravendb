@@ -786,6 +786,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             BackupResult.TimeSeries.Processed = true;
             BackupResult.TimeSeries.ReadCount = databaseSummary.TimeSeriesSegmentsCount;
+            BackupResult.TimeSeriesDeletedRanges.Processed = true;
+            BackupResult.TimeSeriesDeletedRanges.ReadCount = databaseSummary.TimeSeriesDeletedRangesCount;
         }
 
         protected void AddInfo(string message)

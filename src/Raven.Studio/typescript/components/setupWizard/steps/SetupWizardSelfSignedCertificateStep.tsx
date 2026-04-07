@@ -100,7 +100,7 @@ export function SetupWizardSelfSignedCertificateStep() {
         <div>
             <h2 className="mb-1">Use self-signed certificate</h2>
             <p className="mb-4 text-muted">
-                For the highest security and control, you can use your own certificate once obtained.
+                For the highest level of security and control, you can use your own certificate once it is obtained.
             </p>
             <FormGroup>
                 <Controller
@@ -144,8 +144,9 @@ export function SetupWizardSelfSignedCertificateStep() {
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Enter the passphrase used to encrypt your private key. This is required to unlock and use your certificate."
-                                    docsLink="https://docs.ravendb.net/studio/server/certificates/server-management-certificates-view"
+                                    description="Enter the passphrase used to encrypt your private key. 
+                                        This passphrase is required to unlock and use your certificate."
+                                    ravenLinkHash="VBORN2"
                                 />
                             }
                         >
@@ -170,7 +171,7 @@ export function SetupWizardSelfSignedCertificateStep() {
                             message={
                                 <SetupWizardInfoPopover
                                     description="The common name (CN) of the certificate. This is the name that will be displayed in the browser when you access the server."
-                                    docsLink="https://docs.ravendb.net/studio/server/certificates/server-management-certificates-view"
+                                    ravenLinkHash="VBORN2"
                                 />
                             }
                         >

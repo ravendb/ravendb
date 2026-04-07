@@ -36,14 +36,12 @@ namespace StressTests.Issues
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    for (var i = 0; i < count; i++)
                     {
-                        for (var i = 0; i < count; i++)
-                        {
-                            var key = context.GetLazyString($"orders/{i}");
-                            if (filter.Add(key))
-                                added++;
-                        }
+                        var key = context.GetLazyString($"orders/{i}");
+                        if (filter.Add(key))
+                            added++;
                     }
                 }
 
@@ -73,14 +71,12 @@ namespace StressTests.Issues
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    for (var i = 0; i < count; i++)
                     {
-                        for (var i = 0; i < count; i++)
-                        {
-                            var key = context.GetLazyString($"orders/{i:D19}-A");
-                            if (filter.Add(key))
-                                added++;
-                        }
+                        var key = context.GetLazyString($"orders/{i:D19}-A");
+                        if (filter.Add(key))
+                            added++;
                     }
                 }
 
@@ -110,14 +106,12 @@ namespace StressTests.Issues
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    for (var i = 0; i < count; i++)
                     {
-                        for (var i = 0; i < count; i++)
-                        {
-                            var key = context.GetLazyString(Guid.NewGuid().ToString());
-                            if (filter.Add(key))
-                                added++;
-                        }
+                        var key = context.GetLazyString(Guid.NewGuid().ToString());
+                        if (filter.Add(key))
+                            added++;
                     }
                 }
 
@@ -133,50 +127,40 @@ namespace StressTests.Issues
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
-                    }
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
 
                     tx.Commit();
                 }
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
-                    }
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
 
                     tx.Commit();
                 }
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
-                    }
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(BloomFilterVersion.CurrentVersion, filter.Version);
                 }
 
                 SetVersion(context, BloomFilterVersion.BaseVersion);
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(BloomFilterVersion.BaseVersion, filter.Version);
-                    }
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(BloomFilterVersion.BaseVersion, filter.Version);
                 }
 
                 SetVersion(context, version: null);
 
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(BloomFilterVersion.BaseVersion, filter.Version);
-                    }
+                    var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(BloomFilterVersion.BaseVersion, filter.Version);
                 }
             }
         }
@@ -197,10 +181,8 @@ namespace StressTests.Issues
 
             using (var tx = context.OpenWriteTransaction())
             {
-                using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                {
-                    Assert.Equal(version ?? BloomFilterVersion.BaseVersion, filter.Version);
-                }
+                var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                Assert.Equal(version ?? BloomFilterVersion.BaseVersion, filter.Version);
 
                 tx.Commit();
             }
@@ -210,9 +192,7 @@ namespace StressTests.Issues
         {
             using (var tx = context.OpenWriteTransaction())
             {
-                using (var filter = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                {
-                }
+                CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
 
                 tx.Commit();
             }

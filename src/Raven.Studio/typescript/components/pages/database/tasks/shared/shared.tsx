@@ -20,7 +20,6 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
-import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 import { InputItem } from "components/models/common";
 import {
     ongoingTasksReducer,
@@ -32,6 +31,7 @@ import { useAppUrls } from "hooks/useAppUrls";
 import { CounterBadge } from "components/common/CounterBadge";
 import IconName from "../../../../../../typings/server/icons";
 import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
+import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -394,11 +394,13 @@ interface OngoingTasksCategory {
 
 export function useNewOngoingTasks() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
-    const isSharded = db.isSharded;
     const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
 
     const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
-    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+
+    const license = useAppSelector(licenseSelectors.licenseInfo);
+    const isProfessionalOrAbove = license.isAtLeast("Professional");
+
     const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
     const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
     const hasReplicationSink = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
@@ -412,6 +414,7 @@ export function useNewOngoingTasks() {
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
     const subscriptionsDatabaseLimit = useAppSelector(
         licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
@@ -431,7 +434,11 @@ export function useNewOngoingTasks() {
         !isProfessionalOrAbove &&
         (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
 
-    const getSubscriptionDisableReason = (): string => {
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState<string>("");
+    const { forCurrentDatabase } = useAppUrls();
+
+    const getSubscriptionLimitReason = () => {
         if (!isSubscriptionDisabled) {
             return null;
         }
@@ -440,12 +447,6 @@ export function useNewOngoingTasks() {
 
         return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
     };
-
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [searchText, setSearchText] = useState<string>("");
-    const { forCurrentDatabase } = useAppUrls();
-
-    const disableReasonForShardedDb = isSharded ? "Not supported in sharded databases" : null;
 
     const ongoingTasks: OngoingTasksCategory[] = [
         {
@@ -462,30 +463,32 @@ export function useNewOngoingTasks() {
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasExternalReplication,
                     link: forCurrentDatabase.editExternalReplicationTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Replication Hub",
                     description:
                         "Replicate documents to and/or from multiple Replication Sink tasks in other RavenDB databases across different clusters.",
-                    disableReason: disableReasonForShardedDb,
                     iconName: "pull-replication-hub",
                     variant: "Replication",
                     licenseBadge: "Enterprise",
                     target: "ReplicationHub",
                     showLicenseBadge: !hasReplicationHub,
                     link: forCurrentDatabase.editReplicationHubTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Replication Sink",
                     description:
                         "Connect to a central Replication Hub in another RavenDB cluster to receive documents, and optionally replicate back.",
                     iconName: "pull-replication-agent",
-                    disableReason: disableReasonForShardedDb,
                     variant: "Replication",
                     target: "ReplicationSink",
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasReplicationSink,
                     link: forCurrentDatabase.editReplicationSinkTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -502,6 +505,8 @@ export function useNewOngoingTasks() {
                     showLicenseBadge: !hasPeriodicBackups,
                     target: "PeriodicBackup",
                     link: forCurrentDatabase.editPeriodicBackupTask("OngoingTasks", false)(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -511,12 +516,14 @@ export function useNewOngoingTasks() {
             tasks: [
                 {
                     title: "Subscription",
-                    disableReason: getSubscriptionDisableReason(),
                     description: "Send batches of documents that match a pre-defined query to a client for processing.",
                     iconName: "subscriptions",
                     variant: "Subscriptions",
                     target: "Subscription",
                     link: forCurrentDatabase.editSubscriptionTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseReadWrite",
+                    customDisabledReason: getSubscriptionLimitReason(),
                     counterBadge: isProfessionalOrAbove ? null : (
                         <CounterBadge
                             count={tasks.subscriptions.length}
@@ -541,6 +548,8 @@ export function useNewOngoingTasks() {
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasRavenDbEtl,
                     link: forCurrentDatabase.editRavenEtlTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Elasticsearch ETL",
@@ -552,6 +561,8 @@ export function useNewOngoingTasks() {
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasElasticSearchEtl,
                     link: forCurrentDatabase.editElasticSearchEtlTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Kafka ETL",
@@ -559,10 +570,10 @@ export function useNewOngoingTasks() {
                     iconName: "kafka-etl",
                     variant: "ETL",
                     target: "KafkaETL",
-                    disableReason: disableReasonForShardedDb,
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasKafkaEtl,
                     link: forCurrentDatabase.editKafkaEtlTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "SQL ETL",
@@ -574,6 +585,8 @@ export function useNewOngoingTasks() {
                     licenseBadge: "Professional +",
                     showLicenseBadge: !hasSqlEtl,
                     link: forCurrentDatabase.editSqlEtlTaskUrl(),
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "OLAP ETL",
@@ -585,6 +598,8 @@ export function useNewOngoingTasks() {
                     link: forCurrentDatabase.editOlapEtlTaskUrl(),
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasOlapEtl,
+                    isShardingSupported: true,
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "RabbitMQ ETL",
@@ -593,10 +608,10 @@ export function useNewOngoingTasks() {
                     iconName: "rabbitmq-etl",
                     variant: "ETL",
                     target: "RabbitMqETL",
-                    disableReason: disableReasonForShardedDb,
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasRabbitMqEtl,
                     link: forCurrentDatabase.editRabbitMqEtlTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "Azure Queue Storage ETL",
@@ -605,10 +620,10 @@ export function useNewOngoingTasks() {
                     iconName: "azure-queue-storage-etl",
                     variant: "ETL",
                     target: "AzureQueueStorageETL",
-                    disableReason: disableReasonForShardedDb,
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasAzureQueueStorageEtl,
                     link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
@@ -624,9 +639,9 @@ export function useNewOngoingTasks() {
                     variant: "Sink",
                     target: "KafkaSink",
                     licenseBadge: "Enterprise",
-                    disableReason: disableReasonForShardedDb,
                     showLicenseBadge: !hasKafkaSink,
                     link: forCurrentDatabase.editKafkaSinkTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
                 {
                     title: "RabbitMQ Sink",
@@ -636,51 +651,27 @@ export function useNewOngoingTasks() {
                     target: "RabbitMqSink",
                     variant: "Sink",
                     licenseBadge: "Enterprise",
-                    disableReason: disableReasonForShardedDb,
                     showLicenseBadge: !hasRabbitMqSink,
                     link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
                 },
             ],
         },
     ];
 
     function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
-        return ongoingTasks.find((x) => x.categoryName === category)?.tasks.length ?? 0;
+        const categoryTasks = ongoingTasks.find((x) => x.categoryName === category)?.tasks ?? [];
+        return categoryTasks.length;
     }
 
     const filteredTasks = ongoingTasks
-        .filter((category) => {
-            const categoryName = category.categoryName.toLowerCase();
-            const categoryMatches =
-                selectedCategories.length === 0 ||
-                selectedCategories.some((selected) => selected.toLowerCase() === categoryName);
-
-            if (!searchText || !categoryMatches) {
-                return categoryMatches;
-            }
-
-            const matchingTasks = category.tasks.filter(
-                (task) =>
-                    task.title.toLowerCase().includes(searchText.trim().toLowerCase()) ||
-                    task.description.toLowerCase().includes(searchText.trim().toLowerCase())
-            );
-
-            return matchingTasks.length > 0;
-        })
-        .map((category) => {
-            if (!searchText) {
-                return category;
-            }
-
-            return {
-                ...category,
-                tasks: category.tasks.filter(
-                    (task) =>
-                        task.title.toLowerCase().includes(searchText.trim().toLowerCase()) ||
-                        task.description.toLowerCase().includes(searchText.trim().toLowerCase())
-                ),
-            };
-        });
+        .map((category) => ({
+            ...category,
+            tasks: category.tasks.filter((task) => matchesSearchText(task, searchText)),
+        }))
+        .filter(
+            (category) => isCategorySelected(category.categoryName, selectedCategories) && category.tasks.length > 0
+        );
 
     const categoryList: InputItem[] = [
         { value: "Replication", label: "Replication", count: getCategoryCount("Replication") },
@@ -699,3 +690,21 @@ export function useNewOngoingTasks() {
         setSelectedCategories,
     };
 }
+
+const matchesSearchText = (task: TaskItemProps, searchText: string) => {
+    if (!searchText) {
+        return true;
+    }
+
+    const searchLower = searchText.trim().toLowerCase();
+    return task.title.toLowerCase().includes(searchLower) || task.description.toLowerCase().includes(searchLower);
+};
+
+const isCategorySelected = (categoryName: string, selectedCategories: string[]) => {
+    if (selectedCategories.length === 0) {
+        return true;
+    }
+
+    const categoryLower = categoryName.toLowerCase();
+    return selectedCategories.some((selected) => selected.toLowerCase() === categoryLower);
+};

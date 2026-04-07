@@ -33,6 +33,7 @@ import { setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizard
 import { setupWizardFormDefaultValues } from "components/setupWizard/utils/setupWizardFormDefaultValues";
 import classNames from "classnames";
 import LicenseType = Raven.Server.Commercial.LicenseType;
+import License = Raven.Server.Commercial.License;
 
 function scrollSetupWizardToTop() {
     const container = document.querySelector<HTMLElement>(".setup-wizard-main");
@@ -62,7 +63,7 @@ function NoLicenseToGenerate() {
     return (
         <div>
             <h2 className="mb-1">Enter license key</h2>
-            <p className="mb-4 text-muted">You can either use your existing key or generate a free license.</p>
+            <p className="mb-4 text-muted">Enter your existing license key or generate a free one.</p>
 
             <FormGroup>
                 <FormLabel>Your key</FormLabel>
@@ -172,12 +173,12 @@ function LicenseKeyBadge() {
     const { control } = useFormContext<SetupWizardFormData>();
 
     const {
-        licenseKeyStep: { licenseInfo, isLoadingKey, isInvalidKey },
+        licenseKeyStep: { licenseInfo, licenseStatus },
     } = useWatch({ control });
 
-    if (isLoadingKey) {
+    if (licenseStatus === "loading") {
         return (
-            <LazyLoad active={isLoadingKey}>
+            <LazyLoad active>
                 <Badge bg="secondary" pill className="position-absolute bottom-0 end-0 mb-3 me-3" style={{ zIndex: 5 }}>
                     Loading...
                 </Badge>
@@ -185,7 +186,7 @@ function LicenseKeyBadge() {
         );
     }
 
-    if (isInvalidKey) {
+    if (licenseStatus === "invalid") {
         return (
             <PopoverWithHoverWrapper
                 wrapperClassName="position-absolute bottom-0 end-0 mb-3 me-3"
@@ -200,7 +201,22 @@ function LicenseKeyBadge() {
         );
     }
 
-    if (licenseInfo == null || licenseInfo.licenseType == null) {
+    if (licenseStatus === "connection-error") {
+        return (
+            <PopoverWithHoverWrapper
+                wrapperClassName="position-absolute bottom-0 end-0 mb-3 me-3"
+                targetStyle={{ zIndex: 5 }}
+                message="Cannot connect to the license server. Please try again later."
+            >
+                <Badge bg="danger" pill>
+                    Connection error
+                    <Icon icon="warning" margin="ms-2" />
+                </Badge>
+            </PopoverWithHoverWrapper>
+        );
+    }
+
+    if (licenseStatus !== "valid" || licenseInfo == null || licenseInfo.licenseType == null) {
         return null;
     }
 
@@ -260,7 +276,7 @@ function GenerateDeveloper() {
                 <br />
                 <Icon icon="check" color="developer" /> Enterprise-level set of features
                 <br />
-                <Icon icon="check" color="developer" /> Max of 5 nodes in cluster, 9 CPU cores, and 36 GB RAM
+                <Icon icon="check" color="developer" /> Max of 3 nodes in cluster, 9 CPU cores, and 36 GB RAM
             </p>
             <SeeAllPlansButton />
             <GenerateLicenseFields />
@@ -393,6 +409,9 @@ function SkipLicenseVerificationConfirmModal(props: { close: () => void }) {
 
     const handleConfirm = () => {
         reportEvent(setupWizardGA4Prefixes.licenseKeyStep, "skip-verification", "confirmed");
+        setValue("licenseKeyStep.key", null);
+        setValue("licenseKeyStep.licenseStatus", null);
+        setValue("licenseKeyStep.licenseInfo", null);
         setValue("currentStep", "Security");
     };
 
@@ -661,7 +680,7 @@ export function SetupWizardLicenseKeyStepFooter() {
 
     const { licenseKeyStep } = useWatch({ control });
 
-    const { key, licenseTypeToGenerate, isInvalidKey } = licenseKeyStep;
+    const { key, licenseTypeToGenerate, licenseStatus } = licenseKeyStep;
 
     const toDto = (licenseStepData: SetupWizardFormData["licenseKeyStep"]): SendFreeLicenseVerificationRequest => {
         if (!licenseStepData) {
@@ -685,24 +704,26 @@ export function SetupWizardLicenseKeyStepFooter() {
     };
     const asyncRegistrationInfo = useAsyncDebounce(
         async () => {
-            setValue("licenseKeyStep.isLoadingKey", true);
-            setValue("licenseKeyStep.isInvalidKey", false);
+            setValue("licenseKeyStep.licenseStatus", "loading");
             setValue("licenseKeyStep.licenseInfo", null);
 
-            if (key == null) {
-                setValue("licenseKeyStep.isLoadingKey", false);
+            if (!key) {
+                setValue("licenseKeyStep.licenseStatus", null);
                 return;
             }
 
-            if (!key) {
-                setValue("licenseKeyStep.isLoadingKey", false);
+            let parsedKey: License = null;
+
+            try {
+                parsedKey = JSON.parse(key);
+                await licenseKeySchema.validate(parsedKey);
+            } catch {
+                reportEvent(setupWizardGA4Prefixes.licenseKeyStep, "key-parse", "invalid");
+                setValue("licenseKeyStep.licenseStatus", "invalid");
                 return;
             }
 
             try {
-                const parsedKey = JSON.parse(key);
-                await licenseKeySchema.validate(parsedKey);
-
                 const info = await setupWizardService.registrationInfo(parsedKey);
 
                 reportEvent(setupWizardGA4Prefixes.licenseKeyStep, "key-parse", "valid");
@@ -721,11 +742,18 @@ export function SetupWizardLicenseKeyStepFooter() {
                         shouldDirty: true,
                     }
                 );
-                setValue("licenseKeyStep.isLoadingKey", false);
+                setValue("licenseKeyStep.licenseStatus", "valid");
             } catch (err) {
-                reportEvent(setupWizardGA4Prefixes.licenseKeyStep, "key-parse", "invalid");
-                setValue("licenseKeyStep.isInvalidKey", true);
-                setValue("licenseKeyStep.isLoadingKey", false);
+                const message: string = (err as JQueryXHR)?.responseJSON?.Message;
+                const isConnError = message?.includes("Failed to contact");
+
+                reportEvent(
+                    setupWizardGA4Prefixes.licenseKeyStep,
+                    "key-parse",
+                    isConnError ? "connection-error" : "invalid"
+                );
+
+                setValue("licenseKeyStep.licenseStatus", isConnError ? "connection-error" : "invalid");
                 setValue("licenseKeyStep.licenseInfo", null);
             }
         },
@@ -781,7 +809,7 @@ export function SetupWizardLicenseKeyStepFooter() {
     };
 
     const handleContinue = async () => {
-        if (key) {
+        if (key && licenseStatus === "valid") {
             reportEvent(setupWizardGA4Prefixes.licenseKeyStep, "continue", "with-key");
             setValue("currentStep", "Security");
         } else {
@@ -808,13 +836,13 @@ export function SetupWizardLicenseKeyStepFooter() {
                 </Button>
             ) : (
                 <ButtonWithSpinner
-                    disabled={isInvalidKey}
                     variant="primary"
                     className="rounded-pill"
                     onClick={handleContinue}
                     isSpinning={asyncRegistrationInfo.loading}
                 >
-                    Continue <Icon icon="arrow-right" margin="m-s1" />
+                    {key && licenseStatus === "valid" ? "Continue" : "Skip license"}
+                    <Icon icon="arrow-right" margin="ms-1" />
                 </ButtonWithSpinner>
             )}
             {isLicenseSkipModalOpen && <SkipLicenseVerificationConfirmModal close={toggleIsLicenseSkipModalOpen} />}

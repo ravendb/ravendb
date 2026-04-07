@@ -38,6 +38,12 @@ namespace Sparrow.Json
             }
         }
 
+        public bool ShouldFlushAsync
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _innerStream.Length * 2 > _innerStream.Capacity;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {

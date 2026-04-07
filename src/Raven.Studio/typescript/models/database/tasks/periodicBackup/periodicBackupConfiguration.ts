@@ -34,7 +34,7 @@ class periodicBackupConfiguration extends backupConfiguration {
                 encryptedDatabase: boolean,
                 isServerWide: boolean) {
         
-        super(databaseName, dto, serverLimits, encryptedDatabase, isServerWide);
+        super(databaseName, dto, serverLimits, encryptedDatabase, "PeriodicBackup", isServerWide);
        
         this.disabled(dto.Disabled);
         this.name(dto.Name);

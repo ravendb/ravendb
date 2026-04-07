@@ -1182,7 +1182,22 @@ function execute(doc, args){
                 {
                     var visitor = new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText);
                     visitor.HandleSpatial("spatial.distance", me.Arguments, withoutAlias: true, parameters);
-                    fieldName = new QueryFieldName(firstArgME.GetText(null), true);
+                    
+                    var stringFieldName = $"{firstArgME.Name}({string.Join(", ", firstArgME.Arguments.Select(GetParameterForDistance))})";
+                    
+                    fieldName = new QueryFieldName(stringFieldName, true);
+
+                    string GetParameterForDistance(QueryExpression argument)
+                    {
+                        if (argument is FieldExpression fe)
+                        {
+                            return ShouldStripAlias(fe) 
+                                ? fe.GetText(null) 
+                                : fe.GetTextWithAlias(null);
+                        }
+                        
+                        return argument.GetText(null);
+                    }
                 }
                 else
                 {

@@ -67,7 +67,12 @@ namespace SlowTests.Issues
 
                 Assert.Equal(IndexState.Error, indexStats.State);
 
-                Assert.Equal(numberOfReferencedDocuments, indexStats.MapAttempts);
+                Assert.Equal(numberOfReferencedDocuments, WaitForValue(() =>
+                {
+                    indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return indexStats.MapAttempts;
+                }, numberOfReferencedDocuments));
+
                 Assert.Equal(0, indexStats.MapSuccesses);
                 Assert.Equal(numberOfReferencedDocuments, indexStats.MapErrors);
 

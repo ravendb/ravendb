@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -380,5 +381,46 @@ namespace SlowTests.Server.Documents.ETL
             Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsSecretKey"));
             Assert.False(s3SettingsAuditJson.Properties.Select(x => x.Name).Contains("AwsAccessKey"));
     }
+
+        [RavenFact(RavenTestCategory.Etl)]
+        public void CannotRemoveQueueConnectionStringUsedByQueueSinkTask()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var queueConnectionString = new QueueConnectionString
+                {
+                    Name = "QueueConnectionString-Kafka",
+                    BrokerType = QueueBrokerType.Kafka,
+                    KafkaConnectionSettings = new KafkaConnectionSettings { BootstrapServers = "localhost:9092" }
+                };
+
+                var putResult = store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(queueConnectionString));
+                Assert.NotNull(putResult.RaftCommandIndex);
+
+                var queueSinkScript = new QueueSinkScript
+                {
+                    Name = "TestScript",
+                    Queues = new List<string> { "test-queue" },
+                    Script = @"put(this.Id.toString(), this)"
+                };
+
+                var queueSinkConfig = new QueueSinkConfiguration
+                {
+                    Name = "TestQueueSink",
+                    ConnectionStringName = queueConnectionString.Name,
+                    BrokerType = QueueBrokerType.Kafka,
+                    Scripts = { queueSinkScript }
+                };
+
+                var addResult = store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(queueSinkConfig));
+                Assert.NotNull(addResult.RaftCommandIndex);
+
+                // Attempt to remove the connection string should fail
+                var exception = Assert.Throws<RavenException>(() =>
+                    store.Maintenance.Send(new RemoveConnectionStringOperation<QueueConnectionString>(queueConnectionString)));
+
+                Assert.Contains($"Can't delete connection string: {queueConnectionString.Name}. It is used by task: {queueSinkConfig.Name}", exception.Message);
+            }
+        }
 }
 }

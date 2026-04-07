@@ -47,10 +47,10 @@ View its status using:
 
 * Setup
 Open browser, if not opened automatically, at url printed in "Server available on: <url>"
-Follow the web setup instructions at: https://ravendb.net/docs/article-page/6.2/csharp/start/installation/setup-wizard
+Follow the web setup instructions at: https://docs.ravendb.net/6.2/start/installation/setup-wizard/overview
 
 * Upgrading to a New Version
-Follow the upgrade instructions available at: https://ravendb.net/docs/article-page/6.2/csharp/start/installation/upgrading-to-new-version
+Follow the upgrade instructions available at: https://docs.ravendb.net/6.2/start/installation/upgrading-to-new-version
 
 
 

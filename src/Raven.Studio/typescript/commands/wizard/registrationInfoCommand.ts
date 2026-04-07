@@ -19,7 +19,7 @@ class registrationInfoCommand extends commandBase {
             .done(result => task.resolve(result))
             .fail((response: JQueryXHR) => {
                 this.reportError("Failed to complete domain registration", response.responseText, response.statusText);
-                task.reject();
+                task.reject(response);
             });
         
         return task;

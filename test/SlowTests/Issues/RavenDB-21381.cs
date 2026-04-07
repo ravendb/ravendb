@@ -99,7 +99,7 @@ namespace SlowTests.Issues
 
             // Run AdoptOrphaned and assert that new 'Delete Revision' was created again for user1
             var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown);
-            await database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(null, token);
+            await database.DocumentsStorage.RevisionsStorage.AdoptOrphanedAsync(onProgress: null, new AdoptOrphanedRevisionsOperation.Parameters(), token);
             using (var session = store.OpenAsyncSession())
             {
                 var user1RevCount = await session.Advanced.Revisions.GetCountForAsync(user1.Id);

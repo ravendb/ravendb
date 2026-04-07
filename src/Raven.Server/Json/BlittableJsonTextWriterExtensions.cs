@@ -419,7 +419,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteSuggestionQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteSuggestionQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResult result, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -452,8 +452,11 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
 
-            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
-
+            var numberOfResultsTask = writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
+            var numberOfResults = numberOfResultsTask.IsCompletedSuccessfully 
+                ? numberOfResultsTask.Result 
+                : await numberOfResultsTask;
+            
             writer.WriteEndObject();
 
             return numberOfResults;
@@ -966,67 +969,63 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             var results = (object)result.Results;
+            ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> writeResultsAsync;
             if (results is List<Document> documents)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                var writeDocuments = writer.WriteDocumentsAsync(context, documents, metadataOnly, token);
-                (numberOfResults, totalDocumentsSizeInBytes) = writeDocuments.IsCompletedSuccessfully 
-                    ? writeDocuments.Result 
-                    : await writeDocuments;
-                writer.WriteComma();
+                writeResultsAsync = writer.WriteDocumentsAsync(context, documents, metadataOnly, token);
             }
             else if (results is List<BlittableJsonReaderObject> objects)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                var writeObjects = writer.WriteObjectsAsync(context, objects, token);
-                
-                (numberOfResults, totalDocumentsSizeInBytes) = writeObjects.IsCompletedSuccessfully 
-                    ? writeObjects.Result 
-                    : await writeObjects;
-                
-                writer.WriteComma();
+                writeResultsAsync = writer.WriteObjectsAsync(context, objects, token);
             }
             else if (results is List<FacetResult> facets)
             {
                 numberOfResults = facets.Count;
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
-                writer.WriteComma();
-                var maybeFlush = writer.MaybeFlushAsync(token);
-                if (maybeFlush.IsCompletedSuccessfully == false)    
-                    await maybeFlush;
+                writeResultsAsync = ValueTask.FromResult<(long NumberOfResults, long TotalDocumentsSizeInBytes)>((numberOfResults, totalDocumentsSizeInBytes));
             }
             else if (results is List<SuggestionResult> suggestions)
             {
                 numberOfResults = suggestions.Count;
                 writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
-                writer.WriteComma();
-                var maybeFlush = writer.MaybeFlushAsync(token);
-                if (maybeFlush.IsCompletedSuccessfully == false)    
-                    await maybeFlush;
+                writeResultsAsync = ValueTask.FromResult<(long NumberOfResults, long TotalDocumentsSizeInBytes)>((numberOfResults, totalDocumentsSizeInBytes));
             }
             else
                 throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
 
+            (numberOfResults, totalDocumentsSizeInBytes) = writeResultsAsync.IsCompletedSuccessfully 
+                ? writeResultsAsync.Result 
+                : await writeResultsAsync;
+            
+            if (writer.ShouldFlushAsync)
+                await writer.FlushAsync(token);
+            
+            writer.WriteComma();
+            
             var includes = (object)result.Includes;
+            ValueTask<(long Count, long SizeInBytes)> writeIncludesAsync;
             if (includes is List<Document> includeDocuments)
             {
                 writer.WritePropertyName(nameof(result.Includes));
-                var writeIncludes = writer.WriteIncludesAsync(context, includeDocuments, token);
-                if (writeIncludes.IsCompletedSuccessfully == false)    
-                    await writeIncludes;
-                writer.WriteComma();
+                writeIncludesAsync = writer.WriteIncludesAsync(context, includeDocuments, token);
             }
             else if (includes is List<BlittableJsonReaderObject> includeObjects)
             {
                 writer.WritePropertyName(nameof(result.Includes));
-                var writeIncludes = writer.WriteIncludesAsync(includeObjects, token);
-                if (writeIncludes.IsCompletedSuccessfully == false)    
-                    await writeIncludes;
-                writer.WriteComma();
+                writeIncludesAsync = writer.WriteIncludesAsync(includeObjects, token);
             }
             else
+            {
                 throw new NotSupportedException($"Cannot write query includes of '{includes.GetType()}' type in '{result.GetType()}'.");
+            }
 
+            // WriteIncludesAsync flushes internally.
+            if (writeIncludesAsync.IsCompletedSuccessfully == false)
+                await writeIncludesAsync;
+            writer.WriteComma();
+            
             writer.WritePropertyName(nameof(result.IndexTimestamp));
             writer.WriteString(result.IndexTimestamp.GetDefaultRavenFormat());
             writer.WriteComma();
@@ -1906,12 +1905,8 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
-        {
-            return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, token);
-        }
-
-        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync<TDocuments>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, TDocuments documents, bool metadataOnly, CancellationToken token)
+            where TDocuments : IEnumerable<Document>
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -1919,18 +1914,18 @@ namespace Raven.Server.Json
             writer.WriteStartArray();
 
             var first = true;
-            while (documents.MoveNext())
+            foreach (var currentDocument in documents)
             {
                 numberOfResults++;
 
-                if (documents.Current != null)
-                    totalDocumentsSizeInBytes += documents.Current.Data.Size;
+                if (currentDocument != null)
+                    totalDocumentsSizeInBytes += currentDocument.Data.Size;
 
                 if (first == false)
                     writer.WriteComma();
                 first = false;
 
-                WriteDocument(writer, context, documents.Current, metadataOnly);
+                WriteDocument(writer, context, currentDocument, metadataOnly);
                 var maybeFlushValueTask = writer.MaybeFlushAsync(token);
                 if (maybeFlushValueTask.IsCompletedSuccessfully == false)
                     await maybeFlushValueTask;
@@ -2122,7 +2117,7 @@ namespace Raven.Server.Json
                 using (o)
                 {
                     writer.WriteObject(o);
-
+                    
                     var maybeFlush = writer.MaybeFlushAsync(token);
                     var writtenBytes = maybeFlush.IsCompletedSuccessfully 
                         ? maybeFlush.Result 

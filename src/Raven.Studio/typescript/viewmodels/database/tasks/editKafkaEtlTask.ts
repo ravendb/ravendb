@@ -27,6 +27,7 @@ import prismjs = require("prismjs");
 import licenseModel = require("models/auth/licenseModel");
 import EditKafkaEtlInfoHub = require("viewmodels/database/tasks/EditKafkaEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class kafkaTaskTestMode {
     documentId = ko.observable<string>();
@@ -193,6 +194,8 @@ class editKafkaEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringKafkaModel>();
@@ -296,6 +299,14 @@ class editKafkaEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewKafkaEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        }); 
         
         this.newConnectionString(connectionStringKafkaModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.kafkaEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));

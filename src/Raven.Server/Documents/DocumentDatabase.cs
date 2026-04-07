@@ -70,6 +70,7 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
+using Jint;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents
@@ -79,6 +80,8 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
         private readonly Action<LogMode, string> _addToInitLog;
         private readonly Logger _logger;
+        public Logger Logger => _logger;
+
         private readonly DisposeOnce<SingleAttempt> _disposeOnce;
         internal TestingStuff ForTestingPurposes;
 
@@ -1311,7 +1314,8 @@ namespace Raven.Server.Documents
                     CompareExchangeCount = ServerStore.Cluster.GetNumberOfCompareExchange(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     CompareExchangeTombstonesCount = ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(transactionContext, DocumentsStorage.DocumentDatabase.Name),
                     IdentitiesCount = ServerStore.Cluster.GetNumberOfIdentities(transactionContext, DocumentsStorage.DocumentDatabase.Name),
-                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext)
+                    TimeSeriesSegmentsCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(documentsContext),
+                    TimeSeriesDeletedRangesCount = DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(documentsContext)
                 };
             }
         }
@@ -2205,12 +2209,19 @@ namespace Raven.Server.Documents
                 return new DisposableAction(() => ActionToCallDuringDocumentDatabaseInternalDispose = null);
             }
 
-            internal Action Subscription_ActionToCallDuringWaitForChangedDocuments;
+            internal Action<Engine> ActionToCallDuringScriptRunnerCreation;
+
+            public void CallDuringScriptRunnerCreation(Action<Engine> action)
+            {
+                ActionToCallDuringScriptRunnerCreation = action;
+            }
+
+            internal Func<Task, Task<bool>> Subscription_ActionToCallDuringWaitForChangedDocuments;
             internal Action<long> Subscription_ActionToCallAfterRegisterSubscriptionConnection;
             internal Action<ConcurrentSet<SubscriptionConnection>> ConcurrentSubscription_ActionToCallDuringWaitForSubscribe;
             internal Action Subscription_ActionToCallDuringWaitForAck;
 
-            internal IDisposable CallDuringWaitForChangedDocuments(Action action)
+            internal IDisposable CallDuringWaitForChangedDocuments(Func<Task, Task<bool>> action)
             {
                 Subscription_ActionToCallDuringWaitForChangedDocuments = action;
 

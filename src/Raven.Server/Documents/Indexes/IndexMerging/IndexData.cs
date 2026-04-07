@@ -37,6 +37,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public InvocationExpressionSyntax InvocationExpression { get; set; }
         public IndexDefinition Index => _index;
         public bool IsMapReduceOrMultiMap { get; set; }
+        public bool IsJavaScriptIndex { get; set; }
 
         public string BuildExpression(Dictionary<string, ExpressionSyntax> selectExpressions)
         {

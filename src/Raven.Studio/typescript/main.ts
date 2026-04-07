@@ -8,7 +8,6 @@ import { overrideSystem } from "./overrides/system";
 
 import "bootstrap/dist/js/bootstrap";
 import "jquery-fullscreen-plugin/jquery.fullscreen";
-import "bootstrap-select";
 
 import "bootstrap-multiselect";
 

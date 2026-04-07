@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Static;
@@ -16,7 +18,8 @@ namespace Raven.Server.Documents.Indexes
 {
     public abstract class MapIndexBase<T, TField> : Index<T, TField> where T : IndexDefinitionBaseServerSide<TField> where TField : IndexFieldBase
     {
-        private CollectionOfBloomFilters _filters;
+        private CollectionOfBloomFilters _filters = null;
+        private bool _consumed;
         private IndexingStatsScope _statsInstance;
         private readonly MapStats _stats = new MapStats();
 
@@ -35,14 +38,35 @@ namespace Raven.Server.Documents.Indexes
 
         public override IDisposable InitializeIndexingWork(TransactionOperationContext indexContext)
         {
+            if (SearchEngineType != SearchEngineType.Lucene)
+                return null;
+
+            if (_consumed)
+            {
+                Debug.Assert(_filters != null);
+                return null;
+            }
+
             var mode = DocumentDatabase.Is32Bits
                 ? CollectionOfBloomFilters.Mode.X86
                 : CollectionOfBloomFilters.Mode.X64;
 
-            if (_filters == null || _filters.Consumed == false)
-                _filters = CollectionOfBloomFilters.Load(mode, indexContext);
+            _filters = CollectionOfBloomFilters.Load(mode, indexContext);
+            if (_filters.Consumed)
+            {
+                _consumed = true;
+                return null;
+            }
 
-            return _filters;
+            return new DisposableAction(() =>
+            {
+                // If the filters are not consumed, they hold a reference to a Tree which holds 
+                // a reference to a LowLevelTransaction. We must release that reference when the 
+                // transaction ends to avoid keeping the LowLevelTransaction alive (e.g. when the 
+                // index is idle or disabled). We always reload _filters at the start of each transaction anyway.
+                // When consumed, the filters were created with tree: null, so no transaction reference is held.
+                _filters = null;
+            });
         }
 
         public override void HandleDelete(Tombstone tombstone, string collection, Lazy<IndexWriteOperationBase> writer, TransactionOperationContext indexContext, IndexingStatsScope stats)

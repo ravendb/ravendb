@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Runtime.CompilerServices;
 using Corax.Mappings;
 using Corax.Querying;
+using Corax.Querying.Matches;
 using Corax.Querying.Matches.Meta;
 using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
@@ -471,6 +472,39 @@ namespace Raven.Server.Documents.Queries.Facets
                     RangeType.Double or RangeType.Long => searcher.LowAggregationBuilder(metadata, HighValueAsDouble, highValueRange, forward),
                     _ => searcher.LowAggregationBuilder(metadata, HighValue, highValueRange, forward)
                 };
+            }
+
+            public MultiTermMatch GetQuery(IndexSearcher searcher, in FieldMetadata metadata, bool forward = true)
+            {
+                var type = IsNumerical ? RangeType.Double : RangeType.None;
+                var lowValueRange = RangeTypeToCoraxRange(_leftSide);
+                var highValueRange = RangeTypeToCoraxRange(_rightSide);
+
+                if (LowValue != null && HighValue != null)
+                {
+                    return type switch
+                    {
+                        RangeType.Double or RangeType.Long => searcher.BetweenQuery(metadata, LowValueAsDouble, HighValueAsDouble, lowValueRange, highValueRange, forward),
+                        _ => searcher.BetweenQuery(metadata, LowValue, HighValue, lowValueRange, highValueRange, forward)
+                    };
+                }
+
+                if (LowValue != null)
+                {
+                    if (type is RangeType.Double or RangeType.Long)
+                        return searcher.BetweenQuery(metadata, LowValueAsDouble, double.MaxValue, lowValueRange, UnaryMatchOperation.LessThanOrEqual, forward);
+
+                    return lowValueRange == UnaryMatchOperation.GreaterThan
+                        ? searcher.GreaterThanQuery(metadata, LowValue, forward)
+                        : searcher.GreatThanOrEqualsQuery(metadata, LowValue, forward);
+                }
+
+                if (type is RangeType.Double or RangeType.Long)
+                    return searcher.BetweenQuery(metadata, double.MinValue, HighValueAsDouble, UnaryMatchOperation.GreaterThanOrEqual, highValueRange, forward);
+
+                return highValueRange == UnaryMatchOperation.LessThan
+                    ? searcher.LessThanQuery(metadata, HighValue, forward)
+                    : searcher.LessThanOrEqualsQuery(metadata, HighValue, forward);
             }
 
             private UnaryMatchOperation RangeTypeToCoraxRange(Operation o) => o switch

@@ -1,131 +1,80 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
+using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.Util;
-using Raven.Server;
-using Raven.Server.Commercial;
-using Raven.Server.ServerWide.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace StressTests.Issues
 {
-    public class RavenDB_25471 : ReplicationTestBase
+    public class RavenDB_25471 : RavenTestBase
     {
         public RavenDB_25471(ITestOutputHelper output) : base(output)
         {
         }
 
         [RavenTheory(RavenTestCategory.BackupExportImport)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Backup })]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { BackupType.Snapshot })]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { BackupType.Backup })]
+        [RavenData(DatabaseMode = RavenDatabaseMode.All, Data = new object[] { BackupType.Snapshot })]
         public async Task DisableOlapOnRestoreWithoutLicense(Options options, BackupType backupType)
         {
             DoNotReuseServer();
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using var source = GetDocumentStore();
-            await DisableRevisionCompression(Server, source);
-            SetupLocalOlapEtl(source, script: @"
-var orderDate = new Date(this.OrderedAt);
-var year = orderDate.getFullYear();
-var month = orderDate.getMonth();
-var key = new Date(year, month);
-
-loadToOrders(partitionBy(key),
-    {
-        Company : this.Company,
-        ShipVia : this.ShipVia
-    });
-", path: NewDataPath());
-
-            var backupOperation = await source.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+            using (var store = GetDocumentStore())
             {
-                BackupType = backupType,
-                LocalSettings = new LocalSettings
+                await LicenseHelper.DisableRevisionCompression(Server, store);
+
+                await store.Maintenance.SendAsync(new PutConnectionStringOperation<OlapConnectionString>(new OlapConnectionString
                 {
-                    FolderPath = backupPath
-                }
-            }));
-            await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
-            await source.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(source.Database, hardDelete: true));
+                    Name = "olap-cs"
+                }));
 
-            await PutLicense(Server, LicenseTestBase.RL_COMM);
+                var olapEtlConfiguration = new OlapEtlConfiguration
+                {
+                    Name = "olap-test",
+                    ConnectionStringName = "olap-cs",
+                    Transforms = { new Transformation { Name = "loadAll", Collections = { "Users" }, Script = "loadToUsers(this)" } }
+                };
+                var operationResult = await store.Maintenance.SendAsync(new AddEtlOperation<OlapConnectionString>(olapEtlConfiguration));
 
-            using var store = GetDocumentStore();
+                var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+                {
+                    BackupType = BackupType.Snapshot,
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    }
+                }));
 
-            using var destination = new DocumentStore { Urls = new[] { Server.WebUrl }, Database = source.Database + "_Restore" }.Initialize();
+                await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+                olapEtlConfiguration.Disabled = true;
+                await store.Maintenance.SendAsync(new UpdateEtlOperation<OlapConnectionString>(operationResult.TaskId, olapEtlConfiguration));
 
-            using (Backup.RestoreDatabase(destination,
+                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_COMM);
+                var databaseName = $"restored_database-{Guid.NewGuid()}";
+
+                using (Backup.RestoreDatabase(store,
                        new RestoreBackupConfiguration
                        {
                            BackupLocation = Directory.GetDirectories(backupPath).First(),
-                           DatabaseName = destination.Database,
-                           DisableOngoingTasks = true // <<==
-                       })) // restore shouldnt throw
-            {
-                var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(destination.Database));
-                Assert.Equal(1, record.OlapEtls.Count);
-                foreach (var olap in record.OlapEtls)
+                           DatabaseName = databaseName,
+                           DisableOngoingTasks = true
+                       }))
                 {
-                    Assert.True(olap.Disabled);
+                    var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(databaseName));
+                    Assert.Equal(1, record.OlapEtls.Count);
+                    Assert.True(record.OlapEtls[0].Disabled);
                 }
             }
-        }
-
-        private void SetupLocalOlapEtl(DocumentStore store, string script, string path)
-        {
-            var connectionStringName = $"{store.Database} to local";
-            var configuration = new OlapEtlConfiguration
-            {
-                ConnectionStringName = connectionStringName,
-                RunFrequency = "* * * * *",
-                Transforms =
-            {
-                new Transformation
-                {
-                    Name = "MonthlyOrders",
-                    Collections = new List<string> {"Orders"},
-                    Script = script
-                }
-            }
-            };
-
-            var connectionString = new OlapConnectionString
-            {
-                Name = connectionStringName,
-                LocalSettings = new LocalSettings
-                {
-                    FolderPath = path
-                }
-            };
-
-            Etl.AddEtl(store, configuration, connectionString);
-        }
-
-        private static async Task PutLicense(RavenServer leader, string licenseType)
-        {
-            var license = Environment.GetEnvironmentVariable(licenseType);
-            Raven.Server.Commercial.LicenseHelper.TryDeserializeLicense(license, out License li);
-
-            await leader.ServerStore.PutLicenseAsync(li, RaftIdGenerator.NewId());
-        }
-
-        private static async Task DisableRevisionCompression(RavenServer leader, DocumentStore store)
-        {
-            var command = new EditDocumentsCompressionCommand(new DocumentsCompressionConfiguration { CompressRevisions = false, Collections = new string[] { } }, store.Database,
-                RaftIdGenerator.NewId());
-            await leader.ServerStore.SendToLeaderAsync(command);
         }
     }
 }

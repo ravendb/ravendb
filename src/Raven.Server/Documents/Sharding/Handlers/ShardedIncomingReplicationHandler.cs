@@ -50,7 +50,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _sourceShardedDatabaseId = replicatedLastEtag.ShardedDatabaseId;
                 _sourceShardedDatabaseName = ShardHelper.ToDatabaseName(replicatedLastEtag.SourceDatabaseName);
             }
+        }
 
+        internal void Initialize()
+        {
             foreach (var shardNumber in _parent.Context.ShardsTopology.Keys)
             {
                 var node = new ShardReplicationNode { ShardNumber = shardNumber, Database = ShardHelper.ToShardName(_parent.DatabaseName, shardNumber) };
@@ -58,7 +61,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
                 _lastSentEtagPerDestination.Add(shardNumber, 0L);
 
-                _handlers[shardNumber] = new ShardedOutgoingReplicationHandler(parent, node, info, replicatedLastEtag.SourceDatabaseId);
+                _handlers[shardNumber] = new ShardedOutgoingReplicationHandler(_parent, node, info, ConnectionInfo.SourceDatabaseId);
                 _handlers[shardNumber].Start();
             }
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -28,8 +28,6 @@ internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfigura
 
     protected override Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
     {
-        return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters.IncludeForceCreated, 
-            parameters.Collections?.ToHashSet(StringComparer.OrdinalIgnoreCase), token);
+        return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters, token);
     }
 }
-

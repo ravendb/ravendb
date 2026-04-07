@@ -14,7 +14,7 @@ class manualBackupConfiguration extends backupConfiguration {
                 serverLimits: periodicBackupServerLimitsResponse,
                 encryptedDatabase: boolean) {
 
-        super(databaseName, dto, serverLimits, encryptedDatabase);
+        super(databaseName, dto, serverLimits, encryptedDatabase, "ManualBackup");
 
         this.initObservables();
         this.initValidation();

@@ -26,6 +26,7 @@ import shardViewModelBase = require("viewmodels/shardViewModelBase");
 import licenseModel = require("models/auth/licenseModel");
 import EditRavenEtlInfoHub = require("viewmodels/database/tasks/EditRavenEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 type resultItem = {
     header: string;
@@ -202,6 +203,8 @@ class editRavenEtlTask extends shardViewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRavenEtlModel>();
@@ -295,6 +298,14 @@ class editRavenEtlTask extends shardViewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+        
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewRavenEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        });   
         
         this.newConnectionString(connectionStringRavenEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.ravenEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));

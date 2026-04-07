@@ -117,7 +117,10 @@ class exportDatabase extends shardViewModelBase {
 
     private setupDefaultExportFilename(): void {
         const date = moment().format("YYYY-MM-DD HH-mm");
-        const detailedDatabaseName = DatabaseUtils.default.formatNameForFile(this.db.name, this.location);
+
+        const detailedDatabaseName = DatabaseUtils.default.formatNameForFile(this.db.name, {
+            nodeTag: this.db.clusterNodeTag(),
+        });
         
         this.model.exportFileName(`Dump of ${detailedDatabaseName} ${date}`);
     }

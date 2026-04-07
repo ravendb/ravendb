@@ -20,7 +20,8 @@ class enforceRevisionsConfigurationCommand extends commandBase {
         
         const args:  Raven.Client.Documents.Operations.Revisions.EnforceRevisionsConfigurationOperation.Parameters = {
             IncludeForceCreated: this.includeForceCreated,
-            Collections: this.collections ?? undefined
+            Collections: this.collections ?? undefined,
+            ContinuationParameters: undefined
         };
 
         return this.post<void>(url, JSON.stringify(args), this.db)

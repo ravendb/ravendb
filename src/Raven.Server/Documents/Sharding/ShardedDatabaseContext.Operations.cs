@@ -12,6 +12,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Platform;
 
 namespace Raven.Server.Documents.Sharding;
@@ -49,6 +50,8 @@ public partial class ShardedDatabaseContext
 
             base.RaiseNotifications(change, operation);
         }
+
+        protected override Logger GetLogger() => _context._logger;
 
         public override Task<IOperationResult> AddLocalOperation(
             long id,

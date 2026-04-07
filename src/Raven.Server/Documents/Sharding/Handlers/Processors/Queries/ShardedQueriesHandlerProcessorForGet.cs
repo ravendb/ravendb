@@ -24,31 +24,36 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
 
-internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<ShardedQueriesHandler, TransactionOperationContext, TransactionOperationContext, BlittableJsonReaderObject>
+internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHandlerProcessorForGet<ShardedQueriesHandler, TransactionOperationContext, TransactionOperationContext, BlittableJsonReaderObject, QueryResultServerSide<BlittableJsonReaderObject>>
 {
+    private TransactionOperationContext _queryContext;
+    
     public ShardedQueriesHandlerProcessorForGet([NotNull] ShardedQueriesHandler requestHandler, HttpMethod method) : base(requestHandler, requestHandler.DatabaseContext.QueryMetadataCache, method)
     {
+        RegisterForDisposal(this);
+        Initialize();
     }
 
-    protected override IDisposable AllocateContextForQueryOperation(out TransactionOperationContext queryContext, out TransactionOperationContext context)
+    internal override void AllocateContextForQueryOperation(out TransactionOperationContext queryContext, out TransactionOperationContext context)
     {
-        var returnContext = ContextPool.AllocateOperationContext(out queryContext);
-
-        context = queryContext;
-
-        return returnContext;
+        if (_queryContext != null)
+            throw new InvalidOperationException("Context is already allocated.");
+        
+        var returnContext = ContextPool.AllocateOperationContext(out _queryContext);
+        context = _queryContext;
+        queryContext = _queryContext;
+        RegisterForDisposal(returnContext);
     }
 
-    protected override async ValueTask<IndexEntriesQueryResult> GetIndexEntriesAsync(TransactionOperationContext queryContext, TransactionOperationContext context, IndexQueryServerSide query, long? existingResultEtag,
-        bool ignoreLimit, OperationCancelToken token)
+    protected override async Task<IndexEntriesQueryResult> GetIndexEntriesAsync(IndexQueryServerSide query, long? existingResultEtag, bool ignoreLimit)
     {
         using (var timings = Timings(query))
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, Token))
             {
-                var queryProcessor = new ShardedIndexEntriesQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, ignoreLimit, token.Token);
+                var queryProcessor = new ShardedIndexEntriesQueryProcessor(QueryContext, RequestHandler, query, existingResultEtag, ignoreLimit, Token.Token);
 
                 await queryProcessor.InitializeAsync();
 
@@ -61,28 +66,28 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         }
     }
 
-    protected override async ValueTask ExplainAsync(TransactionOperationContext queryContext, IndexQueryServerSide query, OperationCancelToken token)
+    protected override async ValueTask ExplainAsync(IndexQueryServerSide query)
     {
-        var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, query.ToJson(queryContext));
+        var command = new ExplainQueryCommand(DocumentConventions.DefaultForServer, query.ToJson(QueryContext));
 
         var proxyCommand = new ProxyCommand<ExplainQueryCommand.ExplainQueryResult[]>(command, HttpContext);
 
-        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(queryContext, proxyCommand, shardNumber: 0, token.Token);
+        await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(QueryContext, proxyCommand, shardNumber: 0, Token.Token);
     }
 
     protected override AbstractDatabaseNotificationCenter NotificationCenter => RequestHandler.DatabaseContext.NotificationCenter;
 
     protected override RavenConfiguration Configuration => RequestHandler.DatabaseContext.Configuration;
 
-    protected override async ValueTask<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async Task<FacetedQueryResult> GetFacetedQueryResultAsync(IndexQueryServerSide query, long? existingResultEtag)
     {
         using (var timings = Timings(query))
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, Token))
             {
-                var queryProcessor = new ShardedFacetedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+                var queryProcessor = new ShardedFacetedQueryProcessor(QueryContext, RequestHandler, query, existingResultEtag, Token.Token);
 
                 await queryProcessor.InitializeAsync();
 
@@ -95,15 +100,15 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         }
     }
 
-    protected override async ValueTask<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, TransactionOperationContext queryContext, long? existingResultEtag, OperationCancelToken token)
+    protected override async Task<SuggestionQueryResult> GetSuggestionQueryResultAsync(IndexQueryServerSide query, long? existingResultEtag)
     {
         using (var timings = Timings(query))
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, Token))
             {
-                var queryProcessor = new ShardedSuggestionQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, token.Token);
+                var queryProcessor = new ShardedSuggestionQueryProcessor(QueryContext, RequestHandler, query, existingResultEtag, Token.Token);
 
                 await queryProcessor.InitializeAsync();
 
@@ -116,16 +121,15 @@ internal sealed class ShardedQueriesHandlerProcessorForGet : AbstractQueriesHand
         }
     }
 
-    protected override async ValueTask<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query,
-        TransactionOperationContext queryContext, long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
+    protected override async Task<QueryResultServerSide<BlittableJsonReaderObject>> GetQueryResultsAsync(IndexQueryServerSide query, long? existingResultEtag, bool metadataOnly)
     {
         using (var timings = Timings(query))
         {
             var indexName = AbstractQueryRunner.GetIndexName(query);
 
-            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, token))
+            using (RequestHandler.DatabaseContext.QueryRunner.MarkQueryAsRunning(indexName, query, Token))
             {
-                var queryProcessor = new ShardedQueryProcessor(queryContext, RequestHandler, query, existingResultEtag, metadataOnly, token.Token);
+                var queryProcessor = new ShardedQueryProcessor(QueryContext, RequestHandler, query, existingResultEtag, metadataOnly, Token.Token);
 
                 await queryProcessor.InitializeAsync();
 

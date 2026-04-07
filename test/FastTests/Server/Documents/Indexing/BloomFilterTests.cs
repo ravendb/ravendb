@@ -27,32 +27,30 @@ namespace FastTests.Server.Documents.Indexing
                     var key1 = context.GetLazyString("orders/1");
                     var key2 = context.GetLazyString("orders/2");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
-                    {
-                        Assert.False(filter.Contains(key1));
-                        Assert.False(filter.Contains(key2));
-                        Assert.Equal(0, filter.Count);
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator);
+                    Assert.False(filter.Contains(key1));
+                    Assert.False(filter.Contains(key2));
+                    Assert.Equal(0, filter.Count);
 
-                        Assert.True(filter.Add(key1));
-                        Assert.True(filter.Contains(key1));
-                        Assert.False(filter.Contains(key2));
-                        Assert.Equal(1, filter.Count);
+                    Assert.True(filter.Add(key1));
+                    Assert.True(filter.Contains(key1));
+                    Assert.False(filter.Contains(key2));
+                    Assert.Equal(1, filter.Count);
 
-                        Assert.False(filter.Add(key1));
-                        Assert.True(filter.Contains(key1));
-                        Assert.False(filter.Contains(key2));
-                        Assert.Equal(1, filter.Count);
+                    Assert.False(filter.Add(key1));
+                    Assert.True(filter.Contains(key1));
+                    Assert.False(filter.Contains(key2));
+                    Assert.Equal(1, filter.Count);
 
-                        Assert.True(filter.Add(key2));
-                        Assert.True(filter.Contains(key1));
-                        Assert.True(filter.Contains(key2));
-                        Assert.Equal(2, filter.Count);
+                    Assert.True(filter.Add(key2));
+                    Assert.True(filter.Contains(key1));
+                    Assert.True(filter.Contains(key2));
+                    Assert.Equal(2, filter.Count);
 
-                        Assert.False(filter.Add(key1));
-                        Assert.True(filter.Contains(key1));
-                        Assert.True(filter.Contains(key2));
-                        Assert.Equal(2, filter.Count);
-                    }
+                    Assert.False(filter.Add(key1));
+                    Assert.True(filter.Contains(key1));
+                    Assert.True(filter.Contains(key2));
+                    Assert.Equal(2, filter.Count);
 
                     tx.Commit();
                 }
@@ -70,13 +68,11 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
-                    {
-                        Assert.True(filter.Add(key1));
-                        Assert.Equal(1, filter.Count);
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator);
+                    Assert.True(filter.Add(key1));
+                    Assert.Equal(1, filter.Count);
 
-                        filter.Flush();
-                    }
+                    filter.Flush();
 
                     tx.Commit();
                 }
@@ -85,11 +81,9 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator))
-                    {
-                        Assert.False(filter.Add(key1));
-                        Assert.Equal(1, filter.Count);
-                    }
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator);
+                    Assert.False(filter.Add(key1));
+                    Assert.Equal(1, filter.Count);
                 }
             }
         }
@@ -106,15 +100,13 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
-                    {
-                        Assert.True(filter.Add(key1));
-                        Assert.Equal(1, filter.Count);
-                        Assert.True(filter.Writable);
-                        Assert.False(filter.ReadOnly);
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator);
+                    Assert.True(filter.Add(key1));
+                    Assert.Equal(1, filter.Count);
+                    Assert.True(filter.Writable);
+                    Assert.False(filter.ReadOnly);
 
-                        filter.Flush();
-                    }
+                    filter.Flush();
 
                     tx.Commit();
                 }
@@ -123,18 +115,16 @@ namespace FastTests.Server.Documents.Indexing
                 {
                     var tree = tx.CreateTree("Filters");
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator))
-                    {
-                        Assert.False(filter.Writable);
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: false, allocator: context.Allocator);
+                    Assert.False(filter.Writable);
 
-                        Assert.False(filter.Add(key1));
-                        Assert.Equal(1, filter.Count);
-                        Assert.False(filter.Writable);
+                    Assert.False(filter.Add(key1));
+                    Assert.Equal(1, filter.Count);
+                    Assert.False(filter.Writable);
 
-                        Assert.True(filter.Add(key2));
-                        Assert.Equal(2, filter.Count);
-                        Assert.True(filter.Writable);
-                    }
+                    Assert.True(filter.Add(key2));
+                    Assert.Equal(2, filter.Count);
+                    Assert.True(filter.Writable);
                 }
             }
         }
@@ -149,25 +139,21 @@ namespace FastTests.Server.Documents.Indexing
                     var tree = context.Transaction.InnerTransaction.CreateTree("BloomFilters");
                     tree.Increment("Count64", 2);
 
-                    using (var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator))
-                    {
-                        Assert.False(filter.ReadOnly);
-                        filter.MakeReadOnly();
-                        Assert.True(filter.ReadOnly);
-                    }
+                    var filter = new CollectionOfBloomFilters.BloomFilter64(0, BloomFilterVersion.CurrentVersion, tree, writable: true, allocator: context.Allocator);
+                    Assert.False(filter.ReadOnly);
+                    filter.MakeReadOnly();
+                    Assert.True(filter.ReadOnly);
 
                     tx.Commit();
                 }
 
                 using (context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context))
-                    {
-                        Assert.Equal(2, collection.Count);
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X64, context);
+                    Assert.Equal(2, collection.Count);
 
-                        Assert.True(collection[0].ReadOnly);
-                        Assert.False(collection[1].ReadOnly);
-                    }
+                    Assert.True(collection[0].ReadOnly);
+                    Assert.False(collection[1].ReadOnly);
                 }
             }
         }
@@ -179,28 +165,24 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context);
+                    Assert.Equal(1, collection.Count);
+
+                    for (var i = 0; i < CollectionOfBloomFilters.BloomFilter32.MaxCapacity * 1.2; i++)
                     {
-                        Assert.Equal(1, collection.Count);
-
-                        for (var i = 0; i < CollectionOfBloomFilters.BloomFilter32.MaxCapacity * 1.2; i++)
-                        {
-                            var key = context.GetLazyString("orders/" + i);
-                            collection.Add(key);
-                        }
-
-                        Assert.Equal(2, collection.Count);
+                        var key = context.GetLazyString("orders/" + i);
+                        collection.Add(key);
                     }
+
+                    Assert.Equal(2, collection.Count);
 
                     tx.Commit();
                 }
 
                 using (context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
-                    {
-                        Assert.Equal(2, collection.Count);
-                    }
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context);
+                    Assert.Equal(2, collection.Count);
                 }
             }
         }
@@ -212,14 +194,12 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
-                    {
-                        Assert.Equal(1, collection.Count);
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context);
+                    Assert.Equal(1, collection.Count);
 
-                        collection.AddFilter(collection.CreateNewFilter(1, CollectionOfBloomFilters.Mode.X86)); // should not throw
+                    collection.AddFilter(collection.CreateNewFilter(1, CollectionOfBloomFilters.Mode.X86)); // should not throw
 
-                        Assert.Throws<InvalidOperationException>(() => collection.AddFilter(collection.CreateNewFilter(2, CollectionOfBloomFilters.Mode.X64)));
-                    }
+                    Assert.Throws<InvalidOperationException>(() => collection.AddFilter(collection.CreateNewFilter(2, CollectionOfBloomFilters.Mode.X64)));
                 }
             }
         }
@@ -231,30 +211,26 @@ namespace FastTests.Server.Documents.Indexing
             {
                 using (var tx = context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context);
+                    var i = 0;
+                    while (collection.Consumed == false)
                     {
-                        var i = 0;
-                        while (collection.Consumed == false)
-                        {
-                            var key = context.GetLazyString($"orders/{i++}");
-                            collection.Add(key);
-                        }
-
-                        Assert.Equal(20, collection.Count);
-                        collection.Flush();
-                        Assert.Equal(0, collection.Count);
+                        var key = context.GetLazyString($"orders/{i++}");
+                        collection.Add(key);
                     }
+
+                    Assert.Equal(20, collection.Count);
+                    collection.Flush();
+                    Assert.Equal(0, collection.Count);
 
                     tx.Commit();
                 }
 
                 using (context.OpenWriteTransaction())
                 {
-                    using (var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context))
-                    {
-                        Assert.Equal(0, collection.Count);
-                        Assert.True(collection.Consumed);
-                    }
+                    var collection = CollectionOfBloomFilters.Load(CollectionOfBloomFilters.Mode.X86, context);
+                    Assert.Equal(0, collection.Count);
+                    Assert.True(collection.Consumed);
                 }
             }
         }

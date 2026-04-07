@@ -27,6 +27,7 @@ import prismjs = require("prismjs");
 import licenseModel = require("models/auth/licenseModel");
 import EditRabbitMqEtlInfoHub = require("viewmodels/database/tasks/EditRabbitMqEtlInfoHub");
 import typeUtils = require("common/typeUtils");
+import tasksCommonContent = require("models/database/tasks/tasksCommonContent");
 
 class rabbitMqTaskTestMode {
     documentId = ko.observable<string>();
@@ -187,6 +188,8 @@ class editRabbitMqEtlTask extends viewModelBase {
     
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
+
+    taskNameDisabledReason: KnockoutComputed<string>;
     
     createNewConnectionString = ko.observable<boolean>(false);
     newConnectionString = ko.observable<connectionStringRabbitMqEtlModel>();
@@ -291,6 +294,14 @@ class editRabbitMqEtlTask extends viewModelBase {
             }
             return generalUtils.trimMessage(result.Error);
         });
+
+        this.taskNameDisabledReason = ko.pureComputed(() => {
+            if (!this.isAddingNewRabbitMqEtlTask()) {
+                return tasksCommonContent.etlTaskNameLocked;
+            }
+
+            return null;
+        });  
         
         this.newConnectionString(connectionStringRabbitMqEtlModel.empty());
         this.newConnectionString().setNameUniquenessValidator(name => !this.rabbitMqEtlConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));

@@ -11,6 +11,7 @@ public abstract class SetupInfoBase
     public string DataDirectory { get; set; }
     public string SetupCertificatePath { get; set; }
     public string LogsPath { get; set; }
+    public License License { get; set; }
     public string AutoIndexingEngineType { get; set; }
     public string StaticIndexingEngineType { get; set; }
     public StudioConfiguration.StudioEnvironment Environment { get; set; }
@@ -29,6 +30,7 @@ public abstract class SetupInfoBase
             [nameof(Environment)] = Environment,
             [nameof(NodeSetupInfos)] = DynamicJsonValue.Convert(NodeSetupInfos),
             [nameof(LocalNodeTag)] = LocalNodeTag,
+            [nameof(License)] = License?.ToJson(),
         };
     }
 }

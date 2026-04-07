@@ -142,9 +142,9 @@ namespace Raven.Server.SqlMigration.Model
 
         public override string ToString()
         {
-            return $"Skipped: {SkippedCount}. " +
-                   $"Read: {ReadCount}. " +
-                   $"Errored: {ErroredCount}.";
+            return $"Skipped: {SkippedCount:#,#;;0}. " +
+                   $"Read: {ReadCount:#,#;;0}. " +
+                   $"Errored: {ErroredCount:#,#;;0}.";
         }
     }
 }

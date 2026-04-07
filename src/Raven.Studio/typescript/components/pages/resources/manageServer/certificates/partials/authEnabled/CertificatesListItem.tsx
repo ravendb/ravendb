@@ -11,12 +11,12 @@ import {
     RichPanelDetails,
     RichPanelHeader,
     RichPanelNameMultiLine,
-    RichPanelStatus,
 } from "components/common/RichPanel";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { ThemeColor } from "components/models/common";
+import CertificatesItemStatus from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesItemStatus";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { CertificateItem } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
@@ -113,13 +113,24 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     return (
         <RichPanel className="flex-row with-status" hover>
-            <RichPanelStatus color={certificatesUtils.getStateColor(state)}>{state}</RichPanelStatus>
-
+            <CertificatesItemStatus state={state} />
             <div className="flex-grow">
                 <RichPanelHeader>
                     <div>
                         <RichPanelNameMultiLine className="d-flex align-items-center">
                             {certificate.Name ?? "<empty name>"}
+                            {state === "About to expire" && (
+                                <Badge
+                                    bg="warning"
+                                    className="ms-1 fs-6 hstack"
+                                    pill
+                                    title="This certificate is about to expire"
+                                    style={{ gap: "2px" }}
+                                >
+                                    <Icon icon="clock" margin="m-0" />
+                                    About to expire
+                                </Badge>
+                            )}
                             {isCurrentBrowserCert && (
                                 <Badge
                                     bg="success"

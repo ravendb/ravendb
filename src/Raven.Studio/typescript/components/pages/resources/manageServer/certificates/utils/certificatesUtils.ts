@@ -70,7 +70,6 @@ function getStateColor(state: CertificatesState): ThemeColor {
         case "Expired":
             return "danger";
         case "About to expire":
-            return "warning";
         case "Valid":
             return "success";
         default:

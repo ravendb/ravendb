@@ -40,7 +40,7 @@ export function SetupWizardSummaryStep() {
         <div>
             <div className="mb-5">
                 <h2 className="mb-1">Summary</h2>
-                <p className="mb-4 text-muted">Check if everything’s correct before proceeding.</p>
+                <p className="mb-4 text-muted">Verify that all settings are correct before proceeding.</p>
             </div>
             <div className="vstack gap-1 mb-2">
                 <h5 className="mb-0">Security & license</h5>
@@ -70,7 +70,7 @@ export function SetupWizardSummaryStep() {
                         <LocationDistribution>
                             <DistributionLegend>
                                 <div className="top"></div>
-                                <div className="node">HTTPS port</div>
+                                <div className="node">{securityOption === "none" ? "HTTP" : "HTTPS"} port</div>
                                 <div>TCP port</div>
                                 <div>IP address/Hostname</div>
                             </DistributionLegend>

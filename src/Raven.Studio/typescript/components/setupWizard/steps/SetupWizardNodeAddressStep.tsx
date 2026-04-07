@@ -42,7 +42,6 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { setupWizardConstants, setupWizardGA4Prefixes } from "components/setupWizard/utils/setupWizardConstants";
 import useBoolean from "hooks/useBoolean";
 import { SetupWizardInfoPopover } from "components/setupWizard/partials/SetupWizardInfoPopover";
-import { setupWizardFormDefaultValues } from "components/setupWizard/utils/setupWizardFormDefaultValues";
 import { components, OptionProps, SingleValueProps } from "react-select";
 import Badge from "react-bootstrap/Badge";
 
@@ -67,7 +66,7 @@ export function SetupWizardNodeAddressStep() {
 
     const getDomainForWildcard = (tag: string | null): string => {
         if (cns.length === 0) {
-            return "";
+            return null;
         }
 
         const cn = cns[0];
@@ -136,14 +135,16 @@ export function SetupWizardNodeAddressStep() {
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+    useRevalidatePersistedNodesOnEntry();
+
     return (
         <div>
             <div className="mb-4">
                 <h2 className="mb-1">Node addresses</h2>
                 <p className="mb-4 text-muted">
-                    Enter your server settings to ensure clear communication and smooth work of your database.
+                    Configure the cluster by adding nodes and setting their network details.
                     <br />
-                    If you are building a cluster this is the place to add nodes and configure them.
+                    For each node, specify its tag name, ports, and IP address or host name.
                 </p>
             </div>
             <div className="vstack">
@@ -322,9 +323,10 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     const handleSaveEdit = handleSubmit(async (formData: NodeEditFormData) => {
         setValue(`nodeAddressStep.nodes.${index}`, {
             ...formData,
+            dnsName: securityOption === "ownCertificate" ? formData.dnsName : null,
             nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
-            nodeTag: formData.isPassive ? undefined : formData.nodeTag,
+            nodeTag: formData.isPassive ? null : formData.nodeTag,
             isEditing: false,
             isNewlyAdded: false,
         });
@@ -399,8 +401,17 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
                             </Button>
                         </ConditionalPopover>
                         <Button variant="secondary" onClick={handleDiscardEdit}>
-                            <Icon icon="close" />
-                            Discard
+                            {nodeData.isNewlyAdded ? (
+                                <>
+                                    <Icon icon="trash" />
+                                    Remove
+                                </>
+                            ) : (
+                                <>
+                                    <Icon icon="close" />
+                                    Discard
+                                </>
+                            )}
                         </Button>
                     </>
                 ) : (
@@ -430,11 +441,17 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
     );
 }
 
-function NodeDetailsPanelView({ index, control }: { index: number; control: Control<SetupWizardFormData> }) {
-    const nodeData = useWatch({
+interface NodeDetailsPanelViewProps {
+    index: number;
+    control: Control<SetupWizardFormData>;
+}
+
+function NodeDetailsPanelView({ index, control }: NodeDetailsPanelViewProps) {
+    const setupWizardData = useWatch({
         control,
-        name: `nodeAddressStep.nodes.${index}`,
     });
+
+    const nodeData = setupWizardData.nodeAddressStep.nodes[index];
 
     const localIpPortAddress = `${nodeData.ipAddress[0].ipAddress}:${nodeData.httpPort}`;
     return (
@@ -447,7 +464,7 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
                             message={
                                 <SetupWizardInfoPopover
                                     description="Defines the address under which specific node will be available."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -469,7 +486,7 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
                                 message={
                                     <SetupWizardInfoPopover
                                         description="Defines the address under which specific node will be available."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                        ravenLinkHash="MGIZZM"
                                     />
                                 }
                             >
@@ -486,13 +503,14 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
             <RichPanelDetailItem>
                 <div className="d-flex flex-column">
                     <span className="hstack">
-                        <span className="md-label mb-0">HTTPS port</span>
+                        <span className="md-label mb-0">
+                            {setupWizardData.securityStep.securityOption === "none" ? "HTTP" : "HTTPS"} port
+                        </span>
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private communication endpoint for clients and browsers. By default,
-                                        this value is set to 8080."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    description={`Defines the communication endpoint for clients and browsers. By default, this value is set to ${setupWizardData.securityStep.securityOption === "none" ? "8080" : "443"}.`}
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -513,9 +531,8 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the privately accessible TCP endpoint for cluster nodes to communicate
-                                        with each other. By default, this value is set to 38888."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
+                                    description="Defines the TCP endpoint for cluster nodes to communicate with each other. By default, this value is set to 38888."
+                                    ravenLinkHash="9D6HG1"
                                 />
                             }
                         >
@@ -536,8 +553,8 @@ function NodeDetailsPanelView({ index, control }: { index: number; control: Cont
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private network endpoint where the server is accessible."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    description="Defines the network endpoint where the server is accessible."
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -602,8 +619,10 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="When enabled, the node remains passive and does not join any cluster. This is useful when the node is meant for monitoring, initialization, or handling setup tasks without actively participating in cluster operations. It can also be used to isolate the node for testing or debugging purposes."
-                                            docsLink="https://docs.ravendb.net/server/clustering/rachis/cluster-topology#state"
+                                            description="When enabled, the node starts in passive mode and does not join a cluster. 
+                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations. 
+                                                It can also be used to isolate the node for testing or debugging."
+                                            ravenLinkHash="2WV7N1"
                                         />
                                     }
                                 >
@@ -624,10 +643,10 @@ function NodeDetailsPanelEdit({
                                             description="Defines a unique identifier for each node in the cluster."
                                             alert={
                                                 <RichAlert variant="info" icon="info" className="mt-1">
-                                                    Node tag can contain maximum of 4 uppercase letters (A-Z).
+                                                    Node tag can contain a maximum of 4 uppercase letters (A-Z).
                                                 </RichAlert>
                                             }
-                                            docsLink="https://docs.ravendb.net/glossary/node-tag"
+                                            ravenLinkHash="WJJHFY"
                                         />
                                     }
                                 >
@@ -680,13 +699,12 @@ function NodeDetailsPanelEdit({
                     <Col md={colWidth}>
                         <FormGroup>
                             <FormLabel className="d-flex">
-                                HTTPS port
+                                {securityOption === "none" ? "HTTP" : "HTTPS"} port
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the private communication endpoint for clients and browsers.
-                                                    By default, this value is set to 443."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                            description={`Defines the private ${securityOption === "none" ? "HTTP" : "HTTPS"} port used by clients and browsers. By default, this value is set to ${securityOption === "none" ? "8080" : "443"}.`}
+                                            ravenLinkHash="MGIZZM"
                                         />
                                     }
                                 >
@@ -708,9 +726,9 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the privately accessible TCP endpoint for cluster nodes to
-                                                    communicate with each other. By default, this value is set to 38888."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurltcp"
+                                            description="Defines the TCP port used for internal communication between cluster nodes.
+                                                By default, this value is set to 38888."
+                                            ravenLinkHash="9D6HG1"
                                         />
                                     }
                                 >
@@ -762,9 +780,9 @@ function NodeDetailsPanelEdit({
                             <PopoverWithHoverWrapper
                                 message={
                                     <SetupWizardInfoPopover
-                                        description="External overrides allow you to specify an alternative IP address, hostname, or
-                                        HTTPS port that clients should use instead of the default settings."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                        description="External overrides allow you to specify an alternative IP address, hostname, 
+                                            or HTTPS port that clients will use instead of the server’s default settings."
+                                        ravenLinkHash="Z112DU"
                                     />
                                 }
                             >
@@ -806,9 +824,9 @@ function EditFormExternalAddressInputs({
                             <PopoverWithHoverWrapper
                                 message={
                                     <SetupWizardInfoPopover
-                                        description="Defines the public network endpoint from which the requests will be
-                                            forwarded to the private IP address (which RavenDB listens on)."
-                                        docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                        description="Defines the public IP address from which requests will be
+                                            forwarded to the private IP address that RavenDB listens on."
+                                        ravenLinkHash="Z112DU"
                                     />
                                 }
                             >
@@ -819,7 +837,7 @@ function EditFormExternalAddressInputs({
                     <FormInput
                         type="text"
                         name="externalIpAddress"
-                        placeholder="Enter Server IP A address/hostname"
+                        placeholder="Enter Server IP address/hostname"
                         control={control}
                     />
                 </FormGroup>
@@ -833,9 +851,9 @@ function EditFormExternalAddressInputs({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the public HTTPS endpoint that clients and browsers should use
-                                                instead of default binding."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                            description="Defines the public HTTPS port that clients and browsers will use
+                                                instead of the default binding."
+                                            ravenLinkHash="Z112DU"
                                         />
                                     }
                                 >
@@ -862,9 +880,9 @@ function EditFormExternalAddressInputs({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="Defines the publicly accessible TCP endpoint for inter-node communication
+                                            description="Defines the public TCP port used for inter-node communication
                                                 and client connections."
-                                            docsLink="https://docs.ravendb.net/server/configuration/core-configuration#publicserverurl"
+                                            ravenLinkHash="Z112DU"
                                         />
                                     }
                                 >
@@ -895,8 +913,9 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
     const licenseKeyStep = getValues("licenseKeyStep");
     const nodeData = getValues("nodeAddressStep.nodes");
 
+    const hasLicense = !!licenseKeyStep?.licenseInfo;
     const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
-    const isMaxClusterNodes = maxClusterSize === nodeData?.length;
+    const isMaxClusterNodes = nodeData?.length >= maxClusterSize;
 
     return (
         <div
@@ -906,21 +925,41 @@ function AddAnotherNode({ onAddNode }: AddAnotherNodeProps) {
             )}
         >
             <ConditionalPopover
-                conditions={{
-                    isActive: isMaxClusterNodes,
-                    message: (
-                        <>
-                            <p className="mb-0">Your license doesn&apos;t allow more nodes in the cluster.</p>
-                            <hr className="my-2" />
-                            <span className="md-label">
-                                <Icon icon="link" /> See{" "}
-                                <a href="https://ravendb.net/buy" target="_blank">
-                                    licenses comparison <Icon icon="newtab" />
-                                </a>
-                            </span>
-                        </>
-                    ),
-                }}
+                conditions={[
+                    {
+                        isActive: !hasLicense,
+                        message: (
+                            <>
+                                <p className="mb-0">
+                                    Without a license you can only run a single-node cluster. Otherwise, go back to the{" "}
+                                    <b>License Key</b> step to provide a license and unlock multi-node clusters.
+                                </p>
+                                <hr className="my-2" />
+                                <span className="md-label">
+                                    <Icon icon="link" /> See{" "}
+                                    <a href="https://ravendb.net/buy" target="_blank">
+                                        licenses comparison <Icon icon="newtab" />
+                                    </a>
+                                </span>
+                            </>
+                        ),
+                    },
+                    {
+                        isActive: isMaxClusterNodes,
+                        message: (
+                            <>
+                                <p className="mb-0">Your license doesn&apos;t allow more nodes in the cluster.</p>
+                                <hr className="my-2" />
+                                <span className="md-label">
+                                    <Icon icon="link" /> See{" "}
+                                    <a href="https://ravendb.net/buy" target="_blank">
+                                        licenses comparison <Icon icon="newtab" />
+                                    </a>
+                                </span>
+                            </>
+                        ),
+                    },
+                ]}
             >
                 <Button
                     disabled={isMaxClusterNodes}
@@ -1073,8 +1112,8 @@ function IpAddressList({
                         <PopoverWithHoverWrapper
                             message={
                                 <SetupWizardInfoPopover
-                                    description="Defines the private network endpoint where the server is accessible."
-                                    docsLink="https://docs.ravendb.net/server/configuration/core-configuration#serverurl"
+                                    description="Defines the IP address or hostname used to access the server."
+                                    ravenLinkHash="MGIZZM"
                                 />
                             }
                         >
@@ -1167,6 +1206,10 @@ export function SetupWizardNodeAddressStepFooter() {
     const { reportEvent } = useEventsCollector();
 
     const nodeData = getValues("nodeAddressStep.nodes");
+    const licenseKeyStep = getValues("licenseKeyStep");
+
+    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const hasExceededLicenseLimit = nodeData?.length > maxClusterSize;
 
     const isEditing = nodeData?.some((node) => node.isEditing);
 
@@ -1264,7 +1307,7 @@ export function SetupWizardNodeAddressStepFooter() {
         if (nodeCount % 2 === 0) {
             const isConfirmed = await confirm({
                 title: "Confirm even node count",
-                message: `You've chosen an even number of nodes for your cluster. For optimal replication and database performance, an odd number of nodes is usually recommended.
+                message: `You've chosen an even number of nodes for your cluster. For optimal replication and high availability, an odd number of nodes is usually recommended.
                         Are you sure you want to proceed with an even node count?`,
                 icon: "warning",
                 confirmText: "Proceed",
@@ -1296,8 +1339,9 @@ export function SetupWizardNodeAddressStepFooter() {
                 setValue("currentStep", "Security");
                 break;
         }
-        setValue("nodeAddressStep", setupWizardFormDefaultValues["nodeAddressStep"]);
     };
+
+    const isContinueDisabled = isEditing || hasExceededLicenseLimit || nodeData.length === 0;
 
     return (
         <div className="hstack justify-content-between">
@@ -1305,16 +1349,95 @@ export function SetupWizardNodeAddressStepFooter() {
                 <Icon icon="arrow-left" /> Back
             </Button>
             <ConditionalPopover
-                conditions={{
-                    isActive: isEditing,
-                    message: "You can't proceed if you have unsaved nodes. Save your changes first.",
-                }}
+                conditions={[
+                    {
+                        isActive: hasExceededLicenseLimit,
+                        message: <LicenseLimitExceededMessage />,
+                    },
+                    {
+                        isActive: isEditing && !hasExceededLicenseLimit,
+                        message: "You can't proceed if you have unsaved nodes. Save your changes first.",
+                    },
+                ]}
             >
-                <Button disabled={isEditing} variant="primary" className="rounded-pill" onClick={handleContinue}>
+                <Button
+                    disabled={isContinueDisabled}
+                    variant="primary"
+                    className="rounded-pill"
+                    onClick={handleContinue}
+                >
                     Continue <Icon icon="arrow-right" margin="m-0" />
                 </Button>
             </ConditionalPopover>
         </div>
+    );
+}
+
+function useRevalidatePersistedNodesOnEntry() {
+    const { setValue, getValues } = useFormContext<SetupWizardFormData>();
+
+    useEffect(() => {
+        const nodes = getValues("nodeAddressStep.nodes");
+        const securityOption = getValues("securityStep.securityOption");
+        const cns = getValues("selfSignedCertificateStep.cns");
+
+        nodes.forEach((node, index) => {
+            if (securityOption !== "ownCertificate" && node.dnsName) {
+                setValue(`nodeAddressStep.nodes.${index}.dnsName`, null);
+            }
+
+            if (securityOption === "ownCertificate" && node.dnsName) {
+                const isDnsNameInCns = cns?.some((cn) => cn === node.dnsName);
+                if (!isDnsNameInCns) {
+                    if (cns.length === 1) {
+                        // set first CN if only one is available
+                        setValue(`nodeAddressStep.nodes.${index}.dnsName`, cns[0]);
+                    } else {
+                        setValue(`nodeAddressStep.nodes.${index}.dnsName`, null);
+                    }
+                }
+            }
+
+            /*
+             * “Discard” restores the node to its pre-edit state. If the user returned here after changing earlier steps, restoring is not allowed because it would cause a validation error, the node must be either saved or removed.
+             * When `isNewlyAdded` is true, the “Remove” button is shown instead of “Discard”.
+             */
+            setValue(`nodeAddressStep.nodes.${index}.isNewlyAdded`, true, {
+                shouldValidate: true,
+            });
+            setValue(`nodeAddressStep.nodes.${index}.isEditing`, true, {
+                shouldValidate: true,
+            });
+        });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+function LicenseLimitExceededMessage() {
+    const { getValues } = useFormContext<SetupWizardFormData>();
+
+    const nodeData = getValues("nodeAddressStep.nodes");
+    const licenseKeyStep = getValues("licenseKeyStep");
+
+    const maxClusterSize = licenseKeyStep?.licenseInfo?.maxClusterSize ?? setupWizardConstants.AGPL_MAX_CLUSTER_SIZE;
+    const currentNodeCount = nodeData?.length;
+
+    return (
+        <>
+            <p className="mb-0">
+                Your license allows maximum <strong>{maxClusterSize}</strong> node(s), but you have configured{" "}
+                <strong>{currentNodeCount}</strong> nodes.
+            </p>
+            <p className="mb-0">
+                Remove <strong>{currentNodeCount - maxClusterSize}</strong> node(s) or upgrade your license to continue.
+            </p>
+            <hr className="my-2" />
+            <span className="md-label">
+                <Icon icon="link" /> See{" "}
+                <a href="https://ravendb.net/buy" target="_blank">
+                    licenses comparison <Icon icon="newtab" />
+                </a>
+            </span>
+        </>
     );
 }
 

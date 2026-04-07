@@ -26,9 +26,9 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override EtlType EtlType => EtlType.Sql;
 
-        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
+        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, EtlConfiguration<SqlConnectionString> existingConfiguration = null)
         {
-            base.Validate(out errors, validateName, validateConnection);
+            base.Validate(out errors, validateName, validateConnection, existingConfiguration);
 
             if (SqlTables.Count == 0)
                 errors.Add($"{nameof(SqlTables)} cannot be empty");

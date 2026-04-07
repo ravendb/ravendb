@@ -13,6 +13,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.Changes;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Sparrow.LowMemory;
 
 namespace Raven.Server.Documents.Operations;
@@ -30,9 +31,9 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
     {
         _changes = changes;
         _maxCompletedTaskLifeTime = maxCompletedTaskLifeTime;
-
         LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
     }
+    protected abstract Logger GetLogger();
 
     public abstract Task<IOperationResult> AddLocalOperation(
         long id,
@@ -85,6 +86,7 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
 
         void ContinuationFunction(Task<IOperationResult> taskResult)
         {
+            var logger = GetLogger();
             operationDescription.EndTime = SystemTime.UtcNow;
             
             if (operationState.PersistProgressOnFaultedStatus == false)
@@ -94,10 +96,14 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
             {
                 operationState.Result = null;
                 operationState.Status = OperationStatus.Canceled;
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} was canceled.");
             }
             else if (taskResult.IsFaulted)
             {
                 var innerException = taskResult.Exception.ExtractSingleInnerException();
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} faulted.", innerException);
 
                 var isConflict = innerException is DocumentConflictException or ConcurrencyException;
                 var status = isConflict ? HttpStatusCode.Conflict : HttpStatusCode.InternalServerError;
@@ -119,6 +125,8 @@ public abstract class AbstractOperations<TOperation> : ILowMemoryHandler
             {
                 operationState.Result = taskResult.Result;
                 operationState.Status = OperationStatus.Completed;
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Operation {operationDescription.TaskType} with ID {operation.Id} completed successfully.");
             }
 
             if (Monitor.TryEnter(locker) == false)

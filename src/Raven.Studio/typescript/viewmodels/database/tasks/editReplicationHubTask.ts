@@ -541,13 +541,13 @@ class editReplicationHubTask extends shardViewModelBase {
             const certificate = replicationAccessItem.certificate().certificate();
             configurationToExport.Certificate = certificate || null;
 
-            configurationToExport.HubToSinkPrefixes = replicationAccessItem.hubToSinkPrefixes().map(x => x.path());
+            configurationToExport.HubToSinkPrefixes = replicationAccessItem.getHubToSinkPrefixesToSave();
             
             if (this.editedReplicationAccessItem().samePrefixesForBothDirections()) {
                 configurationToExport.UseSamePrefixes = true;
             } else {
                 configurationToExport.UseSamePrefixes = false;
-                configurationToExport.SinkToHubPrefixes = replicationAccessItem.sinkToHubPrefixes().map(x => x.path());
+                configurationToExport.SinkToHubPrefixes = replicationAccessItem.getSinkToHubPrefixesToSave();
             }
         }
 

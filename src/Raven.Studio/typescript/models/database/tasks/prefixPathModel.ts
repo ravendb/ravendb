@@ -2,6 +2,14 @@
     path = ko.observable<string>();
     validationGroup: KnockoutValidationGroup;
 
+    static normalize(path: string): string {
+        if (path == null) {
+            return path;
+        }
+
+        return path.trim();
+    }
+
     constructor(prefixPath: string) {
 
         this.path(prefixPath);
@@ -13,14 +21,16 @@
             validation: [
                 {
                     validator: () => {
-                        if (this.path()) {
-                            const pathLength = this.path().length;
+                        const normalizedPath = prefixPathModel.normalize(this.path());
+
+                        if (normalizedPath) {
+                            const pathLength = normalizedPath.length;
                             if (pathLength === 1) {
                                 return true;
                             }
                             
-                            const lastChar = this.path().charAt(pathLength - 1);
-                            const prevChar = this.path().charAt(pathLength - 2);
+                            const lastChar = normalizedPath.charAt(pathLength - 1);
+                            const prevChar = normalizedPath.charAt(pathLength - 2);
                             return lastChar != '*' || prevChar === '/' || prevChar === '-';
                         }
                         
