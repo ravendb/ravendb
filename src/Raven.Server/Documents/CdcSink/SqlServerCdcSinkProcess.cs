@@ -61,16 +61,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         await ProcessCdcStream(ct);
     }
 
-    protected override async Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
-    {
-        await using var conn = await OpenConnectionAsync(ct);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT sys.fn_cdc_get_max_lsn()";
-        var result = await cmd.ExecuteScalarAsync(ct);
-        if (result is byte[] lsn && IsAllZero(lsn) == false)
-            return Convert.ToHexString(lsn);
-        return null;
-    }
+    protected override Task<string> ReadCurrentCheckpointAsync(CancellationToken ct) 
+        // SQL Server CDC doesn't need ReadCurrentCheckpointAsync. The null-lastLsn path in
+        // GetLsnBounds already computes the correct starting position from the per-table
+        // fn_cdc_get_min_lsn values. Using fn_cdc_get_max_lsn (database-wide) would be wrong
+        // because it reflects ALL CDC activity across all tables in the database, not just ours.    
+        => Task.FromResult<string>(null);
 
     /// <summary>
     /// Enables CDC on the database and individual tables if not already enabled.
