@@ -95,7 +95,7 @@ class storageReport extends viewModelBase {
         });
 
         this.showOnDiskColumn = ko.pureComputed(() =>
-            !!(this.node().internalChildren || []).find(x => x.physicalSize != null)
+            !!(this.node().internalChildren || []).find(x => x.physicalSize != null && x.physicalSize < x.size)
         );
         this.allocatedNodeSize = ko.pureComputed(() =>
             generalUtils.formatBytesToSize(this.node().size)
