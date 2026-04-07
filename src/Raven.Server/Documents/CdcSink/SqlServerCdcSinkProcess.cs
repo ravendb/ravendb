@@ -61,6 +61,17 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         await ProcessCdcStream(ct);
     }
 
+    protected override async Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
+    {
+        await using var conn = await OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT sys.fn_cdc_get_max_lsn()";
+        var result = await cmd.ExecuteScalarAsync(ct);
+        if (result is byte[] lsn && IsAllZero(lsn) == false)
+            return Convert.ToHexString(lsn);
+        return null;
+    }
+
     /// <summary>
     /// Enables CDC on the database and individual tables if not already enabled.
     /// Agent and job health checks are handled by <see cref="CdcSinkSourceVerifier"/>.
@@ -202,31 +213,25 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 await Task.Delay(pollInterval, ct);
             shouldWait = true;
 
-            // Check if capture instances have changed on each poll cycle.
-            // This is cheap (one ExecuteScalar per table) and detects schema changes
-            // promptly — important because a dropped capture instance makes
-            // fn_cdc_get_min_lsn return all zeros, silently skipping the table.
-            if (await HaveCaptureInstancesChanged(conn, captureInstances, ct))
-                throw new InvalidOperationException(
-                    "CDC capture instance changed for one or more tables. " +
-                    "Restarting to re-resolve capture instances with updated schema.");
-
-            // Note: we intentionally do NOT wrap these reads in a transaction. A ReadCommitted transaction
-            // (the SQL Server default) provides no additional guarantees over auto-commit — shared locks are
-            // released as soon as each row is read, so the cleanup job can still purge CDC entries between our
-            // metadata read (GetLsnBounds) and the change table queries. Snapshot isolation would give a
-            // consistent point-in-time view, but requires ALLOW_SNAPSHOT_ISOLATION to be enabled on the database,
-            // which is a server-wide setting we don't want to impose on users.
-            //
-            // Instead, correctness is ensured by:
-            // 1. GetLsnBounds fetches max LSN and all per-table min LSNs in a single batch query (one statement
-            //    = one consistent read even without an explicit transaction).
-            // 2. effectiveFromLsn clamping (below) ensures we never request an LSN range below the table's min,
-            //    even if cleanup advanced the min between the metadata read and the change query.
-            // 3. VerifyNoGapsInLsn detects and warns when our saved position has been purged past recovery.
-
             var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
             LastActivityTime = Database.Time.GetUtcNow();
+
+            // Detect dropped capture instances before checking for new data.
+            // fn_cdc_get_min_lsn returns all zeros when a capture instance no longer exists.
+            // We check this regardless of whether there's new data (from_lsn vs max_lsn),
+            // because a dropped instance must trigger a restart even during idle periods.
+            if (lsnInfo.TableMinLsns != null)
+            {
+                foreach (var ci in captureInstances)
+                {
+                    var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
+                    if (tableMinLsn == null || IsAllZero(tableMinLsn))
+                        throw new InvalidOperationException(
+                            $"Capture instance '{ci.CaptureInstance}' for table {ci.TableInfo.FullName} " +
+                            "no longer exists (fn_cdc_get_min_lsn returned all zeros). " +
+                            "Restarting to re-resolve capture instances.");
+                }
+            }
 
             if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
                 continue;
@@ -238,9 +243,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
             foreach (var ci in captureInstances)
             {
-                var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
-                if (tableMinLsn == null || IsAllZero(tableMinLsn))
-                    continue;
+                var tableMinLsn = lsnInfo.TableMinLsns[ci.CaptureInstance];
 
                 VerifyNoGapsInLsn(lsnInfo, ci, tableMinLsn);
 
@@ -394,16 +397,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         public bool HasNewerInstance;
     }
 
-    /// <summary>
-    /// Cached capture instance names from the last resolve, used for periodic change detection.
-    /// </summary>
-    private Dictionary<string, string> _lastCaptureInstances;
-
     private async Task<List<CaptureInstanceInfo>> ResolveCaptureInstances(CancellationToken ct)
     {
         var result = new List<CaptureInstanceInfo>();
         var allTables = Configuration.CollectAllTablesFlat("dbo");
-        var captureInstanceSnapshot = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         await using var conn = await OpenConnectionAsync(ct);
 
@@ -428,8 +425,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
             var captureInstance = instances.Count > 0 ? instances[0] : $"{tableInfo.Schema}_{tableInfo.TableName}";
             var hasNewerInstance = instances.Count > 1;
-
-            captureInstanceSnapshot[tableInfo.FullName] = captureInstance;
 
             // Fetch the captured column names so we can build an explicit SELECT
             // and read by ordinal instead of calling GetName()/skipping __$ at runtime
@@ -482,38 +477,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnsArray);
         }
 
-        _lastCaptureInstances = captureInstanceSnapshot;
         return result;
-    }
-
-    /// <summary>
-    /// Check if capture instances have changed since we last resolved them.
-    /// Returns true if a new instance appeared or an existing one was dropped.
-    /// </summary>
-    private async Task<bool> HaveCaptureInstancesChanged(DbConnection conn, List<CaptureInstanceInfo> captureInstances, CancellationToken ct)
-    {
-        if (_lastCaptureInstances == null)
-            return false;
-
-        foreach (var ci in captureInstances)
-        {
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT capture_instance
-                FROM cdc.change_tables
-                WHERE source_object_id = OBJECT_ID(@fullTableName)
-                ORDER BY create_date ASC";
-
-            AddParameter(cmd, "@fullTableName", $"{ci.TableInfo.Schema}.{ci.TableInfo.TableName}");
-
-            var currentOldest = (await cmd.ExecuteScalarAsync(ct))?.ToString();
-
-            if (_lastCaptureInstances.TryGetValue(ci.TableInfo.FullName, out var cached) == false
-                || cached != currentOldest)
-                return true;
-        }
-
-        return false;
     }
 
 

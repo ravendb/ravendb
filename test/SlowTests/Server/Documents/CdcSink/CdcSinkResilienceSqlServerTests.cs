@@ -60,6 +60,22 @@ namespace SlowTests.Server.Documents.CdcSink
             throw new TimeoutException($"CDC capture instance for {schema}.{tableName} was not created within 30 seconds.");
         }
 
+        private async Task WaitForCdcCapture(string connectionString)
+        {
+            var sw = Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < 30_000)
+            {
+                await using var connection = new SqlConnection(connectionString);
+                await connection.OpenAsync();
+                await using var cmd = new SqlCommand("SELECT sys.fn_cdc_get_max_lsn()", connection);
+                var result = await cmd.ExecuteScalarAsync();
+                if (result is byte[] lsn && lsn.AsSpan().ContainsAnyExcept((byte)0))
+                    return;
+                await Task.Delay(500);
+            }
+            throw new TimeoutException("CDC capture job did not process any changes within 30 seconds.");
+        }
+
         private SqlConnectionString SetupSqlConnectionString(IDocumentStore store, string connectionString, string name = "mssql-resilience-test")
         {
             var sqlCs = new SqlConnectionString
@@ -186,6 +202,8 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-schema-drop-col");
+
             // Disable CDC on the table, drop the column, re-enable with new schema
             ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_disable_table @source_schema = N'dbo', @source_name = N'items', @capture_instance = N'dbo_items'");
             ExecuteMsSql(connectionString, "ALTER TABLE items DROP COLUMN extra");
@@ -194,19 +212,7 @@ namespace SlowTests.Server.Documents.CdcSink
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Drop')");
 
             // The process should detect the missing column on retry and enter fallback
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-schema-drop-col");
-            Assert.NotNull(process);
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 30_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(500);
-            }
-
-            Assert.NotNull(process.FallbackTime);
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(30));
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -420,7 +426,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("From Old Instance", doc.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true, Skip = "Timing-dependent: capture instance change detection may not trigger fast enough")]
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
         public async Task SchemaEvolution_DropOldCaptureInstance_ProcessRecovers()
         {
             // When the old capture instance is dropped, the process should detect the error,
@@ -438,6 +444,11 @@ namespace SlowTests.Server.Documents.CdcSink
             EnableCdcOnTable(connectionString, "dbo", "items");
 
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before')");
+
+            // Wait for the capture job to process the insert so fn_cdc_get_max_lsn()
+            // returns a valid LSN before the sink starts. This ensures ReadCurrentCheckpointAsync
+            // persists a real checkpoint rather than returning null.
+            await WaitForCdcCapture(connectionString);
 
             var sqlCs = SetupSqlConnectionString(store, connectionString);
             var config = new CdcSinkConfiguration
@@ -466,15 +477,19 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-drop-old-ci");
+
             // Create new capture instance with explicit name, then drop old one
             ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
             EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
             ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_disable_table @source_schema = N'dbo', @source_name = N'items', @capture_instance = N'dbo_items'");
 
-            // Insert using new schema
+            // Wait for the process to detect the capture instance change and enter fallback
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(30));
+
+            // Insert using new schema — process will recover after fallback and pick up new instance
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After Switch', 'new col')");
 
-            // Process should recover — old query fails, restart picks up new instance
             var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
             Assert.NotNull(doc2);
             Assert.Equal("After Switch", doc2.Name);
@@ -505,6 +520,10 @@ namespace SlowTests.Server.Documents.CdcSink
 
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before Schema Change')");
 
+            // Wait for the capture job to process the insert so fn_cdc_get_max_lsn()
+            // returns a valid LSN before the sink starts.
+            await WaitForCdcCapture(connectionString);
+
             var sqlCs = SetupSqlConnectionString(store, connectionString);
             var config = new CdcSinkConfiguration
             {
@@ -533,15 +552,20 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc1);
             Assert.Equal("Before Schema Change", doc1.Name);
 
+            var errorTask = await WaitForNextProcessError(store, "test-full-add-col");
+
             // Step 2-3: ALTER TABLE + new capture instance with explicit name
             ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
             EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
 
-            // Step 4: Insert with new schema
+            // Step 4: Insert with new schema (before dropping old CI so the capture job has time to process it)
             ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After Schema Change', 'new')");
 
-            // Step 5: Drop old capture instance (triggers process restart)
+            // Step 5: Drop old capture instance (triggers process restart via HaveCaptureInstancesChanged)
             ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_disable_table @source_schema = N'dbo', @source_name = N'items', @capture_instance = N'dbo_items'");
+
+            // Wait for the process to detect the change and enter fallback
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(30));
 
             // Step 6: Verify all data arrived
             var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);

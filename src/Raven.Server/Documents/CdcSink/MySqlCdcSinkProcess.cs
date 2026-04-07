@@ -154,6 +154,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         await ProcessCdcStream(ct);
     }
 
+    protected override Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
+        => Task.FromResult(_serverGtid);
+
     /// <summary>
     /// Verifies that the MySQL/MariaDB server is correctly configured for CDC:
     /// binlog_format=ROW, binlog_row_image=FULL, GTID enabled, and correct permissions.
@@ -233,11 +236,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         }
         // MariaDB always has GTID support enabled (no gtid_mode setting)
 
-        // Fetch the current server GTID set so we can start streaming from this point
-        // after the initial load completes. We use FromGtid() instead of FromEnd()
-        // because MySqlCdc's FromEnd() internally executes SHOW MASTER STATUS, which
-        // was removed in MySQL 8.4 (replaced by SHOW BINARY LOG STATUS).
-        // See: https://dev.mysql.com/doc/refman/8.4/en/show-binary-log-status.html
+        // Fetch the current server GTID set so we can start streaming from this point after the initial load completes.
         {
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = _isMariaDb

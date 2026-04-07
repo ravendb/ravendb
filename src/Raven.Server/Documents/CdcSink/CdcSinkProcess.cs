@@ -90,7 +90,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     public CdcSinkConfiguration Configuration { get; }
 
-    public TimeSpan? FallbackTime { get; protected set; }
+    public TimeSpan? FallbackTime { get; internal set; }
 
     /// <summary>
     /// UTC time of the last successfully completed batch. Null if no batch has completed yet.
@@ -684,6 +684,14 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     }
 
 
+    /// <summary>
+    /// Returns the provider's current streaming position (e.g., GTID, WAL LSN, CDC max LSN).
+    /// Called by HandleInitialLoad when no checkpoint exists yet, to persist a starting point
+    /// so that a restart after initial load streams from the correct position.
+    /// </summary>
+    protected virtual Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
+        => Task.FromResult<string>(null);
+
     protected async Task HandleInitialLoad(CancellationToken ct)
     {
         CdcSinkTaskState state;
@@ -691,6 +699,18 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         using (context.OpenReadTransaction())
         {
             state = LoadState(context);
+        }
+
+        // If no streaming checkpoint exists yet, capture the current position from the source
+        // database and persist it. This ensures that on restart, streaming resumes from where
+        // we were when initial load began — not from wherever the server is at restart time.
+        if (string.IsNullOrEmpty(state.LastLsn))
+        {
+            var checkpoint = await ReadCurrentCheckpointAsync(ct);
+            if (string.IsNullOrEmpty(checkpoint) == false)
+            {
+                await SubmitBatch([], checkpoint: checkpoint);
+            }
         }
 
         var allTables = Configuration.CollectAllTablesFlat(GetDefaultSchema());

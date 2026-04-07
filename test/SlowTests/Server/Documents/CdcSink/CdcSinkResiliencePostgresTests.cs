@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Npgsql;
@@ -43,6 +42,11 @@ namespace SlowTests.Server.Documents.CdcSink
             {
                 Name = name,
                 ConnectionStringName = connectionStringName,
+                Postgres = new CdcSinkPostgresSettings
+                {
+                    SlotName = $"test_{name.Replace("-", "_")}_slot",
+                    PublicationName = $"test_{name.Replace("-", "_")}_pub"
+                },
                 Tables = new List<CdcSinkTableConfig>
                 {
                     new CdcSinkTableConfig
@@ -144,6 +148,8 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-schema-drop-col");
+
             // Drop the mapped column — the RelationMessage will have fewer columns.
             // FindColumnIndex will throw for 'extra', causing a retry.
             // On retry, the process re-resolves columns and 'extra' won't be found →
@@ -152,30 +158,14 @@ namespace SlowTests.Server.Documents.CdcSink
             ExecuteNpgSql(connectionString, "ALTER TABLE items DROP COLUMN extra");
             ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Drop')");
 
-            // The process should enter fallback mode since the mapped column no longer exists
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-schema-drop-col");
-            Assert.NotNull(process);
-
-            // Wait a bit for the error to surface
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 15_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(500);
-            }
-
-            Assert.NotNull(process.FallbackTime); // should be in fallback mode
-            Assert.False(process.IsHealthy(out var issue));
-            Assert.Contains("error recovery", issue);
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
         // ─────────────────────────────────────────────────────────────────────
         // Connection Failure Recovery Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true, Skip = "Timing-dependent: pg_terminate_backend may not trigger fallback reliably in CI")]
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ConnectionFailure_RecoversAfterReplicationConnectionKilled()
         {
             using var store = GetDocumentStore();
@@ -197,30 +187,13 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc);
 
             // Kill the replication connection by terminating the WAL sender backend
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-conn-failure");
-            Assert.NotNull(process);
-
-            var slotName = config.Postgres?.SlotName;
-            if (string.IsNullOrEmpty(slotName))
-            {
-                // Auto-generated slot name — find it from the process state
-                slotName = $"ravendb_cdc_{Math.Abs(config.Name.GetHashCode()):x8}";
-            }
+            var errorTask = await WaitForNextProcessError(store, "test-conn-failure");
 
             ExecuteNpgSql(connectionString,
-                $"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = '{slotName}' AND active_pid IS NOT NULL");
+                $"SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = '{config.Postgres.SlotName}' AND active_pid IS NOT NULL");
 
-            // Wait for the process to enter fallback mode
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 15_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(250);
-            }
-
-            Assert.NotNull(process.FallbackTime); // should be in fallback mode
+            // pg_terminate_backend sends TCP RST — Npgsql detects it on the next read
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
 
             // Insert a new row while the process is recovering
             ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Kill')");
@@ -423,23 +396,13 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-drop-mapped");
+
             // Drop a MAPPED column — FindColumnIndex will throw on rebuild
             ExecuteNpgSql(connectionString, "ALTER TABLE items DROP COLUMN extra");
             ExecuteNpgSql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Drop')");
 
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-drop-mapped");
-            Assert.NotNull(process);
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 15_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(500);
-            }
-
-            Assert.NotNull(process.FallbackTime);
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -493,23 +456,13 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-rename-col");
+
             // Rename the mapped column — FindColumnIndex won't find 'name' anymore
             ExecuteNpgSql(connectionString, "ALTER TABLE items RENAME COLUMN name TO title");
             ExecuteNpgSql(connectionString, "INSERT INTO items (id, title) VALUES (2, 'After Rename')");
 
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-rename-col");
-            Assert.NotNull(process);
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 15_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(500);
-            }
-
-            Assert.NotNull(process.FallbackTime);
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(15));
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]

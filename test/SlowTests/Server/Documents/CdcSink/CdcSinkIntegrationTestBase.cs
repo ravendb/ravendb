@@ -40,6 +40,23 @@ namespace SlowTests.Server.Documents.CdcSink
             await process.InitialLoadCompleted; // propagate any exception
         }
 
+        /// <summary>
+        /// Subscribes to ProcessError on the named CDC Sink process and returns a task
+        /// that completes when the next error occurs. Use this before triggering an
+        /// error condition to avoid polling FallbackTime.
+        /// </summary>
+        protected async Task<Task<Exception>> WaitForNextProcessError(IDocumentStore store, string configName)
+        {
+            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
+            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == configName);
+            if (process == null)
+                throw new InvalidOperationException($"CDC Sink process '{configName}' not found");
+
+            var tcs = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+            process.ProcessError += ex => tcs.TrySetResult(ex);
+            return tcs.Task;
+        }
+
         protected async Task<T> WaitForDocumentAsync<T>(IDocumentStore store, string docId, int timeoutMs = 30_000)
             where T : class
         {

@@ -127,6 +127,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         await ProcessCdcStream(ct);
     }
 
+    protected override async Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
+    {
+        await using var conn = await _dataSource.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand(
+            "SELECT confirmed_flush_lsn::text FROM pg_replication_slots WHERE slot_name = @slotName", conn);
+        cmd.Parameters.AddWithValue("slotName", _slotName);
+        var result = await cmd.ExecuteScalarAsync(ct);
+        return result?.ToString();
+    }
+
     private async Task EnsureReplicationSetup(CancellationToken ct)
     {
         var allTables = Configuration.CollectAllTablesFlat("public");

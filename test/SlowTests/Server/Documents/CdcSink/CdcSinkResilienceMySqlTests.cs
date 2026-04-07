@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -97,7 +96,7 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Equal("After", doc2.Name);
         }
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true, Skip = "Timing-dependent: binlog may not deliver new TableMapEvent within test timeout")]
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
         public async Task SchemaEvolution_RemoveColumn_DetectedViaTableMapEvent()
         {
             using var store = GetDocumentStore();
@@ -139,33 +138,28 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
             Assert.NotNull(doc);
 
+            var errorTask = await WaitForNextProcessError(store, "test-schema-drop-col");
+
             // Drop the column — TableMapEvent will have fewer columns
             ExecuteMySql(connectionString, "ALTER TABLE items DROP COLUMN extra");
+
+            // Force MySQL to deliver the new TableMapEvent (with fewer columns) through the binlog.
+            // The ALTER TABLE DDL alone doesn't generate a row event; only a subsequent DML triggers
+            // the TableMapEvent that the CDC client needs to detect the schema change.
+            ExecuteMySql(connectionString, "INSERT INTO items (id, name) VALUES (99, 'flush')");
             ExecuteMySql(connectionString, "INSERT INTO items (id, name) VALUES (2, 'After Drop')");
 
             // Process should detect the mismatch and enter fallback.
             // On retry, it re-resolves columns, but 'extra' is gone from the table
             // while still in the config → FindColumnIndex throws → stays in fallback.
-            var db = await Databases.GetDocumentDatabaseInstanceFor(store);
-            var process = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == "test-schema-drop-col");
-            Assert.NotNull(process);
-
-            var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 30_000)
-            {
-                if (process.FallbackTime != null)
-                    break;
-                await Task.Delay(500);
-            }
-
-            Assert.NotNull(process.FallbackTime);
+            await errorTask.WaitAsync(TimeSpan.FromSeconds(60));
         }
 
         // ─────────────────────────────────────────────────────────────────────
         // Connection Failure Recovery Tests
         // ─────────────────────────────────────────────────────────────────────
 
-        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true, Skip = "Pre-existing failure: document doesn't arrive after stop/restart within timeout")]
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
         public async Task ConnectionFailure_RecoversAfterStopAndRestart()
         {
             using var store = GetDocumentStore();
