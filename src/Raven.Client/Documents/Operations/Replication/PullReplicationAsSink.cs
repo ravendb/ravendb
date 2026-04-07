@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override string GetDefaultTaskName() => ToString();
 
-        public void EnsureHasPrivateKey()
+        internal void EnsureHasPrivateKey()
         {
             var certBytes = Convert.FromBase64String(CertificateWithPrivateKey);
 

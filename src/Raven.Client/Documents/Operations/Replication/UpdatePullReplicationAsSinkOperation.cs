@@ -26,6 +26,20 @@ namespace Raven.Client.Documents.Operations.Replication
         public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication) : this(pullReplication, false)
         {
         }
+
+        /// <inheritdoc cref="UpdatePullReplicationAsSinkOperation"/>
+        /// <param name="pullReplication">
+        /// The <see cref="PullReplicationAsSink"/> object containing the updated configuration for the pull replication sink task.
+        /// This configuration includes details such as the source database, connection strings, allowed paths for data flow 
+        /// between the sink and hub, and an optional private key for a certificate used in secure communication.
+        /// </param>
+        /// <param name="useServerCertificate">Makes the replication use the server certificate. Requires <see cref="PullReplicationAsSink.CertificateWithPrivateKey"/> to be null.</param>
+        /// <exception cref="AuthorizationException">
+        /// Thrown if the provided certificate does not include a private key but is required for secure replication.
+        /// </exception>
+        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false) : this(pullReplication, useServerCertificate,false)
+        {
+        }
         
         /// <inheritdoc cref="UpdatePullReplicationAsSinkOperation"/>
         /// <param name="pullReplication">
@@ -37,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Replication
         /// <exception cref="AuthorizationException">
         /// Thrown if the provided certificate does not include a private key but is required for secure replication.
         /// </exception>
-        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false, bool skipClientCertificateValidation = false)
+        internal UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false, bool skipClientCertificateValidation = false)
         {
             _pullReplication = pullReplication;
             _useServerCertificate = useServerCertificate;
