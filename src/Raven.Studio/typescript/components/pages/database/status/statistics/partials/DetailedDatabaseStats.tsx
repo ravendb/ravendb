@@ -136,9 +136,12 @@ export function DetailedDatabaseStats() {
                             <DetailsBlock>
                                 {(data, location) => {
                                     const id = "js-size-on-disk-" + location.nodeTag + "-" + location.shardNumber;
-                                    const physicalBytes = data.PhysicalSizeOnDisk.SizeInBytes;
-                                    const allocatedBytes = data.AllocatedSizeOnDisk.SizeInBytes;
-                                    const tempBytes = data.TempBuffersSizeOnDisk.SizeInBytes;
+
+                                    const physicalBytes = data.PhysicalSizeOnDisk?.SizeInBytes ?? 0;
+                                    const allocatedBytes = data.AllocatedSizeOnDisk?.SizeInBytes ?? 0;
+                                    const tempBytes = data.TempBuffersSizeOnDisk?.SizeInBytes ?? 0;
+                                    const grandTotalSize = tempBytes + physicalBytes;
+
                                     return (
                                         <PopoverWithHoverWrapper
                                             message={
@@ -152,13 +155,11 @@ export function DetailedDatabaseStats() {
                                                     Temp: <strong>{genUtils.formatBytesToSize(tempBytes)}</strong>
                                                     <br />
                                                     Total (on disk):{" "}
-                                                    <strong>
-                                                        {genUtils.formatBytesToSize(physicalBytes + tempBytes)}
-                                                    </strong>
+                                                    <strong>{genUtils.formatBytesToSize(grandTotalSize)}</strong>
                                                 </>
                                             }
                                         >
-                                            <span id={id}>{genUtils.formatBytesToSize(physicalBytes + tempBytes)}</span>
+                                            <span id={id}>{genUtils.formatBytesToSize(grandTotalSize)}</span>
                                         </PopoverWithHoverWrapper>
                                     );
                                 }}
