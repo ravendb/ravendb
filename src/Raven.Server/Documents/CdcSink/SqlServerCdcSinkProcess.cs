@@ -61,12 +61,18 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         await ProcessCdcStream(ct);
     }
 
-    protected override Task<string> ReadCurrentCheckpointAsync(CancellationToken ct) 
-        // SQL Server CDC doesn't need ReadCurrentCheckpointAsync. The null-lastLsn path in
-        // GetLsnBounds already computes the correct starting position from the per-table
-        // fn_cdc_get_min_lsn values. Using fn_cdc_get_max_lsn (database-wide) would be wrong
-        // because it reflects ALL CDC activity across all tables in the database, not just ours.    
-        => Task.FromResult<string>(null);
+    protected override async Task<string> ReadCurrentCheckpointAsync(CancellationToken ct)
+    {
+        // fn_cdc_get_max_lsn is database-wide (not per-table), it establishes "start streaming from here" so that 
+        // changes made after initial load are picked up on restart. Per-table boundaries are handled by GetLsnBounds.
+        await using var conn = await OpenConnectionAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT sys.fn_cdc_get_max_lsn()";
+        var result = await cmd.ExecuteScalarAsync(ct);
+        if (result is byte[] lsn && IsAllZero(lsn) == false)
+            return Convert.ToHexString(lsn);
+        return null;
+    }
 
     /// <summary>
     /// Enables CDC on the database and individual tables if not already enabled.
@@ -212,22 +218,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var lsnInfo = await GetLsnBounds(conn, captureInstances, lastLsn, ct);
             LastActivityTime = Database.Time.GetUtcNow();
 
-            // Detect dropped capture instances before checking for new data.
-            // fn_cdc_get_min_lsn returns all zeros when a capture instance no longer exists.
-            // We check this regardless of whether there's new data (from_lsn vs max_lsn),
-            // because a dropped instance must trigger a restart even during idle periods.
-            if (lsnInfo.TableMinLsns != null)
-            {
-                foreach (var ci in captureInstances)
-                {
-                    var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
-                    if (tableMinLsn == null || IsAllZero(tableMinLsn))
-                        throw new InvalidOperationException(
-                            $"Capture instance '{ci.CaptureInstance}' for table {ci.TableInfo.FullName} " +
-                            "no longer exists (fn_cdc_get_min_lsn returned all zeros). " +
-                            "Restarting to re-resolve capture instances.");
-                }
-            }
+            await DetectDroppedCaptureInstances(conn, captureInstances, lsnInfo, ct);
 
             if (lsnInfo.MaxLsn == null || lsnInfo.FromLsn == null || CompareLsn(lsnInfo.FromLsn, lsnInfo.MaxLsn) > 0)
                 continue;
@@ -239,7 +230,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
             foreach (var ci in captureInstances)
             {
-                var tableMinLsn = lsnInfo.TableMinLsns[ci.CaptureInstance];
+                var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
+                if (tableMinLsn == null || IsAllZero(tableMinLsn))
+                    continue;
 
                 VerifyNoGapsInLsn(lsnInfo, ci, tableMinLsn);
 
@@ -380,6 +373,39 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         return (maxLsn, fromLsn, tableMinLsns);
     }
+
+    /// <summary>
+    /// Detects capture instances that have been dropped since we resolved them.
+    /// fn_cdc_get_min_lsn returns all zeros both when a capture instance was dropped
+    /// AND when it's freshly created with no CDC rows yet. We disambiguate by querying
+    /// cdc.change_tables — if the instance isn't there, it was truly dropped.
+    /// </summary>
+    private static async Task DetectDroppedCaptureInstances(
+        DbConnection conn,
+        List<CaptureInstanceInfo> captureInstances,
+        (byte[] MaxLsn, byte[] FromLsn, Dictionary<string, byte[]> TableMinLsns) lsnInfo,
+        CancellationToken ct)
+    {
+        if (lsnInfo.TableMinLsns == null)
+            return;
+
+        foreach (var ci in captureInstances)
+        {
+            var tableMinLsn = lsnInfo.TableMinLsns.GetValueOrDefault(ci.CaptureInstance);
+            if (tableMinLsn != null && IsAllZero(tableMinLsn) == false)
+                continue;
+
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM cdc.change_tables WHERE capture_instance = @ci";
+            AddParameter(cmd, "@ci", ci.CaptureInstance);
+            var result = await cmd.ExecuteScalarAsync(ct);
+            if (result is not int count || count == 0)
+                throw new InvalidOperationException(
+                    $"Capture instance '{ci.CaptureInstance}' for table {ci.TableInfo.FullName} " +
+                    "no longer exists. Restarting to re-resolve capture instances.");
+        }
+    }
+
 
     private sealed class CaptureInstanceInfo
     {
