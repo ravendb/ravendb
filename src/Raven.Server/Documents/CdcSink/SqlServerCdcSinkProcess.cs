@@ -45,7 +45,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     private readonly string _factoryName;
 
     public SqlServerCdcSinkProcess(CdcSinkConfiguration configuration, DocumentDatabase database)
-        : base(configuration, database)
+        : base(configuration, database, "dbo")
     {
         _connectionString = configuration.Connection.ConnectionString;
         _factoryName = configuration.Connection.FactoryName;
@@ -201,6 +201,15 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             if (shouldWait)
                 await Task.Delay(pollInterval, ct);
             shouldWait = true;
+
+            // Check if capture instances have changed on each poll cycle.
+            // This is cheap (one ExecuteScalar per table) and detects schema changes
+            // promptly — important because a dropped capture instance makes
+            // fn_cdc_get_min_lsn return all zeros, silently skipping the table.
+            if (await HaveCaptureInstancesChanged(conn, captureInstances, ct))
+                throw new InvalidOperationException(
+                    "CDC capture instance changed for one or more tables. " +
+                    "Restarting to re-resolve capture instances with updated schema.");
 
             // Note: we intentionally do NOT wrap these reads in a transaction. A ReadCommitted transaction
             // (the SQL Server default) provides no additional guarantees over auto-commit — shared locks are
@@ -381,36 +390,46 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         public string Query;
         /// <summary>Column names in the same order as the SELECT list (excludes CDC metadata columns).</summary>
         public string[] Columns;
+        /// <summary>True if a newer capture instance exists for this table (we're draining the old one).</summary>
+        public bool HasNewerInstance;
     }
+
+    /// <summary>
+    /// Cached capture instance names from the last resolve, used for periodic change detection.
+    /// </summary>
+    private Dictionary<string, string> _lastCaptureInstances;
 
     private async Task<List<CaptureInstanceInfo>> ResolveCaptureInstances(CancellationToken ct)
     {
         var result = new List<CaptureInstanceInfo>();
         var allTables = Configuration.CollectAllTablesFlat("dbo");
+        var captureInstanceSnapshot = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         await using var conn = await OpenConnectionAsync(ct);
 
         foreach (var tableInfo in allTables)
         {
-            string captureInstance = null;
-
+            // Find all capture instances for this table, ordered oldest first.
+            // We drain the oldest before switching to newer ones.
+            var instances = new List<string>();
             await using (var cmd = conn.CreateCommand())
             {
                 cmd.CommandText = @"
                     SELECT capture_instance
                     FROM cdc.change_tables
-                    WHERE source_object_id = OBJECT_ID(@fullTableName)";
+                    WHERE source_object_id = OBJECT_ID(@fullTableName)
+                    ORDER BY create_date ASC";
 
                 AddParameter(cmd, "@fullTableName", $"{tableInfo.Schema}.{tableInfo.TableName}");
-                var val = await cmd.ExecuteScalarAsync(ct);
-                captureInstance = val?.ToString();
+                await using var reader = await cmd.ExecuteReaderAsync(ct);
+                while (await reader.ReadAsync(ct))
+                    instances.Add(reader.GetString(0));
             }
 
-            if (string.IsNullOrEmpty(captureInstance))
-            {
-                // Default capture instance naming convention
-                captureInstance = $"{tableInfo.Schema}_{tableInfo.TableName}";
-            }
+            var captureInstance = instances.Count > 0 ? instances[0] : $"{tableInfo.Schema}_{tableInfo.TableName}";
+            var hasNewerInstance = instances.Count > 1;
+
+            captureInstanceSnapshot[tableInfo.FullName] = captureInstance;
 
             // Fetch the captured column names so we can build an explicit SELECT
             // and read by ordinal instead of calling GetName()/skipping __$ at runtime
@@ -457,12 +476,44 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 CaptureInstance = captureInstance,
                 Query = query,
                 Columns = columnsArray,
+                HasNewerInstance = hasNewerInstance,
             });
 
             DocumentProcessor.SetSourceColumnNames(tableInfo.Schema, tableInfo.TableName, columnsArray);
         }
 
+        _lastCaptureInstances = captureInstanceSnapshot;
         return result;
+    }
+
+    /// <summary>
+    /// Check if capture instances have changed since we last resolved them.
+    /// Returns true if a new instance appeared or an existing one was dropped.
+    /// </summary>
+    private async Task<bool> HaveCaptureInstancesChanged(DbConnection conn, List<CaptureInstanceInfo> captureInstances, CancellationToken ct)
+    {
+        if (_lastCaptureInstances == null)
+            return false;
+
+        foreach (var ci in captureInstances)
+        {
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                SELECT capture_instance
+                FROM cdc.change_tables
+                WHERE source_object_id = OBJECT_ID(@fullTableName)
+                ORDER BY create_date ASC";
+
+            AddParameter(cmd, "@fullTableName", $"{ci.TableInfo.Schema}.{ci.TableInfo.TableName}");
+
+            var currentOldest = (await cmd.ExecuteScalarAsync(ct))?.ToString();
+
+            if (_lastCaptureInstances.TryGetValue(ci.TableInfo.FullName, out var cached) == false
+                || cached != currentOldest)
+                return true;
+        }
+
+        return false;
     }
 
 

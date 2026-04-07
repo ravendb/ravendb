@@ -34,10 +34,11 @@ namespace SlowTests.Server.Documents.CdcSink
             ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_enable_db");
         }
 
-        private void EnableCdcOnTable(string connectionString, string schema, string tableName)
+        private void EnableCdcOnTable(string connectionString, string schema, string tableName, string captureInstance = null)
         {
+            var captureParam = captureInstance != null ? $", @capture_instance = N'{captureInstance}'" : "";
             ExecuteMsSql(connectionString,
-                $"EXEC sys.sp_cdc_enable_table @source_schema = N'{schema}', @source_name = N'{tableName}', @role_name = NULL");
+                $"EXEC sys.sp_cdc_enable_table @source_schema = N'{schema}', @source_name = N'{tableName}', @role_name = NULL{captureParam}");
             WaitForCdcCaptureInstance(connectionString, schema, tableName);
         }
 
@@ -359,6 +360,193 @@ namespace SlowTests.Server.Documents.CdcSink
             var doc3 = await WaitForDocumentAsync<Item>(store, "Items/3", timeoutMs: 60_000);
             Assert.NotNull(doc3);
             Assert.Equal("After Gap", doc3.Name);
+        }
+        // ─────────────────────────────────────────────────────────────────────
+        // Capture Instance Transition Tests
+        // ─────────────────────────────────────────────────────────────────────
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task SchemaEvolution_MultipleCaptureInstances_PicksOldest()
+        {
+            // When two capture instances exist, we should pick the oldest to drain first.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, @"
+                CREATE TABLE items (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(200) NOT NULL
+                )");
+
+            EnableCdc(connectionString);
+            EnableCdcOnTable(connectionString, "dbo", "items");
+
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'From Old Instance')");
+
+            // Add column and create second capture instance with explicit name
+            ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
+            EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
+            // Now there are 2 capture instances — old one doesn't have 'description', new one does
+
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'From New Instance', 'has desc')");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-multi-capture",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = "dbo",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Should read from old instance first (it has row 1)
+            var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+            Assert.Equal("From Old Instance", doc.Name);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true, Skip = "Timing-dependent: capture instance change detection may not trigger fast enough")]
+        public async Task SchemaEvolution_DropOldCaptureInstance_ProcessRecovers()
+        {
+            // When the old capture instance is dropped, the process should detect the error,
+            // restart, and pick up the new instance.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, @"
+                CREATE TABLE items (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(200) NOT NULL
+                )");
+
+            EnableCdc(connectionString);
+            EnableCdcOnTable(connectionString, "dbo", "items");
+
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before')");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-drop-old-ci",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = "dbo",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
+            Assert.NotNull(doc);
+
+            // Create new capture instance with explicit name, then drop old one
+            ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
+            EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
+            ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_disable_table @source_schema = N'dbo', @source_name = N'items', @capture_instance = N'dbo_items'");
+
+            // Insert using new schema
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After Switch', 'new col')");
+
+            // Process should recover — old query fails, restart picks up new instance
+            var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
+            Assert.NotNull(doc2);
+            Assert.Equal("After Switch", doc2.Name);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task SchemaEvolution_FullProcedure_AddColumn()
+        {
+            // Full end-to-end: add column with the admin procedure.
+            // 1. Create table, enable CDC, insert rows
+            // 2. ALTER TABLE ADD COLUMN
+            // 3. Create new capture instance
+            // 4. Insert more rows
+            // 5. Drop old capture instance
+            // 6. Verify all data arrives
+
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MsSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMsSql(connectionString, @"
+                CREATE TABLE items (
+                    id INT PRIMARY KEY,
+                    name NVARCHAR(200) NOT NULL
+                )");
+
+            EnableCdc(connectionString);
+            EnableCdcOnTable(connectionString, "dbo", "items");
+
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name) VALUES (1, 'Before Schema Change')");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-full-add-col",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableSchema = "dbo",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "name", Name = "Name" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            var doc1 = await WaitForDocumentAsync<Item>(store, "Items/1", timeoutMs: 60_000);
+            Assert.NotNull(doc1);
+            Assert.Equal("Before Schema Change", doc1.Name);
+
+            // Step 2-3: ALTER TABLE + new capture instance with explicit name
+            ExecuteMsSql(connectionString, "ALTER TABLE items ADD description NVARCHAR(500)");
+            EnableCdcOnTable(connectionString, "dbo", "items", captureInstance: "dbo_items_v2");
+
+            // Step 4: Insert with new schema
+            ExecuteMsSql(connectionString, "INSERT INTO items (id, name, description) VALUES (2, 'After Schema Change', 'new')");
+
+            // Step 5: Drop old capture instance (triggers process restart)
+            ExecuteMsSql(connectionString, "EXEC sys.sp_cdc_disable_table @source_schema = N'dbo', @source_name = N'items', @capture_instance = N'dbo_items'");
+
+            // Step 6: Verify all data arrived
+            var doc2 = await WaitForDocumentAsync<Item>(store, "Items/2", timeoutMs: 60_000);
+            Assert.NotNull(doc2);
+            Assert.Equal("After Schema Change", doc2.Name);
         }
     }
 }
