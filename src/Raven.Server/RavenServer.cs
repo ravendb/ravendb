@@ -1961,6 +1961,10 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
+            else if (IsServerCertificate(certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
             else if (certificate.NotAfter.ToUniversalTime() < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
@@ -1968,10 +1972,6 @@ namespace Raven.Server
             else if (certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
-            }
-            else if (IsServerCertificate(certificate))
-            {
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
             else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
             {
