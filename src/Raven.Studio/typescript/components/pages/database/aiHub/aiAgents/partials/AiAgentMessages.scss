@@ -112,4 +112,36 @@
             max-width: 100%;
         }
     }
+
+    .assistant-summary {
+        position: relative;
+        border: 1px solid transparent;
+        border-radius: sizes.$gutter-xxs;
+        overflow: hidden;
+        background:
+            linear-gradient(colors.$panel-bg-1-var 0 0) padding-box,
+            linear-gradient(120deg, #4ac8f9 13.4%, #5058ff 50%, #8b42f5 86.6%) border-box;
+
+        &__content {
+            border-radius: sizes.$gutter-xxs;
+            padding: sizes.$gutter-sm;
+            background: linear-gradient(135.89deg, rgba(56, 142, 233, 0.3) 0%, colors.$panel-bg-1-var 85.4%);
+        }
+
+        &__show-more {
+            position: absolute;
+            bottom: sizes.$gutter-xs;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        &:has(.assistant-summary__show-more) {
+            &::before {
+                content: "";
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, transparent, colors.$panel-bg-1-var);
+            }
+        }
+    }
 }

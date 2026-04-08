@@ -183,6 +183,19 @@ export class AiAgentStubs {
                     date: "2025-08-08T10:28:20.5582526Z",
                 },
                 {
+                    role: "assistant",
+                    content:
+                        "Summary of previous conversation: - The conversation began with the user saying “Hello,” and the assistant responded politely with “Hello! How can I help you today?”\n- The user then requested: “Answer with some long text.” The assistant complied with a long, imaginative, narrative-style story about a mountain village and an explorer searching for a legendary library of every season. The story included advice from an old shepherd and encounters with a merchant, poet, and mechanic, and ended with the reveal that the library contained blank pages meant for the visitor to write their own chapter. The assistant closed by offering to make the text more poetic, more formal, or much longer.\n- The user then said “thanks,” and the assistant replied briefly and warmly: “You're welcome! If you'd like, I can also help with a new question or continue the conversation.”\n- The user then issued a reminder to go over the entire previous conversation and summarize it according to the original instructions, emphasizing that the final summary should include any essential tool results for future turns.\n- No tools were called at any point, so there are no external IDs, codes, prices, dates, or other tool outputs to preserve.\n\nResults Cache:\n- None (no tools were used).",
+                    date: "2026-04-08T11:48:12.4936949Z",
+                    usage: {
+                        PromptTokens: 730,
+                        CompletionTokens: 300,
+                        TotalTokens: 1030,
+                        CachedTokens: 0,
+                        ReasoningTokens: 0,
+                    },
+                },
+                {
                     role: "user",
                     content: "AI Agent Parameters:\ncompany = companies/90-A\r\n",
                     date: "2025-08-08T10:28:20.5582755Z",

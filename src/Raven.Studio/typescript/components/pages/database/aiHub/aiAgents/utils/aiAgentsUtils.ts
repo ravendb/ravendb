@@ -46,6 +46,8 @@ function mapMessagesFromDoc({ conversationDocument, config }: MapMessagesFromDoc
         return [];
     }
 
+    const summaryPrefix = config.ChatTrimming?.Tokens?.ResultPrefix ?? "Summary of previous conversation:";
+
     const formatDate = (date: string) => (date ? moment(date).format(aiAgentsUtils.messageDateFormat) : null);
 
     function getToolInfoByName(toolName: string): AiAgentToolInfo {
@@ -132,6 +134,23 @@ function mapMessagesFromDoc({ conversationDocument, config }: MapMessagesFromDoc
             typeof docMessage.content === "string" &&
             docMessage.content?.startsWith("AI Agent Parameters")
         ) {
+            continue;
+        }
+
+        if (
+            docMessage.role === "assistant" &&
+            typeof docMessage.content === "string" &&
+            docMessage.content?.startsWith(summaryPrefix)
+        ) {
+            messages.push({
+                id: docMessage.date,
+                role: "assistant-summary",
+                content: getContentFromDoc(docMessage),
+                state: "success",
+                date: formatDate(docMessage.date),
+                usage: docMessage.usage,
+            });
+
             continue;
         }
 

@@ -40,7 +40,7 @@ export type AiAgentToolInfoForType<TType extends AiAgentToolType> = Pick<
 >;
 export type AiAgentToolInfo = { [TType in AiAgentToolType]: AiAgentToolInfoForType<TType> }[AiAgentToolType];
 export type AiAgentDocRole = "system" | "user" | "assistant" | "tool";
-export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool";
+export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool" | "assistant-summary";
 
 export interface AiAgentMessageAttachment {
     name: string;

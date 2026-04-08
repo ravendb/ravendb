@@ -22,6 +22,7 @@ import {
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import InnerForm from "components/common/InnerForm";
 import { tryHandleSubmit } from "components/utils/common";
+import AiAgentSummary from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSummary";
 
 type AiAgentMessagesProps = AiAgentMessagesContextValue & {
     messages: AiAgentMessage[];
@@ -54,6 +55,7 @@ function AiAgentMessageComponent({ message }: AiAgentMessageProps) {
         <div>
             {message.role === "system" && <SystemMessage message={message} />}
             {message.role === "user" && <UserMessage message={message} />}
+            {message.role === "assistant-summary" && <AiAgentSummary agentMessage={message} />}
             {message.role === "assistant" && <AgentMessage agentMessage={message} />}
             {message.role === "submitted-action-tool" && (
                 <AiAgentSubmittedActionTool content={message.content} toolName={message.toolName} />
