@@ -151,7 +151,7 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                             </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
-                             if (node.status === "failure") {
+                            if (node.status === "failure") {
                                 return (
                                     <td
                                         rowSpan={hasAnyCriticalError ? 9 : 8}
@@ -206,7 +206,6 @@ export default function ClusterDebugSummary(props: ClusterDebugSummaryProps) {
                             </PopoverWithHoverWrapper>
                         </th>
                         {nodes.map((node) => {
-
                             return (
                                 <ConditionalRender node={node} key={node.nodeTag}>
                                     {() => (
