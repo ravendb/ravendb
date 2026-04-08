@@ -140,6 +140,7 @@ export interface AiConnection extends ConnectionBase {
         deploymentName?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
+        enablePromptCache?: boolean;
         isSetTemperature?: boolean;
         temperature?: number;
     };
@@ -150,6 +151,7 @@ export interface AiConnection extends ConnectionBase {
         dimensions?: number;
         endpoint?: string;
         embeddingsMaxConcurrentBatches?: number;
+        enablePromptCache?: boolean;
     };
     huggingFaceSettings?: {
         apiKey?: string;
@@ -176,6 +178,7 @@ export interface AiConnection extends ConnectionBase {
         projectId?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
+        enablePromptCache?: boolean;
         isSetTemperature?: boolean;
         temperature?: number;
     };

@@ -381,6 +381,7 @@ export function mapAiConnectionsFromDto(
                     deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
                     dimensions: connection.AzureOpenAiSettings?.Dimensions,
                     embeddingsMaxConcurrentBatches: connection.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                    enablePromptCache: connection.AzureOpenAiSettings?.EnablePromptCache ?? null,
                     isSetTemperature: connection.AzureOpenAiSettings?.Temperature != null,
                     temperature: connection.AzureOpenAiSettings?.Temperature ?? null,
                 },
@@ -390,6 +391,7 @@ export function mapAiConnectionsFromDto(
                     model: connection.GoogleSettings?.Model,
                     dimensions: connection.GoogleSettings?.Dimensions,
                     embeddingsMaxConcurrentBatches: connection.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
+                    enablePromptCache: connection.GoogleSettings?.EnablePromptCache ?? null,
                 },
                 huggingFaceSettings: {
                     apiKey: connection.HuggingFaceSettings?.ApiKey,
@@ -416,6 +418,7 @@ export function mapAiConnectionsFromDto(
                     projectId: connection.OpenAiSettings?.ProjectId,
                     dimensions: connection.OpenAiSettings?.Dimensions,
                     embeddingsMaxConcurrentBatches: connection.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                    enablePromptCache: connection.OpenAiSettings?.EnablePromptCache ?? null,
                     isSetTemperature: connection.OpenAiSettings?.Temperature != null,
                     temperature: connection.OpenAiSettings?.Temperature ?? null,
                 },

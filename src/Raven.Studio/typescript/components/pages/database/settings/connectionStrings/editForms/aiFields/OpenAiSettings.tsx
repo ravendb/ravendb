@@ -18,6 +18,7 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import TemperatureField from "./TemperatureField";
+import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -37,6 +38,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         return tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, {
             ApiKey: formValues.openAiSettings.apiKey,
             Endpoint: formValues.openAiSettings.endpoint,
+            EnablePromptCache: formValues.openAiSettings.enablePromptCache,
             Model: formValues.openAiSettings.model,
             OrganizationId: formValues.openAiSettings.organizationId,
             ProjectId: formValues.openAiSettings.projectId,
@@ -191,6 +193,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     />
                 </div>
             )}
+            <PromptCacheField baseName="openAiSettings" />
             <TemperatureField baseName="openAiSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />}
             <div className="d-flex mb-2">
