@@ -1671,7 +1671,10 @@ namespace Voron
         // We create a single thread-safe persistent dictionary locator with enough state to deal with almost any scenario.
         internal PersistentDictionaryLocator DictionaryLocator { get; } = new PersistentDictionaryLocator(1024);
         public bool IsFlushInProgress => Journal.Applicator.FlushInProgress != 0;
-        public bool HasAdditionalTransactionsToFlush => _transactionsToFlush.IsEmpty is false;
+
+        // Must check both the queue and _lastPeekedRecord, since TryPeekNextRecordToFlush
+        // may dequeue a record into _lastPeekedRecord without consuming it
+        public bool HasAdditionalTransactionsToFlush => _transactionsToFlush.IsEmpty is false || _lastPeekedRecord is not null;
 
         public PersistentDictionary CreateEncodingDictionary(Page dictionaryPage)
         {
