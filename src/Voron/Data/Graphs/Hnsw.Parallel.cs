@@ -557,14 +557,25 @@ public partial class Hnsw
             
             private int GetLevelForNewNode(int maxLevel)
             {
-                int level = 0;
-                while ((parent.Random.Next() & 1) == 0 && // 50% chance 
-                       level < maxLevel)
-                {
-                    level++;
-                }
-
-                return level;
+                // Use the level assignment formula from the original HNSW paper.
+                // Most nodes stay at level 0 where they form a dense, detailed graph
+                // that captures fine-grained neighborhood relationships. Only a few
+                // nodes get promoted to upper levels, which act as sparse long-range
+                // shortcuts. During search, the algorithm quickly descends through
+                // these thin upper layers to find a good entry region, then switches
+                // to the dense level 0 to refine the actual nearest neighbors.
+                // If promotion were too aggressive (e.g. a 50% coin flip), half the
+                // nodes would reach level 1, a quarter level 2, and so on. The upper
+                // layers would become crowded with nodes and edges, making insertion
+                // and search spend most of their time navigating dense upper levels
+                // instead of quickly skipping down to where the real work happens.
+                int m = _searchState.Options.NumberOfEdges;
+                double mL = 1.0 / Math.Log(m);
+                double r = parent.Random.NextDouble();
+                // Avoid log(0)
+                if (r == 0.0) r = double.Epsilon;
+                int level = (int)(-Math.Log(r) * mL);
+                return Math.Min(level, maxLevel);
             }
 
             /// <summary>
