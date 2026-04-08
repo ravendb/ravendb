@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Tests.Infrastructure.ConnectionString;
 using Tests.Infrastructure.XunitExtensions;
 using Xunit;
@@ -281,14 +282,15 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
 
     internal static bool ShouldSkipLicense(out string skipMessage)
     {
-        var hasLicense = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE"));
+        string[] options = ["Raven.License.Path", "Raven.License", "RAVEN_LICENSE_PATH", "RAVEN_LICENSE"];
+        var hasLicense = options.Any(options => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(options)));
         if (hasLicense)
         {
             skipMessage = null;
             return false;
         }
 
-        skipMessage = "Requires License to be set via 'RAVEN_LICENSE' environment variable.";
+        skipMessage = "Requires License to be set via 'RAVEN_LICENSE' or 'RAVEN_LICENSE_PATH' environment variables.";
         return true;
     }
 }

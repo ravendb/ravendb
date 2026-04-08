@@ -186,11 +186,6 @@ namespace Raven.Server.ServerWide
             [nameof(RemoveQueueSinkProcessStateCommand)] = 60_000,
             [nameof(UpdateQueueSinkProcessStateCommand)] = 60_000,
 
-            [nameof(AddCdcSinkCommand)] = 72_000,
-            [nameof(UpdateCdcSinkCommand)] = 72_000,
-            [nameof(RemoveCdcSinkProcessStateCommand)] = 72_000,
-            [nameof(UpdateCdcSinkProcessStateCommand)] = 72_000,
-
             [nameof(EditDataArchivalCommand)] = 60_000,
 
             [nameof(UpdateResponsibleNodeForTasksCommand)] = UpdateResponsibleNodeForTasksCommand.CommandVersion,
@@ -216,7 +211,14 @@ namespace Raven.Server.ServerWide
             [nameof(DeleteAiAgentCommand)] = 71_001,
 
             [nameof(EditRemoteAttachmentsCommand)] = EditRemoteAttachmentsCommand.CommandVersion,
-            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000
+            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000,
+
+
+            [nameof(AddCdcSinkCommand)] = 72_001,
+            [nameof(UpdateCdcSinkCommand)] = 72_001,
+            [nameof(RemoveCdcSinkProcessStateCommand)] = 72_001,
+            [nameof(UpdateCdcSinkProcessStateCommand)] = 72_001,
+
         };
 
         public bool CanPutCommand(string command)
