@@ -21,7 +21,7 @@ namespace Raven.Server.NotificationCenter
             var alert = GetOrCreateAlert<CdcSinkErrorsDetails>(processTag,
                 processName,
                 AlertReason.CdcSink_ScriptError,
-                $"{preMessage}Script has failed for the following messages (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
+                $"{preMessage}CDC Sink script execution failed (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
             return AddErrorAlert(errors, details, alert);
@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter
             var alert = GetOrCreateAlert<CdcSinkErrorsDetails>(processTag,
                 processName,
                 AlertReason.CdcSink_ConsumeError,
-                $"{preMessage}Consume messages has failed (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
+                $"{preMessage}Failed to consume CDC changes from the source database (last {CdcSinkErrorsDetails.MaxNumberOfErrors} errors are shown)",
                 out var details);
 
             return AddErrorAlert(errors, details, alert);

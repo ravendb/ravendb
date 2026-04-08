@@ -134,6 +134,15 @@ public static class CdcSinkSourceVerifier
         }
         else
         {
+            if (configuration?.Postgres == null)
+            {
+                result.Errors.Add(
+                    $"User '{currentUser}' does not have the REPLICATION privilege required for CDC. " +
+                    $"Either grant it with: ALTER ROLE {currentUser} REPLICATION; " +
+                    "or have an admin create a replication slot and publication directly, then setup the `Postgres` section of the configuration with the slot and publication names.");
+                return;
+            }
+
             // User can't create replication infrastructure — check if admin already set it up.
             // Names are always set by AddCdcSinkCommand, so they are guaranteed non-null here.
             var expectedPubName = configuration.Postgres.PublicationName;

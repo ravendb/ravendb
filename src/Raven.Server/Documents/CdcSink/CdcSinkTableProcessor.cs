@@ -1,9 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Amqp;
 using Raven.Client.Documents.Operations.CdcSink;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

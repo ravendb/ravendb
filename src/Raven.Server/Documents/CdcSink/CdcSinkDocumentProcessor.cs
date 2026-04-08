@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.CdcSink;
 public class CdcSinkDocumentProcessor
 {
     private readonly CdcSinkConfiguration _config;
+    private readonly string _defaultSchema;
     private readonly Dictionary<(string Schema, string Table), CdcSinkTableProcessor> _tableIndex;
 
     internal RavenLogger Logger { get; set; }
@@ -30,6 +31,7 @@ public class CdcSinkDocumentProcessor
     public CdcSinkDocumentProcessor(CdcSinkConfiguration config, string defaultSchema = "")
     {
         _config = config;
+        _defaultSchema = defaultSchema;
         _tableIndex = new Dictionary<(string, string), CdcSinkTableProcessor>(TableKeyComparer.Instance);
 
         foreach (var table in config.Tables)
@@ -78,18 +80,21 @@ public class CdcSinkDocumentProcessor
 
         foreach (var table in _config.Tables)
         {
+            var schema = table.SourceTableSchema ?? _defaultSchema;
+
             if (table.Patch != null)
-                tableScripts.TryAdd(MakeKey(table.SourceTableSchema, table.SourceTableName), table.Patch);
+                tableScripts.TryAdd(MakeKey(schema, table.SourceTableName), table.Patch);
 
             if (table.OnDelete?.Patch != null)
-                tableScripts.TryAdd(OnDeleteKey(table.SourceTableSchema, table.SourceTableName), table.OnDelete.Patch);
+                tableScripts.TryAdd(OnDeleteKey(schema, table.SourceTableName), table.OnDelete.Patch);
 
             CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
             {
+                var embeddedSchema = e.SourceTableSchema ?? _defaultSchema;
                 if (e.Patch != null)
-                    tableScripts.TryAdd(MakeKey(e.SourceTableSchema, e.SourceTableName), e.Patch);
+                    tableScripts.TryAdd(MakeKey(embeddedSchema, e.SourceTableName), e.Patch);
                 if (e.OnDelete?.Patch != null)
-                    tableScripts.TryAdd(OnDeleteKey(e.SourceTableSchema, e.SourceTableName), e.OnDelete.Patch);
+                    tableScripts.TryAdd(OnDeleteKey(embeddedSchema, e.SourceTableName), e.OnDelete.Patch);
             });
         }
 

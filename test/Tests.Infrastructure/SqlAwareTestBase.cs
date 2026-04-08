@@ -399,10 +399,12 @@ namespace Tests.Infrastructure
                         {
                             try
                             {
-                                dbCommand.CommandText = $@"
+                                        dbCommand.Parameters.Clear();
+                                dbCommand.CommandText = @"
                                     SELECT pg_drop_replication_slot(slot_name)
                                     FROM pg_replication_slots
-                                    WHERE database = '{dbName}';";
+                                    WHERE database = @dbName";
+                                dbCommand.Parameters.AddWithValue("dbName", dbName);
                                 dbCommand.ExecuteNonQuery();
                                 break;
                             }
