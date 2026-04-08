@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-
 using System.Data.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters;
 using System.Linq;
@@ -95,6 +94,12 @@ public static class CdcSinkSourceVerifier
 
     private static async Task VerifyPostgreSqlAsync(DbConnection connection, List<string> tableNames, CdcSinkConfiguration configuration, CdcSinkVerificationResult result)
     {
+        if (tableNames is not { Count: > 0 })
+        {
+            result.Errors.Add("No table names were provided for verification. At least one table is required.");
+            return;
+        }
+
         using var qb = new Npgsql.NpgsqlCommandBuilder();
 
         // Check wal_level = logical
@@ -179,14 +184,14 @@ public static class CdcSinkSourceVerifier
                 if (publicationExists == false)
                 {
                     missing.Add($"publication '{expectedPubName}'");
-                    var tables = tableNames != null ? string.Join(", ", tableNames) : "ALL TABLES";
-                    commands.Add($"CREATE PUBLICATION {qb.QuoteIdentifier(expectedPubName)} FOR TABLE {tables};");
+                    var quotedTables = string.Join(", ", tableNames.Select(t => qb.QuoteIdentifier(t)));
+                    commands.Add($"CREATE PUBLICATION {qb.QuoteIdentifier(expectedPubName)} FOR TABLE {quotedTables};");
                 }
 
                 if (slotExists == false)
                 {
                     missing.Add($"replication slot '{expectedSlotName}'");
-                    commands.Add($"SELECT pg_create_logical_replication_slot('{expectedSlotName}', 'pgoutput');");
+                    commands.Add($"SELECT pg_create_logical_replication_slot('{expectedSlotName.Replace("'", "''")}', 'pgoutput');");
                 }
 
                 result.Errors.Add(
