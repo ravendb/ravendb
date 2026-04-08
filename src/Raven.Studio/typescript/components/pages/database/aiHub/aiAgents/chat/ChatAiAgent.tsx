@@ -67,7 +67,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack mb-2 justify-content-between px-3">
-                <div className="hstack gap-2">
+                <div className="hstack gap-2 flex-wrap">
                     <Button
                         variant="primary"
                         className="rounded-pill"
@@ -83,6 +83,15 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                             target="_blank"
                         >
                             <Icon icon="document" /> Edit document
+                        </a>
+                    )}
+                    {config.data && (
+                        <a
+                            href={appUrl.forEditAiAgent(databaseName, config.data.Identifier)}
+                            className="btn btn-secondary rounded-pill"
+                            target="_blank"
+                        >
+                            <Icon icon="settings" /> Edit configuration
                         </a>
                     )}
                     <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
