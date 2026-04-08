@@ -156,6 +156,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         dimensions: getDimensionsSchema("azureOpenAiSettings"),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("azureOpenAiSettings"),
+        enablePromptCache: yup.boolean().nullable(),
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("azureOpenAiSettings"),
     }),
@@ -178,6 +179,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         dimensions: getDimensionsSchema("googleSettings"),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("googleSettings"),
+        enablePromptCache: yup.boolean().nullable(),
     }),
     huggingFaceSettings: yupObjectSchema<FormData["huggingFaceSettings"]>({
         apiKey: yup
@@ -240,6 +242,7 @@ const schema = yupObjectSchema<FormData>({
         projectId: yup.string().nullable(),
         dimensions: getDimensionsSchema("openAiSettings"),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("openAiSettings"),
+        enablePromptCache: yup.boolean().nullable(),
         isSetTemperature: yup.boolean().nullable(),
         temperature: getTemperatureSchema("openAiSettings"),
     }),
@@ -308,6 +311,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 deploymentName: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
+                enablePromptCache: null,
                 isSetTemperature: false,
                 temperature: null,
             } satisfies Required<FormData["azureOpenAiSettings"]>,
@@ -318,6 +322,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 dimensions: null,
                 endpoint: null,
                 embeddingsMaxConcurrentBatches: null,
+                enablePromptCache: null,
             } satisfies Required<FormData["googleSettings"]>,
             huggingFaceSettings: {
                 apiKey: null,
@@ -344,6 +349,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 projectId: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
+                enablePromptCache: null,
                 isSetTemperature: false,
                 temperature: null,
             } satisfies Required<FormData["openAiSettings"]>,

@@ -18,6 +18,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import assertUnreachable from "components/utils/assertUnreachable";
+import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -37,6 +38,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         return tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, {
             AiVersion: formValues.googleSettings.aiVersion,
             ApiKey: formValues.googleSettings.apiKey,
+            EnablePromptCache: formValues.googleSettings.enablePromptCache,
             Model: formValues.googleSettings.model,
             Endpoint: formValues.googleSettings.endpoint,
         });
@@ -106,6 +108,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     options={getModelOptions(formValues.modelType)}
                 />
             </div>
+            <PromptCacheField baseName="googleSettings" />
             <div className="mb-2">
                 <FormLabel>
                     Dimensions <OptionalLabel />
