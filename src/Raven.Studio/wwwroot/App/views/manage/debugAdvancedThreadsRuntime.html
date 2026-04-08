@@ -15,6 +15,14 @@
                 <div>
                     <input class="form-control" placeholder="Filter (Name, Thread Id)" data-bind="textInput: filter" />
                 </div>
+                <div>
+                    <div class="toggle">
+                        <input id="io-totals-since-creation" class="styled" type="checkbox" data-bind="checked: showTotalsSinceThreadCreation">
+                        <label for="io-totals-since-creation" class="properties-label" title="When enabled, IO totals show cumulative values since thread creation. When disabled, totals are relative to when monitoring started.">
+                            IO totals since thread creation
+                        </label>
+                    </div>
+                </div>
                 <div class="btn-group">
                     <select
                         id="visibleColumnsSelector"
