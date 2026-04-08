@@ -47,7 +47,7 @@ namespace SlowTests.Server.Documents.CdcSink
             // The process should detect this mismatch and restart to re-learn the schema.
 
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteMySql(connectionString, @"
                 CREATE TABLE items (
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task SchemaEvolution_RemoveColumn_DetectedViaTableMapEvent()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteMySql(connectionString, @"
                 CREATE TABLE items (
@@ -163,7 +163,7 @@ namespace SlowTests.Server.Documents.CdcSink
         public async Task ConnectionFailure_RecoversAfterStopAndRestart()
         {
             using var store = GetDocumentStore();
-            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
 
             ExecuteMySql(connectionString, @"
                 CREATE TABLE items (
