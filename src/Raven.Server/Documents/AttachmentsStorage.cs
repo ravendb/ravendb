@@ -134,9 +134,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
-            string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false)
+        public enum AttachmentSource
         {
+            None,
+            FromSmuggler,
+            FromResolveConflicts
+        }
+        
+        public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
+            string hash, string expectedChangeVector = null, Stream stream = null, bool updateDocument = true, bool extractCollectionName = false, AttachmentSource source = AttachmentSource.None)
+        {
+            if(source == AttachmentSource.None)
+                ValidateAttachmentParameters(name, contentType);
+            
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -146,6 +156,7 @@ namespace Raven.Server.Documents
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
+            var fromSmuggler = source == AttachmentSource.FromSmuggler; 
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
                 TableValueReader tvr = default;
@@ -298,6 +309,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateAttachmentParameters(string name, string contentType)
+        {
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+            
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Attachment name");
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(contentType, "Attachment content type");
+        }
+        
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>

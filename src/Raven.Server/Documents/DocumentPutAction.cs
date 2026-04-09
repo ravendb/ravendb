@@ -132,6 +132,7 @@ namespace Raven.Server.Documents
                     _documentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put, newFlags);
 
                 var collectionName = _documentsStorage.ExtractCollectionName(context, document);
+                ValidateIdAndCollection(id, collectionName.Name, newFlags, nonPersistentFlags);
                 _documentsStorage._forTestingPurposes?.OnBeforeOpenTableWhenPutDocumentWithSpecificId?.Invoke(id);
                 
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
@@ -331,6 +332,24 @@ namespace Raven.Server.Documents
                     LastModified = new DateTime(modifiedTicks, DateTimeKind.Utc)
                 };
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateIdAndCollection(string id, string collection, DocumentFlags newFlags, NonPersistentDocumentFlags nonPersistentFlags)
+        {
+            if (string.IsNullOrWhiteSpace(id)
+                || newFlags.Contain(DocumentFlags.FromReplication)
+                || newFlags.Contain(DocumentFlags.FromClusterTransaction)
+                || newFlags.Contain(DocumentFlags.Reverted)
+                || newFlags.Contain(DocumentFlags.FromResharding)
+                || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
+                return;
+
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(id, "Document ID");
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(collection, "Collection");
         }
 
         [Conditional("DEBUG")]
