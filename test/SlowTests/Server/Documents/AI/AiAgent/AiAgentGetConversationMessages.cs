@@ -238,6 +238,16 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
     }
 
     [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_ReturnsNullForMissingConversation()
+    {
+        using var store = GetDocumentStore();
+
+        var result = await store.AI.GetConversationMessagesAsync("chats/does-not-exist");
+
+        Assert.Null(result);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
     public async Task CanGetConversationMessages_ArrayContentJoinsTextParts()
     {
         using var store = GetDocumentStore();

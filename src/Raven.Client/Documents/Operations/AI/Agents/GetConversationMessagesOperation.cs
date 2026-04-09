@@ -114,7 +114,7 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {
             if (response == null)
-                ThrowInvalidResponse();
+                return; // 404 — conversation not found
 
             Result = JsonDeserializationClient.AiConversationMessagesResult(response);
         }
