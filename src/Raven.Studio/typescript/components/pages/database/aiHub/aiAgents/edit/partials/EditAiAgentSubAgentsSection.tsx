@@ -124,10 +124,10 @@ function SubAgentItem({ index, remove, save, edit }: SubAgentItemProps) {
 
     if (!subAgentItem.isEditing) {
         return (
-            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
-                <div>
+            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center gap-3">
+                <div className="tool-info">
                     <h4 className="m-0">{subAgentItem.identifier}</h4>
-                    <small>{subAgentItem.description}</small>
+                    <small className="tool-description">{subAgentItem.description}</small>
                 </div>
                 <div className="hstack gap-2">
                     <Button variant="danger" onClick={remove}>

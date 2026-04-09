@@ -49,10 +49,10 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
 
     if (!queryItem.isEditing) {
         return (
-            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
-                <div>
+            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center gap-3">
+                <div className="tool-info">
                     <h4 className="m-0">{queryItem.name}</h4>
-                    <small>{queryItem.description}</small>
+                    <small className="tool-description">{queryItem.description}</small>
                 </div>
                 <div className="hstack gap-2">
                     <Button variant="danger" onClick={remove}>

@@ -29,4 +29,20 @@
         align-items: center;
         border-radius: sizes.$border-radius-sm;
     }
+
+    .tool-info {
+        display: flex;
+        flex-direction: column;
+        gap: sizes.$gutter-xxxs;
+
+        .tool-description {
+            display: -webkit-box;
+            line-clamp: 2;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.3em;
+            color: colors.$text-muted-var;
+        }
+    }
 }
