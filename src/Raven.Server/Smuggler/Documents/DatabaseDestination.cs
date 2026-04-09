@@ -889,7 +889,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (remoteParams.IsLocalStorageAttachment() && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, fromSmuggler: true);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, remoteParams, updateDocument: false, source: AttachmentsStorage.AttachmentSource.FromSmuggler);
                         continue;
                     }
 
