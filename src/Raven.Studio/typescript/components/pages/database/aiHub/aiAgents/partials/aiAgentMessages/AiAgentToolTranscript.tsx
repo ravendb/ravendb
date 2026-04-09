@@ -300,6 +300,11 @@ function FilledParametersField({ toolArguments, className }: FilledParametersFie
                 readOnly
                 mode={argumentsMode}
                 height={aceEditorUtils.getAceEditorHeight(prettifiedArguments)}
+                actions={[
+                    { component: <AceEditor.FullScreenAction /> },
+                    { component: <AceEditor.FormatAction /> },
+                    { component: <AceEditor.AutoResizeHeightAction /> },
+                ]}
             />
         </div>
     );

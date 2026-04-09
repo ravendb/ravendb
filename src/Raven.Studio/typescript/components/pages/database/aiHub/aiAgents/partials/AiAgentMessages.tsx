@@ -185,6 +185,7 @@ function AgentMessage({ agentMessage }: AgentMessageProps) {
                                     { component: <AceEditor.FullScreenAction /> },
                                     { component: <AceEditor.FormatAction /> },
                                     { component: <AceEditor.ToggleNewLinesAction /> },
+                                    { component: <AceEditor.AutoResizeHeightAction /> },
                                 ]}
                                 height={aceEditorUtils.getAceEditorHeight(agentMessage.content)}
                                 wrapEnabled={contentMode === "text" ? true : false}

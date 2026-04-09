@@ -34,6 +34,7 @@ function JsonEditorComponent() {
                 { component: <AceEditor.FullScreenAction /> },
                 { component: <AceEditor.FormatAction /> },
                 { component: <AceEditor.ToggleNewLinesAction /> },
+                { component: <AceEditor.AutoResizeHeightAction /> },
             ]}
             value={aceValue}
             onChange={(value) => setAceValue(value)}

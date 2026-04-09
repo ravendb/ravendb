@@ -1,7 +1,12 @@
 import { createContext, RefObject, useContext } from "react";
 import ReactAce from "react-ace";
 
-const AceEditorContext = createContext<RefObject<ReactAce>>(null);
+export interface AceEditorContextValue {
+    aceRef?: RefObject<ReactAce>;
+    setHeight: (height: number) => void;
+}
+
+const AceEditorContext = createContext<AceEditorContextValue>(null);
 
 export function useAceEditorContext() {
     const context = useContext(AceEditorContext);
