@@ -48,12 +48,18 @@ namespace Raven.Client.ServerWide.Commands
                 $"This may indicate that the URL does not point to a RavenDB server. Response: {json}");
         }
 
+        private const int MaxErrorBodySize = 4096;
+
         private static unsafe string GetLastReadBytes(JsonOperationContext.MemoryBuffer buffer)
         {
             if (buffer.Valid == 0)
                 return string.Empty;
 
-            return Encoding.UTF8.GetString(buffer.Address, buffer.Valid);
+            int size = Math.Min(buffer.Valid, MaxErrorBodySize);
+            var text = Encoding.UTF8.GetString(buffer.Address, size);
+            if (buffer.Valid > MaxErrorBodySize)
+                text += "... (truncated)";
+            return text;
         }
 
     }
