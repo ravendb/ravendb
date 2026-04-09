@@ -64,6 +64,47 @@ public class RavenDB_26266(ITestOutputHelper output) : RavenTestBase(output)
                     .ToList());
 
 
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Sharding)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.Sharded)]
+    public void ShardedVectorSearchWithOrderByScoreAndAdditionalField(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var config = Sharding.GetShardingConfiguration(store);
+
+        var sameSimilarityVector = new float[] { 0.8f, 0.6f };
+        var docs = new (float[] Vector, string Name)[]
+        {
+            (HighSimilarityVector, "Charlie"),
+            (sameSimilarityVector, "Bob"),
+            (sameSimilarityVector, "Alice"),
+        };
+
+        using (var session = store.OpenSession())
+        {
+            for (var i = 0; i < docs.Length; i++)
+            {
+                var id = Sharding.GetRandomIdForShard(config, i);
+                session.Store(new NamedVecDoc { Vector = docs[i].Vector, Name = docs[i].Name }, id);
+            }
+
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var results = session.Advanced
+                .RawQuery<NamedVecDoc>("from 'NamedVecDocs' where vector.search(Vector, $q) order by score(), Name")
+                .AddParameter("q", QueryVector)
+                .WaitForNonStaleResults()
+                .ToList();
+
+            Assert.Equal(docs.Length, results.Count);
+            Assert.Equal("Charlie", results[0].Name);
+            Assert.Equal("Alice", results[1].Name);
+            Assert.Equal("Bob", results[2].Name);
+        }
+    }
+
     private void RunVectorSearchTest(Options options, float[][] vectors, Func<IDocumentSession, List<VecDoc>> query)
     {
         using var store = GetDocumentStore(options);
@@ -92,7 +133,7 @@ public class RavenDB_26266(ITestOutputHelper output) : RavenTestBase(output)
 
             for (var i = 0; i < scores.Count - 1; i++)
             {
-                Assert.True(scores[i] > scores[i + 1]);
+                Assert.True(scores[i] >= scores[i + 1]);
             }
         }
     }
@@ -100,5 +141,11 @@ public class RavenDB_26266(ITestOutputHelper output) : RavenTestBase(output)
     private class VecDoc
     {
         public float[] Vector { get; set; }
+    }
+
+    private class NamedVecDoc
+    {
+        public float[] Vector { get; set; }
+        public string Name { get; set; }
     }
 }

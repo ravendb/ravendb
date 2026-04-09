@@ -51,12 +51,16 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     public int Compare(BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
+        int arrayIndex = 0;
         for (var i = 0; i < _orderByFields.Length; i++)
         {
             ref var orderByField = ref _orderByFields[i];
-            var cmp = CompareField(in orderByField, i, x, y);
+            var cmp = CompareField(in orderByField, arrayIndex, x, y);
             if (cmp != 0)
                 return orderByField.Ascending ? cmp : -cmp;
+
+            if (orderByField.OrderingType != OrderByFieldType.Score)
+                arrayIndex++;
         }
 
         return 0;

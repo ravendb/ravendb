@@ -78,6 +78,9 @@ public partial class CoraxQueryBuilder
             DeduplicationDisabled = deduplicationDisabled;
         }
         
+        public bool NeedsScoresBuffer() => HasBoost
+            && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
+
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
         {
             if (orderBy is null)

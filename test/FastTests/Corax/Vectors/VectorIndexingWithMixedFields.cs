@@ -70,8 +70,9 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("test", [.1f, .2f], null, null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = WaitForIndexingErrorsOnAnyShard(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index textual value instead", errors[0].Errors[0].Error);
     }
@@ -109,8 +110,9 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, null, [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = WaitForIndexingErrorsOnAnyShard(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index spatial value instead", errors[0].Errors[0].Error);
     }

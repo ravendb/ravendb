@@ -44,18 +44,18 @@ public class VectorAutoIndexClientApi(ITestOutputHelper output) : RavenTestBase(
 
         foreach (var databaseMode in new[] { RavenDatabaseMode.Single, RavenDatabaseMode.Sharded })
         {
-            var options = RavenTestBase.Options.ForMode(databaseMode);
-            options.SearchEngineMode = RavenSearchEngineMode.Corax;
-            options.ModifyDatabaseRecord += record =>
-            {
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
-                record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
-            };
-
             foreach (var isExact in exactConfig)
             {
                 foreach (var isNative in isNativeVector)
                 {
+                    var options = RavenTestBase.Options.ForMode(databaseMode);
+                    options.SearchEngineMode = RavenSearchEngineMode.Corax;
+                    options.ModifyDatabaseRecord += record =>
+                    {
+                        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
+                        record.Settings[RavenConfiguration.GetKey(x => x.Indexing.StaticIndexingEngineType)] = "Corax";
+                    };
+
                     yield return [options, isExact, isNative, isNative ? primitiveValueFunc : ravenVectorValueFunc];
                 }
             }
