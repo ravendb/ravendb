@@ -76,6 +76,9 @@ namespace Raven.Client.ServerWide.Commands
         {
             var result = await TopologyCommandHelper.ParseTopologyResponseAsync(context, response, url, "database/topology").ConfigureAwait(false);
 
+            if (cache != null && CanCache)
+                CacheResponse(cache, url, response, result);
+
             SetResponse(context, result, fromCache: false);
 
             if (Result?.Nodes == null)

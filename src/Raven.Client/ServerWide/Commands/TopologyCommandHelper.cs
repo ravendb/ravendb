@@ -1,5 +1,4 @@
 using System;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,9 +15,6 @@ namespace Raven.Client.ServerWide.Commands
         public static async Task<BlittableJsonReaderObject> ParseTopologyResponseAsync(
             JsonOperationContext context, HttpResponseMessage response, string url, string debugTag)
         {
-            if (response.StatusCode == HttpStatusCode.NoContent)
-                return null;
-
 #if NETSTANDARD2_0
             using (var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false))
 #else

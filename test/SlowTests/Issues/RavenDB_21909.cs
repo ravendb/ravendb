@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             listener.Prefixes.Add(prefix);
             listener.Start();
 
-            var listenerTask = Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 while (listener.IsListening)
                 {
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
             listener.Prefixes.Add(prefix);
             listener.Start();
 
-            var listenerTask = Task.Run(async () =>
+            _ = Task.Run(async () =>
             {
                 while (listener.IsListening)
                 {
