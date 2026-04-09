@@ -322,6 +322,7 @@ namespace TypingsGenerator
 
             // alerts
             scripter.AddType(typeof(EtlErrorsDetails));
+            scripter.AddType(typeof(EtlWarningDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
             scripter.AddType(typeof(ServerLimitsDetails));
