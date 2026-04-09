@@ -37,10 +37,11 @@ public sealed class GetConversationMessagesOptions
 
     /// <summary>
     /// Controls the level of detail in returned messages.
-    /// Simple: only user + assistant content messages.
-    /// Detailed (default): all messages including system, tool calls, summaries, usage.
+    /// Simple (default): only user + assistant content messages.
+    /// Detailed: adds system messages and tool calls with results.
+    /// Full: no filtering, includes summaries and internal messages.
     /// </summary>
-    public AiConversationDetailLevel DetailLevel{ get; set; } = AiConversationDetailLevel.Simple;
+    public AiConversationDetailLevel DetailLevel { get; set; } = AiConversationDetailLevel.Simple;
 
     internal void Validate()
     {
@@ -49,6 +50,9 @@ public sealed class GetConversationMessagesOptions
 
         if (Before.HasValue && After.HasValue)
             throw new ArgumentException($"{nameof(Before)} and {nameof(After)} cannot both be specified.");
+
+        if (PageSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(PageSize), "PageSize must be greater than 0.");
     }
 }
 
