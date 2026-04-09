@@ -156,6 +156,7 @@ function AceEditor(props: AceEditorProps) {
             <div
                 className={classNames(
                     "ace-editor",
+                    "position-relative",
                     { "has-error": errorMessage },
                     { "is-dragging": resizableHeight.isDragging }
                 )}
@@ -206,25 +207,24 @@ function AceEditor(props: AceEditorProps) {
                     {!isFullScreenLabelHidden && (
                         <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
                     )}
-
-                    <div
-                        style={{
-                            position: "absolute",
-                            bottom: "-5px",
-                            left: 0,
-                            right: 0,
-                            height: "10px",
-                            cursor: "row-resize",
-                        }}
-                        onMouseDown={resizableHeight.handleMouseDown}
-                        onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
-                    />
                 </div>
                 {errorMessage && (
                     <div className="bg-faded-danger py-1 px-2">
                         <small>{errorMessage}</small>
                     </div>
                 )}
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: "-5px",
+                        left: 0,
+                        right: 0,
+                        height: "10px",
+                        cursor: "row-resize",
+                    }}
+                    onMouseDown={resizableHeight.handleMouseDown}
+                    onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
+                />
             </div>
         </AceEditorContext.Provider>
     );
