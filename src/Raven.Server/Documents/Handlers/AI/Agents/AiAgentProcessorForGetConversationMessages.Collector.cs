@@ -30,7 +30,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
         private readonly List<AiConversationMessage> _results = new();
         private readonly Dictionary<string, string> _toolResponses = new(StringComparer.Ordinal);
-        private readonly HashSet<DateTime> _seenTimestamps = new();
+        private readonly HashSet<string> _seenMessageKeys = new(StringComparer.Ordinal);
         private bool _hasOlderMessages;
 
         public Collector(DocumentsOperationContext context, DocumentsStorage storage, List<string> linkedIds,
@@ -80,82 +80,98 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private void CollectFromMessages(BlittableJsonReaderArray messages, DateTime? before, DateTime? after)
         {
             int startIndex, endIndex;
+            bool forward;
 
             if (after.HasValue)
             {
                 startIndex = BinarySearchBound(messages, after.Value, inclusive: true);
                 endIndex = messages.Length;
+                forward = true;
             }
             else if (before.HasValue)
             {
                 startIndex = 0;
                 endIndex = BinarySearchBound(messages, before.Value, inclusive: false);
+                forward = false;
+
+                // Extend past any tool responses that follow the cut point, so a timestamp
+                // boundary can't split an assistant message from its tool responses.
+                while (endIndex < messages.Length && IsToolMessage(messages, endIndex))
+                    endIndex++;
             }
             else
             {
                 startIndex = 0;
                 endIndex = messages.Length;
+                forward = false;
             }
 
             if (startIndex >= endIndex)
                 return;
 
-            if (after.HasValue)
-            {
-                // Forward: collect from start, keep scanning tool responses past pageSize
-                for (int i = startIndex; i < endIndex; i++)
-                {
-                    if (_results.Count >= _pageSize && IsToolMessage(messages, i) == false)
-                        break;
+            CollectToolResponses(messages, startIndex, endIndex);
 
-                    TryProcessMessage(messages, i);
+            int start = forward ? startIndex : endIndex - 1;
+            int step = forward ? 1 : -1;
+            bool stoppedEarly = false;
+
+            for (int i = start; i >= startIndex && i < endIndex; i += step)
+            {
+                TryProcessMessage(messages, i);
+
+                if (_results.Count >= _pageSize)
+                {
+                    stoppedEarly = true;
+                    break;
                 }
             }
-            else
-            {
-                // Backward/default: tool responses come after their assistant message chronologically,
-                // so walking backward we encounter them first — they're in _toolResponses by the time
-                // we hit the assistant message.
-                int lastVisited = endIndex;
-                for (int i = endIndex - 1; i >= startIndex; i--)
-                {
-                    TryProcessMessage(messages, i);
-                    lastVisited = i;
 
-                    if (_results.Count >= _pageSize)
-                        break;
-                }
-
-                if (lastVisited > startIndex)
-                    _hasOlderMessages = true;
-            }
+            if (forward && (startIndex > 0 || _linkedIds.Count > 0))
+                _hasOlderMessages = true;
+            else if (forward == false && stoppedEarly)
+                _hasOlderMessages = true;
         }
 
-        private void TryProcessMessage(BlittableJsonReaderArray messages, int index)
+        private void CollectToolResponses(BlittableJsonReaderArray messages, int startIndex, int endIndex)
         {
-            var msg = (BlittableJsonReaderObject)messages[index];
-            msg.TryGet(ConversationDocument.DateProperty, out DateTime timestamp);
-
-            if (_seenTimestamps.Add(timestamp) == false)
-                return;
-
-            msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
-
-            // Tool responses: accumulate for later merging, don't count toward page
-            if (role == ChatCompletionClient.Constants.RequestFields.RoleToolValue)
+            for (int i = startIndex; i < endIndex; i++)
             {
+                var msg = (BlittableJsonReaderObject)messages[i];
+                msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
+                if (role != ChatCompletionClient.Constants.RequestFields.RoleToolValue)
+                    continue;
+
                 msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId);
                 if (toolCallId != null)
                 {
                     msg.TryGet(ChatCompletionClient.Constants.RequestFields.Content, out string content);
                     _toolResponses[toolCallId] = content;
                 }
-                return;
             }
+        }
+
+        private static string CreateDeduplicationKey(BlittableJsonReaderObject msg)
+        {
+            msg.TryGet(ConversationDocument.DateProperty, out DateTime timestamp);
+            msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
+            msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId);
+            return $"{timestamp.Ticks}|{role}|{toolCallId}";
+        }
+
+        /// <summary>
+        /// Second pass: convert non-tool messages. Tool responses were already collected
+        /// in the first pass, so they're available when converting assistant messages.
+        /// </summary>
+        private void TryProcessMessage(BlittableJsonReaderArray messages, int index)
+        {
+            var msg = (BlittableJsonReaderObject)messages[index];
+
+            if (_seenMessageKeys.Add(CreateDeduplicationKey(msg)) == false)
+                return;
 
             var converted = ParseAndConvertMessage(msg, _toolResponses);
             if (converted == null)
-                return;
+                return; // tool, internal, or unrecognized role
 
             if (PassesDetailFilter(converted) == false)
                 return;

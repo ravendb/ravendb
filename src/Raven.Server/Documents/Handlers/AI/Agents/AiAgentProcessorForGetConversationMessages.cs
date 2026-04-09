@@ -28,19 +28,30 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
         var beforeStr = RequestHandler.GetStringQueryString("before", required: false);
         var afterStr = RequestHandler.GetStringQueryString("after", required: false);
 
-        var detailLevel = AiConversationDetailLevel.Detailed;
+        var detailLevel = AiConversationDetailLevel.Simple;
         if (detailLevelStr != null && Enum.TryParse<AiConversationDetailLevel>(detailLevelStr, ignoreCase: true, out var parsedLevel))
             detailLevel = parsedLevel;
 
-        DateTime? before = beforeStr != null ? DateTime.Parse(beforeStr, null, System.Globalization.DateTimeStyles.RoundtripKind) : null;
-        DateTime? after = afterStr != null ? DateTime.Parse(afterStr, null, System.Globalization.DateTimeStyles.RoundtripKind) : null;
+        if (pageSize <= 0)
+            pageSize = 25;
+
+        DateTime? before = null;
+        if (beforeStr != null && DateTime.TryParse(beforeStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedBefore))
+            before = parsedBefore;
+
+        DateTime? after = null;
+        if (afterStr != null && DateTime.TryParse(afterStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedAfter))
+            after = parsedAfter;
 
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
             var document = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
             if (document == null)
-                throw new ArgumentException($"Conversation '{conversationId}' not found.");
+            {
+                RequestHandler.HttpContext.Response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                return;
+            }
 
             var data = document.Data;
 
