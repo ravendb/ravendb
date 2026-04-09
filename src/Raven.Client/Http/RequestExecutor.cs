@@ -501,7 +501,9 @@ namespace Raven.Client.Http
             // maintenance operations and should not appear as child spans of unrelated user traces.
             // Setting Activity.Current = null here is safe: AsyncLocal semantics ensure the caller's
             // Activity is unaffected once this method returns from its await.
+#if NETCOREAPP3_1_OR_GREATER
             Activity.Current = null;
+#endif
 
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues

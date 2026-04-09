@@ -23,6 +23,54 @@ namespace FastTests.Client
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task ClusterUpdateTopologyAsync_ClearsAmbientActivity_BeforeTopologyHttpRequest()
+        {
+            using var store = GetDocumentStore();
+
+            using var clusterExecutor = ClusterRequestExecutor.Create(store.Urls, store.Certificate, store.Conventions);
+
+            // Warm up — ensure cluster topology is populated by executing a command.
+            using (clusterExecutor.ContextPool.AllocateOperationContext(out var ctx))
+            {
+                var cmd = new Raven.Client.ServerWide.Commands.GetClusterTopologyCommand();
+                await clusterExecutor.ExecuteAsync(cmd, ctx);
+            }
+
+            var parentActivity = new Activity("UserRequest").Start();
+            Activity capturedDuringTopology = null;
+            var topologyRequestObserved = false;
+
+            clusterExecutor.OnBeforeRequest += (_, args) =>
+            {
+                if (args.Url.Contains("/cluster/topology"))
+                {
+                    topologyRequestObserved = true;
+                    capturedDuringTopology = Activity.Current;
+                }
+            };
+
+            try
+            {
+                var node = clusterExecutor.TopologyNodes.First();
+                await clusterExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(node)
+                {
+                    TimeoutInMs = 15_000,
+                    DebugTag = "test-cluster-trace-isolation",
+                    ForceUpdate = true
+                });
+
+                Assert.Same(parentActivity, Activity.Current);
+            }
+            finally
+            {
+                parentActivity.Stop();
+            }
+
+            Assert.True(topologyRequestObserved, "OnBeforeRequest should have fired for the /cluster/topology endpoint");
+            Assert.Null(capturedDuringTopology);
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UpdateTopologyAsync_ClearsAmbientActivity_BeforeTopologyHttpRequest()
         {
             using var store = GetDocumentStore();
