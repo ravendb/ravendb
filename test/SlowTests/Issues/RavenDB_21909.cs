@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             listener.Prefixes.Add(prefix);
             listener.Start();
 
-            _ = Task.Run(async () =>
+            var listenerTask = Task.Run(async () =>
             {
                 while (listener.IsListening)
                 {
@@ -40,6 +40,10 @@ namespace SlowTests.Issues
                         ctx.Response.Close();
                     }
                     catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                    catch (HttpListenerException)
                     {
                         break;
                     }
@@ -66,6 +70,7 @@ namespace SlowTests.Issues
             }
 
             listener.Stop();
+            await listenerTask;
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
@@ -77,7 +82,7 @@ namespace SlowTests.Issues
             listener.Prefixes.Add(prefix);
             listener.Start();
 
-            _ = Task.Run(async () =>
+            var listenerTask = Task.Run(async () =>
             {
                 while (listener.IsListening)
                 {
@@ -91,6 +96,10 @@ namespace SlowTests.Issues
                         ctx.Response.Close();
                     }
                     catch (ObjectDisposedException)
+                    {
+                        break;
+                    }
+                    catch (HttpListenerException)
                     {
                         break;
                     }
@@ -117,6 +126,7 @@ namespace SlowTests.Issues
             }
 
             listener.Stop();
+            await listenerTask;
         }
 
         private static int GetAvailablePort()
