@@ -95,7 +95,7 @@ internal static class RavenLogManagerServerExtensions
     {
         PipeRule.SetLoggingLevels(LogLevel.Trace, LogLevel.Fatal);
         AdminLogsRule.SetLoggingLevels(LogLevel.Trace, LogLevel.Fatal);
-        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NodeTagLayoutRenderer>("nodeTag"));
+        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<RavenLayoutRenderer>("rvn"));
     }
 
     private static readonly ConcurrentDictionary<string, RavenAuditLogger> AuditLoggers = new(StringComparer.OrdinalIgnoreCase);

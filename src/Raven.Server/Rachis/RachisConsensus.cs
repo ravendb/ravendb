@@ -314,7 +314,7 @@ namespace Raven.Server.Rachis
                 using (var tx = context.OpenWriteTransaction())
                 {
                     _tag = ReadNodeTag(context);
-                    NodeTagLayoutRenderer.NodeTag = _tag;
+                    RavenLayoutRenderer.NodeTag = _tag;
 
                     RequestSnapshot = GetSnapshotRequest(context);
 
@@ -2314,7 +2314,7 @@ namespace Raven.Server.Rachis
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
                     _tag = newTag;
-                    NodeTagLayoutRenderer.NodeTag = newTag;
+                    RavenLayoutRenderer.NodeTag = newTag;
                 }
             };
         }
