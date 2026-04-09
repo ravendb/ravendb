@@ -5,14 +5,13 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Tests.Infrastructure;
-using Voron.Util;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -39,15 +38,27 @@ namespace SlowTests.Issues
             ValidateServerCanTalkToItself(certificate);
         }
 
+        [RavenFact(RavenTestCategory.Security)]
+        public void WillExplicitlyTrustOurOwnCertificate_SelfSigned_NotYetValid()
+        {
+            var certificate = CreateCertificateRequest(Environment.MachineName)
+                .CreateSelfSigned(DateTime.Today.AddDays(1), DateTime.Today.AddDays(30));
+            ValidateServerCanTalkToItself(certificate);
+        }
+
         private void ValidateServerCanTalkToItself(X509Certificate2 certificate)
         {
             string certFileName = GetTempFileName();
             File.WriteAllBytes(certFileName, certificate.Export(X509ContentType.Pkcs12));
+            // Reload from file with persistent key storage — ephemeral keys from
+            // CreateSelfSigned are rejected by Windows SChannel for expired certs.
+            var certBytes = certificate.Export(X509ContentType.Pkcs12);
+            var clientCert = CertificateLoaderUtil.CreateCertificate(certBytes);
             var certificates = new TestCertificatesHolder(certFileName, certFileName, certFileName, certFileName, certFileName);
             Certificates.SetupServerAuthentication(certificates: certificates);
             var store = GetDocumentStore(new Options
             {
-                ModifyDocumentStore = documentStore => documentStore.Certificate = X509CertificateLoader.LoadPkcs12FromFile(certFileName, null)
+                ModifyDocumentStore = documentStore => documentStore.Certificate = clientCert
             });
 
             Assert.StartsWith("https", store.Urls[0]);
@@ -89,12 +100,14 @@ namespace SlowTests.Issues
 
             public class PingResult
             {
+#pragma warning disable CS0649 // deserialization targets
                 public string Url;
                 public long TcpInfoTime;
                 public long SendTime;
                 public long ReceiveTime;
                 public string Error;
                 public string[] Log;
+#pragma warning restore CS0649
             }
 
             public class PingCommand : RavenCommand<PingResult[]>
