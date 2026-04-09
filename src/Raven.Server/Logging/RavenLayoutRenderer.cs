@@ -11,7 +11,7 @@ namespace Raven.Server.Logging;
 [ThreadAgnostic]
 internal sealed class RavenLayoutRenderer : LayoutRenderer
 {
-    public static string NodeTag;
+    public static volatile string NodeTag;
 
     [DefaultParameter]
     public string Item { get; set; }
@@ -24,7 +24,7 @@ internal sealed class RavenLayoutRenderer : LayoutRenderer
                 builder.Append(NodeTag ?? RachisConsensus.InitialTag);
                 break;
             default:
-                throw new ArgumentException($"Unknown RavenDB layout renderer item: '{Item}'");
+                throw new ArgumentException($"Unknown RavenDB layout renderer item: '{Item}'. Valid items are: NodeTag");
         }
     }
 }
