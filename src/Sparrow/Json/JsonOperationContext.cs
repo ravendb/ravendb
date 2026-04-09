@@ -505,7 +505,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(value.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(value, out _);
+            int escapePositionsSize = JsonParserState.FindMaxEscapePositionSize(value);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -513,16 +513,13 @@ namespace Sparrow.Json
             var address = memory.Address;
             var actualSize = Encodings.Utf8.GetBytes(value, new Span<byte>(address, memory.SizeInBytes));
 
-            state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
+                state.FindEscapedPositions(address, ref actualSize, escapePositionsSize);
 
             state.WriteEscapePositionsTo(address + actualSize);
             LazyStringValue result = longLived == false ? AllocateStringValue(strValue, address, actualSize) : new LazyStringValue(strValue, address, actualSize, this);
             result.AllocatedMemoryData = memory;
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
             return result;
         }
 
@@ -535,6 +532,30 @@ namespace Sparrow.Json
         }
 
         public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
+        {
+            var state = new JsonParserState();
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
+
+            int escapePositionsSize = JsonParserState.FindMaxEscapePosition(ptr, size);
+
+            int memorySize = maxByteCount + escapePositionsSize;
+            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
+
+            var address = memory.Address;
+
+            Memory.Copy(address, ptr, size);
+
+            state.FindEscapedPositions(address, ref size, escapePositionsSize);
+
+            state.WriteEscapePositionsTo(address + size);
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
+            return result;
+        }
+        
+        public unsafe LazyStringValue GetLazyStringForBackwardCompatibility(byte* ptr, int size, bool longLived = false)
         {
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
@@ -554,10 +575,7 @@ namespace Sparrow.Json
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
             result.AllocatedMemoryData = memory;
 
-            if (state.EscapePositions.Count > 0)
-            {
-                result.EscapePositions = state.EscapePositions.ToArray();
-            }
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
             return result;
         }
 

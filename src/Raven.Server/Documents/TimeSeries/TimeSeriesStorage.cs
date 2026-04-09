@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -1356,6 +1357,13 @@ namespace Raven.Server.Documents.TimeSeries
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateTag(LazyStringValue tag)
+        {
+            if(_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+                DocumentIdWorker.CheckAndThrowContainsControlCharacters(tag, "Time-series tag");
+        }
+
         private Dictionary<string, string[]> _incrementalPrefixByDbId;
         private static readonly byte[] TimedCounterPrefixBuffer = Encoding.UTF8.GetBytes(TimedCounterPrefix);
         private static readonly byte[] IncrementPrefixBuffer = Encoding.UTF8.GetBytes(IncrementPrefix);
@@ -1744,19 +1752,22 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 while (appendEnumerator.MoveNext())
                 {
+                    var current = appendEnumerator.Current;
+                    Debug.Assert(current != null);
+
+                    if (options.ChangeVectorFromReplication == null)
+                    {
+                        // not from replication
+                        AssertNoNanValue(current);
+                    }
+                    
+                    if (options.VerifyName)
+                        ValidateTag(current.Tag);
+                    
                     var retry = true;
                     while (retry)
                     {
                         retry = false;
-                        var current = appendEnumerator.Current;
-                        Debug.Assert(current != null);
-
-                        if (options.ChangeVectorFromReplication == null)
-                        {
-                            // not from replication
-                            AssertNoNanValue(current);
-                        }
-
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, options);
@@ -1813,14 +1824,20 @@ namespace Raven.Server.Documents.TimeSeries
             return context.LastDatabaseChangeVector;
         }
 
-        private static void VerifyLegalName(string name)
+        private void VerifyLegalName(string name)
         {
+            var checkControlChars = _documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier;
+            
             for (int i = 0; i < name.Length; i++)
             {
-                if (name[i] == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
+                var c = name[i];
+                if (c == TimeSeriesConfiguration.TimeSeriesRollupSeparator)
                     throw new InvalidOperationException($"Illegal time series name : '{name}'. " +
                                                         $"Time series names cannot contain '{TimeSeriesConfiguration.TimeSeriesRollupSeparator}' character, " +
                                                         "since this character is reserved for time series rollups.");
+                
+                if(checkControlChars && DocumentIdWorker.IsControlCharacter(c))
+                    DocumentIdWorker.ThrowIdentifierWithControlCharacters(name, "TimeSeries name");
             }
         }
 
@@ -2774,7 +2791,7 @@ namespace Raven.Server.Documents.TimeSeries
                     if (Utf8Formatter.TryFormat(baseline.Ticks, bufferSpan.Slice(offset), out var bytesWritten, FormatD18) == false || bytesWritten != FormatD18.Precision)
                         throw new InvalidOperationException($"Could not write '{baseline.Ticks}' ticks. Bytes written {bytesWritten}, but expected {FormatD18.Precision}.");
 
-                    return context.GetLazyString(mem.Address, size);
+                    return context.GetLazyStringForBackwardCompatibility(mem.Address, size);
                 }
                 finally
                 {
@@ -2798,7 +2815,7 @@ namespace Raven.Server.Documents.TimeSeries
                 var offset = documentId.Size;
                 bufferSpan[offset++] = SpecialChars.LuceneRecordSeparator;
                 name.AsSpan().CopyTo(bufferSpan.Slice(offset));
-                return context.GetLazyString(mem.Address, size);
+                return context.GetLazyStringForBackwardCompatibility(mem.Address, size);
             }
             finally
             {

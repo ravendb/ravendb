@@ -233,10 +233,20 @@ namespace Raven.Server.Documents
             }
         }
 
+        public enum AttachmentSource
+        {
+            None,
+            FromSmuggler,
+            FromResolveConflicts
+        }
+        
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
             string hash, long size, RemoteAttachmentParameters remoteParams, string expectedChangeVector = null, Stream stream = null,
-            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false)
+            bool updateDocument = true, bool extractCollectionName = false, bool streamAlreadyInRemoteStorage = false, AttachmentSource source = AttachmentSource.None)
         {
+            if(source is AttachmentSource.None)
+                ValidateAttachmentParameters(name, contentType);
+            
             (RemoteAttachmentFlags flags, DateTime? remoteAtDt, string identifier) = GetInfoFromRemoteAttachmentParameters(remoteParams);
 
             if (context.Transaction == null)
@@ -248,6 +258,7 @@ namespace Raven.Server.Documents
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
 
+            var fromSmuggler = source == AttachmentSource.FromSmuggler; 
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
                 TableValueReader tvr = default;
@@ -388,7 +399,7 @@ namespace Raven.Server.Documents
 
                         if (putStream && fromSmuggler == false)
                         {
-                            if (fromEtl == false || flags == RemoteAttachmentFlags.None)
+                            if (streamAlreadyInRemoteStorage == false || flags == RemoteAttachmentFlags.None)
                             {
                                 PutAttachmentStream(context, keySlice, base64Hash, stream);
                             }
@@ -396,7 +407,7 @@ namespace Raven.Server.Documents
 
                         if (fromSmuggler == false)
                         {
-                            if (fromEtl && flags == RemoteAttachmentFlags.Remote)
+                            if (streamAlreadyInRemoteStorage && flags == RemoteAttachmentFlags.Remote)
                             {
                                 remoteAt = remoteAtDt.HasValue == false ? -1L : remoteAtDt.Value.Ticks;
                             }
@@ -449,6 +460,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateAttachmentParameters(string name, string contentType)
+        {
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
+                return;
+            
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Attachment name");
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(contentType, "Attachment content type");
+        }
+        
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
@@ -1116,7 +1137,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, updateDocument: updateDocument, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, updateDocument: updateDocument, extractCollectionName: extractCollectionName, streamAlreadyInRemoteStorage: attachment.RemoteParameters.IsRemoteStorageAttachment());
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)
@@ -1136,7 +1157,7 @@ namespace Raven.Server.Documents
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
-            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, fromEtl: attachment.RemoteParameters.IsRemoteStorageAttachment());
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RemoteParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName, streamAlreadyInRemoteStorage: attachment.RemoteParameters.IsRemoteStorageAttachment());
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()

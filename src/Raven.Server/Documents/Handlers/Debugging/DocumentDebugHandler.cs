@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -110,8 +111,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 {
                                     unsafe
                                     {
-                                        using var cloned = context.GetLazyString(doc.LowerId.Buffer, doc.LowerId.Size, longLived: false);
-                                        if (cloned.Length > doc.LowerId.Length)
+                                        JsonParserState.FindMaxEscapePositionAndControlCharSize(doc.LowerId.Buffer, doc.LowerId.Size, out var count);
+                                        if (count > 0)
                                         {
                                             AddToResult(unescapedControlCharacterIds, doc);
                                             resultCount--;
