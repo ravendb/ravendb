@@ -12,7 +12,7 @@ import AceEditorLoadFileAction from "./actions/AceEditorLoadFileAction";
 import AceEditorDeleteAction from "./actions/AceEditorDeleteAction";
 import AceEditorHelpAction from "./actions/AceEditorHelpAction";
 import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesAction";
-import AceEditorAutoResizeHeightAction from "./actions/AceEditorAutoResizeHeightAction";
+import AceEditorAutoResizeHeightAction, { handleAutoResizeHeight } from "./actions/AceEditorAutoResizeHeightAction";
 import { aceEditorConstants } from "./aceEditorConstants";
 import useResizableHeight from "components/hooks/useResizableHeight";
 
@@ -217,6 +217,7 @@ function AceEditor(props: AceEditorProps) {
                             cursor: "row-resize",
                         }}
                         onMouseDown={resizableHeight.handleMouseDown}
+                        onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
                     />
                 </div>
                 {errorMessage && (
