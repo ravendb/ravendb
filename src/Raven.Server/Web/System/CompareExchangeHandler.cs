@@ -19,7 +19,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/databases/*/cmpxchg", "PUT", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task PutCompareExchangeValue()
         {
-            using (var processor = new CompareExchangeHandlerProcessorForPutCompareExchangeValue(this, Database.Name))
+            using (var processor = new CompareExchangeHandlerProcessorForPutCompareExchangeValue<DocumentsOperationContext>(this, Database.Name))
                 await processor.ExecuteAsync();
         }
 
