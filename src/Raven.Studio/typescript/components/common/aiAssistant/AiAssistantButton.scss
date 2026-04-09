@@ -18,4 +18,14 @@
     &:disabled {
         opacity: 0.75 !important;
     }
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(120deg, #4ac8f9 13.4%, #5058ff 50%, #8b42f5 86.6%);
+        border-radius: var(--bs-border-radius-pill);
+        z-index: -1;
+        margin: -1px;
+    }
 }
