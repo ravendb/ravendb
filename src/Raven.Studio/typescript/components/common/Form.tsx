@@ -1007,3 +1007,29 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
         message: error?.message,
     };
 }
+
+export function hasRelevantDirtyFields(dirtyFields: unknown, ignoredFieldNames: string[]): boolean {
+    if (!dirtyFields) {
+        return false;
+    }
+
+    if (dirtyFields === true) {
+        return true;
+    }
+
+    if (Array.isArray(dirtyFields)) {
+        return dirtyFields.some((field) => hasRelevantDirtyFields(field, ignoredFieldNames));
+    }
+
+    if (typeof dirtyFields === "object") {
+        return Object.entries(dirtyFields).some(([key, value]) => {
+            if (ignoredFieldNames.includes(key)) {
+                return false;
+            }
+
+            return hasRelevantDirtyFields(value, ignoredFieldNames);
+        });
+    }
+
+    return false;
+}
