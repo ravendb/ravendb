@@ -1,3 +1,5 @@
+/* global jest, $ */
+
 const lodash = require("lodash");
 const knockout = require("knockout");
 require("knockout-postbox");
@@ -17,6 +19,25 @@ require("../typescript/test/mocks");
 hooksForAutoMock.forEach(hook => {
     jest.mock("hooks/" + hook);
 });
+
+jest.mock("react-markdown", () => {
+    const React = require("react");
+
+    function ReactMarkdown({ children }) {
+        return React.createElement(React.Fragment, null, children);
+    }
+
+    return {
+        __esModule: true,
+        default: ReactMarkdown,
+        Markdown: ReactMarkdown,
+    };
+});
+
+jest.mock("remark-gfm", () => ({
+    __esModule: true,
+    default: () => undefined,
+}));
 
 jest.mock("../typescript/common/eventsCollector", () => ({
     default: new (require("../typescript/test/mocks/hooks/MockEventsCollector").default)()
