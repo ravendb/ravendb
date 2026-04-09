@@ -36,8 +36,6 @@ namespace Raven.Client.ServerWide.Commands
                     catch (Exception e)
                     {
                         string body = GetLastReadBytes(buffer);
-                        if (body.Length == 0)
-                            body = await FetchResponseBodyForError(url).ConfigureAwait(false);
 
                         throw new InvalidOperationException(
                             $"Failed to parse the topology response from '{url}'. " +
@@ -62,25 +60,5 @@ namespace Raven.Client.ServerWide.Commands
             return Encoding.UTF8.GetString(buffer.Address, buffer.Valid);
         }
 
-        private static async Task<string> FetchResponseBodyForError(string url)
-        {
-            try
-            {
-                using var client = new HttpClient();
-                var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
-#if NETSTANDARD2_0
-                var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-#else
-                var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-#endif
-                var buf = new byte[4096];
-                var read = await responseStream.ReadAsync(buf, 0, buf.Length).ConfigureAwait(false);
-                return Encoding.UTF8.GetString(buf, 0, read);
-            }
-            catch
-            {
-                return "(could not read response body)";
-            }
-        }
     }
 }
