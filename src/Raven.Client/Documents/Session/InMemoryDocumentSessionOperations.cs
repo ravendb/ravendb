@@ -1435,6 +1435,9 @@ more responsive application.
         {
             if (_isDisposed)
                 throw new ObjectDisposedException("session");
+
+            if (_documentStore.WasDisposed)
+                throw new ObjectDisposedException("store", "The document store has already been disposed and cannot be used");
         }
 
         private void Dispose(bool isDisposing)
