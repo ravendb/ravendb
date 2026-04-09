@@ -414,5 +414,85 @@ namespace Raven.Server.Documents
         {
             return GetLowerIdSliceAndStorageKey(context, str, out var _, out strSlice);
         }
+
+        public static void CheckAndThrowContainsControlCharacters(ReadOnlySpan<char> str, string identifierName)
+        {
+            if(HasControlCharacters(str))
+                ThrowIdentifierWithControlCharacters(str, identifierName);
+        }
+        
+        public static void CheckAndThrowContainsControlCharacters(LazyStringValue str, string identifierName)
+        {
+            if(HasControlCharacters(str.AsReadOnlySpan()))
+                ThrowIdentifierWithControlCharacters(str, identifierName);
+        }
+
+        [DoesNotReturn]
+        public static void ThrowIdentifierWithControlCharacters(ReadOnlySpan<char> str, string identifierName)
+        {
+            throw new NotSupportedException($"{identifierName} cannot contain control characters : '{EscapeControlCharacters(str)}' (escaped version)");
+        }
+    
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasControlCharacters(ReadOnlySpan<char> str)
+        {
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (IsControlCharacter(str[i]))
+                    return true;
+            }
+            return false;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasControlCharacters(ReadOnlySpan<byte> str)
+        {
+            for (int i = 0; i < str.Length; i++)
+            {
+                if (IsControlCharacter(str[i]))
+                    return true;
+            }
+            return false;
+        }
+    
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsControlCharacter(char c)
+        {
+            // Exclude escape characters that are valid inside JSON
+            // 8  => '\b' => 0000 1000
+            // 9  => '\t' => 0000 1001
+            // 10 => '\n' => 0000 1010
+            // 12 => '\f' => 0000 1100
+            // 13 => '\r' => 0000 1101
+            return c < 8 || c > 13 && c < 32 || c == 11;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsControlCharacter(byte c)
+        {
+            // Exclude escape characters that are valid inside JSON
+            // 8  => '\b' => 0000 1000
+            // 9  => '\t' => 0000 1001
+            // 10 => '\n' => 0000 1010
+            // 12 => '\f' => 0000 1100
+            // 13 => '\r' => 0000 1101
+            return c < 8 || c > 13 && c < 32 || c == 11;
+        }
+    
+        private static string EscapeControlCharacters(ReadOnlySpan<char> str)
+        {
+            var sb = new StringBuilder();
+            foreach (var c in str)
+            {
+                if (IsControlCharacter(c) == false)
+                {
+                    sb.Append(c);
+                    continue;
+                }
+                sb.Append("\\u");
+                sb.Append(((int)c).ToString("x4"));
+            }
+            return sb.ToString();
+        }
     }
 }

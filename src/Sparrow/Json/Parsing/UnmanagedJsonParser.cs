@@ -877,7 +877,7 @@ namespace Sparrow.Json.Parsing
                 }
             }
 
-            if (val < 32)
+            if (val < 32 || val == 92 || val == 34)
             {
                 // control character
                 var esc = _unmanagedWriteBuffer.SizeInBytes - _prevEscapePosition;

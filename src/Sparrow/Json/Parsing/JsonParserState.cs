@@ -45,12 +45,7 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int FindMaxEscapePositionAndControlCharSize(string str, out int controlCount)
-        {
-            return FindMaxEscapePositionAndControlCharSize(str.AsSpan(), out controlCount);
-        }
-        
+        //RavenDB-25738 For backward compatibility only. Use only for collection, attachment name & type, and timeseries tag
         public static int FindMaxEscapePositionAndControlCharSize(ReadOnlySpan<char> str, out int controlCount)
         {
             var count = 0;
@@ -88,7 +83,8 @@ namespace Sparrow.Json.Parsing
             // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
             return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
         }
-
+        
+        //RavenDB-25738 For backward compatibility only. Use only for collection, attachment name & type, and timeseries tag
         public static int FindMaxEscapePositionAndControlCharSize(byte* str, int size, out int escapedCount)
         {
             var count = 0;
@@ -128,14 +124,59 @@ namespace Sparrow.Json.Parsing
             // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
             return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
         }
+        
+        public static int FindMaxEscapePositionSize(ReadOnlySpan<char> str)
+        {
+            var count = 0;
+            for (int i = 0; i < str.Length; i++)
+            {
+                var value = str[i];
+                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
 
+                if (value < 32 || value == 92 || value == 34)
+                    count++;
+            }
+
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * EscapePositionItemSize;
+        }
+
+        public static int FindMaxEscapePosition(byte* str, int size)
+        {
+            var count = 0;
+            for (int i = 0; i < size; i++)
+            {
+                byte value = str[i];
+
+                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
+
+                if (value < 32 || value == 92 || value == 34)
+                    count++;
+            }
+
+            // we take 5 because that is the max number of bytes for variable size int
+            // plus 1 for the actual number of positions
+
+            // NOTE: this is used by FindEscapePositionsIn, change only if you also modify FindEscapePositionsIn
+            return (count + 1) * EscapePositionItemSize;
+        }
+
+        //RavenDB-25738 For backward compatibility only. Use only for collection, attachment name & type, and timeseries tag
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FindEscapedPositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize)
         {
             FindEscapedPositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize);
         }
 
-        public static void FindEscapedPositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        //RavenDB-25738 For backward compatibility only. Use only for collection, attachment name & type, and timeseries tag
+        private static void FindEscapedPositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
         {
             var originalLen = len;
             buffer.Clear();
@@ -190,6 +231,37 @@ namespace Sparrow.Json.Parsing
                 }
             }
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FindEscapedPositions(byte* str, ref int len, int previousComputedMaxSize)
+        {
+            FindEscapedPositions(EscapePositions, str, ref len, previousComputedMaxSize);
+        }
+
+        public static void FindEscapedPositions(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        {
+            buffer.Clear();
+            if (previousComputedMaxSize == EscapePositionItemSize)
+            {
+                // if the value is 5, then we got no escape positions, see: FindMaxEscapePosition
+                // and we don't have to do any work
+                return;
+            }
+
+            var lastEscape = 0;
+            for (int i = 0; i < len; i++)
+            {
+                // PERF: We use the values directly because it is 5x faster than iterating over a constant array.
+                // 34 => '"'  => 0010 0010
+                // 92 => '\\' => 0101 1100
+                if (str[i] is not (92 or 34 or < 32)) 
+                    continue;
+                
+                buffer.Add(i - lastEscape);
+                lastEscape = i + 1;
+            }
+        }
+        
         private static void ThrowInvalidSizeForEscapeControlChars(int previousComputedMaxSize)
         {
             throw new InvalidOperationException($"The previousComputedMaxSize: {previousComputedMaxSize} is too small to support the required escape positions. Did you not call FindMaxNumberOfEscapePositions?");

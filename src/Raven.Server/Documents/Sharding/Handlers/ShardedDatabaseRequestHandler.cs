@@ -181,5 +181,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             if (ShouldAddPagingPerformanceHint(numberOfResults))
                 DatabaseContext.NotificationCenter.Paging.Add(operation, action, details, numberOfResults, pageSize, duration, totalDocumentsSizeInBytes);
         }
+        
+        public override SupportedFeature GetSupportedFeature() => new SupportedFeature(DatabaseContext.DatabaseRecord);
     }
 }

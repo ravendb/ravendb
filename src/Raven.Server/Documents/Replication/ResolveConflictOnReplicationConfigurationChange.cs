@@ -516,7 +516,7 @@ namespace Raven.Server.Documents.Replication
                         // all nodes have the same change vector value after replication
                         var ad = _database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, attachment.DocumentId,
                             attachment.Name, attachment.ContentType, attachment.Hash,
-                            stream: null, expectedChangeVector: null, updateDocument: false);
+                            stream: null, expectedChangeVector: null, updateDocument: false, source:AttachmentsStorage.AttachmentSource.FromResolveConflicts);
                         continue;
                     }
 
