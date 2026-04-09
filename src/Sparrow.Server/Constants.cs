@@ -21,7 +21,7 @@ namespace Sparrow.Server.Global
             internal static List<JsonAttribute> DefaultAdminLogsJsonAttributes = new()
             {
                 new JsonAttribute("Date", "${longdate}"),
-                new JsonAttribute("NodeTag", "${nodeTag}"),
+                new JsonAttribute("NodeTag", "${rvn:item=NodeTag}"),
                 new JsonAttribute("Level", "${level:uppercase=true}"),
                 new JsonAttribute("ThreadID", "${threadid}"),
                 new JsonAttribute("Resource", "${event-properties:item=Resource}"),
