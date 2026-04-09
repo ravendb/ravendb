@@ -448,7 +448,7 @@ namespace Raven.Server.Commercial
                 {
                     // license expired, we'll try to update it
                     var updatedLicense = await GetUpdatedLicenseForActivation(license);
-                    if (updatedLicense.license == null)
+                    if (updatedLicense.License == null)
                     {
                         var errorMessage =
                             $"License already expired on: {licenseStatus.FormattedExpiration} and we failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}.";
@@ -460,7 +460,7 @@ namespace Raven.Server.Commercial
                         throw new LicenseExpiredException(errorMessage);
                     }
 
-                    await ActivateAsync(updatedLicense.license, raftRequestId, skipGettingUpdatedLicense: true, updatedLicense.FromApi);
+                    await ActivateAsync(updatedLicense.License, raftRequestId, skipGettingUpdatedLicense: true, updatedLicense.FromApi);
                     return;
                 }
                 catch (LicenseExpiredException)
@@ -487,14 +487,14 @@ namespace Raven.Server.Commercial
                 try
                 {
                     var updatedLicense = await GetUpdatedLicenseForActivation(license);
-                    if (updatedLicense.license == null)
+                    if (updatedLicense.License == null)
                     {
                         throw new LicenseLimitException($"Your license ('{licenseStatus.Id}') version '{licenseStatus.Version}' doesn't allow you to upgrade to server version '{RavenVersionAttribute.Instance.FullVersion}'. " +
                                                         $"We failed to get an updated one from {ApiHttpClient.ApiRavenDbNet}. " +
                                                         $"Please proceed to the https://ravendb.net/l/8O2YU1 website to perform the license upgrade first.");
                     }
 
-                    await ActivateAsync(updatedLicense.license, raftRequestId, skipGettingUpdatedLicense: true, updatedLicense.FromApi);
+                    await ActivateAsync(updatedLicense.License, raftRequestId, skipGettingUpdatedLicense: true, updatedLicense.FromApi);
                     return;
                 }
                 catch (Exception e)
@@ -726,7 +726,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        private async Task<(License license, bool FromApi)> GetUpdatedLicenseForActivation(License currentLicense)
+        private async Task<(License License, bool FromApi)> GetUpdatedLicenseForActivation(License currentLicense)
         {
             try
             {
@@ -821,7 +821,7 @@ namespace Raven.Server.Commercial
             if (license == null)
                 return null;
 
-            if (license.Id != currentLicense.Id)
+            if (currentLicense != null && license.Id != currentLicense.Id)
                 throw new InvalidOperationException("Updating a license from string or path by using a different license id isn't supported");
 
             var licenseStatus = GetLicenseStatus(license);
@@ -830,7 +830,7 @@ namespace Raven.Server.Commercial
             if (licenseStatus.Expired)
                 return null;
 
-            if (licenseStatus.Expiration < GetLicenseStatus(currentLicense).Expiration)
+            if (currentLicense != null && licenseStatus.Expiration < GetLicenseStatus(currentLicense).Expiration)
                 return null;
 
             if (license.Equals(currentLicense))
@@ -880,26 +880,36 @@ namespace Raven.Server.Commercial
 
         public async Task<LicenseLeaseResult> LeaseLicense(string raftRequestId, bool throwOnError)
         {
-            var leaseStatus = new LicenseLeaseResult() { Status = LeaseStatus.NotModified };
+            var leaseStatus = new LicenseLeaseResult { Status = LeaseStatus.NotModified };
+
+            if (_serverStore.Engine.CurrentState == RachisState.Passive)
+                return leaseStatus;
+
             if (await _leaseLicenseSemaphore.WaitAsync(0) == false)
                 return leaseStatus;
 
             try
             {
                 var loadedLicense = _serverStore.LoadLicense();
-                if (loadedLicense == null)
+                if (loadedLicense == null && (_serverStore.Configuration.Licensing.DisableAutoUpdate || _serverStore.Configuration.Licensing.DisableAutoUpdateFromApi == false))
+                {
+                    // the cluster was bootstrapped, and we don't have an activated license.
+                    // we skip trying to get a new license in case of:
+                    // - the license auto update is disabled.
+                    // - the auto update from api.ravendb.net is enabled - in that case we cannot auto update anyway because we don't have the previous license.
                     return leaseStatus;
+                }
 
                 var updatedLicense = await GetUpdatedLicenseForActivation(loadedLicense);
-                if (updatedLicense.license == null)
+                if (updatedLicense.License == null)
                     return leaseStatus;
 
-                var licenseStatus = GetLicenseStatus(updatedLicense.license);
+                var licenseStatus = GetLicenseStatus(updatedLicense.License);
 
                 try
                 {
                     // we'll activate the license from the license server
-                    await _serverStore.PutLicenseAsync(updatedLicense.license, raftRequestId, updatedLicense.FromApi).ConfigureAwait(false);
+                    await _serverStore.PutLicenseAsync(updatedLicense.License, raftRequestId, updatedLicense.FromApi).ConfigureAwait(false);
                 }
                 catch
                 {

@@ -3709,7 +3709,7 @@ namespace Raven.Server.ServerWide
                     };
                     var journalIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.JournalPath.DriveName);
                     if (journalIoStatsResult != null)
-                        usage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+                        journalUsage.IoStatsResult = FillIoStatsResult(journalIoStatsResult);
 
                     yield return journalUsage;
                 }
@@ -3735,7 +3735,7 @@ namespace Raven.Server.ServerWide
                         };
                         var tempBufferIoStatsResult = Server.DiskStatsGetter.Get(driveInfo?.TempPath.DriveName);
                         if (tempBufferIoStatsResult != null)
-                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(ioStatsResult);
+                            tempBuffersUsage.IoStatsResult = FillIoStatsResult(tempBufferIoStatsResult);
 
                         yield return tempBuffersUsage;
                     }
