@@ -4725,7 +4725,7 @@ namespace Raven.Server.ServerWide
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    var tasks = new Task[databases.Length + 2];
+                    var tasks = new Task[databases.Length + 3];
                     // there is potentially a lot of work to be done here so we are responding to the change on a separate task.
                     for (var index = 0; index < databases.Length; index++)
                     {
@@ -4744,6 +4744,11 @@ namespace Raven.Server.ServerWide
                     tasks[databases.Length + 1] = Task.Run(async () =>
                     {
                         await Changes.OnValueChanges(lastIncludedIndex, nameof(InstallUpdatedServerCertificateCommand));
+                    });
+
+                    tasks[databases.Length + 2] = Task.Run(async () =>
+                    {
+                        await Changes.OnValueChanges(lastIncludedIndex, nameof(PutCertificateCommand));
                     });
 
                     Task.WhenAll(tasks).ContinueWith(task =>
