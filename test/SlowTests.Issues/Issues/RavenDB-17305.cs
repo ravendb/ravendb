@@ -9,7 +9,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -25,34 +24,37 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Security)]
         public void WillExplicitlyTrustOurOwnCertificate_SelfSigned()
         {
+            var now = DateTime.UtcNow;
             var certificate = CreateCertificateRequest(Environment.MachineName)
-                .CreateSelfSigned(DateTime.Today.AddDays(-1), DateTime.Today.AddDays(1));
+                .CreateSelfSigned(now.AddDays(-1), now.AddDays(1));
             ValidateServerCanTalkToItself(certificate);
         }
 
         [RavenFact(RavenTestCategory.Security)]
         public void WillExplicitlyTrustOurOwnCertificate_SelfSigned_Expired()
         {
+            var now = DateTime.UtcNow;
             var certificate = CreateCertificateRequest(Environment.MachineName)
-                .CreateSelfSigned(DateTime.Today.AddDays(-30), DateTime.Today.AddDays(-1));
+                .CreateSelfSigned(now.AddDays(-30), now.AddDays(-1));
             ValidateServerCanTalkToItself(certificate);
         }
 
         [RavenFact(RavenTestCategory.Security)]
         public void WillExplicitlyTrustOurOwnCertificate_SelfSigned_NotYetValid()
         {
+            var now = DateTime.UtcNow;
             var certificate = CreateCertificateRequest(Environment.MachineName)
-                .CreateSelfSigned(DateTime.Today.AddDays(1), DateTime.Today.AddDays(30));
+                .CreateSelfSigned(now.AddDays(1), now.AddDays(30));
             ValidateServerCanTalkToItself(certificate);
         }
 
         private void ValidateServerCanTalkToItself(X509Certificate2 certificate)
         {
-            string certFileName = GetTempFileName();
-            File.WriteAllBytes(certFileName, certificate.Export(X509ContentType.Pkcs12));
-            // Reload from file with persistent key storage — ephemeral keys from
-            // CreateSelfSigned are rejected by Windows SChannel for expired certs.
             var certBytes = certificate.Export(X509ContentType.Pkcs12);
+            string certFileName = GetTempFileName();
+            File.WriteAllBytes(certFileName, certBytes);
+            // Reload with persistent key storage — ephemeral keys from
+            // CreateSelfSigned are rejected by Windows SChannel for expired certs.
             var clientCert = CertificateLoaderUtil.CreateCertificate(certBytes);
             var certificates = new TestCertificatesHolder(certFileName, certFileName, certFileName, certFileName, certFileName);
             Certificates.SetupServerAuthentication(certificates: certificates);
