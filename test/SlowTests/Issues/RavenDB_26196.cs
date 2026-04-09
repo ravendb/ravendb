@@ -3,6 +3,7 @@ using Raven.Client.Documents.Operations.ETL.Queue;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using ITestOutputHelper = Xunit.Abstractions.ITestOutputHelper;
 
 namespace SlowTests.Issues;
 
