@@ -16,7 +16,7 @@ interface AiAgentSummaryProps {
 
 export default function AiAgentSummary({ agentMessage }: AiAgentSummaryProps) {
     const content = agentMessage.content;
-    const { value: isExpanded, setTrue: expand } = useBoolean(false);
+    const { value: isExpanded, setTrue: expand, setFalse: collapse } = useBoolean(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const { height } = useResizeObserver({ ref: contentRef });
 
@@ -67,6 +67,11 @@ export default function AiAgentSummary({ agentMessage }: AiAgentSummaryProps) {
                         </Button>
                     )}
                 </div>
+                {isExpanded && (
+                    <Button className="assistant-summary__show-less" variant="link" size="xs" onClick={collapse}>
+                        Show Less
+                    </Button>
+                )}
             </div>
         </div>
     );

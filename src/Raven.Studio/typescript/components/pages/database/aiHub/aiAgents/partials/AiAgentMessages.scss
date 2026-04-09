@@ -135,6 +135,12 @@
             transform: translateX(-50%);
         }
 
+        &__show-less {
+            position: absolute;
+            bottom: -22px;
+            right: 0;
+        }
+
         &:has(.assistant-summary__show-more) {
             &::before {
                 content: "";
@@ -142,6 +148,10 @@
                 inset: 0;
                 background: linear-gradient(180deg, transparent, colors.$panel-bg-1-var);
             }
+        }
+
+        &:has(.assistant-summary__show-less) {
+            overflow: visible;
         }
     }
 }
