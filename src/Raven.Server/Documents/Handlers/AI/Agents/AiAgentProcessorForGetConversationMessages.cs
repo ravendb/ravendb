@@ -5,7 +5,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -73,22 +72,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             }
 
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, linkedIds, pageSize, detailLevel);
-            collector.CollectFromDocument(messages, before, after);
-
-            // If we don't have enough after filtering, walk history docs
-            if (collector.NeedsMore)
-            {
-                if (after.HasValue)
-                {
-                    for (int i = 0; i < linkedIds.Count && collector.NeedsMore; i++)
-                        collector.CollectFromHistoryDoc(linkedIds[i], before, after);
-                }
-                else
-                {
-                    for (int i = linkedIds.Count - 1; i >= 0 && collector.NeedsMore; i--)
-                        collector.CollectFromHistoryDoc(linkedIds[i], before, after);
-                }
-            }
+            collector.Collect(messages, before, after);
 
             bool hasOlderMessages = collector.HasOlderMessages;
             var filtered = collector.GetResults();
@@ -205,10 +189,4 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
         writer.WriteEndArray();
     }
 
-    private static DateTime GetMessageTimestamp(BlittableJsonReaderArray messages, int index)
-    {
-        var msg = (BlittableJsonReaderObject)messages[index];
-        msg.TryGet(ConversationDocument.DateProperty, out DateTime date);
-        return date;
-    }
 }
