@@ -61,7 +61,7 @@ public class AiConversationMessage
 
     /// <summary>
     /// Tool calls initiated by this assistant message, with their responses inlined.
-    /// Null for non-assistant messages.
+    /// Empty when no tool calls are present (including for non-assistant messages).
     /// </summary>
     public List<AiToolCallResult> ToolCalls { get; set; }
 

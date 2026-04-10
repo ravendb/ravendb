@@ -113,7 +113,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
             });
 
         // Find the assistant message that has tool calls
-        var toolCallMsg = result.Messages.Find(m => m.Role == AiMessageRole.Assistant && m.ToolCalls != null);
+        var toolCallMsg = result.Messages.Find(m => m.Role == AiMessageRole.Assistant && m.ToolCalls is { Count: > 0 });
         Assert.NotNull(toolCallMsg);
         Assert.Single(toolCallMsg.ToolCalls);
         Assert.Equal("RecentOrder", toolCallMsg.ToolCalls[0].Name);
@@ -307,7 +307,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Single(result.Messages);
         var msg = result.Messages[0];
         Assert.Equal(AiMessageRole.User, msg.Role);
-        Assert.Equal($"Look at this image{Environment.NewLine}What do you see?", msg.Content);
+        Assert.Equal("Look at this image\nWhat do you see?", msg.Content);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -484,6 +484,197 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                 Assert.NotEqual("tool", role);
             }
         }
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_BackwardPagingAcrossHistoryBoundary()
+    {
+        // Simulate trimming: history doc has msg1-msg10, current doc has msg8-msg15 (overlap on 8-10).
+        // Backward paging with pageSize=12 should stitch them into a continuous timeline.
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            // History doc: messages 1-10
+            var historyMessages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 1; i <= 10; i++)
+                historyMessages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var historyDoc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = historyMessages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(10),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationHistoryCollection
+                }
+            }, "history-doc");
+            database.DocumentsStorage.Put(context, "ConversationHistory/1$chats/cross-doc", null, historyDoc);
+
+            // Current doc: messages 8-15 (overlap on 8-10), linked to history
+            var currentMessages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 8; i <= 15; i++)
+                currentMessages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var currentDoc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = currentMessages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray { "ConversationHistory/1$chats/cross-doc" },
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(15),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "current-doc");
+            database.DocumentsStorage.Put(context, "chats/cross-doc", null, currentDoc);
+            tx.Commit();
+        }
+
+        // Get latest 12 messages — should span across both docs, deduplicated
+        var result = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/cross-doc",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                PageSize = 12
+            });
+
+        Assert.Equal(12, result.Messages.Count);
+        Assert.True(result.HasOlderMessages);
+
+        // Verify continuous timeline: msg4 through msg15
+        for (int i = 0; i < result.Messages.Count; i++)
+        {
+            int expectedMsgNum = 4 + i;
+            Assert.Equal($"msg{expectedMsgNum}", result.Messages[i].Content);
+        }
+
+        // Now page backward from msg4 to get the remaining messages
+        var older = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/cross-doc",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                Before = result.Messages[0].Timestamp,
+                PageSize = 20
+            });
+
+        Assert.Equal(3, older.Messages.Count); // msg1, msg2, msg3
+        Assert.Equal("msg1", older.Messages[0].Content);
+        Assert.Equal("msg2", older.Messages[1].Content);
+        Assert.Equal("msg3", older.Messages[2].Content);
+        Assert.False(older.HasOlderMessages);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_ForwardPagingFromTrimmedHistory()
+    {
+        // Simulate: client had timestamp at msg5, then trimming moved msg5-msg7 to history.
+        // Current doc only has msg8-msg10. `after=msg5's timestamp` should return msg6-msg10
+        // by reading history first, then current doc.
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            // History doc: messages 1-8
+            var historyMessages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 1; i <= 8; i++)
+                historyMessages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var historyDoc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = historyMessages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(8),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationHistoryCollection
+                }
+            }, "history-doc");
+            database.DocumentsStorage.Put(context, "ConversationHistory/1$chats/forward-test", null, historyDoc);
+
+            // Current doc: messages 7-10 (overlap on 7-8), linked to history
+            var currentMessages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 7; i <= 10; i++)
+                currentMessages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var currentDoc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = currentMessages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray { "ConversationHistory/1$chats/forward-test" },
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(10),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "current-doc");
+            database.DocumentsStorage.Put(context, "chats/forward-test", null, currentDoc);
+            tx.Commit();
+        }
+
+        // Client last saw msg5 (timestamp at minute 5). Ask for everything after.
+        // msg6, msg7, msg8 are in history. msg7, msg8, msg9, msg10 are in current doc.
+        // Should get msg6-msg10 (5 messages, deduplicated).
+        var result = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/forward-test",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                After = baseTime.AddMinutes(5),
+                PageSize = 20
+            });
+
+        Assert.Equal(5, result.Messages.Count);
+        Assert.Equal("msg6", result.Messages[0].Content);
+        Assert.Equal("msg7", result.Messages[1].Content);
+        Assert.Equal("msg8", result.Messages[2].Content);
+        Assert.Equal("msg9", result.Messages[3].Content);
+        Assert.Equal("msg10", result.Messages[4].Content);
     }
 
     #region Test Message Helpers
