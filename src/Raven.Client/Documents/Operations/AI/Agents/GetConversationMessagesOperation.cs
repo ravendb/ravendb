@@ -4,6 +4,7 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
@@ -96,9 +97,9 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
                 .Append($"?conversationId={Uri.EscapeDataString(_params.ConversationId)}");
 
             if (_params.Before.HasValue)
-                sb.Append($"&before={_params.Before.Value:o}");
+                sb.Append("&before=").Append(Uri.EscapeDataString(_params.Before.Value.GetDefaultRavenFormat()));
             if (_params.After.HasValue)
-                sb.Append($"&after={_params.After.Value:o}");
+                sb.Append("&after=").Append(Uri.EscapeDataString(_params.After.Value.GetDefaultRavenFormat()));
 
             sb.Append($"&pageSize={_params.PageSize}");
             sb.Append($"&detailLevel={_params.DetailLevel}");
