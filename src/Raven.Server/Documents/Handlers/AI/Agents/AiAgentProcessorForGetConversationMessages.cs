@@ -43,27 +43,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 return;
             }
 
-            var data = document.Data;
+            var conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
 
-            if (data.TryGet(nameof(ConversationDocument.Agent), out string agent) == false)
-                throw new ArgumentException($"Invalid conversation document '{conversationId}': missing Agent field.");
-
-            data.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages);
-            data.TryGet(nameof(ConversationDocument.LinkedConversations), out BlittableJsonReaderArray linkedConversations);
-            data.TryGet(nameof(ConversationDocument.TotalUsage), out BlittableJsonReaderObject totalUsageObj);
-            data.TryGet(nameof(ConversationDocument.LastMessageAt), out DateTime lastMessageAt);
-
-            AiUsage totalUsage = totalUsageObj != null ? JsonDeserializationClient.AiUsage(totalUsageObj) : new AiUsage();
-
-            var linkedIds = new List<string>();
-            if (linkedConversations != null)
-            {
-                for (int i = 0; i < linkedConversations.Length; i++)
-                    linkedIds.Add(linkedConversations[i].ToString());
-            }
-
-            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, linkedIds, pageSize, detailLevel, before, after);
-            collector.Collect(messages);
+            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation.LinkedConversations, pageSize, detailLevel, before, after);
+            collector.Collect(conversation.Messages);
 
             bool hasMoreMessages = collector.HasMoreMessages;
             var filtered = collector.GetResults();
@@ -77,15 +60,15 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.Agent));
-                writer.WriteString(agent);
+                writer.WriteString(conversation.Agent);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.TotalUsage));
-                totalUsage.Write(writer);
+                conversation.TotalUsage.Write(writer);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.LastMessageAt));
-                writer.WriteDateTime(lastMessageAt, isUtc: true);
+                writer.WriteDateTime(conversation.LastMessageAt, isUtc: true);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.HasMoreMessages));
@@ -117,10 +100,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(AiConversationMessage.Content));
-            if (msg.Content != null)
-                writer.WriteString(msg.Content);
-            else
-                writer.WriteNull();
+            writer.WriteString(msg.Content);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(AiConversationMessage.Attachments));
@@ -160,10 +140,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteString(tc.Arguments);
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(AiToolCallResult.Result));
-                if (tc.Result != null)
-                    writer.WriteString(tc.Result);
-                else
-                    writer.WriteNull();
+                writer.WriteString(tc.Result);
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
