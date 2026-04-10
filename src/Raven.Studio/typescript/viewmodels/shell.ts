@@ -371,6 +371,16 @@ class shell extends viewModelBase {
                             }
                         }
                     );
+                    studioSettings.default.registerOnSettingChangedHandler(
+                        (name) => name === "virtualTableFont",
+                        (_name, setting: simpleStudioSetting<string>) =>
+                            shell.applyVirtualTableFont(setting.getValue())
+                    );
+                    studioSettings.default.registerOnSettingChangedHandler(
+                        (name) => name === "monospaceFont",
+                        (_name, setting: simpleStudioSetting<string>) =>
+                            shell.applyMonospaceFont(setting.getValue())
+                    );
 
                     // bind event handles before we connect to server wide notification center
                     // (connection will be started after executing this method) - it was just scheduled 2 lines above
@@ -426,6 +436,22 @@ class shell extends viewModelBase {
             } else {
                 this.serverEnvironment(null);
             }
+        }
+
+        shell.applyVirtualTableFont(settings.virtualTableFont.getValue());
+        shell.applyMonospaceFont(settings.monospaceFont.getValue());
+    }
+
+    static applyVirtualTableFont(value: string) {
+        const font = value === "default" ? '"Figtree"' : `"${value}"`;
+        document.documentElement.style.setProperty("--vt-font", font);
+    }
+
+    static applyMonospaceFont(value: string) {
+        if (value === "default") {
+            document.documentElement.style.removeProperty("--monospace-font");
+        } else {
+            document.documentElement.style.setProperty("--monospace-font", `"${value}"`);
         }
     }
 

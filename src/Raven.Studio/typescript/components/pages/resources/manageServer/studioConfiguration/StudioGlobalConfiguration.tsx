@@ -4,7 +4,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 
 import { SubmitHandler, useForm } from "react-hook-form";
-import { FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect, FormSelectCreatable, FormSwitch } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import { Icon } from "components/common/Icon";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
@@ -17,7 +17,12 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
-import { studioEnvironmentOptions } from "components/common/studioConfiguration/StudioConfigurationUtils";
+import {
+    virtualTableFontOptions,
+    monospaceFontOptions,
+    studioEnvironmentOptions,
+} from "components/common/studioConfiguration/StudioConfigurationUtils";
+import { SelectOption } from "components/common/select/Select";
 import { AboutViewAnchored, AboutViewHeading, AccordionItemWrapper } from "components/common/AboutView";
 import { useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -29,7 +34,11 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import studioSettings = require("common/settings/studioSettings");
+
+const vtFontPreviewLottie: string = require("Content/img/vt-font-preview.lottie");
+const codeFontPreviewLottie: string = require("Content/img/code-font-preview.lottie");
 
 export default function StudioGlobalConfiguration() {
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
@@ -40,6 +49,8 @@ export default function StudioGlobalConfiguration() {
             replicationFactor: settings.replicationFactor.getValue(),
             isCollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue(),
             isSendUsageStats: settings.sendUsageStats.getValue(),
+            virtualTableFont: settings.virtualTableFont.getValue(),
+            monospaceFont: settings.monospaceFont.getValue(),
         };
     });
 
@@ -74,6 +85,8 @@ export default function StudioGlobalConfiguration() {
             settings.replicationFactor.setValueLazy(formData.replicationFactor);
             settings.collapseDocsWhenOpening.setValue(formData.isCollapseDocsWhenOpening);
             settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
+            settings.virtualTableFont.setValue(formData.virtualTableFont);
+            settings.monospaceFont.setValue(formData.monospaceFont);
 
             await settings.save();
             reset(formData);
@@ -136,8 +149,7 @@ export default function StudioGlobalConfiguration() {
                                                 }
                                                 placement="right"
                                             >
-                                                Server Environment{" "}
-                                                <Icon icon="info" color="info" id="EnvironmentInfo" />
+                                                Server Environment <Icon icon="info-new" id="EnvironmentInfo" />
                                             </PopoverWithHoverWrapper>
                                         </FormLabel>
                                         <FormSelect
@@ -170,7 +182,7 @@ export default function StudioGlobalConfiguration() {
                                                 }
                                                 placement="right"
                                             >
-                                                <Icon icon="info" color="info" id="ReplicationFactorInfo" />
+                                                <Icon icon="info-new" id="ReplicationFactorInfo" />
                                             </PopoverWithHoverWrapper>
                                         </FormLabel>
                                         <FormInput
@@ -183,7 +195,41 @@ export default function StudioGlobalConfiguration() {
                                 </Card.Body>
                             </Card>
                             <Card className="mt-3">
-                                <Card.Body>
+                                <Card.Body className="vstack gap-3">
+                                    <div className="gap-1">
+                                        <FormLabel className="mb-0 md-label">
+                                            Table Font{" "}
+                                            <PopoverWithHoverWrapper
+                                                message={<VirtualTableFontPopoverContent />}
+                                                placement="right"
+                                            >
+                                                <Icon icon="info-new" />
+                                            </PopoverWithHoverWrapper>
+                                        </FormLabel>
+                                        <FormSelectCreatable
+                                            control={control}
+                                            name="virtualTableFont"
+                                            options={virtualTableFontOptions}
+                                            formatOptionLabel={formatFontOptionLabel}
+                                        />
+                                    </div>
+                                    <div className="gap-1">
+                                        <FormLabel className="mb-0 md-label">
+                                            Code Font{" "}
+                                            <PopoverWithHoverWrapper
+                                                message={<CodeFontPopoverContent />}
+                                                placement="right"
+                                            >
+                                                <Icon icon="info-new" />
+                                            </PopoverWithHoverWrapper>
+                                        </FormLabel>
+                                        <FormSelectCreatable
+                                            control={control}
+                                            name="monospaceFont"
+                                            options={monospaceFontOptions}
+                                            formatOptionLabel={formatFontOptionLabel}
+                                        />
+                                    </div>
                                     <div className="d-flex flex-column">
                                         <FormSwitch control={control} name="isCollapseDocsWhenOpening">
                                             Collapse documents when opening
@@ -230,6 +276,51 @@ export default function StudioGlobalConfiguration() {
                     </AboutViewAnchored>
                 </Col>
             </Row>
+        </div>
+    );
+}
+
+const sampleDocumentId = "Orders/830-A";
+
+function formatFontOptionLabel(option: SelectOption<string>) {
+    if (option.value === "default") {
+        return <span>{option.label}</span>;
+    }
+
+    return (
+        <div className="d-flex justify-content-between align-items-baseline">
+            <span>{option.label}</span>
+            <span className="text-muted small ms-3" style={{ fontFamily: `"${option.value}"` }}>
+                {sampleDocumentId}
+            </span>
+        </div>
+    );
+}
+
+function VirtualTableFontPopoverContent() {
+    return (
+        <div style={{ maxWidth: 360 }}>
+            <div className="mb-2 rounded-2 border border-1 border-color-light overflow-hidden">
+                <DotLottieReact src={vtFontPreviewLottie} loop autoplay layout={{ fit: "fit-width" }} />
+            </div>
+            <p className="mb-0">
+                Choose the font used for displaying data in <strong>tables</strong> across the Studio, including
+                document IDs, column values, and other tabular content.
+            </p>
+        </div>
+    );
+}
+
+function CodeFontPopoverContent() {
+    return (
+        <div style={{ maxWidth: 360 }}>
+            <div className="mb-2 rounded-2 border border-1 border-color-light overflow-hidden">
+                <DotLottieReact src={codeFontPreviewLottie} loop autoplay layout={{ fit: "fit-width" }} />
+            </div>
+            <p className="mb-0">
+                Choose the font used for displaying <strong>code</strong> across the Studio, including code editors and
+                samples.
+            </p>
         </div>
     );
 }

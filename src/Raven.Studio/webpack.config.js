@@ -170,7 +170,7 @@ module.exports = (_, args) => {
                     },
                 },
                 {
-                    test: /\.(png|jpg|jpeg|gif|svg|webp)$/,
+                    test: /\.(png|jpg|jpeg|gif|svg|webp|lottie)$/,
                     type: "asset/resource",
                     generator: {
                         filename: "assets/img/[name].[hash:8][ext]",

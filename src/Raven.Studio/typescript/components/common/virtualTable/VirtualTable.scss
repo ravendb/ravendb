@@ -101,6 +101,10 @@
         }
     }
 
+    .document-id-cell {
+        font-family: var(--vt-font);
+    }
+
     tbody {
         border-radius: sizes.$gutter-xxs;
         overflow: hidden;

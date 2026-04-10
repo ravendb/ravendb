@@ -136,7 +136,7 @@ export default function Code(props: CodeProps) {
             )}
             <pre className="code-classes d-flex flex-grow-1 m-0">
                 <code
-                    className={classNames(`language-${languageToHighlight}`, codeClassName)}
+                    className={classNames(`language-${languageToHighlight}`, "monospace-font", codeClassName)}
                     style={{ whiteSpace: whiteSpace ?? "pre" }}
                 >
                     <div dangerouslySetInnerHTML={{ __html: html }} />

@@ -770,3 +770,13 @@ $filtering-input-bg: $toggle-bg !default;
         opacity: 1;
     }
 }
+
+.monospace-font {
+    font-family: var(--monospace-font, var(--bs-font-monospace)) !important;
+}
+
+table {
+    tbody {
+        font-family: var(--vt-font, var(--bs-font-sans-serif));
+    }
+}
