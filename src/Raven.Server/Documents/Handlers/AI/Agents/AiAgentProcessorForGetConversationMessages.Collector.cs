@@ -151,20 +151,12 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 startIndex = BinarySearchBound(messages, after.Value, inclusive: true);
                 endIndex = messages.Length;
                 forward = true;
-                // Tool calls follow their parent assistant message, so we won't encounter any until we 
-                // hit the assistant message itself, this pre-scans them so we have them ready to merge when we do.
-                CollectToolResponses(messages, startIndex, endIndex);
             }
             else if (before.HasValue)
             {
                 startIndex = 0;
                 endIndex = BinarySearchBound(messages, before.Value, inclusive: false);
                 forward = false;
-
-                // Extend past any tool responses that follow the cut point, so a timestamp
-                // boundary can't split an assistant message from its tool responses.
-                while (endIndex < messages.Length && IsToolMessage((BlittableJsonReaderObject)messages[endIndex]))
-                    endIndex++;
             }
             else
             {
@@ -194,12 +186,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (stoppedEarly || startIndex > 0)
                 _hasOlderMessages = true;
-        }
-
-        private void CollectToolResponses(BlittableJsonReaderArray messages, int startIndex, int endIndex)
-        {
-            for (int i = startIndex; i < endIndex; i++)
-                TryCollectToolResponse((BlittableJsonReaderObject)messages[i]);
         }
 
         private bool TryCollectToolResponse(BlittableJsonReaderObject msg)
@@ -233,6 +219,19 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (TryCollectToolResponse(msg))
                 return;
+
+            // For forward paging, tool responses follow this message. Scan ahead to collect
+            // them so they're available when ParseAndConvertMessage resolves tool call results.
+            if (msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) &&
+                toolCalls is { Length: > 0 })
+            {
+                for (int j = index + 1; j < messages.Length; j++)
+                {
+                    var next = (BlittableJsonReaderObject)messages[j];
+                    if (TryCollectToolResponse(next) == false)
+                        break; // hit a non-tool message, stop scanning
+                }
+            }
 
             var converted = ParseAndConvertMessage(msg, _toolResponses);
             if (converted == null)

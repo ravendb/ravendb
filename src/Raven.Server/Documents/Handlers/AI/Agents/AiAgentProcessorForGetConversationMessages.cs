@@ -42,6 +42,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
         if (afterStr != null && DateTime.TryParse(afterStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedAfter))
             after = parsedAfter;
 
+        if (before.HasValue && after.HasValue)
+            throw new ArgumentException("Cannot specify both 'before' and 'after' parameters.");
+
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
