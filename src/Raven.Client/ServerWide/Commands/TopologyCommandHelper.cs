@@ -1,9 +1,12 @@
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Sparrow;
+using Sparrow.Exceptions;
 using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
@@ -29,7 +32,13 @@ namespace Raven.Client.ServerWide.Commands
                         return await context.ParseToMemoryAsync(stream, debugTag,
                             BlittableJsonDocumentBuilder.UsageMode.None, buffer, maxSize: MaxTopologyResponseSize).ConfigureAwait(false);
                     }
-                    catch (Exception e)
+                    catch (Exception e) when (e.InnerException is null && // only catch exceptions that are directly thrown by the parsing code
+                                              e is InvalidDataException   // and only those that are raised directly by the parsing code, not by the HTTP layer or other code
+                                                or InvalidStartOfObjectException 
+                                                or FormatException 
+                                                or EndOfStreamException 
+                                                or ArgumentException 
+                                                or InvalidOperationException)
                     {
                         string body = GetLastReadBytes(buffer);
 
@@ -48,16 +57,14 @@ namespace Raven.Client.ServerWide.Commands
                 $"This may indicate that the URL does not point to a RavenDB server. Response: {json}");
         }
 
-        private const int MaxErrorBodySize = 4096;
-
         private static unsafe string GetLastReadBytes(JsonOperationContext.MemoryBuffer buffer)
         {
             if (buffer.Valid == 0)
                 return string.Empty;
 
-            int size = Math.Min(buffer.Valid, MaxErrorBodySize);
+            int size = Math.Min(buffer.Valid, PeepingTomStream.BufferWindowSize);
             var text = Encoding.UTF8.GetString(buffer.Address, size);
-            if (buffer.Valid > MaxErrorBodySize)
+            if (buffer.Valid > PeepingTomStream.BufferWindowSize)
                 text += "... (truncated)";
             return text;
         }
