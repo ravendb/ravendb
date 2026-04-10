@@ -380,108 +380,93 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
     [RavenFact(RavenTestCategory.Ai)]
     public async Task TruncationDoesNotSplitToolCallGroup()
     {
+        // Run a conversation with tool calls through the real truncation path.
+        // Configure truncation to trigger after a small number of messages, then verify
+        // the persisted document has no orphan tool response messages (every tool message
+        // is preceded by its parent assistant message with tool_calls).
         using var store = GetDocumentStore();
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-        // Build a conversation with a tool call group in the middle:
-        //   [0] system
-        //   [1] user "q1"
-        //   [2] assistant (tool_calls: [RecentOrder])
-        //   [3] tool (response to RecentOrder)
-        //   [4] assistant "answer1"
-        //   [5] user "q2"
-        //   [6] assistant "answer2"
-        //
-        // Truncation config: keep 4 messages after truncate (from 7).
-        // Without the fix: truncateCount = 7 - 4 = 3, removes [1],[2],[3] — splits the tool group
-        //   because [2] (assistant with tool_calls) goes to history but [3] (tool response) stays.
-        // With the fix: the cut point at index 4 sees [4] is not a tool message, so no adjustment.
-        //   Actually truncateCount=3 removes indices 1,2,3 — keeping [0],[4],[5],[6]. That's fine.
-        //
-        // The problematic case is truncateCount = 2, removing [1],[2] — keeping [0],[3],[4],[5],[6].
-        //   Now [3] is a tool response without its parent assistant message.
-        // So set: keep 5 messages → truncateCount = 7 - 5 = 2, cut lands at index 3 which is a tool msg.
-
-        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-        using (var tx = context.OpenWriteTransaction())
+        var agent = CreateAgentWithTools();
+        agent.ChatTrimming = new AiAgentChatTrimmingConfiguration
         {
-            var now = DateTime.UtcNow;
-            var messages = new Sparrow.Json.Parsing.DynamicJsonArray
+            Truncate = new AiAgentTruncateChat
             {
-                MakeMsg(context, "system", "You are helpful", now.AddMinutes(-6)),
-                MakeMsg(context, "user", "q1", now.AddMinutes(-5)),
-                MakeAssistantWithToolCall(context, "call_1", "RecentOrder", "{}", now.AddMinutes(-4)),
-                MakeToolResponse(context, "call_1", "order data here", now.AddMinutes(-3)),
-                MakeMsg(context, "assistant", "answer1", now.AddMinutes(-2)),
-                MakeMsg(context, "user", "q2", now.AddMinutes(-1)),
-                MakeMsg(context, "assistant", "answer2", now),
-            };
+                // Trigger truncation early: trim when > 8 messages, keep 4
+                MessagesLengthBeforeTruncate = 8,
+                MessagesLengthAfterTruncate = 4
+            }
+        };
 
-            var doc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+        // Run 3 turns with tool calls to build up messages past the truncation threshold.
+        // Each turn: user msg + assistant tool_call + tool response + assistant answer = ~4 messages
+        // Plus system + params = ~2 initial. After 3 turns we'll have ~14 messages → triggers truncation.
+        int callCount = 0;
+        var conversationId = "chats/truncate-test";
+        string changeVector = null;
+
+        for (int turn = 0; turn < 3; turn++)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                ["Agent"] = AgentName,
-                ["Parameters"] = null,
-                ["Messages"] = messages,
-                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
-                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                int localCallCount = callCount;
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: _ =>
+                    {
+                        localCallCount++;
+                        // Every odd call triggers a tool call, every even call returns an answer
+                        if (localCallCount % 2 == 1)
+                        {
+                            return new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                            {
+                                Content = new StringContent(MockLlm.CreateToolCallResponse("RecentOrder", "{}"))
+                            };
+                        }
+                        return null; // fall through to default answer
+                    })
                 {
-                    ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0,
-                    ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
-                },
-                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
-                ["LastMessageAt"] = now,
-                ["CreatedAt"] = now.AddMinutes(-6),
-                ["Expires"] = null,
-                ["RemainingToolIterations"] = 16,
-                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
-                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    Authentication = null
+                };
+
+                handler.Initialize(agent, conversationId, new RequestBody
                 {
-                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                    CreationOptions = new AiConversationCreationOptions(),
+                    UserPrompt = $"question {turn}"
+                }, changeVector: changeVector);
+
+                await handler.HandleRequest(context, CancellationToken.None);
+                callCount = localCallCount;
+
+                using (context.OpenReadTransaction())
+                {
+                    var doc = database.DocumentsStorage.Get(context, conversationId);
+                    changeVector = doc?.ChangeVector;
                 }
-            }, "test-doc");
-
-            database.DocumentsStorage.Put(context, "chats/truncate-test", null, doc);
-            tx.Commit();
+            }
         }
 
-        // Now load the document as a ConversationDocument, apply truncation, and verify
+        // Verify the persisted conversation: no tool message should appear without
+        // its parent assistant message immediately before it.
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var doc = database.DocumentsStorage.Get(context, "chats/truncate-test");
-            var conversation = ConversationDocument.ToDocument("chats/truncate-test", doc.Data, 16);
+            var doc = database.DocumentsStorage.Get(context, conversationId);
+            var conversation = ConversationDocument.ToDocument(conversationId, doc.Data, 16);
 
-            Assert.Equal(7, conversation.Messages.Count);
-
-            // Simulate truncation: keep 5 → truncateCount = 2
-            // Without fix: removes indices [1],[2], leaving orphan tool response at [3]
-            // With fix: should advance past the tool response, removing [1],[2],[3] instead
-            var truncateCount = conversation.Messages.Count - 5; // = 2
-            int cutIndex = 1 + truncateCount; // = 3
-            while (cutIndex < conversation.Messages.Count)
+            for (int i = 0; i < conversation.Messages.Count; i++)
             {
-                var msg = conversation.Messages[cutIndex];
-                if (msg.TryGet("role", out string role) && role == "tool")
-                {
-                    cutIndex++;
-                    truncateCount++;
-                }
-                else
-                    break;
-            }
-            truncateCount = int.Min(truncateCount, conversation.Messages.Count - 1);
-
-            // truncateCount should have been bumped from 2 to 3
-            Assert.Equal(3, truncateCount);
-
-            conversation.Messages.RemoveRange(1, truncateCount);
-
-            // Remaining: [system, answer1, q2, answer2] — no orphan tool response
-            Assert.Equal(4, conversation.Messages.Count);
-            foreach (var msg in conversation.Messages)
-            {
+                var msg = conversation.Messages[i];
                 msg.TryGet("role", out string role);
-                Assert.NotEqual("tool", role);
+
+                if (role != "tool")
+                    continue;
+
+                Assert.True(i > 0, "A tool message cannot be the first message in the conversation.");
+
+                var previous = conversation.Messages[i - 1];
+                previous.TryGet("role", out string previousRole);
+                Assert.True(previousRole == "assistant",
+                    $"Tool message at index {i} is not preceded by an assistant message (found '{previousRole}').");
             }
         }
     }
