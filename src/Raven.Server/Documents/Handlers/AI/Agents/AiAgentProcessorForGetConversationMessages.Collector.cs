@@ -13,12 +13,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 internal sealed partial class AiAgentProcessorForGetConversationMessages
 {
     /// <summary>
-    /// Collects, groups, and filters messages in a single pass per document.
+    /// Collects, groups, and filters messages across the current doc and history docs.
     /// Tool responses are accumulated into a dictionary and merged into their
     /// parent assistant message's ToolCalls during parsing.
-    /// For backward paging, tool responses are naturally encountered before
-    /// their parent assistant message. For forward paging, we keep scanning
-    /// past pageSize to collect tool responses (they don't count toward the page).
     /// </summary>
     private sealed class Collector
     {
@@ -27,23 +24,29 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private readonly List<string> _linkedIds;
         private readonly int _pageSize;
         private readonly AiConversationDetailLevel _detailLevel;
+        private readonly bool _forward;
+        private readonly DateTime _before;
+        private readonly DateTime _after;
 
         private readonly List<AiConversationMessage> _results = new();
         private readonly Dictionary<string, string> _toolResponses = new(StringComparer.Ordinal);
         private readonly HashSet<string> _seenMessageKeys = new(StringComparer.Ordinal);
-        private bool _hasOlderMessages;
+        private bool _hasMoreMessages;
 
         public Collector(DocumentsOperationContext context, DocumentsStorage storage, List<string> linkedIds,
-            int pageSize, AiConversationDetailLevel detailLevel)
+            int pageSize, AiConversationDetailLevel detailLevel, DateTime? before, DateTime? after)
         {
             _context = context;
             _storage = storage;
             _linkedIds = linkedIds;
             _pageSize = pageSize;
             _detailLevel = detailLevel;
+            _forward = after.HasValue;
+            _after = after ?? DateTime.MinValue;
+            _before = before ?? DateTime.MaxValue;
         }
 
-        public bool HasOlderMessages => _hasOlderMessages;
+        public bool HasMoreMessages => _hasMoreMessages;
 
         public List<AiConversationMessage> GetResults()
         {
@@ -55,40 +58,52 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         /// Main entry point: collects messages from the current doc and history docs
         /// in the correct order for the paging direction.
         /// </summary>
-        public void Collect(BlittableJsonReaderArray currentMessages, DateTime? before, DateTime? after)
+        public void Collect(BlittableJsonReaderArray currentMessages)
         {
-            if (after is not null)
+            var (histStart, histEnd) = FindRelevantHistoryRange();
+
+            if (_forward)
             {
-                // User is asking for messages after T, page size 5. 
-                // T1 .. T3 were moved to history, T4 .. T6 are in the current doc. 
-                // We want to return T1..T5, but need to process history first
-                int startDoc = FindHistoryDocBound(after.Value, forward: true);
+                // Trimming moves older messages from the current doc into history, so the
+                // chronologically earliest messages matching `after` may live in history docs.
+                // Process history first (oldest to newest), then current doc.
+                for (int i = histStart; i <= histEnd && NeedsMore; i++)
+                    CollectFromHistoryDoc(_linkedIds[i]);
 
-                // For `after` paging, history docs must be processed BEFORE the current doc.
-                for (int i = startDoc; i < _linkedIds.Count && NeedsMore; i++)
-                    CollectFromHistoryDoc(_linkedIds[i], before, after);
-
+                bool visitedCurrentDoc = false;
                 if (NeedsMore)
-                    CollectFromMessages(currentMessages, before, after);
-                return;
+                {
+                    CollectFromMessages(currentMessages);
+                    visitedCurrentDoc = true;
+                }
+
+                // If we filled the page without reaching the current doc, 
+                // there are *obviously* newer messages beyond this page.
+                _hasMoreMessages |= visitedCurrentDoc == false;
             }
-
-            // For backward paging, the current doc has the newest messages — process it first.
-            CollectFromMessages(currentMessages, before, after);
-
-            if (NeedsMore)
+            else
             {
-                int endDoc = before is not null
-                    ? FindHistoryDocBound(before.Value, forward: false)
-                    : _linkedIds.Count - 1;
-                for (int i = endDoc; i >= 0 && NeedsMore; i--)
-                    CollectFromHistoryDoc(_linkedIds[i], before, after);
+                // For backward paging, current doc has the newest messages — process it first,
+                // then walk history docs newest to oldest.
+                CollectFromMessages(currentMessages);
+
+                if (NeedsMore == false && histStart <= histEnd)
+                {
+                    // Page was filled from current doc alone, but history docs with older
+                    // messages exist — let the client know there's more to page into.
+                    _hasMoreMessages = true;
+                }
+                else
+                {
+                    for (int i = histEnd; i >= histStart && NeedsMore; i--)
+                        CollectFromHistoryDoc(_linkedIds[i]);
+                }
             }
         }
 
         private bool NeedsMore => _results.Count < _pageSize;
 
-        private void CollectFromHistoryDoc(string historyDocId, DateTime? before, DateTime? after)
+        private void CollectFromHistoryDoc(string historyDocId)
         {
             var historyDoc = _storage.Get(_context, historyDocId);
 
@@ -99,29 +114,33 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 historyMessages == null || historyMessages.Length == 0)
                 return;
 
-            CollectFromMessages(historyMessages, before, after);
+            CollectFromMessages(historyMessages);
         }
 
         /// <summary>
-        /// Binary search LinkedConversations (chronologically ordered) to find the relevant
-        /// starting doc for paging.
-        /// When forward=true: returns the first doc that may contain messages after the timestamp.
-        /// When forward=false: returns the last doc that may contain messages before the timestamp.
+        /// Returns the (start, end) inclusive range of LinkedConversation indices that may
+        /// contain messages relevant to the current paging direction and timestamp bounds.
+        /// Binary search — LinkedConversations is chronologically ordered.
+        /// Forward: finds first doc whose LastMessageAt > _after through to the end.
+        /// Backward: finds all docs whose first message < _before.
         /// </summary>
-        private int FindHistoryDocBound(DateTime target, bool forward)
+        private (int Start, int End) FindRelevantHistoryRange()
         {
+            if (_linkedIds.Count == 0)
+                return (0, -1);
+
             int lo = 0, hi = _linkedIds.Count;
             while (lo < hi)
             {
                 int mid = lo + (hi - lo) / 2;
-
                 var doc = _storage.Get(_context, _linkedIds[mid]);
+
                 bool goLow;
-                if (forward)
+                if (_forward)
                 {
                     DateTime lastMessageAt = DateTime.MinValue;
                     doc?.Data?.TryGet(nameof(ConversationDocument.LastMessageAt), out lastMessageAt);
-                    goLow = lastMessageAt <= target;
+                    goLow = lastMessageAt <= _after;
                 }
                 else
                 {
@@ -129,7 +148,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     if (doc?.Data?.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages) == true &&
                         messages is { Length: > 0 })
                         firstMessageAt = GetMessageTimestamp(messages, 0);
-                    goLow = firstMessageAt < target;
+                    goLow = firstMessageAt < _before;
                 }
 
                 if (goLow)
@@ -138,44 +157,34 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     hi = mid;
             }
 
-            return forward ? lo : lo - 1;
+            return _forward ? (lo, _linkedIds.Count - 1) : (0, lo - 1);
         }
 
-        private void CollectFromMessages(BlittableJsonReaderArray messages, DateTime? before, DateTime? after)
+        private void CollectFromMessages(BlittableJsonReaderArray messages)
         {
             int startIndex, endIndex;
-            bool forward;
 
-            if (after.HasValue)
+            if (_forward)
             {
-                startIndex = BinarySearchBound(messages, after.Value, inclusive: true);
+                startIndex = BinarySearchBound(messages, _after, inclusive: true);
                 endIndex = messages.Length;
-                forward = true;
-            }
-            else if (before.HasValue)
-            {
-                startIndex = 0;
-                endIndex = BinarySearchBound(messages, before.Value, inclusive: false);
-                forward = false;
             }
             else
             {
                 startIndex = 0;
-                endIndex = messages.Length;
-                forward = false;
+                endIndex = BinarySearchBound(messages, _before, inclusive: false);
             }
 
             if (startIndex >= endIndex)
                 return;
 
-
-            int start = forward ? startIndex : endIndex - 1;
-            int step = forward ? 1 : -1;
+            int start = _forward ? startIndex : endIndex - 1;
+            int step = _forward ? 1 : -1;
             bool stoppedEarly = false;
 
             for (int i = start; i >= startIndex && i < endIndex; i += step)
             {
-                TryProcessMessage(messages, i);
+                TryProcessMessage(messages, ref i);
 
                 if (_results.Count >= _pageSize)
                 {
@@ -184,8 +193,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 }
             }
 
-            if (stoppedEarly || startIndex > 0)
-                _hasOlderMessages = true;
+            if (stoppedEarly)
+                _hasMoreMessages = true;
+            else if (_forward == false)
+                _hasMoreMessages |= startIndex > 0; // older messages exist before our range in this doc
         }
 
         private bool TryCollectToolResponse(BlittableJsonReaderObject msg)
@@ -210,7 +221,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return $"{timestamp.Ticks}|{role}|{toolCallId}";
         }
 
-        private void TryProcessMessage(BlittableJsonReaderArray messages, int index)
+        private void TryProcessMessage(BlittableJsonReaderArray messages, ref int index)
         {
             var msg = (BlittableJsonReaderObject)messages[index];
 
@@ -229,7 +240,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 {
                     var next = (BlittableJsonReaderObject)messages[j];
                     if (TryCollectToolResponse(next) == false)
-                        break; // hit a non-tool message, stop scanning
+                        break;
+                    index = j; // advance main loop index to skip processed tool response messages
                 }
             }
 
@@ -243,7 +255,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             _results.Add(converted);
         }
 
-
         private bool PassesDetailFilter(AiConversationMessage msg)
         {
             return _detailLevel switch
@@ -252,7 +263,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     msg.Role is AiMessageRole.System or AiMessageRole.User or AiMessageRole.Assistant,
                 AiConversationDetailLevel.Simple => msg switch
                 {
-                    { Role: AiMessageRole.User } or 
+                    { Role: AiMessageRole.User } or
                     { Role: AiMessageRole.Assistant, Content: not null } => true,
                     _ => false
                 },

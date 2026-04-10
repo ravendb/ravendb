@@ -34,7 +34,9 @@ public class AiConversationMessagesResult
     public List<AiConversationMessage> Messages { get; set; }
 
     /// <summary>
-    /// True if there are messages older than the ones returned.
+    /// True if there are more messages beyond the returned page.
+    /// For backward/default paging: older messages exist.
+    /// For forward (After) paging: newer messages exist.
     /// </summary>
-    public bool HasOlderMessages { get; set; }
+    public bool HasMoreMessages { get; set; }
 }

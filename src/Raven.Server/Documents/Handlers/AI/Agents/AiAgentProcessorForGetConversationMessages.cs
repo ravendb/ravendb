@@ -23,24 +23,12 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
 
         var conversationId = RequestHandler.GetStringQueryString("conversationId");
         var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? 25;
-        var detailLevelStr = RequestHandler.GetStringQueryString("detailLevel", required: false);
-        var beforeStr = RequestHandler.GetStringQueryString("before", required: false);
-        var afterStr = RequestHandler.GetStringQueryString("after", required: false);
-
-        var detailLevel = AiConversationDetailLevel.Simple;
-        if (detailLevelStr != null && Enum.TryParse<AiConversationDetailLevel>(detailLevelStr, ignoreCase: true, out var parsedLevel))
-            detailLevel = parsedLevel;
+        var detailLevel = RequestHandler.GetEnumQueryString<AiConversationDetailLevel>("detailLevel", required: false);
+        var before = RequestHandler.GetDateTimeQueryString("before", required: false);
+        var after = RequestHandler.GetDateTimeQueryString("after", required: false);
 
         if (pageSize <= 0)
             pageSize = 25;
-
-        DateTime? before = null;
-        if (beforeStr != null && DateTime.TryParse(beforeStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedBefore))
-            before = parsedBefore;
-
-        DateTime? after = null;
-        if (afterStr != null && DateTime.TryParse(afterStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedAfter))
-            after = parsedAfter;
 
         if (before.HasValue && after.HasValue)
             throw new ArgumentException("Cannot specify both 'before' and 'after' parameters.");
@@ -74,10 +62,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                     linkedIds.Add(linkedConversations[i].ToString());
             }
 
-            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, linkedIds, pageSize, detailLevel);
-            collector.Collect(messages, before, after);
+            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, linkedIds, pageSize, detailLevel, before, after);
+            collector.Collect(messages);
 
-            bool hasOlderMessages = collector.HasOlderMessages;
+            bool hasMoreMessages = collector.HasMoreMessages;
             var filtered = collector.GetResults();
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
@@ -100,8 +88,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteDateTime(lastMessageAt, isUtc: true);
                 writer.WriteComma();
 
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.HasOlderMessages));
-                writer.WriteBool(hasOlderMessages);
+                writer.WritePropertyName(nameof(AiConversationMessagesResult.HasMoreMessages));
+                writer.WriteBool(hasMoreMessages);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.Messages));

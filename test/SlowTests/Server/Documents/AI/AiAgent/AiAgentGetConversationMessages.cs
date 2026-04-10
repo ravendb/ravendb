@@ -220,7 +220,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
             });
 
         Assert.True(page.Messages.Count <= 3);
-        Assert.True(page.HasOlderMessages, "Should indicate there are older messages");
+        Assert.True(page.HasMoreMessages, "Should indicate there are older messages");
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -563,7 +563,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
             });
 
         Assert.Equal(12, result.Messages.Count);
-        Assert.True(result.HasOlderMessages);
+        Assert.True(result.HasMoreMessages);
 
         // Verify continuous timeline: msg4 through msg15
         for (int i = 0; i < result.Messages.Count; i++)
@@ -586,7 +586,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Equal("msg1", older.Messages[0].Content);
         Assert.Equal("msg2", older.Messages[1].Content);
         Assert.Equal("msg3", older.Messages[2].Content);
-        Assert.False(older.HasOlderMessages);
+        Assert.False(older.HasMoreMessages);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
@@ -675,6 +675,94 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Equal("msg8", result.Messages[2].Content);
         Assert.Equal("msg9", result.Messages[3].Content);
         Assert.Equal("msg10", result.Messages[4].Content);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_ForwardPagingHasMoreMessages()
+    {
+        // 10 messages in a single doc. Forward page with after=msg2, pageSize=3.
+        // Should return msg3,msg4,msg5 and HasMoreMessages=true (msg6-msg10 remain).
+        // Then page again with after=msg5 — should return msg6,msg7,msg8, HasMoreMessages=true.
+        // Then after=msg8 — msg9,msg10, HasMoreMessages=false.
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            var messages = new Sparrow.Json.Parsing.DynamicJsonArray();
+            for (int i = 1; i <= 10; i++)
+                messages.Add(MakeMsg(context, i % 2 == 1 ? "user" : "assistant", $"msg{i}", baseTime.AddMinutes(i)));
+
+            var doc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = messages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(10),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "test-doc");
+            database.DocumentsStorage.Put(context, "chats/forward-more", null, doc);
+            tx.Commit();
+        }
+
+        // Page 1: after msg2, get 3
+        var page1 = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/forward-more",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                After = baseTime.AddMinutes(2),
+                PageSize = 3
+            });
+
+        Assert.Equal(3, page1.Messages.Count);
+        Assert.Equal("msg3", page1.Messages[0].Content);
+        Assert.Equal("msg5", page1.Messages[2].Content);
+        Assert.True(page1.HasMoreMessages, "Should have more messages after msg5");
+
+        // Page 2: after msg5, get 3
+        var page2 = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/forward-more",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                After = page1.Messages[^1].Timestamp,
+                PageSize = 3
+            });
+
+        Assert.Equal(3, page2.Messages.Count);
+        Assert.Equal("msg6", page2.Messages[0].Content);
+        Assert.Equal("msg8", page2.Messages[2].Content);
+        Assert.True(page2.HasMoreMessages, "Should have more messages after msg8");
+
+        // Page 3: after msg8, get remaining
+        var page3 = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/forward-more",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                After = page2.Messages[^1].Timestamp,
+                PageSize = 3
+            });
+
+        Assert.Equal(2, page3.Messages.Count);
+        Assert.Equal("msg9", page3.Messages[0].Content);
+        Assert.Equal("msg10", page3.Messages[1].Content);
+        Assert.False(page3.HasMoreMessages, "No more messages after msg10");
     }
 
     #region Test Message Helpers
