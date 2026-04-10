@@ -261,6 +261,11 @@ namespace Raven.Server.Documents.Indexes.Static
             return null;
         }
 
+        public static implicit operator bool(DynamicNullObject o)
+        {
+            return false;
+        }
+
         public override bool Equals(object obj)
         {
             return obj == null || obj is DynamicNullObject;
