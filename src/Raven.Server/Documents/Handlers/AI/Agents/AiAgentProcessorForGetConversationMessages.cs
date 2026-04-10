@@ -121,7 +121,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(AiConversationMessage.ToolCalls));
-             writer.WriteStartArray();
+            writer.WriteStartArray();
             bool firstTc = true;
             foreach (AiToolCallResult tc in msg.ToolCalls ?? [])
             {
