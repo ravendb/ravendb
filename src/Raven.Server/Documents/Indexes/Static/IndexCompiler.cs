@@ -330,6 +330,7 @@ namespace Raven.Server.Documents.Indexes.Static
             );
 
             var rewriter = new MethodDynamicParametersRewriter();
+            var recursionGuard = new RecursionGuardRewriter();
             result.SyntaxTrees = new List<SyntaxTree>();
 
             foreach (var kvp in syntaxTrees) //now do the rewrites
@@ -339,7 +340,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
                 rewriter.SemanticModel = tempCompilation.GetSemanticModel(tree);
 
-                var rewritten = rewriter.Visit(tree.GetRoot()).NormalizeWhitespace();
+                var rewritten = rewriter.Visit(tree.GetRoot());
+                rewritten = recursionGuard.Visit(rewritten).NormalizeWhitespace();
 
                 SyntaxTree syntaxTree;
 
