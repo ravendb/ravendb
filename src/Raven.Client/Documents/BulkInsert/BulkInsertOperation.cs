@@ -21,6 +21,7 @@ using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Json.Serialization.SystemTextJson;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -411,8 +412,16 @@ namespace Raven.Client.Documents.BulkInsert
 
                 if (_customEntitySerializer == null || _customEntitySerializer(entity, metadata, _writer.StreamWriter) == false)
                 {
-                    using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
-                        await json.WriteJsonToAsync(_writer.StreamWriter.BaseStream, _token).ConfigureAwait(false);
+                    if (_conventions.Serialization is SystemTextJsonSerializationConventions stjConventions)
+                    {
+                        // Fast path: write entity + metadata directly to stream as UTF-8, bypassing blittable
+                        stjConventions.WriteEntityToStream(_writer.StreamWriter.BaseStream, entity, metadata, _defaultSerializer);
+                    }
+                    else
+                    {
+                        using (var json = _conventions.Serialization.DefaultConverter.ToBlittable(entity, metadata, _context, _defaultSerializer))
+                            await json.WriteJsonToAsync(_writer.StreamWriter.BaseStream, _token).ConfigureAwait(false);
+                    }
                 }
 
                 _writer.Write('}');
