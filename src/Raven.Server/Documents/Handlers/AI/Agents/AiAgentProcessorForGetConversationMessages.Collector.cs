@@ -110,7 +110,16 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (rawDoc?.Data == null)
                 return;
 
-            ConversationDocument historyConversation = ConversationDocument.ToDocument(historyDocId, rawDoc.Data, maxModelIterationsPerCall: 0);
+            ConversationDocument historyConversation;
+            try
+            {
+                historyConversation = ConversationDocument.ToDocument(historyDocId, rawDoc.Data, maxModelIterationsPerCall: 0);
+            }
+            catch (ArgumentException)
+            {
+                // Corrupted or tampered history doc — skip rather than fail the entire request
+                return;
+            }
 
             if (historyConversation.Messages.Count == 0)
                 return;
