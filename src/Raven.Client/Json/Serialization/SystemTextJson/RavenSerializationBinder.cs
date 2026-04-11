@@ -74,7 +74,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             if (_forbiddenTypesCache.Contains(type))
                 ThrowForbiddenType(type);
 
-            if (type.Namespace != null && _forbiddenNamespaces.Any(@namespace => @namespace.StartsWith(type.Namespace)))
+            if (type.Namespace != null && _forbiddenNamespaces.Any(@namespace => type.Namespace.StartsWith(@namespace)))
             {
                 UpdateCache(ref _forbiddenTypesCache, type);
                 ThrowForbiddenNamespace(type);
