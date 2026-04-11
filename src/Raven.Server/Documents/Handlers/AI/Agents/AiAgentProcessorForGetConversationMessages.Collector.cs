@@ -239,9 +239,11 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (TryCollectToolResponse(msg))
                 return;
 
-            // For forward paging, tool responses follow this message. Scan ahead to collect
-            // them so they're available when ParseAndConvertMessage resolves tool call results.
-            if (msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) &&
+            // For forward paging only: tool responses follow their parent assistant message chronologically.
+            // Scan ahead to collect them so they're available when ParseAndConvertMessage resolves tool call results.
+            // In backward mode, tool responses are encountered before the assistant message, so they're already collected.
+            if (_forward &&
+                msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) &&
                 toolCalls is { Length: > 0 })
             {
                 for (int j = index + 1; j < messages.Count; j++)
