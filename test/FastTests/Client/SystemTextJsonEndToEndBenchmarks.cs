@@ -246,19 +246,31 @@ namespace FastTests.Client
                     await session.SaveChangesAsync();
                 }
 
-                // Measure
-                var sw = Stopwatch.StartNew();
+                // Measure - split into load, modify, save phases
+                long loadMs = 0, saveMs = 0;
+                var totalSw = Stopwatch.StartNew();
                 for (int i = 0; i < MeasuredIterations; i++)
                 {
                     using var session = store.OpenAsyncSession();
+
+                    var loadSw = Stopwatch.StartNew();
                     var entity = await session.LoadAsync<Order>($"orders/{i}");
+                    loadSw.Stop();
+                    loadMs += loadSw.ElapsedMilliseconds;
+
                     entity.Total += 100;
                     entity.Notes = $"Updated at iteration {i}";
-                    await session.SaveChangesAsync();
-                }
-                sw.Stop();
 
-                results.Add($"  {name,-12} {sw.ElapsedMilliseconds,6}ms ({sw.ElapsedMilliseconds * 1000.0 / MeasuredIterations:F1} us/op)");
+                    var saveSw = Stopwatch.StartNew();
+                    await session.SaveChangesAsync();
+                    saveSw.Stop();
+                    saveMs += saveSw.ElapsedMilliseconds;
+                }
+                totalSw.Stop();
+
+                results.Add($"  {name,-12} Total: {totalSw.ElapsedMilliseconds,5}ms  " +
+                            $"Load: {loadMs,5}ms ({loadMs * 1000.0 / MeasuredIterations:F0} us/op)  " +
+                            $"Save: {saveMs,5}ms ({saveMs * 1000.0 / MeasuredIterations:F0} us/op)");
             }
 
             foreach (var line in results)
