@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Json.Serialization.SystemTextJson;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -413,6 +414,59 @@ namespace FastTests.Client
             public List<int> Scores { get; set; }
             public Dictionary<string, string> Metadata { get; set; }
             public int[] Numbers { get; set; }
+        }
+
+        // Entity that only has Name — "ExtraField" and "ExtraNumber" are not on this type
+        private class PartialEntity
+        {
+            public string Id { get; set; }
+            public string Name { get; set; }
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task PreserveDocumentPropertiesNotFoundOnModel_RoundTrips()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                ModifyDocumentStore = s =>
+                {
+                    s.Conventions.Serialization = new SystemTextJsonSerializationConventions();
+                }
+            });
+
+            // Store a document with extra properties using an anonymous type
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new
+                {
+                    Name = "John",
+                    ExtraField = "should be preserved",
+                    ExtraNumber = 42
+                }, "items/1");
+                await session.SaveChangesAsync();
+            }
+
+            // Load as PartialEntity (missing ExtraField and ExtraNumber), modify, save
+            using (var session = store.OpenAsyncSession())
+            {
+                var entity = await session.LoadAsync<PartialEntity>("items/1");
+                Assert.Equal("John", entity.Name);
+
+                entity.Name = "Jane";
+                await session.SaveChangesAsync();
+            }
+
+            // Verify extra properties survived the round-trip by loading as dynamic
+            using (var session = store.OpenAsyncSession())
+            {
+                var raw = await session.LoadAsync<BlittableJsonReaderObject>("items/1");
+                Assert.True(raw.TryGet("Name", out string name));
+                Assert.Equal("Jane", name);
+                Assert.True(raw.TryGet("ExtraField", out string extraField));
+                Assert.Equal("should be preserved", extraField);
+                Assert.True(raw.TryGet("ExtraNumber", out long extraNumber));
+                Assert.Equal(42, extraNumber);
+            }
         }
     }
 }
