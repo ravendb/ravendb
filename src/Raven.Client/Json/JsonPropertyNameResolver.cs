@@ -23,7 +23,7 @@ namespace Raven.Client.Json
 
         private static string ResolveJsonPropertyName(MemberInfo member)
         {
-            foreach (var attr in member.GetCustomAttributes(false))
+            foreach (var attr in member.GetCustomAttributes(true))
             {
                 var attrType = attr.GetType();
 
