@@ -112,17 +112,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 case long l:
                     writer.WriteNumberValue(l);
                     break;
+                case int i:
+                    writer.WriteNumberValue(i);
+                    break;
                 case bool b:
                     writer.WriteBooleanValue(b);
                     break;
                 case double d:
                     writer.WriteNumberValue(d);
                     break;
+                case float f:
+                    writer.WriteNumberValue(f);
+                    break;
+                case decimal dec:
+                    writer.WriteNumberValue(dec);
+                    break;
                 case null:
                     writer.WriteNullValue();
                     break;
                 default:
-                    writer.WriteStringValue(value.ToString());
+                    JsonSerializer.Serialize(writer, value);
                     break;
             }
         }
@@ -154,6 +163,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     case JsonTokenType.String: writer.WriteValue(jsonReader.GetString()); break;
                     case JsonTokenType.Number:
                         if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
+                        else if (jsonReader.TryGetDecimal(out decimal dec)) writer.WriteValue(dec);
                         else writer.WriteValue(jsonReader.GetDouble());
                         break;
                     case JsonTokenType.True: writer.WriteValue(true); break;
