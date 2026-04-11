@@ -307,7 +307,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
-            [nameof(Messages)] = Messages,
+            [nameof(Messages)] = _messagesList ?? (object)_messagesArray,
             [nameof(LinkedConversations)] = LinkedConversations,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
