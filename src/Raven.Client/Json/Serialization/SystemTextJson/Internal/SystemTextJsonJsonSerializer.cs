@@ -74,7 +74,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     foreach (var kvp in metadata)
                     {
                         utf8Writer.WritePropertyName(kvp.Key);
-                        WriteMetadataValue(utf8Writer, kvp.Value);
+                        SystemTextJsonSerializationConventions.WriteMetadataValue(utf8Writer, kvp.Value);
                     }
                     utf8Writer.WriteEndObject();
                 }
@@ -83,6 +83,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options));
                 foreach (var property in doc.RootElement.EnumerateObject())
                 {
+                    if (property.Name == Constants.Documents.Metadata.Key)
+                        continue;
                     property.WriteTo(utf8Writer);
                 }
 
@@ -99,40 +101,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             {
                 return context.ParseBuffer(ptr, utf8Json.Length, "serialize/entity",
                     BlittableJsonDocumentBuilder.UsageMode.None);
-            }
-        }
-
-        private static void WriteMetadataValue(Utf8JsonWriter writer, object value)
-        {
-            switch (value)
-            {
-                case string s:
-                    writer.WriteStringValue(s);
-                    break;
-                case long l:
-                    writer.WriteNumberValue(l);
-                    break;
-                case int i:
-                    writer.WriteNumberValue(i);
-                    break;
-                case bool b:
-                    writer.WriteBooleanValue(b);
-                    break;
-                case double d:
-                    writer.WriteNumberValue(d);
-                    break;
-                case float f:
-                    writer.WriteNumberValue(f);
-                    break;
-                case decimal dec:
-                    writer.WriteNumberValue(dec);
-                    break;
-                case null:
-                    writer.WriteNullValue();
-                    break;
-                default:
-                    JsonSerializer.Serialize(writer, value);
-                    break;
             }
         }
 
