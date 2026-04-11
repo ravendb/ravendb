@@ -7,6 +7,7 @@ namespace Raven.Client.Json
     internal static class JsonPropertyNameResolver
     {
         // MemberInfo is immutable — attributes never change. Cache the resolved name per member.
+        // Empty string sentinel means "no custom name found" (ConcurrentDictionary can't store null)
         private static readonly ConcurrentDictionary<MemberInfo, string> _cache = new();
 
         /// <summary>
@@ -18,7 +19,8 @@ namespace Raven.Client.Json
         /// </summary>
         public static string GetJsonPropertyName(MemberInfo member)
         {
-            return _cache.GetOrAdd(member, ResolveJsonPropertyName);
+            var result = _cache.GetOrAdd(member, ResolveJsonPropertyName);
+            return result.Length == 0 ? null : result;
         }
 
         private static string ResolveJsonPropertyName(MemberInfo member)
@@ -47,7 +49,7 @@ namespace Raven.Client.Json
                 if (attr is DataMemberAttribute dataMember && dataMember.Name != null)
                     return dataMember.Name;
             }
-            return null;
+            return string.Empty; // sentinel for "no custom name"
         }
     }
 }
