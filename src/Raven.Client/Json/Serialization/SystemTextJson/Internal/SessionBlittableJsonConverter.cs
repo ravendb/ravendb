@@ -32,13 +32,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 _session.OnBeforeConversionToEntityInvoke(id, type, ref json);
 
+                if (trackEntity && _session.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+                    throw new NotSupportedException(
+                        $"{nameof(DocumentConventions.PreserveDocumentPropertiesNotFoundOnModel)} is not yet supported with the System.Text.Json serializer. " +
+                        "Disable this convention or use the Newtonsoft.Json serializer.");
+
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
                 var entity = defaultValue;
-
-                // TODO: RavenDB-23037 Missing property tracking is not yet implemented for STJ.
-                // The Newtonsoft path uses DefaultRavenContractResolver.RegisterExtensionDataSetter
-                // to capture properties present in JSON but missing from the CLR type. STJ needs
-                // an equivalent approach (e.g., JsonTypeInfo modifier or UnmappedMemberHandling).
 
                 var documentTypeAsString = _session.Conventions.GetClrType(id, json);
                 if (documentTypeAsString != null)

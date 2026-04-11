@@ -23,6 +23,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
         public override void Write(Utf8JsonWriter writer, IMetadataDictionary value, JsonSerializerOptions options)
         {
+            throw new NotSupportedException($"{nameof(MetadataDictionaryConverter)} does not support writing. Metadata should be serialized via the blittable writer path, not through STJ directly.");
         }
     }
 }
