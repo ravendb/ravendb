@@ -31,7 +31,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             pageSize = 25;
 
         if (before.HasValue && after.HasValue)
-            throw new ArgumentException("Cannot specify both 'before' and 'after' parameters.");
+            throw new Raven.Client.Exceptions.BadRequestException("Cannot specify both 'before' and 'after' parameters.");
 
         using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
