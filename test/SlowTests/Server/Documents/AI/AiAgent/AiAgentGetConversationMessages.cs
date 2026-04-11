@@ -769,6 +769,102 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.False(page3.HasMoreMessages, "No more messages after msg10");
     }
 
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_SubConversationIds()
+    {
+        // Create a conversation with sub-agent tool calls and internal messages referencing sub-conversations.
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        var baseTime = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            var messages = new Sparrow.Json.Parsing.DynamicJsonArray
+            {
+                MakeMsg(context, "system", "You are helpful", baseTime.AddMinutes(1)),
+                MakeMsg(context, "user", "Call the sub-agent", baseTime.AddMinutes(2)),
+                // Assistant calls a sub-agent tool
+                MakeAssistantWithToolCall(context, "call_sub1", "user-info-agent", "{}", baseTime.AddMinutes(3)),
+                // Tool response from the sub-agent, with subConversationId
+                context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    ["role"] = "tool",
+                    ["tool_call_id"] = "call_sub1",
+                    ["content"] = "Sub-agent result",
+                    ["subConversationId"] = "SubChats/1-A",
+                    ["date"] = baseTime.AddMinutes(4)
+                }, "msg"),
+                // Internal message marking the sub-agent action
+                context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    ["role"] = "internal",
+                    ["type"] = "sub-agent-action-call",
+                    ["content"] = "[sub-agent called action-tool 'GetUserName']",
+                    ["toolName"] = "GetUserName",
+                    ["subConversationId"] = "SubChats/1-A",
+                    ["date"] = baseTime.AddMinutes(5)
+                }, "msg"),
+                MakeMsg(context, "assistant", "The user name is John", baseTime.AddMinutes(6)),
+            };
+
+            var doc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = AgentName,
+                ["Parameters"] = null,
+                ["Messages"] = messages,
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                    { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = baseTime.AddMinutes(6),
+                ["CreatedAt"] = baseTime,
+                ["Expires"] = null,
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray { "SubChats/1-A" },
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "test-doc");
+            database.DocumentsStorage.Put(context, "chats/sub-agent-test", null, doc);
+            tx.Commit();
+        }
+
+        // Detailed view: should see the tool call with SubConversationId
+        var result = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/sub-agent-test",
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                PageSize = 50
+            });
+
+        // SubConversationIds should be in the result metadata
+        Assert.NotNull(result.SubConversationIds);
+        Assert.Contains("SubChats/1-A", result.SubConversationIds);
+
+        // The assistant message should have a tool call with SubConversationId
+        var assistantWithTools = result.Messages.Find(m => m.Role == AiMessageRole.Assistant && m.ToolCalls is { Count: > 0 });
+        Assert.NotNull(assistantWithTools);
+        Assert.Equal("SubChats/1-A", assistantWithTools.ToolCalls[0].SubConversationId);
+
+        // Full view: should also see the internal message with SubConversationId
+        var fullResult = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = "chats/sub-agent-test",
+                DetailLevel = AiConversationDetailLevel.Full,
+                PageSize = 50
+            });
+
+        var internalMsg = fullResult.Messages.Find(m => m.Role == AiMessageRole.Internal);
+        Assert.NotNull(internalMsg);
+        Assert.Equal("SubChats/1-A", internalMsg.SubConversationId);
+        Assert.Contains("sub-agent called action-tool", internalMsg.Content);
+    }
+
     #region Test Message Helpers
 
     private static BlittableJsonReaderObject MakeMsg(DocumentsOperationContext context, string role, string content, DateTime date)
