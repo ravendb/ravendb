@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal class AzureOpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
 {
-    private readonly AzureOpenAiSettings _settings;
+    private new readonly AzureOpenAiSettings _settings;
 
     private const string ApiVersion = "2024-10-21";
 
