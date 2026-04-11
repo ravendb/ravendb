@@ -207,8 +207,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (stoppedEarly)
                 _hasMoreMessages = true;
-            else if (_forward == false)
-                _hasMoreMessages |= startIndex > 0; // older messages exist before our range in this doc
         }
 
         private bool TryCollectToolResponse(BlittableJsonReaderObject msg)
