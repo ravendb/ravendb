@@ -467,6 +467,25 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                 previous.TryGet("role", out string previousRole);
                 Assert.True(previousRole == "assistant",
                     $"Tool message at index {i} is not preceded by an assistant message (found '{previousRole}').");
+
+                Assert.True(previous.TryGet("tool_calls", out BlittableJsonReaderArray toolCallsArr) && toolCallsArr is { Length: > 0 },
+                    $"Tool message at index {i} is preceded by an assistant message without tool_calls.");
+
+                msg.TryGet("tool_call_id", out string toolCallId);
+                Assert.False(string.IsNullOrEmpty(toolCallId),
+                    $"Tool message at index {i} is missing tool_call_id.");
+
+                bool foundMatch = false;
+                foreach (BlittableJsonReaderObject tc in toolCallsArr)
+                {
+                    if (tc.TryGet("id", out string tcId) && tcId == toolCallId)
+                    {
+                        foundMatch = true;
+                        break;
+                    }
+                }
+                Assert.True(foundMatch,
+                    $"Tool message at index {i} has tool_call_id '{toolCallId}' that doesn't match any tool call in the preceding assistant message.");
             }
         }
     }
