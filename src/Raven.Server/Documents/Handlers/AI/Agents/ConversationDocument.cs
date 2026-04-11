@@ -100,21 +100,36 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 yield return this[i];
         }
 
-        public IEnumerator<BlittableJsonReaderObject> GetEnumerator()
-        {
-            return _owner._messagesList?.GetEnumerator() ?? ArrayEnumerator();
-        }
+        /// <summary>
+        /// Returns a struct enumerator for allocation-free foreach.
+        /// </summary>
+        public Enumerator GetEnumerator() => new(this);
 
-        private IEnumerator<BlittableJsonReaderObject> ArrayEnumerator()
-        {
-            var array = _owner._messagesArray;
-            if (array == null)
-                yield break;
-            for (int i = 0; i < array.Length; i++)
-                yield return (BlittableJsonReaderObject)array[i];
-        }
+        IEnumerator<BlittableJsonReaderObject> IEnumerable<BlittableJsonReaderObject>.GetEnumerator() => new Enumerator(this);
 
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => new Enumerator(this);
+
+        public struct Enumerator : IEnumerator<BlittableJsonReaderObject>
+        {
+            private readonly MessagesList _messages;
+            private int _index;
+
+            internal Enumerator(MessagesList messages)
+            {
+                _messages = messages;
+                _index = -1;
+            }
+
+            public BlittableJsonReaderObject Current => _messages[_index];
+
+            object System.Collections.IEnumerator.Current => Current;
+
+            public bool MoveNext() => ++_index < _messages.Count;
+
+            public void Reset() => _index = -1;
+
+            public void Dispose() { }
+        }
 
         /// <summary>
         /// Returns the underlying storage in a form that ObjectJsonParser can serialize
