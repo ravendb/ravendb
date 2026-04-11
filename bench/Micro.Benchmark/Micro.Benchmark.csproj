@@ -24,5 +24,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
   </ItemGroup>
 </Project>
