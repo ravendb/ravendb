@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow;
@@ -32,20 +34,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
                 _session.OnBeforeConversionToEntityInvoke(id, type, ref json);
 
-                if (trackEntity && _session.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
-                    throw new NotSupportedException(
-                        $"{nameof(DocumentConventions.PreserveDocumentPropertiesNotFoundOnModel)} is not yet supported with the System.Text.Json serializer. " +
-                        "Disable this convention or use the Newtonsoft.Json serializer.");
-
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
                 var entity = defaultValue;
 
+                Type entityType = type;
                 var documentTypeAsString = _session.Conventions.GetClrType(id, json);
                 if (documentTypeAsString != null)
                 {
                     var documentType = _session.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
                     if (documentType != null && type.IsAssignableFrom(documentType))
                     {
+                        entityType = documentType;
                         entity = _session.Conventions.Serialization.DeserializeEntityFromBlittable(documentType, json);
                     }
                 }
@@ -53,6 +52,11 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 if (Equals(entity, defaultValue))
                 {
                     entity = _session.Conventions.Serialization.DeserializeEntityFromBlittable(type, json);
+                }
+
+                if (trackEntity && _session.Conventions.PreserveDocumentPropertiesNotFoundOnModel && entity != null)
+                {
+                    CaptureMissingProperties(entity, entityType, json);
                 }
 
                 if (id != null)
@@ -131,11 +135,22 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             if (documentInfo != null)
                 _session.OnBeforeConversionToDocumentInvoke(documentInfo.Id, entity);
 
-            // TODO: RavenDB-23037 Missing property round-tripping (FillMissingProperties) is not yet
-            // implemented for STJ. The Newtonsoft path uses DefaultRavenContractResolver.RegisterExtensionDataGetter.
             BlittableJsonReaderObject document;
             using (var writer = new SystemTextJsonBlittableWriter(_session.Context, documentInfo))
                 document = ToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
+
+            // Inject missing properties (properties in the original JSON that aren't on the CLR type)
+            if (MissingProperties != null && MissingProperties.TryGetValue(entity, out var missingProps) && missingProps.Count > 0)
+            {
+                if (document.Modifications == null)
+                    document.Modifications = new DynamicJsonValue(document);
+
+                foreach (var kvp in missingProps)
+                    document.Modifications[(string)kvp.Key] = kvp.Value;
+
+                using (var old = document)
+                    document = _session.Context.ReadObject(document, "restore/missingProperties");
+            }
 
             if (documentInfo != null)
                 _session.OnAfterConversionToDocumentInvoke(documentInfo.Id, entity, ref document);
@@ -242,6 +257,54 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         public void RemoveFromMissing<T>(T entity)
         {
             MissingProperties?.Remove(entity);
+        }
+
+        /// <summary>
+        /// Compare the blittable's property names against the entity type's known CLR properties.
+        /// Any properties in the JSON that don't exist on the CLR type are captured as missing
+        /// properties for later round-trip preservation.
+        /// </summary>
+        private void CaptureMissingProperties(object entity, Type entityType, BlittableJsonReaderObject json)
+        {
+            var knownProperties = GetKnownPropertyNames(entityType);
+            var propertyNames = json.GetPropertyNames();
+
+            for (int i = 0; i < propertyNames.Length; i++)
+            {
+                var propName = propertyNames[i];
+
+                if (propName == Constants.Documents.Metadata.Key)
+                    continue;
+
+                if (knownProperties.Contains(propName))
+                    continue;
+
+                // This property exists in JSON but not on the CLR type — capture its value
+                var propIndex = json.GetPropertyIndex(propName);
+                var propDetails = new BlittableJsonReaderObject.PropertyDetails();
+                json.GetPropertyByIndex(propIndex, ref propDetails);
+
+                RegisterMissingProperties(entity, propName, propDetails.Value);
+            }
+        }
+
+        // Cache known property names per entity type (property names are immutable per type)
+        private static readonly ConcurrentDictionary<Type, HashSet<string>> _knownPropertyNamesCache = new();
+
+        private static HashSet<string> GetKnownPropertyNames(Type type)
+        {
+            return _knownPropertyNamesCache.GetOrAdd(type, static t =>
+            {
+                var names = new HashSet<string>(StringComparer.Ordinal);
+                for (Type current = t; current != null && current != typeof(object); current = current.BaseType)
+                {
+                    foreach (var prop in current.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                        names.Add(prop.Name);
+                    foreach (var field in current.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+                        names.Add(field.Name);
+                }
+                return names;
+            });
         }
     }
 }
