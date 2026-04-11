@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Raven.Client.Documents.Conventions;
@@ -144,6 +145,67 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             CustomizeJsonSerializerOptions(options);
 
             return options;
+        }
+
+        /// <summary>
+        /// Writes an entity with @metadata directly to a stream as UTF-8 JSON,
+        /// bypassing the blittable intermediate format. Used by bulk insert.
+        /// </summary>
+        internal void WriteEntityToStream(Stream stream, object entity, IMetadataDictionary metadata, IJsonSerializer serializer)
+        {
+            var options = ((SystemTextJsonJsonSerializer)serializer).Options;
+
+            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true });
+            writer.WriteStartObject();
+
+            // Write @metadata first
+            if (metadata != null && metadata.Count > 0)
+            {
+                writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                writer.WriteStartObject();
+                foreach (var kvp in metadata)
+                {
+                    writer.WritePropertyName(kvp.Key);
+                    WriteMetadataValue(writer, kvp.Value);
+                }
+                writer.WriteEndObject();
+            }
+
+            // Serialize entity to a JsonDocument so we can iterate its top-level properties
+            // and write them into our existing object (which already has @metadata).
+            using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(entity, entity.GetType(), options));
+            foreach (var property in doc.RootElement.EnumerateObject())
+            {
+                property.WriteTo(writer);
+            }
+
+            writer.WriteEndObject();
+            writer.Flush();
+        }
+
+        private static void WriteMetadataValue(Utf8JsonWriter writer, object value)
+        {
+            switch (value)
+            {
+                case string s:
+                    writer.WriteStringValue(s);
+                    break;
+                case long l:
+                    writer.WriteNumberValue(l);
+                    break;
+                case bool b:
+                    writer.WriteBooleanValue(b);
+                    break;
+                case double d:
+                    writer.WriteNumberValue(d);
+                    break;
+                case null:
+                    writer.WriteNullValue();
+                    break;
+                default:
+                    writer.WriteStringValue(value.ToString());
+                    break;
+            }
         }
 
         private void InitializeConverters(JsonSerializerOptions options)
