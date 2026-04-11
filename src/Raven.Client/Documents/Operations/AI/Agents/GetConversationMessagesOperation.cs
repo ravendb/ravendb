@@ -39,7 +39,7 @@ public sealed class GetConversationMessagesOptions
 
     /// <summary>
     /// Controls the level of detail in returned messages.
-    /// Simple (default): only user + assistant content messages.
+    /// Simple (default): user messages (including attachment-only) and assistant messages with content.
     /// Detailed: adds system messages and tool calls with results.
     /// Full: no filtering, includes summaries and internal messages.
     /// </summary>
