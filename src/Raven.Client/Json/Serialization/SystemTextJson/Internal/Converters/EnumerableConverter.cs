@@ -31,6 +31,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
             if (typeToConvert == typeof(BlittableJsonReaderArray))
                 return false;
 
+            if (typeof(IDictionary).IsAssignableFrom(typeToConvert))
+                return false;
+
             if (_canConvertCache.TryGetValue(typeToConvert, out bool canConvert) == false)
             {
                 canConvert = ComputeCanConvert(typeToConvert);
@@ -99,7 +102,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
 
             public override IEnumerable<T> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
             {
-                throw new NotSupportedException($"{nameof(EnumerableConverter)} does not support reading.");
+                if (reader.TokenType == JsonTokenType.Null)
+                    return null;
+
+                if (reader.TokenType != JsonTokenType.StartArray)
+                    throw new JsonException($"Expected StartArray token but got {reader.TokenType}.");
+
+                var list = new List<T>();
+                while (reader.Read())
+                {
+                    if (reader.TokenType == JsonTokenType.EndArray)
+                        break;
+
+                    T item = JsonSerializer.Deserialize<T>(ref reader, options);
+                    list.Add(item);
+                }
+
+                if (typeToConvert.IsArray)
+                    return list.ToArray();
+
+                return list;
             }
 
             public override void Write(Utf8JsonWriter writer, IEnumerable<T> value, JsonSerializerOptions options)
