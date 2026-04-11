@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using System.Text.Json;
+using Sparrow;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -19,25 +21,31 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Serialize(IJsonWriter writer, object value, Type objectType)
         {
-            byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options);
-            WriteJsonToBlittableWriter(writer, bytes);
+            using var stream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+            using (var utf8Writer = new Utf8JsonWriter((Stream)stream))
+            {
+                JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
+            }
+
+            stream.TryGetBuffer(out var buffer);
+            WriteJsonToBlittableWriter(writer, new ReadOnlySpan<byte>(buffer.Array, buffer.Offset, buffer.Count));
         }
 
         public object Deserialize(IJsonReader reader, Type type)
         {
-            SystemTextJsonBlittableReader stjReader = (SystemTextJsonBlittableReader)reader;
+            var stjReader = (SystemTextJsonBlittableReader)reader;
             return JsonSerializer.Deserialize(stjReader.GetUtf8Json(), type, Options);
         }
 
         public T Deserialize<T>(IJsonReader reader)
         {
-            SystemTextJsonBlittableReader stjReader = (SystemTextJsonBlittableReader)reader;
+            var stjReader = (SystemTextJsonBlittableReader)reader;
             return JsonSerializer.Deserialize<T>(stjReader.GetUtf8Json(), Options);
         }
 
-        private static void WriteJsonToBlittableWriter(IJsonWriter writer, byte[] utf8Json)
+        private static void WriteJsonToBlittableWriter(IJsonWriter writer, ReadOnlySpan<byte> utf8Json)
         {
-            Utf8JsonReader jsonReader = new Utf8JsonReader(utf8Json);
+            var jsonReader = new Utf8JsonReader(utf8Json);
             while (jsonReader.Read())
             {
                 switch (jsonReader.TokenType)
