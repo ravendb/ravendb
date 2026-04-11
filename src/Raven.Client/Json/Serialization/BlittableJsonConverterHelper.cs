@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -139,11 +140,20 @@ namespace Raven.Client.Json.Serialization
             return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
         }
 
+        // Cache: (rootType, propertyName) → property/field Type.
+        // Types are immutable, so the mapping never changes.
+        private static readonly ConcurrentDictionary<(Type, string), Type> _propertyTypeCache = new();
+
         internal static Type GetPropertyType(string propertyName, Type rootType)
         {
             if (rootType == null)
                 return null;
 
+            return _propertyTypeCache.GetOrAdd((rootType, propertyName), static key => ResolvePropertyType(key.Item2, key.Item1));
+        }
+
+        private static Type ResolvePropertyType(string propertyName, Type rootType)
+        {
             MemberInfo memberInfo = null;
             try
             {
