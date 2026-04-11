@@ -20,10 +20,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         private bool _first;
         private readonly DocumentInfo _documentInfo;
 
+        public JsonOperationContext Context { get; }
+
         public SystemTextJsonBlittableWriter(JsonOperationContext context, DocumentInfo documentInfo = null,
             BlittableJsonDocumentBuilder.UsageMode? mode = null, BlittableWriter<UnmanagedWriteBuffer> writer = null,
             LazyStringValue idField = null, LazyStringValue keyField = null, LazyStringValue collectionField = null)
         {
+            Context = context;
             _manualBlittableJsonDocumentBuilder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context, mode ?? BlittableJsonDocumentBuilder.UsageMode.None, writer);
             _manualBlittableJsonDocumentBuilder.Reset(mode ?? BlittableJsonDocumentBuilder.UsageMode.None);
             _manualBlittableJsonDocumentBuilder.StartWriteObjectDocument();

@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Dynamic;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -43,12 +46,31 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 if (newInstance == null)
                     return;
 
-                CopyProperties(newInstance, entity, type);
+                GetCompiledCopier(type)(newInstance, entity);
             }
         }
 
-        private static void CopyProperties(object source, object target, Type type)
+        private static readonly ConcurrentDictionary<Type, Action<object, object>> _copiers = new();
+
+        private static Action<object, object> GetCompiledCopier(Type type)
         {
+            return _copiers.GetOrAdd(type, CompileCopier);
+        }
+
+        private static Action<object, object> CompileCopier(Type type)
+        {
+            var sourceParam = Expression.Parameter(typeof(object), "source");
+            var targetParam = Expression.Parameter(typeof(object), "target");
+
+            var sourceTyped = Expression.Variable(type, "s");
+            var targetTyped = Expression.Variable(type, "t");
+
+            var body = new List<Expression>
+            {
+                Expression.Assign(sourceTyped, Expression.Convert(sourceParam, type)),
+                Expression.Assign(targetTyped, Expression.Convert(targetParam, type))
+            };
+
             for (Type currentType = type; currentType != null && currentType != typeof(object); currentType = currentType.BaseType)
             {
                 PropertyInfo[] properties = currentType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
@@ -57,22 +79,29 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                     PropertyInfo property = properties[i];
                     if (property.CanRead == false || property.CanWrite == false)
                         continue;
-
                     if (property.GetIndexParameters().Length > 0)
                         continue;
 
-                    object value = property.GetValue(source);
-                    property.SetValue(target, value);
+                    // t.Prop = s.Prop
+                    body.Add(Expression.Assign(
+                        Expression.Property(targetTyped, property),
+                        Expression.Property(sourceTyped, property)));
                 }
 
                 FieldInfo[] fields = currentType.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
                 for (int i = 0; i < fields.Length; i++)
                 {
                     FieldInfo field = fields[i];
-                    object value = field.GetValue(source);
-                    field.SetValue(target, value);
+
+                    // t.Field = s.Field
+                    body.Add(Expression.Assign(
+                        Expression.Field(targetTyped, field),
+                        Expression.Field(sourceTyped, field)));
                 }
             }
+
+            var block = Expression.Block(new[] { sourceTyped, targetTyped }, body);
+            return Expression.Lambda<Action<object, object>>(block, sourceParam, targetParam).Compile();
         }
 
         protected static BlittableJsonReaderObject ToBlittableInternal(
