@@ -97,9 +97,9 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
                 .Append($"?conversationId={Uri.EscapeDataString(_params.ConversationId)}");
 
             if (_params.Before.HasValue)
-                sb.Append("&before=").Append(Uri.EscapeDataString(_params.Before.Value.ToUniversalTime().GetDefaultRavenFormat()));
+                sb.Append("&before=").Append(Uri.EscapeDataString(_params.Before.Value.GetDefaultRavenFormat()));
             if (_params.After.HasValue)
-                sb.Append("&after=").Append(Uri.EscapeDataString(_params.After.Value.ToUniversalTime().GetDefaultRavenFormat()));
+                sb.Append("&after=").Append(Uri.EscapeDataString(_params.After.Value.GetDefaultRavenFormat()));
 
             sb.Append($"&pageSize={_params.PageSize}");
             sb.Append($"&detailLevel={_params.DetailLevel}");
