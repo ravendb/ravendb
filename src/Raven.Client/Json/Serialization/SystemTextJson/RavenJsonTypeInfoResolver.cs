@@ -218,13 +218,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private static void ThrowByRefNotSupported() =>
             throw new NotSupportedException(
                 "By-ref fields and properties in documents cannot be serialized. " +
-                "You can set RavenDB to ignore them by setting DocumentConventions::Serialization::ThrowErrorOnByRefFields to 'false'. " +
+                $"You can set RavenDB to ignore them by setting {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.IgnoreByRefMembers)} to 'true'. " +
                 "For more details, see https://github.com/JamesNK/Newtonsoft.Json/issues/1552.");
 
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static void ThrowPointersNotSupported() =>
             throw new NotSupportedException(
                 "Pointer type fields and properties in documents cannot be serialized. " +
-                "You can set RavenDB to ignore them by setting DocumentConventions::Serialization::ThrowOnUnsafeMembers to 'false'");
+                $"You can set RavenDB to ignore them by setting {nameof(SystemTextJsonSerializationConventions)}.{nameof(SystemTextJsonSerializationConventions.IgnoreUnsafeMembers)} to 'true'.");
     }
 }
