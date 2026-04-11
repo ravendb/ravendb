@@ -149,7 +149,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 }
                 else
                 {
-                    DateTime firstMessageAt = DateTime.MaxValue;
+                    // Missing/expired docs should not block the backward search — treat them as
+                    // older than any real message so they're skipped naturally.
+                    DateTime firstMessageAt = DateTime.MinValue;
                     if (doc?.Data?.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages) == true &&
                         messages is { Length: > 0 })
                     {
