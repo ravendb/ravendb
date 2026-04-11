@@ -18,7 +18,7 @@ public class RavenDB_25485 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HandleShouldWorkWhenReturningAList()
+    public void AddActionResponseShouldWorkWhenReturningAList()
     {
         using var store = GetDocumentStore();
 
@@ -34,7 +34,7 @@ public class RavenDB_25485 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HandleShouldWorkWhenReturningAnArray()
+    public void AddActionResponseShouldWorkWhenReturningAnArray()
     {
         using var store = GetDocumentStore();
 
@@ -50,7 +50,7 @@ public class RavenDB_25485 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public void HandleShouldWorkWhenReturningAnEmptyList()
+    public void AddActionResponseShouldWorkWhenReturningAnEmptyList()
     {
         using var store = GetDocumentStore();
 
