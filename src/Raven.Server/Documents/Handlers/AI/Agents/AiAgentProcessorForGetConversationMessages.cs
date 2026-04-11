@@ -43,17 +43,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 return;
             }
 
-            ConversationDocument conversation;
-            try
-            {
-                conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
-            }
-            catch (ArgumentException)
-            {
-                // Document exists but isn't a valid conversation (wrong collection, corrupted, etc.)
-                RequestHandler.HttpContext.Response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
-                return;
-            }
+            // Intentionally not catching exceptions here — if the document is not a valid conversation
+            // (wrong format, missing fields, corrupted), we want to surface a clear error to the caller.
+            var conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
 
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
             collector.Collect();

@@ -38,7 +38,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     /// On first mutation (Add, RemoveRange, Clear), materializes to an internal list.
     /// Points back to the owning ConversationDocument for its backing storage.
     /// </summary>
-    public struct MessagesList : IEnumerable<BlittableJsonReaderObject>
+    public struct MessagesList : IList<BlittableJsonReaderObject>
     {
         private readonly ConversationDocument _owner;
 
@@ -46,10 +46,21 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         public int Count => _owner._messagesList?.Count ?? _owner._messagesArray?.Length ?? 0;
 
-        public BlittableJsonReaderObject this[int index] =>
-            _owner._messagesList != null ? _owner._messagesList[index] : (BlittableJsonReaderObject)_owner._messagesArray[index];
+        public bool IsReadOnly => false;
+
+        public BlittableJsonReaderObject this[int index]
+        {
+            get => _owner._messagesList != null ? _owner._messagesList[index] : (BlittableJsonReaderObject)_owner._messagesArray[index];
+            set => Materialize()[index] = value;
+        }
 
         public void Add(BlittableJsonReaderObject msg) => Materialize().Add(msg);
+
+        public void Insert(int index, BlittableJsonReaderObject item) => Materialize().Insert(index, item);
+
+        public bool Remove(BlittableJsonReaderObject item) => Materialize().Remove(item);
+
+        public void RemoveAt(int index) => Materialize().RemoveAt(index);
 
         public void RemoveRange(int index, int count) => Materialize().RemoveRange(index, count);
 
@@ -57,6 +68,26 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             _owner._messagesArray = null;
             _owner._messagesList = [];
+        }
+
+        public bool Contains(BlittableJsonReaderObject item)
+        {
+            for (int i = 0; i < Count; i++)
+                if (this[i] == item) return true;
+            return false;
+        }
+
+        public int IndexOf(BlittableJsonReaderObject item)
+        {
+            for (int i = 0; i < Count; i++)
+                if (this[i] == item) return i;
+            return -1;
+        }
+
+        public void CopyTo(BlittableJsonReaderObject[] array, int arrayIndex)
+        {
+            for (int i = 0; i < Count; i++)
+                array[arrayIndex + i] = this[i];
         }
 
         public BlittableJsonReaderObject FirstOrDefault() => Count == 0 ? null : this[0];
@@ -84,6 +115,12 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+        /// <summary>
+        /// Returns the underlying storage in a form that ObjectJsonParser can serialize
+        /// (either List or BlittableJsonReaderArray — both natively supported).
+        /// </summary>
+        internal object AsSerializable() => (object)_owner._messagesList ?? _owner._messagesArray;
 
         private List<BlittableJsonReaderObject> Materialize()
         {
@@ -307,7 +344,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
-            [nameof(Messages)] = _messagesList ?? (object)_messagesArray,
+            [nameof(Messages)] = Messages.AsSerializable(),
             [nameof(LinkedConversations)] = LinkedConversations,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
