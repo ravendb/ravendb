@@ -7,6 +7,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal;
 using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
+using Sparrow.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson
@@ -176,6 +177,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(entity, entity.GetType(), options));
             foreach (var property in doc.RootElement.EnumerateObject())
             {
+                if (property.Name == Constants.Documents.Metadata.Key)
+                    continue; // already written above
                 property.WriteTo(writer);
             }
 
@@ -183,7 +186,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             writer.Flush();
         }
 
-        private static void WriteMetadataValue(Utf8JsonWriter writer, object value)
+        internal static void WriteMetadataValue(Utf8JsonWriter writer, object value)
         {
             switch (value)
             {
@@ -207,6 +210,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     break;
                 case decimal dec:
                     writer.WriteNumberValue(dec);
+                    break;
+                case DateTime dt:
+                    writer.WriteStringValue(dt.GetDefaultRavenFormat(isUtc: dt.Kind == DateTimeKind.Utc));
+                    break;
+                case DateTimeOffset dto:
+                    writer.WriteStringValue(dto.UtcDateTime.GetDefaultRavenFormat(isUtc: true));
+                    break;
+                case TimeSpan ts:
+                    writer.WriteStringValue(ts.ToString("c"));
                     break;
                 case null:
                     writer.WriteNullValue();
