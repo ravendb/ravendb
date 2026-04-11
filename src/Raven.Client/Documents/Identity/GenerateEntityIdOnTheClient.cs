@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Dynamic;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -14,6 +15,10 @@ namespace Raven.Client.Documents.Identity
         private readonly DocumentConventions _conventions;
         private readonly Func<object, string> _generateId;
         private readonly Func<object, Task<string>> _generateIdAsync;
+
+        // Cache backing field lookup for read-only identity properties (records, init-only).
+        // Key: (entityType, identityPropertyName). Value: FieldInfo or null.
+        private static readonly ConcurrentDictionary<(Type, string), FieldInfo> _backingFieldCache = new();
 
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
         {
@@ -171,9 +176,12 @@ namespace Raven.Client.Documents.Identity
             }
             else
             {
-                const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
-                var fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
-                                entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
+                var fieldInfo = _backingFieldCache.GetOrAdd((entityType, identityProperty.Name), static key =>
+                {
+                    const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
+                    return key.Item1.GetField("<" + key.Item2 + ">i__Field", privateInstanceField) ??
+                           key.Item1.GetField("<" + key.Item2 + ">k__BackingField", privateInstanceField);
+                });
 
                 if (fieldInfo == null)
                     return;
