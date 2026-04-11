@@ -29,7 +29,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private readonly DateTime _after;
 
         private readonly List<AiConversationMessage> _results = new();
-        private readonly Dictionary<string, string> _toolResponses = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, (string Content, string SubConversationId)> _toolResponses = new(StringComparer.Ordinal);
         private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId)> _seenMessageKeys = new();
         private bool _hasMoreMessages;
 
@@ -218,7 +218,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (toolCallId != null)
             {
                 msg.TryGet(ChatCompletionClient.Constants.RequestFields.Content, out string content);
-                _toolResponses[toolCallId] = content;
+                msg.TryGet(ChatCompletionClient.Constants.ResponseFields.SubConversationId, out string subConversationId);
+                _toolResponses[toolCallId] = (content, subConversationId);
             }
             return true;
         }
@@ -309,7 +310,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return lo;
         }
 
-        private static AiConversationMessage ParseAndConvertMessage(BlittableJsonReaderObject msg, Dictionary<string, string> toolResponses)
+        private static AiConversationMessage ParseAndConvertMessage(BlittableJsonReaderObject msg, Dictionary<string, (string Content, string SubConversationId)> toolResponses)
         {
             msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
 
@@ -367,13 +368,19 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (msg.TryGet(ConversationDocument.UsageProperty, out BlittableJsonReaderObject usageObj) && usageObj != null)
                 usage = JsonDeserializationClient.AiUsage(usageObj);
 
+            // For internal messages (sub-agent calls), extract the sub-conversation ID
+            string subConversationId = null;
+            if (apiRole == AiMessageRole.Internal)
+                msg.TryGet(ChatCompletionClient.Constants.ResponseFields.SubConversationId, out subConversationId);
+
             var result = new AiConversationMessage
             {
                 Role = apiRole.Value,
                 Content = content,
                 Attachments = attachments,
                 Timestamp = timestamp,
-                Usage = usage
+                Usage = usage,
+                SubConversationId = subConversationId
             };
 
             if (msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCallsArray) && toolCallsArray != null)
@@ -391,14 +398,20 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     }
 
                     string toolResult = null;
-                    toolResponses?.TryGetValue(tcId, out toolResult);
+                    string tcSubConversationId = null;
+                    if (toolResponses?.TryGetValue(tcId, out var toolResponse) == true)
+                    {
+                        toolResult = toolResponse.Content;
+                        tcSubConversationId = toolResponse.SubConversationId;
+                    }
 
                     result.ToolCalls.Add(new AiToolCallResult
                     {
                         Id = tcId,
                         Name = tcName,
                         Arguments = tcArgs,
-                        Result = toolResult
+                        Result = toolResult,
+                        SubConversationId = tcSubConversationId
                     });
                 }
             }
