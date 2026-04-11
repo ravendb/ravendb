@@ -23,10 +23,16 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             using var reader = new SystemTextJsonBlittableReader();
             reader.Initialize(json);
 
-            object entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _options.Value);
-
-            // Return native memory immediately - we're done with the UTF-8 bytes
-            reader.ReturnMemory();
+            object entity;
+            try
+            {
+                entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _options.Value);
+            }
+            finally
+            {
+                // Return native memory immediately - we're done with the UTF-8 bytes
+                reader.ReturnMemory();
+            }
 
             if (entity != null)
                 TrySetIdentityFromMetadata(entity, json);

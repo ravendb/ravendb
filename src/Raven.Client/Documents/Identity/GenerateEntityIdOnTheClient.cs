@@ -176,12 +176,16 @@ namespace Raven.Client.Documents.Identity
             }
             else
             {
-                var fieldInfo = _backingFieldCache.GetOrAdd((entityType, identityProperty.Name), static key =>
+                var key = (entityType, identityProperty.Name);
+                if (_backingFieldCache.TryGetValue(key, out var fieldInfo) == false)
                 {
                     const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
-                    return key.Item1.GetField("<" + key.Item2 + ">i__Field", privateInstanceField) ??
-                           key.Item1.GetField("<" + key.Item2 + ">k__BackingField", privateInstanceField);
-                });
+                    fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
+                                entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
+
+                    if (fieldInfo != null)
+                        _backingFieldCache.TryAdd(key, fieldInfo);
+                }
 
                 if (fieldInfo == null)
                     return;
