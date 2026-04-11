@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Extensions;
+using Newtonsoft.Json;
 using Sparrow.Json.Sync;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,8 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     private readonly List<ICommandData> _attachmentsCommands = new();
+    private StringBuilder _jsonBuffer;
+    private StringWriter _jsonWriter;
     
     public string ChangeVector => _changeVector;
 
@@ -106,12 +109,7 @@ internal class AiConversation : IAiConversationOperations
             return;
         }
 
-        using (_aiOperations.AllocateOperationContext(out var context))
-        {
-            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
-            var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddArtificialActionWithResponse(toolId, json.ToString());
-        }
+        AddArtificialActionWithResponse(toolId, SerializeToJson(actionResponse));
     }
 
     public void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
@@ -126,12 +124,7 @@ internal class AiConversation : IAiConversationOperations
             return;
         }
 
-        using (_aiOperations.AllocateOperationContext(out var context))
-        {
-            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
-            var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddActionResponse(toolId, json.ToString());
-        }
+        AddActionResponse(toolId, SerializeToJson(actionResponse));
     }
 
     public void AddActionResponse(string toolId, string actionResponse)
@@ -330,6 +323,16 @@ internal class AiConversation : IAiConversationOperations
             _artificialActions.Clear();
             _attachmentsCommands.Clear();
         }
+    }
+
+    private string SerializeToJson(object value)
+    {
+        _jsonBuffer ??= new StringBuilder();
+        _jsonWriter ??= new StringWriter(_jsonBuffer);
+        _jsonBuffer.Clear();
+        var serializer = (JsonSerializer)_aiOperations._store.Conventions.Serialization.CreateSerializer();
+        serializer.Serialize(_jsonWriter, value);
+        return _jsonBuffer.ToString();
     }
 
     internal class AiActionContext<TActionParametersSchema>
