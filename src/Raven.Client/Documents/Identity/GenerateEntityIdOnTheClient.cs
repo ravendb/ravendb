@@ -17,8 +17,12 @@ namespace Raven.Client.Documents.Identity
         private readonly Func<object, Task<string>> _generateIdAsync;
 
         // Cache backing field lookup for read-only identity properties (records, init-only).
-        // Key: (entityType, identityPropertyName). Value: FieldInfo or null.
+        // Key: (entityType, identityPropertyName). Value: FieldInfo or null (positive cache).
         private static readonly ConcurrentDictionary<(Type, string), FieldInfo> _backingFieldCache = new();
+
+        // Negative cache: tracks (entityType, identityPropertyName) pairs where no backing field exists,
+        // so we don't repeat the reflection search on every call.
+        private static readonly System.Collections.Generic.HashSet<(Type, string)> _backingFieldNotFound = new();
 
         public GenerateEntityIdOnTheClient(DocumentConventions conventions, Func<object, Task<string>> generateIdAsync)
         {
@@ -179,12 +183,28 @@ namespace Raven.Client.Documents.Identity
                 var key = (entityType, identityProperty.Name);
                 if (_backingFieldCache.TryGetValue(key, out var fieldInfo) == false)
                 {
+                    // Check negative cache before doing the expensive reflection search
+                    lock (_backingFieldNotFound)
+                    {
+                        if (_backingFieldNotFound.Contains(key))
+                            return;
+                    }
+
                     const BindingFlags privateInstanceField = BindingFlags.Instance | BindingFlags.NonPublic;
                     fieldInfo = entityType.GetField("<" + identityProperty.Name + ">i__Field", privateInstanceField) ??
                                 entityType.GetField("<" + identityProperty.Name + ">k__BackingField", privateInstanceField);
 
                     if (fieldInfo != null)
+                    {
                         _backingFieldCache.TryAdd(key, fieldInfo);
+                    }
+                    else
+                    {
+                        lock (_backingFieldNotFound)
+                        {
+                            _backingFieldNotFound.Add(key);
+                        }
+                    }
                 }
 
                 if (fieldInfo == null)

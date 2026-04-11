@@ -193,17 +193,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 case long l:
                     writer.WriteNumberValue(l);
                     break;
+                case int i:
+                    writer.WriteNumberValue(i);
+                    break;
                 case bool b:
                     writer.WriteBooleanValue(b);
                     break;
                 case double d:
                     writer.WriteNumberValue(d);
                     break;
+                case float f:
+                    writer.WriteNumberValue(f);
+                    break;
+                case decimal dec:
+                    writer.WriteNumberValue(dec);
+                    break;
                 case null:
                     writer.WriteNullValue();
                     break;
                 default:
-                    writer.WriteStringValue(value.ToString());
+                    JsonSerializer.Serialize(writer, value);
                     break;
             }
         }
