@@ -39,4 +39,10 @@ public class AiConversationMessagesResult
     /// For forward (After) paging: newer messages exist.
     /// </summary>
     public bool HasMoreMessages { get; set; }
+
+    /// <summary>
+    /// IDs of sub-agent conversations spawned during this conversation.
+    /// Each can be queried separately via GetConversationMessages.
+    /// </summary>
+    public List<string> SubConversationIds { get; set; }
 }
