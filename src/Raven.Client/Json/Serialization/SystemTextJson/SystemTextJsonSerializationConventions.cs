@@ -1,17 +1,134 @@
+using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal;
+using Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson
 {
-    // Minimal stub - will be filled in when the full STJ serialization conventions are implemented.
-    internal sealed class SystemTextJsonSerializationConventions
+    public class SystemTextJsonSerializationConventions : ISerializationConventions
     {
-        public DocumentConventions Conventions { get; set; }
+        private BlittableJsonConverter _defaultConverter;
+        private Action<JsonSerializerOptions> _customizeJsonSerializerOptions;
+        private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
+        private bool _ignoreByRefMembers;
+        private bool _ignoreUnsafeMembers;
+        private JsonSerializerOptions _cachedSerializerOptions;
+        private JsonSerializerOptions _cachedDeserializerOptions;
 
-        public bool IgnoreByRefMembers { get; set; }
+        public DocumentConventions Conventions { get; private set; }
 
-        public bool IgnoreUnsafeMembers { get; set; }
+        public SystemTextJsonSerializationConventions()
+        {
+            _defaultConverter = new BlittableJsonConverter(this);
+            _ignoreByRefMembers = false;
+            _ignoreUnsafeMembers = false;
+            CustomizeJsonSerializerOptions = _ => { };
+        }
+
+        /// <summary>
+        ///     Register an action to customize the JsonSerializerOptions used by the DocumentStore.
+        /// </summary>
+        public Action<JsonSerializerOptions> CustomizeJsonSerializerOptions
+        {
+            get => _customizeJsonSerializerOptions;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _customizeJsonSerializerOptions = value;
+            }
+        }
+
+        public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable
+        {
+            get => _deserializeEntityFromBlittable;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _deserializeEntityFromBlittable = value;
+            }
+        }
+
+        public bool IgnoreByRefMembers
+        {
+            get => _ignoreByRefMembers;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _ignoreByRefMembers = value;
+            }
+        }
+
+        public bool IgnoreUnsafeMembers
+        {
+            get => _ignoreUnsafeMembers;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _ignoreUnsafeMembers = value;
+            }
+        }
+
+        void ISerializationConventions.Initialize(DocumentConventions conventions)
+        {
+            Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+
+            if (_deserializeEntityFromBlittable == null)
+                _deserializeEntityFromBlittable = new SystemTextJsonBlittableEntitySerializer(this).EntityFromJsonStream;
+        }
+
+        IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
+
+        public ISubscriptionsBlittableJsonConverter CreateConverter<T>(SubscriptionBatch<T> batch)
+        {
+            return new SubscriptionBlittableJsonConverter(this);
+        }
+
+        ISessionBlittableJsonConverter ISerializationConventions.CreateConverter(InMemoryDocumentSessionOperations session)
+        {
+            return new SessionBlittableJsonConverter(session);
+        }
+
+        IJsonSerializer ISerializationConventions.CreateDeserializer(CreateDeserializerOptions options)
+        {
+            JsonSerializerOptions jsonOptions = GetOrCreateOptions(ref _cachedDeserializerOptions);
+            return new SystemTextJsonJsonSerializer(jsonOptions);
+        }
+
+        IJsonSerializer ISerializationConventions.CreateSerializer(CreateSerializerOptions options)
+        {
+            JsonSerializerOptions jsonOptions = GetOrCreateOptions(ref _cachedSerializerOptions);
+            return new SystemTextJsonJsonSerializer(jsonOptions);
+        }
+
+        IJsonWriter ISerializationConventions.CreateWriter(JsonOperationContext context)
+        {
+            return new SystemTextJsonBlittableWriter(context);
+        }
+
+        object ISerializationConventions.DeserializeEntityFromBlittable(Type type, BlittableJsonReaderObject json)
+        {
+            return DeserializeEntityFromBlittable(type, json);
+        }
+
+        T ISerializationConventions.DeserializeEntityFromBlittable<T>(BlittableJsonReaderObject json)
+        {
+            return (T)DeserializeEntityFromBlittable(typeof(T), json);
+        }
+
+        private JsonSerializerOptions GetOrCreateOptions(ref JsonSerializerOptions cached)
+        {
+            if (cached != null)
+                return cached;
+
+            JsonSerializerOptions options = CreateJsonSerializerOptions();
+            cached = options;
+            return options;
+        }
 
         internal JsonSerializerOptions CreateJsonSerializerOptions()
         {
@@ -23,7 +140,30 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
             };
 
+            InitializeConverters(options);
+            CustomizeJsonSerializerOptions(options);
+
             return options;
+        }
+
+        private void InitializeConverters(JsonSerializerOptions options)
+        {
+            if (Conventions == null || Conventions.SaveEnumsAsIntegers == false)
+                options.Converters.Add(new JsonStringEnumConverter());
+
+            options.Converters.Add(DateTimeISO8601Converter.Instance);
+            options.Converters.Add(LuceneDateTimeConverter.Instance);
+            options.Converters.Add(DictionaryDateTimeKeysConverter.Instance);
+            options.Converters.Add(ParametersConverter.Instance);
+            options.Converters.Add(LinqEnumerableConverter.Instance);
+            options.Converters.Add(MetadataDictionaryConverter.Instance);
+            options.Converters.Add(SizeConverter.Instance);
+#if FEATURE_DATEONLY_TIMEONLY_SUPPORT
+            options.Converters.Add(DateOnlyConverter.Instance);
+            options.Converters.Add(TimeOnlyConverter.Instance);
+#endif
+            options.Converters.Add(VectorConverter.Instance);
+            options.Converters.Add(EnumerableConverter.Instance);
         }
     }
 }
