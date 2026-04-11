@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -195,6 +196,7 @@ namespace TypingsGenerator
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(DynamicJsonArray))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IEnumerable))
                 .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(IList))
+                .WithTypeMapping(new TsArray(TsPrimitive.Any, 1), typeof(ConversationDocument.MessagesList))
                 .WithTypeMapping(TsPrimitive.Any, typeof(TaskCompletionSource<object>))
                 .WithTypeMapping(TsPrimitive.Any, typeof(BlittableJsonReaderObject));
 
