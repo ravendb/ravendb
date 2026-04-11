@@ -1,32 +1,70 @@
 using System;
-using Microsoft.IO;
-using Sparrow;
+using System.IO;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
-    internal sealed class SystemTextJsonBlittableReader : IJsonReader
+    internal sealed unsafe class SystemTextJsonBlittableReader : IJsonReader
     {
-        private RecyclableMemoryStream _stream;
+        private AllocatedMemoryData _allocation;
+        private JsonOperationContext _context;
+        private int _length;
 
         public void Initialize(BlittableJsonReaderObject blittable)
         {
-            _stream?.Dispose();
-            _stream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+            _context = blittable._context;
 
-            blittable.WriteJsonTo(_stream);
+            // Blittable binary is more compact than UTF-8 JSON text.
+            // Allocate 2x blittable size from context native memory as initial estimate.
+            int estimatedSize = Math.Max(blittable.Size * 2, 512);
+            _allocation = _context.GetMemory(estimatedSize);
+
+            using var stream = new UnmanagedMemoryStream(_allocation.Address, 0, _allocation.SizeInBytes, FileAccess.Write);
+            try
+            {
+                blittable.WriteJsonTo(stream);
+                _length = (int)stream.Position;
+            }
+            catch (NotSupportedException)
+            {
+                // Buffer too small - grow in-place or reallocate
+                int needed = Math.Max(_allocation.SizeInBytes * 2, estimatedSize * 2);
+                if (_context.GrowAllocation(_allocation, needed - _allocation.SizeInBytes) == false)
+                {
+                    var newAllocation = _context.GetMemory(needed);
+                    _context.ReturnMemory(_allocation);
+                    _allocation = newAllocation;
+                }
+
+                using var retryStream = new UnmanagedMemoryStream(_allocation.Address, 0, _allocation.SizeInBytes, FileAccess.Write);
+                blittable.WriteJsonTo(retryStream);
+                _length = (int)retryStream.Position;
+            }
         }
 
         public ReadOnlySpan<byte> GetUtf8Json()
         {
-            _stream.TryGetBuffer(out ArraySegment<byte> buffer);
-            return new ReadOnlySpan<byte>(buffer.Array, buffer.Offset, buffer.Count);
+            return new ReadOnlySpan<byte>(_allocation.Address, _length);
+        }
+
+        /// <summary>
+        /// Return the native memory to the context immediately.
+        /// Call this as soon as deserialization is complete, while still in the same context scope.
+        /// </summary>
+        public void ReturnMemory()
+        {
+            if (_allocation != null && _context != null)
+            {
+                _context.ReturnMemory(_allocation);
+                _allocation = null;
+                _context = null;
+            }
         }
 
         public void Dispose()
         {
-            _stream?.Dispose();
-            _stream = null;
+            // Reader is cached in LightWeightThreadLocal and outlives the session/context.
+            // Don't return memory here - use ReturnMemory() explicitly after deserialization.
         }
     }
 }

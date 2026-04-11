@@ -8,7 +8,6 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
     internal sealed class SystemTextJsonBlittableEntitySerializer
     {
-        private readonly LightWeightThreadLocal<SystemTextJsonBlittableReader> _reader;
         private readonly LightWeightThreadLocal<JsonSerializerOptions> _options;
 
         private readonly GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
@@ -17,15 +16,17 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions.Conventions, generateIdAsync: null);
             _options = new LightWeightThreadLocal<JsonSerializerOptions>(() => conventions.CreateJsonSerializerOptions());
-            _reader = new LightWeightThreadLocal<SystemTextJsonBlittableReader>(() => new SystemTextJsonBlittableReader());
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject json)
         {
-            _reader.Value.Initialize(json);
+            using var reader = new SystemTextJsonBlittableReader();
+            reader.Initialize(json);
 
-            ReadOnlySpan<byte> utf8Json = _reader.Value.GetUtf8Json();
-            object entity = JsonSerializer.Deserialize(utf8Json, type, _options.Value);
+            object entity = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, _options.Value);
+
+            // Return native memory immediately - we're done with the UTF-8 bytes
+            reader.ReturnMemory();
 
             if (entity != null)
                 TrySetIdentityFromMetadata(entity, json);
