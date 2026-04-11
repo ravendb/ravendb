@@ -57,6 +57,12 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                 return elementType != null && elementType != typeof(object);
             }
 
+            // Only handle interface and abstract types — concrete collection types (List<T>, HashSet<T>,
+            // Queue<T>, etc.) are already handled by STJ's built-in converters. If we intercept them,
+            // our Read path always returns List<T>, which breaks for HashSet<T>, Queue<T>, etc.
+            if (typeToConvert.IsInterface == false && typeToConvert.IsAbstract == false)
+                return false;
+
             foreach (Type interfaceType in typeToConvert.GetInterfaces())
             {
                 if (interfaceType.IsGenericType == false)
@@ -67,6 +73,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal.Converters
                     Type itemType = interfaceType.GetGenericArguments()[0];
                     return itemType != typeof(object);
                 }
+            }
+
+            // Also check the type itself (it may be the IEnumerable<T> interface directly)
+            if (typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            {
+                Type itemType = typeToConvert.GetGenericArguments()[0];
+                return itemType != typeof(object);
             }
 
             return false;

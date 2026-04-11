@@ -19,26 +19,26 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             int estimatedSize = Math.Max(blittable.Size * 2, 512);
             _allocation = _context.GetMemory(estimatedSize);
 
-            using var stream = new UnmanagedMemoryStream(_allocation.Address, 0, _allocation.SizeInBytes, FileAccess.Write);
-            try
+            while (true)
             {
-                blittable.WriteJsonTo(stream);
-                _length = (int)stream.Position;
-            }
-            catch (NotSupportedException)
-            {
-                // Buffer too small - grow in-place or reallocate
-                int needed = Math.Max(_allocation.SizeInBytes * 2, estimatedSize * 2);
-                if (_context.GrowAllocation(_allocation, needed - _allocation.SizeInBytes) == false)
+                using var stream = new UnmanagedMemoryStream(_allocation.Address, 0, _allocation.SizeInBytes, FileAccess.Write);
+                try
                 {
-                    var newAllocation = _context.GetMemory(needed);
-                    _context.ReturnMemory(_allocation);
-                    _allocation = newAllocation;
+                    blittable.WriteJsonTo(stream);
+                    _length = (int)stream.Position;
+                    break;
                 }
-
-                using var retryStream = new UnmanagedMemoryStream(_allocation.Address, 0, _allocation.SizeInBytes, FileAccess.Write);
-                blittable.WriteJsonTo(retryStream);
-                _length = (int)retryStream.Position;
+                catch (NotSupportedException)
+                {
+                    // Buffer too small - keep doubling until WriteJsonTo succeeds
+                    int needed = _allocation.SizeInBytes * 2;
+                    if (_context.GrowAllocation(_allocation, needed - _allocation.SizeInBytes) == false)
+                    {
+                        var newAllocation = _context.GetMemory(needed);
+                        _context.ReturnMemory(_allocation);
+                        _allocation = newAllocation;
+                    }
+                }
             }
         }
 
