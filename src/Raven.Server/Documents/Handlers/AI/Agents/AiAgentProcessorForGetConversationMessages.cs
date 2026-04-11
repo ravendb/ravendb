@@ -55,8 +55,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 return;
             }
 
-            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation.LinkedConversations, pageSize, detailLevel, before, after);
-            collector.Collect(conversation.Messages);
+            var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
+            collector.Collect();
 
             bool hasMoreMessages = collector.HasMoreMessages;
             var filtered = collector.GetResults();

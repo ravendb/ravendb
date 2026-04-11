@@ -24,8 +24,86 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public string Agent = agent;
 
     public BlittableJsonReaderObject Parameters = parameters;
-    public List<BlittableJsonReaderObject> Messages = [];
+    public MessagesList Messages => new(this);
     public List<string> LinkedConversations = [];
+
+    // Backing fields for MessagesList — live on this heap-allocated class instance
+    // so the struct can reference them without an extra allocation.
+    internal BlittableJsonReaderArray _messagesArray;
+    internal List<BlittableJsonReaderObject> _messagesList;
+
+    /// <summary>
+    /// Wraps conversation messages with lazy materialization. When constructed from a
+    /// BlittableJsonReaderArray (via ToDocument), provides zero-copy read access.
+    /// On first mutation (Add, RemoveRange, Clear), materializes to an internal list.
+    /// Points back to the owning ConversationDocument for its backing storage.
+    /// </summary>
+    public struct MessagesList : IEnumerable<BlittableJsonReaderObject>
+    {
+        private readonly ConversationDocument _owner;
+
+        internal MessagesList(ConversationDocument owner) => _owner = owner;
+
+        public int Count => _owner._messagesList?.Count ?? _owner._messagesArray?.Length ?? 0;
+
+        public BlittableJsonReaderObject this[int index] =>
+            _owner._messagesList != null ? _owner._messagesList[index] : (BlittableJsonReaderObject)_owner._messagesArray[index];
+
+        public void Add(BlittableJsonReaderObject msg) => Materialize().Add(msg);
+
+        public void RemoveRange(int index, int count) => Materialize().RemoveRange(index, count);
+
+        public void Clear()
+        {
+            _owner._messagesArray = null;
+            _owner._messagesList = [];
+        }
+
+        public BlittableJsonReaderObject FirstOrDefault() => Count == 0 ? null : this[0];
+
+        public BlittableJsonReaderObject LastOrDefault() => Count == 0 ? null : this[Count - 1];
+
+        public IEnumerable<BlittableJsonReaderObject> Skip(int count)
+        {
+            for (int i = count; i < Count; i++)
+                yield return this[i];
+        }
+
+        public IEnumerator<BlittableJsonReaderObject> GetEnumerator()
+        {
+            return _owner._messagesList?.GetEnumerator() ?? ArrayEnumerator();
+        }
+
+        private IEnumerator<BlittableJsonReaderObject> ArrayEnumerator()
+        {
+            var array = _owner._messagesArray;
+            if (array == null)
+                yield break;
+            for (int i = 0; i < array.Length; i++)
+                yield return (BlittableJsonReaderObject)array[i];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+
+        private List<BlittableJsonReaderObject> Materialize()
+        {
+            if (_owner._messagesList != null)
+                return _owner._messagesList;
+
+            var array = _owner._messagesArray;
+            var list = new List<BlittableJsonReaderObject>(array?.Length ?? 0);
+            if (array != null)
+            {
+                for (int i = 0; i < array.Length; i++)
+                    list.Add(((BlittableJsonReaderObject)array[i]).CloneOnTheSameContext());
+            }
+
+            _owner._messagesList = list;
+            _owner._messagesArray = null;
+            return list;
+        }
+    }
+
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public AiUsage CurrentUsage = new AiUsage();
@@ -300,7 +378,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
-            Messages = messages.Items.Select(m => ((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            _messagesArray = messages,
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,

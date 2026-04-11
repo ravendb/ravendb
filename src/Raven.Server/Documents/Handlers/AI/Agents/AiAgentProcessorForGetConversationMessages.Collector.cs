@@ -21,7 +21,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
     {
         private readonly DocumentsOperationContext _context;
         private readonly DocumentsStorage _storage;
-        private readonly List<string> _linkedIds;
+        private readonly ConversationDocument _conversation;
         private readonly int _pageSize;
         private readonly AiConversationDetailLevel _detailLevel;
         private readonly bool _forward;
@@ -33,12 +33,12 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId)> _seenMessageKeys = new();
         private bool _hasMoreMessages;
 
-        public Collector(DocumentsOperationContext context, DocumentsStorage storage, List<string> linkedIds,
+        public Collector(DocumentsOperationContext context, DocumentsStorage storage, ConversationDocument conversation,
             int pageSize, AiConversationDetailLevel detailLevel, DateTime? before, DateTime? after)
         {
             _context = context;
             _storage = storage;
-            _linkedIds = linkedIds;
+            _conversation = conversation;
             _pageSize = pageSize;
             _detailLevel = detailLevel;
             _forward = after.HasValue;
@@ -58,8 +58,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         /// Main entry point: collects messages from the current doc and history docs
         /// in the correct order for the paging direction.
         /// </summary>
-        public void Collect(List<BlittableJsonReaderObject> currentMessages)
+        public void Collect()
         {
+            var currentMessages = _conversation.Messages;
             var (histStart, histEnd) = FindRelevantHistoryRange();
 
             if (_forward)
@@ -68,7 +69,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 // chronologically earliest messages matching `after` may live in history docs.
                 // Process history first (oldest to newest), then current doc.
                 for (int i = histStart; i <= histEnd && NeedsMore; i++)
-                    CollectFromHistoryDoc(_linkedIds[i]);
+                    CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
 
                 bool visitedCurrentDoc = false;
                 if (NeedsMore)
@@ -96,7 +97,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 else
                 {
                     for (int i = histEnd; i >= histStart && NeedsMore; i--)
-                        CollectFromHistoryDoc(_linkedIds[i]);
+                        CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
                 }
             }
         }
@@ -131,14 +132,14 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         /// </summary>
         private (int Start, int End) FindRelevantHistoryRange()
         {
-            if (_linkedIds.Count == 0)
+            if (_conversation.LinkedConversations.Count == 0)
                 return (0, -1);
 
-            int lo = 0, hi = _linkedIds.Count;
+            int lo = 0, hi = _conversation.LinkedConversations.Count;
             while (lo < hi)
             {
                 int mid = lo + (hi - lo) / 2;
-                var doc = _storage.Get(_context, _linkedIds[mid]);
+                var doc = _storage.Get(_context, _conversation.LinkedConversations[mid]);
 
                 bool goLow;
                 if (_forward)
@@ -167,10 +168,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                     hi = mid;
             }
 
-            return _forward ? (lo, _linkedIds.Count - 1) : (0, lo - 1);
+            return _forward ? (lo, _conversation.LinkedConversations.Count - 1) : (0, lo - 1);
         }
 
-        private void CollectFromMessages(List<BlittableJsonReaderObject> messages)
+        private void CollectFromMessages(ConversationDocument.MessagesList messages)
         {
             int startIndex, endIndex;
 
@@ -231,7 +232,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return (timestamp.Ticks, role, toolCallId);
         }
 
-        private void TryProcessMessage(List<BlittableJsonReaderObject> messages, ref int index)
+        private void TryProcessMessage(ConversationDocument.MessagesList messages, ref int index)
         {
             var msg = messages[index];
 
@@ -288,13 +289,13 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return role == ChatCompletionClient.Constants.RequestFields.RoleToolValue;
         }
 
-        private static DateTime GetMessageTimestamp(List<BlittableJsonReaderObject> messages, int index)
+        private static DateTime GetMessageTimestamp(ConversationDocument.MessagesList messages, int index)
         {
             messages[index].TryGet(ConversationDocument.DateProperty, out DateTime date);
             return date;
         }
 
-        private static int BinarySearchBound(List<BlittableJsonReaderObject> messages, DateTime target, bool inclusive)
+        private static int BinarySearchBound(ConversationDocument.MessagesList messages, DateTime target, bool inclusive)
         {
             int lo = 0, hi = messages.Count;
             while (lo < hi)
