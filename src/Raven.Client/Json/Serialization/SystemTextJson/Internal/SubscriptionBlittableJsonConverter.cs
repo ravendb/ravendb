@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -20,8 +21,10 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
         {
             try
             {
-                // TODO: RavenDB-23037 Missing property tracking is not yet implemented for STJ.
-                // The Newtonsoft path uses DefaultRavenContractResolver.RegisterExtensionDataSetter.
+                if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+                    throw new NotSupportedException(
+                        $"{nameof(DocumentConventions.PreserveDocumentPropertiesNotFoundOnModel)} is not yet supported with the System.Text.Json serializer. " +
+                        "Disable this convention or use the Newtonsoft.Json serializer.");
 
                 var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
                 var entity = defaultValue;

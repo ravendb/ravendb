@@ -41,7 +41,15 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
                 reader.Initialize(json);
                 var type = entity.GetType();
                 var serializer = (SystemTextJsonJsonSerializer)jsonSerializer;
-                object newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, serializer.Options);
+                object newInstance;
+                try
+                {
+                    newInstance = JsonSerializer.Deserialize(reader.GetUtf8Json(), type, serializer.Options);
+                }
+                finally
+                {
+                    reader.ReturnMemory();
+                }
 
                 if (newInstance == null)
                     return;
