@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -130,15 +133,105 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
             // TODO: RavenDB-23037 Missing property round-tripping (FillMissingProperties) is not yet
             // implemented for STJ. The Newtonsoft path uses DefaultRavenContractResolver.RegisterExtensionDataGetter.
+            BlittableJsonReaderObject document;
             using (var writer = new SystemTextJsonBlittableWriter(_session.Context, documentInfo))
+                document = ToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
+
+            if (documentInfo != null)
+                _session.OnAfterConversionToDocumentInvoke(documentInfo.Id, entity, ref document);
+
+            return document;
+        }
+
+        private BlittableJsonReaderObject SerializeViaParseBuffer(object entity, SystemTextJsonJsonSerializer stjSerializer, DocumentInfo documentInfo)
+        {
+            var context = _session.Context;
+            var conventions = _session.Conventions;
+            var type = entity.GetType();
+
+            // Set up identity removal via the resolver
+            bool isDynamicObject = entity is IDynamicMetaObjectProvider;
+            bool hasIdentityProperty = conventions.GetIdentityProperty(type) != null;
+
+            if (isDynamicObject == false)
             {
-                var document = ToBlittableInternal(entity, _session.Conventions, _session.Context, _session.JsonSerializer, writer);
-
-                if (documentInfo != null)
-                    _session.OnAfterConversionToDocumentInvoke(documentInfo.Id, entity, ref document);
-
-                return document;
+                RavenJsonTypeInfoResolver.RootEntity = hasIdentityProperty ? entity : null;
+                RavenJsonTypeInfoResolver.RemovedIdentityProperty = false;
             }
+
+            BlittableJsonReaderObject document;
+            try
+            {
+                document = stjSerializer.SerializeToBlittable(entity, type, context);
+            }
+            finally
+            {
+                RavenJsonTypeInfoResolver.RootEntity = null;
+            }
+
+            // Remove identity property if the resolver didn't handle it
+            bool changes = false;
+            if (isDynamicObject || (hasIdentityProperty && RavenJsonTypeInfoResolver.RemovedIdentityProperty == false))
+            {
+                changes = BlittableJsonConverterHelper.TryRemoveIdentityProperty(document, type, conventions, isDynamicObject);
+            }
+
+            // Inject @metadata
+            changes |= InjectMetadata(document, documentInfo);
+
+            if (changes)
+            {
+                using (var old = document)
+                {
+                    document = context.ReadObject(document, "convert/entityToBlittable");
+                }
+            }
+
+            return document;
+        }
+
+        private static bool InjectMetadata(BlittableJsonReaderObject document, DocumentInfo documentInfo)
+        {
+            if (documentInfo == null)
+                return false;
+
+            object metadataValue = null;
+
+            if (documentInfo.Metadata?.Modifications != null && documentInfo.Metadata.Modifications.Properties.Count > 0)
+            {
+                // Modified metadata blittable — apply modifications, then use the blittable itself
+                // (ReadObject will handle the Modifications overlay)
+                metadataValue = documentInfo.Metadata;
+            }
+            else if (documentInfo.Metadata != null)
+            {
+                // Existing metadata blittable — use directly as nested value
+                metadataValue = documentInfo.Metadata;
+            }
+            else if (documentInfo.MetadataInstance != null)
+            {
+                var metadata = new DynamicJsonValue();
+                foreach (var kvp in documentInfo.MetadataInstance)
+                    metadata[kvp.Key] = kvp.Value;
+                metadataValue = metadata;
+            }
+            else if (documentInfo.Collection != null)
+            {
+                var metadata = new DynamicJsonValue();
+                metadata[Constants.Documents.Metadata.Collection] = documentInfo.Collection;
+                if (documentInfo.Id != null)
+                    metadata[Constants.Documents.Metadata.Id] = documentInfo.Id;
+                metadataValue = metadata;
+            }
+
+            if (metadataValue == null)
+                return false;
+
+            if (document.Modifications == null)
+                document.Modifications = new DynamicJsonValue(document);
+
+            document.Modifications[Constants.Documents.Metadata.Key] = metadataValue;
+            return true;
         }
 
         public void Clear()

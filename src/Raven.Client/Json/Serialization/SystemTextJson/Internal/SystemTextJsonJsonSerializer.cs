@@ -1,7 +1,7 @@
 using System;
-using System.IO;
 using System.Text.Json;
-using Sparrow;
+using Raven.Client.Documents.Session;
+using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 {
@@ -21,14 +21,110 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
 
         public void Serialize(IJsonWriter writer, object value, Type objectType)
         {
-            using var stream = RecyclableMemoryStreamFactory.GetRecyclableStream();
-            using (var utf8Writer = new Utf8JsonWriter((Stream)stream))
+            if (writer is SystemTextJsonBlittableWriter stjWriter)
+            {
+                // Serialize entity to UTF-8 in context native memory
+                using var bufferWriter = new ContextMemoryBufferWriter(stjWriter.Context);
+                using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter))
+                {
+                    JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
+                }
+                WriteJsonToBlittableWriter(writer, bufferWriter.WrittenSpan);
+            }
+            else
+            {
+                var bytes = JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options);
+                WriteJsonToBlittableWriter(writer, bytes);
+            }
+        }
+
+        /// <summary>
+        /// Serialize entity to UTF-8 bytes in context native memory, then parse directly into
+        /// a BlittableJsonReaderObject using the context's own parser. Bypasses the IJsonWriter
+        /// token walk entirely.
+        /// </summary>
+        internal unsafe BlittableJsonReaderObject SerializeToBlittable(object value, Type objectType, JsonOperationContext context)
+        {
+            using var bufferWriter = new ContextMemoryBufferWriter(context);
+            using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter))
             {
                 JsonSerializer.Serialize(utf8Writer, value, objectType, Options);
             }
 
-            stream.TryGetBuffer(out var buffer);
-            WriteJsonToBlittableWriter(writer, new ReadOnlySpan<byte>(buffer.Array, buffer.Offset, buffer.Count));
+            return ParseBufferToBlittable(bufferWriter, context);
+        }
+
+        /// <summary>
+        /// Serialize entity with @metadata prefix to UTF-8 bytes, then parse into blittable.
+        /// Same approach as WriteEntityToStream but targets a context buffer instead of HTTP stream.
+        /// </summary>
+        internal unsafe BlittableJsonReaderObject SerializeToBlittableWithMetadata(object value, Type objectType,
+            IMetadataDictionary metadata, JsonOperationContext context)
+        {
+            using var bufferWriter = new ContextMemoryBufferWriter(context);
+            using (var utf8Writer = new Utf8JsonWriter((System.Buffers.IBufferWriter<byte>)bufferWriter, new System.Text.Json.JsonWriterOptions { SkipValidation = true }))
+            {
+                utf8Writer.WriteStartObject();
+
+                // Write @metadata first
+                if (metadata != null && metadata.Count > 0)
+                {
+                    utf8Writer.WritePropertyName(Constants.Documents.Metadata.Key);
+                    utf8Writer.WriteStartObject();
+                    foreach (var kvp in metadata)
+                    {
+                        utf8Writer.WritePropertyName(kvp.Key);
+                        WriteMetadataValue(utf8Writer, kvp.Value);
+                    }
+                    utf8Writer.WriteEndObject();
+                }
+
+                // Serialize entity properties into the same object
+                using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(value, objectType, Options));
+                foreach (var property in doc.RootElement.EnumerateObject())
+                {
+                    property.WriteTo(utf8Writer);
+                }
+
+                utf8Writer.WriteEndObject();
+            }
+
+            return ParseBufferToBlittable(bufferWriter, context);
+        }
+
+        private static unsafe BlittableJsonReaderObject ParseBufferToBlittable(ContextMemoryBufferWriter bufferWriter, JsonOperationContext context)
+        {
+            var utf8Json = bufferWriter.WrittenSpan;
+            fixed (byte* ptr = utf8Json)
+            {
+                return context.ParseBuffer(ptr, utf8Json.Length, "serialize/entity",
+                    BlittableJsonDocumentBuilder.UsageMode.None);
+            }
+        }
+
+        private static void WriteMetadataValue(Utf8JsonWriter writer, object value)
+        {
+            switch (value)
+            {
+                case string s:
+                    writer.WriteStringValue(s);
+                    break;
+                case long l:
+                    writer.WriteNumberValue(l);
+                    break;
+                case bool b:
+                    writer.WriteBooleanValue(b);
+                    break;
+                case double d:
+                    writer.WriteNumberValue(d);
+                    break;
+                case null:
+                    writer.WriteNullValue();
+                    break;
+                default:
+                    writer.WriteStringValue(value.ToString());
+                    break;
+            }
         }
 
         public object Deserialize(IJsonReader reader, Type type)
@@ -50,39 +146,19 @@ namespace Raven.Client.Json.Serialization.SystemTextJson.Internal
             {
                 switch (jsonReader.TokenType)
                 {
-                    case JsonTokenType.StartObject:
-                        writer.WriteStartObject();
-                        break;
-                    case JsonTokenType.EndObject:
-                        writer.WriteEndObject();
-                        break;
-                    case JsonTokenType.StartArray:
-                        writer.WriteStartArray();
-                        break;
-                    case JsonTokenType.EndArray:
-                        writer.WriteEndArray();
-                        break;
-                    case JsonTokenType.PropertyName:
-                        writer.WritePropertyName(jsonReader.GetString());
-                        break;
-                    case JsonTokenType.String:
-                        writer.WriteValue(jsonReader.GetString());
-                        break;
+                    case JsonTokenType.StartObject: writer.WriteStartObject(); break;
+                    case JsonTokenType.EndObject: writer.WriteEndObject(); break;
+                    case JsonTokenType.StartArray: writer.WriteStartArray(); break;
+                    case JsonTokenType.EndArray: writer.WriteEndArray(); break;
+                    case JsonTokenType.PropertyName: writer.WritePropertyName(jsonReader.GetString()); break;
+                    case JsonTokenType.String: writer.WriteValue(jsonReader.GetString()); break;
                     case JsonTokenType.Number:
-                        if (jsonReader.TryGetInt64(out long l))
-                            writer.WriteValue(l);
-                        else
-                            writer.WriteValue(jsonReader.GetDouble());
+                        if (jsonReader.TryGetInt64(out long l)) writer.WriteValue(l);
+                        else writer.WriteValue(jsonReader.GetDouble());
                         break;
-                    case JsonTokenType.True:
-                        writer.WriteValue(true);
-                        break;
-                    case JsonTokenType.False:
-                        writer.WriteValue(false);
-                        break;
-                    case JsonTokenType.Null:
-                        writer.WriteNull();
-                        break;
+                    case JsonTokenType.True: writer.WriteValue(true); break;
+                    case JsonTokenType.False: writer.WriteValue(false); break;
+                    case JsonTokenType.Null: writer.WriteNull(); break;
                 }
             }
         }
