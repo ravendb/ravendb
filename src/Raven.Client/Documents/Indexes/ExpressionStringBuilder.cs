@@ -5,13 +5,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
+using Raven.Client.Json;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
@@ -273,28 +272,12 @@ namespace Raven.Client.Documents.Indexes
             if (propName != null)
                 return propName;
 
-            foreach (var customAttribute in memberInfo.GetCustomAttributes(inherit: true))
+            propName = JsonPropertyNameResolver.GetJsonPropertyName(memberInfo);
+            if (propName != null)
             {
-                var customAttributeType = customAttribute.GetType();
-                if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
-                    continue;
-
-                switch (customAttributeType.Name)
-                {
-                    case nameof(JsonPropertyAttribute):
-                        propName = ((dynamic)customAttribute).PropertyName;
-                        break;
-                    case nameof(DataMemberAttribute):
-                        propName = ((dynamic)customAttribute).Name;
-                        break;
-                    default:
-                        continue;
-                }
-
                 if (KeywordsInCSharp.Contains(propName))
                     return '@' + propName;
-                if (propName != null)
-                    return propName;
+                return propName;
             }
 
             return _conventions.GetConvertedPropertyNameFor(memberInfo);
