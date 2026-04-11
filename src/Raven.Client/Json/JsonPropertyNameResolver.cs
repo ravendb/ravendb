@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Serialization;
 
@@ -5,6 +6,9 @@ namespace Raven.Client.Json
 {
     internal static class JsonPropertyNameResolver
     {
+        // MemberInfo is immutable — attributes never change. Cache the resolved name per member.
+        private static readonly ConcurrentDictionary<MemberInfo, string> _cache = new();
+
         /// <summary>
         /// Gets the JSON property name for a member by checking:
         /// 1. Newtonsoft.Json.JsonPropertyAttribute.PropertyName (by namespace, to avoid hard dependency)
@@ -13,6 +17,11 @@ namespace Raven.Client.Json
         /// Returns null if no custom name is found.
         /// </summary>
         public static string GetJsonPropertyName(MemberInfo member)
+        {
+            return _cache.GetOrAdd(member, ResolveJsonPropertyName);
+        }
+
+        private static string ResolveJsonPropertyName(MemberInfo member)
         {
             foreach (var attr in member.GetCustomAttributes(false))
             {
