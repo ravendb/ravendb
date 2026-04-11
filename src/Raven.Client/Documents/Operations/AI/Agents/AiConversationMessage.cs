@@ -33,6 +33,12 @@ public class AiToolCallResult
     /// The tool's response content. Null if still pending (ActionRequired).
     /// </summary>
     public string Result { get; set; }
+
+    /// <summary>
+    /// If this tool call was a sub-agent invocation, the ID of the spawned sub-conversation.
+    /// Can be queried separately via GetConversationMessages.
+    /// </summary>
+    public string SubConversationId { get; set; }
 }
 
 public class AiConversationMessage
@@ -69,4 +75,9 @@ public class AiConversationMessage
     /// Token usage for this message (typically on assistant messages).
     /// </summary>
     public AiUsage Usage { get; set; }
+
+    /// <summary>
+    /// For Internal role messages: the ID of the sub-conversation this message relates to.
+    /// </summary>
+    public string SubConversationId { get; set; }
 }

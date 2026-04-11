@@ -77,6 +77,19 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteBool(hasMoreMessages);
                 writer.WriteComma();
 
+                writer.WritePropertyName(nameof(AiConversationMessagesResult.SubConversationIds));
+                writer.WriteStartArray();
+                bool firstSub = true;
+                foreach (string subId in conversation.SubConversationIds)
+                {
+                    if (firstSub == false)
+                        writer.WriteComma();
+                    firstSub = false;
+                    writer.WriteString(subId);
+                }
+                writer.WriteEndArray();
+                writer.WriteComma();
+
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.Messages));
                 WriteMessages(writer, filtered);
 
@@ -143,9 +156,16 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(AiToolCallResult.Result));
                 writer.WriteString(tc.Result);
+                writer.WriteComma();
+                writer.WritePropertyName(nameof(AiToolCallResult.SubConversationId));
+                writer.WriteString(tc.SubConversationId);
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(AiConversationMessage.SubConversationId));
+            writer.WriteString(msg.SubConversationId);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(AiConversationMessage.Usage));
