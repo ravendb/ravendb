@@ -43,7 +43,17 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 return;
             }
 
-            var conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
+            ConversationDocument conversation;
+            try
+            {
+                conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
+            }
+            catch (ArgumentException)
+            {
+                // Document exists but isn't a valid conversation (wrong collection, corrupted, etc.)
+                RequestHandler.HttpContext.Response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
+                return;
+            }
 
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation.LinkedConversations, pageSize, detailLevel, before, after);
             collector.Collect(conversation.Messages);
