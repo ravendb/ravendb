@@ -283,7 +283,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
     internal static bool ShouldSkipLicense(out string skipMessage)
     {
         string[] options = ["Raven.License.Path", "Raven.License", "RAVEN_LICENSE_PATH", "RAVEN_LICENSE"];
-        var hasLicense = options.Any(options => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(options)));
+        var hasLicense = options.Any(envVarName => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(envVarName)));
         if (hasLicense)
         {
             skipMessage = null;

@@ -267,7 +267,8 @@ public class CdcSinkTableProcessor
         for (int i = 0; i < indices.Length; i++)
         {
             _sb.Append('/');
-            _sb.Append(values[indices[i]] ?? "null");
+            var val = values[indices[i]];
+            _sb.Append(val is null or DBNull ? "null" : val);
         }
 
         return _sb.ToString();
@@ -327,7 +328,7 @@ public class CdcSinkTableProcessor
         if (string.IsNullOrEmpty(s))
             return null;
 
-        var trimmed = s.AsSpan().TrimStart();
+        var trimmed = s.AsSpan().Trim();
         if (trimmed.IsEmpty)
             return null;
 
@@ -418,7 +419,7 @@ public class CdcSinkTableProcessor
                 if (v is not null and not DBNull)
                     allNull = false;
                 _sb.Append('/');
-                _sb.Append(v ?? "null");
+                _sb.Append(v is null or DBNull ? "null" : v);
             }
 
             doc[linked.PropertyName] = allNull ? null : _sb.ToString();

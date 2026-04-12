@@ -76,10 +76,15 @@ public static class CdcSinkSourceVerifier
                         await VerifySqlServerAsync(dbConnection, tableNames, result);
                         break;
 
+                    case "MySql.Data.MySqlClient":
+                    case "MySqlConnector.MySqlConnectorFactory":
+                        await VerifyMySqlAsync(dbConnection, result);
+                        break;
+
                     default:
                         result.Errors.Add(
                             $"CDC is not supported for provider '{connection.FactoryName}'. " +
-                            "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server).");
+                            "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server), MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB).");
                         break;
                 }
             }
@@ -508,6 +513,62 @@ public static class CdcSinkSourceVerifier
                         $"Ask a database administrator to run: EXEC sys.sp_cdc_enable_table " +
                         $"@source_schema = {qb.QuoteIdentifier(schema)}, @source_name = {qb.QuoteIdentifier(table)}, @role_name = NULL;");
                 }
+            }
+        }
+    }
+
+    private static async Task VerifyMySqlAsync(DbConnection connection, CdcSinkVerificationResult result)
+    {
+        // Detect MySQL vs MariaDB
+        string version;
+        bool isMariaDb;
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT VERSION()";
+            version = (await cmd.ExecuteScalarAsync())?.ToString() ?? "";
+            isMariaDb = version.Contains("MariaDB", StringComparison.OrdinalIgnoreCase);
+        }
+
+        result.HasPermissionToSetup = true; // MySQL CDC uses binlog replication, no special setup commands needed
+
+        // Check binlog_format
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT @@binlog_format";
+            var format = (await cmd.ExecuteScalarAsync())?.ToString();
+            if (string.Equals(format, "ROW", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                result.Errors.Add(
+                    $"MySQL binlog_format is '{format}' but must be 'ROW' for CDC Sink. " +
+                    (isMariaDb ? "MariaDB defaults to MIXED — " : "") +
+                    "Set it with: SET GLOBAL binlog_format = 'ROW'; or add binlog_format = ROW to my.cnf.");
+            }
+        }
+
+        // Check binlog_row_image
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.CommandText = "SELECT @@binlog_row_image";
+            var rowImage = (await cmd.ExecuteScalarAsync())?.ToString();
+            if (string.Equals(rowImage, "FULL", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                result.Errors.Add(
+                    $"MySQL binlog_row_image is '{rowImage}' but must be 'FULL' for CDC Sink. " +
+                    "Set it with: SET GLOBAL binlog_row_image = 'FULL';");
+            }
+        }
+
+        // Verify GTID is enabled (MySQL only — MariaDB always has GTID support)
+        if (isMariaDb == false)
+        {
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT @@gtid_mode";
+            var gtidMode = (await cmd.ExecuteScalarAsync())?.ToString();
+            if (string.Equals(gtidMode, "ON", StringComparison.OrdinalIgnoreCase) == false)
+            {
+                result.Errors.Add(
+                    $"MySQL gtid_mode is '{gtidMode}' but must be 'ON' for CDC Sink. " +
+                    "Enable it with: SET GLOBAL gtid_mode = ON; SET GLOBAL enforce_gtid_consistency = ON;");
             }
         }
     }
