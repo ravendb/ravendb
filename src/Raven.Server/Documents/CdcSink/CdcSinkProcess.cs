@@ -8,6 +8,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Jint.Native;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Json.Serialization;
@@ -15,6 +16,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents.CdcSink.Stats;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -297,31 +299,44 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 ?? throw new InvalidOperationException("The table has no patch script configured.");
 
             var table = testScript.Configuration.Tables[0];
+            var processor = docProcessor.GetProcessor(table.SourceTableSchema ?? "", table.SourceTableName);
 
-            // Wrap the message in the same $rows format that production uses,
-            // so the dispatch script and per-table functions work identically.
-            var rowsArgs = new DynamicJsonValue
+            // Use ScriptRunner directly (same as production CdcSinkBatchCommand.RunPatches)
+            // to pass a real JsArray instead of going through PatchDocumentCommand which
+            // would wrap args in a BlittableObjectInstance and break `rows.length`.
+            using (database.Scripts.GetScriptRunner(patchRequest, readOnly: false, out var runner))
             {
-                ["rows"] = new DynamicJsonArray
+                runner.DebugMode = true;
+
+                // Create an empty document as the script's `this` context
+                var empty = new DynamicJsonValue
                 {
-                    new DynamicJsonValue
+                    ["@metadata"] = new DynamicJsonValue
                     {
-                        ["table"] = table.SourceTableName,
-                        ["row"] = new DynamicJsonValue(messageDoc)
+                        ["@collection"] = table.CollectionName
                     }
+                };
+                using var emptyDoc = context.ReadObject(empty, "cdc-test-doc");
+                var docInstance = runner.Translate(context, new Document { Data = emptyDoc });
+
+                // Build a JsArray of rows matching the production format
+                var rowObj = new JsObject(runner.ScriptEngine);
+                rowObj.FastSetDataProperty("table", processor.Key);
+                rowObj.FastSetDataProperty("row", new BlittableObjectInstance(runner.ScriptEngine, null, messageDoc, null, null, null));
+                rowObj.FastSetDataProperty("old", JsValue.Null);
+
+                var rowsArray = new JsArray(runner.ScriptEngine, [rowObj]);
+
+                using (runner.Run(context, context, "execute", "test-cdc/" + Guid.NewGuid(),
+                           [docInstance, rowsArray]))
+                {
+                    return new TestCdcSinkScriptResult
+                    {
+                        DebugOutput = runner.DebugOutput != null ? new List<string>(runner.DebugOutput) : null,
+                        Actions = runner.DebugActions?.GetDebugActions()
+                    };
                 }
-            };
-            using var argsBlittable = context.ReadObject(rowsArgs, "cdc-test-args");
-
-            var command = new TestCdcMessageCommand(context, patchRequest, argsBlittable);
-
-            command.Execute(context, null);
-
-            return new TestCdcSinkScriptResult
-            {
-                DebugOutput = command.DebugOutput,
-                Actions = command.DebugActions
-            };
+            }
         }
     }
 
@@ -394,8 +409,6 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         var start = Stopwatch.GetTimestamp();
         await Database.TxMerger.Enqueue(command);
 
-        DocumentProcessor.ReturnBatchValues(ops);
-
         LastBatchTime = Database.Time.GetUtcNow();
         if (checkpoint != null)
             LastCheckpoint = checkpoint;
@@ -449,6 +462,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         var pending = new List<CdcSinkDocumentOp>();
         var emptyTask = Task.FromResult<(string, int)>((null, 0));
         Task<(string, int)> lastBatch = emptyTask;
+        List<CdcSinkDocumentOp> lastBatchOps = null;
         // Two groupers for the two concurrent batches in the pipeline (current + previous).
         var groupers = new[] { new Commands.CdcSinkBatchCommand.DocumentGrouper(), new Commands.CdcSinkBatchCommand.DocumentGrouper() };
         int grouperIndex = 0;
@@ -467,6 +481,15 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             if (completedCheckpoint is not null)
                 await OnBatchFlushed(completedCheckpoint, rows);
 
+            // Return values from the completed batch back to per-table pools.
+            // Done here (after await) rather than inside SubmitBatch so that pool
+            // access stays on the caller's flow and never races with RentValues.
+            if (lastBatchOps != null)
+            {
+                DocumentProcessor.ReturnBatchValues(lastBatchOps);
+                lastBatchOps = null;
+            }
+
             // Rotate context: previous batch's blittables stay alive in previousCtx
             // until the next FlushBatch call disposes it after awaiting lastBatch.
             // Safe to dispose the context, since we just awaited on the previous batch's completion that used it
@@ -482,6 +505,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 return;
             }
 
+            lastBatchOps = batch;
             lastBatch = SubmitBatch(batch, lastCheckpoint, grouper: groupers[grouperIndex]);
             grouperIndex ^= 1; // alternate between the two groupers
             batch = [];
@@ -554,8 +578,13 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             // Stream ended — flush remaining ops, then wait for the final batch to complete
             await FlushBatch();
             (string finalCheckpoint, int rows) = await lastBatch;
+            if (lastBatchOps != null)
+            {
+                DocumentProcessor.ReturnBatchValues(lastBatchOps);
+                lastBatchOps = null;
+            }
             if (finalCheckpoint is not null) // force a flush, ensure the last LSN is acknowledged for PostgreSQL and similar providers.
-                await OnBatchFlushed(finalCheckpoint, Database.Configuration.CdcSink.MaxBatchSize + 1); 
+                await OnBatchFlushed(finalCheckpoint, Database.Configuration.CdcSink.MaxBatchSize + 1);
         }
         finally
         {
@@ -772,6 +801,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
         }
 
         var lastBatch = Task.CompletedTask;
+        List<CdcSinkDocumentOp> lastBatchOps = null;
         IDisposable previousBatchCtx = null;
         IDisposable currentBatchCtx = null;
 
@@ -790,6 +820,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     currentBatchCtx = null;
 
                     await lastBatch;
+                    if (lastBatchOps != null)
+                    {
+                        DocumentProcessor.ReturnBatchValues(lastBatchOps);
+                        lastBatchOps = null;
+                    }
                     previousBatchCtx?.Dispose();
                     previousBatchCtx = null;
 
@@ -802,6 +837,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 }
 
                 await lastBatch;
+                if (lastBatchOps != null)
+                {
+                    DocumentProcessor.ReturnBatchValues(lastBatchOps);
+                    lastBatchOps = null;
+                }
                 previousBatchCtx?.Dispose();
 
                 var tableLoadUpdate = new Dictionary<string, CdcSinkTableLoadState>
@@ -809,6 +849,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                     [tableKey] = new CdcSinkTableLoadState { LastKeyValues = new List<string>(newLastKeys) }
                 };
 
+                lastBatchOps = ops;
                 lastBatch = SubmitBatch(ops, tableLoadUpdates: tableLoadUpdate);
                 previousBatchCtx = currentBatchCtx;
                 currentBatchCtx = null;
