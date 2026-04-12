@@ -104,6 +104,7 @@ namespace FastTests.Client
                 Assert.Equal(TimeSpan.FromHours(2.5), loaded.TimeSpanProp);
                 Assert.Equal(7, loaded.NullableIntProp);
                 Assert.Null(loaded.NullableIntNull);
+                Assert.Equal(new DateTimeOffset(2025, 6, 15, 10, 30, 0, TimeSpan.FromHours(2)), loaded.DateTimeOffsetProp);
                 Assert.Null(loaded.NullableDateTimeProp);
                 Assert.Null(loaded.NullString);
             }
