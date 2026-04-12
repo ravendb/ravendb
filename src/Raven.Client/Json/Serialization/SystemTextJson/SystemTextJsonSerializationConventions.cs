@@ -157,12 +157,14 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             var options = ((SystemTextJsonJsonSerializer)serializer).Options;
 
-            using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true });
-            writer.WriteStartObject();
-
-            // Write @metadata first
+            // Serialize entity directly to stream: produces {"prop1":...,"prop2":...}
+            JsonSerializer.Serialize(stream, entity, entity.GetType(), options);
             if (metadata != null && metadata.Count > 0)
             {
+                stream.SetLength(stream.Length - 1); // Remove trailing }
+                stream.WriteByte((byte)',');
+
+                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { SkipValidation = true });
                 writer.WritePropertyName(Constants.Documents.Metadata.Key);
                 writer.WriteStartObject();
                 foreach (var kvp in metadata)
@@ -171,20 +173,9 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                     WriteMetadataValue(writer, kvp.Value);
                 }
                 writer.WriteEndObject();
+                writer.Flush();
+                stream.WriteByte((byte)'}');
             }
-
-            // Serialize entity to a JsonDocument so we can iterate its top-level properties
-            // and write them into our existing object (which already has @metadata).
-            using var doc = JsonDocument.Parse(JsonSerializer.SerializeToUtf8Bytes(entity, entity.GetType(), options));
-            foreach (var property in doc.RootElement.EnumerateObject())
-            {
-                if (property.Name == Constants.Documents.Metadata.Key)
-                    continue; // already written above
-                property.WriteTo(writer);
-            }
-
-            writer.WriteEndObject();
-            writer.Flush();
         }
 
         internal static void WriteMetadataValue(Utf8JsonWriter writer, object value)
