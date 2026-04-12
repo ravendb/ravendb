@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Raven.Client.Documents.Conventions;
@@ -188,6 +189,8 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         internal static void WriteMetadataValue(Utf8JsonWriter writer, object value)
         {
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            
             switch (value)
             {
                 case string s:
