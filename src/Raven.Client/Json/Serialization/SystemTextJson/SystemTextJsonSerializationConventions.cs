@@ -223,6 +223,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
                 case null:
                     writer.WriteNullValue();
                     break;
+                case IMetadataDictionary dict:
+                    writer.WriteStartObject();
+                    foreach (var kvp in dict)
+                    {
+                        writer.WritePropertyName(kvp.Key);
+                        WriteMetadataValue(writer, kvp.Value);
+                    }
+                    writer.WriteEndObject();
+                    break;
+                case object[] arr:
+                    writer.WriteStartArray();
+                    foreach (var item in arr)
+                        WriteMetadataValue(writer, item);
+                    writer.WriteEndArray();
+                    break;
                 default:
                     JsonSerializer.Serialize(writer, value);
                     break;
