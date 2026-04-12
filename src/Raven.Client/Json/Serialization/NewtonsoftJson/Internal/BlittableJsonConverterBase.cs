@@ -44,10 +44,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                     serializer.Populate(reader, entity);
                 }
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Could not populate entity.", ex);
-            }
             finally
             {
                 serializer.ObjectCreationHandling = old;
