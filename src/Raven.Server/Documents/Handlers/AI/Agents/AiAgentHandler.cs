@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 
@@ -47,6 +48,16 @@ public class AiAgentHandler : DatabaseRequestHandler
     public async Task AiAgentTest()
     {
         using (var processor = new AiAgentProcessorForTestConversation(this))
+        {
+            await processor.ExecuteAsync();
+        }
+    }
+
+
+    [RavenAction("/databases/*/admin/ai/agent/generate-code", "GET", AuthorizationStatus.DatabaseAdmin)]
+    public async Task AiAgentGenerateCode()
+    {
+        using (var processor = new AiAgentProcessorForGenerateCode<DatabaseRequestHandler, DocumentsOperationContext>(this))
         {
             await processor.ExecuteAsync();
         }
