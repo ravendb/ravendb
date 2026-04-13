@@ -166,8 +166,12 @@ class documents extends shardViewModelBase {
         }));
 
         this.registerDisposable(this.tracker.registerOnCollectionRemovedHandler(c => {
+            const isExpectedRemoval = this.isExpectedCollectionRemoval(c.name);
+
             if (c === this.currentCollection()) {
-                messagePublisher.reportWarning(c.name + " was removed");
+                if (!isExpectedRemoval) {
+                    messagePublisher.reportWarning(c.name + " was removed");
+                }
                 this.currentCollection(this.tracker.getAllDocumentsCollection());
             } else if (this.currentCollection().isAllDocuments) {
                 this.dirtyCurrentCollection(true);
@@ -368,6 +372,17 @@ class documents extends shardViewModelBase {
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.resetGrid(false);
+    }
+
+    private isExpectedCollectionRemoval(collectionName: string): boolean {
+        const modalProps = this.deleteDocumentsModalView()?.props;
+        if (!modalProps) {
+            return false;
+        }
+
+        return modalProps.collectionName === collectionName
+            && !modalProps.isAllDocuments
+            && modalProps.excludedIds.length === 0;
     }
 
     private onEntireCollectionDeleted(collectionName: string) {
