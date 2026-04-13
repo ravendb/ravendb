@@ -78,14 +78,16 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             // only maxBudgetNis and minRamGb should be sent to the model,
             // customerId shouldn't be sent (sendToModel is false on chat), customerName shouldn't be sent (additional param - only for sub-agent use)
-            var expectedParamsMsg = "AI Agent Parameters:\nmaxBudgetNis = 3500" + Environment.NewLine + 
-                                    "minRamGb = 16" + Environment.NewLine + 
+            var expectedParamsMsg = "AI Agent Parameters:\nmaxBudgetNis = 3500" + Environment.NewLine +
+                                    "minRamGb = 16" + Environment.NewLine +
                                     "customerName = Shahar" + Environment.NewLine;
-            using (var session = store.OpenAsyncSession())
+            var result = await store.AI.GetConversationMessagesAsync(new GetConversationMessagesOptions
             {
-                var doc = await session.LoadAsync<Chat>("Chats/1");
-                Assert.True(doc.Messages.Any(m => m.Content as string == expectedParamsMsg));
-            }
+                ConversationId = "Chats/1",
+                DetailLevel = AiConversationDetailLevel.Full,
+                PageSize = 50
+            });
+            Assert.Contains(result.Messages, m => m.Content == expectedParamsMsg);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
