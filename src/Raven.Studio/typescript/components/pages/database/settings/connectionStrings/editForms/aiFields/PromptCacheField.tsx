@@ -25,6 +25,29 @@ export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
 
     const fieldName = `${baseName}.enablePromptCache` satisfies FieldPath<FormData>;
 
+    function getDescriptionForDefaultPromptCacheKey(baseName: PromptCacheFieldProps["baseName"]) {
+        switch (baseName) {
+            case "openAiSettings":
+            case "azureOpenAiSettings":
+                return (
+                    <>
+                        <strong>Default:</strong> <code>True</code>
+                        <br />
+                        The server sends the cache key by default.
+                    </>
+                );
+
+            case "googleSettings":
+                return (
+                    <>
+                        <strong>Default:</strong> <code>False</code>
+                        <br />
+                        The server does not send the cache key by default.
+                    </>
+                );
+        }
+    }
+
     return (
         <div className="mb-2">
             <FormLabel>
@@ -32,16 +55,21 @@ export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
                 <PopoverWithHoverWrapper
                     message={
                         <>
-                            Controls whether RavenDB sends <code>prompt_cache_key</code> with chat completion requests.
+                            Controls whether RavenDB includes the <code>prompt_cache_key</code> field in chat completion
+                            requests sent to the AI provider.
+                            <br />
+                            <br />
+                            This allows the provider to reuse cached prompt prefixes instead of reprocessing the entire
+                            conversation history across turns in the same conversation, reducing latency and cost.
+                            <br />
+                            <br />
                             <ul className="mb-0">
+                                <li>{getDescriptionForDefaultPromptCacheKey(baseName)}</li>
                                 <li className="mt-1">
-                                    <strong>Default:</strong> use the server&apos;s provider-specific behavior.
+                                    <strong>True:</strong> Always send the cache key.
                                 </li>
                                 <li className="mt-1">
-                                    <strong>True:</strong> always send the field.
-                                </li>
-                                <li className="mt-1">
-                                    <strong>False:</strong> never send the field.
+                                    <strong>False:</strong> Never send the cache key.
                                 </li>
                             </ul>
                         </>
