@@ -359,6 +359,8 @@ namespace Sparrow.LowMemory
                 totalUnmanagedAllocations = -1;
             }
 
+            monitor.UpdateAboutToRunOutOfMemoryFlag();
+
             if (isLowMemory != LowMemorySeverity.None)
             {
                 if (LowMemoryState == false)

@@ -47,6 +47,11 @@ namespace Sparrow.Server.LowMemory
             MemoryInformation.AssertNotAboutToRunOutOfMemory();
         }
 
+        public override void UpdateAboutToRunOutOfMemoryFlag()
+        {
+            MemoryInformation.UpdateAboutToRunOutOfMemoryFlag();
+        }
+
         public override void Dispose()
         {
             if (_buffers != null)

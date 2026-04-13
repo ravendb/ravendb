@@ -15,6 +15,10 @@ namespace Sparrow.LowMemory
 
         public abstract void AssertNotAboutToRunOutOfMemory();
 
+        public virtual void UpdateAboutToRunOutOfMemoryFlag()
+        {
+        }
+
         internal static long GetManagedMemoryInBytes()
         {
             return GC.GetTotalMemory(false);

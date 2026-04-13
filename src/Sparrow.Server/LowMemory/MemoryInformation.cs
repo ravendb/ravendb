@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
@@ -114,21 +115,31 @@ namespace Sparrow.Server.LowMemory
             _lowMemoryCommitLimitInMb = lowMemoryCommitLimitInMb;
         }
 
+        private static int _isAboutToRunOutOfMemory;
+
         public static void AssertNotAboutToRunOutOfMemory()
         {
-            if (EnableEarlyOutOfMemoryChecks == false)
+            if (_isAboutToRunOutOfMemory == 0)
                 return;
 
-            if (DisableEarlyOutOfMemoryCheck)
-                return;
+            ThrowInsufficientMemory(GetMemoryInfo());
+        }
 
-            if (PlatformDetails.RunningOnPosix &&       // we only _need_ this check on Windows
-                EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
-                return;
+        internal static void UpdateAboutToRunOutOfMemoryFlag()
+        {
+            int newValue = 0;
 
-            var memInfo = GetEarlyOutOfMemoryInfo();
-            if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
-                ThrowInsufficientMemory(GetMemoryInfo());
+            if (EnableEarlyOutOfMemoryChecks &&
+                DisableEarlyOutOfMemoryCheck == false &&
+                (PlatformDetails.RunningOnPosix == false || EnableEarlyOutOfMemoryCheck))
+            {
+                var memInfo = GetEarlyOutOfMemoryInfo();
+                if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
+                    newValue = 1;
+            }
+
+            if (newValue != _isAboutToRunOutOfMemory)
+                Interlocked.Exchange(ref _isAboutToRunOutOfMemory, newValue);
         }
 
         internal static bool IsEarlyOutOfMemory(MemoryInfoResult memInfo, out Size commitChargeThreshold)
