@@ -41,6 +41,11 @@ public class AiConversationMessagesResult
     public bool HasMoreMessages { get; set; }
 
     /// <summary>
+    /// True if any message in the conversation contains attachments (images, files).
+    /// </summary>
+    public bool HasAttachments { get; set; }
+
+    /// <summary>
     /// IDs of sub-agent conversations spawned during this conversation.
     /// Each can be queried separately via GetConversationMessages.
     /// </summary>
