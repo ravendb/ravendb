@@ -86,8 +86,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void SaveChanges()
         {
-            if (DisableDisposeChecks == false)
-                AssertNotDisposed();
+            AssertNotDisposed();
             var saveChangesOperation = new BatchOperation(this);
 
             using (var command = saveChangesOperation.CreateRequest())

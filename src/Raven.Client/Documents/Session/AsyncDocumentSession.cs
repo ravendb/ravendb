@@ -150,8 +150,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public async Task SaveChangesAsync(CancellationToken token = default(CancellationToken))
         {
-            if (DisableDisposeChecks == false)
-                AssertNotDisposed();
+            AssertNotDisposed();
             using (AsyncTaskHolder())
             {
                 if (_asyncDocumentIdGeneration != null)
