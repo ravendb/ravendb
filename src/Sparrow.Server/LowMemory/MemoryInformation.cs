@@ -122,7 +122,12 @@ namespace Sparrow.Server.LowMemory
             if (_isAboutToRunOutOfMemory == 0)
                 return;
 
-            ThrowInsufficientMemory(GetMemoryInfo());
+            // The background thread flagged potential memory pressure.
+            // Re-check with fresh data so allocations can still proceed
+            // if memory has been freed since the last background check.
+            var memInfo = GetEarlyOutOfMemoryInfo();
+            if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
+                ThrowInsufficientMemory(GetMemoryInfo());
         }
 
         internal static void UpdateAboutToRunOutOfMemoryFlag()
@@ -131,8 +136,9 @@ namespace Sparrow.Server.LowMemory
 
             if (EnableEarlyOutOfMemoryChecks &&
                 DisableEarlyOutOfMemoryCheck == false &&
-                (PlatformDetails.RunningOnPosix == false || EnableEarlyOutOfMemoryCheck))
-            {
+                (PlatformDetails.RunningOnPosix == false ||
+                 EnableEarlyOutOfMemoryCheck))             // we only _need_ this check on Windows
+            {                                              // but we want to enable this manually if needed
                 var memInfo = GetEarlyOutOfMemoryInfo();
                 if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
                     newValue = 1;
