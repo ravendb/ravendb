@@ -40,6 +40,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Equal(conversationId, result.ConversationId);
         Assert.Equal(AgentName, result.Agent);
         Assert.NotNull(result.TotalUsage);
+        Assert.False(result.HasAttachments);
         Assert.True(result.Messages.Count > 0);
 
         // Should have system, user, and assistant messages
@@ -368,6 +369,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
             });
 
         Assert.Single(result.Messages);
+        Assert.True(result.HasAttachments);
         var msg = result.Messages[0];
         Assert.Equal(AiMessageRole.User, msg.Role);
         Assert.Equal("Please analyze this", msg.Content);

@@ -22,13 +22,10 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
 
         var conversationId = RequestHandler.GetStringQueryString("conversationId");
-        var pageSize = RequestHandler.GetIntValueQueryString("pageSize", required: false) ?? 25;
+        var pageSize = RequestHandler.GetPageSize(25);
         var detailLevel = RequestHandler.GetEnumQueryString<AiConversationDetailLevel>("detailLevel", required: false);
         var before = RequestHandler.GetDateTimeQueryString("before", required: false);
         var after = RequestHandler.GetDateTimeQueryString("after", required: false);
-
-        if (pageSize <= 0)
-            pageSize = 25;
 
         if (before.HasValue && after.HasValue)
             throw new Raven.Client.Exceptions.BadRequestException("Cannot specify both 'before' and 'after' parameters.");
@@ -50,8 +47,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
             collector.Collect();
 
-            bool hasMoreMessages = collector.HasMoreMessages;
-            var filtered = collector.GetResults();
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
             {
@@ -74,7 +69,11 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.HasMoreMessages));
-                writer.WriteBool(hasMoreMessages);
+                writer.WriteBool(collector.HasMoreMessages);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AiConversationMessagesResult.HasAttachments));
+                writer.WriteBool(collector.HasAttachments);
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.SubConversationIds));
@@ -91,7 +90,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.Messages));
-                WriteMessages(writer, filtered);
+                WriteMessages(writer, collector.GetResults());
 
                 writer.WriteEndObject();
             }
