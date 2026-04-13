@@ -176,8 +176,9 @@ function useDeleteCollection({
                     })
                     .always(() => {
                         onDeleteCompleted();
-                        close();
                     });
+
+                close();
             })
             .always(() => {
                 if (isMounted()) {
