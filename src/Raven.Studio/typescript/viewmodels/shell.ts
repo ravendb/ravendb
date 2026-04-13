@@ -372,9 +372,9 @@ class shell extends viewModelBase {
                         }
                     );
                     studioSettings.default.registerOnSettingChangedHandler(
-                        (name) => name === "virtualTableFont",
+                        (name) => name === "tableFont",
                         (_name, setting: simpleStudioSetting<string>) =>
-                            shell.applyVirtualTableFont(setting.getValue())
+                            shell.applyTableFont(setting.getValue())
                     );
                     studioSettings.default.registerOnSettingChangedHandler(
                         (name) => name === "monospaceFont",
@@ -438,13 +438,13 @@ class shell extends viewModelBase {
             }
         }
 
-        shell.applyVirtualTableFont(settings.virtualTableFont.getValue());
+        shell.applyTableFont(settings.tableFont.getValue());
         shell.applyMonospaceFont(settings.monospaceFont.getValue());
     }
 
-    static applyVirtualTableFont(value: string) {
+    static applyTableFont(value: string) {
         const font = value === "default" ? '"Figtree"' : `"${value}"`;
-        document.documentElement.style.setProperty("--vt-font", font);
+        document.documentElement.style.setProperty("--table-font", font);
     }
 
     static applyMonospaceFont(value: string) {

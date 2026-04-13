@@ -1,3 +1,4 @@
+import { createContext, useContext, useMemo, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -18,8 +19,7 @@ import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import {
-    virtualTableFontOptions,
-    monospaceFontOptions,
+    predefinedFontOptions,
     studioEnvironmentOptions,
 } from "components/common/studioConfiguration/StudioConfigurationUtils";
 import { SelectOption } from "components/common/select/Select";
@@ -34,13 +34,18 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import { components as rsComponents, MenuProps, OptionProps } from "react-select";
+import { ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import AceEditor from "components/common/ace/AceEditor";
 import studioSettings = require("common/settings/studioSettings");
 
-const vtFontPreviewLottie: string = require("Content/img/vt-font-preview.lottie");
-const codeFontPreviewLottie: string = require("Content/img/code-font-preview.lottie");
-
 export default function StudioGlobalConfiguration() {
+    const [vtHoveredFont, setVtHoveredFont] = useState<string | null>(null);
+    const [codeHoveredFont, setCodeHoveredFont] = useState<string | null>(null);
+
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
 
@@ -49,7 +54,7 @@ export default function StudioGlobalConfiguration() {
             replicationFactor: settings.replicationFactor.getValue(),
             isCollapseDocsWhenOpening: settings.collapseDocsWhenOpening.getValue(),
             isSendUsageStats: settings.sendUsageStats.getValue(),
-            virtualTableFont: settings.virtualTableFont.getValue(),
+            tableFont: settings.tableFont.getValue(),
             monospaceFont: settings.monospaceFont.getValue(),
         };
     });
@@ -85,7 +90,7 @@ export default function StudioGlobalConfiguration() {
             settings.replicationFactor.setValueLazy(formData.replicationFactor);
             settings.collapseDocsWhenOpening.setValue(formData.isCollapseDocsWhenOpening);
             settings.sendUsageStats.setValueLazy(formData.isSendUsageStats);
-            settings.virtualTableFont.setValue(formData.virtualTableFont);
+            settings.tableFont.setValue(formData.tableFont);
             settings.monospaceFont.setValue(formData.monospaceFont);
 
             await settings.save();
@@ -157,7 +162,7 @@ export default function StudioGlobalConfiguration() {
                                             name="environment"
                                             options={studioEnvironmentOptions}
                                             isSearchable={false}
-                                        ></FormSelect>
+                                        />
                                     </div>
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
@@ -190,7 +195,7 @@ export default function StudioGlobalConfiguration() {
                                             name="replicationFactor"
                                             type="number"
                                             placeholder="Cluster size (default)"
-                                        ></FormInput>
+                                        />
                                     </div>
                                 </Card.Body>
                             </Card>
@@ -200,18 +205,27 @@ export default function StudioGlobalConfiguration() {
                                         <FormLabel className="mb-0 md-label">
                                             Table Font{" "}
                                             <PopoverWithHoverWrapper
-                                                message={<VirtualTableFontPopoverContent />}
+                                                message={<TableFontPopoverContent />}
                                                 placement="right"
                                             >
                                                 <Icon icon="info-new" />
                                             </PopoverWithHoverWrapper>
                                         </FormLabel>
-                                        <FormSelectCreatable
-                                            control={control}
-                                            name="virtualTableFont"
-                                            options={virtualTableFontOptions}
-                                            formatOptionLabel={formatFontOptionLabel}
-                                        />
+                                        <FontHoverContext.Provider
+                                            value={{
+                                                hoveredFont: vtHoveredFont,
+                                                setHoveredFont: setVtHoveredFont,
+                                            }}
+                                        >
+                                            <FormSelectCreatable
+                                                control={control}
+                                                name="tableFont"
+                                                options={predefinedFontOptions}
+                                                formatOptionLabel={formatFontOptionLabel}
+                                                components={tableFontSelectComponents}
+                                                onMenuClose={() => setVtHoveredFont(null)}
+                                            />
+                                        </FontHoverContext.Provider>
                                     </div>
                                     <div className="gap-1">
                                         <FormLabel className="mb-0 md-label">
@@ -223,12 +237,21 @@ export default function StudioGlobalConfiguration() {
                                                 <Icon icon="info-new" />
                                             </PopoverWithHoverWrapper>
                                         </FormLabel>
-                                        <FormSelectCreatable
-                                            control={control}
-                                            name="monospaceFont"
-                                            options={monospaceFontOptions}
-                                            formatOptionLabel={formatFontOptionLabel}
-                                        />
+                                        <FontHoverContext.Provider
+                                            value={{
+                                                hoveredFont: codeHoveredFont,
+                                                setHoveredFont: setCodeHoveredFont,
+                                            }}
+                                        >
+                                            <FormSelectCreatable
+                                                control={control}
+                                                name="monospaceFont"
+                                                options={predefinedFontOptions}
+                                                formatOptionLabel={formatFontOptionLabel}
+                                                components={codeFontSelectComponents}
+                                                onMenuClose={() => setCodeHoveredFont(null)}
+                                            />
+                                        </FontHoverContext.Provider>
                                     </div>
                                     <div className="d-flex flex-column">
                                         <FormSwitch control={control} name="isCollapseDocsWhenOpening">
@@ -280,48 +303,186 @@ export default function StudioGlobalConfiguration() {
     );
 }
 
-const sampleDocumentId = "Orders/830-A";
+const FontHoverContext = createContext<{
+    hoveredFont: string | null;
+    setHoveredFont: (font: string | null) => void;
+}>({ hoveredFont: null, setHoveredFont: () => {} });
+
+function FontPreviewOption(props: OptionProps<SelectOption<string>>) {
+    const { setHoveredFont } = useContext(FontHoverContext);
+    return (
+        <rsComponents.Option
+            {...props}
+            innerProps={{
+                ...props.innerProps,
+                onMouseEnter: (e: React.MouseEvent<HTMLDivElement>) => {
+                    props.innerProps.onMouseEnter?.(e);
+                    setHoveredFont(props.data.value);
+                },
+            }}
+        />
+    );
+}
+
+function getPreviewFontFamily(
+    hoveredFont: string | null,
+    selectProps: MenuProps<SelectOption<string>>["selectProps"],
+    defaultFont: string
+): string {
+    const fontValue = hoveredFont ?? (selectProps.value as SelectOption<string>)?.value ?? "default";
+    return fontValue === "default" ? defaultFont : `"${fontValue}"`;
+}
+
+function TableFontMenu(props: MenuProps<SelectOption<string>>) {
+    const { hoveredFont } = useContext(FontHoverContext);
+    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps, '"Figtree"');
+
+    return (
+        <rsComponents.Menu {...props}>
+            <div className="d-flex">
+                <div style={{ minWidth: 240, flexShrink: 0 }}>{props.children}</div>
+                <div className="vr" />
+                <VtTablePreview fontFamily={fontFamily} />
+            </div>
+        </rsComponents.Menu>
+    );
+}
+
+function CodeFontMenu(props: MenuProps<SelectOption<string>>) {
+    const { hoveredFont } = useContext(FontHoverContext);
+    const fontFamily = getPreviewFontFamily(hoveredFont, props.selectProps, "var(--bs-font-monospace)");
+
+    return (
+        <rsComponents.Menu {...props}>
+            <div className="d-flex">
+                <div style={{ minWidth: 240, flexShrink: 0 }}>{props.children}</div>
+                <div className="vr" />
+                <CodePreview fontFamily={fontFamily} />
+            </div>
+        </rsComponents.Menu>
+    );
+}
+
+interface VtPreviewRow {
+    name: string;
+    active: boolean;
+    city: string;
+}
+
+const vtPreviewData: VtPreviewRow[] = [
+    { name: "3d7b4e1c-9f2a-4b8c-e5d1-2a6c8f9e1b3d", active: true, city: "New York" },
+    { name: "7f2c5a9e-1b4d-4a7f-c3e8-5d9b2f1e6c4a", active: false, city: "London" },
+    { name: "a8e4b6d2-7c3f-4e9b-1a5d-8f2c6e9b3a7f", active: true, city: "Tokyo" },
+    { name: "5c1e9a7b-3d6f-4b2e-9c1a-7e4b8f2d5c9a", active: true, city: "Berlin" },
+    { name: "2a7f4d9c-5e1b-4a6f-c8d3-1f9e5a7b2c4e", active: false, city: "Paris" },
+    { name: "9b3e6a1f-2d7c-4b9a-e5f1-6c2a8d3f7e9b", active: false, city: "Sydney" },
+];
+
+const vtPreviewColumns: ColumnDef<VtPreviewRow>[] = [
+    {
+        header: "Name",
+        accessorKey: "name",
+        cell: CellValueWrapper,
+        size: 160,
+        enableColumnFilter: false,
+        enableSorting: false,
+    },
+    {
+        header: "Active",
+        accessorKey: "active",
+        cell: CellValueWrapper,
+        size: 80,
+        enableColumnFilter: false,
+        enableSorting: false,
+    },
+    {
+        header: "City",
+        accessorKey: "city",
+        cell: CellValueWrapper,
+        size: 120,
+        enableColumnFilter: false,
+        enableSorting: false,
+    },
+];
+
+function VtTablePreview({ fontFamily }: { fontFamily: string }) {
+    const table = useReactTable({
+        data: vtPreviewData,
+        columns: vtPreviewColumns,
+        columnResizeMode: "onChange",
+        getCoreRowModel: getCoreRowModel(),
+        enableColumnFilters: false,
+    });
+
+    return (
+        <div
+            className="flex-grow-1 p-2 overflow-hidden font-preview-table"
+            style={{ "--preview-font-family": fontFamily, borderRadius: 8 } as React.CSSProperties}
+        >
+            <span className="md-label">Preview</span>
+            <VirtualTable table={table} heightInPx={virtualTableUtils.getHeightInPx(vtPreviewData.length, 300)} />
+        </div>
+    );
+}
+
+const codePreviewValue = `from Orders
+where Lines.Count > 3
+select {
+    Id: id(),
+    Company: Company,
+    Total: Lines.Sum(x => x.Price)
+}`;
+
+function CodePreview({ fontFamily }: { fontFamily: string }) {
+    return (
+        <div
+            className="flex-grow-1 p-2 overflow-hidden"
+            style={{ "--monospace-font": fontFamily, borderRadius: 8 } as React.CSSProperties}
+        >
+            <span className="md-label">Preview</span>
+            <AceEditor
+                mode="rql"
+                value={codePreviewValue}
+                readOnly
+                height="230px"
+                width="400px"
+                isFullScreenLabelHidden
+                setOptions={{
+                    showLineNumbers: true,
+                    showPrintMargin: false,
+                    highlightGutterLine: false,
+                }}
+                aceRef={undefined}
+            />
+        </div>
+    );
+}
+
+const tableFontSelectComponents = { Menu: TableFontMenu, Option: FontPreviewOption };
+const codeFontSelectComponents = { Menu: CodeFontMenu, Option: FontPreviewOption };
 
 function formatFontOptionLabel(option: SelectOption<string>) {
     if (option.value === "default") {
         return <span>{option.label}</span>;
     }
-
-    return (
-        <div className="d-flex justify-content-between align-items-baseline">
-            <span>{option.label}</span>
-            <span className="text-muted small ms-3" style={{ fontFamily: `"${option.value}"` }}>
-                {sampleDocumentId}
-            </span>
-        </div>
-    );
+    return <span style={{ fontFamily: `"${option.value}"` }}>{option.label}</span>;
 }
 
-function VirtualTableFontPopoverContent() {
+function TableFontPopoverContent() {
     return (
-        <div style={{ maxWidth: 360 }}>
-            <div className="mb-2 rounded-2 border border-1 border-color-light overflow-hidden">
-                <DotLottieReact src={vtFontPreviewLottie} loop autoplay layout={{ fit: "fit-width" }} />
-            </div>
-            <p className="mb-0">
-                Choose the font used for displaying data in <strong>tables</strong> across the Studio, including
-                document IDs, column values, and other tabular content.
-            </p>
-        </div>
+        <p className="mb-0">
+            Choose the font used for displaying data in <strong>tables</strong> across the Studio, including document
+            IDs, column values, and other tabular content.
+        </p>
     );
 }
 
 function CodeFontPopoverContent() {
     return (
-        <div style={{ maxWidth: 360 }}>
-            <div className="mb-2 rounded-2 border border-1 border-color-light overflow-hidden">
-                <DotLottieReact src={codeFontPreviewLottie} loop autoplay layout={{ fit: "fit-width" }} />
-            </div>
-            <p className="mb-0">
-                Choose the font used for displaying <strong>code</strong> across the Studio, including code editors and
-                samples.
-            </p>
-        </div>
+        <p className="mb-0">
+            Choose the font used for displaying <strong>code</strong> across the Studio, including code editors and
+            samples.
+        </p>
     );
 }
 

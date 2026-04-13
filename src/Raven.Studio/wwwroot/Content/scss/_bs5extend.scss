@@ -777,6 +777,6 @@ $filtering-input-bg: $toggle-bg !default;
 
 table {
     tbody {
-        font-family: var(--vt-font, var(--bs-font-sans-serif));
+        font-family: var(--table-font, var(--bs-font-sans-serif));
     }
 }

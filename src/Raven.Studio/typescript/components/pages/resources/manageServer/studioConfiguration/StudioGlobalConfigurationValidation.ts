@@ -9,7 +9,7 @@ const schema = yup
         replicationFactor: yup.number().nullable().positive().integer(),
         isCollapseDocsWhenOpening: yup.boolean(),
         isSendUsageStats: yup.boolean(),
-        virtualTableFont: yup.string().required(),
+        tableFont: yup.string().required(),
         monospaceFont: yup.string().required(),
     })
     .required();

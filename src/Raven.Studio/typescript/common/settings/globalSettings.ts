@@ -28,7 +28,7 @@ class globalSettings extends abstractSettings {
 
     feedback = new simpleStudioSetting<feedbackSavedSettingsDto>("local", null, x => this.saveSetting(x));
 
-    virtualTableFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
+    tableFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
     monospaceFont = new simpleStudioSetting<string>("local", "default", x => this.saveSetting(x));
 
     constructor(remoteSettingsLoader: () => JQueryPromise<Raven.Client.ServerWide.Operations.Configuration.ServerWideStudioConfiguration>,

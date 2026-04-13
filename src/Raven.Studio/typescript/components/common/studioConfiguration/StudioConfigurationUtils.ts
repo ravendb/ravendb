@@ -14,23 +14,16 @@ export const studioEnvironmentOptions: SelectOption<StudioEnvironment>[] = allSt
     label: environment,
 }));
 
-export const virtualTableFontOptions: SelectOption<string>[] = [
-    { value: "default", label: "Default" },
-    { value: "Inter", label: "Inter" },
-    { value: "JetBrains Mono", label: "JetBrains Mono" },
-    { value: "Google Sans Code", label: "Google Sans Code" },
-    { value: "Fira Code", label: "Fira Code" },
-    { value: "Source Code Pro", label: "Source Code Pro" },
-    { value: "Space Mono", label: "Space Mono" },
-    { value: "IBM Plex Mono", label: "IBM Plex Mono" },
+export const allFonts = [
+    "JetBrains Mono",
+    "Google Sans Code",
+    "Fira Code",
+    "Source Code Pro",
+    "Space Mono",
+    "IBM Plex Mono",
 ];
 
-export const monospaceFontOptions: SelectOption<string>[] = [
+export const predefinedFontOptions: SelectOption<string>[] = [
     { value: "default", label: "Default" },
-    { value: "JetBrains Mono", label: "JetBrains Mono" },
-    { value: "Google Sans Code", label: "Google Sans Code" },
-    { value: "Fira Code", label: "Fira Code" },
-    { value: "Source Code Pro", label: "Source Code Pro" },
-    { value: "Space Mono", label: "Space Mono" },
-    { value: "IBM Plex Mono", label: "IBM Plex Mono" },
+    ...allFonts.map((font) => ({ value: font, label: font })),
 ];

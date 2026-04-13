@@ -102,7 +102,7 @@
     }
 
     .document-id-cell {
-        font-family: var(--vt-font);
+        font-family: var(--table-font);
     }
 
     tbody {
@@ -198,6 +198,17 @@
                 opacity: 1;
                 transition: bs5variables.$transition-base;
             }
+        }
+    }
+}
+
+.font-preview-table {
+    .virtual-table {
+        table,
+        th,
+        td,
+        td * {
+            font-family: var(--preview-font-family) !important;
         }
     }
 }
