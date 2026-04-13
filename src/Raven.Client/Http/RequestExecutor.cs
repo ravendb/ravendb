@@ -600,7 +600,7 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
-            if (Disposed)
+            if (InMemoryDocumentSessionOperations.DisableDisposeChecks == false && Disposed)
                 ThrowObjectDisposedException();
 
             var topologyUpdate = _firstTopologyUpdate;
