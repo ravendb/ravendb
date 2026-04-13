@@ -91,7 +91,6 @@ namespace Raven.Client.Documents.Operations.Replication
             if (string.IsNullOrEmpty(HubName))
                 throw new ArgumentException("Must be not empty", nameof(HubName));
 
-            PullReplicationPathFilterUtils.NormalizeAndValidate(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths, Name ?? HubName);
             var djv = base.ToJson();
 
             djv[nameof(Mode)] = Mode;
@@ -106,7 +105,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override DynamicJsonValue ToAuditJson()
         {
-            PullReplicationPathFilterUtils.Normalize(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths);
             var djv = base.ToAuditJson();
 
             djv[nameof(Mode)] = Mode;

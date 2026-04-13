@@ -29,8 +29,6 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public DynamicJsonValue ToJson()
         {
-            PullReplicationPathFilterUtils.NormalizeAndValidate(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths, Name);
-
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,

@@ -56,6 +56,7 @@ namespace Raven.Client.Documents.Operations.Replication
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/tasks/pull-replication/hub/access?name={Uri.EscapeDataString(_hubName)}";
 
+                PullReplicationPathFilterUtils.NormalizeAndValidate(ref _access.AllowedHubToSinkPaths, ref _access.AllowedSinkToHubPaths, _access.Name);
                 var blittable = ctx.ReadObject(_access.ToJson(), "register-access");
 
                 var request = new HttpRequestMessage
