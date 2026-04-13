@@ -32,6 +32,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private readonly Dictionary<string, (string Content, string SubConversationId)> _toolResponses = new(StringComparer.Ordinal);
         private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId)> _seenMessageKeys = new();
         private bool _hasMoreMessages;
+        private bool _hasAttachments;
 
         public Collector(DocumentsOperationContext context, DocumentsStorage storage, ConversationDocument conversation,
             int pageSize, AiConversationDetailLevel detailLevel, DateTime? before, DateTime? after)
@@ -47,6 +48,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         }
 
         public bool HasMoreMessages => _hasMoreMessages;
+        public bool HasAttachments => _hasAttachments;
 
         public List<AiConversationMessage> GetResults()
         {
@@ -263,6 +265,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (PassesDetailFilter(converted) == false)
                 return;
+
+            if (converted.Attachments is { Count: > 0 })
+                _hasAttachments = true;
 
             _results.Add(converted);
         }
