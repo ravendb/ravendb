@@ -1052,7 +1052,7 @@ interface ReactLocationProps {
 
 interface ReactInKnockoutOptions<T> {
     component: T;
-    props?: Parameters<typeof T>[0];
+    props?: Parameters<T>[0];
     dirtyFlag?: ReactDirtyFlag;
 }
 

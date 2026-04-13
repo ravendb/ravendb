@@ -55,16 +55,7 @@ class documents extends shardViewModelBase {
     
     $downloadForm: JQuery;
     
-    isDeleteDocumentsModalVisible = ko.observable<boolean>(false);
-    deleteDocumentsModalView: ReactInKnockout<typeof DeleteDocumentsModal.default> = ko.pureComputed(() => ({
-        component: DeleteDocumentsModal.default,
-        props: {
-            close: () => this.isDeleteDocumentsModalVisible(false),
-            gridController: this.gridController(),
-            onDeleteCompleted: () => this.onDeleteCompleted(),
-            currentCollection: this.currentCollection,
-        },
-    }));
+    deleteDocumentsModalView = ko.observable<ReactInKnockoutOptions<typeof DeleteDocumentsModal.default>>();
     
     itemsSoFar = ko.observable<number>(0);
     continuationToken: string;
@@ -356,13 +347,36 @@ class documents extends shardViewModelBase {
                     }
                 });
         } else {
-            this.isDeleteDocumentsModalVisible(true);
+            const currentCollection = this.currentCollection();
+
+            this.deleteDocumentsModalView({
+                component: DeleteDocumentsModal.default,
+                props: {
+                    close: () => this.deleteDocumentsModalView(null),
+                    onDeleteCompleted: () => this.onDeleteCompleted(),
+                    onEntireCollectionDeleted: (collectionName: string) => this.onEntireCollectionDeleted(collectionName),
+                    collectionName: currentCollection.name,
+                    collectionDocumentCount: currentCollection.documentCount(),
+                    isAllDocuments: currentCollection.isAllDocuments,
+                    excludedIds: selection.excluded.map(x => x.getId()),
+                    selectedCount: selection.count,
+                },
+            });
         }
     }
 
     private onDeleteCompleted() {
         this.spinners.delete(false);
         this.resetGrid(false);
+    }
+
+    private onEntireCollectionDeleted(collectionName: string) {
+        const selectedCollection = this.currentCollection();
+        const allDocsCollection = this.tracker.getAllDocumentsCollection();
+
+        if (selectedCollection?.name === collectionName && selectedCollection !== allDocsCollection) {
+            this.currentCollection(allDocsCollection);
+        }
     }
 
     copySelectedDocs() {
