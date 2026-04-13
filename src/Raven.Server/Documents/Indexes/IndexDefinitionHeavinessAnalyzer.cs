@@ -80,7 +80,6 @@ namespace Raven.Server.Documents.Indexes
         // ─────────────────── Tier 2: Runtime penalty constants ──────────────
         private const int PenaltyMaxOutputsHigh = 5;       // > 100
         private const int PenaltyMaxOutputsVeryHigh = 10;  // > 1024 (on top)
-        private const int PenaltyReferenceLoadWarning = 10;
         private const double ErrorRateThresholdHigh = 0.05;
         private const double ErrorRateThresholdInvalid = 0.15;
         private const int PenaltyErrorRateHigh = 5;
@@ -242,7 +241,7 @@ namespace Raven.Server.Documents.Indexes
                     if (opts.Vector != null)
                     {
                         score += AddPenalty(penalties, $"Field '{fieldName}': Vector options (HNSW graph)", PenaltyFieldVector);
-                        if (opts.Vector.Dimensions > 512)
+                        if (opts.Vector.Dimensions is > 512)
                             score += AddPenalty(penalties, $"Field '{fieldName}': Vector Dimensions > 512", PenaltyFieldVectorHighDimensions);
                     }
                 }
@@ -297,11 +296,11 @@ namespace Raven.Server.Documents.Indexes
 
             try
             {
-                var tree = CSharpSyntaxTree.ParseText(mapExpression);
-                var root = tree.GetRoot();
+                var normalizedMap = Static.IndexCompiler.NormalizeFunction(mapExpression);
+                var expression = SyntaxFactory.ParseExpression(normalizedMap);
 
                 var visitor = new IndexMapComplexityVisitor();
-                visitor.Visit(root);
+                visitor.Visit(expression);
 
                 if (visitor.LoadDocumentCount > 0)
                 {
@@ -445,12 +444,12 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var tree = CSharpSyntaxTree.ParseText(map);
-                    var root = tree.GetRoot();
+                    var normalizedMap = Static.IndexCompiler.NormalizeFunction(map);
+                    var expression = SyntaxFactory.ParseExpression(normalizedMap);
 
                     // Try query syntax first, then method syntax
                     var querySyntaxRetriever = CollectionNameRetriever.QuerySyntax;
-                    querySyntaxRetriever.Visit(root);
+                    querySyntaxRetriever.Visit(expression);
 
                     if (querySyntaxRetriever.CollectionNames?.Length > 0)
                     {
@@ -460,7 +459,7 @@ namespace Raven.Server.Documents.Indexes
                     }
 
                     var methodSyntaxRetriever = CollectionNameRetriever.MethodSyntax;
-                    methodSyntaxRetriever.Visit(root);
+                    methodSyntaxRetriever.Visit(expression);
 
                     if (methodSyntaxRetriever.CollectionNames?.Length > 0)
                     {
