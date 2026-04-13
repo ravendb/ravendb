@@ -983,7 +983,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return $"{IndexNamePrefix}{Regex.Replace(name, @"[^\w\d]", "_")}";
         }
 
-        private static string NormalizeFunction(string function)
+        internal static string NormalizeFunction(string function)
         {
             return function?.Trim().TrimEnd(';');
         }

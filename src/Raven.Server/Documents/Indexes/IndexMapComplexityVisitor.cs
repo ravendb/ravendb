@@ -20,7 +20,6 @@ namespace Raven.Server.Documents.Indexes
         public bool HasWhereClause { get; private set; }
         public bool HasRecurse { get; private set; }
 
-        private int _fanoutDepth;
         private readonly HashSet<SyntaxNode> _visitedFanoutNodes = new();
 
         public override void VisitInvocationExpression(InvocationExpressionSyntax node)
