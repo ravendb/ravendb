@@ -47,12 +47,7 @@ export default function DeleteDocumentsModal({
         asyncGlobalSettings.result?.isRequireTypedConfirmationToDeleteDocuments.getValue() ?? true;
 
     const isSelectedAll = selectedCount === collectionDocumentCount;
-
-    const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
-
     const { confirmText, handleTextChange, isConfirmed } = useDeleteConfirmation(isRequireTypedConfirm);
-    const { tasksService } = useServices();
-    const collectionsList = useAsync(() => tasksService.fetchCollectionsStats(dbName), []);
 
     const deleteCollection = useDeleteCollection({
         close,
@@ -92,7 +87,6 @@ export default function DeleteDocumentsModal({
             </Modal.Header>
             <Modal.Body>
                 <CollectionsInfo
-                    collectionsList={collectionsList}
                     collectionName={collectionName}
                     isAllDocuments={isAllDocuments}
                     selectedCount={selectedCount}
@@ -118,7 +112,7 @@ export default function DeleteDocumentsModal({
                         variant="danger"
                         onClick={onConfirm}
                         className="rounded-pill"
-                        disabled={!isConfirmed || collectionsList.loading}
+                        disabled={!isConfirmed}
                     >
                         Delete
                     </ButtonWithSpinner>
@@ -209,7 +203,6 @@ function useDeleteCollection({
 }
 
 interface CollectionsInfoProps {
-    collectionsList: UseAsyncReturn<collectionsStats>;
     collectionName: string;
     isAllDocuments: boolean;
     selectedCount: number;
@@ -217,7 +210,6 @@ interface CollectionsInfoProps {
 }
 
 function CollectionsInfo({
-    collectionsList,
     collectionName,
     isAllDocuments,
     selectedCount,
@@ -226,20 +218,18 @@ function CollectionsInfo({
     const collectionDisplayName = isAllDocuments ? "all" : collectionName;
 
     return (
-        <LazyLoad active={collectionsList.loading}>
-            <p>
-                {isSelectedAll ? "All" : "Selected"} documents from{" "}
-                {isAllDocuments ? (
-                    <>
-                        <b className="text-uppercase">{collectionDisplayName}</b> collections
-                    </>
-                ) : (
-                    <>
-                        collection <b>{collectionDisplayName}</b>
-                    </>
-                )}{" "}
-                will be deleted ({genUtils.formatNumberToStringFixed(selectedCount, 0)} documents).
-            </p>
-        </LazyLoad>
+        <p>
+            {isSelectedAll ? "All" : "Selected"} documents from{" "}
+            {isAllDocuments ? (
+                <>
+                    <b className="text-uppercase">{collectionDisplayName}</b> collections
+                </>
+            ) : (
+                <>
+                    collection <b>{collectionDisplayName}</b>
+                </>
+            )}{" "}
+            will be deleted ({genUtils.formatNumberToStringFixed(selectedCount, 0)} documents).
+        </p>
     );
 }
