@@ -39,6 +39,7 @@ class virtualDeleteByQueryFailures extends groupedVirtualNotification<queryBased
         
         const item = {
             id: dto.Id,
+            operationId: dto.OperationId,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
             query: query,

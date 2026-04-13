@@ -3,12 +3,10 @@ import { Icon } from "components/common/Icon";
 import React, { useState } from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import { useAsync, UseAsyncReturn } from "react-async-hook";
+import { useAsync } from "react-async-hook";
 import { useServices } from "hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { LazyLoad } from "components/common/LazyLoad";
-import collectionsStats from "models/database/documents/collectionsStats";
 import messagePublisher from "common/messagePublisher";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import notificationCenter from "common/notifications/notificationCenter";
@@ -26,8 +24,8 @@ interface DeleteDocumentsModalProps {
     isAllDocuments: boolean;
     excludedIds: string[];
     selectedCount: number;
-    onDeleteCompleted?: () => void;
-    onEntireCollectionDeleted?: (collectionName: string) => void;
+    onDeleteCompleted: () => void;
+    onEntireCollectionDeleted: (collectionName: string) => void;
 }
 
 export default function DeleteDocumentsModal({
@@ -159,18 +157,10 @@ function useDeleteCollection({
             .deleteCollection(collectionNameForApi, dbName, excludedIds)
             .done((result) => {
                 const operationId = result.OperationId;
+                notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
 
-                // For slow connection, this operation may fail
-                try {
-                    notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
-                } catch {
-                    onDeleteCompleted?.();
-                    close();
-                    return;
-                }
-
-                notificationCenter.instance.databaseOperationsWatch
-                    .monitorOperation(operationId)
+                notificationCenter.instance
+                    .monitorOperation(dbName, operationId)
                     .done(() => {
                         if (excludedIds.length === 0) {
                             messagePublisher.reportSuccess(`Deleted collection ${collectionName}`);
@@ -181,11 +171,11 @@ function useDeleteCollection({
                         }
 
                         if (excludedIds.length === 0) {
-                            onEntireCollectionDeleted?.(collectionName);
+                            onEntireCollectionDeleted(collectionName);
                         }
                     })
                     .always(() => {
-                        onDeleteCompleted?.();
+                        onDeleteCompleted();
                         close();
                     });
             })
@@ -209,12 +199,7 @@ interface CollectionsInfoProps {
     isSelectedAll: boolean;
 }
 
-function CollectionsInfo({
-    collectionName,
-    isAllDocuments,
-    selectedCount,
-    isSelectedAll,
-}: CollectionsInfoProps) {
+function CollectionsInfo({ collectionName, isAllDocuments, selectedCount, isSelectedAll }: CollectionsInfoProps) {
     const collectionDisplayName = isAllDocuments ? "all" : collectionName;
 
     return (

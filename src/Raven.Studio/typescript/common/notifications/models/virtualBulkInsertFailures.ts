@@ -33,6 +33,7 @@ class virtualBulkInsertFailures extends groupedVirtualNotification<virtualBulkOp
 
         const item: virtualBulkOperationFailureItem = {
             id: dto.Id,
+            operationId: dto.OperationId,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
             errorMsg: bulkResult.Message,
@@ -47,7 +48,7 @@ class virtualBulkInsertFailures extends groupedVirtualNotification<virtualBulkOp
         }
         
         this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
-            + " to database " + this.database.name
+            + " to database " + this.databaseName
             + " has been completed with an error. ");
     }
 }
