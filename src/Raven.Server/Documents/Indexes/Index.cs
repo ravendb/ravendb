@@ -3249,6 +3249,8 @@ namespace Raven.Server.Documents.Indexes
                     if (calculateMemoryStats)
                         stats.Memory = GetMemoryStats();
 
+                    stats.HeavinessGrade = ComputeHeavinessGrade(stats, queryContext);
+
                     return stats;
                 }
             }
@@ -3260,6 +3262,54 @@ namespace Raven.Server.Documents.Indexes
             return GetReferencedCollections()?
                 .SelectMany(p => p.Value?.Select(z => z.Name))
                 .ToHashSet();
+        }
+
+        private IndexHeavinessGrade ComputeHeavinessGrade(IndexStats stats, QueryOperationContext queryContext)
+        {
+            try
+            {
+                IndexDefinition indexDefinition = GetIndexDefinition();
+
+                if (indexDefinition == null)
+                    return null;
+
+                IndexDefinitionHeavinessAnalyzer.CollectionDataProvider collectionDataProvider = null;
+                DocumentsOperationContext docsContext = null;
+                IDisposable contextRelease = null;
+
+                try
+                {
+                    if (queryContext?.Documents?.Transaction != null)
+                    {
+                        docsContext = queryContext.Documents;
+                    }
+                    else if (DocumentDatabase != null)
+                    {
+                        contextRelease = DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out docsContext);
+                        docsContext.OpenReadTransaction();
+                    }
+
+                    if (docsContext != null)
+                    {
+                        DocumentsOperationContext capturedContext = docsContext;
+                        collectionDataProvider = collectionName =>
+                        {
+                            CollectionDetails details = DocumentDatabase.DocumentsStorage.GetCollectionDetails(capturedContext, collectionName);
+                            return (details.CountOfDocuments, details.DocumentsSize.SizeInBytes);
+                        };
+                    }
+
+                    return IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(indexDefinition, Collections, stats, collectionDataProvider);
+                }
+                finally
+                {
+                    contextRelease?.Dispose();
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private IndexStats.MemoryStats GetMemoryStats()
