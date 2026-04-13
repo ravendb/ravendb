@@ -56,6 +56,7 @@ class documents extends shardViewModelBase {
     $downloadForm: JQuery;
     
     deleteDocumentsModalView = ko.observable<ReactInKnockoutOptions<typeof DeleteDocumentsModal.default>>();
+    expectedCollectionRemoval = ko.observable<string>();
     
     itemsSoFar = ko.observable<number>(0);
     continuationToken: string;
@@ -167,6 +168,10 @@ class documents extends shardViewModelBase {
 
         this.registerDisposable(this.tracker.registerOnCollectionRemovedHandler(c => {
             const isExpectedRemoval = this.isExpectedCollectionRemoval(c.name);
+
+            if (isExpectedRemoval) {
+                this.expectedCollectionRemoval(null);
+            }
 
             if (c === this.currentCollection()) {
                 if (!isExpectedRemoval) {
@@ -358,6 +363,8 @@ class documents extends shardViewModelBase {
                 props: {
                     close: () => this.deleteDocumentsModalView(null),
                     onDeleteCompleted: () => this.onDeleteCompleted(),
+                    onCollectionDeletionStarted: (collectionName: string) => this.expectedCollectionRemoval(collectionName),
+                    onCollectionDeletionFailed: (collectionName: string) => this.onCollectionDeletionFailed(collectionName),
                     onEntireCollectionDeleted: (collectionName: string) => this.onEntireCollectionDeleted(collectionName),
                     collectionName: currentCollection.name,
                     collectionDocumentCount: currentCollection.documentCount(),
@@ -375,14 +382,13 @@ class documents extends shardViewModelBase {
     }
 
     private isExpectedCollectionRemoval(collectionName: string): boolean {
-        const modalProps = this.deleteDocumentsModalView()?.props;
-        if (!modalProps) {
-            return false;
-        }
+        return this.expectedCollectionRemoval() === collectionName;
+    }
 
-        return modalProps.collectionName === collectionName
-            && !modalProps.isAllDocuments
-            && modalProps.excludedIds.length === 0;
+    private onCollectionDeletionFailed(collectionName: string) {
+        if (this.expectedCollectionRemoval() === collectionName) {
+            this.expectedCollectionRemoval(null);
+        }
     }
 
     private onEntireCollectionDeleted(collectionName: string) {

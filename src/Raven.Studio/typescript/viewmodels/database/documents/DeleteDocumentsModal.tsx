@@ -25,6 +25,8 @@ interface DeleteDocumentsModalProps {
     excludedIds: string[];
     selectedCount: number;
     onDeleteCompleted: () => void;
+    onCollectionDeletionStarted: (collectionName: string) => void;
+    onCollectionDeletionFailed: (collectionName: string) => void;
     onEntireCollectionDeleted: (collectionName: string) => void;
 }
 
@@ -36,6 +38,8 @@ export default function DeleteDocumentsModal({
     excludedIds,
     selectedCount,
     onDeleteCompleted,
+    onCollectionDeletionStarted,
+    onCollectionDeletionFailed,
     onEntireCollectionDeleted,
 }: DeleteDocumentsModalProps) {
     // Note: wrapped in function to avoid type error (JQueryPromise<globalSettings>)
@@ -55,6 +59,8 @@ export default function DeleteDocumentsModal({
         excludedIds,
         selectedCount,
         onDeleteCompleted,
+        onCollectionDeletionStarted,
+        onCollectionDeletionFailed,
         onEntireCollectionDeleted,
     });
 
@@ -141,6 +147,8 @@ function useDeleteCollection({
     excludedIds,
     selectedCount: documentCount,
     onDeleteCompleted,
+    onCollectionDeletionStarted,
+    onCollectionDeletionFailed,
     onEntireCollectionDeleted,
 }: DeleteDocumentsModalProps) {
     const { databasesService } = useServices();
@@ -151,12 +159,18 @@ function useDeleteCollection({
     const execute = () => {
         setIsLoading(true);
         const collectionNameForApi = isAllDocuments ? "@all_docs" : collectionName;
+        const isCollectionRemoval = excludedIds.length === 0 && !isAllDocuments;
 
         // This is JQueryPromise. Use 'done' to prevent wrong order of execution in event loop
         databasesService
             .deleteCollection(collectionNameForApi, dbName, excludedIds)
             .done((result) => {
                 const operationId = result.OperationId;
+
+                if (isCollectionRemoval) {
+                    onCollectionDeletionStarted(collectionName);
+                }
+
                 notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
 
                 notificationCenter.instance
@@ -172,6 +186,11 @@ function useDeleteCollection({
 
                         if (excludedIds.length === 0) {
                             onEntireCollectionDeleted(collectionName);
+                        }
+                    })
+                    .fail(() => {
+                        if (isCollectionRemoval) {
+                            onCollectionDeletionFailed(collectionName);
                         }
                     })
                     .always(() => {
