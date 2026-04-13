@@ -315,12 +315,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (cleanupTombstones)
             {
+                _hasMoreTombstones = false;
                 foreach (var cmd in cleanCompareExchangeTombstonesCommands)
                 {
                     var result = await _server.SendToLeaderAsync(cmd);
                     await _server.Cluster.WaitForIndexNotification(result.Index);
-                    var hasMore = (bool)result.Result;
-                    _hasMoreTombstones |= hasMore;
+                    _hasMoreTombstones |= (bool)result.Result;
                 }
 
                 if (_hasMoreTombstones == false)
