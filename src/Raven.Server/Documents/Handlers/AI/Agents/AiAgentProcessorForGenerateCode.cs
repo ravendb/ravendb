@@ -39,21 +39,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var generatedCode = lang.ToLower() switch
             {
-                "c#" => $$"""
-                          using System;
-                          using System.Collections.Generic;
-                          using Raven.Client.Documents.Operations.AI.Agents;
-
-                          public class GeneratedAgentTest
-                          {
-                              public void Run()
-                              {
-                          {{new CSharpCodeGenerator().Generate(agent, "agentCSharp", indent: 2)}}
-                              }
-                          }
-                          """,
-                "javascript" => new NodejsCodeGenerator().Generate(agent, "agentJs"),
-                "python" => new PythonCodeGenerator().Generate(agent, "agentPython"),
+                "c#" => new CSharpCodeGenerator().GenerateFullFile(agent, "agent"),
+                "javascript" => new NodejsCodeGenerator().GenerateFullFile(agent, "agent"),
+                "python" => new PythonCodeGenerator().GenerateFullFile(agent, "agent"),
                 _ => throw new ArgumentException($"Unsupported language '{lang}'. Supported languages are: C#, JavaScript, Python.")
             };
 

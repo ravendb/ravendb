@@ -39,6 +39,19 @@ public class RavenDB_26357 : RavenTestBase
 
         var generatedCode = result.GeneratedCode;
 
+        generatedCode = generatedCode.Replace("using Raven.Client.Documents.Operations.AI.Agents;", """
+using Raven.Client.Documents.Operations.AI.Agents; 
+public class Program
+{ 
+    public static void Main()
+    {
+""");
+        generatedCode += """
+
+    }
+}
+""";
+
         var syntaxTree = CSharpSyntaxTree.ParseText(generatedCode);
 
         // Gather the references needed to compile the generated code
@@ -230,8 +243,8 @@ public class RavenDB_26357 : RavenTestBase
         public static readonly ChangeUserNameSampleRequest Instance = new()
         {
             UserId = "Users/123456789",
-            OldUserName = "James Parker",
-            NewUserName = "James Smith"
+            OldUserName = "Jame's Parker",
+            NewUserName = "Jame's Smith"
         };
 
         public string UserId { get; set; }

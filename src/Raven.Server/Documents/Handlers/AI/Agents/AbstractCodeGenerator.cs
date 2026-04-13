@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 public abstract class AbstractCodeGenerator
 {
+    public virtual string GenerateFullFile(object obj, string varName = "obj") => Generate(obj, varName);
+
     public string Generate(object obj, string varName = "obj", int indent = 0)
     {
         var sb = new StringBuilder();
@@ -136,17 +138,17 @@ public abstract class AbstractCodeGenerator
     protected virtual string FormatValue(object value) => value switch
     {
         null => "null",
-        string s => $"\"{EscapeDoubleQuoted(s)}\"",
+        string s => FormatString(s), // if the string doesnt contains escape characters use $"\"{s}\""
         bool b => b.ToString().ToLower(),
         Enum e => $"{e.GetType().Name}.{e}",
         _ => value.ToString()
     };
 
-    protected string EscapeDoubleQuoted(string s) =>
-        s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    private static string FormatString(string s) => HasEscaping(s) ? $"\"\"\"{s}\"\"\"" : $"\"{s}\"";
 
-    protected string EscapeSingleQuoted(string s) =>
-        s.Replace("\\", "\\\\").Replace("'", "\\'");
+    private static bool HasEscaping(string s) => s.Contains('\"') || s.Contains('\\') || s.Contains('\n') || s.Contains('\r');
+
+    protected string EscapeSingleQuoted(string s) => s.Replace("\\", "\\\\").Replace("'", "\\'");
 
     protected string Indent(int level) => new(' ', level * 4);
 
@@ -162,6 +164,14 @@ public abstract class AbstractCodeGenerator
 
 public class CSharpCodeGenerator : AbstractCodeGenerator
 {
+    public override string GenerateFullFile(object obj, string varName = "obj") => $$"""
+                                                                                     using System;
+                                                                                     using System.Collections.Generic;
+                                                                                     using Raven.Client.Documents.Operations.AI.Agents;
+
+                                                                                     {{Generate(obj, varName)}}
+                                                                                     """;
+
     protected override void WriteRootPrefix(StringBuilder sb, object obj, string varName, int indent) =>
         sb.AppendLine($"{Indent(indent)}var {varName} = new {obj.GetType().Name}");
 
@@ -199,6 +209,12 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
 public class NodejsCodeGenerator : AbstractCodeGenerator
 {
+    public override string GenerateFullFile(object obj, string varName = "obj") => $$"""
+                                                                                     const { RavenDB } = require('ravendb');
+
+                                                                                     {{Generate(obj, varName)}}
+                                                                                     """;
+
     protected override string TransformPropertyName(string name) => ToCamelCase(name);
     protected override string FormatValue(object value) => value switch
     {
@@ -246,6 +262,12 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
 
 public class PythonCodeGenerator : AbstractCodeGenerator
 {
+    public override string GenerateFullFile(object obj, string varName = "obj") => $"""
+                                                                                    from ravendb.operations.ai.agents import *
+
+                                                                                    {Generate(obj, varName)}
+                                                                                    """;
+
     protected override string TransformPropertyName(string name) => ToSnakeCase(name);
 
     // Python strings use single quotes inside the value need no escaping
