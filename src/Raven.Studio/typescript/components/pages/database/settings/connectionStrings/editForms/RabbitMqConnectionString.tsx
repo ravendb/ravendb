@@ -13,6 +13,7 @@ import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
@@ -30,6 +31,7 @@ interface RabbitMqConnectionStringProps extends EditConnectionStringFormProps {
 export default function RabbitMqConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: RabbitMqConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["RabbitMQ"].map((x) => x.name);
@@ -118,6 +120,7 @@ export default function RabbitMqConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRabbitMqEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
@@ -126,6 +129,7 @@ export default function RabbitMqConnectionString({
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

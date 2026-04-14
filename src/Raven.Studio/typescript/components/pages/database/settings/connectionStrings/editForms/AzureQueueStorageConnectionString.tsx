@@ -16,6 +16,7 @@ import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "components/pages/database/settings/connectionStrings/editForms/shared/ExcludedDatabasesFormSelect";
 import { useServices } from "components/hooks/useServices";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { useAppSelector } from "components/store";
@@ -36,6 +37,7 @@ export interface AzureQueueStorageConnectionStringProps extends EditConnectionSt
 export default function AzureQueueStorageConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: AzureQueueStorageConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AzureQueueStorage"].map((x) => x.name);
@@ -145,6 +147,7 @@ export default function AzureQueueStorageConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editAzureQueueStorageEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -273,6 +276,7 @@ function getStringRequiredSchema(authType: AzureQueueStorageAuthenticationType) 
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     authType: yup.string<AzureQueueStorageAuthenticationType>(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
     settings: yupObjectSchema<FormData["settings"]>({
         connectionString: yupObjectSchema<FormData["settings"]["connectionString"]>({
             connectionStringValue: yup

@@ -12,6 +12,7 @@ import Form from "react-bootstrap/Form";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionStringUsedByTasks from "components/pages/database/settings/connectionStrings/editForms/shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "components/pages/database/settings/connectionStrings/editForms/shared/ExcludedDatabasesFormSelect";
 import { useServices } from "components/hooks/useServices";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import { useAppSelector } from "components/store";
@@ -30,6 +31,7 @@ export interface AmazonSqsConnectionStringProps extends EditConnectionStringForm
 export default function AmazonSqsConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: AmazonSqsConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AmazonSqs"].map((x) => x.name);
@@ -139,6 +141,7 @@ export default function AmazonSqsConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editAmazonSqsEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -211,6 +214,7 @@ function getStringRequiredSchema(authType: AmazonSqsAuthenticationType) {
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     authType: yup.string<AmazonSqsAuthenticationType>(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
     settings: yupObjectSchema<FormData["settings"]>({
         basic: yupObjectSchema<FormData["settings"]["basic"]>({
             accessKey: getStringRequiredSchema("basic"),

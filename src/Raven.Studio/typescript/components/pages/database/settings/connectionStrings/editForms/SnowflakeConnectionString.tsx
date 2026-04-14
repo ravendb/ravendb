@@ -10,6 +10,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import { Icon } from "components/common/Icon";
@@ -29,6 +30,7 @@ export interface SnowflakeConnectionStringProps extends EditConnectionStringForm
 export default function SnowflakeConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: SnowflakeConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Snowflake"].map((x) => x.name);
@@ -116,6 +118,7 @@ export default function SnowflakeConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSnowflakeEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
@@ -124,6 +127,7 @@ export default function SnowflakeConnectionString({
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

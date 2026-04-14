@@ -12,6 +12,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import { Icon } from "components/common/Icon";
@@ -34,6 +35,7 @@ export interface SqlConnectionStringProps extends EditConnectionStringFormProps 
 export default function SqlConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: SqlConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Sql"].map((x) => x.name);
@@ -162,6 +164,7 @@ export default function SqlConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSqlEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );
@@ -260,6 +263,7 @@ const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
     connectionString: yup.string().nullable().required(),
     factoryName: yup.string<SqlConnectionStringFactoryName>().nullable().required(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

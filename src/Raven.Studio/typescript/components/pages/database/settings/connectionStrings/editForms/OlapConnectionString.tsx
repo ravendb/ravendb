@@ -16,9 +16,11 @@ import {
 } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAppSelector } from "components/store";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import * as yup from "yup";
 
 type FormData = ConnectionFormData<OlapConnection>;
 
@@ -29,6 +31,7 @@ interface OlapConnectionStringProps extends EditConnectionStringFormProps {
 export default function OlapConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: OlapConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Olap"].map((x) => x.name);
@@ -69,6 +72,7 @@ export default function OlapConnectionString({
                     />
                 </div>
                 <FormDestinationList isForNewConnection={isForNewConnection} />
+                {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
 
             <ConnectionStringUsedByTasks
@@ -81,6 +85,7 @@ export default function OlapConnectionString({
 
 const schema = yupObjectSchema<Omit<FormData, "destinations">>({
     name: connectionStringsUtils.nameSchema,
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 }).concat(destinationsSchema);
 
 const yupSchemaResolver = yupResolver(schema);

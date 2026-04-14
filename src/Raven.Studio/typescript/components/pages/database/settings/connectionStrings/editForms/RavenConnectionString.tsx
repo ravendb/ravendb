@@ -13,6 +13,7 @@ import * as yup from "yup";
 import { useAsyncCallback } from "react-async-hook";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ConnectionTestError from "../../../../../common/connectionTests/ConnectionTestError";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import RichAlert from "components/common/RichAlert";
@@ -30,6 +31,7 @@ export interface RavenConnectionStringProps extends EditConnectionStringFormProp
 export default function RavenConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: RavenConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Raven"].map((x) => x.name);
@@ -108,6 +110,7 @@ export default function RavenConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRavenEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -223,6 +226,7 @@ const schema = yupObjectSchema<FormData>({
         .array()
         .of(yup.object({ url: yup.string().basicUrl().nullable().required() }))
         .min(1),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

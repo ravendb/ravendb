@@ -25,6 +25,7 @@ import messagePublisher from "common/messagePublisher";
 import { mapElasticSearchAuthenticationToDto } from "../store/connectionStringsMapsToDto";
 import ConnectionTestResult from "../../../../../common/connectionTests/ConnectionTestResult";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import ElasticSearchCertificate from "./ElasticSearchCertificate";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -43,6 +44,7 @@ export interface ElasticSearchStringProps extends EditConnectionStringFormProps 
 export default function ElasticSearchConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: ElasticSearchStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["ElasticSearch"].map((x) => x.name);
@@ -253,6 +255,7 @@ export default function ElasticSearchConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editElasticSearchEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -395,6 +398,7 @@ const schema = yupObjectSchema<FormData>({
         .array()
         .of(yup.object({ url: yup.string().basicUrl().nullable().required() }))
         .min(1),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

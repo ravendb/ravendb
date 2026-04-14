@@ -12,6 +12,7 @@ import ServerWideCustomSorters = require("components/pages/resources/manageServe
 import ServerSettings = require("components/pages/resources/manageServer/serverSettings/ServerSettings");
 import AdminLogs = require("components/pages/resources/manageServer/adminLogs/AdminLogs");
 import Certificates = require("components/pages/resources/manageServer/certificates/Certificates");
+import ServerwideConnectionStrings = require("components/pages/resources/manageServer/serverwideConnectionStrings/ServerWideConnectionStrings");
 
 export = getManageServerMenuItem;
 
@@ -183,6 +184,22 @@ function getManageServerMenuItem() {
                     { name: "Add New Server-Wide Custom Sorter", alternativeNames: ["Create Server-Wide Custom Sorter"] },
                     { name: "Edit New Server-Wide Custom Sorter" },
                     { name: "Delete New Server-Wide Custom Sorter", alternativeNames: ["Remove New Server-Wide Custom Sorter"] },
+                ],
+            },
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/serverwideConnectionStrings',
+            moduleId: reactUtils.bridgeToReact(ServerwideConnectionStrings.default, "nonShardedView"),
+            title: "Server-Wide Connection Strings",
+            nav: true,
+            css: 'icon-manage-connection-strings',
+            dynamicHash: appUrl.forServerwideConnectionStrings,
+            requiredAccess: "ClusterAdmin",
+            search: {
+                innerActions: [
+                    { name: "Add New Server-Wide Connection String", alternativeNames: ["Create Server-Wide Connection String"] },
+                    { name: "Edit Server-Wide Connection String" },
+                    { name: "Delete Server-Wide Connection String", alternativeNames: ["Remove Server-Wide Connection String"] },
                 ],
             },
         }),

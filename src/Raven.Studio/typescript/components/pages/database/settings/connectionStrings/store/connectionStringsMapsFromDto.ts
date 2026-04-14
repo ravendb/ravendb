@@ -1,4 +1,5 @@
 import {
+    Connection,
     ConnectionStringUsedTask,
     ElasticSearchAuthenticationMethod,
     ElasticSearchConnection,
@@ -380,39 +381,281 @@ export function mapAzureServiceBusConnectionsFromDto(
         );
 }
 
+function getAiConnectorType(connection: AiConnectionStringDto): AiConnection["connectorType"] {
+    if (connection.AzureOpenAiSettings) {
+        return "azureOpenAiSettings";
+    }
+    if (connection.GoogleSettings) {
+        return "googleSettings";
+    }
+    if (connection.HuggingFaceSettings) {
+        return "huggingFaceSettings";
+    }
+    if (connection.OllamaSettings) {
+        return "ollamaSettings";
+    }
+    if (connection.EmbeddedSettings) {
+        return "embeddedSettings";
+    }
+    if (connection.OpenAiSettings) {
+        return "openAiSettings";
+    }
+    if (connection.MistralAiSettings) {
+        return "mistralAiSettings";
+    }
+    if (connection.VertexSettings) {
+        return "vertexSettings";
+    }
+    return null;
+}
+
+type WithExcludedDatabases<T> = T & { ExcludedDatabases?: string[] };
+
+export type ServerWideConnectionStringDto =
+    | WithExcludedDatabases<RavenConnectionStringDto>
+    | WithExcludedDatabases<SqlConnectionStringDto>
+    | WithExcludedDatabases<SnowflakeConnectionStringDto>
+    | WithExcludedDatabases<OlapConnectionStringDto>
+    | WithExcludedDatabases<ElasticSearchConnectionStringDto>
+    | WithExcludedDatabases<QueueConnectionStringDto>
+    | WithExcludedDatabases<AiConnectionStringDto>;
+
+const noTasks: ConnectionStringUsedTask[] = [];
+
+
+export function mapServerWideConnectionsFromDto(
+    results: ServerWideConnectionStringDto[]
+): { [key in StudioConnectionType]: Connection[] } {
+    const mapped: Record<StudioConnectionType, Connection[]> = {
+        Raven: [],
+        Sql: [],
+        Snowflake: [],
+        Olap: [],
+        ElasticSearch: [],
+        Kafka: [],
+        RabbitMQ: [],
+        AzureQueueStorage: [],
+        AmazonSqs: [],
+        Ai: [],
+    };
+
+    for (const dto of results) {
+        const excludedDatabases = dto.ExcludedDatabases ?? [];
+        switch (dto.Type) {
+            case "Raven": {
+                const d = dto as WithExcludedDatabases<RavenConnectionStringDto>;
+                mapped.Raven.push({
+                    type: "Raven",
+                    name: d.Name,
+                    database: d.Database,
+                    topologyDiscoveryUrls: d.TopologyDiscoveryUrls.map((url) => ({ url })),
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                } satisfies RavenConnection);
+                break;
+            }
+            case "Sql": {
+                const d = dto as WithExcludedDatabases<SqlConnectionStringDto>;
+                mapped.Sql.push({
+                    type: "Sql",
+                    name: d.Name,
+                    connectionString: d.ConnectionString,
+                    factoryName: d.FactoryName,
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                } satisfies SqlConnection);
+                break;
+            }
+            case "Snowflake": {
+                const d = dto as WithExcludedDatabases<SnowflakeConnectionStringDto>;
+                mapped.Snowflake.push({
+                    type: "Snowflake",
+                    name: d.Name,
+                    connectionString: d.ConnectionString,
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                } satisfies SnowflakeConnection);
+                break;
+            }
+            case "Olap": {
+                const d = dto as WithExcludedDatabases<OlapConnectionStringDto>;
+                mapped.Olap.push({
+                    type: "Olap",
+                    name: d.Name,
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                    ...mapDestinationsFromDto(_.omit(d, "Type", "Name")),
+                } satisfies OlapConnection);
+                break;
+            }
+            case "ElasticSearch": {
+                const d = dto as WithExcludedDatabases<ElasticSearchConnectionStringDto>;
+                mapped.ElasticSearch.push({
+                    type: "ElasticSearch",
+                    name: d.Name,
+                    authMethodUsed: getElasticSearchAuthenticationMethod(d),
+                    apiKey: d.Authentication?.ApiKey?.ApiKey,
+                    apiKeyId: d.Authentication?.ApiKey?.ApiKeyId,
+                    username: d.Authentication?.Basic?.Username,
+                    password: d.Authentication?.Basic?.Password,
+                    certificatesBase64: d.Authentication?.Certificate?.CertificatesBase64,
+                    nodes: d.Nodes.map((url) => ({ url })),
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                } satisfies ElasticSearchConnection);
+                break;
+            }
+            case "Queue": {
+                const d = dto as WithExcludedDatabases<QueueConnectionStringDto>;
+                switch (d.BrokerType) {
+                    case "Kafka":
+                        mapped.Kafka.push({
+                            type: "Kafka",
+                            name: d.Name,
+                            bootstrapServers: d.KafkaConnectionSettings.BootstrapServers,
+                            connectionOptions: Object.keys(d.KafkaConnectionSettings.ConnectionOptions).map((key) => ({
+                                key,
+                                value: d.KafkaConnectionSettings.ConnectionOptions[key],
+                            })),
+                            isUseRavenCertificate: d.KafkaConnectionSettings.UseRavenCertificate,
+                            usedByTasks: noTasks,
+                            excludedDatabases,
+                        } satisfies KafkaConnection);
+                        break;
+                    case "RabbitMq":
+                        mapped.RabbitMQ.push({
+                            type: "RabbitMQ",
+                            name: d.Name,
+                            connectionString: d.RabbitMqConnectionSettings.ConnectionString,
+                            usedByTasks: noTasks,
+                            excludedDatabases,
+                        } satisfies RabbitMqConnection);
+                        break;
+                    case "AzureQueueStorage":
+                        mapped.AzureQueueStorage.push({
+                            type: "AzureQueueStorage",
+                            name: d.Name,
+                            authType: getAzureQueueStorageAuthType(d),
+                            settings: {
+                                connectionString: {
+                                    connectionStringValue: d.AzureQueueStorageConnectionSettings.ConnectionString,
+                                },
+                                entraId: {
+                                    clientId: d.AzureQueueStorageConnectionSettings.EntraId?.ClientId,
+                                    clientSecret: d.AzureQueueStorageConnectionSettings.EntraId?.ClientSecret,
+                                    storageAccountName: d.AzureQueueStorageConnectionSettings.EntraId?.StorageAccountName,
+                                    tenantId: d.AzureQueueStorageConnectionSettings.EntraId?.TenantId,
+                                },
+                                passwordless: {
+                                    storageAccountName: d.AzureQueueStorageConnectionSettings.Passwordless?.StorageAccountName,
+                                },
+                            },
+                            usedByTasks: noTasks,
+                            excludedDatabases,
+                        } satisfies AzureQueueStorageConnection);
+                        break;
+                    case "AmazonSqs":
+                        mapped.AmazonSqs.push({
+                            type: "AmazonSqs",
+                            name: d.Name,
+                            authType: getAmazonSqsAuthType(d),
+                            settings: {
+                                passwordless: d.AmazonSqsConnectionSettings.Passwordless,
+                                basic: {
+                                    accessKey: d.AmazonSqsConnectionSettings.Basic?.AccessKey,
+                                    secretKey: d.AmazonSqsConnectionSettings.Basic?.SecretKey,
+                                    regionName: d.AmazonSqsConnectionSettings.Basic?.RegionName,
+                                },
+                            },
+                            usedByTasks: noTasks,
+                            excludedDatabases,
+                        } satisfies AmazonSqsConnection);
+                        break;
+                }
+                break;
+            }
+            case "Ai": {
+                const d = dto as WithExcludedDatabases<AiConnectionStringDto>;
+                mapped.Ai.push({
+                    type: "Ai",
+                    name: d.Name,
+                    usedByTasks: noTasks,
+                    excludedDatabases,
+                    identifier: d.Identifier,
+                    connectorType: getAiConnectorType(d),
+                    modelType: d.ModelType,
+                    azureOpenAiSettings: {
+                        apiKey: d.AzureOpenAiSettings?.ApiKey,
+                        endpoint: d.AzureOpenAiSettings?.Endpoint,
+                        model: d.AzureOpenAiSettings?.Model,
+                        deploymentName: d.AzureOpenAiSettings?.DeploymentName,
+                        dimensions: d.AzureOpenAiSettings?.Dimensions,
+                        embeddingsMaxConcurrentBatches: d.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                        isSetTemperature: d.AzureOpenAiSettings?.Temperature != null,
+                        temperature: d.AzureOpenAiSettings?.Temperature ?? null,
+                    },
+                    googleSettings: {
+                        aiVersion: d.GoogleSettings?.AiVersion,
+                        apiKey: d.GoogleSettings?.ApiKey,
+                        model: d.GoogleSettings?.Model,
+                        dimensions: d.GoogleSettings?.Dimensions,
+                        embeddingsMaxConcurrentBatches: d.GoogleSettings?.EmbeddingsMaxConcurrentBatches,
+                    },
+                    huggingFaceSettings: {
+                        apiKey: d.HuggingFaceSettings?.ApiKey,
+                        endpoint: d.HuggingFaceSettings?.Endpoint,
+                        model: d.HuggingFaceSettings?.Model,
+                        embeddingsMaxConcurrentBatches: d.HuggingFaceSettings?.EmbeddingsMaxConcurrentBatches,
+                    },
+                    ollamaSettings: {
+                        model: d.OllamaSettings?.Model,
+                        uri: d.OllamaSettings?.Uri,
+                        think: d.OllamaSettings?.Think,
+                        embeddingsMaxConcurrentBatches: d.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
+                        isSetTemperature: d.OllamaSettings?.Temperature != null,
+                        temperature: d.OllamaSettings?.Temperature ?? null,
+                    },
+                    embeddedSettings: {
+                        embeddingsMaxConcurrentBatches: d.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
+                    },
+                    openAiSettings: {
+                        apiKey: d.OpenAiSettings?.ApiKey,
+                        endpoint: d.OpenAiSettings?.Endpoint,
+                        model: d.OpenAiSettings?.Model,
+                        organizationId: d.OpenAiSettings?.OrganizationId,
+                        projectId: d.OpenAiSettings?.ProjectId,
+                        dimensions: d.OpenAiSettings?.Dimensions,
+                        embeddingsMaxConcurrentBatches: d.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                        isSetTemperature: d.OpenAiSettings?.Temperature != null,
+                        temperature: d.OpenAiSettings?.Temperature ?? null,
+                    },
+                    mistralAiSettings: {
+                        apiKey: d.MistralAiSettings?.ApiKey,
+                        endpoint: d.MistralAiSettings?.Endpoint,
+                        model: d.MistralAiSettings?.Model,
+                        embeddingsMaxConcurrentBatches: d.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
+                    },
+                    vertexSettings: {
+                        aiVersion: d.VertexSettings?.AiVersion,
+                        googleCredentialsJson: d.VertexSettings?.GoogleCredentialsJson,
+                        location: d.VertexSettings?.Location,
+                        model: d.VertexSettings?.Model,
+                        embeddingsMaxConcurrentBatches: d.VertexSettings?.EmbeddingsMaxConcurrentBatches,
+                    },
+                } satisfies AiConnection);
+                break;
+            }
+        }
+    }
+
+    return mapped;
+}
+
 export function mapAiConnectionsFromDto(
     connections: Record<string, AiConnectionStringDto>,
     ongoingTasks: OngoingTaskForConnection[]
 ): AiConnection[] {
     const type: AiConnection["type"] = "Ai";
-
-    const getConnectorType = (connection: AiConnectionStringDto): AiConnection["connectorType"] => {
-        if (connection.AzureOpenAiSettings) {
-            return "azureOpenAiSettings";
-        }
-        if (connection.GoogleSettings) {
-            return "googleSettings";
-        }
-        if (connection.HuggingFaceSettings) {
-            return "huggingFaceSettings";
-        }
-        if (connection.OllamaSettings) {
-            return "ollamaSettings";
-        }
-        if (connection.EmbeddedSettings) {
-            return "embeddedSettings";
-        }
-        if (connection.OpenAiSettings) {
-            return "openAiSettings";
-        }
-        if (connection.MistralAiSettings) {
-            return "mistralAiSettings";
-        }
-        if (connection.VertexSettings) {
-            return "vertexSettings";
-        }
-        return null;
-    };
 
     return Object.values(connections).map(
         (connection) =>
@@ -421,7 +664,7 @@ export function mapAiConnectionsFromDto(
                 name: connection.Name,
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 identifier: connection.Identifier,
-                connectorType: getConnectorType(connection),
+                connectorType: getAiConnectorType(connection),
                 modelType: connection.ModelType,
                 azureOpenAiSettings: {
                     apiKey: connection.AzureOpenAiSettings?.ApiKey,

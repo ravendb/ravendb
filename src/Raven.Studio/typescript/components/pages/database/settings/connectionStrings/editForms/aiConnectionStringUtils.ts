@@ -295,6 +295,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("mistralAiSettings"),
     }),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 function getDefaultValues(initialConnection: AiConnection, isForNewConnection: boolean): FormData {

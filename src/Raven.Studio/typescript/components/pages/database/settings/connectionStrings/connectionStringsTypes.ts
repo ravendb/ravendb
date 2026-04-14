@@ -31,6 +31,7 @@ export interface ConnectionStringUsedTask {
 interface ConnectionBase {
     name?: string;
     usedByTasks?: ConnectionStringUsedTask[];
+    excludedDatabases?: string[];
 }
 
 export interface RavenConnection extends ConnectionBase {
@@ -245,6 +246,7 @@ export type ConnectionStringDto = Partial<
 export interface EditConnectionStringFormProps {
     initialConnection: Connection;
     isForNewConnection: boolean;
+    isServerwide?: boolean;
     onSave: (x: Connection) => void;
 }
 

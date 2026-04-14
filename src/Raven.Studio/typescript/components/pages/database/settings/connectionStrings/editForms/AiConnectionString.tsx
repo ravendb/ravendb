@@ -5,6 +5,7 @@ import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
 import { yupResolver } from "@hookform/resolvers/yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
@@ -43,7 +44,7 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: AiConnection;
 }
 
-export default function AiConnectionString({ initialConnection, isForNewConnection, onSave }: AiConnectionStringProps) {
+export default function AiConnectionString({ initialConnection, isForNewConnection, isServerwide, onSave }: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
 
     const form = useForm<FormData>({
@@ -188,6 +189,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     tasks={initialConnection.usedByTasks}
                     urlProvider={forCurrentDatabase.editEmbeddingsGeneration}
                 />
+                {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
         </FormProvider>
     );

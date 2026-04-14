@@ -10,6 +10,7 @@ import { SharedStubs } from "test/stubs/SharedStubs";
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { mockJQueryError } from "test/mocks/utils";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
@@ -90,6 +91,12 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withConnectionStrings(dto?: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) {
         return this.mockResolvedValue(this.mocks.getConnectionStrings, dto, DatabasesStubs.connectionStrings());
+    }
+
+    withServerWideConnectionStrings(dto?: MockedValue<{ Results: ServerWideConnectionStringDto[] }>) {
+        return this.mockResolvedValue(this.mocks.getServerWideConnectionStrings, dto, {
+            Results: DatabasesStubs.serverWideConnectionStrings(),
+        });
     }
 
     withTestClusterNodeConnection(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
@@ -210,7 +217,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withEtlErrors(dto?: MockedValue<EtlErrors[]>) {
         return this.mockResolvedValue(this.mocks.getEtlErrors, dto, TasksStubs.etlErrors());
-    }
+}
 
     withEtlStats(dto?: MockedValue<EtlTaskStats[]>) {
         return this.mockResolvedValue(this.mocks.getEtlStats, dto, TasksStubs.etlStats());

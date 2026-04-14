@@ -25,10 +25,13 @@ import copyToClipboard from "common/copyToClipboard";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
+    isServerwide?: boolean;
+    onConnectionDeleted?: (connection: Connection) => void;
+    onEditConnection?: (connection: Connection) => void;
 }
 
 export default function ConnectionStringsPanel(props: ConnectionStringsPanelProps) {
-    const { connection } = props;
+    const { connection, isServerwide = false, onConnectionDeleted, onEditConnection } = props;
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
@@ -39,10 +42,17 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasWriteAccess = isServerwide ? hasClusterAdminAccess : hasDatabaseAdminAccess;
 
     const asyncDelete = useAsyncCallback(async () => {
-        await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
-        dispatch(connectionStringsActions.connectionDeleted(connection));
+        if (isServerwide) {
+            await tasksService.deleteServerWideConnectionString(getDtoEtlType(connection.type), connection.name);
+            onConnectionDeleted?.(connection);
+        } else {
+            await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
+            dispatch(connectionStringsActions.connectionDeleted(connection));
+        }
     });
 
     const onDelete = async () => {
@@ -69,12 +79,16 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                     <RichPanelInfo>
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
-                    {hasDatabaseAdminAccess && (
+                    {hasWriteAccess && (
                         <RichPanelActions>
                             <Button
                                 variant="secondary"
                                 title="Edit connection string"
-                                onClick={() => dispatch(connectionStringsActions.editConnectionModalOpened(connection))}
+                                onClick={() =>
+                                    isServerwide
+                                        ? onEditConnection?.(connection)
+                                        : dispatch(connectionStringsActions.editConnectionModalOpened(connection))
+                                }
                             >
                                 <Icon icon="edit" margin="m-0" />
                             </Button>

@@ -12,6 +12,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
+import ExcludedDatabasesFormSelect from "./shared/ExcludedDatabasesFormSelect";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { yupObjectSchema } from "components/utils/yupUtils";
 import ConnectionTestError from "components/common/connectionTests/ConnectionTestError";
@@ -32,6 +33,7 @@ interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
 export default function KafkaConnectionString({
     initialConnection,
     isForNewConnection,
+    isServerwide,
     onSave,
 }: KafkaConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Kafka"].map((x) => x.name);
@@ -209,6 +211,7 @@ export default function KafkaConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editKafkaEtl}
             />
+            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -246,6 +249,7 @@ const schema = yupObjectSchema<FormData>({
         }),
     connectionOptions: yup.array().of(connectionOptionSchema),
     isUseRavenCertificate: yup.boolean(),
+    excludedDatabases: yup.array().of(yup.string()).optional(),
 });
 
 const yupSchemaResolver = yupResolver(schema);

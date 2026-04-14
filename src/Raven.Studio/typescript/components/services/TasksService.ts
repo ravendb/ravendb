@@ -23,6 +23,9 @@ import testSqlConnectionStringCommand from "commands/database/cluster/testSqlCon
 import deleteConnectionStringCommand from "commands/database/settings/deleteConnectionStringCommand";
 import getConnectionStringsCommand from "commands/database/settings/getConnectionStringsCommand";
 import saveConnectionStringCommand from "commands/database/settings/saveConnectionStringCommand";
+import getServerWideConnectionStringsCommand from "commands/serverWide/connectionStrings/getServerWideConnectionStringsCommand";
+import saveServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/saveServerWideConnectionStringCommand";
+import deleteServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/deleteServerWideConnectionStringCommand";
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
@@ -129,6 +132,20 @@ export default class TasksService {
 
     async deleteConnectionString(...args: ConstructorParameters<typeof deleteConnectionStringCommand>) {
         return new deleteConnectionStringCommand(...args).execute();
+    }
+
+    async getServerWideConnectionStrings() {
+        return new getServerWideConnectionStringsCommand().execute();
+    }
+
+    async saveServerWideConnectionString(connectionString: ConnectionStringDto) {
+        return new saveServerWideConnectionStringCommand(connectionString).execute();
+    }
+
+    async deleteServerWideConnectionString(
+        ...args: ConstructorParameters<typeof deleteServerWideConnectionStringCommand>
+    ) {
+        return new deleteServerWideConnectionStringCommand(...args).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {
