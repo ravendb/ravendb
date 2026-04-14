@@ -10,11 +10,8 @@ namespace Voron.Impl.Backup
         private const uint FSCTL_SET_SPARSE = 0x000900c4;
 
         /// <summary>
-        /// Prepares a file for sparse-aware restore logic.
-        /// On Windows, this calls FSCTL_SET_SPARSE. On POSIX (Linux/macOS), unwritten
-        /// regions are left unwritten and the filesystem may account for them as holes,
-        /// so there is no additional setup required here.
-        /// Returns false if sparse files are not supported on this filesystem.
+        /// Marks a file as sparse. On Windows calls FSCTL_SET_SPARSE; on POSIX unwritten regions are
+        /// automatically holes so no setup is needed. Returns false if sparse is not supported.
         /// </summary>
         public static bool TryMarkFileAsSparse(FileStream file)
         {
@@ -45,8 +42,6 @@ namespace Voron.Impl.Backup
             }
             catch
             {
-                // If DeviceIoControl fails (e.g., unsupported filesystem like FAT32),
-                // fall back to normal (non-sparse) file writing
                 return false;
             }
         }

@@ -331,10 +331,6 @@ namespace Voron.Impl.Backup
                 {
                     // we don't know the uncompressed size of the file for the zstd stream (the uncompressed size is stored at the end of the file).
                     var isZstd = decompressionStream is ZstdStream;
-
-                    // For .voron data files, use sparse-aware copy to avoid writing zero regions.
-                    // This preserves the original file's sparsity and prevents disk-full errors when
-                    // restoring databases that had significant free space (hole-punched regions).
                     bool isVoronDataFile = string.Equals(entry.Name, Constants.DatabaseFilename, StringComparison.OrdinalIgnoreCase);
                     bool useSparse = isVoronDataFile && disableSparseRegions == false && SparseFileHelper.TryMarkFileAsSparse(output);
 

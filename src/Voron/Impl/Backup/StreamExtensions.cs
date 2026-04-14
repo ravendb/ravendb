@@ -33,22 +33,15 @@ namespace Voron.Impl.Backup
         }
 
         /// <summary>
-        /// Copies from source to destination while detecting contiguous zero-page regions
-        /// and skipping them, creating a sparse file. The destination file must already be
-        /// marked as sparse on Windows (via SparseFileHelper.TryMarkFileAsSparse).
+        /// Copies from source to destination while detecting contiguous zero-page regions and skipping them to create a sparse file.
+        /// The destination file must already be marked as sparse on Windows (via <see cref="SparseFileHelper.TryMarkFileAsSparse"/>).
+        /// Zero runs shorter than <see cref="FreeSpaceHandling.NumberOfFreePagesForSparseConsideration"/> pages are written normally.
         /// </summary>
-        /// <remarks>
-        /// Zero regions shorter than FreeSpaceHandling.NumberOfFreePagesForSparseConsideration pages (1 MB) are written
-        /// normally to avoid creating fragmented sparse holes with negligible benefit.
-        /// This threshold matches the one used by Voron's flush pipeline in FreeSpaceHandling.GetSparseRegions.
-        /// </remarks>
-        public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
+        public static void CopyToPreservingSparseRegions(this Stream source, FileStream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
             int minZeroPagesForHole = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
 
-            // Use a buffer that is a multiple of page size for aligned zero-detection.
-            // DefaultBufferSize (81920) = 10 pages of 8192 bytes each.
             int bufferSize = DefaultBufferSize;
             var readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
             var zeroBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
@@ -58,10 +51,10 @@ namespace Voron.Impl.Backup
             {
                 Array.Clear(zeroBuffer, 0, DefaultBufferSize);
 
-                long logicalPosition = 0;     // tracks the logical position in the output stream
-                long destinationPosition = 0; // tracks where destination stream is actually positioned
-                int contiguousZeroPages = 0;  // accumulated count of consecutive zero pages across buffer boundaries
-                int partialPageBytes = 0;     // accumulated bytes of a page that spans multiple reads
+                long logicalPosition = 0;
+                long destinationPosition = 0;
+                int contiguousZeroPages = 0;
+                int partialPageBytes = 0;
 
                 int count;
                 while ((count = source.Read(readBuffer, 0, bufferSize)) != 0)
@@ -93,8 +86,7 @@ namespace Voron.Impl.Backup
 
                     if (fullPages > 0)
                     {
-                        // Process full pages - detect zero pages and batch writes
-                        int pendingWriteStart = -1; // start offset within buffer of pending non-zero data
+                        int pendingWriteStart = -1;
 
                         for (int i = 0; i < fullPages; i++)
                         {
@@ -103,7 +95,6 @@ namespace Voron.Impl.Backup
 
                             if (isZeroPage)
                             {
-                                // Flush any pending non-zero data before accumulating zeros
                                 if (pendingWriteStart >= 0)
                                 {
                                     int writeLength = pageOffset - pendingWriteStart;
@@ -116,16 +107,13 @@ namespace Voron.Impl.Backup
                             }
                             else
                             {
-                                // Non-zero page encountered - check if we need to flush accumulated zeros
                                 if (contiguousZeroPages > 0)
                                 {
                                     if (contiguousZeroPages < minZeroPagesForHole)
                                     {
-                                        // Small zero run - write it (not worth creating a sparse hole)
                                         long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
                                         WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
                                     }
-                                    // else: large zero run - skip it (creates a sparse hole)
 
                                     contiguousZeroPages = 0;
                                 }
@@ -137,7 +125,6 @@ namespace Voron.Impl.Backup
                             logicalPosition += pageSize;
                         }
 
-                        // Flush any pending non-zero writes from this buffer
                         if (pendingWriteStart >= 0)
                         {
                             int writeEnd = offset + (fullPages * pageSize);
@@ -173,14 +160,12 @@ namespace Voron.Impl.Backup
                     logicalPosition += partialPageBytes;
                 }
 
-                // After all data is read, flush any trailing zeros below threshold
                 if (contiguousZeroPages > 0 && contiguousZeroPages < minZeroPagesForHole)
                 {
                     long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
                     WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
                 }
 
-                // Set the correct file length (the file may end with a sparse hole)
                 if (logicalPosition > 0)
                 {
                     destination.SetLength(logicalPosition);
@@ -236,8 +221,6 @@ namespace Voron.Impl.Backup
 
         private static void WriteZeros(Stream destination, byte[] zeroBuffer, long logicalOffset, long length, ref long destinationPosition)
         {
-            // For small zero runs that don't meet the sparse threshold, we need to actually write them.
-            // Seek to position and write zero bytes.
             if (destinationPosition != logicalOffset)
             {
                 destination.Seek(logicalOffset, SeekOrigin.Begin);
