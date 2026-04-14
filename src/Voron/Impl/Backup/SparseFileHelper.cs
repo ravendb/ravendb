@@ -10,15 +10,16 @@ namespace Voron.Impl.Backup
         private const uint FSCTL_SET_SPARSE = 0x000900c4;
 
         /// <summary>
-        /// Marks a file as sparse so that unwritten regions become holes on disk.
+        /// Prepares a file for sparse-aware restore logic.
         /// On Windows, this calls FSCTL_SET_SPARSE. On POSIX (Linux/macOS), unwritten
-        /// regions are automatically sparse on modern filesystems — no setup needed.
+        /// regions are left unwritten and the filesystem may account for them as holes,
+        /// so there is no additional setup required here.
         /// Returns false if sparse files are not supported on this filesystem.
         /// </summary>
         public static bool TryMarkFileAsSparse(FileStream file)
         {
             if (PlatformDetails.RunningOnPosix)
-                return true; // unwritten regions are automatic holes on ext4/xfs/btrfs/APFS
+                return true;
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) == false)
                 return false;

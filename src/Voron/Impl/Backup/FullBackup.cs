@@ -286,10 +286,11 @@ namespace Voron.Impl.Backup
             VoronPathSetting journalDir = null,
             Action<string> onProgress = null,
             int? maxReadOpsPerSecond = null,
+            bool disableSparseRegions = false,
             CancellationToken cancellationToken = default)
         {
             using (var zip = System.IO.Compression.ZipFile.Open(backupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, cancellationToken: cancellationToken);
+                Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, disableSparseRegions, cancellationToken);
         }
 
         public void Restore(IEnumerable<ZipArchiveEntry> entries,
