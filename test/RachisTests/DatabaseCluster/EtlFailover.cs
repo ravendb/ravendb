@@ -245,7 +245,10 @@ namespace RachisTests.DatabaseCluster
             var srcDb = "ETL-src";
             var dstDb = "ETL-dst";
 
-            var (_, srcRaft) = await CreateRaftCluster(3, shouldRunInMemory: false);
+            var (_, srcRaft) = await CreateRaftCluster(3, shouldRunInMemory: false, customSettings: new Dictionary<string, string>(DefaultClusterSettings)
+            {
+                [RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "600"
+            });
             var (_, dstRaft) = await CreateRaftCluster(1);
             var srcNodes = await CreateDatabaseInCluster(srcDb, 2, srcRaft.WebUrl);
             var destNode = await CreateDatabaseInCluster(dstDb, 1, dstRaft.WebUrl);
