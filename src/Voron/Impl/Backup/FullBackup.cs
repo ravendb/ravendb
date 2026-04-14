@@ -289,7 +289,7 @@ namespace Voron.Impl.Backup
             CancellationToken cancellationToken = default)
         {
             using (var zip = System.IO.Compression.ZipFile.Open(backupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, cancellationToken);
+                Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, cancellationToken: cancellationToken);
         }
 
         public void Restore(IEnumerable<ZipArchiveEntry> entries,
@@ -297,6 +297,7 @@ namespace Voron.Impl.Backup
             VoronPathSetting journalDir = null,
             Action<string> onProgress = null,
             int? maxReadOpsPerSecond = null,
+            bool disableSparseRegions = false,
             CancellationToken cancellationToken = default)
         {
             journalDir ??= voronDataDir.Combine("Journals");
@@ -329,7 +330,14 @@ namespace Voron.Impl.Backup
                 {
                     // we don't know the uncompressed size of the file for the zstd stream (the uncompressed size is stored at the end of the file).
                     var isZstd = decompressionStream is ZstdStream;
-                    decompressionStream.CopyTo(output, readCount =>
+
+                    // For .voron data files, use sparse-aware copy to avoid writing zero regions.
+                    // This preserves the original file's sparsity and prevents disk-full errors when
+                    // restoring databases that had significant free space (hole-punched regions).
+                    bool isVoronDataFile = string.Equals(entry.Name, Constants.DatabaseFilename, StringComparison.OrdinalIgnoreCase);
+                    bool useSparse = isVoronDataFile && disableSparseRegions == false && SparseFileHelper.TryMarkFileAsSparse(output);
+
+                    Action<int> progressCallback = readCount =>
                     {
                         rateGate?.WaitToProceed();
 
@@ -340,7 +348,12 @@ namespace Voron.Impl.Backup
                             onProgress?.Invoke(
                                 $"Restoring file: '{entry.Name}', {new Size(totalRead, SizeUnit.Bytes)}{(isZstd ? string.Empty : "/" + new Size(entry.Length, SizeUnit.Bytes))}");
                         }
-                    }, cancellationToken);
+                    };
+
+                    if (useSparse)
+                        decompressionStream.CopyToSparse(output, progressCallback, cancellationToken);
+                    else
+                        decompressionStream.CopyTo(output, progressCallback, cancellationToken);
                 }
 
                 onProgress?.Invoke($"Restored file: '{entry.Name}' to: '{dst}', " +
