@@ -7,7 +7,7 @@ UBUNTU_VERSION=$(lsb_release -r 2>/dev/null | cut -d ":" -f2 | sed 's/\t//g')
 APT_PREFIX=""
 if [ "$EUID" -eq 0 ]; then
     APT_PREFIX=""
-elif command -v sudo &> /dev/null && sudo -n true 2>/dev/null; then
+elif command -v sudo &> /dev/null; then
     APT_PREFIX="sudo"
 else
     echo "Note: Not running as root and sudo is not available."
@@ -15,11 +15,14 @@ else
     echo ""
 fi
 
+INSTALL_FAILURES=0
+
 apt_install() {
     if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
         $APT_PREFIX apt-get install -y --no-install-recommends "$@"
     else
         echo "WARNING: Cannot install $* via apt-get (no root/sudo). Please install manually."
+        INSTALL_FAILURES=$((INSTALL_FAILURES + 1))
         return 1
     fi
 }
@@ -48,6 +51,13 @@ elif [ "$UBUNTU_VERSION" = "22.04" ] ; then
     apt_install libicu70
 elif [ "$UBUNTU_VERSION" = "24.04" ] ; then
     apt_install libicu74
+fi
+
+if [ "$INSTALL_FAILURES" -gt 0 ]; then
+    echo ""
+    echo "WARNING: $INSTALL_FAILURES package(s) could not be installed (no root/sudo)."
+    echo "Please install the missing packages manually before running RavenDB."
+    exit 1
 fi
 
 echo "Runtime prerequisites setup complete."

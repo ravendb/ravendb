@@ -15,7 +15,7 @@ fi
 APT_PREFIX=""
 if [ "$EUID" -eq 0 ]; then
     APT_PREFIX=""
-elif command -v sudo &> /dev/null && sudo -n true 2>/dev/null; then
+elif command -v sudo &> /dev/null; then
     APT_PREFIX="sudo"
 else
     echo "Note: Not running as root and sudo is not available."
@@ -33,11 +33,11 @@ apt_install() {
     fi
 }
 
-apt_update() {
-    if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
-        $APT_PREFIX apt-get update
-    fi
-}
+# Update package lists if we have apt access
+if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
+    echo "Updating package lists..."
+    $APT_PREFIX apt-get update
+fi
 
 # Check and install curl
 echo "Checking for curl..."

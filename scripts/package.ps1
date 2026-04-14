@@ -99,14 +99,20 @@ function LayoutToolsPackage ( $packageDir, $projectDir, $packOpts ) {
     $toolsSubDir = Join-Path -Path $packageDir -ChildPath "Tools";
     New-Item -ItemType Directory -Path $toolsSubDir;
 
-    CopyDirectoryContents "Raven.Migrator" $packOpts.OutDirs.Migrator $toolsSubDir -AllowDllOverwrite
-    CopyDirectoryContents "Voron.Recovery" $packOpts.OutDirs.Drtools $toolsSubDir -AllowDllOverwrite
+    CopyDirectoryContents "Raven.Migrator" $packOpts.OutDirs.Migrator $toolsSubDir -WarnOnDllConflict
+    CopyDirectoryContents "Voron.Recovery" $packOpts.OutDirs.Drtools $toolsSubDir -WarnOnDllConflict
 }
 
-function CopyDirectoryContents ( $tag, $src, $dst, [switch]$AllowDllOverwrite ) {
+function CopyDirectoryContents ( $tag, $src, $dst, [switch]$WarnOnDllConflict ) {
     write-host "Copy $tag files: $src -> $dst"
-    if ($AllowDllOverwrite) {
-        Copy-FileHash -Path "$src" -Destination "$dst" -Recurse
+    if ($WarnOnDllConflict) {
+        try {
+            Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
+        } catch {
+            write-host -ForegroundColor Yellow "WARNING: $($_.Exception.Message)"
+            write-host -ForegroundColor Yellow "Overwriting with version from $tag."
+            Copy-FileHash -Path "$src" -Destination "$dst" -Recurse
+        }
     } else {
         Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
     }
