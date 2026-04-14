@@ -224,7 +224,7 @@ public class RavenDB_26344 : StorageTest
 
         // Restore with sparse regions disabled
         var restoreDir = voronDataDir.Combine("restored-no-sparse");
-        BackupMethods.Full.Restore(backupPath, restoreDir, disableSparseRegions: true);
+        BackupMethods.Full.Restore(backupPath, restoreDir);
 
         var options = StorageEnvironmentOptions.ForPathForTests(restoreDir.FullPath);
         options.MaxLogFileSize = Env.Options.MaxLogFileSize;

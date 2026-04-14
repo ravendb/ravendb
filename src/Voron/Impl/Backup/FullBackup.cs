@@ -283,22 +283,22 @@ namespace Voron.Impl.Backup
 
         public void Restore(VoronPathSetting backupPath,
             VoronPathSetting voronDataDir,
+            bool sparseRegionsSupported = true,
             VoronPathSetting journalDir = null,
             Action<string> onProgress = null,
             int? maxReadOpsPerSecond = null,
-            bool disableSparseRegions = false,
             CancellationToken cancellationToken = default)
         {
             using (var zip = System.IO.Compression.ZipFile.Open(backupPath.FullPath, ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-                Restore(zip.Entries, voronDataDir, journalDir, onProgress, maxReadOpsPerSecond, disableSparseRegions, cancellationToken);
+                Restore(zip.Entries, voronDataDir, sparseRegionsSupported, journalDir, onProgress, maxReadOpsPerSecond, cancellationToken);
         }
 
         public void Restore(IEnumerable<ZipArchiveEntry> entries,
             VoronPathSetting voronDataDir,
+            bool sparseRegionsSupported = true,
             VoronPathSetting journalDir = null,
             Action<string> onProgress = null,
             int? maxReadOpsPerSecond = null,
-            bool disableSparseRegions = false,
             CancellationToken cancellationToken = default)
         {
             journalDir ??= voronDataDir.Combine("Journals");
@@ -332,7 +332,7 @@ namespace Voron.Impl.Backup
                     // we don't know the uncompressed size of the file for the zstd stream (the uncompressed size is stored at the end of the file).
                     var isZstd = decompressionStream is ZstdStream;
                     bool isVoronDataFile = string.Equals(entry.Name, Constants.DatabaseFilename, StringComparison.OrdinalIgnoreCase);
-                    bool useSparse = isVoronDataFile && disableSparseRegions == false && SparseFileHelper.TryMarkFileAsSparse(output);
+                    bool useSparse = isVoronDataFile && sparseRegionsSupported && SparseFileHelper.TryMarkFileAsSparse(output);
 
                     Action<int> progressCallback = readCount =>
                     {

@@ -297,6 +297,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 BackupMethods.Full.Restore(
                     zipEntries,
                     restoreDirectory,
+                    IsSparseRegionsSupported(),
                     journalDir: null,
                     onProgress: message =>
                     {
@@ -305,7 +306,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress.Invoke(restoreResult.Progress);
                     },
                     RestoreConfiguration.MaxReadOpsPerSecond,
-                    disableSparseRegions: GetDisableSparseRegions(restoreSettings),
                     cancellationToken: OperationCancelToken.Token);
             }
 
@@ -313,6 +313,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                 throw new InvalidDataException("Cannot restore the snapshot without the settings file!");
 
             return restoreSettings;
+
+            bool IsSparseRegionsSupported()
+            {
+                if (restoreSettings?.DatabaseRecord?.Settings?.TryGetValue(
+                        RavenConfiguration.GetKey(x => x.Storage.DisableSparseRegions), out var value) == true
+                    && bool.TryParse(value, out var disableSparseRegions))
+                {
+                    return disableSparseRegions == false;
+                }
+
+                return ServerStore.Configuration.Storage.DisableSparseRegions == false;
+            }
         }
 
         private async Task RestoreFromSmugglerFileAsync(Action<IOperationProgress> onProgress, DocumentDatabase database, string smugglerFile, JsonOperationContext context, int? maxReadOpsPerSecond)
@@ -400,18 +412,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     index?.Dispose();
                 }
             }
-        }
-
-        private bool GetDisableSparseRegions(RestoreSettings restoreSettings)
-        {
-            if (restoreSettings?.DatabaseRecord?.Settings?.TryGetValue(
-                    RavenConfiguration.GetKey(x => x.Storage.DisableSparseRegions), out var value) == true
-                && bool.TryParse(value, out var perDatabaseSetting))
-            {
-                return perDatabaseSetting;
-            }
-
-            return ServerStore.Configuration.Storage.DisableSparseRegions;
         }
 
         public override void Dispose()
