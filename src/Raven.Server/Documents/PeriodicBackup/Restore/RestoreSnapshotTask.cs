@@ -404,8 +404,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         private bool GetDisableSparseRegions(RestoreSettings restoreSettings)
         {
-            // Check per-database setting from the snapshot's database record first,
-            // fall back to server-wide configuration
             if (restoreSettings?.DatabaseRecord?.Settings?.TryGetValue(
                     RavenConfiguration.GetKey(x => x.Storage.DisableSparseRegions), out var value) == true
                 && bool.TryParse(value, out var perDatabaseSetting))
