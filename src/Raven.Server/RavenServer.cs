@@ -3214,7 +3214,7 @@ namespace Raven.Server
                 ea.Execute(() => AdminConsolePipe?.Dispose());
                 ea.Execute(() => LogStreamPipe?.Dispose());
                 ea.Execute(() => _redirectingWebHost?.Dispose());
-                ea.Execute(() => _webHost?.Dispose());
+                DisposeWebHost();
                 ea.Execute(() => _tcpContextPool?.Dispose());
                 if (_tcpListenerStatus != null)
                 {
@@ -3251,6 +3251,33 @@ namespace Raven.Server
 
                 ea.ThrowIfNeeded();
             }
+        }
+
+        private void DisposeWebHost()
+        {
+            try
+            {
+                _webHost?.Dispose();
+            }
+            catch (Exception e) when (IsExpectedShutdownException(e))
+            {
+                // During shutdown, active HTTP connections may throw I/O exceptions
+                // (broken pipe, connection reset) as they are torn down. This is expected.
+                if (_tcpLogger.IsInfoEnabled)
+                    _tcpLogger.Info("Ignoring expected I/O error during web host shutdown", e);
+            }
+        }
+
+        private static bool IsExpectedShutdownException(Exception e)
+        {
+            return e switch
+            {
+                IOException => true,
+                SocketException => true,
+                AggregateException ae => ae.Flatten().InnerExceptions.Count > 0 &&
+                                         ae.Flatten().InnerExceptions.All(ie => ie is IOException or SocketException),
+                _ => false
+            };
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)
