@@ -99,13 +99,17 @@ function LayoutToolsPackage ( $packageDir, $projectDir, $packOpts ) {
     $toolsSubDir = Join-Path -Path $packageDir -ChildPath "Tools";
     New-Item -ItemType Directory -Path $toolsSubDir;
 
-    CopyDirectoryContents "Raven.Migrator" $packOpts.OutDirs.Migrator $toolsSubDir
-    CopyDirectoryContents "Voron.Recovery" $packOpts.OutDirs.Drtools $toolsSubDir
+    CopyDirectoryContents "Raven.Migrator" $packOpts.OutDirs.Migrator $toolsSubDir -AllowDllOverwrite
+    CopyDirectoryContents "Voron.Recovery" $packOpts.OutDirs.Drtools $toolsSubDir -AllowDllOverwrite
 }
 
-function CopyDirectoryContents ( $tag, $src, $dst ) {
+function CopyDirectoryContents ( $tag, $src, $dst, [switch]$AllowDllOverwrite ) {
     write-host "Copy $tag files: $src -> $dst"
-    Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
+    if ($AllowDllOverwrite) {
+        Copy-FileHash -Path "$src" -Destination "$dst" -Recurse
+    } else {
+        Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
+    }
 }
 
 function CopyStudioPackageToServerOutputDirectory ( $packOpts ) {

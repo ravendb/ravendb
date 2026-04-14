@@ -265,7 +265,7 @@ function GetCurrentVersionPrefix($projectDir) {
 }
 
 function Validate-ExecutableVersion($assemblyPath, $versionInfo) {
-    # $versionInfo = @{ 
+    # $versionInfo = @{
     #     Version = $version;
     #     VersionPrefix = $versionPrefix;
     #     VersionSuffix = $versionSuffix;
@@ -274,7 +274,12 @@ function Validate-ExecutableVersion($assemblyPath, $versionInfo) {
     #     BuiltAtString = $builtAtString;
     #     BuildType = $buildType;
     # }
-    
+
+    if ($IsWindows -eq $False) {
+        write-host "Skipping executable version validation for $assemblyPath (not on Windows)"
+        return
+    }
+
     Assert-AssemblyFileVersion `
         -ExpectedFileVersion "$($versionInfo.VersionPrefix).$($versionInfo.BuildNumber)" `
         -AssemblyPath $assemblyPath
@@ -288,7 +293,7 @@ function Validate-ExecutableVersion($assemblyPath, $versionInfo) {
 }
 
 function Validate-AssemblyVersion($assemblyPath, $versionInfo) {
-    # $versionInfo = @{ 
+    # $versionInfo = @{
     #     Version = $version;
     #     VersionPrefix = $versionPrefix;
     #     VersionSuffix = $versionSuffix;
@@ -300,7 +305,12 @@ function Validate-AssemblyVersion($assemblyPath, $versionInfo) {
     Assert-AssemblyVersion `
         -ExpectedVersion $versionInfo.VersionPrefix `
         -AssemblyPath $assemblyPath
-    
+
+    if ($IsWindows -eq $False) {
+        write-host "Skipping file/product version validation for $assemblyPath (not on Windows)"
+        return
+    }
+
     Assert-AssemblyFileVersion `
         -ExpectedFileVersion "$($versionInfo.VersionPrefix).$($versionInfo.BuildNumber)" `
         -AssemblyPath $assemblyPath
