@@ -246,15 +246,16 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 {
                     if (Buffer == null) 
                         return;
-                    ArrayPool<ulong>.Shared.Return(Buffer);
                     
                     // The finalizer started when this object held the only existing reference to Buffer
                     // via the ConditionalWeakTable (_joinLifetimes). The CWT removes an element only when
                     // there is no other reference to the key (in this case Buffer).
-                    // However, since we returned our buffer to the pool, we actually increased the reference count (so eviction is stopped).
+                    // However, since we returned our buffer to the pool, we actually will increase the reference count (so eviction from CWT will stop).
                     // Additionally, CWT has a requirement that keys must be unique, however without manually removing the reference
-                    // there is a chance to get exactly the same buffer for eviction registration soon.
+                    // there is a chance to get exactly the same buffer for to add into CWT before even removing it from the table.
                     _joinLifetimes.Remove(Buffer);
+                    
+                    ArrayPool<ulong>.Shared.Return(Buffer);
                 }
             }
 
