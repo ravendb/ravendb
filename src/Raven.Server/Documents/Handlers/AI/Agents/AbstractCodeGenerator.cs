@@ -65,13 +65,17 @@ public abstract class AbstractCodeGenerator
 
     protected void WriteProperties(StringBuilder sb, object obj, int indent)
     {
-        var props = GetReadableProperties(obj.GetType())
-            .Select(p => (prop: p, value: p.GetValue(obj)))
-            .Where(x => IsEmptyValue(x.value) == false)
-            .ToList();
+        var props = new List<(string name, object value)>();
+        foreach (var member in GetReadableMembers(obj.GetType()))
+        {
+            var name = member.Name;
+            var value = GetMemberValue(member, obj);
+            if (IsEmptyValue(value) == false)
+                props.Add((name, value));
+        }
 
         for (int i = 0; i < props.Count; i++)
-            WriteProperty(sb, props[i].prop.Name, props[i].value, indent, isLast: i == props.Count - 1);
+            WriteProperty(sb, props[i].name, props[i].value, indent, isLast: i == props.Count - 1);
     }
 
     private void WriteProperty(StringBuilder sb, string name, object value, int indent, bool isLast)
@@ -146,20 +150,65 @@ public abstract class AbstractCodeGenerator
         return new List<string>();
     }
 
-    private IEnumerable<PropertyInfo> GetReadableProperties(Type type) =>
-        type.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanRead);
-
-    private bool HasAnyPrintableProperty(object obj) =>
-        obj != null && GetReadableProperties(obj.GetType()).Any(p => IsEmptyValue(p.GetValue(obj)) == false);
-
-    private bool IsEmptyValue(object value) => value switch
+    private IEnumerable<MemberInfo> GetReadableMembers(Type type)
     {
-        null => true,
-        string s => string.IsNullOrWhiteSpace(s),
-        IEnumerable e => e.Cast<object>().All(IsEmptyValue),
-        _ when IsSimpleType(value.GetType()) => IsDefaultValue(value),
-        _ => HasAnyPrintableProperty(value) == false
-    };
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => p.CanRead)
+            .Cast<MemberInfo>();
+
+        var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .Cast<MemberInfo>();
+
+        return properties.Concat(fields);
+    }
+
+    private static object GetMemberValue(MemberInfo member, object obj)
+    {
+        if (member is PropertyInfo prop)
+            return prop.GetValue(obj);
+        if (member is FieldInfo field)
+            return field.GetValue(obj);
+        return null;
+    }
+
+    private bool HasAnyPrintableProperty(object obj)
+    {
+        if (obj == null)
+            return false;
+
+        foreach (var member in GetReadableMembers(obj.GetType()))
+        {
+            var val = GetMemberValue(member, obj);
+            if (IsEmptyValue(val) == false)
+                return true;
+        }
+
+        return false;
+    }
+
+    private bool IsEmptyValue(object value)
+    {
+        if (value == null)
+            return true;
+
+        if (value is string s)
+            return string.IsNullOrWhiteSpace(s);
+
+        if (value is IEnumerable e)
+        {
+            foreach (var item in e)
+            {
+                if (IsEmptyValue(item) == false)
+                    return false;
+            }
+            return true;
+        }
+
+        if (IsSimpleType(value.GetType()))
+            return IsDefaultValue(value);
+
+        return HasAnyPrintableProperty(value) == false;
+    }
 
     private static bool IsDefaultValue(object value)
     {
@@ -498,20 +547,20 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         foreach (var action in obj.Actions ?? [])
         {
             var handlerName = $"handle_{ToSnakeCase(action.Name)}";
-            sb.AppendLine($"    # Define a handler for the '{action.Name}' action tool");
-            sb.AppendLine($"    def {handlerName}(params):");
-            AppendJsonComment(sb, action.ParametersSampleObject, "        ");
-            sb.AppendLine($"        # TODO: handle '{action.Name}' action");
-            sb.AppendLine($"        return 'done'");
+            sb.AppendLine($"# Define a handler for the '{action.Name}' action tool");
+            sb.AppendLine($"def {handlerName}(params):");
+            AppendJsonComment(sb, action.ParametersSampleObject, "    ");
+            sb.AppendLine($"    # TODO: handle '{action.Name}' action");
+            sb.AppendLine($"    return 'done'");
             sb.AppendLine();
-            sb.AppendLine($"    chat.handle('{action.Name}', {handlerName})");
+            sb.AppendLine($"chat.handle('{action.Name}', {handlerName})");
             sb.AppendLine();
         }
 
-        sb.AppendLine("    # Set user prompt and run");
-        sb.AppendLine("    chat.set_user_prompt('Your question here')");
-        sb.AppendLine("    result = chat.run()");
-        sb.AppendLine("    answer = result.answer");
+        sb.AppendLine("# Set user prompt and run");
+        sb.AppendLine("chat.set_user_prompt('Your question here')");
+        sb.AppendLine("result = chat.run()");
+        sb.AppendLine("answer = result.answer");
 
         return sb.ToString();
     }
