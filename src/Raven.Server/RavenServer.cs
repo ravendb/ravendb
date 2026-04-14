@@ -3270,14 +3270,17 @@ namespace Raven.Server
 
         private static bool IsExpectedShutdownException(Exception e)
         {
-            return e switch
+            if (e is IOException or SocketException)
+                return true;
+
+            if (e is AggregateException ae)
             {
-                IOException => true,
-                SocketException => true,
-                AggregateException ae => ae.Flatten().InnerExceptions.Count > 0 &&
-                                         ae.Flatten().InnerExceptions.All(ie => ie is IOException or SocketException),
-                _ => false
-            };
+                AggregateException flattened = ae.Flatten();
+                return flattened.InnerExceptions.Count > 0 &&
+                       flattened.InnerExceptions.All(ie => ie is IOException or SocketException);
+            }
+
+            return false;
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)
