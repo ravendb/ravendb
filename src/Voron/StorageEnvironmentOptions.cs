@@ -787,7 +787,24 @@ namespace Voron
 
                 foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
                 {
-                    File.Delete(file);
+                    for (int i = 0; i < 5; i++)
+                    {
+                        try
+                        {
+                            File.Delete(file);
+                            break;
+                        }
+                        catch (UnauthorizedAccessException) when (i < 4)
+                        {
+                            // On Windows, memory-mapped file handles may not be fully released by
+                            // the kernel yet even after the pager is disposed. Retry after a brief delay.
+                            Thread.Sleep(50);
+                        }
+                        catch (IOException) when (i < 4)
+                        {
+                            Thread.Sleep(50);
+                        }
+                    }
                 }
             }
 
