@@ -306,7 +306,7 @@ namespace Raven.Server.Rachis
 
                 ContextPool = new ClusterContextPool(changes, _persistentState, configuration.Memory.MaxContextSizeToKeep);
                 TxMerger = new ClusterTransactionOperationsMerger(configuration, time, shutdown);
-                TxMerger.Initialize(ContextPool, IsEncrypted, PlatformDetails.Is32Bits || configuration.Storage.ForceUsing32BitsPager);
+                TxMerger.Initialize(ContextPool, IsEncrypted, PlatformDetails.Is32Bits || configuration.Storage.ForceUsing32BitsPager || env.Options.ForceUsing32BitsPager);
                 TxMerger.Start();
 
                 ClusterTopology topology;
