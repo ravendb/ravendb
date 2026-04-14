@@ -4,18 +4,13 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Global;
+using Voron.Impl.FreeSpace;
 
 namespace Voron.Impl.Backup
 {
     public static class StreamExtensions
     {
         private const int DefaultBufferSize = 81920;
-
-        /// <summary>
-        /// Minimum number of contiguous zero pages required to create a sparse hole.
-        /// Matches the threshold in FreeSpaceHandling.GetSparseRegions (128 pages = 1 MB).
-        /// </summary>
-        internal const int MinContiguousZeroPagesForSparse = 128;
 
         public static void CopyTo(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
@@ -43,22 +38,25 @@ namespace Voron.Impl.Backup
         /// marked as sparse on Windows (via SparseFileHelper.TryMarkFileAsSparse).
         /// </summary>
         /// <remarks>
-        /// Zero regions shorter than MinContiguousZeroPagesForSparse pages (1 MB) are written
+        /// Zero regions shorter than FreeSpaceHandling.NumberOfFreePagesForSparseConsideration pages (1 MB) are written
         /// normally to avoid creating fragmented sparse holes with negligible benefit.
         /// This threshold matches the one used by Voron's flush pipeline in FreeSpaceHandling.GetSparseRegions.
         /// </remarks>
         public static void CopyToSparse(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
-            int minZeroPagesForHole = MinContiguousZeroPagesForSparse;
+            int minZeroPagesForHole = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
 
             // Use a buffer that is a multiple of page size for aligned zero-detection.
             // DefaultBufferSize (81920) = 10 pages of 8192 bytes each.
             int bufferSize = DefaultBufferSize;
             var readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            var zeroBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
 
             try
             {
+                Array.Clear(zeroBuffer, 0, DefaultBufferSize);
+
                 long logicalPosition = 0;     // tracks the logical position in the output stream
                 long destinationPosition = 0; // tracks where destination stream is actually positioned
                 int contiguousZeroPages = 0;  // accumulated count of consecutive zero pages across buffer boundaries
@@ -102,7 +100,7 @@ namespace Voron.Impl.Backup
                                 {
                                     // Small zero run - write it (not worth creating a sparse hole)
                                     long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                                    WriteZeros(destination, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
+                                    WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
                                 }
                                 // else: large zero run - skip it (creates a sparse hole)
 
@@ -136,7 +134,7 @@ namespace Voron.Impl.Backup
                             if (contiguousZeroPages < minZeroPagesForHole)
                             {
                                 long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                                WriteZeros(destination, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
+                                WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
                             }
                             contiguousZeroPages = 0;
                         }
@@ -152,7 +150,7 @@ namespace Voron.Impl.Backup
                 if (contiguousZeroPages > 0 && contiguousZeroPages < minZeroPagesForHole)
                 {
                     long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                    WriteZeros(destination, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
+                    WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
                 }
 
                 // Set the correct file length (the file may end with a sparse hole)
@@ -164,6 +162,7 @@ namespace Voron.Impl.Backup
             finally
             {
                 ArrayPool<byte>.Shared.Return(readBuffer);
+                ArrayPool<byte>.Shared.Return(zeroBuffer);
             }
         }
 
@@ -180,7 +179,7 @@ namespace Voron.Impl.Backup
             destinationPosition += length;
         }
 
-        private static void WriteZeros(Stream destination, long logicalOffset, long length, ref long destinationPosition)
+        private static void WriteZeros(Stream destination, byte[] zeroBuffer, long logicalOffset, long length, ref long destinationPosition)
         {
             // For small zero runs that don't meet the sparse threshold, we need to actually write them.
             // Seek to position and write zero bytes.
@@ -190,25 +189,15 @@ namespace Voron.Impl.Backup
                 destinationPosition = logicalOffset;
             }
 
-            // Write zeros in chunks using a stack-allocated or pooled buffer
-            var zeroBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
-            try
+            long remaining = length;
+            while (remaining > 0)
             {
-                Array.Clear(zeroBuffer, 0, DefaultBufferSize);
-                long remaining = length;
-                while (remaining > 0)
-                {
-                    int toWrite = (int)Math.Min(remaining, DefaultBufferSize);
-                    destination.Write(zeroBuffer, 0, toWrite);
-                    remaining -= toWrite;
-                }
+                int toWrite = (int)Math.Min(remaining, DefaultBufferSize);
+                destination.Write(zeroBuffer, 0, toWrite);
+                remaining -= toWrite;
+            }
 
-                destinationPosition += length;
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(zeroBuffer);
-            }
+            destinationPosition += length;
         }
 
         public static async Task CopyToAsync(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)

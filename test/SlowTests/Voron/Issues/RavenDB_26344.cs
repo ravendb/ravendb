@@ -163,11 +163,13 @@ public class RavenDB_26344 : StorageTest
 
             if (PlatformDetails.RunningOnMacOsx == false)
             {
-                // The physical size should be significantly less than allocated
-                // We freed 28 * 2MB = 56MB of data, so physical should be at least 40MB less
-                Assert.True(restoredPhysical < restoredAllocated - (40L * 1024 * 1024),
-                    $"Expected restored physical size to be at least 40MB less than allocated after sparse restore, " +
-                    $"but allocated={new Size(restoredAllocated, SizeUnit.Bytes)}, physical={new Size(restoredPhysical, SizeUnit.Bytes)}");
+                Assert.True(originalPhysical < originalAllocated - (40L * 1024 * 1024),
+                    $"Expected source database to be sparse before backup, but allocated={new Size(originalAllocated, SizeUnit.Bytes)}, physical={new Size(originalPhysical, SizeUnit.Bytes)}");
+
+                const long allowedRestoreOverhead = 16L * 1024 * 1024;
+                Assert.True(restoredPhysical <= originalPhysical + allowedRestoreOverhead,
+                    $"Expected restored physical size to stay close to the source sparse file after restore, " +
+                    $"but source physical={new Size(originalPhysical, SizeUnit.Bytes)}, restored physical={new Size(restoredPhysical, SizeUnit.Bytes)}, allocated={new Size(restoredAllocated, SizeUnit.Bytes)}");
             }
         }
     }
@@ -222,13 +224,7 @@ public class RavenDB_26344 : StorageTest
 
         // Restore with sparse regions disabled
         var restoreDir = voronDataDir.Combine("restored-no-sparse");
-        using (var zip = System.IO.Compression.ZipFile.Open(backupPath.FullPath, System.IO.Compression.ZipArchiveMode.Read, System.Text.Encoding.UTF8))
-        {
-            BackupMethods.Full.Restore(
-                zip.Entries,
-                restoreDir,
-                disableSparseRegions: true);
-        }
+        BackupMethods.Full.Restore(backupPath, restoreDir, disableSparseRegions: true);
 
         var options = StorageEnvironmentOptions.ForPathForTests(restoreDir.FullPath);
         options.MaxLogFileSize = Env.Options.MaxLogFileSize;
