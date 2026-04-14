@@ -37,7 +37,7 @@ namespace Voron.Impl.Backup
         /// The destination file must already be marked as sparse on Windows (via <see cref="SparseFileHelper.TryMarkFileAsSparse"/>).
         /// Zero runs shorter than <see cref="FreeSpaceHandling.NumberOfFreePagesForSparseConsideration"/> pages are written normally.
         /// </summary>
-        public static void CopyToPreservingSparseRegions(this Stream source, FileStream destination, Action<int> onProgress, CancellationToken cancellationToken)
+        public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
             int minZeroPagesForHole = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
