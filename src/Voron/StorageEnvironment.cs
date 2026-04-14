@@ -369,9 +369,20 @@ namespace Voron
 
                 if (_options.DisableSparseRegions == false)
                 {
+                    var hasSparseRegions = false;
+
                     foreach (long freeSegment in _freeSpaceHandling.GetCandidatesForSparseRegions(tx))
                     {
                         tx.RecordSparseRangeCandidate(freeSegment);
+                        hasSparseRegions = true;
+                    }
+
+                    if (hasSparseRegions && tx.NumberOfModifiedPages == 0)
+                    {
+                        // When there are no other modified pages the transaction state will not be enqueued to _transactionsToFlush in UpdateStateOnCommit
+                        // meaning sparse region candidates won't reach the flush pipeline and hole-punching won't happen.
+                        // Force a page modification so the transaction is written to the journal hence enqueued to _transactionsToFlush.
+                        tx.ModifyPage(0);
                     }
                 }
 
