@@ -510,9 +510,15 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                DatabaseRecord record = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
                 var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
@@ -623,9 +629,16 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
+                DatabaseRecord record = null;
+                DatabaseTopology shardTopology = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
+                shardTopology = record.Sharding.Shards[0];
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
@@ -668,9 +681,16 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
+                DatabaseRecord record = null;
+                DatabaseTopology shardTopology = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
+                shardTopology = record.Sharding.Shards[0];
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
