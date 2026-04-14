@@ -95,7 +95,7 @@ public class CdcSinkProcessStatistics
 
         ConsumeErrors++;
 
-        ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo(error));
+        ConsumeErrorsInCurrentBatch.Enqueue(new CdcSinkErrorInfo($"Document '{documentId}': {error}"));
 
         LastConsumeErrorTime = SystemTime.UtcNow;
 
@@ -110,7 +110,7 @@ public class CdcSinkProcessStatistics
 
         CreateAlertIfAnyConsumeErrors(message);
 
-        throw new InvalidOperationException($"{message}. Current stats: {this}. Error: {error}");
+        throw new InvalidOperationException($"{message}. Current stats: {this}. Document: '{documentId}'. Error: {error}");
     }
 
     private void CreateAlertIfAnyConsumeErrors(string preMessage = null)

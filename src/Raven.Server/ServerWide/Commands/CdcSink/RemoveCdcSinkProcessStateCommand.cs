@@ -1,5 +1,6 @@
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -21,7 +22,7 @@ public sealed class RemoveCdcSinkProcessStateCommand : UpdateValueForDatabaseCom
     }
 
     public override string GetItemId() =>
-        CdcSinkProcessState.GenerateItemName(DatabaseName, ConfigurationName);
+        CdcSinkProcessState.GenerateItemName(ShardHelper.ToDatabaseName(DatabaseName), ConfigurationName);
 
     protected override UpdatedValue GetUpdatedValue(long index, RawDatabaseRecord record, ClusterOperationContext context, BlittableJsonReaderObject existingValue) =>
         new UpdatedValue(UpdatedValueActionType.Delete, value: null);

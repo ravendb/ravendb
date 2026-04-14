@@ -7,7 +7,7 @@ public enum CdcColumnType
 {
     /// <summary>
     /// Store as a document property with standard type conversion.
-    /// int/smallint/bigint → long, real/float/double → double, numeric/decimal → double,
+    /// int/smallint/bigint → long, real/float/double → double, numeric/decimal → decimal,
     /// boolean → bool, date → DateOnly, timestamp/timestamptz → DateTime,
     /// uuid → string, varchar/text → string, arrays → JSON arrays.
     /// JSON/JSONB columns are stored as plain strings unless explicitly marked as Json.

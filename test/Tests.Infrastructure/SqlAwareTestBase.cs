@@ -421,6 +421,7 @@ namespace Tests.Infrastructure
                             }
                         }
 
+                        dbCommand.Parameters.Clear();
                         const string dropDatabaseQuery = "DROP DATABASE IF EXISTS \"{0}\"";
                         dbCommand.CommandText = string.Format(dropDatabaseQuery, dbName);
                         dbCommand.ExecuteNonQuery();
