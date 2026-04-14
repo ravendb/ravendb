@@ -260,7 +260,7 @@ $aspect-ratios: (
 // stylelint-disable value-keyword-case
 $font-family-sans-serif: "Figtree", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji",
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji" !default;
-$font-family-monospace: Menlo, Monaco, Consolas, "Courier New", monospace !default;
+$font-family-monospace: var(--monospace-font, Menlo), Monaco, Consolas, "Courier New", monospace !default;
 // stylelint-enable value-keyword-case
 $font-family-base: var(--#{$prefix}font-sans-serif) !default;
 $font-family-code: var(--#{$prefix}font-monospace) !default;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Row from "react-bootstrap/Row";
@@ -43,8 +43,8 @@ import AceEditor from "components/common/ace/AceEditor";
 import studioSettings = require("common/settings/studioSettings");
 
 export default function StudioGlobalConfiguration() {
-    const [vtHoveredFont, setVtHoveredFont] = useState<string | null>(null);
-    const [codeHoveredFont, setCodeHoveredFont] = useState<string | null>(null);
+    const [tableHoveredFont, setTableHoveredFont] = useState<string>(null);
+    const [codeHoveredFont, setCodeHoveredFont] = useState<string>(null);
 
     const asyncGlobalSettings = useAsyncCallback<StudioGlobalConfigurationFormData>(async () => {
         const settings = await studioSettings.default.globalSettings(true);
@@ -213,8 +213,8 @@ export default function StudioGlobalConfiguration() {
                                         </FormLabel>
                                         <FontHoverContext.Provider
                                             value={{
-                                                hoveredFont: vtHoveredFont,
-                                                setHoveredFont: setVtHoveredFont,
+                                                hoveredFont: tableHoveredFont,
+                                                setHoveredFont: setTableHoveredFont,
                                             }}
                                         >
                                             <FormSelectCreatable
@@ -223,7 +223,7 @@ export default function StudioGlobalConfiguration() {
                                                 options={predefinedFontOptions}
                                                 formatOptionLabel={formatFontOptionLabel}
                                                 components={tableFontSelectComponents}
-                                                onMenuClose={() => setVtHoveredFont(null)}
+                                                onMenuClose={() => setTableHoveredFont(null)}
                                             />
                                         </FontHoverContext.Provider>
                                     </div>
@@ -416,8 +416,8 @@ function VtTablePreview({ fontFamily }: { fontFamily: string }) {
 
     return (
         <div
-            className="flex-grow-1 p-2 overflow-hidden font-preview-table"
-            style={{ "--preview-font-family": fontFamily, borderRadius: 8 } as React.CSSProperties}
+            className="flex-grow-1 p-2 overflow-hidden"
+            style={{ "--table-font": fontFamily, borderRadius: 8 } as React.CSSProperties}
         >
             <span className="md-label">Preview</span>
             <VirtualTable table={table} heightInPx={virtualTableUtils.getHeightInPx(vtPreviewData.length, 300)} />
@@ -426,12 +426,9 @@ function VtTablePreview({ fontFamily }: { fontFamily: string }) {
 }
 
 const codePreviewValue = `from Orders
-where Lines.Count > 3
-select {
-    Id: id(),
-    Company: Company,
-    Total: Lines.Sum(x => x.Price)
-}`;
+where Lines.Count > 4
+order by Freight as double
+select Lines[].ProductName as ProductNames, OrderedAt, ShipTo.City`;
 
 function CodePreview({ fontFamily }: { fontFamily: string }) {
     return (
@@ -452,7 +449,6 @@ function CodePreview({ fontFamily }: { fontFamily: string }) {
                     showPrintMargin: false,
                     highlightGutterLine: false,
                 }}
-                aceRef={undefined}
             />
         </div>
     );
@@ -462,10 +458,8 @@ const tableFontSelectComponents = { Menu: TableFontMenu, Option: FontPreviewOpti
 const codeFontSelectComponents = { Menu: CodeFontMenu, Option: FontPreviewOption };
 
 function formatFontOptionLabel(option: SelectOption<string>) {
-    if (option.value === "default") {
-        return <span>{option.label}</span>;
-    }
-    return <span style={{ fontFamily: `"${option.value}"` }}>{option.label}</span>;
+    const fontFamily = option.value === "default" ? '"Figtree"' : `"${option.value}"`;
+    return <span style={{ fontFamily }}>{option.label}</span>;
 }
 
 function TableFontPopoverContent() {

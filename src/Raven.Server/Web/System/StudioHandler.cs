@@ -116,8 +116,7 @@ namespace Raven.Server.Web.System
             ".woff",
             ".woff2",
             ".ttf",
-            ".appcache",
-            ".lottie"
+            ".appcache"
         };
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -147,8 +146,7 @@ namespace Raven.Server.Web.System
             {".ttf", "application/octet-stream"},
             {".woff", "application/font-woff"},
             {".woff2", "application/font-woff2"},
-            {".appcache", "text/cache-manifest; charset=utf-8"},
-            {".lottie", "application/zip"}
+            {".appcache", "text/cache-manifest; charset=utf-8"}
         };
 
         [RavenAction("/favicon.ico", "GET", AuthorizationStatus.UnauthenticatedClients, SkipLastRequestTimeUpdate = true)]

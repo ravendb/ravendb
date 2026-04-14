@@ -88,14 +88,6 @@ const config: StorybookConfig = {
 
         config.module?.rules?.push(...incomingRules);
 
-        config.module?.rules?.push({
-            test: /\.lottie$/,
-            type: "asset/resource",
-            generator: {
-                filename: "assets/img/[name].[hash:8][ext]",
-            },
-        });
-
         const incomingPluginsNames = [
             "ProvidePlugin",
             "MiniCssExtractPlugin",
