@@ -59,10 +59,16 @@ public partial class RavenTestBase
             if (record.IsSharded == false)
                 return;
 
+            var servers = _parent.GetServers();
             foreach (var shardNumber in record.Sharding.Shards.Keys)
             {
                 var shardName = ShardHelper.ToShardName(store.Database, shardNumber);
-                AsyncHelpers.RunSync(() => _parent.Databases.WaitForRaftIndex(shardName, raftCommandIndex));
+                foreach (var server in servers)
+                {
+                    var database = AsyncHelpers.RunSync(() => server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(shardName));
+                    if (database != null)
+                        AsyncHelpers.RunSync(() => database.RachisLogIndexNotifications.WaitForIndexNotification(raftCommandIndex, TimeSpan.FromSeconds(15)));
+                }
             }
         }
 

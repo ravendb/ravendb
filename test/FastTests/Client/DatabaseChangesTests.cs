@@ -1,8 +1,6 @@
 ﻿﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -72,22 +70,15 @@ namespace FastTests.Client
             }
 
             await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, true)).ConfigureAwait(false);
-            using (var changes = store.Changes())
-            {
-                var message = string.Empty;
-                changes.OnError += exception => Volatile.Write(ref message, exception.Message);
-                var obs = changes.ForDocumentsInCollection<User>();
-                var task = obs.EnsureSubscribedNow();
-                var timeout = TimeSpan.FromSeconds(30);
-                if (await Task.WhenAny(task, Task.Delay(timeout)) != task)
-                    throw new TimeoutException($"{timeout} {message}");
 
-                var e = await Assert.ThrowsAnyAsync<Exception>(() => task);
-                if (e is AggregateException ae)
-                    e = ae.ExtractSingleInnerException();
-                
-                Assert.Equal(typeof(DatabaseDoesNotExistException), e.GetType());
-            }
+            await AssertWaitForExceptionAsync<DatabaseDoesNotExistException>(async () =>
+            {
+                using (var changes = store.Changes())
+                {
+                    var obs = changes.ForDocumentsInCollection<User>();
+                    await obs.EnsureSubscribedNow();
+                }
+            }, timeout: 30_000);
         }
 
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
