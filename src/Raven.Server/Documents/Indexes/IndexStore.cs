@@ -2068,6 +2068,16 @@ namespace Raven.Server.Documents.Indexes
 
                 if (oldIndex != null)
                 {
+                    if (oldIndex is MapReduceIndex oldMapReduceIndex && oldMapReduceIndex.OutputReduceToCollection != null
+                        && newIndex is MapReduceIndex newMapReduceIndex && newMapReduceIndex.OutputReduceToCollection != null)
+                    {
+                        var prefixesOfDocumentsToDelete = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                        CollectPrefixesOfDocumentsToDelete(oldMapReduceIndex, ref prefixesOfDocumentsToDelete);
+
+                        if (prefixesOfDocumentsToDelete.Count > 0)
+                            newMapReduceIndex.OutputReduceToCollection.AddPrefixesOfDocumentsToDelete(prefixesOfDocumentsToDelete);
+                    }
+
                     while (true)
                     {
                         try

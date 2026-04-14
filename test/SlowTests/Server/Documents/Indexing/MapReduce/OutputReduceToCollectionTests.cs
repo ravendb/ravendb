@@ -213,6 +213,49 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
+        public async Task SideBySideReplacementShouldCleanUpOldArtificialDocuments()
+        {
+            using (var store = GetDocumentStore())
+            {
+                await store.ExecuteIndexAsync(new DailyInvoicesIndex());
+
+                var date = new DateTime(2017, 1, 1);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < 30; i++)
+                    {
+                        await session.StoreAsync(new Invoice { Amount = 1, IssuedAt = date.AddHours(i * 6) });
+                    }
+
+                    await session.SaveChangesAsync();
+                }
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                int countBeforeReplacement;
+                using (var session = store.OpenAsyncSession())
+                {
+                    countBeforeReplacement = await session.Query<DailyInvoice>().CountAsync();
+                    Assert.True(countBeforeReplacement > 0);
+                }
+
+                // deploy updated index - triggers side-by-side replacement
+                await store.ExecuteIndexAsync(new Replacement_CountFieldAdded.DailyInvoicesIndex());
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                // after replacement, the artificial document count must remain the same
+                // (old ones deleted, new ones created)
+                using (var session = store.OpenAsyncSession())
+                {
+                    var countAfterReplacement = await session.Query<DailyInvoice>().CountAsync();
+                    Assert.Equal(countBeforeReplacement, countAfterReplacement);
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdateIndexAsSideBySideAndChangingReduceOutputCollection()
         {
             using (var store = GetDocumentStore())
