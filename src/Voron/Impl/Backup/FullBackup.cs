@@ -352,7 +352,7 @@ namespace Voron.Impl.Backup
                     };
 
                     if (useSparse)
-                        decompressionStream.CopyToSparse(output, progressCallback, cancellationToken);
+                        decompressionStream.CopyToPreservingSparseRegions(output, progressCallback, cancellationToken);
                     else
                         decompressionStream.CopyTo(output, progressCallback, cancellationToken);
                 }
