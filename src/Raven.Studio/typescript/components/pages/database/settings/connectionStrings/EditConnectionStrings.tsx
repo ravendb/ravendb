@@ -113,7 +113,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                 <div className="text-center lead">{isForNewConnection ? "Create a new" : "Edit"} connection string</div>
             </Modal.Header>
             <Modal.Body className="pb-0 vstack gap-3">
-                {viewContext === "connectionStrings" && (
+                {(viewContext === "connectionStrings" || viewContext === "serverWideConnectionStrings") && (
                     <div className="mb-2">
                         <FormLabel>Type</FormLabel>
                         <InputGroup className="gap-1 flex-wrap flex-column">

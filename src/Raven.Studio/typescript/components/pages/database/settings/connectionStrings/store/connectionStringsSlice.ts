@@ -16,12 +16,18 @@ import {
     mapAmazonSqsConnectionsFromDto,
     mapAzureServiceBusConnectionsFromDto,
     mapAiConnectionsFromDto,
+    mapServerWideConnectionsFromDto,
+    ServerWideConnectionStringDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export type ConnectionStringsViewContext = "connectionStrings" | "aiConnectionStrings" | "aiTask";
+export type ConnectionStringsViewContext =
+    | "connectionStrings"
+    | "aiConnectionStrings"
+    | "aiTask"
+    | "serverWideConnectionStrings";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;
@@ -155,6 +161,16 @@ export const connectionStringsSlice = createSlice({
             })
             .addCase(fetchData.rejected, (state) => {
                 state.loadStatus = "failure";
+            })
+            .addCase(fetchServerWideData.fulfilled, (state, { payload }) => {
+                state.connections = mapServerWideConnectionsFromDto(payload.serverWideDto);
+                state.loadStatus = "success";
+            })
+            .addCase(fetchServerWideData.pending, (state) => {
+                state.loadStatus = "loading";
+            })
+            .addCase(fetchServerWideData.rejected, (state) => {
+                state.loadStatus = "failure";
             });
     },
 });
@@ -163,6 +179,10 @@ interface FetchDataResult {
     ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
     connectionStringsDto: GetConnectionStringsResult;
     hasDatabaseAdminAccess: boolean;
+}
+
+interface FetchServerWideDataResult {
+    serverWideDto: ServerWideConnectionStringDto[];
 }
 
 const fetchData = createAsyncThunk<
@@ -191,9 +211,18 @@ const fetchData = createAsyncThunk<
     };
 });
 
+const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult>(
+    connectionStringsSlice.name + "/fetchServerWideConnectionStrings",
+    async () => {
+        const { Results } = await services.tasksService.getServerWideConnectionStrings();
+        return { serverWideDto: Results };
+    }
+);
+
 export const connectionStringsActions = {
     ...connectionStringsSlice.actions,
     fetchData,
+    fetchServerWideData,
 };
 
 export const connectionStringSelectors = {

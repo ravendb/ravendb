@@ -1,36 +1,26 @@
+import { useEffect, useState } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
-import { useServices } from "components/hooks/useServices";
-import { useAsync } from "react-async-hook";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { useState } from "react";
 import { Connection, StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import { mapServerWideConnectionsFromDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
+import {
+    getIcon,
+    getTypeLabel,
+} from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
+import "components/pages/database/settings/connectionStrings/ConnectionStringsPanels.scss";
 import { EmptySet } from "components/common/EmptySet";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ServerWideConnectionStringsInfoHub from "components/pages/resources/manageServer/serverwideConnectionStrings/ServerWideConnectionStringsInfoHub";
 import { exhaustiveStringTuple } from "components/utils/common";
-
-const emptyConnections: { [key in StudioConnectionType]: Connection[] } = {
-    Raven: [],
-    Sql: [],
-    Snowflake: [],
-    Olap: [],
-    ElasticSearch: [],
-    Kafka: [],
-    RabbitMQ: [],
-    AzureQueueStorage: [],
-    AmazonSqs: [],
-    Ai: [],
-};
+import { connectionStringsActions, connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 
 const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Ai",
@@ -46,38 +36,41 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
 );
 
 export default function ServerWideConnectionStrings() {
-    const { tasksService } = useServices();
+    const dispatch = useAppDispatch();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const [connections, setConnections] = useState(emptyConnections);
     const [editConnection, setEditConnection] = useState<Connection | null>(null);
 
-    const asyncGet = useAsync(
-        async () => {
-            const { Results } = await tasksService.getServerWideConnectionStrings();
-            setConnections(mapServerWideConnectionsFromDto(Results));
-        },
-        []
-    );
+    useEffect(() => {
+        dispatch(connectionStringsActions.viewContextSet("serverWideConnectionStrings"));
+        dispatch(connectionStringsActions.fetchServerWideData());
+
+        return () => {
+            dispatch(connectionStringsActions.reset());
+        };
+    }, [dispatch]);
+
+    const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
+    const connections = useAppSelector(connectionStringSelectors.connections);
+    const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
 
     const handleSave = async (_name: string) => {
-        const { Results } = await tasksService.getServerWideConnectionStrings();
-        setConnections(mapServerWideConnectionsFromDto(Results));
+        dispatch(connectionStringsActions.fetchServerWideData());
         setEditConnection(null);
     };
 
     const handleConnectionDeleted = (connection: Connection) => {
-        setConnections((prev) => ({
-            ...prev,
-            [connection.type]: prev[connection.type].filter((x) => x.name !== connection.name),
-        }));
+        dispatch(connectionStringsActions.connectionDeleted(connection));
     };
 
-    if (asyncGet.status === "error") {
-        return <LoadError error="Unable to load server-wide connection strings" refresh={asyncGet.execute} />;
+    if (loadStatus === "failure") {
+        return (
+            <LoadError
+                error="Unable to load server-wide connection strings"
+                refresh={() => dispatch(connectionStringsActions.fetchServerWideData())}
+            />
+        );
     }
-
-    const isEmpty = allStudioEtlTypes.every((type) => connections[type].length === 0);
 
     return (
         <div className="content-margin">
@@ -103,7 +96,7 @@ export default function ServerWideConnectionStrings() {
                             Add a server-wide connection string
                         </Button>
                         <div className={hasClusterAdminAccess ? null : "item-disabled pe-none"}>
-                            <LazyLoad active={asyncGet.status === "loading"}>
+                            <LazyLoad active={loadStatus === "loading"}>
                                 {isEmpty ? (
                                     <EmptySet>No server-wide connection strings have been defined</EmptySet>
                                 ) : (
@@ -113,7 +106,7 @@ export default function ServerWideConnectionStrings() {
                                             return null;
                                         }
                                         return (
-                                            <div key={type} className="mb-4">
+                                            <div key={type} className="mb-4 connection-strings-panels">
                                                 <HrHeader
                                                     right={
                                                         hasClusterAdminAccess && (
@@ -130,7 +123,8 @@ export default function ServerWideConnectionStrings() {
                                                         )
                                                     }
                                                 >
-                                                    {type}
+                                                    <Icon icon={getIcon(type)} />
+                                                    {getTypeLabel(type)}
                                                 </HrHeader>
                                                 {typeConnections.map((connection) => (
                                                     <ConnectionStringsPanel

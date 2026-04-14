@@ -22,6 +22,8 @@ import useUniqueId from "components/hooks/useUniqueId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import copyToClipboard from "common/copyToClipboard";
+import classNames from "classnames";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
@@ -44,6 +46,8 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
     const hasWriteAccess = isServerwide ? hasClusterAdminAccess : hasDatabaseAdminAccess;
+    const { appUrl } = useAppUrls();
+    const isFromServerWide = !isServerwide && connection.excludedDatabases !== undefined;
 
     const asyncDelete = useAsyncCallback(async () => {
         if (isServerwide) {
@@ -80,36 +84,55 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
                     {hasWriteAccess && (
-                        <RichPanelActions>
-                            <Button
-                                variant="secondary"
-                                title="Edit connection string"
-                                onClick={() =>
-                                    isServerwide
-                                        ? onEditConnection?.(connection)
-                                        : dispatch(connectionStringsActions.editConnectionModalOpened(connection))
-                                }
-                            >
-                                <Icon icon="edit" margin="m-0" />
-                            </Button>
-                            <ConditionalPopover
-                                conditions={{
-                                    isActive: isDeleteDisabled,
-                                    message: "Connection string is being used by an ongoing task",
-                                }}
-                            >
-                                <div id={deleteButtonId}>
-                                    <ButtonWithSpinner
-                                        variant="danger"
-                                        title="Delete connection string"
-                                        disabled={isDeleteDisabled}
-                                        onClick={onDelete}
-                                        icon="trash"
-                                        isSpinning={asyncDelete.loading}
-                                    />
-                                </div>
-                            </ConditionalPopover>
-                        </RichPanelActions>
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: isFromServerWide,
+                                message: (
+                                    <>
+                                        This connection string is managed server-wide. To edit or delete it, go to{" "}
+                                        <a href={appUrl.forServerwideConnectionStrings()}>
+                                            Server-Wide Connection Strings
+                                        </a>
+                                        .
+                                    </>
+                                ),
+                            }}
+                        >
+                            <div className={classNames({ "item-disabled pe-none": isFromServerWide })}>
+                                <RichPanelActions>
+                                    <Button
+                                        variant="secondary"
+                                        title="Edit connection string"
+                                        onClick={() =>
+                                            isServerwide
+                                                ? onEditConnection?.(connection)
+                                                : dispatch(
+                                                      connectionStringsActions.editConnectionModalOpened(connection)
+                                                  )
+                                        }
+                                    >
+                                        <Icon icon="edit" margin="m-0" />
+                                    </Button>
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: isDeleteDisabled,
+                                            message: "Connection string is being used by an ongoing task",
+                                        }}
+                                    >
+                                        <div id={deleteButtonId}>
+                                            <ButtonWithSpinner
+                                                variant="danger"
+                                                title="Delete connection string"
+                                                disabled={isDeleteDisabled}
+                                                onClick={onDelete}
+                                                icon="trash"
+                                                isSpinning={asyncDelete.loading}
+                                            />
+                                        </div>
+                                    </ConditionalPopover>
+                                </RichPanelActions>
+                            </div>
+                        </ConditionalPopover>
                     )}
                 </RichPanelHeader>
 
