@@ -609,7 +609,7 @@ namespace FastTests
         {
             await WaitAndAssertForValueAsync(async () =>
                 await act().ContinueWith(t =>
-                    t.Exception?.InnerException?.GetType()), typeof(T), timeout, interval);
+                    t.Exception?.Flatten().InnerException?.GetType()), typeof(T), timeout, interval);
         }
 
         protected static async Task<T> AssertWaitForNotNullAsync<T>(Func<Task<T>> act, int timeout = 15000, int interval = 100) where T : class
