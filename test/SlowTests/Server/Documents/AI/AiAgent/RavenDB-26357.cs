@@ -38,12 +38,12 @@ public class RavenDB_26357 : RavenTestBase
         var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
 
         var generatedCode = result.GeneratedCode;
-
+        generatedCode = generatedCode.Replace("/* your response type */", "string");
         generatedCode = generatedCode.Replace("using Raven.Client.Documents.Operations.AI.Agents;", """
 using Raven.Client.Documents.Operations.AI.Agents; 
 public class Program
 { 
-    public static void Main()
+    public static async Task Main()
     {
 """);
         generatedCode += """
@@ -336,3 +336,4 @@ public class Program
     }
 
 }
+
