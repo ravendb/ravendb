@@ -14,7 +14,7 @@ namespace SlowTests.Voron.Issues;
 public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
     [RavenFact(RavenTestCategory.Voron)]
-    public void CopyToPreservingSparsity_ShouldCreateHoleForZeroRunSpanningMultipleReadBuffers()
+    public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunSpanningMultipleReadBuffers()
     {
         int pageSize = Constants.Storage.PageSize;
         int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 17;
@@ -35,7 +35,28 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void CopyToPreservingSparsity_ShouldPreserveTrailingSparseHoleAtEndOfStream()
+    public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunSpanningNonPageAlignedReads()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 17;
+        var source = new byte[(2 + sparsePages) * pageSize];
+
+        Fill(source, 0, pageSize, 11);
+        Fill(source, (1 + sparsePages) * pageSize, pageSize, 12);
+
+        using var input = new ChunkedReadStream(source, pageSize / 2);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal((long)source.Length - (long)sparsePages * pageSize, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldPreserveTrailingSparseHoleAtEndOfStream()
     {
         int pageSize = Constants.Storage.PageSize;
         int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 9;
@@ -55,7 +76,27 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void CopyToPreservingSparsity_ShouldWriteZeroRunBelowSparseThreshold()
+    public void CopyToPreservingSparseRegions_ShouldPreserveTrailingSparseHoleAtEndOfStreamWithNonPageAlignedReads()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 9;
+        var source = new byte[(1 + sparsePages) * pageSize];
+
+        Fill(source, 0, pageSize, 13);
+
+        using var input = new ChunkedReadStream(source, (pageSize / 2) + 37);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(pageSize, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldWriteZeroRunBelowSparseThreshold()
     {
         int pageSize = Constants.Storage.PageSize;
         int zeroPages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration - 1;
@@ -76,7 +117,49 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void CopyToPreservingSparsity_ShouldWritePartialPageTailAfterSparseHole()
+    public void CopyToPreservingSparseRegions_ShouldWriteZeroRunBelowSparseThresholdWithNonPageAlignedReads()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int zeroPages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration - 1;
+        var source = new byte[(2 + zeroPages) * pageSize];
+
+        Fill(source, 0, pageSize, 14);
+        Fill(source, (1 + zeroPages) * pageSize, pageSize, 15);
+
+        using var input = new ChunkedReadStream(source, (pageSize / 3) + 29);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(source.Length, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldCreateHoleForZeroRunAtSparseThreshold()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
+        var source = new byte[(2 + sparsePages) * pageSize];
+
+        Fill(source, 0, pageSize, 16);
+        Fill(source, (1 + sparsePages) * pageSize, pageSize, 17);
+
+        using var input = new ChunkedReadStream(source, (pageSize / 4) + 17);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal((long)source.Length - (long)sparsePages * pageSize, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldWritePartialPageTailAfterSparseHole()
     {
         int pageSize = Constants.Storage.PageSize;
         int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 5;
@@ -87,6 +170,28 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         Fill(source, (1 + sparsePages) * pageSize, tailLength, 7);
 
         using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(pageSize + tailLength, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldWritePartialPageTailAfterSparseHoleWithNonPageAlignedReads()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 5;
+        int tailLength = pageSize / 2;
+        var source = new byte[((1 + sparsePages) * pageSize) + tailLength];
+
+        Fill(source, 0, pageSize, 18);
+        Fill(source, (1 + sparsePages) * pageSize, tailLength, 19);
+
+        using var input = new ChunkedReadStream(source, (pageSize / 2) + 11);
         using var destination = new RecordingSparseDestination();
 
         input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
@@ -164,6 +269,75 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         {
             TotalBytesWritten += buffer.Length;
             _inner.Write(buffer);
+        }
+    }
+
+    private sealed class ChunkedReadStream : Stream
+    {
+        private readonly MemoryStream _inner;
+        private readonly int _maxReadSize;
+
+        public ChunkedReadStream(byte[] buffer, int maxReadSize)
+        {
+            _inner = new MemoryStream(buffer);
+            _maxReadSize = maxReadSize;
+        }
+
+        public override bool CanRead => _inner.CanRead;
+
+        public override bool CanSeek => _inner.CanSeek;
+
+        public override bool CanWrite => false;
+
+        public override long Length => _inner.Length;
+
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
+
+        public override void Flush()
+        {
+            _inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return _inner.Read(buffer, offset, Math.Min(count, _maxReadSize));
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            return _inner.Read(buffer[..Math.Min(buffer.Length, _maxReadSize)]);
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return _inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            _inner.SetLength(value);
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            throw new NotSupportedException();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+                _inner.Dispose();
+
+            base.Dispose(disposing);
         }
     }
 }
