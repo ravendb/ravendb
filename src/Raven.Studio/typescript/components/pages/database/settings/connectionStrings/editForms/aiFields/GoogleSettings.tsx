@@ -108,7 +108,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     options={getModelOptions(formValues.modelType)}
                 />
             </div>
-            <PromptCacheField baseName="googleSettings" />
+            <PromptCacheField baseName="googleSettings" serverDefaultValue={false} />
             <div className="mb-2">
                 <FormLabel>
                     Dimensions <OptionalLabel />

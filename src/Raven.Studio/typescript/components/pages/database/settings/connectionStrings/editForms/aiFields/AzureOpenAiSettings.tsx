@@ -155,7 +155,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     />
                 </div>
             )}
-            <PromptCacheField baseName="azureOpenAiSettings" />
+            <PromptCacheField baseName="azureOpenAiSettings" serverDefaultValue={true} />
             <TemperatureField baseName="azureOpenAiSettings" />
             {formValues.modelType === "TextEmbeddings" && (
                 <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />

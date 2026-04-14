@@ -193,7 +193,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     />
                 </div>
             )}
-            <PromptCacheField baseName="openAiSettings" />
+            <PromptCacheField baseName="openAiSettings" serverDefaultValue={true} />
             <TemperatureField baseName="openAiSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />}
             <div className="d-flex mb-2">

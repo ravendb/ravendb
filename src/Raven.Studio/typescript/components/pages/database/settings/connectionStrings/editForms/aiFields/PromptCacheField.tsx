@@ -12,9 +12,10 @@ type FormData = ConnectionFormData<AiConnection>;
 
 interface PromptCacheFieldProps {
     baseName: Extract<FormData["connectorType"], "azureOpenAiSettings" | "googleSettings" | "openAiSettings">;
+    serverDefaultValue: boolean;
 }
 
-export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
+export default function PromptCacheField({ baseName, serverDefaultValue }: PromptCacheFieldProps) {
     const { control } = useFormContext<FormData>();
 
     const modelType = useWatch({ control, name: "modelType" });
@@ -24,29 +25,6 @@ export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
     }
 
     const fieldName = `${baseName}.enablePromptCache` satisfies FieldPath<FormData>;
-
-    function getDescriptionForDefaultPromptCacheKey(baseName: PromptCacheFieldProps["baseName"]) {
-        switch (baseName) {
-            case "openAiSettings":
-            case "azureOpenAiSettings":
-                return (
-                    <>
-                        <strong>Default:</strong> <code>True</code>
-                        <br />
-                        The server sends the cache key by default.
-                    </>
-                );
-
-            case "googleSettings":
-                return (
-                    <>
-                        <strong>Default:</strong> <code>False</code>
-                        <br />
-                        The server does not send the cache key by default.
-                    </>
-                );
-        }
-    }
 
     return (
         <div className="mb-2">
@@ -64,7 +42,13 @@ export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
                             <br />
                             <br />
                             <ul className="mb-0">
-                                <li>{getDescriptionForDefaultPromptCacheKey(baseName)}</li>
+                                <li>
+                                    <strong>Default:</strong> <code>{serverDefaultValue ? "True" : "False"}</code>
+                                    <br />
+                                    {serverDefaultValue
+                                        ? "The server sends the cache key by default."
+                                        : "The server does not send the cache key by default."}
+                                </li>
                                 <li className="mt-1">
                                     <strong>True:</strong> Always send the cache key.
                                 </li>
@@ -83,7 +67,7 @@ export default function PromptCacheField({ baseName }: PromptCacheFieldProps) {
     );
 }
 
-const promptCacheOptions: SelectOption<boolean>[] = [
+const promptCacheOptions: SelectOption<boolean | null>[] = [
     { label: "Default", value: null },
     { label: "True", value: true },
     { label: "False", value: false },
