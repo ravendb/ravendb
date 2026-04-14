@@ -787,7 +787,19 @@ namespace Voron
 
                 foreach (var file in Directory.GetFiles(TempPath.FullPath).Where(x => x.EndsWith(BuffersFileExtension, StringComparison.OrdinalIgnoreCase) || x.EndsWith(TempFileExtension, StringComparison.OrdinalIgnoreCase)))
                 {
-                    File.Delete(file);
+                    try
+                    {
+                        File.Delete(file);
+                    }
+                    catch (IOException)
+                    {
+                        // On Windows, a previous environment's pager may still hold the file handle
+                        // (e.g. pending GC finalization). The file will be cleaned up on next startup.
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Same as above — file is still in use by another handle.
+                    }
                 }
             }
 
