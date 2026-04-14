@@ -42,7 +42,7 @@ namespace Voron.Impl.Backup
         /// normally to avoid creating fragmented sparse holes with negligible benefit.
         /// This threshold matches the one used by Voron's flush pipeline in FreeSpaceHandling.GetSparseRegions.
         /// </remarks>
-        public static void CopyToSparse(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
+        public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
             int minZeroPagesForHole = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
