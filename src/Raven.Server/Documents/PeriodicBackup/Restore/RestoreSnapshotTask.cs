@@ -16,6 +16,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -304,6 +305,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                         onProgress.Invoke(restoreResult.Progress);
                     },
                     RestoreConfiguration.MaxReadOpsPerSecond,
+                    disableSparseRegions: GetDisableSparseRegions(restoreSettings),
                     cancellationToken: OperationCancelToken.Token);
             }
 
@@ -398,6 +400,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     index?.Dispose();
                 }
             }
+        }
+
+        private bool GetDisableSparseRegions(RestoreSettings restoreSettings)
+        {
+            // Check per-database setting from the snapshot's database record first,
+            // fall back to server-wide configuration
+            if (restoreSettings?.DatabaseRecord.Settings.TryGetValue(
+                    RavenConfiguration.GetKey(x => x.Storage.DisableSparseRegions), out var value) == true
+                && bool.TryParse(value, out var perDatabaseSetting))
+            {
+                return perDatabaseSetting;
+            }
+
+            return ServerStore.Configuration.Storage.DisableSparseRegions;
         }
 
         public override void Dispose()
