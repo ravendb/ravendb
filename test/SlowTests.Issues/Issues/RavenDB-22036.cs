@@ -1,10 +1,14 @@
 using System;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Extensions;
 using Xunit;
@@ -16,6 +20,19 @@ public class RavenDB_22036 : RavenTestBase
     public RavenDB_22036(ITestOutputHelper output) : base(output)
     {
     }
+
+    private void WaitForIndexRaftOnShards(IDocumentStore store, long raftCommandIndex)
+    {
+        var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+        if (record.IsSharded == false)
+            return;
+
+        foreach (var shardNumber in record.Sharding.Shards.Keys)
+        {
+            var shardName = ShardHelper.ToShardName(store.Database, shardNumber);
+            AsyncHelpers.RunSync(() => Databases.WaitForRaftIndex(shardName, raftCommandIndex));
+        }
+    }
     
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
@@ -24,15 +41,16 @@ public class RavenDB_22036 : RavenTestBase
         using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
-            
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
                 Maps = { "from user in docs.Users select new { user.FirstName }" },
                 Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
 
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.SideBySide)).ExecuteOnAll();
             
@@ -64,15 +82,16 @@ public class RavenDB_22036 : RavenTestBase
         using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
-            
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
                 Maps = { "from user in docs.Users select new { user.FirstName }" },
                 Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
 
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.InPlace)).ExecuteOnAll();
             
@@ -104,15 +123,16 @@ public class RavenDB_22036 : RavenTestBase
         using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
-            
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
                 Maps = { "from user in docs.Users select new { user.FirstName }" },
                 Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, indexResetMode: IndexResetMode.SideBySide)).ExecuteOnAll();
             
@@ -157,14 +177,15 @@ public class RavenDB_22036 : RavenTestBase
         {
             const string indexName = "Users/ByName";
 
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
-                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
-                Type = IndexType.Map, 
+                Maps = { "from user in docs.Users select new { user.FirstName }" },
+                Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName)).ExecuteOnAll();
             
@@ -202,19 +223,20 @@ public class RavenDB_22036 : RavenTestBase
         {
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.ResetMode)] = IndexResetMode.SideBySide.ToString();
         };
-        
+
         using (var store = GetDocumentStore(options))
         {
             const string indexName = "Users/ByName";
 
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
-                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
-                Type = IndexType.Map, 
+                Maps = { "from user in docs.Users select new { user.FirstName }" },
+                Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName)).ExecuteOnAll();
             
@@ -252,14 +274,15 @@ public class RavenDB_22036 : RavenTestBase
         {
             const string indexName = "Users/ByName";
 
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
-                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
-                Type = IndexType.Map, 
+                Maps = { "from user in docs.Users select new { user.FirstName }" },
+                Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, IndexResetMode.SideBySide)).ExecuteOnAll();
             
@@ -309,14 +332,15 @@ public class RavenDB_22036 : RavenTestBase
         {
             const string indexName = "Users/ByName";
 
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
-                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
-                Type = IndexType.Map, 
+                Maps = { "from user in docs.Users select new { user.FirstName }" },
+                Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, IndexResetMode.SideBySide)).ExecuteOnAll();
             
@@ -367,14 +391,15 @@ public class RavenDB_22036 : RavenTestBase
             const string indexName = "Users/ByName";
             const string replacementIndexName = $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{indexName}";
 
-            store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
+            var putResult = store.Maintenance.Send(new PutIndexesOperation(new IndexDefinition
             {
-                Maps = { "from user in docs.Users select new { user.FirstName }" }, 
-                Type = IndexType.Map, 
+                Maps = { "from user in docs.Users select new { user.FirstName }" },
+                Type = IndexType.Map,
                 Name = indexName
             }));
-            
+
             store.Maintenance.ForTesting(() => new StopIndexingOperation()).ExecuteOnAll();
+            WaitForIndexRaftOnShards(store, putResult[0].RaftCommandIndex);
             
             store.Maintenance.ForTesting(() => new ResetIndexOperation(indexName, IndexResetMode.SideBySide)).ExecuteOnAll();
             
