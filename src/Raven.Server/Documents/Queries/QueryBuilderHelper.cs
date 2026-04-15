@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Corax;
@@ -889,16 +890,20 @@ public static class QueryBuilderHelper
         return GenerateEmbeddings.FromArray(allocator, scope, memory, options, bytesRequired);
     }
     
-    public static bool EvaluateConstantExpressionForWhenQuery(BinaryExpression constantExpression, BlittableJsonReaderObject parameters)
+    public static bool EvaluateConstantExpressionForWhenQuery(QueryExpression expression, BlittableJsonReaderObject parameters)
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
+
+        if (expression is InExpression inExpression)
+            return EvaluateInExpressionForWhenQuery(inExpression, parameters);
+
+        if (expression is not BinaryExpression constantExpression)
+            throw new InvalidOperationException($"Expected binary or in expression, but got: '{expression}' of type '{expression.Type}'.");
+
         if (constantExpression.Operator is OperatorType.And or OperatorType.Or)
         {
-            PortableExceptions.ThrowIfNot<ArgumentException>(constantExpression.Left is BinaryExpression, $"Expected binary expression, but got: '{constantExpression.Left.ToString()}' of type '{constantExpression.Left.Type}'.");
-            PortableExceptions.ThrowIfNot<ArgumentException>(constantExpression.Right is BinaryExpression, $"Expected binary expression, but got: '{constantExpression.Right.ToString()}' of type '{constantExpression.Right.Type}'.");
-            
-            var leftResult = EvaluateConstantExpressionForWhenQuery((BinaryExpression)constantExpression.Left, parameters);
-            var rightResult = EvaluateConstantExpressionForWhenQuery((BinaryExpression)constantExpression.Right, parameters);
+            var leftResult = EvaluateConstantExpressionForWhenQuery(constantExpression.Left, parameters);
+            var rightResult = EvaluateConstantExpressionForWhenQuery(constantExpression.Right, parameters);
             return (constantExpression.Operator) switch
             {
                 OperatorType.And => leftResult && rightResult,
@@ -906,7 +911,7 @@ public static class QueryBuilderHelper
                 _ => throw new InvalidOperationException("Should not happen!")
             };
         }
-        
+
         if (constantExpression.Left is not FieldExpression leftField)
             throw new InvalidOperationException($"Expected parameter field (e.g. $p0), but got: '{constantExpression.Left}'.");
         
@@ -1054,5 +1059,114 @@ public static class QueryBuilderHelper
             default:
                 return false;
         }
+    }
+
+    private static bool EvaluateInExpressionForWhenQuery(InExpression inExpression, BlittableJsonReaderObject parameters)
+    {
+        if (inExpression.Source is not FieldExpression sourceField)
+            throw new InvalidOperationException($"Expected parameter field (e.g. $p0), but got: '{inExpression.Source}'.");
+
+        PortableExceptions.ThrowIfNot<InvalidOperationException>(sourceField.FieldValue.StartsWith('$'),
+            $"Expected parameter field (e.g. $p0), but got: '{sourceField.FieldValue}'.");
+
+        object paramValue;
+        bool paramIsMissing;
+        if (parameters == null || parameters.TryGet(new StringSegment(sourceField.FieldValue, 1, sourceField.FieldValue.Length - 1), out paramValue) == false)
+        {
+            paramValue = null;
+            paramIsMissing = true;
+        }
+        else
+        {
+            paramIsMissing = false;
+        }
+
+        if (paramIsMissing || paramValue is null)
+        {
+            foreach (QueryExpression value in inExpression.Values)
+            {
+                if (value is ValueExpression { Value: ValueTokenType.Null })
+                    return inExpression.All == false;
+            }
+
+            return false;
+        }
+        
+        if (paramValue is BlittableJsonReaderArray array)
+            return WhenInArrayToArrayExpressionEvaluator(array, inExpression);
+
+        return WhenInScalarExpressionEvaluator(GetValueAsString(paramValue), inExpression);
+    }
+
+    private static HashSet<string> MaterializeInList(InExpression inExpression)
+    {
+        var set = new HashSet<string>(inExpression.Values.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (QueryExpression value in inExpression.Values)
+        {
+            if (value is not ValueExpression valueExpression)
+                throw new InvalidOperationException($"Expected value expression in 'in' list, but got: '{value}' of type '{value.Type}'.");
+
+            var valueAsString = valueExpression.Value == ValueTokenType.Null
+                ? Corax.Constants.NullValue
+                : GetValueAsString(valueExpression.Token);
+
+            set.Add(valueAsString);
+        }
+
+        return set;
+    }
+
+    private static bool WhenInScalarExpressionEvaluator(string paramValueAsString, InExpression inExpression)
+    {
+        int matches = 0;
+        paramValueAsString ??= Corax.Constants.NullValue;
+        foreach (QueryExpression value in inExpression.Values)
+        {
+            if (value is not ValueExpression valueExpression)
+                throw new InvalidOperationException($"Expected value expression in 'in' list, but got: '{value}' of type '{value.Type}'.");
+
+            var valueAsString = valueExpression.Value == ValueTokenType.Null
+                ? Corax.Constants.NullValue
+                : GetValueAsString(valueExpression.Token);
+
+            if (string.Equals(paramValueAsString, valueAsString, StringComparison.OrdinalIgnoreCase))
+            {
+                if (inExpression.All == false)
+                    return true;
+
+                matches++;
+            }
+        }
+
+        return inExpression.All && matches == inExpression.Values.Count;
+    }
+
+    private static bool WhenInArrayToArrayExpressionEvaluator(BlittableJsonReaderArray array, InExpression inExpression)
+    {
+        HashSet<string> valuesSet = MaterializeInList(inExpression);
+        
+        if (inExpression.All)
+        {
+            HashSet<string> parameterValues = new(array.Length, StringComparer.OrdinalIgnoreCase);
+            foreach (var value in array)
+            {
+                var valueAsString = value is null 
+                    ? Corax.Constants.NullValue 
+                    : GetValueAsString(value.ToString());
+                
+                parameterValues.Add(valueAsString);
+            }
+
+            return parameterValues.IsSubsetOf(valuesSet);
+        }
+
+        foreach (object element in array)
+        {
+            var elementAsString = element is null ? Corax.Constants.NullValue : GetValueAsString(element);
+            if (valuesSet.Contains(elementAsString))
+                return true;
+        }
+
+        return false;
     }
 }

@@ -727,7 +727,7 @@ namespace Raven.Server.Documents.Queries
         {
             PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
-            var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], parameters);
+            var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery(expression.Arguments[0], parameters);
             if (constantExpressionResult == false)
                 return new LuceneWhenQuery();
             
