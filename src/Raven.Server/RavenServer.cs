@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -334,6 +335,11 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
+                    .ConfigureAppConfiguration(builder =>
+                    {
+                        if (Configuration.Monitoring.OpenTelemetry.Enabled)
+                            builder.Add(new OpenTelemetryEnvironmentVariablesReader());
+                    })
                     .ConfigureMicrosoftLogging(Configuration.Logs, ServerStore.NotificationCenter)
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
@@ -496,7 +502,7 @@ namespace Raven.Server
                 throw;
             }
         }
-        
+
         private void StartOpenTelemetry()
         {
             MetricsManager = new MetricsManager(ServerStore.Server, _openTelemetryInitialized); 
@@ -518,7 +524,6 @@ namespace Raven.Server
             openTelemetryBuilder.WithMetrics(ConfigureMetrics);
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
-                builder.ConfigureResource(x => x.AddEnvironmentVariableDetector());
                 var configuration = Configuration.Monitoring.OpenTelemetry;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
