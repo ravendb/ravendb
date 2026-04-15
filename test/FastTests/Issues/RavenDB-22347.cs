@@ -22,6 +22,12 @@ namespace FastTests.Issues
         [InlineData("line1\nline2")]
         [InlineData("col1\tcol2")]
         [InlineData("")]
+        [InlineData("\r\n")]
+        [InlineData("\u2028")]
+        [InlineData("\u2029")]
+        [InlineData("\u3712")]
+        [InlineData("\ud83d\ude00")]
+        [InlineData("key \ud83d\udd11 with emoji")]
         public void CanPatchDictionaryViaIndexerWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
@@ -67,6 +73,12 @@ namespace FastTests.Issues
         [InlineData("line1\nline2")]
         [InlineData("col1\tcol2")]
         [InlineData("")]
+        [InlineData("\r\n")]
+        [InlineData("\u2028")]
+        [InlineData("\u2029")]
+        [InlineData("\u3712")]
+        [InlineData("\ud83d\ude00")]
+        [InlineData("key \ud83d\udd11 with emoji")]
         public void CanAddDictionaryEntryWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
@@ -113,6 +125,12 @@ namespace FastTests.Issues
         [InlineData("it's a \"test\"\\path.with-dashes and spaces")]
         [InlineData("line1\nline2")]
         [InlineData("col1\tcol2")]
+        [InlineData("\r\n")]
+        [InlineData("\u2028")]
+        [InlineData("\u2029")]
+        [InlineData("\u3712")]
+        [InlineData("\ud83d\ude00")]
+        [InlineData("key \ud83d\udd11 with emoji")]
         public void CanRemoveDictionaryEntryWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
