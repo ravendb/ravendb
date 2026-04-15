@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
-using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
 using Sparrow.Backups;
 using Sparrow.Platform;
@@ -224,7 +223,7 @@ public class RavenDB_26344 : StorageTest
 
         // Restore with sparse regions disabled
         var restoreDir = voronDataDir.Combine("restored-no-sparse");
-        BackupMethods.Full.Restore(backupPath, restoreDir);
+        BackupMethods.Full.Restore(backupPath, restoreDir, sparseRegionsSupported: false);
 
         var options = StorageEnvironmentOptions.ForPathForTests(restoreDir.FullPath);
         options.MaxLogFileSize = Env.Options.MaxLogFileSize;

@@ -40,10 +40,8 @@ namespace Voron.Impl.Backup
         public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
-            int minZeroPagesForHole = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
 
-            int bufferSize = DefaultBufferSize;
-            var readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            var readBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
             var zeroBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
             var pageBuffer = ArrayPool<byte>.Shared.Rent(pageSize);
 
@@ -57,7 +55,7 @@ namespace Voron.Impl.Backup
                 int partialPageBytes = 0;
 
                 int count;
-                while ((count = source.Read(readBuffer, 0, bufferSize)) != 0)
+                while ((count = source.Read(readBuffer, 0, DefaultBufferSize)) != 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(count);
@@ -75,8 +73,7 @@ namespace Voron.Impl.Backup
 
                         if (partialPageBytes == pageSize)
                         {
-                            ProcessPage(destination, pageBuffer, 0, pageSize, ref contiguousZeroPages, minZeroPagesForHole,
-                                zeroBuffer, ref logicalPosition, ref destinationPosition);
+                            ProcessPage(destination, pageBuffer, 0, pageSize, ref contiguousZeroPages, zeroBuffer, ref logicalPosition, ref destinationPosition);
                             partialPageBytes = 0;
                         }
                     }
@@ -98,8 +95,9 @@ namespace Voron.Impl.Backup
                                 if (pendingWriteStart >= 0)
                                 {
                                     int writeLength = pageOffset - pendingWriteStart;
+                                    long writeLogicalStart = logicalPosition - writeLength;
                                     FlushPendingWrite(destination, readBuffer, pendingWriteStart, writeLength,
-                                        logicalPosition - (pageOffset - pendingWriteStart), ref destinationPosition);
+                                        writeLogicalStart, ref destinationPosition);
                                     pendingWriteStart = -1;
                                 }
 
@@ -108,15 +106,7 @@ namespace Voron.Impl.Backup
                             else
                             {
                                 if (contiguousZeroPages > 0)
-                                {
-                                    if (contiguousZeroPages < minZeroPagesForHole)
-                                    {
-                                        long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                                        WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
-                                    }
-
-                                    contiguousZeroPages = 0;
-                                }
+                                    HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
                                 if (pendingWriteStart < 0)
                                     pendingWriteStart = pageOffset;
@@ -146,25 +136,14 @@ namespace Voron.Impl.Backup
                 if (partialPageBytes > 0)
                 {
                     if (contiguousZeroPages > 0)
-                    {
-                        if (contiguousZeroPages < minZeroPagesForHole)
-                        {
-                            long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                            WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
-                        }
-
-                        contiguousZeroPages = 0;
-                    }
+                        HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
                     FlushPendingWrite(destination, pageBuffer, 0, partialPageBytes, logicalPosition, ref destinationPosition);
                     logicalPosition += partialPageBytes;
                 }
 
-                if (contiguousZeroPages > 0 && contiguousZeroPages < minZeroPagesForHole)
-                {
-                    long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                    WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
-                }
+                if (contiguousZeroPages > 0)
+                    HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
                 if (logicalPosition > 0)
                 {
@@ -179,8 +158,7 @@ namespace Voron.Impl.Backup
             }
         }
 
-        private static void ProcessPage(Stream destination, byte[] pageBuffer, int offset, int pageSize, ref int contiguousZeroPages,
-            int minZeroPagesForHole, byte[] zeroBuffer, ref long logicalPosition, ref long destinationPosition)
+        private static void ProcessPage(Stream destination, byte[] pageBuffer, int offset, int pageSize, ref int contiguousZeroPages, byte[] zeroBuffer, ref long logicalPosition, ref long destinationPosition)
         {
             bool isZeroPage = new ReadOnlySpan<byte>(pageBuffer, offset, pageSize).ContainsAnyExcept((byte)0) == false;
 
@@ -192,15 +170,7 @@ namespace Voron.Impl.Backup
             }
 
             if (contiguousZeroPages > 0)
-            {
-                if (contiguousZeroPages < minZeroPagesForHole)
-                {
-                    long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
-                    WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
-                }
-
-                contiguousZeroPages = 0;
-            }
+                HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
             FlushPendingWrite(destination, pageBuffer, offset, pageSize, logicalPosition, ref destinationPosition);
             logicalPosition += pageSize;
@@ -217,6 +187,17 @@ namespace Voron.Impl.Backup
 
             destination.Write(buffer, offset, length);
             destinationPosition += length;
+        }
+
+        private static void HandleContiguousZeroPages(Stream destination, byte[] zeroBuffer, ref int contiguousZeroPages, long logicalPosition, int pageSize, ref long destinationPosition)
+        {
+            if (contiguousZeroPages is > 0 and < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration)
+            {
+                long zeroStart = logicalPosition - ((long)contiguousZeroPages * pageSize);
+                WriteZeros(destination, zeroBuffer, zeroStart, (long)contiguousZeroPages * pageSize, ref destinationPosition);
+            }
+
+            contiguousZeroPages = 0;
         }
 
         private static void WriteZeros(Stream destination, byte[] zeroBuffer, long logicalOffset, long length, ref long destinationPosition)
