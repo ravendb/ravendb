@@ -32,7 +32,11 @@ INSTALL_FAILURES=0
 
 apt_install() {
     if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
-        $APT_PREFIX apt-get install -y --no-install-recommends "$@"
+        if ! $APT_PREFIX apt-get install -y --no-install-recommends "$@"; then
+            INSTALL_FAILURES=$((INSTALL_FAILURES + 1))
+            return 1
+        fi
+        return 0
     else
         # Check if all requested packages are already installed
         local missing=0

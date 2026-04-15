@@ -148,6 +148,11 @@ if [ -z "$NODE_CMD" ]; then
         export PATH="$HOME/.local/share/fnm:$PATH"
         eval "$(fnm env)"
         fnm install --lts
+        NEEDS_PATH_HINT=1
+    fi
+    if ! command -v node &> /dev/null; then
+        echo "Error: Node.js installation failed. Please install Node.js 20.x or later manually."
+        exit 1
     fi
 else
     NODE_VERSION="$($NODE_CMD --version)"
