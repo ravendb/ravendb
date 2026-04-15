@@ -63,8 +63,8 @@ namespace Raven.Client.Documents.Operations.Replication
                         $"When {nameof(useServerCertificate)} is set to true, " +
                         $"{nameof(PullReplicationAsSink.CertificateWithPrivateKey)} should be null to use server certificate.");
 
-                if (skipClientCertificateValidation == false)
-                    pullReplication.EnsureHasPrivateKey();
+                if (skipClientCertificateValidation == false && pullReplication.HasPrivateKey() == false)
+                    throw new AuthorizationException("Certificate with private key is required");
             }
         }
 

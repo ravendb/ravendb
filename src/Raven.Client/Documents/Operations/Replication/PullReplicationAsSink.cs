@@ -132,14 +132,13 @@ namespace Raven.Client.Documents.Operations.Replication
 
         public override string GetDefaultTaskName() => ToString();
 
-        internal void EnsureHasPrivateKey()
+        internal bool HasPrivateKey()
         {
             var certBytes = Convert.FromBase64String(CertificateWithPrivateKey);
 
             using (var certificate = CertificateLoaderUtil.CreateCertificate(certBytes, CertificatePassword, CertificateLoaderUtil.FlagsForExport))
             {
-                if (certificate.HasPrivateKey == false)
-                    throw new InvalidOperationException("Certificate with private key is required.");
+                return certificate.HasPrivateKey;
             }
         }
     }
