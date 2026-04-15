@@ -23,7 +23,7 @@ class certificateUtils {
         const keyBags = p12.getBags({
             bagType: forge.pki.oids.pkcs8ShroudedKeyBag
         });
-        if (!keyBags[forge.pki.oids.pkcs8ShroudedKeyBag] || keyBags[forge.pki.oids.pkcs8ShroudedKeyBag].length === 0) {
+        if (!keyBags[forge.pki.oids.pkcs8ShroudedKeyBag]?.length) {
             throw new Error("The provided certificate file does not contain a private key. Please provide a PFX file with a private key.");
         }
 
