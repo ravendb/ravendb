@@ -97,7 +97,7 @@ else
     echo ".NET SDK not found. Installing .NET SDK $MAJOR_MINOR_VERSION..."
     if ! apt_install dotnet-sdk-$MAJOR_MINOR_VERSION; then
         echo "Trying dotnet-install.sh (non-root method)..."
-        curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
+        curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
         export PATH="$HOME/.dotnet:$PATH"
     fi
 fi

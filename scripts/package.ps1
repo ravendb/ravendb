@@ -109,9 +109,13 @@ function CopyDirectoryContents ( $tag, $src, $dst, [switch]$WarnOnDllConflict ) 
         try {
             Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
         } catch {
-            write-host -ForegroundColor Yellow "WARNING: $($_.Exception.Message)"
-            write-host -ForegroundColor Yellow "Overwriting with version from $tag."
-            Copy-FileHash -Path "$src" -Destination "$dst" -Recurse
+            if ($_.Exception -and $_.Exception.Message -match '(?i)\bdll\b') {
+                write-host -ForegroundColor Yellow "WARNING: $($_.Exception.Message)"
+                write-host -ForegroundColor Yellow "Overwriting with version from $tag."
+                Copy-FileHash -Path "$src" -Destination "$dst" -Recurse
+            } else {
+                throw
+            }
         }
     } else {
         Copy-FileHash -Path "$src" -Destination "$dst" -Recurse -ThrowForDlls
