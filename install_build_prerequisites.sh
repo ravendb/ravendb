@@ -24,6 +24,8 @@ else
     echo ""
 fi
 
+NEEDS_PATH_HINT=0
+
 apt_install() {
     if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
         $APT_PREFIX apt-get install -y "$@"
@@ -91,6 +93,8 @@ if [ -n "$CURRENT_DOTNET_VERSION" ]; then
             echo "Trying dotnet-install.sh (non-root method)..."
             curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
             export PATH="$HOME/.dotnet:$PATH"
+            export DOTNET_ROOT="$HOME/.dotnet"
+            NEEDS_PATH_HINT=1
         fi
     fi
 else
@@ -99,6 +103,8 @@ else
         echo "Trying dotnet-install.sh (non-root method)..."
         curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
         export PATH="$HOME/.dotnet:$PATH"
+        export DOTNET_ROOT="$HOME/.dotnet"
+        NEEDS_PATH_HINT=1
     fi
 fi
 
@@ -110,6 +116,7 @@ if ! command -v pwsh &> /dev/null; then
         echo "Installing PowerShell via dotnet tool..."
         dotnet tool install --global PowerShell
         export PATH="$PATH:$HOME/.dotnet/tools"
+        NEEDS_PATH_HINT=1
     fi
 else
     echo "PowerShell is already installed."
@@ -152,4 +159,15 @@ fi
 
 # Completion message
 echo ""
+if [ "$NEEDS_PATH_HINT" -eq 1 ]; then
+    echo "NOTE: Some tools were installed to user-local directories."
+    echo "Add the following to your shell profile (~/.bashrc or ~/.profile) to make them available:"
+    echo ""
+    [ -d "$HOME/.dotnet" ] && echo "  export DOTNET_ROOT=\"\$HOME/.dotnet\"" && echo "  export PATH=\"\$HOME/.dotnet:\$PATH\""
+    [ -d "$HOME/.dotnet/tools" ] && echo "  export PATH=\"\$HOME/.dotnet/tools:\$PATH\""
+    [ -d "$HOME/.local/share/fnm" ] && echo "  eval \"\$(fnm env)\""
+    echo ""
+    echo "Then restart your shell or run: source ~/.bashrc"
+    echo ""
+fi
 echo "Environment setup complete. To build RavenDB run: ./build.sh"
