@@ -89,7 +89,7 @@ if [ -n "$CURRENT_DOTNET_VERSION" ]; then
         echo "Installing .NET SDK $MAJOR_MINOR_VERSION..."
         if ! apt_install dotnet-sdk-$MAJOR_MINOR_VERSION; then
             echo "Trying dotnet-install.sh (non-root method)..."
-            curl -sSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
+            curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
             export PATH="$HOME/.dotnet:$PATH"
         fi
     fi
@@ -121,7 +121,7 @@ NODE_CMD=$(command -v node)
 if [ -z "$NODE_CMD" ]; then
     echo "Node.js not found. Installing Node.js..."
     if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
-        curl -sL https://deb.nodesource.com/setup_lts.x | $APT_PREFIX bash -
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | $APT_PREFIX bash -
         apt_install nodejs build-essential
     else
         echo "Installing Node.js via fnm (non-root method)..."
