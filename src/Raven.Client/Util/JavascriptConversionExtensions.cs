@@ -2235,17 +2235,7 @@ namespace Raven.Client.Util
 
             private static void WriteStringLiteral(string str, JavascriptWriter writer)
             {
-                writer.Write('"');
-                writer.Write(
-                    str
-                        .Replace("\\", "\\\\")
-                        .Replace("\r", "\\r")
-                        .Replace("\n", "\\n")
-                        .Replace("\t", "\\t")
-                        .Replace("\0", "\\0")
-                        .Replace("\"", "\\\""));
-
-                writer.Write('"');
+                writer.Write(ToJsStringLiteral(str));
             }
         }
 
@@ -2834,9 +2824,7 @@ namespace Raven.Client.Util
                 using (writer.Operation(mce))
                 {
                     writer.Write("new RegExp(");
-                    writer.Write("\"");
-                    writer.Write(EscapeForJsString(pattern));
-                    writer.Write("\"");
+                    writer.Write(ToJsStringLiteral(pattern));
 
                     if (flags.Length > 0)
                     {
@@ -2880,19 +2868,16 @@ namespace Raven.Client.Util
 
         }
 
-        internal static string EscapeForJsString(string value)
+        /// <summary>
+        /// Returns a JS string literal including surrounding quotes, with all special characters escaped.
+        /// e.g. input: key"with"quotes => output: "key\"with\"quotes"
+        /// </summary>
+        internal static string ToJsStringLiteral(string value)
         {
             if (value == null)
-                return string.Empty;
+                return "null";
 
-            return value
-                .Replace("\\", "\\\\")        // Must be first!
-                .Replace("\"", "\\\"")        // Escape quotes
-                .Replace("\r", "\\r")         // Escape CR
-                .Replace("\n", "\\n")         // Escape LF
-                .Replace("\u2028", "\\u2028") // CRITICAL: Escape Line Separator
-                .Replace("\u2029", "\\u2029") // CRITICAL: Escape Paragraph Separator
-                .Replace("\t", "\\t");        // Optional: nice for debugging readability
+            return JsonConvert.ToString(value);
         }
 
         internal sealed class PatchPathWrappedConstantSupport : JavascriptConversionExtension
@@ -2921,15 +2906,6 @@ namespace Raven.Client.Util
                         return;
                     }
 
-                    // For string values, write them as quoted strings
-                    if (value is string stringValue)
-                    {
-                        writer.Write("\"");
-                        writer.Write(EscapeForJsString(stringValue));
-                        writer.Write("\"");
-                        return;
-                    }
-
                     // For numeric values, write them directly
                     if (value is int || value is long || value is short || value is byte ||
                         value is uint || value is ulong || value is ushort || value is sbyte ||
@@ -2939,10 +2915,8 @@ namespace Raven.Client.Util
                         return;
                     }
 
-                    // For any other type, convert to string and quote it
-                    writer.Write("\"");
-                    writer.Write(EscapeForJsString(value.ToString()));
-                    writer.Write("\"");
+                    // For string and any other type, write as a quoted JS string literal
+                    writer.Write(ToJsStringLiteral(value.ToString()));
                 }
             }
         }

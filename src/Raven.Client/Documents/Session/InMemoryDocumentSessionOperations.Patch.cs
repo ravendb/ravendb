@@ -409,7 +409,7 @@ namespace Raven.Client.Documents.Session
             if (key == null)
                 throw new ArgumentNullException(nameof(key), "Dictionary key cannot be null");
 
-            return $"\"{JavascriptConversionExtensions.EscapeForJsString(key.ToString())}\"";
+            return JavascriptConversionExtensions.ToJsStringLiteral(key.ToString());
         }
     }
 }
