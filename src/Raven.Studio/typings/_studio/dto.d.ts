@@ -661,6 +661,7 @@ interface explainQueryResponse extends resultsDto<Raven.Server.Documents.Queries
 
 interface virtualBulkOperationItem {
     id: string;
+    operationId: number;
     date: string;
     duration: number;
     totalItemsProcessed: number;
@@ -672,6 +673,7 @@ interface virtualBulkOperationItem {
 
 interface virtualBulkOperationFailureItem {
     id: string;
+    operationId: number;
     date: string;
     duration: number;
     errorMsg: string;

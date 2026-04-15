@@ -98,7 +98,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private long _lastIndexCleanupTimeInTicks;
         internal long _lastTombstonesCleanupTimeInTicks;
         internal long _lastExpiredCompareExchangeCleanupTimeInTicks;
-        private bool _hasMoreTombstones = false;
+
 
         public (ClusterObserverLogEntry[] List, long Iteration) ReadDecisionsForDatabase()
         {
@@ -179,6 +179,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var cleanupIndexes = now.Ticks - _lastIndexCleanupTimeInTicks >= _server.Configuration.Indexing.CleanupInterval.AsTimeSpan.Ticks;
             var cleanupTombstones = now.Ticks - _lastTombstonesCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeTombstonesCleanupInterval.AsTimeSpan.Ticks;
             var cleanupExpiredCompareExchange = now.Ticks - _lastExpiredCompareExchangeCleanupTimeInTicks >= _server.Configuration.Cluster.CompareExchangeExpiredCleanupInterval.AsTimeSpan.Ticks;
+            var hasMoreTombstones = false;
 
             foreach (var database in databases)
             {
@@ -284,7 +285,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             switch (cleanupState)
                             {
                                 case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
-                                    _hasMoreTombstones = true;
+                                    hasMoreTombstones = true;
                                     break;
                                 case CompareExchangeTombstonesCleanupState.HasMoreTombstones:
                                     Debug.Assert(cmd != null, $"Expected to get command {nameof(CleanCompareExchangeTombstonesCommand)} but it was null");
@@ -319,11 +320,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var result = await _server.SendToLeaderAsync(cmd);
                     await _server.Cluster.WaitForIndexNotification(result.Index);
-                    var hasMore = (bool)result.Result;
-                    _hasMoreTombstones |= hasMore;
+                    hasMoreTombstones |= (bool)result.Result;
                 }
 
-                if (_hasMoreTombstones == false)
+                if (hasMoreTombstones == false)
                     _lastTombstonesCleanupTimeInTicks = now.Ticks;
             }
 

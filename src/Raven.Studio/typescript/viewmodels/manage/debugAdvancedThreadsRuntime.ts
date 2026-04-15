@@ -13,7 +13,26 @@ import eventsCollector = require("common/eventsCollector");
 import awesomeMultiselect = require("common/awesomeMultiselect");
 
 type Unit = "" | "%" | "B" | "KB" | "KB/s";
-type ThreadInfo = Raven.Server.Dashboard.ThreadInfo;
+
+interface IoStatsWithTotals extends Raven.Server.Dashboard.IoStats {
+    IoSyscallsTotal?: number;
+    ReadIoSyscallsTotal?: number;
+    WriteIoSyscallsTotal?: number;
+    ThroughputKbTotal?: number;
+    ReadThroughputKbTotal?: number;
+    WriteThroughputKbTotal?: number;
+}
+
+interface ThreadInfo extends Omit<Raven.Server.Dashboard.ThreadInfo, "IoStats"> {
+    IoStats?: IoStatsWithTotals;
+}
+
+interface IoSnapshot {
+    syscr: number;
+    syscw: number;
+    readBytes: number;
+    writeBytes: number;
+}
 
 class debugAdvancedThreadsRuntime extends viewModelBase {
     view = require("views/manage/debugAdvancedThreadsRuntime.html");
@@ -35,6 +54,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     isPause = ko.observable<boolean>(false);
     
     filter = ko.observable<string>();
+    
+    showTotalsSinceThreadCreation = ko.observable<boolean>(false);
+    
+    private initialSnapshots = new Map<string, IoSnapshot>();
 
     allColumnHeaders = [
         "Stack",
@@ -92,6 +115,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         
         this.filter.throttle(300).subscribe(() => this.filterEntries());
         this.visibleColumnHeaders.subscribe(() => this.filterEntries(true));
+        this.showTotalsSinceThreadCreation.subscribe(() => this.filterEntries(true));
     }
     
     attached() {
@@ -179,6 +203,10 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         grid.init(fetcher, () => {
                 type ColumnHeader = (typeof this.allColumnHeaders)[number];
 
+                const totalsSuffix = this.showTotalsSinceThreadCreation()
+                    ? "aggregated since thread creation"
+                    : "aggregated since this view was open";
+
                 const columns = [
                     new actionColumn<ThreadInfo>(grid, (x) => this.showStackTrace(x), "Stack" satisfies ColumnHeader, () => `<i title="Click to view Stack Trace" class="icon-thread-stack-trace"></i>`, "55px"),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => x.Name, "Name", "20%", {
@@ -213,27 +241,27 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.IoSyscallsTotal, 0), "Total IO SysCalls", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.IoSyscallsTotal),
-                        headerTitle: "Total IO SysCalls aggregated since this view was open",
+                        headerTitle: `Total IO SysCalls ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadIoSyscallsTotal, 0), "Total IO SysCalls Read", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.ReadIoSyscallsTotal),
-                        headerTitle: "Total IO SysCalls Read aggregated since this view was open",
+                        headerTitle: `Total IO SysCalls Read ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteIoSyscallsTotal, 0), "Total IO SysCalls Write", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.WriteIoSyscallsTotal),
-                        headerTitle: "Total IO SysCalls aggregated since this view was open",
+                        headerTitle: `Total IO SysCalls Write ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ThroughputKbTotal, 2, "KB"), "Total IO Throughput", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.ThroughputKbTotal),
-                        headerTitle: "Total IO Throughput aggregated since this view was open",
+                        headerTitle: `Total IO Throughput ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.ReadThroughputKbTotal, 2, "KB"), "Total IO Throughput Read", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.ReadThroughputKbTotal),
-                        headerTitle: "Total IO Throughput Read aggregated since this view was open",
+                        headerTitle: `Total IO Throughput Read ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => this.getStringValue(x.IoStats?.WriteThroughputKbTotal, 2, "KB"), "Total IO Throughput Write", "7%", {
                         sortable: x => this.getSortableValue(x.IoStats?.WriteThroughputKbTotal),
-                        headerTitle: "Total IO Throughput Write aggregated since this view was open",
+                        headerTitle: `Total IO Throughput Write ${totalsSuffix}`,
                     }),
                     new textColumn<ThreadInfo, ColumnHeader>(grid, x => generalUtils.formatTimeSpan(x.Duration, false), "Total CPU Time", "7%", {
                         sortable: x => this.getSortableValue(x.Duration),
@@ -280,12 +308,54 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     connectWebSocket() {
         eventsCollector.default.reportEvent("threads-info", "connect");
 
+        this.initialSnapshots.clear();
+
         const ws = new threadsInfoWebSocketClient(data => this.onData(data));
         this.liveClient(ws);
     }
     
     private onData(data: Raven.Server.Dashboard.ThreadsInfo) {
-        this.allData(data.List);
+        const KB = 1024;
+        const threads = data.List as ThreadInfo[];
+        const sinceCreation = this.showTotalsSinceThreadCreation();
+
+        for (const thread of threads) {
+            if (thread.IoStats && thread.IoStats.Syscr != null) {
+                const snapshotKey = thread.Id + "_" + thread.StartingTime;
+                const current: IoSnapshot = {
+                    syscr: thread.IoStats.Syscr,
+                    syscw: thread.IoStats.Syscw,
+                    readBytes: thread.IoStats.ReadBytes,
+                    writeBytes: thread.IoStats.WriteBytes
+                };
+
+                if (!this.initialSnapshots.has(snapshotKey)) {
+                    this.initialSnapshots.set(snapshotKey, { ...current });
+                }
+
+                if (sinceCreation) {
+                    // Use raw cumulative values (total since thread creation)
+                    thread.IoStats.IoSyscallsTotal = current.syscr + current.syscw;
+                    thread.IoStats.ThroughputKbTotal = (current.readBytes + current.writeBytes) / KB;
+                    thread.IoStats.ReadIoSyscallsTotal = current.syscr;
+                    thread.IoStats.WriteIoSyscallsTotal = current.syscw;
+                    thread.IoStats.ReadThroughputKbTotal = current.readBytes / KB;
+                    thread.IoStats.WriteThroughputKbTotal = current.writeBytes / KB;
+                } else {
+                    // Use snapshot deltas (total since monitoring started)
+                    const initial = this.initialSnapshots.get(snapshotKey);
+
+                    thread.IoStats.IoSyscallsTotal = (current.syscr - initial.syscr) + (current.syscw - initial.syscw);
+                    thread.IoStats.ThroughputKbTotal = ((current.readBytes - initial.readBytes) + (current.writeBytes - initial.writeBytes)) / KB;
+                    thread.IoStats.ReadIoSyscallsTotal = current.syscr - initial.syscr;
+                    thread.IoStats.WriteIoSyscallsTotal = current.syscw - initial.syscw;
+                    thread.IoStats.ReadThroughputKbTotal = (current.readBytes - initial.readBytes) / KB;
+                    thread.IoStats.WriteThroughputKbTotal = (current.writeBytes - initial.writeBytes) / KB;
+                }
+            }
+        }
+
+        this.allData(threads);
         this.machineCpuUsage(data.CpuUsage);
         this.serverCpuUsage(data.ProcessCpuUsage);
         this.dedicatedThreadsCount(data.DedicatedThreadsCount);

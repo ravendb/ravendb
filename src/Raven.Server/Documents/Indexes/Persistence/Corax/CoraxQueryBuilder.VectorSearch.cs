@@ -127,7 +127,7 @@ public static partial class CoraxQueryBuilder
             allowObjectsInParameters: false, allowArraysInParameters: true);
 
         (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
-
+        int numberOfDimensions;
         if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
@@ -136,6 +136,9 @@ public static partial class CoraxQueryBuilder
         else
         {
             VectorOptions vectorOptions = VectorHelpers.GetOptions(builderParameters, fieldName, out indexField);
+            
+            if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out  numberOfDimensions) == false)
+                return CoraxVectorItem.BuildEmpty(builderParameters); // no vector indexed
             if (vectorOptions.SourceEmbeddingType is VectorEmbeddingType.Text)
             {
                 transformedEmbeddings = VectorHelpers.GetVectorValueForTextualInput(builderParameters, vectorOptions, valueType, value);
@@ -189,7 +192,7 @@ public static partial class CoraxQueryBuilder
             }
         }
 
-        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out var numberOfDimensions) == false)
+        if (builderParameters.Index.IndexFieldsPersistence.TryReadNumberOfDimensions(fieldName, out  numberOfDimensions) == false)
             return CoraxVectorItem.BuildEmpty(builderParameters); // no vector indexed
 
         if (transformedEmbeddings.SingleVector != null)

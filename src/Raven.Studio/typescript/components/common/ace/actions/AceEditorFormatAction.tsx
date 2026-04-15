@@ -8,16 +8,10 @@ import ReactAce from "react-ace";
 const beautify = ace.require("ace/ext/beautify").beautify;
 
 export default function AceEditorFormatAction() {
-    const reactAce = useAceEditorContext();
+    const { aceRef } = useAceEditorContext();
 
     return (
-        <Button
-            variant="link"
-            onClick={() => handleFormat(reactAce)}
-            className="p-0 text-reset"
-            size="sm"
-            title="Format"
-        >
+        <Button variant="link" onClick={() => handleFormat(aceRef)} className="p-0 text-reset" size="sm" title="Format">
             <Icon icon="indent" margin="m-0" />
         </Button>
     );

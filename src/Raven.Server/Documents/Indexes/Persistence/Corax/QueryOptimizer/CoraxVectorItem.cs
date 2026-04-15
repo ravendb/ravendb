@@ -63,11 +63,11 @@ public sealed class CoraxVectorItem(CoraxQueryBuilder.Parameters parameters) : I
     {
         if (_isEmpty)
             return parameters.IndexSearcher.EmptyMatch();
-        
+
         IQueryMatch vs;
         if (_documentId != null)
         {
-            vs = parameters.IndexSearcher.VectorSearch(_field, _documentId, _minimumDistance, _numberOfCandidates, _isExact, parameters.IsVectorSingleClause, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
+            vs = parameters.IndexSearcher.VectorSearch(_field, _documentId, _minimumDistance, _numberOfCandidates, _isExact, _isVectorSingleClause, inner, parameters.Index.Configuration.CoraxVectorSearchScanningThreshold);
         }
         else if (_vectorsToSearch is not null)
         {

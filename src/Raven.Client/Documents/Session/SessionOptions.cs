@@ -45,26 +45,30 @@ namespace Raven.Client.Documents.Session
     {
         /// <summary>
         /// No optimistic concurrency checks are performed.<br/>
-        /// PUT and DELETE commands are sent without a change vector, so the server does not check for concurrent modifications.
+        /// During <see cref="DocumentSession.SaveChanges"/>, PUT and DELETE commands are sent without a change vector, so the server does not check for concurrent modifications.
         /// </summary>
         None,
 
         /// <summary>
         /// Optimistic concurrency checks are performed for written (PUT) and deleted (DELETE) entities only.<br/>
-        /// Each PUT/DELETE command includes the entity's change vector so the server rejects the operation
-        /// if the document was modified by another session since it was loaded.<br/>
-        /// Entities that were loaded but not modified are <b>not</b> checked.
+        /// Entities that are tracked by the session but were not modified/deleted are <b>not</b> checked.<br/>
+        /// <br/>
+        /// During <see cref="DocumentSession.SaveChanges"/>, each PUT/DELETE command includes the entity's change vector so the server rejects the save operation
+        /// if the document was modified by another session since it was first tracked by the session.<br/>
+        /// <br/>
+        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>
+        /// and <see cref="TransactionMode.ClusterWide"/>.
         /// </summary>
         Writes,
 
         /// <summary>
-        /// Optimistic concurrency checks are performed for <b>all</b> entities in the session — both modified and not modified.<br/>
-        /// In addition to the per-command change vector checks from <see cref="Writes"/>,
-        /// <see cref="DocumentSession.SaveChanges"/> verifies that no tracked entity
-        /// was modified by another session since it was loaded.<br/>
+        /// Optimistic concurrency checks are performed for <b>all</b> entities tracked by the session - both modified and not modified.<br/>
         /// <br/>
-        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>
-        /// and <see cref="TransactionMode.ClusterWide"/>.
+        /// During <see cref="DocumentSession.SaveChanges"/>, the session sends the change vector of <b>all</b> tracked documents to the server.
+        /// The server rejects the save operation if any of these documents was modified by another session since it was first tracked by the session.<br/>
+        /// <br/>
+        /// This mode is incompatible with <see cref="SessionOptions.NoTracking"/>,
+        /// <see cref="TransactionMode.ClusterWide"/>, and sharded databases.
         /// </summary>
         WritesAndReads
     }

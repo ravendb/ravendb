@@ -2,11 +2,10 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import ReactAce from "react-ace";
 import { Control, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
-import Button from "react-bootstrap/Button";
 import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
 import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
@@ -15,69 +14,49 @@ import { aceEditorUtils } from "components/common/ace/aceEditorUtils";
 import { AiAgentSubmittedActionTool } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSubmittedActionTool";
 import { AiAgentToolTranscript } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentToolTranscript";
 import { AiAgentMessagesAttachments } from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesAttachments";
+import {
+    AiAgentMessagesContextValue,
+    AiAgentMessagesProvider,
+    useAiAgentMessagesContext,
+} from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentMessagesContext";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import InnerForm from "components/common/InnerForm";
+import { tryHandleSubmit } from "components/utils/common";
+import AiAgentSummary from "components/pages/database/aiHub/aiAgents/partials/aiAgentMessages/AiAgentSummary";
 
-interface AiAgentMessagesProps {
+type AiAgentMessagesProps = AiAgentMessagesContextValue & {
     messages: AiAgentMessage[];
-    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
-    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
-    parametersFromUser?: Record<string, string>;
-    documentId?: string;
-}
+};
 
-export default function AiAgentMessages({
-    messages,
-    handleSaveParameters,
-    setIsWaitingForActionToolSubmit,
-    parametersFromUser,
-    documentId,
-}: AiAgentMessagesProps) {
+export default function AiAgentMessages(props: AiAgentMessagesProps) {
+    const { messages, ...contextValue } = props;
+
+    // Used as key for OpenActionCalls component to re-render it when openActionCalls change
+    const openActionCallsIds = Object.keys(props.openActionCalls ?? {});
+
     return (
-        <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
-            {messages.map((message) => (
-                <AiAgentMessageComponent
-                    key={message.id}
-                    message={message}
-                    allMessages={messages}
-                    handleSaveParameters={handleSaveParameters}
-                    setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
-                    parametersFromUser={parametersFromUser}
-                    documentId={documentId}
-                />
-            ))}
-        </div>
+        <AiAgentMessagesProvider value={contextValue}>
+            <div className="w-100 vstack gap-2 ai-agent-messages pb-4">
+                {messages.map((message) => (
+                    <AiAgentMessageComponent key={message.id} message={message} />
+                ))}
+                {openActionCallsIds.length > 0 && <OpenActionCalls key={openActionCallsIds.join(";")} />}
+            </div>
+        </AiAgentMessagesProvider>
     );
 }
 
 interface AiAgentMessageProps {
     message: AiAgentMessage;
-    allMessages: AiAgentMessage[];
-    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
-    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
-    parametersFromUser?: Record<string, string>;
-    documentId: string;
 }
 
-function AiAgentMessageComponent({
-    message,
-    allMessages,
-    handleSaveParameters,
-    setIsWaitingForActionToolSubmit,
-    parametersFromUser,
-    documentId,
-}: AiAgentMessageProps) {
+function AiAgentMessageComponent({ message }: AiAgentMessageProps) {
     return (
         <div>
             {message.role === "system" && <SystemMessage message={message} />}
-            {message.role === "user" && <UserMessage message={message} documentId={documentId} />}
-            {message.role === "assistant" && (
-                <AgentMessage
-                    agentMessage={message}
-                    allMessages={allMessages}
-                    handleSaveParameters={handleSaveParameters}
-                    setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
-                    parametersFromUser={parametersFromUser}
-                />
-            )}
+            {message.role === "user" && <UserMessage message={message} />}
+            {message.role === "assistant-summary" && <AiAgentSummary agentMessage={message} />}
+            {message.role === "assistant" && <AgentMessage agentMessage={message} />}
             {message.role === "submitted-action-tool" && (
                 <AiAgentSubmittedActionTool content={message.content} toolName={message.toolName} />
             )}
@@ -108,10 +87,11 @@ function SystemMessage({ message }: SystemMessageProps) {
 
 interface UserMessageProps {
     message: AiAgentMessage;
-    documentId: string;
 }
 
-function UserMessage({ message, documentId }: UserMessageProps) {
+function UserMessage({ message }: UserMessageProps) {
+    const { documentId } = useAiAgentMessagesContext();
+
     const getMessageContent = (): string | { type: "text"; text: string }[] => {
         try {
             return JSON.parse(message.content);
@@ -156,52 +136,10 @@ function UserMessage({ message, documentId }: UserMessageProps) {
 
 interface AgentMessageProps {
     agentMessage: AiAgentMessage;
-    allMessages: AiAgentMessage[];
-    handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
-    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
-    parametersFromUser?: Record<string, string>;
 }
 
-function AgentMessage({
-    agentMessage,
-    allMessages,
-    handleSaveParameters,
-    setIsWaitingForActionToolSubmit,
-    parametersFromUser,
-}: AgentMessageProps) {
+function AgentMessage({ agentMessage }: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
-
-    const { control, handleSubmit, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
-        defaultValues: {
-            parameters:
-                agentMessage.toolCalls?.map((x) => ({
-                    id: x.id,
-                    name: x.name,
-                    arguments: "",
-                })) ?? [],
-        },
-    });
-
-    const parametersFieldsArray = useFieldArray({
-        control,
-        name: "parameters",
-    });
-
-    const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = (formData) => {
-        handleSaveParameters?.(formData.parameters);
-    };
-
-    const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
-    const isLastItem = agentMessageIndex === allMessages.length - 1;
-    const hasActionTool = agentMessage.toolCalls?.some((x) => x.type === "action");
-
-    const isRequireParameters =
-        isLastItem && hasActionTool && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
-
-    useEffect(() => {
-        setIsWaitingForActionToolSubmit(isRequireParameters);
-    }, [isRequireParameters]);
-
     const contentMode = aceEditorUtils.getAceEditorMode(agentMessage.content);
 
     return (
@@ -247,6 +185,7 @@ function AgentMessage({
                                     { component: <AceEditor.FullScreenAction /> },
                                     { component: <AceEditor.FormatAction /> },
                                     { component: <AceEditor.ToggleNewLinesAction /> },
+                                    { component: <AceEditor.AutoResizeHeightAction /> },
                                 ]}
                                 height={aceEditorUtils.getAceEditorHeight(agentMessage.content)}
                                 wrapEnabled={contentMode === "text" ? true : false}
@@ -259,30 +198,61 @@ function AgentMessage({
                     {agentMessage.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {agentMessage.toolCalls.map((toolCall) => (
-                                <AiAgentToolTranscript
-                                    key={toolCall.id}
-                                    toolCall={toolCall}
-                                    parametersFromUser={parametersFromUser}
-                                />
+                                <AiAgentToolTranscript key={toolCall.id} toolCall={toolCall} />
                             ))}
                         </div>
                     )}
                 </div>
             )}
-            {isRequireParameters && (
-                <div className="hstack justify-content-end mt-2">
-                    <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
-                        {parametersFieldsArray.fields.map((field, idx) => (
-                            <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
-                        ))}
-                        <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
-                            <Icon icon="check" />
-                            Submit
-                        </Button>
-                    </div>
-                </div>
-            )}
         </div>
+    );
+}
+
+function OpenActionCalls() {
+    const { openActionCalls, handleSaveParameters } = useAiAgentMessagesContext();
+
+    const openActionCallsValues = Object.values(openActionCalls ?? {});
+
+    const { control, handleSubmit, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
+        defaultValues: {
+            parameters: openActionCallsValues.map((x) => ({
+                id: x.ToolId,
+                name: x.Name,
+                arguments: "",
+            })),
+        },
+    });
+
+    const parametersFieldsArray = useFieldArray({
+        control,
+        name: "parameters",
+    });
+
+    const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = async (formData) => {
+        return tryHandleSubmit(async () => {
+            await handleSaveParameters(formData.parameters);
+        });
+    };
+
+    return (
+        <InnerForm onSubmit={handleSubmit(handleSave)}>
+            <div className="hstack justify-content-end mt-2">
+                <div className="text-end bg-faded-primary p-2 border-radius-xs border border-primary text-reset w-100">
+                    {parametersFieldsArray.fields.map((field, idx) => (
+                        <ActionToolParameterField key={field.id} idx={idx} name={field.name} control={control} />
+                    ))}
+                    <ButtonWithSpinner
+                        variant="primary"
+                        className="rounded-pill ms-auto"
+                        onClick={handleSubmit(handleSave)}
+                        isSpinning={formState.isSubmitting}
+                        icon="check"
+                    >
+                        Submit
+                    </ButtonWithSpinner>
+                </div>
+            </div>
+        </InnerForm>
     );
 }
 

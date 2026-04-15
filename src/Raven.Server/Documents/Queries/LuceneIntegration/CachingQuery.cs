@@ -246,6 +246,15 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 {
                     if (Buffer == null) 
                         return;
+                    
+                    // The finalizer started when this object held the only existing reference to Buffer
+                    // via the ConditionalWeakTable (_joinLifetimes). The CWT removes an element only when
+                    // there is no other reference to the key (in this case Buffer).
+                    // However, since we returned our buffer to the pool, we actually will increase the reference count (so eviction from CWT will stop).
+                    // Additionally, CWT has a requirement that keys must be unique, however without manually removing the reference
+                    // there is a chance to get exactly the same buffer for to add into CWT before even removing it from the table.
+                    _joinLifetimes.Remove(Buffer);
+                    
                     ArrayPool<ulong>.Shared.Return(Buffer);
                 }
             }
@@ -263,8 +272,15 @@ namespace Raven.Server.Documents.Queries.LuceneIntegration
                 }
 
                 var array = (ulong[])value;
+
+
+                var returnBuffer = new ReturnBuffer();
+                _joinLifetimes.Add(array, returnBuffer);
                 
-                _joinLifetimes.Add(array, new ReturnBuffer{Buffer = array});
+                // Lazily initialize the return buffer. If any error occurs during the Add method,
+                // we will not have an unreferenced object that would return our buffer to the pool.
+                // In such case, the array will simply be released by GC.
+                returnBuffer.Buffer = array;                
             }
 
             public override float GetSumOfSquaredWeights()

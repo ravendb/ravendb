@@ -58,7 +58,11 @@ function AceEditorContent({ content }: AiAgentToolResponseContentProps) {
             readOnly
             mode={contentMode}
             height={aceEditorUtils.getAceEditorHeight(content, { maxLineCount: 6 })}
-            actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+            actions={[
+                { component: <AceEditor.FullScreenAction /> },
+                { component: <AceEditor.FormatAction /> },
+                { component: <AceEditor.AutoResizeHeightAction /> },
+            ]}
         />
     );
 }

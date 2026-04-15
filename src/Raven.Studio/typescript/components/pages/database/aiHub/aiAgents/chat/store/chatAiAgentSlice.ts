@@ -1,6 +1,6 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
@@ -17,9 +17,7 @@ interface ChatAiAgentState {
     document: loadableData<documentDto>;
     runChatState: loadStatus;
     conversationId: string;
-    messages: AiAgentMessage[];
     isRawData: boolean;
-    isWaitingForActionToolSubmit: boolean;
     isDocumentExpirationEnabled: loadableData<boolean>;
     isDocumentDeleted: boolean;
     isDocumentChanged: boolean;
@@ -32,9 +30,7 @@ const initialState: ChatAiAgentState = {
     document: createIdleState(),
     runChatState: "idle",
     conversationId: "",
-    messages: [],
     isRawData: false,
-    isWaitingForActionToolSubmit: false,
     isDocumentExpirationEnabled: createIdleState(),
     isDocumentDeleted: false,
     isDocumentChanged: false,
@@ -49,17 +45,11 @@ export const chatAiAgentSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
-        messagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
-            state.messages = action.payload;
-        },
         documentSet: (state, action: PayloadAction<documentDto>) => {
             state.document = createSuccessState(action.payload);
         },
         isRawDataSet: (state, action: PayloadAction<boolean>) => {
             state.isRawData = action.payload;
-        },
-        isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
-            state.isWaitingForActionToolSubmit = action.payload;
         },
         isDocumentDeletedSet: (state, action: PayloadAction<boolean>) => {
             state.isDocumentDeleted = action.payload;
@@ -95,12 +85,6 @@ export const chatAiAgentSlice = createSlice({
             .addCase(getDocument.fulfilled, (state, action) => {
                 state.document = createSuccessState(action.payload);
                 state.isDocumentChanged = false;
-
-                state.messages = aiAgentsUtils.mapMessagesFromDoc({
-                    docMessages: action.payload.Messages,
-                    config: state.config.data,
-                    docAttachments: action.payload["@metadata"]?.["@attachments"],
-                });
             })
             .addCase(runChat.pending, (state) => {
                 state.runChatState = "loading";
@@ -250,8 +234,20 @@ export const chatAiAgentActions = {
     getIsDocumentExpirationEnabled,
 };
 
+const selectChatAiAgentConfig = (state: RootState) => state.chatAiAgent.config.data;
+const selectChatAiAgentDocument = (state: RootState) => state.chatAiAgent.document.data;
+
+const selectChatAiAgentMessages = createSelector(
+    [selectChatAiAgentDocument, selectChatAiAgentConfig],
+    (conversationDocument, config) =>
+        aiAgentsUtils.mapMessagesFromDoc({
+            conversationDocument,
+            config,
+        })
+);
+
 export const chatAiAgentSelectors = {
-    messages: (state: RootState) => state.chatAiAgent.messages,
+    messages: selectChatAiAgentMessages,
     conversationId: (state: RootState) => state.chatAiAgent.conversationId,
     config: (state: RootState) => state.chatAiAgent.config,
     isRawData: (state: RootState) => state.chatAiAgent.isRawData,
@@ -262,7 +258,9 @@ export const chatAiAgentSelectors = {
         state.chatAiAgent.runChatState === "loading" ||
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
-    isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
+    isActionToolSubmitRequired: createSelector([selectChatAiAgentDocument], (conversationDocument) =>
+        aiAgentsUtils.hasOpenActionCalls(conversationDocument)
+    ),
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
     isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
     isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,

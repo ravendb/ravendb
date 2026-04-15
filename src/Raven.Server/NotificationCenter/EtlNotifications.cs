@@ -62,10 +62,26 @@ namespace Raven.Server.NotificationCenter
 
             return alert;
         }
+        public AlertRaised AddWarning(string processTag, string processName, string message, string documentId, string timeSeriesName)
+        {
+            var alert = GetOrCreateAlert<EtlWarningDetails>(
+                processTag,
+                processName,
+                AlertReason.Etl_Warning,
+                message,
+                out var details);
+
+            details.DocumentId = documentId;
+            details.TimeSeriesName = timeSeriesName;
+
+            _notificationCenter.Add(alert);
+            return alert;
+        }
 
         private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertReason etlAlertReason, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError);
+            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError ||
+                         etlAlertReason == AlertReason.Etl_Warning);
 
             var key = $"{processTag}/{processName}";
 

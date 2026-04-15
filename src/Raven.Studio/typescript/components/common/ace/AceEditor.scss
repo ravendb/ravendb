@@ -20,6 +20,10 @@ $pre-bg: colors.$well-bg-var;
             border-bottom-right-radius: var(--bs-border-radius);
         }
     }
+    &.is-dragging {
+        border-bottom-color: hsl(from var(--border-color-light) h s calc(l + 5%));
+    }
+
     .react-ace-wrapper {
         display: flex;
         align-items: end;

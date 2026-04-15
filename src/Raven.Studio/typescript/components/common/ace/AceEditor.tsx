@@ -1,4 +1,4 @@
-import { ReactNode, RefObject, useEffect, useState } from "react";
+import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { AceEditorMode, LanguageService } from "components/models/aceEditor";
 import { Ace } from "ace-builds";
 import { setCompleters } from "ace-builds/src-noconflict/ext-language_tools";
@@ -12,7 +12,9 @@ import AceEditorLoadFileAction from "./actions/AceEditorLoadFileAction";
 import AceEditorDeleteAction from "./actions/AceEditorDeleteAction";
 import AceEditorHelpAction from "./actions/AceEditorHelpAction";
 import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesAction";
+import AceEditorAutoResizeHeightAction, { handleAutoResizeHeight } from "./actions/AceEditorAutoResizeHeightAction";
 import { aceEditorConstants } from "./aceEditorConstants";
+import useResizableHeight from "components/hooks/useResizableHeight";
 
 interface ActionItem {
     component: ReactNode;
@@ -28,11 +30,12 @@ export interface AceEditorProps extends IAceEditorProps {
     aceRef?: RefObject<ReactAce>;
     actions?: ActionItem[];
     isFullScreenLabelHidden?: boolean;
+    minHeight?: number | string;
+    maxHeight?: number | string;
 }
 
 function AceEditor(props: AceEditorProps) {
     const {
-        aceRef,
         setOptions,
         languageService,
         validationErrorMessage,
@@ -41,9 +44,14 @@ function AceEditor(props: AceEditorProps) {
         actions = [],
         onLoad,
         height = "200px",
+        minHeight = aceEditorConstants.minHeightInPx,
+        maxHeight = aceEditorConstants.maxHeightInPx,
         isFullScreenLabelHidden,
         ...rest
     } = props;
+
+    const defaultAceRef = useRef<ReactAce>(null);
+    const aceRef = props.aceRef || defaultAceRef;
 
     const overriddenSetOptions: IAceOptions = {
         enableBasicAutocompletion: true,
@@ -58,6 +66,12 @@ function AceEditor(props: AceEditorProps) {
     const validActions = actions.filter(Boolean);
 
     const [aceErrorMessage, setAceErrorMessage] = useState<string>(null);
+
+    const resizableHeight = useResizableHeight({
+        initialHeight: height,
+        minHeight,
+        maxHeight,
+    });
 
     useEffect(() => {
         if (languageService) {
@@ -92,6 +106,10 @@ function AceEditor(props: AceEditorProps) {
             setIsValid(true);
         }
     }, [aceErrorMessage, setIsValid]);
+
+    useEffect(() => {
+        aceRef?.current?.editor.resize();
+    }, [aceRef, resizableHeight.height]);
 
     const onValidate = (annotations: Ace.Annotation[]) => {
         const firstError = annotations.find((x) => x.type === "error");
@@ -134,9 +152,21 @@ function AceEditor(props: AceEditorProps) {
     };
 
     return (
-        <AceEditorContext.Provider value={aceRef}>
-            <div className={classNames("ace-editor", { "has-error": errorMessage })}>
-                <div className="react-ace-wrapper" style={{ height }}>
+        <AceEditorContext.Provider value={{ aceRef, setHeight: resizableHeight.setHeight }}>
+            <div
+                className={classNames(
+                    "ace-editor",
+                    "position-relative",
+                    { "has-error": errorMessage },
+                    { "is-dragging": resizableHeight.isDragging }
+                )}
+            >
+                <div
+                    className="react-ace-wrapper"
+                    style={{
+                        height: `${resizableHeight.height}px`,
+                    }}
+                >
                     <ReactAce
                         ref={aceRef}
                         mode="csharp"
@@ -183,6 +213,18 @@ function AceEditor(props: AceEditorProps) {
                         <small>{errorMessage}</small>
                     </div>
                 )}
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: "-5px",
+                        left: 0,
+                        right: 0,
+                        height: "10px",
+                        cursor: "row-resize",
+                    }}
+                    onMouseDown={resizableHeight.handleMouseDown}
+                    onDoubleClick={() => handleAutoResizeHeight(aceRef, resizableHeight.setHeight)}
+                />
             </div>
         </AceEditorContext.Provider>
     );
@@ -212,5 +254,6 @@ AceEditor.LoadFileAction = AceEditorLoadFileAction;
 AceEditor.DeleteAction = AceEditorDeleteAction;
 AceEditor.HelpAction = AceEditorHelpAction;
 AceEditor.ToggleNewLinesAction = AceEditorToggleNewLinesAction;
+AceEditor.AutoResizeHeightAction = AceEditorAutoResizeHeightAction;
 
 export default AceEditor;

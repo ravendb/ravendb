@@ -19,6 +19,8 @@ internal abstract class AbstractChatCompletionClientSettings
 
     public virtual bool SupportStrictTools => true;
 
+    public virtual bool EnablePromptCaching => true;
+
     public Uri GetBaseEndpointUri() => _settings.GetBaseEndpointUri();
 
     protected AbstractChatCompletionClientSettings(IAiSettings settings)

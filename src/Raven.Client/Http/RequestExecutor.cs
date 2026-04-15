@@ -604,6 +604,9 @@ namespace Raven.Client.Http
             SessionInfo sessionInfo = null,
             CancellationToken token = default)
         {
+            if (InMemoryDocumentSessionOperations.DisableDisposeChecks == false && Disposed)
+                ThrowObjectDisposedException();
+
             var topologyUpdate = _firstTopologyUpdate;
 
             if (topologyUpdate != null && topologyUpdate.Status == TaskStatus.RanToCompletion)
@@ -2071,6 +2074,11 @@ namespace Raven.Client.Http
         internal bool Disposed => _disposeOnceRunner.Disposed;
 
         public static bool HasServerCertificateCustomValidationCallback => _serverCertificateCustomValidationCallback?.Length > 0;
+
+        private static void ThrowObjectDisposedException()
+        {
+            throw new ObjectDisposedException(nameof(RequestExecutor), "The request executor has already been disposed and cannot be used");
+        }
 
         public virtual void Dispose()
         {

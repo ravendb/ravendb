@@ -29,6 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private RequestExecutor _requestExecutor;
         private string _recentUrl;
+        private bool _incrementalTsAlertRaised;
         public string Url => _recentUrl;
 
         private readonly RavenEtlDocumentTransformer.ScriptInput _script;
@@ -147,20 +148,32 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
             Debug.Assert(commands != null);
 
-            if (commands.Count == 0)
-                return 0;
-
             if (ShouldTrackTimeSeries())
             {
-                foreach (var command in commands)
+                for (int i = commands.Count - 1; i >= 0; i--)
                 {
-                    if (command is TimeSeriesBatchCommandData tsbc)
+                    if (commands[i] is TimeSeriesBatchCommandData tsbc &&
+                        TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
                     {
-                        if (TimeSeriesHandlerProcessorForGetTimeSeries.CheckIfIncrementalTs(tsbc.Name))
-                            throw new NotSupportedException($"Load isn't support for incremental time series '{tsbc.Name}' at document '{tsbc.Id}'");
+                        if (_incrementalTsAlertRaised == false)
+                        {
+                            Database.NotificationCenter.EtlNotifications.AddWarning(
+                                Tag,
+                                Name,
+                                $"Incremental Time Series are not supported and are going to be skipped going forward. First encountered in document '{tsbc.Id}' for time series '{tsbc.Name}'",
+                                tsbc.Id,
+                                tsbc.Name);
+
+                            _incrementalTsAlertRaised = true;
+                        }
+
+                        commands.RemoveAt(i);
                     }
                 }
             }
+
+            if (commands.Count == 0)
+                return 0;
 
             BatchOptions options = null;
             if (Configuration.LoadRequestTimeoutInSec != null)

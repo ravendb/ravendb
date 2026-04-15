@@ -18,6 +18,7 @@ import {
     testAiAgentYupResolver,
 } from "../utils/editAiAgentValidation";
 import router from "plugins/router";
+import { hasRelevantDirtyFields } from "components/common/Form";
 
 interface QueryParams {
     id: string;
@@ -92,7 +93,8 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         );
     };
 
-    const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
+    const hasRelevantDirty = hasRelevantDirtyFields(editForm.formState.dirtyFields, ["isEditing"]);
+    const { setIsDirty } = useDirtyFlag(hasRelevantDirty);
 
     const reloadEditForm = async () => {
         const result = await asyncGetEditDefaultValues.execute();

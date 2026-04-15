@@ -485,11 +485,12 @@ export function FormAceEditor<
     TFieldValues extends FieldValues = FieldValues,
     TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >(props: FormElementProps<TFieldValues, TName> & AceEditorProps) {
-    const { name, control, defaultValue, rules, shouldUnregister, ...rest } = props;
+    const { name, control, defaultValue, rules, shouldUnregister, disabled, ...rest } = props;
 
     const {
         field: { onChange, value },
         fieldState: { error },
+        formState,
     } = useController({
         name,
         control,
@@ -498,7 +499,15 @@ export function FormAceEditor<
         shouldUnregister,
     });
 
-    return <AceEditor onChange={onChange} value={value} validationErrorMessage={error?.message} {...rest} />;
+    return (
+        <AceEditor
+            onChange={onChange}
+            value={value}
+            validationErrorMessage={error?.message}
+            readOnly={formState.isSubmitting || disabled}
+            {...rest}
+        />
+    );
 }
 
 export function FormDurationPicker<
@@ -997,4 +1006,30 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
         hasErrors: !!error,
         message: error?.message,
     };
+}
+
+export function hasRelevantDirtyFields(dirtyFields: unknown, ignoredFieldNames: string[]): boolean {
+    if (!dirtyFields) {
+        return false;
+    }
+
+    if (dirtyFields === true) {
+        return true;
+    }
+
+    if (Array.isArray(dirtyFields)) {
+        return dirtyFields.some((field) => hasRelevantDirtyFields(field, ignoredFieldNames));
+    }
+
+    if (typeof dirtyFields === "object") {
+        return Object.entries(dirtyFields).some(([key, value]) => {
+            if (ignoredFieldNames.includes(key)) {
+                return false;
+            }
+
+            return hasRelevantDirtyFields(value, ignoredFieldNames);
+        });
+    }
+
+    return false;
 }

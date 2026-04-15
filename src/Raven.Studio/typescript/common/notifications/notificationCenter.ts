@@ -87,6 +87,7 @@ class notificationCenter {
     static instance = new notificationCenter();
 
     static readonly postponeOptions = notificationCenterSettings.postponeOptions;
+    private static readonly maxRecentOperations = 50;
 
     spinners = {
         dismiss: ko.observableArray<string>([]),
@@ -128,6 +129,9 @@ class notificationCenter {
     detailsProviders: detailsProvider[] = [];
     customOperationMerger: customOperationMerger[] = [];
     customOperationHandler: customOperationHandler[] = [];
+    private pendingOperationDetails = new Set<string>();
+    private recentOperations = new Map<string, Raven.Server.NotificationCenter.Notifications.OperationChanged>();
+    private currentDatabaseName: string;
 
     private hideHandler = (e: Event) => {
         if (this.shouldConsumeHideEvent(e)) {
@@ -300,6 +304,7 @@ class notificationCenter {
 
     configureForDatabase(client: databaseNotificationCenterClient): changeSubscription[] {
         const db = client.getDatabase();
+        this.currentDatabaseName = db.name;
         this.databaseOperationsWatch.configureFor(db);
 
         return [
@@ -312,6 +317,8 @@ class notificationCenter {
     }
 
     databaseDisconnected() {
+        this.clearTrackedOperationsForDatabase(this.currentDatabaseName);
+        this.currentDatabaseName = null;
         this.databaseNotifications.removeAll();
     }
 
@@ -355,6 +362,8 @@ class notificationCenter {
 
     private onOperationChangeReceived(operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged, notificationsContainer: KnockoutObservableArray<abstractNotification>,
         database: database) {
+        this.trackRecentOperation(database, operationDto);
+
         const spinnersCleanup = () => {
             if (operationDto.State.Status !== "InProgress") {
                 // since kill request doesn't wait for actual kill, let's remove completed items
@@ -370,6 +379,7 @@ class notificationCenter {
                 onChange: invokeOnChange,
                 spinnersCleanup: spinnersCleanup
             })) {
+                this.tryOpenPendingOperationDetails(database, operationDto.OperationId, operationDto);
                 // low-level handler processed this notification  - we assume we are done
                 return;
             }
@@ -406,12 +416,14 @@ class notificationCenter {
 
         spinnersCleanup();
         invokeOnChange();
+        this.tryOpenPendingOperationDetails(database, operationDto.OperationId, operationDto);
     }
 
     private onNotificationUpdated(notificationUpdatedDto: Raven.Server.NotificationCenter.Notifications.NotificationUpdated, notificationsContainer: KnockoutObservableArray<abstractNotification>) {
 
         const existingOperation = notificationsContainer().find(x => x.id === notificationUpdatedDto.NotificationId) as operation;
         if (existingOperation) {
+            this.clearTrackedOperation(existingOperation.databaseName, existingOperation.operationId());
             this.removeNotificationFromNotificationCenter(existingOperation);
         }
     }
@@ -432,7 +444,7 @@ class notificationCenter {
 
         this.spinners.postpone.push(notificationId);
 
-        return new postponeNotificationCommand(notification.database, notificationId, timeInSeconds)
+        return new postponeNotificationCommand(notification.databaseName, notificationId, timeInSeconds)
             .execute()
             .always(() => this.spinners.postpone.remove(notificationId))
             .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -455,7 +467,7 @@ class notificationCenter {
 
             this.spinners.dismiss.push(notificationId);
 
-            new dismissNotificationCommand(notification.database, notificationId, shouldDismissForever)
+            new dismissNotificationCommand(notification.databaseName, notificationId, shouldDismissForever)
                 .execute()
                 .always(() => this.spinners.dismiss.remove(notificationId))
                 .done(() => this.removeNotificationFromNotificationCenter(notification));
@@ -465,6 +477,10 @@ class notificationCenter {
     }
 
     private removeNotificationFromNotificationCenter(notification: abstractNotification) {
+        if (notification instanceof operation) {
+            this.clearTrackedOperation(notification.databaseName, notification.operationId());
+        }
+
         this.globalNotifications.remove(notification);
         this.databaseNotifications.remove(notification);
     }
@@ -493,7 +509,7 @@ class notificationCenter {
 
                     this.spinners.kill.push(notificationId);
 
-                    new killOperationCommand(operationToKill.database, operationToKill.operationId())
+                    new killOperationCommand(operationToKill.databaseName, operationToKill.operationId())
                         .execute()
                         .fail(() => {
                             // we don't call remove in always since killOperationCommand only delivers kill signal and doesn't wait for actual kill
@@ -504,38 +520,126 @@ class notificationCenter {
     }
 
     openDetailsForOperationById(db: database | string, operationId: number): void {
-        const existingNotification = this.getOperationById(db, operationId);
-        if (existingNotification) {
-            this.openDetails(existingNotification);
-        } else {
-            const showDialog = _.once(() => {
-                // at this point operation have to exist
-                this.openDetails(this.getOperationById(db, operationId));
-            });
-
-            this.monitorOperation(db, operationId, showDialog)
-                .always(showDialog);
+        if (this.tryOpenOperationDetails(db, operationId)) {
+            return;
         }
+
+        this.pendingOperationDetails.add(this.getOperationTrackingKey(db, operationId));
     }
 
-    private getOperationById(db: database | string, operationId: number) {
-        const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
-        const topLevelNotification = notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
-        if (topLevelNotification) {
-            return topLevelNotification;
+    private tryOpenPendingOperationDetails(
+        db: database | string,
+        operationId: number,
+        operationDto?: Raven.Server.NotificationCenter.Notifications.OperationChanged
+    ): boolean {
+        const operationKey = this.getOperationTrackingKey(db, operationId);
+        if (!this.pendingOperationDetails.has(operationKey)) {
+            return false;
         }
-        
-        // merge operation was merged into other virtual operation?
-        for (const array of notificationsArray) {
-            if (array instanceof groupedVirtualNotification) {
-                const match = array.operations().find(x => x.id === operationId);
+
+        return this.tryOpenOperationDetails(db, operationId, operationDto);
+    }
+
+    private createOperationFromDto(
+        db: database | string,
+        operationDto?: Raven.Server.NotificationCenter.Notifications.OperationChanged
+    ): operation {
+        if (!operationDto) {
+            return null;
+        }
+
+        return new operation(db, operationDto);
+    }
+
+    private getTopLevelOperationById(db: database | string, operationId: number): operation {
+        const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
+        return notificationsArray.find(x => x instanceof operation && x.operationId() === operationId) as operation;
+    }
+
+    private getRecentOperationById(db: database | string, operationId: number): operation {
+        const operationKey = this.getOperationTrackingKey(db, operationId);
+        const operationDto = this.recentOperations.get(operationKey);
+        return this.createOperationFromDto(db, operationDto);
+    }
+
+    private getGroupedOperationById(db: database | string, operationId: number): abstractNotification {
+        const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
+
+        for (const groupedNotification of notificationsArray) {
+            if (groupedNotification instanceof groupedVirtualNotification) {
+                const match = groupedNotification.operations().find(x => x.operationId === operationId);
                 if (match) {
-                    return match;
+                    return groupedNotification;
                 }
             }
         }
-        
+
         return null;
+    }
+
+    private tryOpenOperationDetails(
+        db: database | string,
+        operationId: number,
+        operationDto?: Raven.Server.NotificationCenter.Notifications.OperationChanged
+    ): boolean {
+        const notification = this.resolveOperationDetailsTarget(db, operationId, operationDto);
+        if (!notification) {
+            return false;
+        }
+
+        this.clearTrackedOperation(db, operationId);
+        this.openDetails(notification);
+        return true;
+    }
+
+    private getOperationTrackingKey(db: database | string, operationId: number): string {
+        const dbName = typeof db === "string" ? db : db?.name;
+        const keyPrefix = dbName || "__serverWide__";
+        return keyPrefix + "|" + operationId;
+    }
+
+    private resolveOperationDetailsTarget(
+        db: database | string,
+        operationId: number,
+        operationDto?: Raven.Server.NotificationCenter.Notifications.OperationChanged
+    ): abstractNotification {
+        return this.getTopLevelOperationById(db, operationId)
+            || this.createOperationFromDto(db, operationDto)
+            || this.getRecentOperationById(db, operationId)
+            || this.getGroupedOperationById(db, operationId);
+    }
+
+    private trackRecentOperation(
+        db: database | string,
+        operationDto: Raven.Server.NotificationCenter.Notifications.OperationChanged
+    ) {
+        const operationKey = this.getOperationTrackingKey(db, operationDto.OperationId);
+        this.recentOperations.delete(operationKey);
+        this.recentOperations.set(operationKey, operationDto);
+
+        if (this.recentOperations.size > notificationCenter.maxRecentOperations) {
+            const oldestTrackedOperation = this.recentOperations.keys().next().value;
+            this.recentOperations.delete(oldestTrackedOperation);
+        }
+    }
+
+    private clearTrackedOperation(db: database | string, operationId: number) {
+        const operationKey = this.getOperationTrackingKey(db, operationId);
+        this.pendingOperationDetails.delete(operationKey);
+        this.recentOperations.delete(operationKey);
+    }
+
+    private clearTrackedOperationsForDatabase(databaseName: string) {
+        if (!databaseName) {
+            return;
+        }
+
+        const databasePrefix = databaseName + "|";
+        const pendingOperationsToClear = Array.from(this.pendingOperationDetails).filter((key) => key.startsWith(databasePrefix));
+        pendingOperationsToClear.forEach((key) => this.pendingOperationDetails.delete(key));
+
+        const recentOperationsToClear = Array.from(this.recentOperations.keys()).filter((key) => key.startsWith(databasePrefix));
+        recentOperationsToClear.forEach((key) => this.recentOperations.delete(key));
     }
 
     openDetails(notification: abstractNotification) {
