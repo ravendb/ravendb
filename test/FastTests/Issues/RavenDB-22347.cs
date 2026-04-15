@@ -11,8 +11,146 @@ namespace FastTests.Issues
         {
         }
 
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("Key1")]
+        [InlineData("key-with-dash")]
+        [InlineData("key with space")]
+        [InlineData("key.with.dot")]
+        [InlineData("back\\slash")]
+        [InlineData("ke\"y1")]
+        [InlineData("it's a \"test\"\\path.with-dashes and spaces")]
+        [InlineData("line1\nline2")]
+        [InlineData("col1\tcol2")]
+        [InlineData("")]
+        public void CanPatchDictionaryViaIndexerWithVariousKeys(string key)
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Document
+                {
+                    Values = new Dictionary<string, string>
+                    {
+                        { key, "OriginalValue" },
+                        { "Untouched", "Untouched" }
+                    }
+                }, "docs/1");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                session.Advanced.Patch<Document, string>("docs/1", x => x.Values[key], "Updated");
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var doc = commands.Get("docs/1").BlittableJson;
+                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
+                Assert.True(values.TryGet(key, out string value), $"Key '{key}' should exist");
+                Assert.Equal("Updated", value);
+                Assert.True(values.TryGet("Untouched", out value));
+                Assert.Equal("Untouched", value);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("NewKey")]
+        [InlineData("key-with-dash")]
+        [InlineData("key with space")]
+        [InlineData("key.with.dot")]
+        [InlineData("back\\slash")]
+        [InlineData("key\"with\"quotes")]
+        [InlineData("it's a \"test\"\\path.with-dashes and spaces")]
+        [InlineData("line1\nline2")]
+        [InlineData("col1\tcol2")]
+        [InlineData("")]
+        public void CanAddDictionaryEntryWithVariousKeys(string key)
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Document
+                {
+                    Values = new Dictionary<string, string>
+                    {
+                        { "Existing", "ExistingValue" }
+                    }
+                }, "docs/1");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var doc = session.Load<Document>("docs/1");
+                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(key, "AddedValue"));
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var doc = commands.Get("docs/1").BlittableJson;
+                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
+                Assert.Equal(2, values.Count);
+
+                Assert.True(values.TryGet(key, out string value), $"Key '{key}' should exist");
+                Assert.Equal("AddedValue", value);
+                Assert.True(values.TryGet("Existing", out value));
+                Assert.Equal("ExistingValue", value);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Patching)]
+        [InlineData("Key1")]
+        [InlineData("key-with-dash")]
+        [InlineData("key with space")]
+        [InlineData("key.with.dot")]
+        [InlineData("back\\slash")]
+        [InlineData("key\"with\"quotes")]
+        [InlineData("it's a \"test\"\\path.with-dashes and spaces")]
+        [InlineData("line1\nline2")]
+        [InlineData("col1\tcol2")]
+        public void CanRemoveDictionaryEntryWithVariousKeys(string key)
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Document
+                {
+                    Values = new Dictionary<string, string>
+                    {
+                        { key, "ToBeRemoved" },
+                        { "Surviving", "SurvivingValue" }
+                    }
+                }, "docs/1");
+                session.SaveChanges();
+            }
+
+            using (var session = store.OpenSession())
+            {
+                var doc = session.Load<Document>("docs/1");
+                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(key));
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var doc = commands.Get("docs/1").BlittableJson;
+                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
+                Assert.Equal(1, values.Count);
+
+                Assert.False(values.TryGet(key, out string _), $"Key '{key}' should have been removed");
+                Assert.True(values.TryGet("Surviving", out string value));
+                Assert.Equal("SurvivingValue", value);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryValueWithIndexerAndKeyFromObjectProperty()
+        public void CanPatchDictionaryViaIndexerWithKeyFromObjectProperty()
         {
             using var store = GetDocumentStore();
 
@@ -50,7 +188,7 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryValueWithIndexerAndKeyFromVariable()
+        public void CanAddDictionaryEntryWithKeyFromObjectProperty()
         {
             using var store = GetDocumentStore();
 
@@ -60,83 +198,7 @@ namespace FastTests.Issues
                 {
                     Values = new Dictionary<string, string>
                     {
-                        { "Key1", "Value1" },
-                        { "Key2", "Value2" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var key = "Key1";
-
-            using (var session = store.OpenSession())
-            {
-                session.Advanced.Patch<Document, string>("docs/1", x => x.Values[key], "UpdatedValue");
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-
-                Assert.True(values.TryGet("Key1", out string value));
-                Assert.Equal("UpdatedValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithAdderAndKeyFromObjectProperty()
-        {
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "Key1", "Value1" },
-                        { "Key2", "Value2" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var keyHolder = new KeyHolder { Key = "Key3" };
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(keyHolder.Key, "Value3"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(3, values.Count);
-
-                Assert.True(values.TryGet("Key3", out string value));
-                Assert.Equal("Value3", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanRemoveDictionaryKeyWithAdderAndKeyFromObjectProperty()
-        {
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "Key1", "Value1" },
-                        { "Key2", "Value2" },
-                        { "Key3", "Value3" }
+                        { "Key1", "Value1" }
                     }
                 }, "docs/1");
                 session.SaveChanges();
@@ -147,7 +209,7 @@ namespace FastTests.Issues
             using (var session = store.OpenSession())
             {
                 var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(keyHolder.Key));
+                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(keyHolder.Key, "Value2"));
                 session.SaveChanges();
             }
 
@@ -157,178 +219,14 @@ namespace FastTests.Issues
                 Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
                 Assert.Equal(2, values.Count);
 
-                Assert.True(values.TryGet("Key1", out string _));
-                Assert.True(values.TryGet("Key3", out string _));
-                Assert.False(values.TryGet("Key2", out string _));
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithKeyContainingSpecialCharacters()
-        {
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "Key1", "Value1" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var specialKeys = new[] { "key-with-dash", "key with space", "key.with", "key\"with\"quotes" };
-
-            foreach (var key in specialKeys)
-            {
-                using (var session = store.OpenSession())
-                {
-                    var doc = session.Load<Document>("docs/1");
-                    session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(key, $"Value for {key}"));
-                    session.SaveChanges();
-                }
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(5, values.Count);
-
-                foreach (var key in specialKeys)
-                {
-                    Assert.True(values.TryGet(key, out string value), $"Key '{key}' should exist");
-                    Assert.Equal($"Value for {key}", value);
-                }
-            }
-        }
-
-        // --- Additional tests below ---
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryValueWithIndexerAndKeyContainingQuotes()
-        {
-            // Ayende's review: test indexer path with key containing embedded quotes
-            using var store = GetDocumentStore();
-
-            var keyWithQuotes = "ke\"y1";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { keyWithQuotes, "OriginalValue" },
-                        { "Key2", "Value2" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var obj = new { Key = keyWithQuotes };
-
-            using (var session = store.OpenSession())
-            {
-                session.Advanced.Patch<Document, string>("docs/1", x => x.Values[obj.Key], "UpdatedValue");
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-
-                Assert.True(values.TryGet(keyWithQuotes, out string value));
-                Assert.Equal("UpdatedValue", value);
-                Assert.True(values.TryGet("Key2", out value));
+                Assert.True(values.TryGet("Key2", out string value));
                 Assert.Equal("Value2", value);
             }
         }
 
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryValueWithIndexerAndKeyContainingSpecialCharacters()
+        public void CanRemoveDictionaryEntryWithKeyFromObjectProperty()
         {
-            // Test PatchPathWrappedConstantSupport with various special characters in the key
-            using var store = GetDocumentStore();
-
-            var specialKeys = new[] { "key-with-dash", "key with space", "key.with.dot", "back\\slash" };
-
-            foreach (var specialKey in specialKeys)
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Document
-                    {
-                        Values = new Dictionary<string, string>
-                        {
-                            { specialKey, "OriginalValue" }
-                        }
-                    }, "docs/1");
-                    session.SaveChanges();
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    session.Advanced.Patch<Document, string>("docs/1", x => x.Values[specialKey], "Updated");
-                    session.SaveChanges();
-                }
-
-                using (var commands = store.Commands())
-                {
-                    var doc = commands.Get("docs/1").BlittableJson;
-                    Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                    Assert.True(values.TryGet(specialKey, out string value), $"Key '{specialKey}' should exist");
-                    Assert.Equal("Updated", value);
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanAddDictionaryEntryWithKeyFromVariable()
-        {
-            // Tests Add path with simple string variable (not object property)
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "Key1", "Value1" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var key = "NewKey";
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(key, "NewValue"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(2, values.Count);
-
-                Assert.True(values.TryGet("NewKey", out string value));
-                Assert.Equal("NewValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanRemoveDictionaryEntryWithKeyFromVariable()
-        {
-            // Tests Remove path with simple string variable
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -344,12 +242,12 @@ namespace FastTests.Issues
                 session.SaveChanges();
             }
 
-            var key = "Key1";
+            var keyHolder = new KeyHolder { Key = "Key1" };
 
             using (var session = store.OpenSession())
             {
                 var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(key));
+                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(keyHolder.Key));
                 session.SaveChanges();
             }
 
@@ -366,48 +264,8 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanRemoveDictionaryEntryWithSpecialCharacterKey()
-        {
-            using var store = GetDocumentStore();
-
-            var specialKey = "key-with-dash";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { specialKey, "Value1" },
-                        { "Key2", "Value2" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(specialKey));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(1, values.Count);
-
-                Assert.False(values.TryGet(specialKey, out string _));
-                Assert.True(values.TryGet("Key2", out string value));
-                Assert.Equal("Value2", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
         public void CanAddAndRemoveDictionaryEntriesInSameSession()
         {
-            // Tests patch merging with the new bracket notation
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -426,7 +284,7 @@ namespace FastTests.Issues
             using (var session = store.OpenSession())
             {
                 var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add("Key3", "Value3"));
+                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add("key-three", "Value3"));
                 session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove("Key1"));
                 session.SaveChanges();
             }
@@ -440,7 +298,7 @@ namespace FastTests.Issues
                 Assert.False(values.TryGet("Key1", out string _));
                 Assert.True(values.TryGet("Key2", out string value));
                 Assert.Equal("Value2", value);
-                Assert.True(values.TryGet("Key3", out value));
+                Assert.True(values.TryGet("key-three", out value));
                 Assert.Equal("Value3", value);
             }
         }
@@ -448,7 +306,6 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Patching)]
         public void CanAddMultipleDictionaryEntriesWithSpecialKeysInSameSession()
         {
-            // Tests patch merging with multiple special-character keys
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -485,159 +342,9 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanOverwriteExistingDictionaryEntryWithSpecialCharacterKey()
+        public void CanAddDictionaryEntryWithKeyValuePairOverload()
         {
             using var store = GetDocumentStore();
-
-            var specialKey = "my-key.with";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { specialKey, "OriginalValue" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(specialKey, "OverwrittenValue"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(1, values.Count);
-
-                Assert.True(values.TryGet(specialKey, out string value));
-                Assert.Equal("OverwrittenValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithKeyContainingBackslash()
-        {
-            // Backslash must be escaped first in EscapeForJsString to avoid double-escaping
-            using var store = GetDocumentStore();
-
-            var key = "path\\to\\thing";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "Key1", "Value1" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(key, "BackslashValue"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(2, values.Count);
-
-                Assert.True(values.TryGet(key, out string value));
-                Assert.Equal("BackslashValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithKeyContainingNewlineAndTab()
-        {
-            using var store = GetDocumentStore();
-
-            var keyWithNewline = "line1\nline2";
-            var keyWithTab = "col1\tcol2";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>()
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(keyWithNewline, "NewlineValue"));
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(keyWithTab, "TabValue"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(2, values.Count);
-
-                Assert.True(values.TryGet(keyWithNewline, out string value));
-                Assert.Equal("NewlineValue", value);
-                Assert.True(values.TryGet(keyWithTab, out value));
-                Assert.Equal("TabValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithKeyContainingMixedSpecialCharacters()
-        {
-            // A key that exercises multiple escape rules simultaneously
-            using var store = GetDocumentStore();
-
-            var crazyKey = "it's a \"test\"\\path.with-dashes and spaces";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>()
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add(crazyKey, "CrazyValue"));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-
-                Assert.True(values.TryGet(crazyKey, out string value));
-                Assert.Equal("CrazyValue", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithKeyValuePairAndSpecialCharacterKey()
-        {
-            // Tests the KeyValuePair overload of Add
-            using var store = GetDocumentStore();
-
-            var specialKey = "my-special.key";
 
             using (var session = store.OpenSession())
             {
@@ -655,7 +362,7 @@ namespace FastTests.Issues
             {
                 var doc = session.Load<Document>("docs/1");
                 session.Advanced.Patch(doc, x => x.Values,
-                    dict => dict.Add(new KeyValuePair<string, string>(specialKey, "SpecialValue")));
+                    dict => dict.Add(new KeyValuePair<string, string>("my-special.key", "SpecialValue")));
                 session.SaveChanges();
             }
 
@@ -665,7 +372,7 @@ namespace FastTests.Issues
                 Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
                 Assert.Equal(2, values.Count);
 
-                Assert.True(values.TryGet(specialKey, out string value));
+                Assert.True(values.TryGet("my-special.key", out string value));
                 Assert.Equal("SpecialValue", value);
             }
         }
@@ -673,7 +380,6 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchDictionaryWithEnumKeyUsingAdd()
         {
-            // Regression: enum keys should work with bracket notation
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -711,7 +417,6 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchDictionaryWithEnumKeyUsingRemove()
         {
-            // Regression: enum key Remove should work with bracket notation
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -749,7 +454,6 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchDictionaryWithEnumKeyUsingIndexer()
         {
-            // Regression: indexer patch with enum key
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -784,42 +488,43 @@ namespace FastTests.Issues
         }
 
         [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithEmptyStringKey()
+        public void CanPatchDictionaryWithComplexValueAndSpecialCharacterKey()
         {
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
             {
-                session.Store(new Document
+                session.Store(new NestedDocument
                 {
-                    Values = new Dictionary<string, string>()
+                    Items = new Dictionary<string, NestedValue>()
                 }, "docs/1");
                 session.SaveChanges();
             }
 
+            var key = "item-one";
+
             using (var session = store.OpenSession())
             {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Add("", "EmptyKeyValue"));
+                session.Advanced.Patch<NestedDocument, NestedValue>("docs/1",
+                    x => x.Items[key], new NestedValue { Name = "Test", Score = 42 });
                 session.SaveChanges();
             }
 
             using (var commands = store.Commands())
             {
                 var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(1, values.Count);
-
-                Assert.True(values.TryGet("", out string value));
-                Assert.Equal("EmptyKeyValue", value);
+                Assert.True(doc.TryGet(nameof(NestedDocument.Items), out BlittableJsonReaderObject items));
+                Assert.True(items.TryGet(key, out BlittableJsonReaderObject nested));
+                Assert.True(nested.TryGet(nameof(NestedValue.Name), out string name));
+                Assert.Equal("Test", name);
+                Assert.True(nested.TryGet(nameof(NestedValue.Score), out int score));
+                Assert.Equal(42, score);
             }
         }
 
         [RavenFact(RavenTestCategory.Patching)]
         public void PatchDoesNotAffectNonDictionaryProperties()
         {
-            // Regression: adding PatchPathWrappedConstantSupport to path compilation
-            // should not break simple property patching
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -854,7 +559,6 @@ namespace FastTests.Issues
         [RavenFact(RavenTestCategory.Patching)]
         public void IncrementStillWorksWithPatchPathWrappedConstantSupport()
         {
-            // Regression: Increment uses the same _pathScriptCompilationOptions
             using var store = GetDocumentStore();
 
             using (var session = store.OpenSession())
@@ -878,116 +582,6 @@ namespace FastTests.Issues
             {
                 var doc = session.Load<DocumentWithMultipleProperties>("docs/1");
                 Assert.Equal(15, doc.Count);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithLiteralSpecialCharacterKeyInIndexer()
-        {
-            // Literal string key with special chars in the indexer expression
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { "my-key", "OriginalValue" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                session.Advanced.Patch<Document, string>("docs/1", x => x.Values["my-key"], "Updated");
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-
-                Assert.True(values.TryGet("my-key", out string value));
-                Assert.Equal("Updated", value);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanPatchDictionaryWithComplexValueAndSpecialCharacterKey()
-        {
-            // Dictionary with complex value types and special character keys via indexer
-            using var store = GetDocumentStore();
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new NestedDocument
-                {
-                    Items = new Dictionary<string, NestedValue>()
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            var key = "item-one";
-
-            using (var session = store.OpenSession())
-            {
-                session.Advanced.Patch<NestedDocument, NestedValue>("docs/1",
-                    x => x.Items[key], new NestedValue { Name = "Test", Score = 42 });
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(NestedDocument.Items), out BlittableJsonReaderObject items));
-                Assert.True(items.TryGet(key, out BlittableJsonReaderObject nested));
-                Assert.True(nested.TryGet(nameof(NestedValue.Name), out string name));
-                Assert.Equal("Test", name);
-                Assert.True(nested.TryGet(nameof(NestedValue.Score), out int score));
-                Assert.Equal(42, score);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Patching)]
-        public void CanRemoveDictionaryEntryWithQuotesInKey()
-        {
-            // Remove with a key containing embedded quotes
-            using var store = GetDocumentStore();
-
-            var keyWithQuotes = "key\"with\"quotes";
-
-            using (var session = store.OpenSession())
-            {
-                session.Store(new Document
-                {
-                    Values = new Dictionary<string, string>
-                    {
-                        { keyWithQuotes, "QuotedValue" },
-                        { "NormalKey", "NormalValue" }
-                    }
-                }, "docs/1");
-                session.SaveChanges();
-            }
-
-            using (var session = store.OpenSession())
-            {
-                var doc = session.Load<Document>("docs/1");
-                session.Advanced.Patch(doc, x => x.Values, dict => dict.Remove(keyWithQuotes));
-                session.SaveChanges();
-            }
-
-            using (var commands = store.Commands())
-            {
-                var doc = commands.Get("docs/1").BlittableJson;
-                Assert.True(doc.TryGet(nameof(Document.Values), out BlittableJsonReaderObject values));
-                Assert.Equal(1, values.Count);
-
-                Assert.False(values.TryGet(keyWithQuotes, out string _));
-                Assert.True(values.TryGet("NormalKey", out string value));
-                Assert.Equal("NormalValue", value);
             }
         }
 
