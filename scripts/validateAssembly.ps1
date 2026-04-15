@@ -46,10 +46,6 @@ function Assert-AssemblyVersion () {
         throw "Assembly file $AssemblyPath does not exist."
     }
 
-    if ($IsWindows -eq $False) {
-        return
-    }
-
     $cmd = '[string]::Join(".", $([System.Reflection.Assembly]::LoadFrom("' + $AssemblyPath.Replace("\", "\\") + '").GetName().Version.ToString().Split(".") | Select-Object -First 3));'
     $bytes = [System.Text.Encoding]::Unicode.GetBytes($cmd)
     $encodedCommand = [Convert]::ToBase64String($bytes)
