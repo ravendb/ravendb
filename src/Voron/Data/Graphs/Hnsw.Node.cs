@@ -37,6 +37,25 @@ public partial class Hnsw
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ReadOnlySpan<long> EdgesAtLevel(int level) => EdgesPerLevel[level].ToSpan();
 
+        /// <summary>
+        /// Returns the vector's memory address and length without triggering I/O.
+        /// Returns false if the vector hasn't been loaded yet.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetVectorAddress(out byte* address, out int length)
+        {
+            if (_vectorSpan.Length > 0)
+            {
+                address = _vectorSpan.Address;
+                length = _vectorSpan.Length;
+                return true;
+            }
+
+            address = null;
+            length = 0;
+            return false;
+        }
+
         public long GetVectorContainerId()
         {
             if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
