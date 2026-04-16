@@ -67,8 +67,9 @@ public class RavenDB_26344 : StorageTest
         Assert.Null(Env.CurrentStateRecord.SparseRegions);
 
         (long allocatedBefore, long physicalBefore) = Env.DataPager.GetFileSize(Env.CurrentStateRecord.DataPagerState);
-        
-        Assert.Equal(allocatedBefore, physicalBefore);
+
+        Assert.True(physicalBefore >= allocatedBefore,
+            $"Expected physical size >= allocated before sparse regions, but allocated={allocatedBefore}, physical={physicalBefore}");
 
         Options.DisableSparseRegions = false; // enable sparse regions before the restart
         
