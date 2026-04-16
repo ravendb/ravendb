@@ -1,5 +1,6 @@
 using System;
 using System.Buffers;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,11 +48,17 @@ namespace Voron.Impl.Backup
 
             try
             {
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                Debug.Assert(bufferSize / pageSize < FreeSpaceHandling.NumberOfFreePagesForSparseConsideration,
+                    $"Below code assumes buffer holds fewer pages ({bufferSize / pageSize}) than the sparse threshold ({FreeSpaceHandling.NumberOfFreePagesForSparseConsideration})");
+
                 Array.Clear(zeroBuffer, 0, DefaultBufferSize);
 
                 long logicalPosition = 0;
                 long destinationPosition = 0;
                 int contiguousZeroPages = 0;
+                int subPageTail = 0;
+                int subPageTailOffset = 0;
 
                 int count;
                 while ((count = source.ReadAtLeast(readBuffer.AsSpan(0, bufferSize), bufferSize, throwOnEndOfStream: false)) > 0)
@@ -59,11 +66,22 @@ namespace Voron.Impl.Backup
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(count);
 
+                    if (count < bufferSize)
+                    {
+                        // Final read — strip any sub-page tail so all code below works with page-aligned data only.
+                        // The tail will be written after the loop.
+                        subPageTail = count % pageSize;
+                        subPageTailOffset = count - subPageTail;
+                        count -= subPageTail;
+
+                        if (count == 0)
+                            break;
+                    }
+
                     var span = new ReadOnlySpan<byte>(readBuffer, 0, count);
 
                     // Fast path: first and last bytes non-zero means no sparse region can start/end in this buffer
-                    // (max internal zero run is 9 pages, far below the 512-page threshold).
-                    if (count == bufferSize && span[0] != 0 && span[count - 1] != 0)
+                    if (span[0] != 0 && span[count - 1] != 0)
                     {
                         if (contiguousZeroPages > 0)
                             HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
@@ -74,22 +92,12 @@ namespace Voron.Impl.Backup
                     }
 
                     int firstNonZero = span.IndexOfAnyExcept((byte)0);
+                    bool isEntireBufferZero = firstNonZero == -1;
 
-                    if (firstNonZero == -1)
+                    if (isEntireBufferZero)
                     {
-                        int wholeZeroPages = count / pageSize;
-                        contiguousZeroPages += wholeZeroPages;
-                        logicalPosition += (long)wholeZeroPages * pageSize;
-
-                        int zeroTail = count - (wholeZeroPages * pageSize);
-                        if (zeroTail > 0)
-                        {
-                            if (contiguousZeroPages > 0)
-                                HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
-
-                            FlushPendingWrite(destination, readBuffer, wholeZeroPages * pageSize, zeroTail, logicalPosition, ref destinationPosition);
-                            logicalPosition += zeroTail;
-                        }
+                        contiguousZeroPages += count / pageSize;
+                        logicalPosition += count;
                         continue;
                     }
 
@@ -103,31 +111,25 @@ namespace Voron.Impl.Backup
                         HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
                     int contentStart = leadingZeroPages * pageSize;
-                    int contentEnd = Math.Min(((lastNonZero / pageSize) + 1) * pageSize, count);
+                    int contentEnd = ((lastNonZero / pageSize) + 1) * pageSize;
                     int contentLength = contentEnd - contentStart;
 
                     FlushPendingWrite(destination, readBuffer, contentStart, contentLength, logicalPosition, ref destinationPosition);
                     logicalPosition += contentLength;
 
-                    int trailingBytes = count - contentEnd;
-                    int trailingZeroPages = trailingBytes / pageSize;
+                    int trailingZeroPages = (count - contentEnd) / pageSize;
                     contiguousZeroPages = trailingZeroPages;
                     logicalPosition += (long)trailingZeroPages * pageSize;
-
-                    int trailingZeroTail = trailingBytes - (trailingZeroPages * pageSize);
-                    if (trailingZeroTail > 0)
-                    {
-                        if (contiguousZeroPages > 0)
-                            HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
-
-                        int tailStart = contentEnd + (trailingZeroPages * pageSize);
-                        FlushPendingWrite(destination, readBuffer, tailStart, trailingZeroTail, logicalPosition, ref destinationPosition);
-                        logicalPosition += trailingZeroTail;
-                    }
                 }
 
                 if (contiguousZeroPages > 0)
                     HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
+
+                if (subPageTail > 0)
+                {
+                    FlushPendingWrite(destination, readBuffer, subPageTailOffset, subPageTail, logicalPosition, ref destinationPosition);
+                    logicalPosition += subPageTail;
+                }
 
                 if (logicalPosition > 0)
                     destination.SetLength(logicalPosition);
