@@ -29,9 +29,7 @@ import AzureServiceBusConnectionString from "components/pages/database/settings/
 import AiConnectionString from "components/pages/database/settings/connectionStrings/editForms/AiConnectionString";
 import Modal from "components/common/Modal";
 import { FormLabel } from "components/common/Form";
-import {
-    ServerWideConnectionStringDto
-} from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 
 export interface EditConnectionStringsProps {
     initialConnection?: Connection;

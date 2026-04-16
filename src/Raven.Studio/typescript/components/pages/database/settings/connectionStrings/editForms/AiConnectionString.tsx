@@ -44,7 +44,12 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: AiConnection;
 }
 
-export default function AiConnectionString({ initialConnection, isForNewConnection, isServerwide, onSave }: AiConnectionStringProps) {
+export default function AiConnectionString({
+    initialConnection,
+    isForNewConnection,
+    isServerwide,
+    onSave,
+}: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
 
     const form = useForm<FormData>({

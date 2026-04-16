@@ -21,7 +21,8 @@ export default function ServerWideConnectionStringsInfoHub() {
                             <strong>ALL databases</strong> in your cluster.
                         </li>
                         <li className="margin-top-xxs">
-                            Server-wide connection strings can be referenced when defining ongoing tasks in any database.
+                            Server-wide connection strings can be referenced when defining ongoing tasks in any
+                            database.
                         </li>
                         <li className="margin-top-xxs">
                             Connection strings that are in use by ongoing tasks cannot be deleted, as they are essential

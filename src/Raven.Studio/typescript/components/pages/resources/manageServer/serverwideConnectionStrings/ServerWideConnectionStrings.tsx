@@ -7,20 +7,23 @@ import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { Connection, StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import {
+    Connection,
+    StudioConnectionType,
+} from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
-import {
-    getIcon,
-    getTypeLabel,
-} from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
+import { getIcon, getTypeLabel } from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
 import "components/pages/database/settings/connectionStrings/ConnectionStringsPanels.scss";
 import { EmptySet } from "components/common/EmptySet";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
 import ServerWideConnectionStringsInfoHub from "components/pages/resources/manageServer/serverwideConnectionStrings/ServerWideConnectionStringsInfoHub";
 import { exhaustiveStringTuple } from "components/utils/common";
-import { connectionStringsActions, connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import {
+    connectionStringsActions,
+    connectionStringSelectors,
+} from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 
 const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Ai",
@@ -115,7 +118,9 @@ export default function ServerWideConnectionStrings() {
                                                                 size="sm"
                                                                 className="rounded-pill"
                                                                 title="Add new connection string"
-                                                                onClick={() => setEditConnection({ type } as Connection)}
+                                                                onClick={() =>
+                                                                    setEditConnection({ type } as Connection)
+                                                                }
                                                             >
                                                                 <Icon icon="plus" />
                                                                 Add new
