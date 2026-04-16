@@ -248,12 +248,15 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 var processor = DocumentProcessor.GetProcessor(ci.TableInfo.Schema, ci.TableInfo.TableName);
                 // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
 
+                // For embedded tables, op 3 (pre-update image) is kept so we can detect
+                // reparenting. Stash old values keyed by PK; pair with op 4 (post-update).
+                Dictionary<string, object[]> pendingPreUpdate = null;
+
                 while (await reader.ReadAsync(ct))
                 {
                     var rowLsn = reader[0] as byte[];
                     var rowSeq = reader[1] as byte[];
                     var operation = reader.GetInt32(2);
-                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
 
                     var values = processor.RentValues();
                     for (int i = 0; i < columns.Length; i++)
@@ -262,7 +265,29 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         values[i] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
                     }
 
+                    if (operation == 3) // pre-update image for embedded table
+                    {
+                        pendingPreUpdate ??= new Dictionary<string, object[]>(StringComparer.Ordinal);
+                        var pkKey = processor.GenerateDocumentId(values);
+                        pendingPreUpdate[pkKey] = values;
+                        continue;
+                    }
+
+                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
                     var op = DocumentProcessor.ProcessRow(processor, cdcOperation, values, StreamingJsonContext);
+
+                    if (operation == 4 && !processor.IsRoot && pendingPreUpdate != null)
+                    {
+                        // Post-update image — pair with stashed pre-update for reparent detection
+                        var pkKey = processor.GenerateDocumentId(values);
+                        if (pendingPreUpdate.Remove(pkKey, out var oldValues))
+                        {
+                            foreach (var evt in CreateEmbeddedUpdateEvents(op, oldValues))
+                                buffer.Add((rowLsn, rowSeq, evt));
+                            continue;
+                        }
+                    }
+
                     var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
                     buffer.Add((rowLsn, rowSeq, new CdcEvent(eventType, op, null)));
                 }
@@ -477,12 +502,15 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var columnList = string.Join(", ", quotedColumns);
 
             // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
-            // We filter out pre-update images (3) at the SQL level to avoid transferring rows we'd discard.
+            // For embedded tables we keep pre-update images (op 3) so we can detect join column
+            // changes (reparenting). For root tables we still filter them out.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
+            var proc = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
+            var filterPreUpdate = proc == null || proc.IsRoot;
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
                 FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'all')
-                WHERE __$operation <> 3
+                {(filterPreUpdate ? "WHERE __$operation <> 3" : "")}
                 ORDER BY __$start_lsn, __$seqval";
 
             var columnsArray = columns.ToArray();

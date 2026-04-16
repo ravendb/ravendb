@@ -3570,5 +3570,166 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task EmbeddedReparent_JoinColumnChange_MustRemoveFromOldParent()
+        {
+            // Scenario: group_members has JoinColumn "group_id". When group_id changes from 1→2,
+            // the member should move from Groups/1.Members[] to Groups/2.Members[].
+            // Bug: the CDC pipeline only emits an Upsert to Groups/2 — the old entry in
+            // Groups/1.Members[] is never removed, creating a phantom +1 in fanout indexes.
+            //
+            // This test uses CdcSinkDocumentProcessor.ProcessRow to generate ops (simulating the
+            // real pipeline), feeds them through CdcSinkBatchCommand, and asserts correct behavior.
+
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // --- Configuration: "groups" root table with "group_members" embedded array ---
+            var rootConfig = new CdcSinkTableConfig
+            {
+                CollectionName = "Groups",
+                SourceTableSchema = "public",
+                SourceTableName = "groups",
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "group_id", Name = "GroupId" },
+                    new() { Column = "name", Name = "Name" }
+                },
+                PrimaryKeyColumns = new List<string> { "group_id" },
+                EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                {
+                    new()
+                    {
+                        SourceTableSchema = "public",
+                        SourceTableName = "group_members",
+                        PropertyName = "Members",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        JoinColumns = new List<string> { "group_id" },
+                        Type = CdcSinkRelationType.Array,
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new() { Column = "id", Name = "MemberId" },
+                            new() { Column = "joined_at", Name = "JoinedAt" }
+                        }
+                    }
+                }
+            };
+
+            var sinkConfig = new CdcSinkConfiguration
+            {
+                Name = "test-reparent",
+                Tables = new List<CdcSinkTableConfig> { rootConfig }
+            };
+            var docProcessor = new CdcSinkDocumentProcessor(sinkConfig);
+
+            // Set source column names (simulates what providers do from DB schema metadata)
+            var rootProcessor = docProcessor.GetProcessor("public", "groups");
+            SetSourceColumnNamesFromConfig(rootProcessor, rootConfig.Columns);
+
+            var embProcessor = docProcessor.GetProcessor("public", "group_members");
+            SetSourceColumnNamesFromConfig(embProcessor, rootConfig.EmbeddedTables[0].Columns);
+
+            // --- Step 1: Create parent documents Groups/1 and Groups/2 ---
+            var group1Op = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "groups",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 1, "Group Alpha" }
+            }, null);
+
+            var group2Op = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "groups",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 2, "Group Beta" }
+            }, null);
+
+            var putCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { group1Op, group2Op },
+                "test-reparent", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(putCmd);
+
+            // --- Step 2: Insert member (id=10) into Groups/1 ---
+            // SourceColumnNames after SetSourceColumnNamesFromConfig: [id, joined_at, group_id]
+            var insertMemberOp = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "group_members",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 10, "2024-01-01", 1 } // id=10, joined_at, group_id=1
+            }, null);
+
+            Assert.NotNull(insertMemberOp);
+            Assert.Equal(CdcSinkDocumentOpType.EmbeddedModify, insertMemberOp.Type);
+            Assert.Equal("Groups/1", insertMemberOp.DocumentId);
+
+            var insertCmd = new CdcSinkBatchCommand(database,
+                new List<CdcSinkDocumentOp> { insertMemberOp },
+                "test-reparent", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(insertCmd);
+
+            // Verify member is in Groups/1
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext verifyCtx))
+            using (verifyCtx.OpenReadTransaction())
+            {
+                var g1 = database.DocumentsStorage.Get(verifyCtx, "Groups/1");
+                Assert.NotNull(g1);
+                g1.Data.TryGet("Members", out BlittableJsonReaderArray m1);
+                Assert.NotNull(m1);
+                Assert.Equal(1, m1.Length);
+            }
+
+            // --- Step 3: Simulate UPDATE group_members SET group_id=2 WHERE id=10 ---
+            // In real providers, this UPDATE decodes both old and new row values and calls
+            // CreateEmbeddedUpdateEvents, which yields two CdcEvents when the join column
+            // changed: a Delete from the old parent followed by an Upsert to the new parent.
+            // The test constructs both ops directly since it bypasses the provider layer.
+
+            var upsertToNewParent = docProcessor.ProcessRow(new CdcSinkRow
+            {
+                TableSchema = "public", TableName = "group_members",
+                Operation = CdcSinkOperation.Upsert,
+                Data = new object[] { 10, "2024-01-01", 2 } // id=10, joined_at, group_id=2 (NEW)
+            }, null);
+
+            Assert.NotNull(upsertToNewParent);
+            Assert.Equal("Groups/2", upsertToNewParent.DocumentId);
+
+            var deleteFromOldParent = new CdcSinkDocumentOp
+            {
+                Type = CdcSinkDocumentOpType.EmbeddedModify,
+                DocumentId = "Groups/1", // OLD parent
+                Processor = embProcessor,
+                MappedData = upsertToNewParent.MappedData, // same PK values identify the entry
+                RawValues = new object[] { 10, "2024-01-01", 1 }, // old row with group_id=1
+                Operation = CdcSinkOperation.Delete,
+            };
+
+            var reparentOps = new List<CdcSinkDocumentOp> { deleteFromOldParent, upsertToNewParent };
+            var reparentCmd = new CdcSinkBatchCommand(database,
+                reparentOps, "test-reparent", null, null, null, null, null, null);
+            await database.TxMerger.Enqueue(reparentCmd);
+
+            // --- Step 4: Assert correct behavior ---
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))
+            using (readCtx.OpenReadTransaction())
+            {
+                var group1 = database.DocumentsStorage.Get(readCtx, "Groups/1");
+                var group2 = database.DocumentsStorage.Get(readCtx, "Groups/2");
+                Assert.NotNull(group1);
+                Assert.NotNull(group2);
+                // Groups/2 must have exactly 1 member (the reparented one)
+                group2.Data.TryGet("Members", out BlittableJsonReaderArray members2);
+                Assert.NotNull(members2);
+                Assert.Equal(1, members2.Length);
+
+                // Groups/1 must have NO members after reparent — the old entry must be removed.
+                group1.Data.TryGet("Members", out BlittableJsonReaderArray members1);
+                Assert.NotNull(members1);
+                Assert.Equal(0, members1.Length);
+
+
+            }
+        }
+
     }
 }

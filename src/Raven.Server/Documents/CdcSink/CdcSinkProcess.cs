@@ -426,6 +426,37 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     protected readonly record struct CdcEvent(CdcEventType Type, CdcSinkDocumentOp Op, string Checkpoint);
 
     /// <summary>
+    /// Builds the <see cref="CdcEvent"/>(s) for an UPDATE on an embedded table.
+    /// When the join column changed (reparenting), returns two events: a Delete from the
+    /// old parent followed by an Upsert to the new parent.  Otherwise returns a single Upsert.
+    /// Providers call this after decoding both old and new row values.
+    /// </summary>
+    /// <param name="newOp">The op produced by <see cref="CdcSinkDocumentProcessor.ProcessRow(CdcSinkTableProcessor, CdcSinkOperation, object[], JsonOperationContext)"/> for the new row.</param>
+    /// <param name="oldValues">Decoded column values from the row BEFORE the update (same positional layout as <see cref="CdcSinkTableProcessor.SourceColumnNames"/>). May be null if the provider cannot supply old data.</param>
+    protected CdcEvent[] CreateEmbeddedUpdateEvents(CdcSinkDocumentOp newOp, object[] oldValues)
+    {
+        if (oldValues != null && newOp?.Processor is { IsRoot: false } proc)
+        {
+            var oldParentId = proc.GetParentDocumentId(oldValues);
+            if (string.Equals(oldParentId, newOp.DocumentId, StringComparison.Ordinal) == false)
+            {
+                var deleteOp = new CdcSinkDocumentOp
+                {
+                    Type = CdcSinkDocumentOpType.EmbeddedModify,
+                    DocumentId = oldParentId,
+                    Processor = proc,
+                    MappedData = newOp.MappedData,
+                    RawValues = oldValues,
+                    Operation = CdcSinkOperation.Delete,
+                };
+                return [new CdcEvent(CdcEventType.Delete, deleteOp, null), new CdcEvent(CdcEventType.Upsert, newOp, null)];
+            }
+        }
+
+        return [new CdcEvent(CdcEventType.Upsert, newOp, null)];
+    }
+
+    /// <summary>
     /// Returns an async stream of CDC events from the source database.
     /// Each subclass converts provider-specific events into <see cref="CdcEvent"/>:
     /// <list type="bullet">
