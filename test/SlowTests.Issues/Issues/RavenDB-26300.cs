@@ -463,6 +463,109 @@ public class RavenDB_26300(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All, Data = new object[] { true })]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All, Data = new object[] { false })]
+    public void WhenOperatorWithNotInInsideCondition(Options options, bool useAutoIndex)
+    {
+        using var store = GetDocumentStore(options);
+        using var session = store.OpenSession();
+        session.Advanced.MaxNumberOfRequestsPerSession = int.MaxValue;
+        session.Store(new Dto { Tag = "1", Number = 1 });
+        session.Store(new Dto { Tag = "1", Number = 2 });
+        session.Store(new Dto { Tag = "1", Number = 3 });
+        session.SaveChanges();
+
+        var indexName = useAutoIndex ? "Dtos" : "index 'Index'";
+
+        if (useAutoIndex == false)
+        {
+            new Index().Execute(store);
+            Indexes.WaitForIndexing(store);
+        }
+
+        int result;
+
+        {
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in (1, 2), Number != 1)")
+                .AddParameter("p", 1)
+                .WaitForNonStaleResults()
+                .Count();
+            Assert.Equal(3, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in (1, 2), Number != 1)")
+                .AddParameter("p", 99)
+                .Count();
+            Assert.Equal(2, result);
+        }
+
+        {
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($p0 == 1 and not $p1 in (1, 2), Number != 1)")
+                .AddParameter("p0", 1)
+                .AddParameter("p1", 99)
+                .Count();
+            Assert.Equal(2, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($p0 == 1 and not $p1 in (1, 2), Number != 1)")
+                .AddParameter("p0", 1)
+                .AddParameter("p1", 1)
+                .Count();
+            Assert.Equal(3, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when($p0 == 1 and not $p1 in (1, 2), Number != 1)")
+                .AddParameter("p0", 99)
+                .AddParameter("p1", 99)
+                .Count();
+            Assert.Equal(3, result);
+        }
+
+        {
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in ('aaa', 'bbb'), Number != 1)")
+                .AddParameter("p", "aaa")
+                .Count();
+            Assert.Equal(3, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in ('aaa', 'bbb'), Number != 1)")
+                .AddParameter("p", "zzz")
+                .Count();
+            Assert.Equal(2, result);
+        }
+
+        {
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p all in (1, 2, 3), Number != 1)")
+                .AddParameter("p", new[] { 1, 2, 3 })
+                .Count();
+            Assert.Equal(3, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p all in (1, 2, 3), Number != 1)")
+                .AddParameter("p", new[] { 1, 99 })
+                .Count();
+            Assert.Equal(2, result);
+        }
+
+        {
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in (1, 2), Number != 1)")
+                .AddParameter("p", (object)null)
+                .Count();
+            Assert.Equal(2, result);
+
+            result = session.Advanced
+                .RawQuery<Dto>($"from {indexName} where when(true and not $p in (1, 2), Number != 1)")
+                .Count();
+            Assert.Equal(2, result);
+        }
+    }
+
     private class Dto
     {
         public string Id { get; set; }

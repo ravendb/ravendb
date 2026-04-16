@@ -894,6 +894,12 @@ public static class QueryBuilderHelper
     {
         RuntimeHelpers.EnsureSufficientExecutionStack();
 
+        if (expression is TrueExpression)
+            return true;
+
+        if (expression is NegatedExpression negated)
+            return EvaluateConstantExpressionForWhenQuery(negated.Expression, parameters) == false;
+
         if (expression is InExpression inExpression)
             return EvaluateInExpressionForWhenQuery(inExpression, parameters);
 
