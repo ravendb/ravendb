@@ -72,7 +72,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         Assert.Equal(source.Length, destination.Length);
         Assert.Equal(source, destination.ToArray());
         Assert.Equal(pageSize, destination.TotalBytesWritten);
-        Assert.Empty(destination.ForwardSeekLengths);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
@@ -92,7 +92,7 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         Assert.Equal(source.Length, destination.Length);
         Assert.Equal(source, destination.ToArray());
         Assert.Equal(pageSize, destination.TotalBytesWritten);
-        Assert.Empty(destination.ForwardSeekLengths);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
     }
 
     [RavenFact(RavenTestCategory.Voron)]
