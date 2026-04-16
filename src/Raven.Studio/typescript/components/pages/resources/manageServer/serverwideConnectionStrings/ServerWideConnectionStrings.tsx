@@ -14,7 +14,6 @@ import {
 import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
 import { getIcon, getTypeLabel } from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
-import "components/pages/database/settings/connectionStrings/ConnectionStringsPanels.scss";
 import { EmptySet } from "components/common/EmptySet";
 import { LazyLoad } from "components/common/LazyLoad";
 import { LoadError } from "components/common/LoadError";
