@@ -178,13 +178,8 @@ public unsafe partial class Hnsw
                         goto Start;
                     }
 
-                    ref var candidate = ref _searchState.GetNodeByIndex(cur);
-                    candidate.Visited = visitedCounter;
-
-                    ref var edges = ref candidate.EdgesPerLevel[_level];
-
-                    _nodeIds.ResetAndCopyFrom(allocator, edges.ToSpan());
-                    _searchState.LoadNodeIndexes(ref _nodeIds, ref _indexes);
+                    _searchState.GetNodeByIndex(cur).Visited = visitedCounter;
+                    _searchState.ResolveEdgeIndexes(cur, _level, ref _nodeIds, ref _indexes);
 
                     for (int i = 0; i < _indexes.Count; i++)
                     {

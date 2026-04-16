@@ -289,6 +289,31 @@ public unsafe partial class Hnsw
         }
 
         /// <summary>
+        /// Resolves edge indexes for a node at the specified level, caching the result in
+        /// <see cref="Node.EdgesIndexesPerLevel"/>. On cache hit the expensive
+        /// <see cref="LoadNodeIndexes"/> dictionary lookups are skipped entirely.
+        /// May grow the nodes array — callers must re-fetch any outstanding node refs afterward.
+        /// </summary>
+        private void ResolveEdgeIndexes(int nodeIndex, int level, ref NativeList<long> nodeIds, ref NativeList<int> indexes)
+        {
+            ref var node = ref GetNodeByIndex(nodeIndex);
+
+            if (node.EdgesIndexesPerLevel.Count > level &&
+                node.EdgesIndexesPerLevel[level].Count == node.EdgesPerLevel[level].Count)
+            {
+                indexes.ResetAndCopyFrom(Llt.Allocator, node.EdgesIndexesPerLevel[level].ToSpan());
+                return;
+            }
+
+            nodeIds.ResetAndCopyFrom(Llt.Allocator, node.EdgesPerLevel[level].ToSpan());
+            LoadNodeIndexes(ref nodeIds, ref indexes);
+
+            node = ref GetNodeByIndex(nodeIndex);
+            node.EdgesIndexesPerLevel.SetCapacity(Llt.Allocator, level + 1);
+            node.EdgesIndexesPerLevel[level].ResetAndCopyFrom(Llt.Allocator, indexes.ToSpan());
+        }
+
+        /// <summary>
         /// This accepts a list of node ids (mutable, we do destructive updates to it) and translate
         /// that to a list of the indexes in the nodes array. If needed, it will load the nodes
         /// from the disk in a batch oriented manner.
@@ -543,11 +568,8 @@ public unsafe partial class Hnsw
                 do
                 {
                     moved = false;
-                    ref var n = ref GetNodeByIndex(currentNodeIndex);
-                    Debug.Assert(n.EdgesPerLevel.Count > level, "n.EdgesPerLevel.Count > level");
-                    ref var edges = ref n.EdgesPerLevel[level];
-                    nodeIds.ResetAndCopyFrom(Llt.Allocator, edges.ToSpan());
-                    LoadNodeIndexes(ref nodeIds, ref indexes);
+                    Debug.Assert(GetNodeByIndex(currentNodeIndex).EdgesPerLevel.Count > level, "n.EdgesPerLevel.Count > level");
+                    ResolveEdgeIndexes(currentNodeIndex, level, ref nodeIds, ref indexes);
                     for (var i = 0; i < indexes.Count; i++)
                     {
                         var edgeIdx = indexes[i];
