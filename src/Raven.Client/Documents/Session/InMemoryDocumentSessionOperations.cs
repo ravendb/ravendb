@@ -40,6 +40,8 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
+        internal static readonly bool DisableDisposeChecks = string.Equals(Environment.GetEnvironmentVariable("RAVEN_DISABLE_DISPOSE_CHECKS"), "true", StringComparison.OrdinalIgnoreCase);
+
         internal long _asyncTasksCounter;
         internal int _maxDocsCountOnCachedRenewSession = 16 * 1024;
         protected readonly RequestExecutor _requestExecutor;
@@ -1493,6 +1495,9 @@ more responsive application.
         {
             if (_isDisposed)
                 throw new ObjectDisposedException("session");
+
+            if (DisableDisposeChecks == false && _documentStore.WasDisposed)
+                throw new ObjectDisposedException("store", "The document store has already been disposed and cannot be used");
         }
 
         private void Dispose(bool isDisposing)

@@ -15,6 +15,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Platform;
 
 namespace FastTests;
 
@@ -80,7 +81,10 @@ public partial class RavenTestBase
             if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec), out var _) == false)
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
 
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl ?? (
+                PlatformDetails.RunningOnMacOsx 
+                ? "https://localhost:0" 
+                : $"https://{Environment.MachineName}:0");
 
             _parent.DoNotReuseServer(customSettings);
 
@@ -157,6 +161,7 @@ public partial class RavenTestBase
                 }
 
                 X509Certificate2 serverCertificate;
+                AsymmetricAlgorithm pk = null;
                 try
                 {
                     serverCertificate = CertificateHelper.CreateCertificateFromPfx(certBytes, (string)null, X509KeyStorageFlags.UserKeySet | CertificateLoaderUtil.FlagsForExport);
@@ -165,8 +170,14 @@ public partial class RavenTestBase
                 {
                     throw new CryptographicException($"Unable to load the test certificate for the machine '{Environment.MachineName}'. Log: {log}", e);
                 }
-
-                SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out var pk);
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    SecretProtection.ValidatePrivateKeyOnMacOs(serverCertificatePath,serverCertificate, out pk);
+                }
+                else
+                {
+                    SecretProtection.ValidatePrivateKey(serverCertificatePath, null, certBytes, out pk);
+                }
                 SecretProtection.ValidateServerKeyUsages(serverCertificatePath, serverCertificate, validateKeyUsages: true);
 
                 string serverCertificateForCommunicationPath;
@@ -209,7 +220,8 @@ public partial class RavenTestBase
                 var clientCertificate1Path = GenerateClientCertificate(1, serverCertificate, pk, ekuSuffix, gen);
                 var clientCertificate2Path = GenerateClientCertificate(2, serverCertificate, pk, ekuSuffix, gen);
                 var clientCertificate3Path = GenerateClientCertificate(3, serverCertificate, pk, ekuSuffix, gen);
-
+                
+                pk?.Dispose();
                 return new TestCertificatesHolder(serverCertificatePath, serverCertificateForCommunicationPath, clientCertificate1Path, clientCertificate2Path, clientCertificate3Path);
             }
 

@@ -20,13 +20,15 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             public Dictionary<string, DatabaseAccess> Permissions { get; set; }
             public string Name { get; set; }
             public SecurityClearance Clearance { get; set; }
+            public bool Disabled { get; set; }
         }
 
         private readonly string _thumbprint;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly string _name;
         private readonly SecurityClearance _clearance;
-        
+        private readonly bool _disabled;
+
         /// <inheritdoc cref="EditClientCertificateOperation"/>
         /// <param name="parameters">See <see cref="Parameters"/>.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="parameters"/> argument is null, or any of its required properties are null.</exception>
@@ -38,11 +40,12 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             _thumbprint = parameters.Thumbprint ?? throw new ArgumentNullException(nameof(parameters.Thumbprint));
             _permissions = parameters.Permissions ?? throw new ArgumentNullException(nameof(parameters.Permissions));
             _clearance = parameters.Clearance;
+            _disabled = parameters.Disabled;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new EditClientCertificateCommand(conventions, _thumbprint, _name, _permissions, _clearance);
+            return new EditClientCertificateCommand(conventions, _thumbprint, _name, _permissions, _clearance, _disabled);
         }
 
         private sealed class EditClientCertificateCommand : RavenCommand, IRaftCommand
@@ -52,14 +55,16 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly string _name;
             private readonly SecurityClearance _clearance;
+            private readonly bool _disabled;
 
-            public EditClientCertificateCommand(DocumentConventions conventions, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+            public EditClientCertificateCommand(DocumentConventions conventions, string thumbprint, string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, bool disabled)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _thumbprint = thumbprint;
                 _name = name;
                 _permissions = permissions;
                 _clearance = clearance;
+                _disabled = disabled;
             }
 
             public override bool IsReadRequest => false;
@@ -73,8 +78,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Thumbprint = _thumbprint,
                     Permissions = _permissions,
                     SecurityClearance = _clearance,
-                    Name = _name
+                    Name = _name,
+                    Disabled = _disabled
                 };
+
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,

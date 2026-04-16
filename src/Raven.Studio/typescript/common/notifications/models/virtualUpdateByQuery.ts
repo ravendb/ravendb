@@ -35,6 +35,7 @@ class virtualUpdateByQuery extends groupedVirtualNotification<queryBasedVirtualB
 
         const item = {
             id: dto.Id,
+            operationId: dto.OperationId,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
             totalItemsProcessed: bulkResult.Total,

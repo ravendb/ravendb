@@ -29,6 +29,18 @@ public sealed class AzureQueueStorageConnectionSettings
             return false;
         }
 
+        if (string.IsNullOrWhiteSpace(ConnectionString) == false)
+        {
+            try
+            {
+                AssertValidConnectionStringAndGetUrl(ConnectionString);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         return true;
     }
     
@@ -52,14 +64,14 @@ public sealed class AzureQueueStorageConnectionSettings
     {
         if (ConnectionString != null)
         {
-            return GetUrlFromConnectionString(ConnectionString);
+            return AssertValidConnectionStringAndGetUrl(ConnectionString);
         }
 
         string storageAccountName = GetStorageAccountName();
         return $"https://{storageAccountName}.queue.core.windows.net/";
     }
     
-    private string GetUrlFromConnectionString(string connectionString)
+    private string AssertValidConnectionStringAndGetUrl(string connectionString)
     {
         var protocol = SqlConnectionStringParser.GetConnectionStringValue(connectionString, ["DefaultEndpointsProtocol"]);
         if (string.IsNullOrWhiteSpace(protocol))

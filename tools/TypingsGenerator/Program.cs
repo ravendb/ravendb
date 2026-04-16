@@ -323,6 +323,7 @@ namespace TypingsGenerator
 
             // alerts
             scripter.AddType(typeof(EtlErrorsDetails));
+            scripter.AddType(typeof(EtlWarningDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
             scripter.AddType(typeof(ServerLimitsDetails));
@@ -615,6 +616,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AiAgentConfiguration));
             scripter.AddType(typeof(RequestBody));
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
+            scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestResult));
             scripter.AddType(typeof(AiAgentActionRequest));
             scripter.AddType(typeof(ConversionRequestBody));
 

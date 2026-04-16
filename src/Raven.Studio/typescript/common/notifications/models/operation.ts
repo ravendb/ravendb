@@ -28,7 +28,7 @@ class operation extends abstractNotification {
     onUpdateCallbacks: Array<() => void> = [];
     headerIconAddonClass: KnockoutComputed<string>;
 
-    constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
+    constructor(db: database | string, dto: Raven.Server.NotificationCenter.Notifications.OperationChanged) {
         super(db, dto);
 
         this.operationId(dto.OperationId);

@@ -36,6 +36,7 @@ class virtualBulkInsert extends groupedVirtualNotification<virtualBulkOperationI
         
         const item: virtualBulkOperationItem = {
             id: dto.Id,
+            operationId: dto.OperationId,
             date: dto.StartTime,
             duration: moment.utc(dto.EndTime).diff(moment.utc(dto.StartTime)),
             totalItemsProcessed: bulkInsertInfo.Total,
@@ -54,7 +55,7 @@ class virtualBulkInsert extends groupedVirtualNotification<virtualBulkOperationI
         
         const totalItemsCount = typeUtils.sumBy(this.operations(), x => x.totalItemsProcessed);
         this.message(pluralizeHelpers.pluralize(this.operations().length, "bulk insert", "bulk inserts")
-            + " to database " + this.database.name
+            + " to database " + this.databaseName
             + " completed successfully. "
             + pluralizeHelpers.pluralize(totalItemsCount, " item was inserted.", "items were inserted.") );
     }

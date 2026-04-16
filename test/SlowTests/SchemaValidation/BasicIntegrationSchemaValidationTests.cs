@@ -409,7 +409,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Smuggler)]
+    [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
     public async Task SchemaValidation_WhenRestoreInvalidData_ShouldRestore()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
@@ -460,7 +460,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
 
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Etl)]
     public async Task SchemaValidation_WhenEtl_ShouldValidateAndFailInNeeded()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
@@ -527,7 +527,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Replication)]
     public async Task SchemaValidation_WhenInternalReplicateInvalidData_ShouldNotThrow()
     {
         var (nodes, _) = await CreateRaftCluster(3);
@@ -629,7 +629,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         Assert.Contains("The value of 'properties' must be an object, but received 'ShouldBeObject' of type 'string'. Schema path '#/properties'.", e.Message);
     }
     
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Revisions)]
     public async Task SchemaValidation_WhenRevertRevisionAndSchemaIsEnabled_ShouldThrowWhen()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } } };
@@ -680,7 +680,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.JavaScript)]
+    [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Revisions)]
     public async Task SchemaValidation_WhenRevertRevisionByTimeSchemaIsEnabled_ShouldThrow()
     {
         var schemaDefinitionObj = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.MaxLength] = 3 } } };
@@ -737,7 +737,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
     
     private static void AssertError(string expected, string actual)
     {
-        if(actual.Contains(expected) == false)
+        if (actual.Contains(expected) == false)
             Assert.Fail($"expected: {expected}, actual: {actual}");
     }
 }

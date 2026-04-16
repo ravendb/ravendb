@@ -71,6 +71,12 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
 
             if (orderByField.OrderingType == OrderByFieldType.Score)
             {
+                if (query.Metadata.HasVectorSearch)
+                {
+                    currentCoraxOrderIndex++;
+                    continue;
+                }
+
                 DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "RavenDB-13927 Order by score");
                 throw new NotSupportedInShardingException("Ordering by score is not supported in sharding");
             }

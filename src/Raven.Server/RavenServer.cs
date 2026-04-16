@@ -85,6 +85,7 @@ using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
+using Sparrow.Platform;
 using Constants = Sparrow.Global.Constants;
 using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
 using ClientConstants = Raven.Client.Constants;
@@ -1367,8 +1368,16 @@ namespace Raven.Server
                     Configuration.Security.CertificateRenewExecArguments,
                     ServerStore.GetLicenseType(),
                     ServerStore.Configuration.Security.CertificateValidationKeyUsages);
-
-                return CertificateLoaderUtil.CreateCertificateFromPfx(certificate.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForPersist);
+                
+                var flags = CertificateLoaderUtil.FlagsForPersist;
+        
+                // macOS Keychain rigidly blocks silent exports of persisted private keys.
+                // Keeping the key in memory (Ephemeral) bypasses the Keychain restriction.
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    flags = CertificateLoaderUtil.FlagsForExport;
+                }
+                return CertificateLoaderUtil.CreateCertificateFromPfx(certificate.Export(X509ContentType.Pfx), flags: flags);
             }
             catch (Exception e)
             {
@@ -1473,7 +1482,16 @@ namespace Raven.Server
             X509Certificate2 refreshedCertificate;
             try
             {
-                refreshedCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(newCertBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                var flags = CertificateLoaderUtil.FlagsForPersist;
+        
+                // macOS Keychain blocks the export of private keys loaded with PersistKeySet.
+                // We must load it as Ephemeral (FlagsForExport) so StartCertificateReplicationAsync can broadcast it.
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    flags = CertificateLoaderUtil.FlagsForExport;
+                }
+
+                refreshedCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(newCertBytes, flags: flags);
             }
             catch (Exception e)
             {
@@ -1924,7 +1942,11 @@ namespace Raven.Server
             {
                 Definition = definition;
 
-                if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
+                if (definition.Disabled)
+                {
+                    Status = AuthenticationStatus.UnfamiliarCertificate;
+                }
+                else if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
                 {
                     Status = AuthenticationStatus.ClusterAdmin;
                 }
@@ -1961,6 +1983,10 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
+            else if (IsServerCertificate(certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+            }
             else if (certificate.NotAfter.ToUniversalTime() < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
@@ -1968,10 +1994,6 @@ namespace Raven.Server
             else if (certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
-            }
-            else if (IsServerCertificate(certificate))
-            {
-                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
             else if (wellKnown != null && wellKnown.Contains(certificate.Thumbprint, StringComparer.OrdinalIgnoreCase))
             {
@@ -2070,6 +2092,9 @@ namespace Raven.Server
 
             foreach (var certDef in certificatesWithSameHash.OrderByDescending(x => x.NotAfter))
             {
+                if (certDef.Disabled)
+                    continue;
+
                 // Hash is good, let's validate it was signed by a known issuer, otherwise users can use the private key to register a new cert with a different issuer.
                 using (var goodKnownCert = CertificateLoaderUtil.CreateCertificateFromAny(Convert.FromBase64String(certDef.Certificate)))
                 {

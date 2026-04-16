@@ -28,6 +28,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Sparrow.Platform;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Platform.Posix;
 using Sparrow.Utils;
@@ -787,11 +788,13 @@ namespace Raven.Server.Web.Authentication
                 var editedCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
                 
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
+                var disabledExplicitlySet = certificateJson.TryGet(nameof(CertificateMetadata.Disabled), out bool disabledValue);
 
                 ValidateCertificateDefinition(editedCertificate, ServerStore);
 
                 CertificateDefinition existingCertificate;
                 string twoFactorAuthenticationKey;
+                bool effectiveDisabled = false;
                 using (ctx.OpenWriteTransaction())
                 {
                     var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, editedCertificate.Thumbprint);
@@ -810,6 +813,21 @@ namespace Raven.Server.Web.Authentication
                     }
 
                     existingCertificate = JsonDeserializationServer.CertificateDefinition(existingCertificateJson);
+
+                    effectiveDisabled = disabledExplicitlySet ? disabledValue : existingCertificate.Disabled;
+
+                    if (effectiveDisabled)
+                    {
+                        if (existingCertificate.SecurityClearance == SecurityClearance.ClusterNode)
+                            throw new InvalidOperationException($"Cannot disable the certificate '{existingCertificate.Name}'. It is a cluster node certificate and disabling it would break the cluster.");
+
+                        if (Server.Certificate.ServerCertificate?.Thumbprint != null &&
+                            existingCertificate.Thumbprint == Server.Certificate.ServerCertificate.Thumbprint)
+                            throw new InvalidOperationException($"Cannot disable the server certificate '{existingCertificate.Name}'.");
+
+                        if (clientCert?.Thumbprint != null && clientCert.Thumbprint == existingCertificate.Thumbprint)
+                            throw new InvalidOperationException($"Cannot disable the certificate '{existingCertificate.Name}' because it is currently being used for this request.");
+                    }
 
                     if ((existingCertificate.SecurityClearance == SecurityClearance.ClusterAdmin || existingCertificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
                     {
@@ -831,7 +849,7 @@ namespace Raven.Server.Web.Authentication
                     var permissions = FormatPermissions(editedCertificate);
 
                     LogAuditForServer("CHANGE",
-                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}.");
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {effectiveDisabled}.");
                 }
 
                 var cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
@@ -844,7 +862,8 @@ namespace Raven.Server.Web.Authentication
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
                         NotAfter = existingCertificate.NotAfter,
-                        NotBefore = existingCertificate.NotBefore
+                        NotBefore = existingCertificate.NotBefore,
+                        Disabled = effectiveDisabled
                     }, GetRaftRequestIdFromQuery())
                 { TwoFactorAuthenticationKey = twoFactorAuthenticationKey };
 
@@ -1173,7 +1192,16 @@ namespace Raven.Server.Web.Authentication
                         X509Certificate2 newCertificate;
                         try
                         {
-                            newCertificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+                            var flags = CertificateLoaderUtil.FlagsForPersist;
+    
+                            // macOS Keychain rigidly blocks exports of persisted private keys.
+                            // Keeping the key in memory (Ephemeral) by dropping PersistKeySet bypasses this.
+                            if (PlatformDetails.RunningOnMacOsx)
+                            {
+                                flags = CertificateLoaderUtil.FlagsForExport; 
+                            }
+
+                            newCertificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes, flags: flags);
                         }
                         catch (Exception e)
                         {

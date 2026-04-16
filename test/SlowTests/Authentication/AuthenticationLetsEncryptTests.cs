@@ -33,6 +33,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Json;
 using Raven.Server.ServerWide;
 using System.Threading;
+using Sparrow.Platform;
 
 namespace SlowTests.Authentication
 {
@@ -530,15 +531,19 @@ namespace SlowTests.Authentication
             char nodeTag = 'A';
             for (int i = 1; i <= clutserSize; i++)
             {
-                var tcpListener = new TcpListener(IPAddress.Loopback, 0);
-                tcpListener.Start();
-                var port = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
-                tcpListener.Stop();
+                var httpReservation = ReservePort();
+                httpReservation.Socket.Dispose();
+                
                 var setupNodeInfo = new NodeInfo
                 {
-                    Port = port,
+                    Port = httpReservation.Port,
                     Addresses = new List<string> { $"127.0.0.{i}" }
                 };
+                
+                if (PlatformDetails.RunningOnMacOsx)
+                {
+                    setupNodeInfo.Addresses = new List<string> { "127.0.0.1" };
+                }
                 nodeSetupInfos.Add(nodeTag.ToString(), setupNodeInfo);
                 nodeTag++;
             }
@@ -606,6 +611,13 @@ namespace SlowTests.Authentication
                         [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
                         [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeStagingUrl
                     };
+
+                    if (PlatformDetails.RunningOnMacOsx)
+                    {
+                        // currently macOS finds it hard to setup secured cluster and to satisfy heartbeats in rate < 300ms.
+                        // from debugging investigation, it is between 200 < heartbeat < 500
+                        settings[RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)] = "700";
+                    }
                     customSettings.Add(settings);
                 }
             }

@@ -683,7 +683,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 {
                     sortingData = new()
                     {
-                        ScoresBuffer = _index.Configuration.CoraxIncludeDocumentScore && builderParameters is { HasBoost: true }
+                        ScoresBuffer = builderParameters.NeedsScoresBuffer()
                             ? ScorePool.Rent(bufferSize)
                             : null,
                         DistancesBuffer = _index.Configuration.CoraxIncludeSpatialDistance && hasOrderByDistance

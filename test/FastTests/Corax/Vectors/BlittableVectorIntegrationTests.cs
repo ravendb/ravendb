@@ -158,18 +158,18 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
     }
 
     [RavenTheory(RavenTestCategory.Vector)]
-    [InlineData(1.0d, 8)]
-    [InlineData(1.0d, 500)]
-    [InlineData(1.0d, 1024)]
-    [InlineData(1.0d, 2048)]
-    [InlineData(1.1d, 8)]
-    [InlineData(1.1d, 500)]
-    [InlineData(1.1d, 1024)]
-    [InlineData(1.1d, 2048)]
-    public async Task CanReadFloatingValuesAsAllTypes(double repeatedValue, int size)
+    [RavenData(1.0d, 8, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.0d, 500, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.0d, 1024, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.0d, 2048, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.1d, 8, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.1d, 500, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.1d, 1024, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1.1d, 2048, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanReadFloatingValuesAsAllTypes(Options options, double repeatedValue, int size)
     {
         var array1 = Enumerable.Repeat(1d, size).ToArray();
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         string id;
         using (var session = store.OpenAsyncSession(new SessionOptions(){NoCaching = true}))
         {
@@ -203,14 +203,14 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
     }
     
     [RavenTheory(RavenTestCategory.Vector)]
-    [InlineData(8)]
-    [InlineData(500)]
-    [InlineData(1024)]
-    [InlineData(2048)]
-    public async Task CanReadNumericValuesAsAllTypes(int size)
+    [RavenData(8, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(500, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(1024, DatabaseMode = RavenDatabaseMode.All)]
+    [RavenData(2048, DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanReadNumericValuesAsAllTypes(Options options, int size)
     {
         var array1 = Enumerable.Repeat(1, size).ToArray();
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         string id;
         using (var session = store.OpenAsyncSession(new SessionOptions(){NoCaching = true}))
         {
@@ -297,10 +297,11 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
         }
     }
     
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.JavaScript)]
-    public async Task CanReadBlittableVector()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.JavaScript)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanReadBlittableVector(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         string id;
         var array = new[] { 0.1f, 0.1f, 0.1f, 0.1f };
         var array2 = array.Select(x => x * 2f).ToArray();
@@ -321,10 +322,11 @@ public class BlittableVectorIntegrationTests(ITestOutputHelper output) : RavenTe
     }
 
     
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
-    public async Task CanPatchWithBlittableVector()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
+    [RavenData(DatabaseMode = RavenDatabaseMode.All)]
+    public async Task CanPatchWithBlittableVector(Options options)
     {
-        using var store = GetDocumentStore();
+        using var store = GetDocumentStore(options);
         string id;
         var array = new[] { 0.1f, 0.1f, 0.1f, 0.1f };
         using (var session = store.OpenAsyncSession(new SessionOptions(){NoCaching = true}))

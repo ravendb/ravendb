@@ -1308,7 +1308,9 @@ public static partial class CoraxQueryBuilder
                 if (builderParameters.IsVectorSingleClause && index.Configuration.CoraxIncludeDocumentScore == false)
                     return null;
                 
-                builderParameters.IndexReadOperation?.AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved();
+                if (builderParameters.Metadata.HasVectorSearch == false)
+                    builderParameters.IndexReadOperation?.AssertCanOrderByScoreAutomaticallyWhenBoostingOrVectorSearchIsInvolved();
+                
                 return new[] { new OrderMetadata(true, MatchCompareFieldType.Score) };
             }
 

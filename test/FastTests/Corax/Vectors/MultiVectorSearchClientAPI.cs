@@ -15,10 +15,11 @@ namespace FastTests.Corax.Vectors;
 
 public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
-    public void CanSearchByMultipleVectorsByTexts()
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanSearchByMultipleVectorsByTexts(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
 
         using (var session = store.OpenSession())
         {
@@ -59,10 +60,11 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
-    public void CanSearchByMultipleVectorsByEmbeddings()
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanSearchByMultipleVectorsByEmbeddings(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var session = store.OpenSession())
@@ -111,10 +113,11 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
-    public void CanSearchByMultipleVectorsByRavenVector()
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanSearchByMultipleVectorsByRavenVector(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var session = store.OpenSession())
@@ -163,10 +166,11 @@ public class MultiVectorSearchClientAPI(ITestOutputHelper output) : RavenTestBas
         }
     }
     
-     [RavenMultiplatformFact(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
-    public void CanSearchByMultipleVectorsByBase64()
+    [RavenMultiplatformTheory(RavenTestCategory.Querying | RavenTestCategory.Corax | RavenTestCategory.Querying, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanSearchByMultipleVectorsByBase64(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
 
         using (var session = store.OpenSession())

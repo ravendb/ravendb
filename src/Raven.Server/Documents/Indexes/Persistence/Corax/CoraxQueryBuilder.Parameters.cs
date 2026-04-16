@@ -68,16 +68,18 @@ public partial class CoraxQueryBuilder
                 : null;
 
             // in case when we've implicit boosting we've built primitives with scoring enabled
-            HasBoost = index.HasBoostedFields 
-                       || query.Metadata.HasBoost 
+            HasBoost = index.HasBoostedFields
+                       || query.Metadata.HasBoost
                        || IsVectorSingleClause
                        || (query.Metadata.HasVectorSearch && index.Configuration.CoraxVectorSearchOrderByScoreAutomatically)
-                       || (index.Configuration.OrderByScoreAutomaticallyWhenBoostingIsInvolved &&
-                                                      HasBoostingAsOrderingType(query.Metadata.OrderBy));
+                       || HasBoostingAsOrderingType(query.Metadata.OrderBy);
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
             DeduplicationDisabled = deduplicationDisabled;
         }
+        
+        public bool NeedsScoresBuffer() => HasBoost
+            && (Index.Configuration.CoraxIncludeDocumentScore || (IndexReadOperation.IsSharded && Metadata.HasVectorSearch));
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
         {

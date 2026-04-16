@@ -86,6 +86,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void SaveChanges()
         {
+            AssertNotDisposed();
             var saveChangesOperation = new BatchOperation(this);
 
             using (var command = saveChangesOperation.CreateRequest())

@@ -141,6 +141,7 @@ export default function SampleObjectAndSchemaFields<
                                     position: "bottom",
                                 },
                             ]}
+                            isFullScreenLabelHidden
                         />
                         {!!sampleObject && !jsonSchema && (
                             <div className="mt-2">
@@ -190,6 +191,7 @@ export default function SampleObjectAndSchemaFields<
                                         position: "bottom",
                                     },
                                 ]}
+                                isFullScreenLabelHidden
                             />
                             {!!sampleObject && !jsonSchema && (
                                 <ButtonWithSpinner

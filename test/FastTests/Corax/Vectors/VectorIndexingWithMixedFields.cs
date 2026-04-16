@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -11,10 +15,11 @@ namespace FastTests.Corax.Vectors;
 
 public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CanIndexNullWithVector()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanIndexNullWithVector(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(string.Empty, new float[] { .1f, .2f }, null, null, 0f, 0f));
         session.Store(new AutoVecDoc(string.Empty, null, null, null, 0f, 0f));
@@ -29,10 +34,11 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Null(result.Singles);
     }
 
-    [RavenMultiplatformFact(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void CanIndexNullWhenServerGeneratesTheEmbedding()
+    [RavenMultiplatformTheory(RavenTestCategory.Vector | RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CanIndexNullWhenServerGeneratesTheEmbedding(Options options)
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("animal", null, null, null, 0f, 0f));
         session.Store(new AutoVecDoc(null, null, null, null, 0f, 0f));
@@ -49,58 +55,89 @@ public class VectorIndexingWithMixedFields(ITestOutputHelper output) : RavenTest
         Assert.Null(result.Singles);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndTextualValues() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedField>();
-    
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndTextualValuesJs() => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedFieldJs>();
-    
-    private void CannotMixVectorAndTextualValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndTextualValues(Options options) => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedField>(options);
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndTextualValuesJs(Options options) => CannotMixVectorAndTextualValuesBase<TextualWithVectorMixedFieldJs>(options);
+
+    private void CannotMixVectorAndTextualValuesBase<TIndex>(Options options)
     where  TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc("test", [.1f, .2f], null, null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index textual value instead", errors[0].Errors[0].Error);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndNumericalValues() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedField>();
-    public void CannotMixVectorAndNumericalValuesJs() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedFieldJs>();
-    private void CannotMixVectorAndNumericalValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndNumericalValues(Options options) => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedField>(options);
+    public void CannotMixVectorAndNumericalValuesJs() => CannotMixVectorAndNumericalValuesBase<NumericalWithVectorMixedFieldJs>(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+    private void CannotMixVectorAndNumericalValuesBase<TIndex>(Options options)
     where  TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, [.1f, .2f], [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index numerical value instead", errors[0].Errors[0].Error);
     }
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndSpatialValues() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedField>();
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndSpatialValues(Options options) => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedField>(options);
 
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CannotMixVectorAndSpatialValuesJs() => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedFieldJs>();
-    
-    private void CannotMixVectorAndSpatialValuesBase<TIndex>()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
+    public void CannotMixVectorAndSpatialValuesJs(Options options) => CannotMixVectorAndSpatialValuesBase<SpatialWithVectorMixedFieldJs>(options);
+
+    private void CannotMixVectorAndSpatialValuesBase<TIndex>(Options options)
     where TIndex : AbstractIndexCreationTask, new()
     {
-        using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));
+        using var store = GetDocumentStore(options);
         using var session = store.OpenSession();
         session.Store(new AutoVecDoc(null, null, [2, -3], null, 0f, 0f));
         session.SaveChanges();
-        new TIndex().Execute(store);
-        var errors = Indexes.WaitForIndexingErrors(store);
+        var index = new TIndex();
+        index.Execute(store);
+        var errors = WaitForIndexingErrorsOnAnyShard(store, [index.IndexName]);
         Assert.NotNull(errors[0].Errors[0].Error);
         Assert.Contains("tried to index spatial value instead", errors[0].Errors[0].Error);
+    }
+
+    private IndexErrors[] WaitForIndexingErrorsOnAnyShard(IDocumentStore store, string[] indexNames = null)
+    {
+        var databaseRecord = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+        if (databaseRecord.IsSharded == false)
+            return Indexes.WaitForIndexingErrors(store, indexNames);
+
+        var timeout = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(1);
+        var sp = Stopwatch.StartNew();
+        while (sp.Elapsed < timeout)
+        {
+            foreach (var shardNumber in databaseRecord.Sharding.Shards.Keys)
+            {
+                var shardErrors = store.Maintenance.ForShard(shardNumber).Send(new GetIndexErrorsOperation(indexNames));
+                var withErrors = shardErrors.Where(e => e.Errors.Length > 0).ToArray();
+                if (withErrors.Length > 0)
+                    return withErrors;
+            }
+            Thread.Sleep(32);
+        }
+
+        throw new TimeoutException($"Got no index error on any shard for more than {timeout}.");
     }
 
     private record AutoVecDoc(string Text, float[] Singles, sbyte[] Int8, byte[] Binary, float lat, float lon, string Id = null);

@@ -43,6 +43,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 case ExpressionType.NotEqual:
                     result = arg != null && arg is DynamicNullObject == false;
                     break;
+                case ExpressionType.Or:
+                    result = arg switch
+                    {
+                        DynamicNullObject => false,
+                        bool b => b,
+                        _ => true
+                    };
+                    break;
                 default:
                     result = Null;
                     break;
@@ -131,11 +139,17 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public static dynamic operator &(DynamicNullObject left, object right)
         {
+            if (right is bool or DynamicNullObject)
+                return false;
             return left;
         }
 
         public static dynamic operator |(DynamicNullObject left, object right)
         {
+            if (right is bool b)
+                return b;
+            if (right is DynamicNullObject)
+                return false;
             return left;
         }
 
@@ -259,6 +273,11 @@ namespace Raven.Server.Documents.Indexes.Static
         public static implicit operator string(DynamicNullObject self)
         {
             return null;
+        }
+
+        public static implicit operator bool(DynamicNullObject o)
+        {
+            return false;
         }
 
         public override bool Equals(object obj)

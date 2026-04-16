@@ -40,7 +40,7 @@ export type AiAgentToolInfoForType<TType extends AiAgentToolType> = Pick<
 >;
 export type AiAgentToolInfo = { [TType in AiAgentToolType]: AiAgentToolInfoForType<TType> }[AiAgentToolType];
 export type AiAgentDocRole = "system" | "user" | "assistant" | "tool";
-export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool";
+export type AiAgentMessageRole = AiAgentDocRole | "submitted-action-tool" | "assistant-summary";
 
 export interface AiAgentMessageAttachment {
     name: string;
@@ -61,12 +61,14 @@ export interface AiAgentMessage {
     attachments?: AiAgentMessageAttachment[];
 }
 
+export type AiAgentOpenActionCalls = Record<string, Raven.Client.Documents.Operations.AI.Agents.AiAgentActionRequest>;
+
 export interface AiAgentDocumentResponse {
     Agent: string;
     Parameters: Record<string, any>;
     Messages: AiAgentDocMessage[];
     TotalUsage: Raven.Client.Documents.Operations.AI.AiUsage;
-    OpenActionCalls: TODO;
+    OpenActionCalls: AiAgentOpenActionCalls;
 }
 
 export interface AiAgentRunResult {

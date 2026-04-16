@@ -40,7 +40,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
     const document = useAppSelector(chatAiAgentSelectors.document);
     const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
-    const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
+    const isActionToolSubmitRequired = useAppSelector(chatAiAgentSelectors.isActionToolSubmitRequired);
     const isDocumentDeleted = useAppSelector(chatAiAgentSelectors.isDocumentDeleted);
     const isDocumentChanged = useAppSelector(chatAiAgentSelectors.isDocumentChanged);
     const activePromptIndex = useAppSelector(chatAiAgentSelectors.activePromptIndex);
@@ -80,7 +80,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
     };
 
     const isPromptDisabled =
-        isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
+        isLoading || isActionToolSubmitRequired || isDocumentDeleted || isDocumentChanged || config.data?.Disabled;
     const hasPromptErrors = !!formState.errors.prompts;
 
     const handlePromptPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -125,13 +125,12 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                     )}
                     {!isRawData && messages.length > 0 && (
                         <AiAgentMessages
+                            mode="chat"
                             messages={messages}
                             handleSaveParameters={runChat}
-                            setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                            }
                             parametersFromUser={document.data?.Parameters}
                             documentId={conversationId}
+                            openActionCalls={document.data?.OpenActionCalls}
                         />
                     )}
                     {isRawData && document.data && (

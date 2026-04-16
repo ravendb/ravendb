@@ -6,7 +6,7 @@ import moment = require("moment");
 
 abstract class abstractNotification {
 
-    database: database;
+    databaseName: string;
 
     id: string;
     readOnly: boolean;
@@ -31,11 +31,11 @@ abstract class abstractNotification {
     headerIconClass: KnockoutComputed<string>;
     cssClass: KnockoutComputed<string>;
 
-    protected constructor(db: database, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
-        this.database = db;
+    protected constructor(db: database | string, dto: Raven.Server.NotificationCenter.Notifications.Notification) {
+        this.databaseName = typeof db === "string" ? db : db?.name;
         this.id = dto.Id;
         this.type = dto.Type;
-        this.readOnly = !accessManager.canHandleOperation(db ? "DatabaseReadWrite" : "Operator", db?.name);
+        this.readOnly = !accessManager.canHandleOperation(db ? "DatabaseReadWrite" : "Operator", this.databaseName);
 
         this.headerClass = ko.pureComputed(() => {
             const severity = this.severity();
@@ -54,7 +54,7 @@ abstract class abstractNotification {
             }
         });
         
-        this.headerIconClass = ko.pureComputed(() => this.database ? "icon-database-cutout" : "icon-global-cutout");
+        this.headerIconClass = ko.pureComputed(() => this.databaseName ? "icon-database-cutout" : "icon-global-cutout");
 
         this.cssClass = ko.pureComputed(() => {
             const severity = this.severity();

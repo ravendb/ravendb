@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return context.ReadObject(callParameters, "call/params");
         }
 
-        private DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
+        protected virtual DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
         {
             var queryString = new StringBuilder("?")
                 .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return subAgent;
         }
 
-        private bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
+        protected virtual bool TryCloseSubAgentCall(JsonOperationContext context, string conversationId, BlittableJsonReaderObject requestResult, AiToolCall currentCall,
             SubConversationResult result)
         {
             if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
@@ -348,13 +348,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        private sealed class SubConversationResult
+        protected sealed class SubConversationResult
         {
             public IDisposable Disposable { get; }
             public List<BlittableJsonReaderObject> Messages { get; } = new();
             public List<string> OpenToolCallsToRemove { get; } = new();
             public Dictionary<string, AiAgentActionRequest> ChildUserCalls { get; } = new();
             public int ToolsIterations { get; set; }
+            public List<BlittableJsonReaderObject> SubAgentsResponses { get; set; }
 
             public SubConversationResult(IDisposable disposable)
             {

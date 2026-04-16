@@ -12,7 +12,6 @@ import { Icon } from "components/common/Icon";
 import { useFormContext } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import Button from "react-bootstrap/Button";
-import Badge from "react-bootstrap/Badge";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import useBoolean from "components/hooks/useBoolean";
 import Collapse from "react-bootstrap/Collapse";
@@ -121,9 +120,10 @@ function ParameterItem({ index, parameterItem, remove, save, edit }: ParameterIt
                         <h4 className="m-0 text-truncate" title={parameterItem.name}>
                             {parameterItem.name}
                         </h4>
-                        <Badge pill bg="secondary" className="font-size-12 flex-shrink-0">
+                        <span className="small text-secondary">|</span>
+                        <span className="fs-4 flex-shrink-0 text-monospace text-muted">
                             {getParameterTypeLabel(parameterItem.type)}
-                        </Badge>
+                        </span>
                     </div>
                     <small className="d-block text-truncate" title={parameterItem.description}>
                         {parameterItem.description}

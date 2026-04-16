@@ -158,18 +158,14 @@ namespace SlowTests.Server.Documents.ETL.SQL
                         }
                     }
 
-                    etlDone.Reset();
-
                     await new ProductsByCategoryUpdated().ExecuteAsync(store);
 
                     await Indexes.WaitForIndexingAsync(store);
 
                     using (var session = store.OpenSession())
                     {
-                        WaitForValue(() => session.Query<ProductsByCategories>().Count(), 2, 0, interval: 500);
+                        WaitForValue(() => session.Query<ProductsByCategories>().Count(), 2, interval: 500);
                     }
-
-                    await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
 
                     using (var con = new SqlConnection())
                     {
@@ -178,8 +174,13 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
                         using (var dbCommand = con.CreateCommand())
                         {
-                            dbCommand.CommandText = "SELECT COUNT(*) FROM ProductsByCategories";
-                            Assert.Equal(2, dbCommand.ExecuteScalar());
+                            var count = WaitForValue(() =>
+                            {
+                                dbCommand.CommandText = "SELECT COUNT(*) FROM ProductsByCategories";
+                                return (int)dbCommand.ExecuteScalar();
+                            }, 2, timeout: 60_000, interval: 500);
+
+                            Assert.Equal(2, count);
 
                             dbCommand.CommandText = "SELECT Category FROM ProductsByCategories ORDER BY Category";
                             using (var reader = dbCommand.ExecuteReader())

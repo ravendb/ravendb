@@ -10,12 +10,12 @@ import classNames from "classnames";
 (ace as any).config.loadModule("ace/mode/raven_document_newline_friendly");
 
 export default function AceEditorToggleNewLinesAction() {
-    const reactAce = useAceEditorContext();
+    const { aceRef } = useAceEditorContext();
     const { value: isNewLinesEnabled, toggle: toggleNewLinesEnabled } = useBoolean(false);
 
     const handleToggleNewLines = () => {
         try {
-            const session = reactAce?.current.editor.session;
+            const session = aceRef?.current.editor.session;
 
             if (!session) {
                 console.error("No Ace Editor session found");
@@ -26,7 +26,7 @@ export default function AceEditorToggleNewLinesAction() {
                 const value = documentHelpers.escapeNewlinesAndTabsInTextFields(session.getValue());
                 session.setValue(value);
                 session.setMode("ace/mode/raven_document");
-                handleFormat(reactAce);
+                handleFormat(aceRef);
             } else {
                 const value = documentHelpers.unescapeNewlinesAndTabsInTextFields(session.getValue());
                 session.setValue(value);

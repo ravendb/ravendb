@@ -18,6 +18,7 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import { SelectOption } from "components/common/select/Select";
 import TemperatureField from "./TemperatureField";
+import PromptCacheField from "./PromptCacheField";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
@@ -35,6 +36,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
         return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, {
             ApiKey: formValues.azureOpenAiSettings.apiKey,
             Endpoint: formValues.azureOpenAiSettings.endpoint,
+            EnablePromptCache: formValues.azureOpenAiSettings.enablePromptCache,
             Model: formValues.azureOpenAiSettings.model,
             DeploymentName: formValues.azureOpenAiSettings.deploymentName,
             Dimensions: formValues.azureOpenAiSettings.dimensions,
@@ -153,6 +155,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     />
                 </div>
             )}
+            <PromptCacheField baseName="azureOpenAiSettings" serverDefaultValue={true} />
             <TemperatureField baseName="azureOpenAiSettings" />
             {formValues.modelType === "TextEmbeddings" && (
                 <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />
