@@ -205,7 +205,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         await VerifyAgentIsRunning(conn, ct);
         bool shouldWait = false;
-        var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
+        var buffer = new List<(byte[] Lsn, byte[] SeqVal, int Order, CdcEvent Event)>();
 
         while (true)
         {
@@ -283,26 +283,29 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         if (pendingPreUpdate.Remove(pkKey, out var oldValues))
                         {
                             foreach (var evt in CreateEmbeddedUpdateEvents(op, oldValues))
-                                buffer.Add((rowLsn, rowSeq, evt));
+                                buffer.Add((rowLsn, rowSeq, buffer.Count, evt));
                             continue;
                         }
                     }
 
                     var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
-                    buffer.Add((rowLsn, rowSeq, new CdcEvent(eventType, op, null)));
+                    buffer.Add((rowLsn, rowSeq, buffer.Count, new CdcEvent(eventType, op, null)));
                 }
             }
 
             if (buffer.Count > 0)
             {
-                // Sort by (LSN, seqval) to preserve cross-table transaction order
+                // Sort by (LSN, seqval, insertion order) to preserve cross-table transaction order.
+                // Insertion order breaks ties when reparent emits two events with the same (LSN, seqval).
                 buffer.Sort((a, b) =>
                 {
                     int cmp = CompareLsn(a.Lsn, b.Lsn);
-                    return cmp != 0 ? cmp : CompareLsn(a.SeqVal, b.SeqVal);
+                    if (cmp != 0) return cmp;
+                    cmp = CompareLsn(a.SeqVal, b.SeqVal);
+                    return cmp != 0 ? cmp : a.Order.CompareTo(b.Order);
                 });
 
-                foreach (var (_, _, evt) in buffer)
+                foreach (var (_, _, _, evt) in buffer)
                     yield return evt;
 
                 yield return new CdcEvent(CdcEventType.TransactionCommit, null, Convert.ToHexString(lsnInfo.MaxLsn));

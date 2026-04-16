@@ -576,9 +576,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     }
 
     /// <summary>
-    /// Decodes binlog cells into raw column values and returns the processor and values.
+    /// Decodes binlog cells into raw column values and returns the decoded values array.
     /// Used by <see cref="DecodeRow"/> and by the reparent detection path
-    /// (which needs the raw values without calling ProcessRow).
+    /// (which needs the raw values without calling ProcessRow); the processor is available via <paramref name="tableInfo"/>.
     /// </summary>
     private object[] DecodeRowInternal(
         TableInfo tableInfo, IReadOnlyList<object> cells)

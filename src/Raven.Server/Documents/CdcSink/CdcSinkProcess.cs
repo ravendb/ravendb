@@ -440,6 +440,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var oldParentId = proc.GetParentDocumentId(oldValues);
             if (string.Equals(oldParentId, newOp.DocumentId, StringComparison.Ordinal) == false)
             {
+                // MappedData is shared with newOp: reparenting changes the join (FK) column,
+                // not the PK. The PK values used by MatchesPrimaryKey to find the array element
+                // are identical in old and new rows.
                 var deleteOp = new CdcSinkDocumentOp
                 {
                     Type = CdcSinkDocumentOpType.EmbeddedModify,
@@ -451,6 +454,9 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
                 };
                 return [new CdcEvent(CdcEventType.Delete, deleteOp, null), new CdcEvent(CdcEventType.Upsert, newOp, null)];
             }
+
+            // Same parent — no reparent. Return the pooled old-values array since we won't use it.
+            proc.ReturnValues(oldValues);
         }
 
         return [new CdcEvent(CdcEventType.Upsert, newOp, null)];
