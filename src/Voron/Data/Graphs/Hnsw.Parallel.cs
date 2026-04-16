@@ -248,10 +248,12 @@ public partial class Hnsw
                     insertedVector = n.GetVectorUnmanagedSpan(_searchState);
                     AddEdgesFromInFlightNodes(ref n, createdNodeIndex);
                 }
-                foreach(var item in SearchNearestAcrossLevels(insertedVector, currentMaxLevel))
+                
+                foreach(var item in SearchNearestAcrossLevels(insertedVector, currentMaxLevel, currentNodeIndex))
                 {
                     yield return item;
                 }
+                
                 for (int level = nodeRandomLevel; level >= 0; level--)
                 {
                     int startingPointIndex = _nearestIndexes[level];
@@ -331,9 +333,10 @@ public partial class Hnsw
 
             private IEnumerable<WorkItem> NearestEdges(int startingPointIndex, int currentNodeIndex, UnmanagedSpan vector, int level)
             {
-                Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-
+                Debug.Assert(_candidatesQ.Count == 0);
+                Debug.Assert(_nearestEdgesQ.Count == 0);
+                Debug.Assert(startingPointIndex != currentNodeIndex);
+                
                 float lowerBound = float.MaxValue;
                 ClearVisited();
                 MarkVisited(currentNodeIndex); // we can't have an edge to itself
@@ -498,10 +501,11 @@ public partial class Hnsw
                 
             }
 
-            private IEnumerable<WorkItem> SearchNearestAcrossLevels(UnmanagedSpan from, int maxLevel)
+            private IEnumerable<WorkItem> SearchNearestAcrossLevels(UnmanagedSpan from, int maxLevel, int insertedNodeIndex)
             {
                 _nearestIndexes.Clear();
                 ClearVisited();
+                MarkVisited(insertedNodeIndex);
                 var currentNodeIndex = _searchState.GetNodeIndexById(EntryPointId);
                 var level = maxLevel;
                 var distance = float.MaxValue;

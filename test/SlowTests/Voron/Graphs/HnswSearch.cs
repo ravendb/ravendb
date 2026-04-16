@@ -186,4 +186,38 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
 
         float GetNextDim() => random.NextSingle() * (random.Next() % 2 == 0 ? 1 : -1);
     }
+
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [InlineDataWithRandomSeed]
+    public void ConcurrentNodePlacementDoesNotFailWhenNodeDiscoversItself(int seed)
+    {
+        const int vectorSize = 1536;
+        const int vectorSizeInBytes = vectorSize * sizeof(float);
+        using var _ = Slice.From(Allocator, $"test", out var treeName);
+        var random = new Random(seed);
+
+        const int numberOfEntries = 1024;
+        var vectors = new float[numberOfEntries][];
+        for (int i = 0; i < numberOfEntries; i++)
+        {
+            vectors[i] = new float[vectorSize];
+            for (int j = 0; j < vectorSize; j++)
+                vectors[i][j] = random.NextSingle() * (random.Next() % 2 == 0 ? 1 : -1);
+        }
+
+        using (var wTx = Env.WriteTransaction())
+        {
+            Hnsw.Create(wTx.LowLevelTransaction, treeName, vectorSizeInBytes, 3, 16, VectorEmbeddingType.Single);
+
+            using (var registration = Hnsw.RegistrationFor(wTx.LowLevelTransaction, treeName, random))
+            {
+                for (int i = 0; i < numberOfEntries; i++)
+                    registration.Register(i + 1, MemoryMarshal.Cast<float, byte>(vectors[i]));
+
+                registration.Commit(CancellationToken.None);
+            }
+
+            wTx.Commit();
+        }
+    }
 }
