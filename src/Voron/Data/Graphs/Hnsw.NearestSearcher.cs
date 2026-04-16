@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Sparrow;
 using Voron.Global;
 using Voron.Util;
 
 namespace Voron.Data.Graphs;
 
-public partial class Hnsw
+public unsafe partial class Hnsw
 {
     public partial class SearchState
     {
@@ -192,6 +194,11 @@ public partial class Hnsw
                             continue; // already checked
                         next.Visited = visitedCounter;
 
+                        // Prefetch the next unvisited neighbor's vector data to overlap
+                        // cache-miss latency with the current distance computation.
+                        // SimilarityCalc is ~65% of query time, ~80% of which is data loading.
+                        PrefetchNextNeighborVector(i + 1, visitedCounter);
+
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
                                         || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
 
@@ -285,6 +292,33 @@ public partial class Hnsw
                 };
                 
                 return _vectorReadCounter < max;
+            }
+
+            /// <summary>
+            /// Finds the next unvisited neighbor starting from <paramref name="startFrom"/> and
+            /// issues software prefetch instructions for its vector data. This overlaps the
+            /// cache-miss latency (~500ns for 6KB from L3) with the current distance computation (~633ns).
+            /// On platforms without software prefetch the JIT eliminates this entirely.
+            /// </summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void PrefetchNextNeighborVector(int startFrom, int visitedCounter)
+            {
+                if (PortableIntrinsics.CanPrefetch == false)
+                    return;
+
+                for (int j = startFrom; j < _indexes.Count; j++)
+                {
+                    var idx = _indexes[j];
+                    ref var node = ref _searchState.GetNodeByIndex(idx);
+                    if (node.Visited == visitedCounter)
+                        continue;
+
+                    if (node.TryGetVectorAddress(out byte* address, out int length) == false)
+                        return; // vector not loaded yet, skip prefetch
+
+                    PortableIntrinsics.PrefetchRange(address, length);
+                    return;
+                }
             }
 
             private static int GetPrefetchExtendSize(int numberOfCandidates) => numberOfCandidates switch

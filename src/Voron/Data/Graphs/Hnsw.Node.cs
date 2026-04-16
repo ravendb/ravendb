@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server.Utils;
@@ -29,6 +30,25 @@ public partial class Hnsw
         public int QueryDistanceVersion;
 
         public bool VectorLoaded => _vectorSpan.Length > 0;
+
+        /// <summary>
+        /// Returns the vector's memory address and length without triggering I/O.
+        /// Returns false if the vector hasn't been loaded yet.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetVectorAddress(out byte* address, out int length)
+        {
+            if (_vectorSpan.Length > 0)
+            {
+                address = _vectorSpan.Address;
+                length = _vectorSpan.Length;
+                return true;
+            }
+
+            address = null;
+            length = 0;
+            return false;
+        }
 
         public long GetVectorContainerId()
         {
