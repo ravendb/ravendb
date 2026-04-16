@@ -202,6 +202,146 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldUseFastPathForAllNonZeroContent()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int pages = 30;
+        var source = new byte[pages * pageSize];
+
+        for (int i = 0; i < pages; i++)
+            Fill(source, i * pageSize, pageSize, (byte)(i + 1));
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(source.Length, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldPreserveInternalZeroPagesInFastPathBuffer()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int pages = 10;
+        var source = new byte[pages * pageSize];
+
+        Fill(source, 0 * pageSize, pageSize, 1);
+        Fill(source, 1 * pageSize, pageSize, 2);
+        Fill(source, 2 * pageSize, pageSize, 3);
+        // pages 3, 4, 5 left as zeros (below sparse threshold, must be preserved as-is)
+        Fill(source, 6 * pageSize, pageSize, 6);
+        Fill(source, 7 * pageSize, pageSize, 7);
+        Fill(source, 8 * pageSize, pageSize, 8);
+        Fill(source, 9 * pageSize, pageSize, 9);
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(source.Length, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldHandleMultipleSparseRegions()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 11;
+        int totalPages = 1 + sparsePages + 1 + sparsePages + 1;
+        var source = new byte[totalPages * pageSize];
+
+        Fill(source, 0, pageSize, 21);
+        Fill(source, (1 + sparsePages) * pageSize, pageSize, 22);
+        Fill(source, (1 + sparsePages + 1 + sparsePages) * pageSize, pageSize, 23);
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(3L * pageSize, destination.TotalBytesWritten);
+        Assert.Equal(2, destination.ForwardSeekLengths.Count);
+        Assert.All(destination.ForwardSeekLengths, len => Assert.Equal((long)sparsePages * pageSize, len));
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldHandleAllZeroStreamWithPartialPageTail()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 1;
+        int tailLength = 100;
+        var source = new byte[(sparsePages * pageSize) + tailLength];
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(tailLength, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldHandleSourceSmallerThanOneBuffer()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int pages = 5;
+        var source = new byte[pages * pageSize];
+
+        for (int i = 0; i < pages; i++)
+            Fill(source, i * pageSize, pageSize, (byte)(i + 31));
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(source.Length, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldResolvePendingZeroRunBeforeFastPathWrite()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        const int bufferPages = 10; // must match DefaultBufferSize / pageSize
+        var source = new byte[2 * bufferPages * pageSize];
+
+        // Buffer 1: 3 non-zero pages, then 7 zero pages (below sparse threshold).
+        // First byte non-zero, last byte zero -> slow path, carries 7-page zero run into buffer 2.
+        Fill(source, 0 * pageSize, pageSize, 41);
+        Fill(source, 1 * pageSize, pageSize, 42);
+        Fill(source, 2 * pageSize, pageSize, 43);
+
+        // Buffer 2: 10 non-zero pages -> fast path. Must resolve the 7-page pending zero run first.
+        for (int i = 0; i < bufferPages; i++)
+            Fill(source, (bufferPages + i) * pageSize, pageSize, (byte)(51 + i));
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(source.Length, destination.TotalBytesWritten);
+        Assert.Empty(destination.ForwardSeekLengths);
+    }
+
     private static void Fill(byte[] buffer, int offset, int length, byte value)
     {
         new Span<byte>(buffer, offset, length).Fill(value);
