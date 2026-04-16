@@ -40,10 +40,10 @@ namespace Voron.Impl.Backup
         public static void CopyToPreservingSparseRegions(this Stream source, Stream destination, Action<int> onProgress, CancellationToken cancellationToken)
         {
             int pageSize = Constants.Storage.PageSize;
+            int bufferSize = DefaultBufferSize;
 
-            var readBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
+            var readBuffer = ArrayPool<byte>.Shared.Rent(bufferSize);
             var zeroBuffer = ArrayPool<byte>.Shared.Rent(DefaultBufferSize);
-            var pageBuffer = ArrayPool<byte>.Shared.Rent(pageSize);
 
             try
             {
@@ -52,128 +52,91 @@ namespace Voron.Impl.Backup
                 long logicalPosition = 0;
                 long destinationPosition = 0;
                 int contiguousZeroPages = 0;
-                int partialPageBytes = 0;
 
                 int count;
-                while ((count = source.Read(readBuffer, 0, DefaultBufferSize)) != 0)
+                while ((count = source.ReadAtLeast(readBuffer.AsSpan(0, bufferSize), bufferSize, throwOnEndOfStream: false)) > 0)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     onProgress?.Invoke(count);
 
-                    int offset = 0;
+                    var span = new ReadOnlySpan<byte>(readBuffer, 0, count);
 
-                    if (partialPageBytes > 0)
+                    // Fast path: first and last bytes non-zero means no sparse region can start/end in this buffer
+                    // (max internal zero run is 9 pages, far below the 512-page threshold).
+                    if (count == bufferSize && span[0] != 0 && span[count - 1] != 0)
                     {
-                        int bytesNeeded = pageSize - partialPageBytes;
-                        int bytesToCopy = Math.Min(bytesNeeded, count);
-                        Buffer.BlockCopy(readBuffer, 0, pageBuffer, partialPageBytes, bytesToCopy);
+                        if (contiguousZeroPages > 0)
+                            HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
-                        partialPageBytes += bytesToCopy;
-                        offset += bytesToCopy;
-
-                        if (partialPageBytes == pageSize)
-                        {
-                            ProcessPage(destination, pageBuffer, 0, pageSize, ref contiguousZeroPages, zeroBuffer, ref logicalPosition, ref destinationPosition);
-                            partialPageBytes = 0;
-                        }
+                        FlushPendingWrite(destination, readBuffer, 0, count, logicalPosition, ref destinationPosition);
+                        logicalPosition += count;
+                        continue;
                     }
 
-                    int remaining = count - offset;
-                    int fullPages = remaining / pageSize;
+                    int firstNonZero = span.IndexOfAnyExcept((byte)0);
 
-                    if (fullPages > 0)
+                    if (firstNonZero == -1)
                     {
-                        int pendingWriteStart = -1;
+                        int wholeZeroPages = count / pageSize;
+                        contiguousZeroPages += wholeZeroPages;
+                        logicalPosition += (long)wholeZeroPages * pageSize;
 
-                        for (int i = 0; i < fullPages; i++)
+                        int zeroTail = count - (wholeZeroPages * pageSize);
+                        if (zeroTail > 0)
                         {
-                            int pageOffset = offset + (i * pageSize);
-                            bool isZeroPage = new ReadOnlySpan<byte>(readBuffer, pageOffset, pageSize).ContainsAnyExcept((byte)0) == false;
+                            if (contiguousZeroPages > 0)
+                                HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
-                            if (isZeroPage)
-                            {
-                                if (pendingWriteStart >= 0)
-                                {
-                                    int writeLength = pageOffset - pendingWriteStart;
-                                    long writeLogicalStart = logicalPosition - writeLength;
-                                    FlushPendingWrite(destination, readBuffer, pendingWriteStart, writeLength,
-                                        writeLogicalStart, ref destinationPosition);
-                                    pendingWriteStart = -1;
-                                }
-
-                                contiguousZeroPages++;
-                            }
-                            else
-                            {
-                                if (contiguousZeroPages > 0)
-                                    HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
-
-                                if (pendingWriteStart < 0)
-                                    pendingWriteStart = pageOffset;
-                            }
-
-                            logicalPosition += pageSize;
+                            FlushPendingWrite(destination, readBuffer, wholeZeroPages * pageSize, zeroTail, logicalPosition, ref destinationPosition);
+                            logicalPosition += zeroTail;
                         }
-
-                        if (pendingWriteStart >= 0)
-                        {
-                            int writeEnd = offset + (fullPages * pageSize);
-                            int writeLength = writeEnd - pendingWriteStart;
-                            FlushPendingWrite(destination, readBuffer, pendingWriteStart, writeLength,
-                                logicalPosition - writeLength, ref destinationPosition);
-                        }
+                        continue;
                     }
 
-                    int remainderOffset = offset + (fullPages * pageSize);
-                    int remainder = count - remainderOffset;
-                    if (remainder > 0)
-                    {
-                        Buffer.BlockCopy(readBuffer, remainderOffset, pageBuffer, partialPageBytes, remainder);
-                        partialPageBytes += remainder;
-                    }
-                }
+                    int lastNonZero = span.LastIndexOfAnyExcept((byte)0);
 
-                if (partialPageBytes > 0)
-                {
+                    int leadingZeroPages = firstNonZero / pageSize;
+                    contiguousZeroPages += leadingZeroPages;
+                    logicalPosition += (long)leadingZeroPages * pageSize;
+
                     if (contiguousZeroPages > 0)
                         HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
-                    FlushPendingWrite(destination, pageBuffer, 0, partialPageBytes, logicalPosition, ref destinationPosition);
-                    logicalPosition += partialPageBytes;
+                    int contentStart = leadingZeroPages * pageSize;
+                    int contentEnd = Math.Min(((lastNonZero / pageSize) + 1) * pageSize, count);
+                    int contentLength = contentEnd - contentStart;
+
+                    FlushPendingWrite(destination, readBuffer, contentStart, contentLength, logicalPosition, ref destinationPosition);
+                    logicalPosition += contentLength;
+
+                    int trailingBytes = count - contentEnd;
+                    int trailingZeroPages = trailingBytes / pageSize;
+                    contiguousZeroPages = trailingZeroPages;
+                    logicalPosition += (long)trailingZeroPages * pageSize;
+
+                    int trailingZeroTail = trailingBytes - (trailingZeroPages * pageSize);
+                    if (trailingZeroTail > 0)
+                    {
+                        if (contiguousZeroPages > 0)
+                            HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
+
+                        int tailStart = contentEnd + (trailingZeroPages * pageSize);
+                        FlushPendingWrite(destination, readBuffer, tailStart, trailingZeroTail, logicalPosition, ref destinationPosition);
+                        logicalPosition += trailingZeroTail;
+                    }
                 }
 
                 if (contiguousZeroPages > 0)
                     HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
 
                 if (logicalPosition > 0)
-                {
                     destination.SetLength(logicalPosition);
-                }
             }
             finally
             {
                 ArrayPool<byte>.Shared.Return(readBuffer);
                 ArrayPool<byte>.Shared.Return(zeroBuffer);
-                ArrayPool<byte>.Shared.Return(pageBuffer);
             }
-        }
-
-        private static void ProcessPage(Stream destination, byte[] pageBuffer, int offset, int pageSize, ref int contiguousZeroPages, byte[] zeroBuffer, ref long logicalPosition, ref long destinationPosition)
-        {
-            bool isZeroPage = new ReadOnlySpan<byte>(pageBuffer, offset, pageSize).ContainsAnyExcept((byte)0) == false;
-
-            if (isZeroPage)
-            {
-                contiguousZeroPages++;
-                logicalPosition += pageSize;
-                return;
-            }
-
-            if (contiguousZeroPages > 0)
-                HandleContiguousZeroPages(destination, zeroBuffer, ref contiguousZeroPages, logicalPosition, pageSize, ref destinationPosition);
-
-            FlushPendingWrite(destination, pageBuffer, offset, pageSize, logicalPosition, ref destinationPosition);
-            logicalPosition += pageSize;
         }
 
         private static void FlushPendingWrite(Stream destination, byte[] buffer, int offset, int length,
