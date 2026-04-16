@@ -1,58 +1,37 @@
 ﻿using System;
 using System.IO.Compression;
-using ICSharpCode.SharpZipLib.Zip;
 using Sparrow.Backups;
 
 namespace Voron.Impl.Backup;
 
-public sealed class BackupZipArchive : IDisposable
+public sealed class BackupZipArchive
 {
-    private readonly ZipOutputStream _zipStream;
+    private readonly ZipArchive _zipArchive;
     private readonly SnapshotBackupCompressionAlgorithm _compressionAlgorithm;
     private readonly CompressionLevel _compressionLevel;
+    private readonly CompressionLevel _compressionLevelForZipEntry;
 
-    public BackupZipArchive(ZipOutputStream zipStream, SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    public BackupZipArchive(ZipArchive zipArchive, SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
-        _zipStream = zipStream ?? throw new ArgumentNullException(nameof(zipStream));
+        _zipArchive = zipArchive ?? throw new ArgumentNullException(nameof(zipArchive));
         _compressionAlgorithm = compressionAlgorithm;
         _compressionLevel = compressionLevel;
-        
-        var level = GetCompressionLevel(compressionAlgorithm, compressionLevel);
-        _zipStream.SetLevel(level);
+        _compressionLevelForZipEntry = GetCompressionLevelForZipEntry(compressionAlgorithm, compressionLevel);
     }
 
-    public BackupZipArchiveEntry CreateEntry(string entryName, bool noCompression = false)
+    public BackupZipArchiveEntry CreateEntry(string entryName)
     {
-        var zipEntry = new ZipEntry(entryName);
-
-        if (noCompression)
-            zipEntry.CompressionMethod = CompressionMethod.Stored;
-        
-        _zipStream.PutNextEntry(zipEntry);
-
-        return new BackupZipArchiveEntry(_zipStream, _compressionAlgorithm, noCompression ? CompressionLevel.NoCompression : _compressionLevel);
+        var zipEntry = _zipArchive.CreateEntry(entryName, _compressionLevelForZipEntry);
+        return new BackupZipArchiveEntry(zipEntry, _compressionAlgorithm, _compressionLevel);
     }
 
-    private static int GetCompressionLevel(SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
+    private static CompressionLevel GetCompressionLevelForZipEntry(SnapshotBackupCompressionAlgorithm compressionAlgorithm, CompressionLevel compressionLevel)
     {
         return compressionAlgorithm switch
         {
-            SnapshotBackupCompressionAlgorithm.Deflate => compressionLevel switch
-            {
-                CompressionLevel.NoCompression => 0,
-                CompressionLevel.Fastest => 1,
-                CompressionLevel.Optimal => 6,
-                CompressionLevel.SmallestSize => 9,
-                _ => throw new ArgumentOutOfRangeException(nameof(compressionLevel), compressionLevel, null)
-            },
-            SnapshotBackupCompressionAlgorithm.Zstd => 0,
+            SnapshotBackupCompressionAlgorithm.Zstd => CompressionLevel.NoCompression,
+            SnapshotBackupCompressionAlgorithm.Deflate => compressionLevel,
             _ => throw new ArgumentOutOfRangeException(nameof(compressionAlgorithm), compressionAlgorithm, null)
         };
-    }
-
-    public void Dispose()
-    {
-        _zipStream.Finish();
-        _zipStream.Dispose();
     }
 }

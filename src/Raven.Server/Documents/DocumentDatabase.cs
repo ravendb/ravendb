@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using ICSharpCode.SharpZipLib.Zip;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading;
@@ -1557,14 +1556,14 @@ namespace Raven.Server.Documents
             }
 
             using (TombstoneCleaner.PreventTombstoneCleaningUpToEtag(lastTombstoneEtag))
-            using (var package = new BackupZipArchive(new ZipOutputStream(stream) { IsStreamOwner = false }, compressionAlgorithm, compressionLevel))
+            using (var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
             {
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                 {
-                    var smugglerValuesEntry = package.CreateEntry(RestoreSettings.SmugglerValuesFileName, noCompression: true); // the smuggler output is already compressed
-                    
-                    using (var smugglerEntryStream = smugglerValuesEntry.Open())
-                    using (var outputStream = GetOutputStream(smugglerEntryStream))
+                    // the smuggler output is already compressed
+                    var zipArchiveEntry = zipArchive.CreateEntry(RestoreSettings.SmugglerValuesFileName);
+                    using (var zipStream = zipArchiveEntry.Open())
+                    using (var outputStream = GetOutputStream(zipStream))
                     {
                         var smugglerSource = new DatabaseSource(this, 0, 0, _logger);
                         using (DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -1593,9 +1592,10 @@ namespace Raven.Server.Documents
 
                     infoNotify?.Invoke(("Backed up Database Record", 1));
 
+                    var package = new BackupZipArchive(zipArchive, compressionAlgorithm, compressionLevel);
                     var settingsEntry = package.CreateEntry(RestoreSettings.SettingsFileName);
-                    using (var settingsEntryStream = settingsEntry.Open())
-                    using (var outputStream = GetOutputStream(settingsEntryStream))
+                    using (var zipStream = settingsEntry.Open())
+                    using (var outputStream = GetOutputStream(zipStream))
                     using (var writer = new BlittableJsonTextWriter(serverContext, outputStream))
                     {
                         writer.WriteStartObject();
@@ -1644,7 +1644,7 @@ namespace Raven.Server.Documents
 
                 infoNotify?.Invoke(("Backed up database values", 1));
 
-                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), package, maxReadOpsPerSecond, infoNotify, cancellationToken);
+                BackupMethods.Full.ToFile(GetAllStoragesForBackup(excludeIndexes), zipArchive, compressionAlgorithm, compressionLevel, maxReadOpsPerSecond, infoNotify, cancellationToken);
             }
 
             return smugglerResult;
