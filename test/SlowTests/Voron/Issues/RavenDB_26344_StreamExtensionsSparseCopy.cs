@@ -342,6 +342,46 @@ public class RavenDB_26344_StreamExtensionsSparseCopy(ITestOutputHelper output) 
         Assert.Empty(destination.ForwardSeekLengths);
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldHandleEntirelyZeroPageAlignedStream()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration + 20;
+        var source = new byte[sparsePages * pageSize];
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(0, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
+    [RavenFact(RavenTestCategory.Voron)]
+    public void CopyToPreservingSparseRegions_ShouldCreateHoleForExactThresholdZeroRunFollowedByPartialTail()
+    {
+        int pageSize = Constants.Storage.PageSize;
+        int sparsePages = FreeSpaceHandling.NumberOfFreePagesForSparseConsideration;
+        int tailLength = 137;
+        var source = new byte[(sparsePages * pageSize) + tailLength];
+
+        // tail is non-zero so we can verify it's written correctly after the hole
+        Fill(source, sparsePages * pageSize, tailLength, 99);
+
+        using var input = new MemoryStream(source);
+        using var destination = new RecordingSparseDestination();
+
+        input.CopyToPreservingSparseRegions(destination, onProgress: null, CancellationToken.None);
+
+        Assert.Equal(source.Length, destination.Length);
+        Assert.Equal(source, destination.ToArray());
+        Assert.Equal(tailLength, destination.TotalBytesWritten);
+        Assert.Contains((long)sparsePages * pageSize, destination.ForwardSeekLengths);
+    }
+
     private static void Fill(byte[] buffer, int offset, int length, byte value)
     {
         new Span<byte>(buffer, offset, length).Fill(value);
