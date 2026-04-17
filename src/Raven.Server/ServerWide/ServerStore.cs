@@ -794,22 +794,26 @@ namespace Raven.Server.ServerWide
 
             try
             {
-                var highReadAheadDevices = PlatformSpecific.MemoryInformation.GetBlockDevicesWithHighReadAhead();
-                if (highReadAheadDevices != null)
+                var thresholdKb = Configuration.Storage.ReadAheadKbAlertThreshold;
+                if (thresholdKb != null)
                 {
-                    var deviceList = string.Join(", ", highReadAheadDevices.Select(x => $"{x.DeviceName} ({x.ReadAheadValue})"));
-                    var alert = AlertRaised.Create(
-                        null,
-                        "High read_ahead_kb Detected",
-                        $"One or more block devices have read_ahead_kb set above 128 KB: {deviceList}. " +
-                        "This can cause excessive I/O during random-access workloads. " +
-                        "Consider lowering it. Please follow the documentation for guidance.",
-                        AlertType.HighReadAheadKb,
-                        NotificationSeverity.Warning);
-                    if (NotificationCenter.IsInitialized)
-                        NotificationCenter.Add(alert);
-                    else
-                        _storeAlertForLateRaise.Add(alert);
+                    var highReadAheadDevices = PlatformSpecific.MemoryInformation.GetBlockDevicesWithHighReadAhead(thresholdKb.Value);
+                    if (highReadAheadDevices != null)
+                    {
+                        var deviceList = string.Join(", ", highReadAheadDevices.Select(x => $"{x.DeviceName} ({x.ReadAheadValue})"));
+                        var alert = AlertRaised.Create(
+                            null,
+                            "High read_ahead_kb Detected",
+                            $"One or more block devices have read_ahead_kb set above {thresholdKb.Value} KB: {deviceList}. " +
+                            "This can cause excessive I/O during random-access workloads. " +
+                            "Consider lowering it. Please follow the documentation for guidance.",
+                            AlertType.HighReadAheadKb,
+                            NotificationSeverity.Warning);
+                        if (NotificationCenter.IsInitialized)
+                            NotificationCenter.Add(alert);
+                        else
+                            _storeAlertForLateRaise.Add(alert);
+                    }
                 }
             }
             catch (Exception e)

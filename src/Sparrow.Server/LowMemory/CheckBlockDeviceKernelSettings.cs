@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Server.Platform.Posix;
 
@@ -12,12 +11,12 @@ namespace Sparrow.Server.LowMemory
         private static readonly Logger Log = LoggingSource.Instance.GetLogger("Server", typeof(CheckBlockDeviceKernelSettings).FullName);
 
         private const string SysBlockPath = "/sys/block/";
-        private const int ReadAheadKbThreshold = 128;
 
         /// <summary>
         /// Returns a list of block devices whose read_ahead_kb value exceeds
-        /// <see cref="ReadAheadKbThreshold"/> KB, or null if no devices are above the
-        /// threshold or if the check cannot be performed.
+        /// <paramref name="thresholdKb"/>, or null if no devices are above the threshold
+        /// or if the check cannot be performed (returns null in both cases — the caller
+        /// only needs to know whether an alert should be raised).
         /// <para>
         /// A high read_ahead_kb causes the kernel to issue large sequential read-ahead
         /// I/Os on every page fault, which wastes I/O bandwidth and can cause 100% IO wait
@@ -26,7 +25,7 @@ namespace Sparrow.Server.LowMemory
         /// Only meaningful on Linux; callers should guard with
         /// <c>PlatformDetails.RunningOnPosix &amp;&amp; !PlatformDetails.RunningOnMacOsx</c>.
         /// </summary>
-        public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead()
+        public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead(int thresholdKb)
         {
             try
             {
@@ -51,7 +50,7 @@ namespace Sparrow.Server.LowMemory
                     if (readAheadKb == long.MaxValue) // ReadNumberFromFile returns long.MaxValue on error
                         continue;
 
-                    if (readAheadKb > ReadAheadKbThreshold)
+                    if (readAheadKb > thresholdKb)
                     {
                         result ??= new List<(string, Size)>();
                         result.Add((deviceName, new Size(readAheadKb, SizeUnit.Kilobytes)));

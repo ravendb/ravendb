@@ -24,11 +24,11 @@ namespace Sparrow.Server.Platform
                 return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
             }
 
-            public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead()
+            public static List<(string DeviceName, Size ReadAheadValue)> GetBlockDevicesWithHighReadAhead(int thresholdKb)
             {
                 if (PlatformDetails.RunningOnPosix == false || PlatformDetails.RunningOnMacOsx)
                     return null;
-                return CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead();
+                return CheckBlockDeviceKernelSettings.GetBlockDevicesWithHighReadAhead(thresholdKb);
             }
         }
 

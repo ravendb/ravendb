@@ -219,16 +219,7 @@ namespace Voron.Impl.Journal
 
             LastTransactionHeader = current;
 
-            // Release the just-processed transaction's pages from the kernel page cache.
-            // Combined with FADV_SEQUENTIAL's adaptive look-ahead this creates a sliding
-            // window that keeps only ~1-2 transactions resident at a time - critical when
-            // many databases recover simultaneously and page cache pressure is a concern.
-            if (_journalPager is RvnMemoryMapPager rvnJournalPager)
-            {
-                var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * 4 * Constants.Size.Kilobyte;
-                var txLength = transactionSizeIn4Kb * 4 * Constants.Size.Kilobyte;
-                rvnJournalPager.TryDropFromPageCacheHint(txStartOffset, txLength);
-            }
+            DropProcessedTxFromPageCache(transactionSizeIn4Kb);
 
             return true;
         }
@@ -250,14 +241,22 @@ namespace Voron.Impl.Journal
             else
                 _lastSkippedTx = current->TransactionId;
 
-            // Already-synced transactions are skipped but their journal pages should still
-            // be evicted from the page cache - same sliding-window benefit as applied transactions.
-            if (_journalPager is RvnMemoryMapPager rvnJournalPager)
-            {
-                var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * 4 * Constants.Size.Kilobyte;
-                var txLength = transactionSizeIn4Kb * 4 * Constants.Size.Kilobyte;
-                rvnJournalPager.TryDropFromPageCacheHint(txStartOffset, txLength);
-            }
+            DropProcessedTxFromPageCache(transactionSizeIn4Kb);
+        }
+
+        // Release the just-processed transaction's pages from the kernel page cache.
+        // Combined with FADV_SEQUENTIAL's adaptive look-ahead this creates a sliding
+        // window that keeps only ~1-2 transactions resident at a time - critical when
+        // many databases recover simultaneously and page cache pressure is a concern.
+        // Applies to both applied and skipped (already-synced) transactions.
+        private void DropProcessedTxFromPageCache(long transactionSizeIn4Kb)
+        {
+            if (_journalPager is not RvnMemoryMapPager rvnJournalPager)
+                return;
+
+            var txStartOffset = (_readAt4Kb - transactionSizeIn4Kb) * 4L * Constants.Size.Kilobyte;
+            var txLength = transactionSizeIn4Kb * 4L * Constants.Size.Kilobyte;
+            rvnJournalPager.TryDropFromPageCacheHint(txStartOffset, txLength);
         }
 
         private bool IsAlreadySyncTransaction(TransactionHeader* current)
@@ -786,6 +785,9 @@ namespace Voron.Impl.Journal
             }
             OnDispose?.Invoke(this);
 
+            // Drop the entire journal file from the page cache now that recovery is done.
+            // offset=0, length=0 tells posix_fadvise(FADV_DONTNEED) to apply to the whole file
+            // (the kernel interprets len=0 as "to end of file").
             if (_journalPager is RvnMemoryMapPager rvnPager)
                 rvnPager.TryDropFromPageCacheHint();
         }

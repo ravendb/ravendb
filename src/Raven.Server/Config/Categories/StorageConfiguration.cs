@@ -152,5 +152,11 @@ namespace Raven.Server.Config.Categories
         [MinValue(0)]
         [ConfigurationEntry("Storage.MaxNumberOfRecyclableJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxNumberOfRecyclableJournals { get; set; }
+
+        [Description("Threshold (in KB) for the block device read_ahead_kb alert raised on server startup on Linux. If any block device's read_ahead_kb exceeds this value, a warning alert is raised. Set to null to disable the check.")]
+        [DefaultValue(128)]
+        [MinValue(0)]
+        [ConfigurationEntry("Storage.ReadAheadKbAlertThresholdInKb", ConfigurationEntryScope.ServerWideOnly)]
+        public int? ReadAheadKbAlertThreshold { get; set; }
     }
 }
