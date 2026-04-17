@@ -161,13 +161,7 @@ public sealed unsafe class HnswIndexCache : IDisposable
     private static int AlignUp(int v, int align) => (v + align - 1) & ~(align - 1);
 
     private static delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> ResolveSimilarityKernel(in Hnsw.Options options) =>
-        options.SimilarityMethod switch
-        {
-            Hnsw.SimilarityMethod.CosineSimilaritySingles => &Hnsw.CosineDistanceSingles,
-            Hnsw.SimilarityMethod.CosineSimilarityI8 => &Hnsw.CosineDistanceI8,
-            Hnsw.SimilarityMethod.HammingDistance => &Hnsw.HammingDistance,
-            _ => throw new ArgumentOutOfRangeException(nameof(options.SimilarityMethod), options.SimilarityMethod, null)
-        };
+        Hnsw.GetDistanceKernel(options);
 
     /// <summary>
     /// Conservative bytes-per-node estimate used to translate a node-count budget into a buffer

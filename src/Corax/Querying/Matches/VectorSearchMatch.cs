@@ -133,6 +133,7 @@ public struct VectorSearchMatch : IQueryMatch
         
         
         var searchState = _indexSearcher.GetOrCreateVectorSearchState(fieldName);
+
         _vectorSearchRetriever = _isExact switch
         {
             _ when _scanningQuery => Hnsw.ExactNearest(searchState, _numberOfCandidates, vector, _minimumMatch, hasFilterMatch: false, nodesIdsToScan),

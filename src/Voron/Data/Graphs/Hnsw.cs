@@ -11,6 +11,7 @@ using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Tensors;
 using Sparrow.Server.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
@@ -53,6 +54,10 @@ public unsafe partial class Hnsw
             _ => throw new InvalidOperationException($"Unexpected value of {nameof(VectorEmbeddingType)}: {embeddingType}")
         };
 
+        // VectorEmbeddingType.Single is stored in the NormalizedTensor layout: unit vector followed by a trailing float L2 norm. Callers pass the raw payload size (dims * sizeof(float)); the trailing-norm bytes are added here so callers do not need to know about the layout.
+        if (embeddingType == VectorEmbeddingType.Single)
+            vectorSizeBytes += MagnitudeSizeInBytes;
+
         var options = new Options
         {
             Version = Constants.Graphs.HnswVersion.CurrentVersion,
@@ -67,6 +72,27 @@ public unsafe partial class Hnsw
         {
             Unsafe.Write(output, options);
         }
+    }
+
+    /// <summary>
+    /// Returns the distance kernel to use for a given HNSW <see cref="Options"/>. For
+    /// <see cref="SimilarityMethod.CosineSimilaritySingles"/> the kernel depends on the on-disk
+    /// version: at or above <see cref="Constants.Graphs.HnswVersion.SinglesWithL2Norm"/> the
+    /// operands are pre-normalized (NormalizedTensor layout) and the dot-only kernel applies;
+    /// below that version the operands are raw vectors and norms are recomputed per call.
+    /// </summary>
+    internal static delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> GetDistanceKernel(in Options options)
+    {
+        return options.SimilarityMethod switch
+        {
+            SimilarityMethod.CosineSimilaritySingles =>
+                options.Version >= Constants.Graphs.HnswVersion.SinglesWithL2Norm
+                    ? &CosineDistanceSinglesNormalized
+                    : &CosineDistanceSingles,
+            SimilarityMethod.CosineSimilarityI8 => &CosineDistanceI8,
+            SimilarityMethod.HammingDistance => &HammingDistance,
+            _ => throw new ArgumentOutOfRangeException(nameof(options.SimilarityMethod), options.SimilarityMethod, null)
+        };
     }
 
     private static ContainerId ReadGlobalVectorsContainerId(LowLevelTransaction llt)
@@ -110,6 +136,7 @@ public unsafe partial class Hnsw
         public readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
         public readonly bool IsEmpty;
         private readonly HnswIndexCache _nodeCache;
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope? _queryNormalizationScope;
 
         public Span<Node> Nodes => _nodes.ToSpan();
         public Tree Tree => _tree;
@@ -136,6 +163,14 @@ public unsafe partial class Hnsw
         {
         }
 
+        public SearchState(LowLevelTransaction llt, Slice name, ref Memory<byte> queryVector) : this(llt, name, null)
+        {
+            if (IsEmpty)
+                return;
+            if (TryNormalizeQueryVector(Options, Llt.Allocator, ref queryVector, out var scope))
+                _queryNormalizationScope = scope;
+        }
+
         public SearchState(LowLevelTransaction llt, Slice name, HnswIndexCache nodeCache)
         {
             Llt = llt;
@@ -158,13 +193,7 @@ public unsafe partial class Hnsw
             {
                 var options = _tree.DirectRead(OptionsSlice);
                 Options = Unsafe.Read<Options>(options);
-                SimilarityCalc = Options.SimilarityMethod switch
-                {
-                    SimilarityMethod.CosineSimilaritySingles => &CosineDistanceSingles,
-                    SimilarityMethod.CosineSimilarityI8 => &CosineDistanceI8,
-                    SimilarityMethod.HammingDistance => &HammingDistance,
-                    _ => throw new ArgumentOutOfRangeException(nameof(Options.SimilarityMethod), Options.SimilarityMethod, null)
-                };
+                SimilarityCalc = GetDistanceKernel(Options);
             }
         }
 
@@ -246,6 +275,7 @@ public unsafe partial class Hnsw
         public void RegisterNodeLocation(long nodeId, long locationId) =>
             _nodeIdToLocations.Add(nodeId, locationId);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Node GetNodeByIndex(int index)
         {
             ref var n = ref _nodes[index];
@@ -294,10 +324,14 @@ public unsafe partial class Hnsw
         /// <see cref="LoadNodeIndexes"/> dictionary lookups are skipped entirely.
         /// May grow the nodes array — callers must re-fetch any outstanding node refs afterward.
         /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResolveEdgeIndexes(int nodeIndex, int level, ref NativeList<long> nodeIds, ref NativeList<int> indexes)
         {
             ref var node = ref GetNodeByIndex(nodeIndex);
 
+            // Fast path: the resolved indexes for this level are already cached on the node.
+            // The slow path (miss) is in a NoInlining helper so only this copy is inlined into
+            // callers inside the search loop.
             if (node.EdgesIndexesPerLevel.Count > level &&
                 node.EdgesIndexesPerLevel[level].Count == node.EdgesPerLevel[level].Count)
             {
@@ -305,6 +339,13 @@ public unsafe partial class Hnsw
                 return;
             }
 
+            ResolveEdgeIndexesSlow(nodeIndex, level, ref nodeIds, ref indexes);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void ResolveEdgeIndexesSlow(int nodeIndex, int level, ref NativeList<long> nodeIds, ref NativeList<int> indexes)
+        {
+            ref var node = ref GetNodeByIndex(nodeIndex);
             nodeIds.ResetAndCopyFrom(Llt.Allocator, node.EdgesPerLevel[level].ToSpan());
             LoadNodeIndexes(ref nodeIds, ref indexes);
 
@@ -425,12 +466,23 @@ public unsafe partial class Hnsw
         }
 
         // Allows storing cached distance to the queried vector. Should be used only in the querying part!
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float QueryDistance(ReadOnlySpan<byte> vector, int toIdx, ref long vectorReadCounter)
         {
+            // Fast path: the distance for this (query vector, node) pair was already computed during
+            // the current traversal and is still valid (version equals _visitsCounter). The miss path
+            // — loading the stored vector and running SimilarityCalc — lives in a NoInlining helper so
+            // its register footprint does not leak into the search loop.
             ref var to = ref GetNodeByIndex(toIdx);
             if (to.QueryDistanceVersion == _queryVectorVersion)
                 return to.QueryDistanceValue;
 
+            return QueryDistanceMiss(vector, ref to, ref vectorReadCounter);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private float QueryDistanceMiss(ReadOnlySpan<byte> vector, ref Node to, ref long vectorReadCounter)
+        {
             Span<byte> v2 = to.GetVector(this);
             vectorReadCounter++;
             var distance = SimilarityCalc(vector, v2);
@@ -740,7 +792,13 @@ public unsafe partial class Hnsw
 
            _nodes.Dispose(Llt.Allocator);
 
+           if (_queryNormalizationScope is { } scope)
+           {
+               scope.Dispose();
+               _queryNormalizationScope = null;
+           }
        }
+
     }
 
     public partial class Registration : IDisposable
@@ -755,7 +813,13 @@ public unsafe partial class Hnsw
         private readonly ContainerId _globalVectorsContainerId;
         private PostingList _largePostingListSet;
 
+        // Lazy scratch used by Register to normalize raw-sized inputs in-place; one allocation per Registration.
+        private ByteStringContext<ByteStringMemoryCache>.InternalScope _normalizationScope;
+        private ByteString _normalizationBuffer;
+
         public int AmountOfModifiedVectorsInTransaction => _vectorHashCache.Count;
+
+        public Options Options => _searchState.Options;
 
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
@@ -862,9 +926,9 @@ public unsafe partial class Hnsw
         {
             entryId = EntryIdToInternalEntryId(entryId);
             PortableExceptions.ThrowIfOnDebug<ArgumentOutOfRangeException>((entryId & Constants.Graphs.VectorId.EnsureIsSingleMask) != 0, "Entry ids must have the first two bits cleared, we are using those");
-            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
-                vector.Length != _searchState.Options.VectorSizeBytes,
-                $"Vector size {vector.Length} does not match expected size: {_searchState.Options.VectorSizeBytes}");
+
+            if (vector.Length != _searchState.Options.VectorSizeBytes)
+                vector = NormalizeIntoScratch(vector);
 
             var hashBuffer = ComputeHashFor(vector);
             ref (ByteString Hash, int NodeIndex, NativeList<long> PostingList) postingList = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorHashCache, hashBuffer, out var exists);
@@ -957,6 +1021,22 @@ public unsafe partial class Hnsw
                 //container id | index    | marker
                 return new ContainerEntryId((long)containerId | (uint)(index << 1) | Constants.Graphs.VectorStorage.VectorContainerInternalIndexer);
             }
+        }
+
+        private ReadOnlySpan<byte> NormalizeIntoScratch(ReadOnlySpan<byte> vector)
+        {
+            var expected = _searchState.Options.VectorSizeBytes;
+            var floats = MemoryMarshal.Cast<byte, float>(vector);
+            PortableExceptions.ThrowIf<ArgumentOutOfRangeException>(
+                VectorNormalizationRequired(_searchState.Options) == false || TensorSizeBytes<float>(floats.Length) != expected,
+                $"Vector size {vector.Length} does not match expected size: {expected}");
+
+            if (_normalizationBuffer.HasValue == false)
+                _normalizationScope = _searchState.Llt.Allocator.Allocate(expected, out _normalizationBuffer);
+
+            var dst = _normalizationBuffer.ToSpan();
+            WriteNormalizedTensor(floats, dst);
+            return dst;
         }
 
         private ByteString ComputeHashFor(ReadOnlySpan<byte> vector)
@@ -1104,7 +1184,8 @@ public unsafe partial class Hnsw
 
         public void Dispose()
         {
-            //todo: we may wants to release the vector hash cache
+            if (_normalizationBuffer.HasValue)
+                _normalizationScope.Dispose();
         }
 
         private long UpdatePostingList(ContainerEntryId postingListId, in NativeList<long> modifications, FastPForEncoder pForEncoder, ref FastPForDecoder pForDecoder, ref ContextBoundNativeList<long> tempListBuffer)
@@ -1190,15 +1271,15 @@ public unsafe partial class Hnsw
     
     public static VectorSearchRetriever ExactNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
     {
-        var searchState = new SearchState(llt, name);
+        var searchState = new SearchState(llt, name, ref vector);
         var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
         return new VectorSearchRetriever(searchState,  results, vector, minimumSimilarity);
     }
 
     public static VectorSearchRetriever ApproximateFilteredNearest<TEnumerator>(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, TEnumerator nodesToProbe)
-     where TEnumerator : IEnumerator<long> 
+     where TEnumerator : IEnumerator<long>
     {
-        var searchState = new SearchState(llt, name);
+        var searchState = new SearchState(llt, name, ref vector);
         var startingPointsIndexes = new ContextBoundNativeList<int>(llt.Allocator);
         var candidates = new ContextBoundNativeList<int>(llt.Allocator);
         candidates.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
@@ -1215,7 +1296,7 @@ public unsafe partial class Hnsw
     
     public static VectorSearchRetriever ApproximateNearest(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch = false)
     {
-        var searchState = new SearchState(llt, name);
+        var searchState = new SearchState(llt, name, ref vector);
         var nearestNodesByLevel = new ContextBoundNativeList<int>(llt.Allocator);
         nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
 
@@ -1239,6 +1320,7 @@ public unsafe partial class Hnsw
     /// </summary>
     public static VectorSearchRetriever ApproximateNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch = false)
     {
+        TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         // Bind the per-node QueryDistance cache to this query vector before SearchNearestAcrossLevels
         // reads it. Without this, a shared SearchState reuses cached distances from a prior sub-query
         // and the upper-level descent latches onto the wrong starting point.
@@ -1248,14 +1330,14 @@ public unsafe partial class Hnsw
         nearestNodesByLevel.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
 
         searchState.SearchNearestAcrossLevels(vector.Span, -1, searchState.Options.MaxLevel, ref nearestNodesByLevel);
         var nearest = nearestNodesByLevel[0];
         nearestNodesByLevel.Clear();
         var nearestEdgesSearch = searchState.NearestSearch(nearest, vector, 0, numberOfCandidates, nearestNodesByLevel,
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists, hasFilterMatch);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false);
+        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
     /// <summary>
@@ -1264,9 +1346,10 @@ public unsafe partial class Hnsw
     /// </summary>
     public static VectorSearchRetriever ExactNearest(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, bool hasFilterMatch, ContextBoundNativeList<long>? nodesToScan = null)
     {
+        TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         searchState.OnQueryVector(vector);
         var results = searchState.ExactSearch(vector, hasFilterMatch, numberOfCandidates, nodesToScan);
-        return new VectorSearchRetriever(searchState, results, vector, minimumSimilarity, ownsSearchState: false);
+        return new VectorSearchRetriever(searchState, results, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
     /// <summary>
@@ -1276,6 +1359,7 @@ public unsafe partial class Hnsw
     public static VectorSearchRetriever ApproximateFilteredNearest<TEnumerator>(SearchState searchState, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity, TEnumerator nodesToProbe)
         where TEnumerator : IEnumerator<long>
     {
+        TryNormalizeQueryVector(searchState.Options, searchState.Llt.Allocator, ref vector, out var queryVectorScope);
         searchState.OnQueryVector(vector);
 
         var startingPointsIndexes = new ContextBoundNativeList<int>(searchState.Llt.Allocator);
@@ -1283,13 +1367,13 @@ public unsafe partial class Hnsw
         candidates.EnsureCapacityFor(searchState.Options.MaxLevel + 1);
 
         if (searchState.Options.CountOfVectors == 0)
-            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false);
+            return new VectorSearchRetriever(searchState, searchState.EmptySearch(), vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
 
         searchState.SearchFilteredNearest(ref startingPointsIndexes, nodesToProbe, numberOfCandidates, 16);
         candidates.Clear();
         var nearestEdgesSearch = searchState.NearestSearch(startingPointsIndexes, vector, 0, numberOfCandidates, candidates,
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
-        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false);
+        return new VectorSearchRetriever(searchState, nearestEdgesSearch, vector, minimumSimilarity, ownsSearchState: false, queryVectorScope);
     }
 
     public static VectorSearchRetriever EmptySearch(LowLevelTransaction llt, Slice name, int numberOfCandidates, Memory<byte> vector, float minimumSimilarity)

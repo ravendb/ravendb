@@ -31,6 +31,10 @@ public partial class Hnsw
         private readonly IHnswSearcher _vectorsSearcher;
         private readonly Memory<byte> _vector;
         private IEnumerator<bool> _resultsEnumerator;
+        // When the searchState-based entry points allocate a normalized copy of the query
+        // vector they hand the scope here so Dispose releases it alongside the retriever's
+        // other per-query state.
+        private Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? _queryVectorScope;
 
         public SimilarityMethod? SimilarityMethod => _searchState?.Options.SimilarityMethod;
         
@@ -45,12 +49,13 @@ public partial class Hnsw
         public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
         
         public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity,
-            bool ownsSearchState = true)
+            bool ownsSearchState = true, Sparrow.Server.ByteStringContext<Sparrow.Server.ByteStringMemoryCache>.InternalScope? queryVectorScope = null)
         {
             _searchState = searchState;
             _ownsSearchState = ownsSearchState;
             _vectorsSearcher = vectorsSearcher;
             _vector = vector;
+            _queryVectorScope = queryVectorScope;
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
             _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
@@ -314,6 +319,7 @@ public partial class Hnsw
             _pforDecoder.Dispose();
             _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
+            _queryVectorScope?.Dispose();
             if (_ownsSearchState)
                 _searchState.Dispose();
         }

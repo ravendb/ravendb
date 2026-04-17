@@ -150,7 +150,8 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
         BuildGraph(treeName, vectorCount: 300, seed: 19);
 
         float[] query = RandomVector(new Random(99));
-        var queryBytes = MemoryMarshal.Cast<float, byte>(query).ToArray();
+        var queryBytes = new byte[Hnsw.TensorSizeBytes<float>(query.Length)];
+        Hnsw.WriteNormalizedTensor(query, queryBytes);
 
         using (var tx = Env.ReadTransaction())
         {
@@ -208,6 +209,7 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
         }
         tx.Commit();
     }
+
 
     private static float[] RandomVector(Random random)
     {
