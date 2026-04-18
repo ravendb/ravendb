@@ -31,6 +31,14 @@ public unsafe partial class Hnsw
             private long _vectorReadCounter = 0;
             private readonly int _startingPointIndex;
             private ContextBoundNativeList<int> _startingPointIndexes;
+
+            // Traversal state carried across MoveNextBatch calls so the caller can consume
+            // one batch at a time. _needsRestart triggers a fresh InitState; _isDone short-circuits
+            // further work once the outer traversal has finished.
+            private float _lowerBound;
+            private int _visitedCounter;
+            private bool _needsRestart = true;
+            private bool _isDone;
             
             public long CandidatesProcessed { get => _vectorReadCounter; }
             public int NumberOfCandidates { get; init; }
@@ -146,53 +154,57 @@ public unsafe partial class Hnsw
                 }
             }
 
-            public IEnumerable<bool> Search()
+            public bool MoveNextBatch()
             {
-                Start:
+                if (_isDone)
+                    return false;
+
                 var candidatesQ = _searchState._candidatesQ;
                 var nearestEdgesQ = _searchState._nearestEdgesQ;
-                var allocator = _searchState.Llt.Allocator;
 
-                Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-                InitState(out float lowerBound, out int visitedCounter);
+                if (_needsRestart)
+                {
+                    Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
+                    Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
+                    InitState(out _lowerBound, out _visitedCounter);
+                    _needsRestart = false;
+                }
 
                 while (candidatesQ.TryDequeue(out var cur, out var curDistance))
                 {
-                    if (-curDistance < lowerBound &&
+                    if (-curDistance < _lowerBound &&
                         nearestEdgesQ.Count == _internalNumberOfCandidates)
                     {
                         ProcessResults();
-                        // Drain candidatesQ before yielding. Non-filtered queries consume only
-                        // the first batch and never resume the iterator, so without this clear
-                        // the shared SearchState carries far-from-the-old-vector candidates into
-                        // the next query, polluting its priority queue and forcing the search to
-                        // expand 25-30% more nodes than a fresh state would.
+                        // Drain candidatesQ before yielding. Non-filtered queries consume only the
+                        // first batch and never resume; without this clear, a shared SearchState
+                        // (e.g. MultiVectorSearch sub-queries) carries far-from-the-old-vector
+                        // candidates into the next query and pollutes its priority queue. It also
+                        // satisfies InitState's empty-queue precondition on the restart path.
                         candidatesQ.Clear();
-                        yield return true;
-                        // If we need to fetch more, we'll start the query again with a higher NumberOfCandidates.
-                        // The SearchState keeps its state, so traversal through already visited nodes is I/O-free
-                        // because we keep distances in memory from the previous run.
-                        // This method can be greedy enough to traverse the entire graph, so it's the caller's
-                        // responsibility to enforce a stop condition.
-                        goto Start;
+                        // Yield the current batch. Subsequent MoveNextBatch calls re-enter via InitState;
+                        // revisits are I/O-free because per-node distances remain cached in SearchState.
+                        // The caller is responsible for enforcing a stop condition: otherwise the search
+                        // may traverse the entire graph.
+                        _needsRestart = true;
+                        return true;
                     }
 
-                    _searchState.GetNodeByIndex(cur).Visited = visitedCounter;
+                    _searchState.GetNodeByIndex(cur).Visited = _visitedCounter;
                     _searchState.ResolveEdgeIndexes(cur, _level, ref _nodeIds, ref _indexes);
 
                     for (int i = 0; i < _indexes.Count; i++)
                     {
                         var nextIndex = _indexes[i];
                         ref var next = ref _searchState.GetNodeByIndex(nextIndex);
-                        if (next.Visited == visitedCounter)
+                        if (next.Visited == _visitedCounter)
                             continue; // already checked
-                        next.Visited = visitedCounter;
+                        next.Visited = _visitedCounter;
 
                         // Prefetch the next unvisited neighbor's vector data to overlap
                         // cache-miss latency with the current distance computation.
                         // SimilarityCalc is ~65% of query time, ~80% of which is data loading.
-                        PrefetchNextNeighborVector(i + 1, visitedCounter);
+                        PrefetchNextNeighborVector(i + 1, _visitedCounter);
 
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
                                         || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
@@ -207,7 +219,7 @@ public unsafe partial class Hnsw
                                 nearestEdgesQ.Enqueue(nextIndex, nextDist);
                             }
                         }
-                        else if (lowerBound < nextDist)
+                        else if (_lowerBound < nextDist)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
 
@@ -222,14 +234,15 @@ public unsafe partial class Hnsw
                         }
 
                         Debug.Assert(candidatesQ.Count > 0);
-                        nearestEdgesQ.TryPeek(out _, out lowerBound);
+                        nearestEdgesQ.TryPeek(out _, out _lowerBound);
                     }
                 }
 
                 // Nothing more to visit. Move the current results into the candidates list and finish.
                 ProcessResults();
                 candidatesQ.Clear();
-                yield return _candidates.Count > 0;
+                _isDone = true;
+                return _candidates.Count > 0;
             }
 
             public bool TryGetCurrentCandidates(out ContextBoundNativeList<int> candidates)
@@ -242,6 +255,9 @@ public unsafe partial class Hnsw
             {
                 Reset();
                 _internalNumberOfCandidates += GetPrefetchExtendSize(_internalNumberOfCandidates);
+                // The next MoveNextBatch call will InitState from the starting points again.
+                _needsRestart = true;
+                _isDone = false;
             }
 
             // Reset the NearestSearcher state; however, it does not clear the data already stored inside SearchState.

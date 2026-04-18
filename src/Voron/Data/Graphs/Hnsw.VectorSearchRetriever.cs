@@ -1,10 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Server;
 using Sparrow.Server.Collections;
 using Voron.Data.Containers;
 using Voron.Data.PostingLists;
@@ -30,7 +28,6 @@ public partial class Hnsw
         private bool _foundCandidateInCurrentSmallPostingList;
         private readonly IHnswSearcher _vectorsSearcher;
         private readonly Memory<byte> _vector;
-        private IEnumerator<bool> _resultsEnumerator;
         // When the searchState-based entry points allocate a normalized copy of the query
         // vector they hand the scope here so Dispose releases it alongside the retriever's
         // other per-query state.
@@ -59,8 +56,7 @@ public partial class Hnsw
             _postingListResults = new(_searchState.Llt.Allocator);
             _pforDecoder = new(searchState.Llt.Allocator);
             _maximumDistance = searchState.MinimumSimilarityToDistance(minimumSimilarity);
-            _resultsEnumerator = _vectorsSearcher.Search().GetEnumerator();
-            _resultsEnumerator.MoveNext(); //read first batch
+            _vectorsSearcher.MoveNextBatch(); // prime the first batch
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -184,13 +180,10 @@ public partial class Hnsw
                     {
                         break;
                     }
-                    
-                    if (_resultsEnumerator.MoveNext() == false)
-                    {
-                        _resultsEnumerator = _vectorsSearcher.Search().GetEnumerator();    
-                        _resultsEnumerator.MoveNext();
-                    }
-                    
+
+                    // Pull the next batch into _vectorsSearcher. An empty batch is valid — TryGetCurrentCandidates below handles it.
+                    _vectorsSearcher.MoveNextBatch();
+
                     // If we fetch more than once, we've no guarantee that the whole set of results are sorted by distances.
                     // We could explore not previously seen nodes that are closer to the query vector than the ones we've already seen.
                     IsSortedByDistance = false;
@@ -317,7 +310,6 @@ public partial class Hnsw
         {
             _postingListResults.Dispose();
             _pforDecoder.Dispose();
-            _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
             _queryVectorScope?.Dispose();
             if (_ownsSearchState)
