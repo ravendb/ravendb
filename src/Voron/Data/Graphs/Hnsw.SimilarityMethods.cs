@@ -49,7 +49,7 @@ public partial class Hnsw
         // Both operands are unit vectors here, so cosine distance collapses to 1 - a·b.
         var aUnit = ReadTensorVector<float>(a);
         var bUnit = ReadTensorVector<float>(b);
-        return 1f - TensorPrimitives.Dot(aUnit, bUnit);
+        return 1f - Sparrow.Server.Tensors.Functions.DotProduct(aUnit, bUnit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
