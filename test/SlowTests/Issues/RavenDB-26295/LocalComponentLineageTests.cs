@@ -17,7 +17,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 {
@@ -39,13 +39,13 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
     [RavenTheory(RavenTestCategory.Replication)]
     [RavenData(Data = [false])]
     [RavenData(Data = [true])]
-    public async Task TimeSeriesAppend_ShouldNotReuseSiblingLineage(Options options, bool onHubInternal)
+    public async Task TimeSeriesAppend_ShouldNotReuseSiblingLineage(bool onHubInternal)
     {
         const string timeSeriesName = "HeartRate";
         var baseline = new DateTime(2024, 03, 01, 00, 00, 00, DateTimeKind.Utc);
         var docId = GetDocId(prefix: "ts-append");
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
@@ -54,7 +54,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         await StoreUserAsync(lab, SiblingNode, docId, userName: "ts-owner");
         await AddTimeSeriesAsync(lab, docId, timeSeriesName, baseline, SiblingNode);
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         var localNode = onHubInternal ? HubInternal : HubEntry;
         var observerBlocker = onHubInternal ? hubInternalToObserver : hubEntryToObserver;
@@ -71,7 +71,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
                 userMessage: $"Expected '{timeSeriesName}' on '{docId}' at hub-internal {HubInternal}.");
         }
 
-        await lab.ApplyHeartbeatChangeVectorAsync(baselineSource, Observer);
+        await lab.ApplyHeartbeatChangeVectorAsync(source: baselineSource, target: Observer);
         await WaitForObserverSiblingBaseline(
             lab,
             sourceNode: baselineSource,
@@ -98,11 +98,6 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         Assert.True(lab.WaitForTimeSeries(node: Observer, docId, timeSeriesName, timeout: 60_000),
             userMessage: $"Expected local TS append '{timeSeriesName}' on '{docId}' from {localNode} to reach observer {Observer}.");
-        var observerSegment = lab.GetTimeSeriesSegmentSnapshots(Observer, docId)
-            .Where(x => string.Equals(x.Name, timeSeriesName, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(x => x.Etag)
-            .FirstOrDefault();
-        var observerSnapshot = lab.GetDocumentSnapshot(node: Observer, docId);
 
         WaitForFlaggedDocument(lab, node: Observer, docId, "observer");
         AssertNodeEtagUnchanged(
@@ -114,14 +109,14 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
     }
 
     [RavenTheory(RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    public async Task CounterIncrement_ShouldUseLocalOnlyCounterGroupCv(Options options, bool onHubInternal)
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
+    public async Task CounterIncrement_ShouldUseLocalOnlyCounterGroupCv(bool onHubInternal)
     {
         const string counterName = "views";
         var docId = GetDocId(prefix: "counter-increment");
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(source: SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
@@ -130,7 +125,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         await StoreUserAsync(lab, SiblingNode, docId, userName: "counter-owner");
         await AddCounterAsync(lab, docId, counterName, SiblingNode);
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         var localNode = onHubInternal ? HubInternal : HubEntry;
         var observerBlocker = onHubInternal ? hubInternalToObserver : hubEntryToObserver;
@@ -147,7 +142,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
                 userMessage: $"Expected counter '{counterName}' on '{docId}' at hub-internal {HubInternal}.");
         }
 
-        await lab.ApplyHeartbeatChangeVectorAsync(baselineSource, Observer);
+        await lab.ApplyHeartbeatChangeVectorAsync(source: baselineSource, target: Observer);
         await WaitForObserverSiblingBaseline(
             lab,
             sourceNode: baselineSource,
@@ -187,14 +182,14 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
     }
 
     [RavenTheory(RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    public async Task NewAttachment_ShouldUseLocalOnlyAttachmentCv(Options options, bool onHubInternal)
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
+    public async Task NewAttachment_ShouldUseLocalOnlyAttachmentCv(bool onHubInternal)
     {
         const string attachmentName = "local.bin";
         var docId = GetDocId(prefix: "attachment-put");
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(source: SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
@@ -202,7 +197,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         using var hubInternalToObserver = lab.BlockLink(source: HubInternal, target: Observer);
 
         await StoreUserAsync(lab, SiblingNode, docId, userName: "attachment-owner");
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         var localNode = onHubInternal ? HubInternal : HubEntry;
         var observerBlocker = onHubInternal ? hubInternalToObserver : hubEntryToObserver;
@@ -212,15 +207,13 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         if (onHubInternal)
             WaitForFlaggedDocument(lab, node: HubInternal, docId, subject: "hub-internal");
 
-        await lab.ApplyHeartbeatChangeVectorAsync(baselineSource, Observer);
+        await lab.ApplyHeartbeatChangeVectorAsync(source: baselineSource, target: Observer);
         await WaitForObserverSiblingBaseline(
             lab,
             sourceNode: baselineSource,
             observerNode: Observer,
             siblingNode: SiblingNode,
             scenario: $"attachment put on {localNode}");
-
-        var observerDbCvBefore = lab.GetDatabaseChangeVector(node: Observer);
 
         await lab.StoreFor(localNode).Operations.SendAsync(
             new PutAttachmentOperation(
@@ -238,13 +231,11 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         await ReleaseToObserverAsync(lab, localNode, observerBlocker, markerId: $"markers/attachment-put/{Guid.NewGuid():N}");
 
-        Assert.True(
-            lab.WaitForAttachment(node: Observer, docId, attachmentName, localAttachment.Hash, timeout: 60_000),
+        Assert.True(lab.WaitForAttachment(node: Observer, docId, attachmentName, localAttachment.Hash, timeout: 60_000),
             userMessage: $"Expected local attachment '{attachmentName}' on '{docId}' from {localNode} to reach observer {Observer}.");
 
         WaitForFlaggedDocument(lab, node: Observer, docId, subject: "observer");
         var observerAttachment = lab.GetAttachmentSnapshot(node: Observer, docId, attachmentName);
-        var observerSnapshot = lab.GetDocumentSnapshot(node: Observer, docId);
         Assert.True(observerAttachment.Exists, userMessage: $"Expected observer {Observer} to expose attachment '{attachmentName}' on '{docId}'.");
         Assert.Equal(localAttachment.ChangeVector, observerAttachment.ChangeVector);
         AssertNotContainsNodeEntry(
@@ -254,22 +245,22 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
     }
 
     [RavenTheory(RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    public async Task RefreshMetadataOnFlaggedDocument_ShouldRemainPendingInThisHarness(Options options, bool onHubInternal)
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
+    public async Task RefreshMetadataOnFlaggedDocument_ShouldRemainPendingInThisHarness(bool onHubInternal)
     {
         const MetadataUpdateMode mode = MetadataUpdateMode.Refresh;
         var docId = GetDocId(prefix: "metadata-refresh");
         var dueTime = DateTime.UtcNow.AddMinutes(-5);
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(source: SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
 
         await StoreUserAsync(lab, SiblingNode, docId, userName: "refresh-owner");
         await SetDueMetadataAsync(lab, SiblingNode, docId, mode, dueTime);
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         var localNode = onHubInternal ? HubInternal : HubEntry;
 
@@ -287,8 +278,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         AssertFlagged(localAfter.Flags, subject: $"refresh pending document '{docId}' on {localNode}");
         if (isResponsibleNode)
         {
-            Assert.True(
-                ContainsNodeEntry(localAfter.ChangeVector, SiblingNode),
+            Assert.True(ContainsNodeEntry(localAfter.ChangeVector, SiblingNode),
                 userMessage: $"Expected refreshed document '{docId}' on {localNode} to carry sibling lineage in its CV, but CV was '{localAfter.ChangeVector ?? "<null>"}'.");
             Assert.NotEqual(localBefore.ChangeVector, localAfter.ChangeVector);
             AssertNodeEtagUnchanged(
@@ -301,23 +291,22 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
             return;
         }
 
-        Assert.True(
-            ContainsNodeEntry(localAfter.ChangeVector, SiblingNode),
+        Assert.True(ContainsNodeEntry(localAfter.ChangeVector, SiblingNode),
             userMessage: $"Expected refresh pending document '{docId}' on {localNode} to carry sibling lineage in its CV, but CV was '{localAfter.ChangeVector ?? "<null>"}'.");
         Assert.Equal(localBefore.ChangeVector, localAfter.ChangeVector);
         AssertRefreshMetadataStillPending(lab, localNode, docId);
     }
 
     [RavenTheory(RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    public async Task ArchivalMetadataUpdate_ShouldKeepFilteredGuardOnFlaggedDocument(Options options, bool onHubInternal)
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
+    public async Task ArchivalMetadataUpdate_ShouldKeepFilteredGuardOnFlaggedDocument(bool onHubInternal)
     {
         const MetadataUpdateMode mode = MetadataUpdateMode.Archival;
         var docId = GetDocId(prefix: $"metadata-{mode.ToString().ToLowerInvariant()}");
         var dueTime = DateTime.UtcNow.AddMinutes(-5);
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(source: SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
@@ -326,7 +315,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         await StoreUserAsync(lab, SiblingNode, docId, userName: $"{mode}-owner");
         await SetDueMetadataAsync(lab, SiblingNode, docId, mode, dueTime);
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         var localNode = onHubInternal ? HubInternal : HubEntry;
         var observerBlocker = onHubInternal ? hubInternalToObserver : hubEntryToObserver;
@@ -338,7 +327,6 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         WaitForMetadataKey(lab, localNode, docId, Raven.Client.Constants.Documents.Metadata.ArchiveAt);
         var localBefore = lab.GetDocumentSnapshot(localNode, docId);
         var localDbCvBefore = lab.GetDatabaseChangeVector(localNode);
-        var observerDbCvBefore = lab.GetDatabaseChangeVector(node: Observer);
 
         var isResponsibleNode = await ProcessMetadataUpdateAsync(lab, localNode, mode, dueTime.AddMinutes(1));
 
@@ -350,8 +338,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         {
             Assert.True(localSnapshot.Flags.Contain(DocumentFlags.Archived),
                 userMessage: $"Expected archival-updated document '{docId}' on {localNode} to keep {nameof(DocumentFlags.Archived)}, but flags were '{localSnapshot.Flags}'.");
-            Assert.True(
-                ContainsNodeEntry(localSnapshot.ChangeVector, SiblingNode),
+            Assert.True(ContainsNodeEntry(localSnapshot.ChangeVector, SiblingNode),
                 userMessage: $"Expected archival-updated document '{docId}' on {localNode} to retain sibling lineage in its CV, but CV was '{localSnapshot.ChangeVector ?? "<null>"}'.");
             Assert.NotEqual(localBefore.ChangeVector, localSnapshot.ChangeVector);
             AssertNodeEtagUnchanged(
@@ -368,8 +355,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
             AssertFlagged(observerSnapshot.Flags, subject: $"archival-updated document '{docId}' on observer {Observer}");
             Assert.True(observerSnapshot.Flags.Contain(DocumentFlags.Archived),
                 userMessage: $"Expected observer {Observer} to receive archived '{docId}' from {localNode}.");
-            Assert.True(
-                ContainsNodeEntry(observerSnapshot.ChangeVector, SiblingNode),
+            Assert.True(ContainsNodeEntry(observerSnapshot.ChangeVector, SiblingNode),
                 userMessage: $"Expected observer {Observer} archived document '{docId}' from {localNode} to retain sibling lineage in its CV, but CV was '{observerSnapshot.ChangeVector ?? "<null>"}'.");
             return;
         }
@@ -386,13 +372,12 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         AssertArchivalMetadataStillPending(lab, localNode, docId);
     }
 
-    [RavenTheory(RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task ConflictResolution_ShouldPreserveFlaggedWinnerAndGuardDbCv(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task ConflictResolution_ShouldPreserveFlaggedWinnerAndGuardDbCv()
     {
         var docId = GetDocId(prefix: "conflict-resolution");
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var siblingToHubEntry = lab.BlockLink(source: SiblingNode, target: HubEntry);
         using var siblingToHubInternal = lab.BlockLink(source: SiblingNode, target: HubInternal);
         using var siblingToObserver = lab.BlockLink(source: SiblingNode, target: Observer);
@@ -404,27 +389,24 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
 
         await StoreUserAsync(lab, node: Observer, docId, userName: "conflict-local");
         await StoreUserAsync(lab, SiblingNode, docId, userName: "flagged-winner");
-        await lab.InjectExistingTicketAsync(docId, SiblingNode, targetNode: HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: SiblingNode, targetNode: HubEntry);
 
         WaitForFlaggedDocument(lab, node: HubEntry, docId, subject: "hub-entry");
-        var hubDbCvBefore = lab.GetDatabaseChangeVector(node: HubEntry);
-        await lab.ApplyHeartbeatChangeVectorAsync(SiblingNode, HubInternal);
+        await lab.ApplyHeartbeatChangeVectorAsync(source: SiblingNode, target: HubInternal);
         await WaitForObserverSiblingBaseline(
             lab,
             sourceNode: SiblingNode,
             observerNode: HubInternal,
             siblingNode: SiblingNode,
             scenario: "conflict resolution observer baseline");
-        var observerDbCvBefore = lab.GetDatabaseChangeVector(node: HubInternal);
 
         await SetReplicationConflictResolutionAsync((DocumentStore)lab.StoreFor(node: HubEntry), StraightforwardConflictResolution.ResolveToLatest);
 
-        await ReleaseLinkAndWaitAsync(
-            lab,
-            source: Observer,
-            target: HubEntry,
-            blocker: conflictToHubEntry,
-            markerId: $"markers/conflict-resolution/{Guid.NewGuid():N}");
+        var conflictResolutionMarkerId = $"markers/conflict-resolution/{Guid.NewGuid():N}";
+        await StoreUserAsync(lab, node: Observer, conflictResolutionMarkerId, userName: "sync");
+        conflictToHubEntry.Release();
+        Assert.True(lab.WaitForDoc(HubEntry, conflictResolutionMarkerId, timeout: 60_000),
+            userMessage: $"Expected sync marker '{conflictResolutionMarkerId}' from {Observer} to reach {HubEntry}.");
 
         Assert.Equal(
             0,
@@ -442,17 +424,14 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
             userMessage: $"Expected resolved winner '{docId}' on hub-entry {HubEntry} to keep {nameof(DocumentFlags.Resolved)}, but flags were '{resolvedSnapshot.Flags}'.");
         Assert.True(ContainsNodeEntry(resolvedSnapshot.ChangeVector, SiblingNode),
             userMessage: $"Expected resolved winner '{docId}' on hub-entry {HubEntry} to retain sibling lineage in its CV, but CV was '{resolvedSnapshot.ChangeVector ?? "<null>"}'.");
-        var hubDbCvAfter = lab.GetDatabaseChangeVector(node: HubEntry);
 
-        await ReleaseLinkAndWaitAsync(
-            lab,
-            source: HubEntry,
-            target: HubInternal,
-            blocker: hubEntryToHubInternal,
-            markerId: $"markers/conflict-resolution-propagation/{Guid.NewGuid():N}");
+        var conflictPropagationMarkerId = $"markers/conflict-resolution-propagation/{Guid.NewGuid():N}";
+        await StoreUserAsync(lab, node: HubEntry, conflictPropagationMarkerId, userName: "sync");
+        hubEntryToHubInternal.Release();
+        Assert.True(lab.WaitForDoc(HubInternal, conflictPropagationMarkerId, timeout: 60_000),
+            userMessage: $"Expected sync marker '{conflictPropagationMarkerId}' from {HubEntry} to reach {HubInternal}.");
 
-        Assert.True(
-            lab.WaitForDocumentName(HubInternal, docId, expectedName: "flagged-winner", timeout: 60_000),
+        Assert.True(lab.WaitForDocumentName(HubInternal, docId, expectedName: "flagged-winner", timeout: 60_000),
             userMessage: $"Expected resolved winner '{docId}' to reach observer node {HubInternal}.");
 
         var observerSnapshot = lab.GetDocumentSnapshot(HubInternal, docId);
@@ -546,7 +525,7 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         Assert.NotNull(user);
 
         var metadata = session.Advanced.GetMetadataFor(user);
-        Assert.True(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.Refresh), $"Expected '@refresh' to remain pending on '{docId}' at {node} in this harness.");
+        Assert.True(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.Refresh), userMessage: $"Expected '@refresh' to remain pending on '{docId}' at {node} in this harness.");
     }
 
     private static void AssertRefreshMetadataCleared(NonDocumentLab lab, LineageNode node, string docId)
@@ -566,36 +545,33 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         Assert.NotNull(user);
 
         var metadata = session.Advanced.GetMetadataFor(user);
-        Assert.True(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.ArchiveAt), $"Expected '@archive-at' to remain pending on '{docId}' at {node} on non-responsible node.");
+        Assert.True(metadata.ContainsKey(Raven.Client.Constants.Documents.Metadata.ArchiveAt), userMessage: $"Expected '@archive-at' to remain pending on '{docId}' at {node} on non-responsible node.");
     }
 
     private static void WaitForFlaggedDocument(NonDocumentLab lab, LineageNode node, string docId, string subject)
     {
-        Assert.True(lab.WaitForDoc(node, docId, timeout: 60_000), $"Expected '{docId}' on {subject} node {node}.");
+        Assert.True(lab.WaitForDoc(node, docId, timeout: 60_000), userMessage: $"Expected '{docId}' on {subject} node {node}.");
         var snapshot = lab.GetDocumentSnapshot(node, docId);
-        Assert.True(snapshot.Exists, $"Expected '{docId}' to exist on {subject} node {node}.");
+        Assert.True(snapshot.Exists, userMessage: $"Expected '{docId}' to exist on {subject} node {node}.");
         AssertFlagged(snapshot.Flags, $"{subject} document '{docId}' on {node}");
     }
 
     private void WaitForMetadataKey(NonDocumentLab lab, LineageNode node, string docId, string metadataKey)
     {
-        Assert.True(
-            WaitForValue(
+        Assert.True(WaitForValue(
                 () => HasMetadataKey(lab, node, docId, metadataKey),
                 expectedVal: true,
                 timeout: 60_000),
-            $"Expected '{docId}' on {node} to contain metadata key '{metadataKey}' before processing the local metadata path.");
+            userMessage: $"Expected '{docId}' on {node} to contain metadata key '{metadataKey}' before processing the local metadata path.");
     }
 
     private async Task WaitForObserverSiblingBaseline(NonDocumentLab lab, LineageNode sourceNode, LineageNode observerNode, LineageNode siblingNode, string scenario)
     {
         var sourceDbCv = lab.GetDatabaseChangeVector(sourceNode);
         var expectedSiblingEtag = GetNodeEtag(sourceDbCv, siblingNode);
-        var observerDbCvBefore = lab.GetDatabaseChangeVector(observerNode);
 
-        Assert.True(
-            expectedSiblingEtag.HasValue,
-            $"Expected source {sourceNode} DB CV to already include sibling node '{siblingNode}' before {scenario}, but source CV was '{sourceDbCv ?? "<null>"}'.");
+        Assert.True(expectedSiblingEtag.HasValue,
+            userMessage: $"Expected source {sourceNode} DB CV to already include sibling node '{siblingNode}' before {scenario}, but source CV was '{sourceDbCv ?? "<null>"}'.");
 
 
         var baselineReached = WaitForValue(
@@ -612,52 +588,49 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         if (baselineReached == false && sourceNode != siblingNode)
         {
 
-            await lab.ApplyHeartbeatChangeVectorAsync(siblingNode, observerNode);
-            baselineReached = WaitForValue(
-                () =>
-                {
-                    var current = GetNodeEtag(lab.GetDatabaseChangeVector(observerNode), siblingNode);
-                    return current.HasValue && current.Value >= expectedSiblingEtag.Value
-                        ? expectedSiblingEtag.Value
-                        : -1;
-                },
-                expectedVal: expectedSiblingEtag.Value,
-                timeout: 60_000) == expectedSiblingEtag.Value;
+            await lab.ApplyHeartbeatChangeVectorAsync(source: siblingNode, target: observerNode);
+            _ = WaitForValue(
+                    () =>
+                    {
+                        var current = GetNodeEtag(lab.GetDatabaseChangeVector(observerNode), siblingNode);
+                        return current.HasValue && current.Value >= expectedSiblingEtag.Value
+                            ? expectedSiblingEtag.Value
+                            : -1;
+                    },
+                    expectedVal: expectedSiblingEtag.Value,
+                    timeout: 60_000) == expectedSiblingEtag.Value;
         }
 
         var observerDbCvAfter = lab.GetDatabaseChangeVector(observerNode);
         var actual = GetNodeEtag(observerDbCvAfter, siblingNode);
 
 
-        Assert.True(
-            actual.HasValue && actual.Value >= expectedSiblingEtag.Value,
-            $"Expected observer {observerNode} DB CV to reach at least sibling node '{siblingNode}' etag {expectedSiblingEtag.Value} before {scenario}, but actual was {actual?.ToString() ?? "<missing>"}. Source CV: '{sourceDbCv ?? "<null>"}'. Observer CV: '{observerDbCvAfter ?? "<null>"}'.");
+        Assert.True(actual.HasValue && actual.Value >= expectedSiblingEtag.Value,
+            userMessage: $"Expected observer {observerNode} DB CV to reach at least sibling node '{siblingNode}' etag {expectedSiblingEtag.Value} before {scenario}, but actual was {actual?.ToString() ?? "<missing>"}. Source CV: '{sourceDbCv ?? "<null>"}'. Observer CV: '{observerDbCvAfter ?? "<null>"}'.");
     }
 
     private static async Task ReleaseToObserverAsync(NonDocumentLab lab, LineageNode source, InternalLinkBlocker blocker, string markerId)
     {
-        await ReleaseLinkAndWaitAsync(lab, source, Observer, blocker, markerId);
+        await ReleaseLinkAndWaitAsync(lab, source: source, target: Observer, blocker: blocker, markerId: markerId);
     }
 
     private static async Task ReleaseLinkAndWaitAsync(NonDocumentLab lab, LineageNode source, LineageNode target, InternalLinkBlocker blocker, string markerId)
     {
         await StoreUserAsync(lab, source, markerId, "sync");
         blocker.Release();
-        Assert.True(lab.WaitForDoc(target, markerId, timeout: 60_000), $"Expected sync marker '{markerId}' from {source} to reach {target}.");
+        Assert.True(lab.WaitForDoc(target, markerId, timeout: 60_000), userMessage: $"Expected sync marker '{markerId}' from {source} to reach {target}.");
     }
 
     private static void AssertFlagged(DocumentFlags flags, string subject)
     {
-        Assert.True(
-            (flags & DocumentFlags.FromFilteredPullReplicationHub) == DocumentFlags.FromFilteredPullReplicationHub,
-            $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
+        Assert.True((flags & DocumentFlags.FromFilteredPullReplicationHub) == DocumentFlags.FromFilteredPullReplicationHub,
+            userMessage: $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
     }
 
     private static void AssertNotContainsNodeEntry(string changeVector, LineageNode node, string subject)
     {
-        Assert.True(
-            ContainsNodeEntry(changeVector, node) == false,
-            $"Expected {subject} NOT to contain sibling node '{node}', but CV was '{changeVector ?? "<null>"}'.");
+        Assert.True(ContainsNodeEntry(changeVector, node) == false,
+            userMessage: $"Expected {subject} NOT to contain sibling node '{node}', but CV was '{changeVector ?? "<null>"}'.");
     }
 
     private static void AssertNodeEtagUnchanged(string expectedChangeVector, string actualChangeVector, LineageNode node, string actualSubject, string expectedSubject)
@@ -665,9 +638,8 @@ public class LocalComponentLineageTests : NonDocumentDbCvProtectionTestBase
         var expectedEtag = GetNodeEtag(expectedChangeVector, node);
         var actualEtag = GetNodeEtag(actualChangeVector, node);
 
-        Assert.True(
-            expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
-            $"Expected {actualSubject} to keep the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
+        Assert.True(expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
+            userMessage: $"Expected {actualSubject} to keep the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
     }
 
     private static bool ContainsNodeEntry(string changeVector, LineageNode node)

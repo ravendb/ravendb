@@ -1,10 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace SlowTests.Issues.RavenDB_26295
 {
     public class FilteredPullReplicationClusterConvergenceTests : FilteredPullReplicationClusterConvergenceTestBase
     {
@@ -24,12 +25,23 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Replication)]
         [RavenMemberData(nameof(ScenarioMatrix), DatabaseMode = RavenDatabaseMode.Single)]
-        public Task Should_Converge_On_All_Nodes(Options options, ScenarioId scenarioId, BridgeTicketMutationMode mutationMode) =>
-            ExecuteScenarioAsync(options, scenarioId, mutationMode);
-
-        [RavenTheory(RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, Data = [ScenarioId.AllThreeAllDifferentCWins, BridgeTicketMutationMode.None], Skip = "Filtered pull replication is not supported on sharded databases.")]
-        public Task Should_Not_Run_On_Sharded_Databases(Options options, ScenarioId scenarioId, BridgeTicketMutationMode mutationMode) =>
-            ExecuteScenarioAsync(options, scenarioId, mutationMode);
+        public async Task Should_Converge_On_All_Nodes(Options options, ScenarioId scenarioId, BridgeTicketMutationMode mutationMode)
+        {
+            await using var lab = await ReplicationLab.CreateAsync(owner: this, options, ScenarioCatalog.Definitions.Value[scenarioId], mutationMode);
+
+            ScenarioExecutionReport report = null;
+            try
+            {
+                report = await lab.RunUntilStateVerifiedAsync();
+                lab.AssertVerifiedState(report);
+                await lab.VerifyReplicationAliveAfterVerificationAsync();
+            }
+            catch (Exception e)
+            {
+                report ??= await lab.CaptureReportAsync();
+                throw new Xunit.Sdk.XunitException(ScenarioFailureReportBuilder.Build(report, e));
+            }
+        }
     }
 }

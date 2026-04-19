@@ -15,7 +15,7 @@ using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
 {
@@ -29,19 +29,18 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, true])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
+    [RavenData(Data = [false, true])]
+    [RavenData(Data = [false, false])]
+    [RavenData(Data = [true, true])]
+    [RavenData(Data = [true, false])]
     public async Task DirectImport_ShouldNormalizeFilteredPullFlag_ForDocumentsAndTombstones(
-        Options options,
         bool importTombstone,
         bool includeFlag)
     {
-        using var target = GetDocumentStore(options);
+        using var target = GetDocumentStore(new Options());
         var operateOnTypes = importTombstone ? DatabaseItemType.Tombstones : DatabaseItemType.Documents;
         await using var dump = importTombstone
-            ? await CreateDirectTombstoneExportDumpAsync(options, includeFlag)
+            ? await CreateDirectTombstoneExportDumpAsync(includeFlag)
             : CreateDocumentDump(includeFlag);
 
         await ImportDumpAsync(target, dump, operateOnTypes);
@@ -65,27 +64,25 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
                 : "unflagged document imported from smuggler dump");
     }
 
-    [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
+    [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
     public async Task ExportImport_FromActualFilteredPullSource_ShouldNormalizeFilteredPullFlag_ForDocumentsAndTombstones(
-        Options options,
         bool exportTombstone)
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
 
-        using (var blockCToA = lab.BlockLink(LineageNode.C, LineageNode.A))
-        using (var blockCToB = lab.BlockLink(LineageNode.C, LineageNode.B))
+        using (lab.BlockLink(source: LineageNode.C, target: LineageNode.A))
+        using (lab.BlockLink(source: LineageNode.C, target: LineageNode.B))
         {
-            await lab.WriteAndInjectTicketAsync(SubjectDocId, LineageNode.C, LineageNode.A);
+            await lab.WriteAndInjectTicketAsync(SubjectDocId, sourceNode: LineageNode.C, targetNode: LineageNode.A);
         }
 
-        Assert.True(
-            lab.WaitForDoc(LineageNode.A, SubjectDocId, timeout: 60_000),
-            $"Expected actual filtered-pull document '{SubjectDocId}' to arrive on source hub A.");
+        Assert.True(lab.WaitForDoc(LineageNode.A, SubjectDocId, timeout: 60_000),
+            userMessage: $"Expected actual filtered-pull document '{SubjectDocId}' to arrive on source hub A.");
 
         var sourceDoc = lab.GetDocumentSnapshot(LineageNode.A, SubjectDocId);
-        Assert.True(sourceDoc.Exists, $"Expected source document '{SubjectDocId}' on hub A before export.");
+        Assert.True(sourceDoc.Exists, userMessage: $"Expected source document '{SubjectDocId}' on hub A before export.");
         AssertFlagged(sourceDoc.Flags, "source document on hub A after filtered pull injection");
 
         if (exportTombstone)
@@ -96,15 +93,14 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
                 await session.SaveChangesAsync();
             }
 
-            Assert.True(
-                WaitForValue(
+            Assert.True(WaitForValue(
                     () => lab.GetDocumentTombstoneSnapshot(LineageNode.A, SubjectDocId).Exists,
                     expectedVal: true,
                     timeout: 60_000),
-                $"Expected filtered-lineage tombstone for '{SubjectDocId}' on source hub A.");
+                userMessage: $"Expected filtered-lineage tombstone for '{SubjectDocId}' on source hub A.");
 
             var sourceTombstone = lab.GetDocumentTombstoneSnapshot(LineageNode.A, SubjectDocId);
-            Assert.True(sourceTombstone.Exists, $"Expected source tombstone '{SubjectDocId}' on hub A before export.");
+            Assert.True(sourceTombstone.Exists, userMessage: $"Expected source tombstone '{SubjectDocId}' on hub A before export.");
             AssertFlagged(sourceTombstone.Flags, "source tombstone on hub A before smuggler export from a live filtered-pull topology");
         }
 
@@ -124,18 +120,17 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
         AssertNotFlagged(documentFlags, "document imported from actual filtered-pull source export");
     }
 
-    [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
+    [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+    [RavenData(Data = [false])]
+    [RavenData(Data = [true])]
     public async Task ImportedDocument_LocalUpdate_ShouldNotPreserveFilteredPullFlag(
-        Options options,
         bool targetHasActiveFilteredPull)
     {
         using var directDump = CreateDocumentDump(includeFlag: true);
 
         if (targetHasActiveFilteredPull == false)
         {
-            using var target = GetDocumentStore(options);
+            using var target = GetDocumentStore(new Options());
 
             await ImportDumpAsync(target, directDump, DatabaseItemType.Documents);
 
@@ -150,7 +145,7 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
             return;
         }
 
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         _ = await lab.CreateExternalSinkStoreAsync(LineageNode.B, PullReplicationMode.HubToSink);
 
         var targetStore = lab.StoreFor(LineageNode.B);
@@ -161,7 +156,7 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
 
         var dbCvAfterActive = await GetDatabaseChangeVectorAsync(targetStore);
         var documentAfterActive = lab.GetDocumentSnapshot(LineageNode.B, SubjectDocId);
-        Assert.True(documentAfterActive.Exists, $"Expected imported document '{SubjectDocId}' on active filtered target B after local update.");
+        Assert.True(documentAfterActive.Exists, userMessage: $"Expected imported document '{SubjectDocId}' on active filtered target B after local update.");
 
         AssertNotFlagged(documentAfterActive.Flags, "document updated locally after import into a database with active filtered pull configuration");
         Assert.NotEqual(dbCvBeforeActive, dbCvAfterActive);
@@ -215,9 +210,9 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
         return new MemoryStream(Encoding.UTF8.GetBytes(root.ToJsonString()));
     }
 
-    private async Task<MemoryStream> CreateDirectTombstoneExportDumpAsync(Options options, bool includeFlag)
+    private async Task<MemoryStream> CreateDirectTombstoneExportDumpAsync(bool includeFlag)
     {
-        using var source = GetDocumentStore(options);
+        using var source = GetDocumentStore(new Options());
         var flags = includeFlag ? DocumentFlags.FromFilteredPullReplicationHub : DocumentFlags.None;
         await CreateDocumentTombstoneAsync(source, flags);
         return await ExportDumpAsync(source, DatabaseItemType.Tombstones);
@@ -337,15 +332,13 @@ public class SmugglerFlagStripTests : TombstoneLineagePreservationTestBase
 
     private static void AssertFlagged(DocumentFlags flags, string subject)
     {
-        Assert.True(
-            flags.Contain(DocumentFlags.FromFilteredPullReplicationHub),
-            $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
+        Assert.True(flags.Contain(DocumentFlags.FromFilteredPullReplicationHub),
+            userMessage: $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
     }
 
     private static void AssertNotFlagged(DocumentFlags flags, string subject)
     {
-        Assert.True(
-            flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == false,
-            $"Expected {subject} NOT to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
+        Assert.True(flags.Contain(DocumentFlags.FromFilteredPullReplicationHub) == false,
+            userMessage: $"Expected {subject} NOT to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
     }
 }

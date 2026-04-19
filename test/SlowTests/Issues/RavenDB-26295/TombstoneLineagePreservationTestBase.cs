@@ -27,7 +27,7 @@ using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public abstract class TombstoneLineagePreservationTestBase : ReplicationTestBase
 {
@@ -280,7 +280,7 @@ public abstract class TombstoneLineagePreservationTestBase : ReplicationTestBase
 
         public InternalLinkBlocker BlockLink(LineageNode source, LineageNode target)
         {
-            var handler = GetInternalHandler(source, target);
+            var handler = GetInternalHandler(source: source, target: target);
             return new InternalLinkBlocker(handler);
         }
 
@@ -292,14 +292,14 @@ public abstract class TombstoneLineagePreservationTestBase : ReplicationTestBase
                 await session.SaveChangesAsync();
             }
 
-            await InjectExistingTicketAsync(docId, sourceNode, targetNode);
+            await InjectExistingTicketAsync(docId, sourceNode: sourceNode, targetNode: targetNode);
         }
 
         public async Task InjectExistingTicketAsync(string docId, LineageNode sourceNode, LineageNode targetNode)
         {
             await BridgeTicketAsync(
-                sourceNode,
-                targetNode,
+                sourceNode: sourceNode,
+                targetNode: targetNode,
                 bridgeReady: store => _owner.WaitForDocument(store, docId, timeout: 60_000),
                 targetReady: store => _owner.WaitForDocument(store, docId, timeout: 60_000),
                 bridgeMessage: $"Expected ticket '{docId}' to arrive in bridge store ({sourceNode}->bridge).",
@@ -678,7 +678,7 @@ public abstract class TombstoneLineagePreservationTestBase : ReplicationTestBase
                     AllowedHubToSinkPaths = ["tickets/*"]
                 }));
 
-            Assert.True(bridgeReady(bridgeStore), bridgeMessage);
+            Assert.True(bridgeReady(bridgeStore), userMessage: bridgeMessage);
 
             await bridgeStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(
                 new RavenConnectionString
@@ -698,7 +698,7 @@ public abstract class TombstoneLineagePreservationTestBase : ReplicationTestBase
                     AllowedSinkToHubPaths = ["tickets/*"]
                 }));
 
-            Assert.True(targetReady(StoreFor(targetNode)), targetMessage);
+            Assert.True(targetReady(StoreFor(targetNode)), userMessage: targetMessage);
 
             await bridgeStore.Maintenance.SendAsync(new DeleteOngoingTaskOperation(targetTask.TaskId, OngoingTaskType.PullReplicationAsSink));
             await bridgeStore.Maintenance.SendAsync(new DeleteOngoingTaskOperation(sourceTask.TaskId, OngoingTaskType.PullReplicationAsSink));

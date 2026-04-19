@@ -8,7 +8,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
 {
@@ -20,26 +20,23 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task FilteredClassification_WithoutDivergence_ShouldSinkTagUnknownDbId(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task FilteredClassification_WithoutDivergence_ShouldSinkTagUnknownDbId()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var source = lab.CreateIsolatedStore("full-vs-regular-classification-baseline");
         var docId = "tickets/full-vs-regular-classification-baseline";
 
         await PutDocumentsWithChangeVectorsAsync(source, (docId, "classification-baseline", CreateSyntheticChangeVector(50)));
         await lab.ConnectSinkToHubAsync(source, TargetHub);
 
-        Assert.True(
-            lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
-            $"Expected filtered sink document '{docId}' to arrive on hub {TargetHub}.");
+        Assert.True(lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
+            userMessage: $"Expected filtered sink document '{docId}' to arrive on hub {TargetHub}.");
 
         var snapshot = lab.GetDocumentSnapshot(TargetHub, docId);
-        Assert.True(snapshot.Exists, $"Expected '{docId}' to exist on hub {TargetHub}.");
-        Assert.True(
-            snapshot.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub),
-            $"Expected '{docId}' on hub {TargetHub} to stay flagged after filtered pull classification, but flags were '{snapshot.Flags}'.");
+        Assert.True(snapshot.Exists, userMessage: $"Expected '{docId}' to exist on hub {TargetHub}.");
+        Assert.True(snapshot.Flags.Contain(DocumentFlags.FromFilteredPullReplicationHub),
+            userMessage: $"Expected '{docId}' on hub {TargetHub} to stay flagged after filtered pull classification, but flags were '{snapshot.Flags}'.");
         Assert.Contains(
             $"SINK:50-{SyntheticDbId}",
             snapshot.ChangeVector ?? string.Empty,
@@ -50,11 +47,10 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
             StringComparison.OrdinalIgnoreCase);
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task FilteredClassification_FullOnlyDbId_IsCurrentlyTreatedAsKnownSibling(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task FilteredClassification_FullOnlyDbId_IsCurrentlyTreatedAsKnownSibling()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var source = lab.CreateIsolatedStore("full-vs-regular-classification-divergent");
         var docId = "tickets/full-vs-regular-classification-divergent";
         var before = ReadDatabaseChangeVectors(lab.DatabaseFor(TargetHub));
@@ -77,12 +73,11 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
         await PutDocumentsWithChangeVectorsAsync(source, (docId, "classification-divergent", CreateSyntheticChangeVector(51)));
         await lab.ConnectSinkToHubAsync(source, TargetHub);
 
-        Assert.True(
-            lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
-            $"Expected filtered sink document '{docId}' to arrive on hub {TargetHub}.");
+        Assert.True(lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
+            userMessage: $"Expected filtered sink document '{docId}' to arrive on hub {TargetHub}.");
 
         var snapshot = lab.GetDocumentSnapshot(TargetHub, docId);
-        Assert.True(snapshot.Exists, $"Expected '{docId}' to exist on hub {TargetHub}.");
+        Assert.True(snapshot.Exists, userMessage: $"Expected '{docId}' to exist on hub {TargetHub}.");
         Assert.Contains(
             $"{SyntheticTag}:51-{SyntheticDbId}",
             snapshot.ChangeVector ?? string.Empty,
@@ -93,11 +88,10 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
             StringComparison.OrdinalIgnoreCase);
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task FilteredPullHandshake_WithFullOnlyDbId_ShouldStillDeliverSinkDocument(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task FilteredPullHandshake_WithFullOnlyDbId_ShouldStillDeliverSinkDocument()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var source = lab.CreateIsolatedStore("full-vs-regular-filtered-handshake-divergent");
         var docId = "tickets/full-vs-regular-filtered-handshake-divergent";
         var before = ReadDatabaseChangeVectors(lab.DatabaseFor(TargetHub));
@@ -110,17 +104,15 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
         await PutDocumentsWithChangeVectorsAsync(source, (docId, "filtered-handshake-divergent", CreateSyntheticChangeVector(50)));
         await lab.ConnectSinkToHubAsync(source, TargetHub);
 
-        Assert.True(
-            lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
-            $"Expected filtered sink-to-hub handshake to deliver '{docId}' even when full DB CV knows '{SyntheticDbId}' but regular DB CV does not. " +
+        Assert.True(lab.WaitForDoc(TargetHub, docId, timeout: 60_000),
+            userMessage: $"Expected filtered sink-to-hub handshake to deliver '{docId}' even when full DB CV knows '{SyntheticDbId}' but regular DB CV does not. " +
             $"If this fails, the destination likely advertised a full-only starting point and the sink skipped a legitimate item before classification even ran.");
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task FreshReplicationHandshake_WithoutDivergence_ShouldDeliverSyntheticBacklog(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task FreshReplicationHandshake_WithoutDivergence_ShouldDeliverSyntheticBacklog()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var source = lab.CreateIsolatedStore("full-vs-regular-handshake-baseline");
 
         await PutDocumentsWithChangeVectorsAsync(
@@ -131,16 +123,14 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
 
         await SetupReplicationAsync(source, lab.StoreFor(TargetHub));
 
-        Assert.True(
-            lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-handshake-baseline/3", "baseline-3", timeout: 60_000),
-            $"Expected fresh replication handshake without divergence to deliver the synthetic backlog to hub {TargetHub}.");
+        Assert.True(lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-handshake-baseline/3", "baseline-3", timeout: 60_000),
+            userMessage: $"Expected fresh replication handshake without divergence to deliver the synthetic backlog to hub {TargetHub}.");
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task FreshReplicationHandshake_WithFullOnlyDbId_ShouldStillDeliverSyntheticBacklog(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task FreshReplicationHandshake_WithFullOnlyDbId_ShouldStillDeliverSyntheticBacklog()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var source = lab.CreateIsolatedStore("full-vs-regular-handshake-divergent");
         var before = ReadDatabaseChangeVectors(lab.DatabaseFor(TargetHub));
 
@@ -157,17 +147,15 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
 
         await SetupReplicationAsync(source, lab.StoreFor(TargetHub));
 
-        Assert.True(
-            lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-handshake-divergent/3", "divergent-3", timeout: 60_000),
-            $"Expected fresh replication handshake to deliver the synthetic backlog even when full DB CV knows '{SyntheticDbId}' but regular DB CV does not. " +
+        Assert.True(lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-handshake-divergent/3", "divergent-3", timeout: 60_000),
+            userMessage: $"Expected fresh replication handshake to deliver the synthetic backlog even when full DB CV knows '{SyntheticDbId}' but regular DB CV does not. " +
             $"If this fails, the destination likely advertised full-only lineage in its starting-point reply and the source skipped legitimate backlog.");
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task DivergenceAcrossClassificationAndFreshReplication_ShouldNotSkipLegitimateBacklog(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task DivergenceAcrossClassificationAndFreshReplication_ShouldNotSkipLegitimateBacklog()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var classificationSource = lab.CreateIsolatedStore("full-vs-regular-e2e-classification");
         using var replicationSource = lab.CreateIsolatedStore("full-vs-regular-e2e-replication");
         var before = ReadDatabaseChangeVectors(lab.DatabaseFor(TargetHub));
@@ -182,9 +170,8 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
             ("tickets/full-vs-regular-e2e/classification", "classification", CreateSyntheticChangeVector(51)));
         await lab.ConnectSinkToHubAsync(classificationSource, TargetHub);
 
-        Assert.True(
-            lab.WaitForDoc(TargetHub, "tickets/full-vs-regular-e2e/classification", timeout: 60_000),
-            $"Expected filtered classification probe to reach hub {TargetHub} before the fresh replication handshake.");
+        Assert.True(lab.WaitForDoc(TargetHub, "tickets/full-vs-regular-e2e/classification", timeout: 60_000),
+            userMessage: $"Expected filtered classification probe to reach hub {TargetHub} before the fresh replication handshake.");
 
         var classificationSnapshot = lab.GetDocumentSnapshot(TargetHub, "tickets/full-vs-regular-e2e/classification");
         Assert.Contains(
@@ -206,9 +193,8 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
 
         await SetupReplicationAsync(replicationSource, lab.StoreFor(TargetHub));
 
-        Assert.True(
-            lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-e2e/backlog/3", "backlog-3", timeout: 60_000),
-            $"Expected the fresh replication handshake to deliver backlog docs even after filtered classification already observed the synthetic '{SyntheticDbId}' lineage. " +
+        Assert.True(lab.WaitForDocumentName(TargetHub, "tickets/full-vs-regular-e2e/backlog/3", "backlog-3", timeout: 60_000),
+            userMessage: $"Expected the fresh replication handshake to deliver backlog docs even after filtered classification already observed the synthetic '{SyntheticDbId}' lineage. " +
             $"If this fails, divergence between full and regular DB CV is likely affecting the starting-point reply.");
     }
 
@@ -227,9 +213,7 @@ public class FullVsRegularDbCvTests : NonDocumentDbCvProtectionTestBase
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
-            return (
-                DocumentsStorage.GetDatabaseChangeVector(context).AsString(),
-                DocumentsStorage.GetFullDatabaseChangeVector(context));
+            return (DocumentsStorage.GetDatabaseChangeVector(context).AsString(), DocumentsStorage.GetFullDatabaseChangeVector(context));
         }
     }
 

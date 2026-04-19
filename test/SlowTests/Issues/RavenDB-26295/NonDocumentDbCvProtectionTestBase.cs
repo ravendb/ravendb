@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -17,22 +18,19 @@ using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication.Incoming;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Utils;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Sparrow;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
 {
@@ -177,7 +175,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                 "application/octet-stream"));
 
         var attachment = lab.GetAttachmentSnapshot(node, docId, attachmentName);
-        Assert.True(attachment.Exists, $"Expected attachment '{attachmentName}' on '{docId}' at {node}.");
+        Assert.True(attachment.Exists, userMessage: $"Expected attachment '{attachmentName}' on '{docId}' at {node}.");
         return new SatelliteMarker(attachmentName, attachment.Hash, attachment.ContentType);
     }
 
@@ -230,7 +228,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                 "application/octet-stream"));
 
         var attachment = lab.GetAttachmentSnapshot(node, docId, attachmentName);
-        Assert.True(attachment.Exists, $"Expected attachment '{attachmentName}' on '{docId}' at {node} before deleting it.");
+        Assert.True(attachment.Exists, userMessage: $"Expected attachment '{attachmentName}' on '{docId}' at {node} before deleting it.");
 
         using (var session = lab.StoreFor(node).OpenAsyncSession())
         {
@@ -239,7 +237,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
         }
 
         var tombstone = lab.GetAttachmentTombstoneSnapshot(node, docId, attachmentName, attachment.Hash, attachment.ContentType);
-        Assert.True(tombstone.Exists, $"Expected attachment tombstone '{attachmentName}' on '{docId}' at {node}.");
+        Assert.True(tombstone.Exists, userMessage: $"Expected attachment tombstone '{attachmentName}' on '{docId}' at {node}.");
         return new SatelliteMarker(attachmentName, attachment.Hash, attachment.ContentType);
     }
 
@@ -349,8 +347,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                     if (reader == writer)
                         continue;
 
-                    Assert.True(
-                        _owner.WaitForDocument(StoreFor(reader), docId, timeout: 60_000),
+                    Assert.True(_owner.WaitForDocument(StoreFor(reader), docId, timeout: 60_000),
                         userMessage: $"Priming: expected '{docId}' from {writer} to reach {reader}.");
                 }
             }
@@ -372,7 +369,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
 
         public InternalLinkBlocker BlockLink(LineageNode source, LineageNode target)
         {
-            var handler = GetInternalHandler(source, target);
+            var handler = GetInternalHandler(source: source, target: target);
             return new InternalLinkBlocker(handler);
         }
 
@@ -466,9 +463,8 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
         public async Task InjectExistingTicketAsync(string docId, LineageNode sourceNode, LineageNode targetNode)
         {
             await BridgeTicketAsync(
-                docId,
-                sourceNode,
-                targetNode,
+                sourceNode: sourceNode,
+                targetNode: targetNode,
                 bridgeReady: store => _owner.WaitForDocument(store, docId, timeout: 60_000),
                 targetReady: store => _owner.WaitForDocument(store, docId, timeout: 60_000),
                 bridgeMessage: $"Expected ticket '{docId}' to arrive in bridge store ({sourceNode}->bridge).",
@@ -482,8 +478,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
 
             foreach (var waitTarget in waitTargets)
             {
-                Assert.True(
-                    WaitForDoc(waitTarget, markerId, timeout: 60_000),
+                Assert.True(WaitForDoc(waitTarget, markerId, timeout: 60_000),
                     userMessage: $"Sync marker '{markerId}' should have reached {waitTarget} from {sender}.");
             }
 
@@ -589,7 +584,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                 {
                     using (counterGroup)
                     {
-                        var counterDocId = counterGroup.DocumentId?.ToString();
+                        var counterDocId = counterGroup.DocumentId?.ToString(CultureInfo.InvariantCulture);
                         if (string.Equals(counterDocId, docId, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
@@ -679,7 +674,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                     {
                         TimeSeriesValuesSegment.ParseTimeSeriesKey(deletedRange.Key, context, out _, out var timeSeriesName);
                         result.Add(new TimeSeriesDeletedRangeSnapshot(
-                            timeSeriesName.ToString(),
+                            timeSeriesName.ToString(CultureInfo.InvariantCulture),
                             deletedRange.ChangeVector,
                             deletedRange.From,
                             deletedRange.To,
@@ -701,13 +696,13 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                     using (segment)
                     {
                         TimeSeriesValuesSegment.ParseTimeSeriesKey(segment.Key, context, out var segmentDocId, out var timeSeriesName);
-                        var currentDocId = segmentDocId?.ToString();
+                        var currentDocId = segmentDocId?.ToString(CultureInfo.InvariantCulture);
                         if (string.Equals(currentDocId, docId, StringComparison.OrdinalIgnoreCase) == false)
                             continue;
 
                         result.Add(new TimeSeriesSegmentSnapshot(
                             currentDocId,
-                            timeSeriesName?.ToString(),
+                            timeSeriesName?.ToString(CultureInfo.InvariantCulture),
                             segment.ChangeVector,
                             segment.Etag));
                     }
@@ -721,14 +716,13 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
         {
             var sourceDatabase = DatabaseFor(source);
             var targetDatabase = DatabaseFor(target);
-            string sourceChangeVector;
             string adjustedSourceChangeVector;
             long sourceLastDatabaseEtag;
 
             using (sourceDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                sourceChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                string sourceChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 sourceLastDatabaseEtag = sourceDatabase.DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
 
                 if (string.IsNullOrEmpty(sourceChangeVector))
@@ -804,7 +798,6 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
         }
 
         private async Task BridgeTicketAsync(
-            string docId,
             LineageNode sourceNode,
             LineageNode targetNode,
             Func<IDocumentStore, bool> bridgeReady,
@@ -842,7 +835,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                     AllowedHubToSinkPaths = ["tickets/*"]
                 }));
 
-            Assert.True(bridgeReady(bridgeStore), bridgeMessage);
+            Assert.True(bridgeReady(bridgeStore), userMessage: bridgeMessage);
 
             await bridgeStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(
                 new RavenConnectionString
@@ -862,7 +855,7 @@ public abstract class NonDocumentDbCvProtectionTestBase : ReplicationTestBase
                     AllowedSinkToHubPaths = ["tickets/*"]
                 }));
 
-            Assert.True(targetReady(StoreFor(targetNode)), targetMessage);
+            Assert.True(targetReady(StoreFor(targetNode)), userMessage: targetMessage);
 
             await bridgeStore.Maintenance.SendAsync(
                 new DeleteOngoingTaskOperation(targetTask.TaskId, OngoingTaskType.PullReplicationAsSink));

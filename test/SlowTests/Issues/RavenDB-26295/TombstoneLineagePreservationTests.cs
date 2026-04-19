@@ -9,10 +9,16 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTestBase
 {
+    public enum TopologyKind
+    {
+        HubEntry,
+        HubInternal
+    }
+
     private sealed record ScenarioTopology(
         LineageNode Writer,
         LineageNode HubEntry,
@@ -44,60 +50,27 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
     {
     }
 
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Document_DeleteRecreate_OnHubEntry_ShouldPreserveSiblingLineage(Options options) =>
-        RunDocumentDeleteRecreateScenarioAsync(options, HubEntryTopology, "tickets/doc-hub-entry");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Document_DeleteRecreate_OnHubInternal_ShouldPreserveSiblingLineage(Options options) =>
-        RunDocumentDeleteRecreateScenarioAsync(options, HubInternalTopology, "tickets/doc-hub-internal");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Attachment_DeleteRecreate_OnHubEntry_ShouldPreserveSiblingLineage(Options options) =>
-        RunAttachmentDeleteRecreateScenarioAsync(options, HubEntryTopology, "tickets/attachment-hub-entry", "lineage.bin");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Attachment_DeleteRecreate_OnHubInternal_ShouldPreserveSiblingLineage(Options options) =>
-        RunAttachmentDeleteRecreateScenarioAsync(options, HubInternalTopology, "tickets/attachment-hub-internal", "lineage.bin");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task TimeSeriesDeletedRange_OnHubEntry_ShouldPreserveSiblingLineage(Options options) =>
-        RunTimeSeriesDeletedRangeScenarioAsync(options, HubEntryTopology, "tickets/ts-range-hub-entry", "HeartRate");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task TimeSeriesDeletedRange_OnHubInternal_ShouldPreserveSiblingLineage(Options options) =>
-        RunTimeSeriesDeletedRangeScenarioAsync(options, HubInternalTopology, "tickets/ts-range-hub-internal", "HeartRate");
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Document_CreateWithNoPriorTombstone_OnHubEntry_ShouldNotBorrowLineage(Options options) =>
-        RunFreshDocumentRegressionScenarioAsync(options);
-
-    [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-    public Task Document_RecreateArrivesViaReplication_ShouldPreferReplicatedChangeVector(Options options) =>
-        RunReplicatedRecreateRegressionScenarioAsync(options);
-
-    private async Task RunDocumentDeleteRecreateScenarioAsync(Options options, ScenarioTopology topology, string docId)
+    [RavenTheory(RavenTestCategory.Replication)]
+    [RavenData(Data = [TopologyKind.HubEntry])]
+    [RavenData(Data = [TopologyKind.HubInternal])]
+    public async Task Document_DeleteRecreate_ShouldPreserveSiblingLineage(TopologyKind topologyKind)
     {
-        await using var lab = await CreateLabAsync(options);
-        using var firstBlocker = lab.BlockLink(topology.FirstBlockedLink.Source, topology.FirstBlockedLink.Target);
-        using var secondBlocker = lab.BlockLink(topology.SecondBlockedLink.Source, topology.SecondBlockedLink.Target);
+        var topology = topologyKind == TopologyKind.HubInternal ? HubInternalTopology : HubEntryTopology;
+        var docId = topologyKind == TopologyKind.HubInternal
+            ? "tickets/doc-hub-internal"
+            : "tickets/doc-hub-entry";
 
-        await lab.WriteAndInjectTicketAsync(docId, topology.Writer, topology.HubEntry);
+        await using var lab = await CreateLabAsync(new Options());
+        using var firstBlocker = lab.BlockLink(source: topology.FirstBlockedLink.Source, target: topology.FirstBlockedLink.Target);
+        using var secondBlocker = lab.BlockLink(source: topology.SecondBlockedLink.Source, target: topology.SecondBlockedLink.Target);
 
-        Assert.True(
-            lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
-            $"Expected '{docId}' to exist on {topology.Label} receiver {topology.Receiver}.");
+        await lab.WriteAndInjectTicketAsync(docId, sourceNode: topology.Writer, targetNode: topology.HubEntry);
+
+        Assert.True(lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
+            userMessage: $"Expected '{docId}' to exist on {topology.Label} receiver {topology.Receiver}.");
 
         var injected = lab.GetDocumentSnapshot(topology.Receiver, docId);
-        Assert.True(injected.Exists, $"Expected injected document '{docId}' on {topology.Receiver}.");
+        Assert.True(injected.Exists, userMessage: $"Expected injected document '{docId}' on {topology.Receiver}.");
         AssertFlagged(injected.Flags, $"injected document '{docId}' on {topology.Receiver}");
         AssertContainsNodeEntry(injected.ChangeVector, topology.Writer, $"injected document '{docId}' on {topology.Receiver}");
         var receiverDbCvBeforeDelete = lab.GetDatabaseChangeVector(topology.Receiver);
@@ -114,7 +87,7 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         }
 
         var tombstone = lab.GetDocumentTombstoneSnapshot(topology.Receiver, docId);
-        Assert.True(tombstone.Exists, $"Expected document tombstone for '{docId}' on {topology.Receiver}.");
+        Assert.True(tombstone.Exists, userMessage: $"Expected document tombstone for '{docId}' on {topology.Receiver}.");
         AssertFlagged(tombstone.Flags, $"document tombstone '{docId}' on {topology.Receiver}");
         AssertContainsNodeEntry(tombstone.ChangeVector, topology.Writer, $"document tombstone '{docId}' on {topology.Receiver}");
         AssertNodeEtagUnchanged(
@@ -132,7 +105,7 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         }
 
         var recreated = lab.GetDocumentSnapshot(topology.Receiver, docId);
-        Assert.True(recreated.Exists, $"Expected recreated document '{docId}' on {topology.Receiver}.");
+        Assert.True(recreated.Exists, userMessage: $"Expected recreated document '{docId}' on {topology.Receiver}.");
         Assert.Equal(recreatedName, recreated.Name);
         AssertFlagged(recreated.Flags, $"recreated document '{docId}' on {topology.Receiver}");
         AssertContainsNodeEntry(recreated.ChangeVector, topology.Writer, $"recreated document '{docId}' on {topology.Receiver}");
@@ -151,22 +124,29 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
 
         foreach (var peer in topology.Peers)
         {
-            Assert.True(
-                lab.WaitForDocumentName(peer, docId, recreatedName, timeout: 60_000),
-                $"Expected recreated document '{docId}' from {topology.Receiver} to reach peer {peer} without a conflict.");
+            Assert.True(lab.WaitForDocumentName(peer, docId, recreatedName, timeout: 60_000),
+                userMessage: $"Expected recreated document '{docId}' from {topology.Receiver} to reach peer {peer} without a conflict.");
 
             var conflictCount = lab.GetConflictCount(peer, docId);
-            Assert.True(
-                conflictCount == 0,
-                $"Spurious conflict on peer {peer} for recreated document '{docId}' after delete+recreate on {topology.Receiver}. Conflict count: {conflictCount}.");
+            Assert.True(conflictCount == 0,
+                userMessage: $"Spurious conflict on peer {peer} for recreated document '{docId}' after delete+recreate on {topology.Receiver}. Conflict count: {conflictCount}.");
         }
     }
 
-    private async Task RunAttachmentDeleteRecreateScenarioAsync(Options options, ScenarioTopology topology, string docId, string attachmentName)
+    [RavenTheory(RavenTestCategory.Replication)]
+    [RavenData(Data = [TopologyKind.HubEntry])]
+    [RavenData(Data = [TopologyKind.HubInternal])]
+    public async Task Attachment_DeleteRecreate_ShouldPreserveSiblingLineage(TopologyKind topologyKind)
     {
-        await using var lab = await CreateLabAsync(options);
-        using var firstBlocker = lab.BlockLink(topology.FirstBlockedLink.Source, topology.FirstBlockedLink.Target);
-        using var secondBlocker = lab.BlockLink(topology.SecondBlockedLink.Source, topology.SecondBlockedLink.Target);
+        var topology = topologyKind == TopologyKind.HubInternal ? HubInternalTopology : HubEntryTopology;
+        var docId = topologyKind == TopologyKind.HubInternal
+            ? "tickets/attachment-hub-internal"
+            : "tickets/attachment-hub-entry";
+        const string attachmentName = "lineage.bin";
+
+        await using var lab = await CreateLabAsync(new Options());
+        using var firstBlocker = lab.BlockLink(source: topology.FirstBlockedLink.Source, target: topology.FirstBlockedLink.Target);
+        using var secondBlocker = lab.BlockLink(source: topology.SecondBlockedLink.Source, target: topology.SecondBlockedLink.Target);
 
         using (var session = lab.StoreFor(topology.Writer).OpenAsyncSession())
         {
@@ -181,22 +161,20 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
                 new MemoryStream([1, 2, 3, 4]),
                 "application/octet-stream"));
 
-        await lab.InjectExistingTicketAsync(docId, topology.Writer, topology.HubEntry);
+        await lab.InjectExistingTicketAsync(docId, sourceNode: topology.Writer, targetNode: topology.HubEntry);
 
-        Assert.True(
-            lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
-            $"Expected attachment owner document '{docId}' on {topology.Receiver}.");
-        Assert.True(
-            lab.WaitForAttachment(topology.Receiver, docId, attachmentName, timeout: 60_000),
-            $"Expected attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
+        Assert.True(lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
+            userMessage: $"Expected attachment owner document '{docId}' on {topology.Receiver}.");
+        Assert.True(lab.WaitForAttachment(topology.Receiver, docId, attachmentName, timeout: 60_000),
+            userMessage: $"Expected attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
 
         var receiverDoc = lab.GetDocumentSnapshot(topology.Receiver, docId);
-        Assert.True(receiverDoc.Exists, $"Expected attachment owner document '{docId}' on {topology.Receiver}.");
+        Assert.True(receiverDoc.Exists, userMessage: $"Expected attachment owner document '{docId}' on {topology.Receiver}.");
         AssertFlagged(receiverDoc.Flags, $"attachment owner document '{docId}' on {topology.Receiver}");
         AssertContainsNodeEntry(receiverDoc.ChangeVector, topology.Writer, $"attachment owner document '{docId}' on {topology.Receiver}");
 
         var existingAttachment = lab.GetAttachmentSnapshot(topology.Receiver, docId, attachmentName);
-        Assert.True(existingAttachment.Exists, $"Expected attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
+        Assert.True(existingAttachment.Exists, userMessage: $"Expected attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
         AssertContainsNodeEntry(existingAttachment.ChangeVector, topology.Writer, $"attachment '{attachmentName}' on '{docId}' at {topology.Receiver}");
         var receiverDbCvBeforeDelete = lab.GetDatabaseChangeVector(topology.Receiver);
 
@@ -206,13 +184,8 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
             await session.SaveChangesAsync();
         }
 
-        var tombstone = lab.GetAttachmentTombstoneSnapshot(
-            topology.Receiver,
-            docId,
-            attachmentName,
-            existingAttachment.Hash,
-            existingAttachment.ContentType);
-        Assert.True(tombstone.Exists, $"Expected attachment tombstone for '{attachmentName}' on '{docId}' at {topology.Receiver}.");
+        var tombstone = lab.GetAttachmentTombstoneSnapshot(topology.Receiver, docId, attachmentName, existingAttachment.Hash, existingAttachment.ContentType);
+        Assert.True(tombstone.Exists, userMessage: $"Expected attachment tombstone for '{attachmentName}' on '{docId}' at {topology.Receiver}.");
         AssertContainsNodeEntry(tombstone.ChangeVector, topology.Writer, $"attachment tombstone '{attachmentName}' on '{docId}' at {topology.Receiver}");
         AssertNodeEtagUnchanged(
             receiverDbCvBeforeDelete,
@@ -229,7 +202,7 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
                 existingAttachment.ContentType));
 
         var recreatedAttachment = lab.GetAttachmentSnapshot(topology.Receiver, docId, attachmentName);
-        Assert.True(recreatedAttachment.Exists, $"Expected recreated attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
+        Assert.True(recreatedAttachment.Exists, userMessage: $"Expected recreated attachment '{attachmentName}' on '{docId}' at {topology.Receiver}.");
         Assert.NotEqual(existingAttachment.Hash, recreatedAttachment.Hash);
         AssertContainsNodeEntry(recreatedAttachment.ChangeVector, topology.Writer, $"recreated attachment '{attachmentName}' on '{docId}' at {topology.Receiver}");
         AssertSameNodeEtag(
@@ -249,31 +222,37 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
 
         foreach (var peer in topology.Peers)
         {
-            Assert.True(
-                lab.WaitForAttachment(peer, docId, attachmentName, recreatedAttachment.Hash, timeout: 60_000),
-                $"Expected recreated attachment '{attachmentName}' from {topology.Receiver} to reach peer {peer}.");
+            Assert.True(lab.WaitForAttachment(peer, docId, attachmentName, recreatedAttachment.Hash, timeout: 60_000),
+                userMessage: $"Expected recreated attachment '{attachmentName}' from {topology.Receiver} to reach peer {peer}.");
 
             var conflictCount = lab.GetConflictCount(peer, docId);
-            Assert.True(
-                conflictCount == 0,
-                $"Spurious conflict on peer {peer} for attachment '{attachmentName}' on '{docId}' after delete+recreate on {topology.Receiver}. Conflict count: {conflictCount}.");
+            Assert.True(conflictCount == 0,
+                userMessage: $"Spurious conflict on peer {peer} for attachment '{attachmentName}' on '{docId}' after delete+recreate on {topology.Receiver}. Conflict count: {conflictCount}.");
         }
     }
 
-    private async Task RunTimeSeriesDeletedRangeScenarioAsync(Options options, ScenarioTopology topology, string docId, string timeSeriesName)
+    [RavenTheory(RavenTestCategory.Replication)]
+    [RavenData(Data = [TopologyKind.HubEntry])]
+    [RavenData(Data = [TopologyKind.HubInternal])]
+    public async Task TimeSeriesDeletedRange_ShouldPreserveSiblingLineage(TopologyKind topologyKind)
     {
-        await using var lab = await CreateLabAsync(options);
-        using var firstBlocker = lab.BlockLink(topology.FirstBlockedLink.Source, topology.FirstBlockedLink.Target);
-        using var secondBlocker = lab.BlockLink(topology.SecondBlockedLink.Source, topology.SecondBlockedLink.Target);
+        var topology = topologyKind == TopologyKind.HubInternal ? HubInternalTopology : HubEntryTopology;
+        var docId = topologyKind == TopologyKind.HubInternal
+            ? "tickets/ts-range-hub-internal"
+            : "tickets/ts-range-hub-entry";
+        const string timeSeriesName = "HeartRate";
 
-        await lab.WriteAndInjectTicketAsync(docId, topology.Writer, topology.HubEntry);
+        await using var lab = await CreateLabAsync(new Options());
+        using var firstBlocker = lab.BlockLink(source: topology.FirstBlockedLink.Source, target: topology.FirstBlockedLink.Target);
+        using var secondBlocker = lab.BlockLink(source: topology.SecondBlockedLink.Source, target: topology.SecondBlockedLink.Target);
 
-        Assert.True(
-            lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
-            $"Expected '{docId}' to exist on {topology.Receiver} before creating a deleted range.");
+        await lab.WriteAndInjectTicketAsync(docId, sourceNode: topology.Writer, targetNode: topology.HubEntry);
+
+        Assert.True(lab.WaitForDoc(topology.Receiver, docId, timeout: 60_000),
+            userMessage: $"Expected '{docId}' to exist on {topology.Receiver} before creating a deleted range.");
 
         var receiverDoc = lab.GetDocumentSnapshot(topology.Receiver, docId);
-        Assert.True(receiverDoc.Exists, $"Expected deleted-range owner document '{docId}' on {topology.Receiver}.");
+        Assert.True(receiverDoc.Exists, userMessage: $"Expected deleted-range owner document '{docId}' on {topology.Receiver}.");
         AssertFlagged(receiverDoc.Flags, $"deleted-range owner document '{docId}' on {topology.Receiver}");
         AssertContainsNodeEntry(receiverDoc.ChangeVector, topology.Writer, $"deleted-range owner document '{docId}' on {topology.Receiver}");
         var dbCvBeforeDelete = lab.GetDatabaseChangeVector(topology.Receiver);
@@ -286,15 +265,13 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
             await session.SaveChangesAsync();
         }
 
-        Assert.True(
-            lab.WaitForDeletedRange(topology.Receiver, docId, timeSeriesName, timeout: 60_000),
-            $"Expected a time-series deleted range for '{timeSeriesName}' on '{docId}' at {topology.Receiver}.");
+        Assert.True(lab.WaitForDeletedRange(topology.Receiver, docId, timeSeriesName, timeout: 60_000),
+            userMessage: $"Expected a time-series deleted range for '{timeSeriesName}' on '{docId}' at {topology.Receiver}.");
 
         var deletedRange = lab.GetDeletedRangeSnapshots(topology.Receiver, docId)
             .Where(x => string.Equals(x.Name, timeSeriesName, StringComparison.OrdinalIgnoreCase))
             .OrderByDescending(x => x.Etag)
             .First();
-
         AssertContainsNodeEntry(deletedRange.ChangeVector, topology.Writer, $"deleted range '{timeSeriesName}' on '{docId}' at {topology.Receiver}");
         AssertSameNodeEtag(
             receiverDoc.ChangeVector,
@@ -313,28 +290,27 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
 
         foreach (var peer in topology.Peers)
         {
-            Assert.True(
-                lab.WaitForDeletedRange(peer, docId, timeSeriesName, deletedRange.ChangeVector, timeout: 60_000),
-                $"Expected deleted range '{timeSeriesName}' from {topology.Receiver} to reach peer {peer}.");
+            Assert.True(lab.WaitForDeletedRange(peer, docId, timeSeriesName, deletedRange.ChangeVector, timeout: 60_000),
+                userMessage: $"Expected deleted range '{timeSeriesName}' from {topology.Receiver} to reach peer {peer}.");
 
             var conflictCount = lab.GetConflictCount(peer, docId);
-            Assert.True(
-                conflictCount == 0,
-                $"Spurious conflict on peer {peer} for time-series deleted range '{timeSeriesName}' on '{docId}' after local delete on {topology.Receiver}. Conflict count: {conflictCount}.");
+            Assert.True(conflictCount == 0,
+                userMessage: $"Spurious conflict on peer {peer} for time-series deleted range '{timeSeriesName}' on '{docId}' after local delete on {topology.Receiver}. Conflict count: {conflictCount}.");
         }
     }
 
-    private async Task RunFreshDocumentRegressionScenarioAsync(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task Document_CreateWithNoPriorTombstone_OnHubEntry_ShouldNotBorrowLineage()
     {
-        await using var lab = await CreateLabAsync(options);
-        using var writerToHubEntry = lab.BlockLink(LineageNode.A, LineageNode.B);
-        using var observerToHubEntry = lab.BlockLink(LineageNode.C, LineageNode.B);
+        await using var lab = await CreateLabAsync(new Options());
+        using var writerToHubEntry = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
+        using var observerToHubEntry = lab.BlockLink(source: LineageNode.C, target: LineageNode.B);
 
         const string seededDocId = "tickets/seeded-flagged-doc";
-        await lab.WriteAndInjectTicketAsync(seededDocId, LineageNode.A, LineageNode.B);
+        await lab.WriteAndInjectTicketAsync(seededDocId, sourceNode: LineageNode.A, targetNode: LineageNode.B);
 
         var injected = lab.GetDocumentSnapshot(LineageNode.B, seededDocId);
-        Assert.True(injected.Exists, $"Expected seeded flagged document '{seededDocId}' on B.");
+        Assert.True(injected.Exists, userMessage: $"Expected seeded flagged document '{seededDocId}' on B.");
         AssertFlagged(injected.Flags, $"seeded flagged document '{seededDocId}' on B");
         var dbCvBeforeFresh = lab.GetDatabaseChangeVector(LineageNode.B);
         AssertDbCvBehindItemChangeVector(
@@ -352,7 +328,7 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         }
 
         var fresh = lab.GetDocumentSnapshot(LineageNode.B, freshDocId);
-        Assert.True(fresh.Exists, $"Expected fresh document '{freshDocId}' on B.");
+        Assert.True(fresh.Exists, userMessage: $"Expected fresh document '{freshDocId}' on B.");
         Assert.Equal(freshName, fresh.Name);
         AssertSameNodeEtag(
             dbCvBeforeFresh,
@@ -370,30 +346,28 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
 
         foreach (var peer in new[] { LineageNode.A, LineageNode.C })
         {
-            Assert.True(
-                lab.WaitForDocumentName(peer, freshDocId, freshName, timeout: 60_000),
-                $"Expected fresh document '{freshDocId}' from B to reach peer {peer}.");
+            Assert.True(lab.WaitForDocumentName(peer, freshDocId, freshName, timeout: 60_000),
+                userMessage: $"Expected fresh document '{freshDocId}' from B to reach peer {peer}.");
 
             var conflictCount = lab.GetConflictCount(peer, freshDocId);
-            Assert.True(
-                conflictCount == 0,
-                $"Unexpected conflict on peer {peer} for fresh document '{freshDocId}'. Conflict count: {conflictCount}.");
+            Assert.True(conflictCount == 0,
+                userMessage: $"Unexpected conflict on peer {peer} for fresh document '{freshDocId}'. Conflict count: {conflictCount}.");
         }
     }
 
-    private async Task RunReplicatedRecreateRegressionScenarioAsync(Options options)
+    [RavenFact(RavenTestCategory.Replication)]
+    public async Task Document_RecreateArrivesViaReplication_ShouldPreferReplicatedChangeVector()
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
 
         const string docId = "tickets/recreate-via-replication";
-        await lab.WriteAndInjectTicketAsync(docId, LineageNode.C, LineageNode.A);
+        await lab.WriteAndInjectTicketAsync(docId, sourceNode: LineageNode.C, targetNode: LineageNode.A);
 
-        Assert.True(
-            lab.WaitForDoc(LineageNode.B, docId, timeout: 60_000),
-            $"Expected bridged document '{docId}' from A to reach receiver B.");
+        Assert.True(lab.WaitForDoc(LineageNode.B, docId, timeout: 60_000),
+            userMessage: $"Expected bridged document '{docId}' from A to reach receiver B.");
 
         var bridgedOnB = lab.GetDocumentSnapshot(LineageNode.B, docId);
-        Assert.True(bridgedOnB.Exists, $"Expected bridged document '{docId}' on B.");
+        Assert.True(bridgedOnB.Exists, userMessage: $"Expected bridged document '{docId}' on B.");
 
         using (var session = lab.StoreFor(LineageNode.B).OpenAsyncSession())
         {
@@ -401,15 +375,14 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
             await session.SaveChangesAsync();
         }
 
-        Assert.True(
-            WaitForValue(
+        Assert.True(WaitForValue(
                 () => lab.GetDocumentTombstoneSnapshot(LineageNode.A, docId).Exists,
                 expectedVal: true,
                 timeout: 60_000),
-            $"Expected delete of '{docId}' from B to reach A before recreating it there.");
+            userMessage: $"Expected delete of '{docId}' from B to reach A before recreating it there.");
 
         var tombstoneOnA = lab.GetDocumentTombstoneSnapshot(LineageNode.A, docId);
-        Assert.True(tombstoneOnA.Exists, $"Expected replicated tombstone for '{docId}' on A.");
+        Assert.True(tombstoneOnA.Exists, userMessage: $"Expected replicated tombstone for '{docId}' on A.");
 
         var recreatedName = $"recreated-on-A-{Guid.NewGuid():N}";
         using (var session = lab.StoreFor(LineageNode.A).OpenAsyncSession())
@@ -419,37 +392,26 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         }
 
         var recreatedOnA = lab.GetDocumentSnapshot(LineageNode.A, docId);
-        Assert.True(recreatedOnA.Exists, $"Expected recreated document '{docId}' on A.");
+        Assert.True(recreatedOnA.Exists, userMessage: $"Expected recreated document '{docId}' on A.");
         Assert.Equal(recreatedName, recreatedOnA.Name);
 
-        Assert.True(
-            lab.WaitForDocumentName(LineageNode.B, docId, recreatedName, timeout: 60_000),
-            $"Expected replicated recreate of '{docId}' from A to reach receiver B.");
+        Assert.True(lab.WaitForDocumentName(LineageNode.B, docId, recreatedName, timeout: 60_000),
+            userMessage: $"Expected replicated recreate of '{docId}' from A to reach receiver B.");
 
         var replicated = lab.GetDocumentSnapshot(LineageNode.B, docId);
-        Assert.True(replicated.Exists, $"Expected replicated document '{docId}' on receiver B.");
+        Assert.True(replicated.Exists, userMessage: $"Expected replicated document '{docId}' on receiver B.");
         Assert.Equal(recreatedName, replicated.Name);
         Assert.Equal(recreatedOnA.ChangeVector, replicated.ChangeVector);
         var conflictCount = lab.GetConflictCount(LineageNode.B, docId);
-        Assert.True(
-            conflictCount == 0,
-            $"Unexpected conflict on receiver B for replicated recreate '{docId}'. Conflict count: {conflictCount}.");
+        Assert.True(conflictCount == 0,
+            userMessage: $"Unexpected conflict on receiver B for replicated recreate '{docId}'. Conflict count: {conflictCount}.");
     }
 
     private static void AssertContainsNodeEntry(string changeVector, LineageNode node, string subject)
     {
         var needle = $"{node}:";
-        Assert.True(
-            changeVector?.Contains(needle, StringComparison.Ordinal) == true,
-            $"Expected {subject} change vector to contain sibling entry '{needle}', but was '{changeVector ?? "<null>"}'.");
-    }
-
-    private static void AssertNotContainsNodeEntry(string changeVector, LineageNode node, string subject)
-    {
-        var needle = $"{node}:";
-        Assert.True(
-            changeVector?.Contains(needle, StringComparison.Ordinal) != true,
-            $"Expected {subject} change vector NOT to contain entry '{needle}', but was '{changeVector ?? "<null>"}'.");
+        Assert.True(changeVector?.Contains(needle, StringComparison.Ordinal) == true,
+            userMessage: $"Expected {subject} change vector to contain sibling entry '{needle}', but was '{changeVector ?? "<null>"}'.");
     }
 
     private static void AssertDbCvBehindItemChangeVector(string itemChangeVector, string databaseChangeVector, LineageNode sibling, string subject)
@@ -457,9 +419,8 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         var itemEtag = GetNodeEtag(itemChangeVector, sibling);
         var dbCvEtag = GetNodeEtag(databaseChangeVector, sibling);
 
-        Assert.True(
-            itemEtag.HasValue && dbCvEtag.HasValue && dbCvEtag.Value < itemEtag.Value,
-            $"Expected {subject} to stay behind sibling entry '{sibling}' (item etag: {itemEtag?.ToString() ?? "<missing>"}, DB CV etag: {dbCvEtag?.ToString() ?? "<missing>"}). Item CV: '{itemChangeVector ?? "<null>"}'. DB CV: '{databaseChangeVector ?? "<null>"}'.");
+        Assert.True(itemEtag.HasValue && dbCvEtag.HasValue && dbCvEtag.Value < itemEtag.Value,
+            userMessage: $"Expected {subject} to stay behind sibling entry '{sibling}' (item etag: {itemEtag?.ToString() ?? "<missing>"}, DB CV etag: {dbCvEtag?.ToString() ?? "<missing>"}). Item CV: '{itemChangeVector ?? "<null>"}'. DB CV: '{databaseChangeVector ?? "<null>"}'.");
     }
 
     private static void AssertSameNodeEtag(string expectedChangeVector, string actualChangeVector, LineageNode node, string actualSubject, string expectedSubject)
@@ -467,9 +428,8 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         var expectedEtag = GetNodeEtag(expectedChangeVector, node);
         var actualEtag = GetNodeEtag(actualChangeVector, node);
 
-        Assert.True(
-            expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
-            $"Expected {actualSubject} to preserve the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
+        Assert.True(expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
+            userMessage: $"Expected {actualSubject} to preserve the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
     }
 
     private static void AssertNodeEtagUnchanged(string expectedChangeVector, string actualChangeVector, LineageNode node, string actualSubject, string expectedSubject)
@@ -477,9 +437,8 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         var expectedEtag = GetNodeEtag(expectedChangeVector, node);
         var actualEtag = GetNodeEtag(actualChangeVector, node);
 
-        Assert.True(
-            expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
-            $"Expected {actualSubject} to keep the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
+        Assert.True(expectedEtag.HasValue && actualEtag.HasValue && expectedEtag.Value == actualEtag.Value,
+            userMessage: $"Expected {actualSubject} to keep the '{node}' etag from {expectedSubject}, but expected {expectedEtag?.ToString() ?? "<missing>"} and got {actualEtag?.ToString() ?? "<missing>"}. Expected CV: '{expectedChangeVector ?? "<null>"}'. Actual CV: '{actualChangeVector ?? "<null>"}'.");
     }
 
     private static void AssertNodeEtagGreater(string greaterChangeVector, string smallerChangeVector, LineageNode node, string greaterSubject, string smallerSubject)
@@ -487,23 +446,20 @@ public class TombstoneLineagePreservationTests : TombstoneLineagePreservationTes
         var greaterEtag = GetNodeEtag(greaterChangeVector, node);
         var smallerEtag = GetNodeEtag(smallerChangeVector, node);
 
-        Assert.True(
-            greaterEtag.HasValue && smallerEtag.HasValue && greaterEtag.Value > smallerEtag.Value,
-            $"Expected '{node}' etag in {greaterSubject} to be greater than in {smallerSubject}, but got {greaterEtag?.ToString() ?? "<missing>"} and {smallerEtag?.ToString() ?? "<missing>"}. Greater CV: '{greaterChangeVector ?? "<null>"}'. Smaller CV: '{smallerChangeVector ?? "<null>"}'.");
+        Assert.True(greaterEtag.HasValue && smallerEtag.HasValue && greaterEtag.Value > smallerEtag.Value,
+            userMessage: $"Expected '{node}' etag in {greaterSubject} to be greater than in {smallerSubject}, but got {greaterEtag?.ToString() ?? "<missing>"} and {smallerEtag?.ToString() ?? "<missing>"}. Greater CV: '{greaterChangeVector ?? "<null>"}'. Smaller CV: '{smallerChangeVector ?? "<null>"}'.");
     }
 
     private static void AssertFlagged(DocumentFlags flags, string subject)
     {
-        Assert.True(
-            (flags & DocumentFlags.FromFilteredPullReplicationHub) == DocumentFlags.FromFilteredPullReplicationHub,
-            $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
+        Assert.True((flags & DocumentFlags.FromFilteredPullReplicationHub) == DocumentFlags.FromFilteredPullReplicationHub,
+            userMessage: $"Expected {subject} to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
     }
 
     private static void AssertNotFlagged(DocumentFlags flags, string subject)
     {
-        Assert.True(
-            (flags & DocumentFlags.FromFilteredPullReplicationHub) == 0,
-            $"Expected {subject} NOT to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
+        Assert.True((flags & DocumentFlags.FromFilteredPullReplicationHub) == 0,
+            userMessage: $"Expected {subject} NOT to keep {nameof(DocumentFlags.FromFilteredPullReplicationHub)}, but flags were '{flags}'.");
     }
 
     private static long? GetNodeEtag(string changeVector, LineageNode node)

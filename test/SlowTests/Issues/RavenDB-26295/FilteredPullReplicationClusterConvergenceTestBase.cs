@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -21,7 +21,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public abstract class FilteredPullReplicationClusterConvergenceTestBase : ReplicationTestBase
 {
@@ -29,25 +29,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
     {
     }
 
-    private protected async Task ExecuteScenarioAsync(Options options, ScenarioId scenarioId, BridgeTicketMutationMode mutationMode = BridgeTicketMutationMode.None)
-    {
-        await using var lab = await ReplicationLab.CreateAsync(owner: this, options, ScenarioCatalog.Definitions.Value[scenarioId], mutationMode);
-
-        ScenarioExecutionReport report = null;
-        try
-        {
-            report = await lab.RunUntilStateVerifiedAsync();
-            lab.AssertVerifiedState(report);
-            await lab.VerifyReplicationAliveAfterVerificationAsync();
-        }
-        catch (Exception e)
-        {
-            report ??= await lab.CaptureReportAsync();
-            throw new Xunit.Sdk.XunitException(ScenarioFailureReportBuilder.Build(report, e));
-        }
-    }
-
-    private sealed class ReplicationLab : IAsyncDisposable
+    private protected sealed class ReplicationLab : IAsyncDisposable
     {
         private const string InternalPrefix = "internal//";
         private const string TicketPrefix = "tickets//";
@@ -270,8 +252,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
                 await StoreUserDocumentAsync(_stores[node], docId, name: $"bootstrap-{node}");
                 foreach (var otherClusterNode in ScenarioCatalog.OrderedNodes.Where(x => x != node))
                 {
-                    Assert.True(
-                        _owner.WaitForDocument(_stores[otherClusterNode], docId, timeout: 60_000),
+                    Assert.True(_owner.WaitForDocument(_stores[otherClusterNode], docId, timeout: 60_000),
                         userMessage: $"Expected bootstrap document '{docId}' from {node} to arrive on {otherClusterNode}.");
                 }
             }
@@ -315,7 +296,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
 
             foreach (var skippedTargetClusterNode in step.SkippedTargets)
             {
-                await InflateTargetAsync(stepIndex, source: step.WriterClusterNode, skippedTargetClusterNode);
+                await InflateTargetAsync(stepIndex, source: step.WriterClusterNode, target: skippedTargetClusterNode);
                 Record(
                     CheckpointKind.TargetInflated,
                     stepNumber,
@@ -389,7 +370,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
                 if (_retainedBlockers.ContainsKey(link))
                     continue;
 
-                _retainedBlockers[link] = new InternalLinkBlocker(GetInternalHandler(link.Source, link.Target));
+                _retainedBlockers[link] = new InternalLinkBlocker(GetInternalHandler(source: link.Source, target: link.Target));
             }
         }
 
@@ -427,43 +408,41 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
             {
                 AdminCertificate = _certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = _certificates.ServerCertificateForCommunication.Value,
-                ModifyDatabaseName = _ => GetBridgeDatabaseName(stepIndex, source, target)
+                ModifyDatabaseName = _ => GetBridgeDatabaseName(stepIndex, source: source, target: target)
             });
 
             try
             {
                 var sourceTaskId = await CreateBridgeTaskAsync(
                     sinkStore,
-                    GetBridgeConnectionName(stepIndex, source, target, role: "source"),
+                    GetBridgeConnectionName(stepIndex, source: source, target: target, role: "source"),
                     _servers[source].WebUrl,
                     new PullReplicationAsSink
                     {
-                        ConnectionStringName = GetBridgeConnectionName(stepIndex, source, target, "source"),
+                        ConnectionStringName = GetBridgeConnectionName(stepIndex, source: source, target: target, role: "source"),
                         Mode = PullReplicationMode.HubToSink,
                         CertificateWithPrivateKey = _pullCertificatePfxBase64,
                         HubName = GetHubDefinitionName(source),
                         AllowedHubToSinkPaths = [_ticketWildcard]
                     });
 
-                Assert.True(
-                    _owner.WaitForDocument(sinkStore, GetTicketDocumentId(stepIndex), timeout: 60_000),
+                Assert.True(_owner.WaitForDocument(sinkStore, GetTicketDocumentId(stepIndex), timeout: 60_000),
                     userMessage: $"Expected ticket '{GetTicketDocumentId(stepIndex)}' to reach bridge sink for {source}->{target}.");
 
                 var targetTaskId = await CreateBridgeTaskAsync(
                     sinkStore,
-                    GetBridgeConnectionName(stepIndex, source, target, role: "target"),
+                    GetBridgeConnectionName(stepIndex, source: source, target: target, role: "target"),
                     _servers[target].WebUrl,
                     new PullReplicationAsSink
                     {
-                        ConnectionStringName = GetBridgeConnectionName(stepIndex, source, target, role: "target"),
+                        ConnectionStringName = GetBridgeConnectionName(stepIndex, source: source, target: target, role: "target"),
                         Mode = PullReplicationMode.SinkToHub,
                         CertificateWithPrivateKey = _pullCertificatePfxBase64,
                         HubName = GetHubDefinitionName(target),
                         AllowedSinkToHubPaths = [_ticketWildcard]
                     });
 
-                Assert.True(
-                    _owner.WaitForDocument(_stores[target], GetTicketDocumentId(stepIndex), timeout: 60_000),
+                Assert.True(_owner.WaitForDocument(_stores[target], GetTicketDocumentId(stepIndex), timeout: 60_000),
                     userMessage: $"Expected ticket '{GetTicketDocumentId(stepIndex)}' to inflate target {target} from source {source}.");
 
                 await sinkStore.Maintenance.SendAsync(new DeleteOngoingTaskOperation(targetTaskId, OngoingTaskType.PullReplicationAsSink));
@@ -495,8 +474,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
             var markerId = GetAliveMarkerDocumentId();
 
             await StoreUserDocumentAsync(_stores[markerWriterClusterNode], markerId, name: $"alive-{markerWriterClusterNode}");
-            Assert.True(
-                _owner.WaitForDocument(_stores[markerTargetClusterNode], markerId, timeout: 60_000),
+            Assert.True(_owner.WaitForDocument(_stores[markerTargetClusterNode], markerId, timeout: 60_000),
                 userMessage: $"Expected alive marker '{markerId}' from {markerWriterClusterNode} to reach {markerTargetClusterNode}.");
 
             Record(CheckpointKind.ReplicationAliveVerified, _definition.Steps.Count, detail: "post-gap replication is alive");
@@ -739,7 +717,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
         public string Detail { get; init; }
     }
 
-    private sealed class ScenarioExecutionReport
+    private protected sealed class ScenarioExecutionReport
     {
         public ScenarioDefinition Definition { get; init; }
 
@@ -797,7 +775,7 @@ public abstract class FilteredPullReplicationClusterConvergenceTestBase : Replic
         }
     }
 
-    private static class ScenarioFailureReportBuilder
+    private protected static class ScenarioFailureReportBuilder
     {
         public static string Build(ScenarioExecutionReport report, Exception exception)
         {

@@ -11,7 +11,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Issues.RavenDB_26295;
 
 public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBase
 {
@@ -22,11 +22,11 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    public async Task InternalReplication_ShouldStoreEquivalentKeys(Options options, bool seedFilteredLineage)
+    [RavenData(Data = [true])]
+    [RavenData(Data = [false])]
+    public async Task InternalReplication_ShouldStoreEquivalentKeys(bool seedFilteredLineage)
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var writerToSource = lab.BlockLink(source: LineageNode.C, target: LineageNode.A);
         using var writerToReceiver = lab.BlockLink(source: LineageNode.C, target: LineageNode.B);
         using var sourceToReceiver = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
@@ -48,11 +48,11 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false])]
-    public async Task FilteredPullReplication_ShouldStoreEquivalentKeys(Options options, bool seedFilteredLineage)
+    [RavenData(Data = [true])]
+    [RavenData(Data = [false])]
+    public async Task FilteredPullReplication_ShouldStoreEquivalentKeys(bool seedFilteredLineage)
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var writerToSource = lab.BlockLink(source: LineageNode.C, target: LineageNode.A);
         using var writerToReceiver = lab.BlockLink(source: LineageNode.C, target: LineageNode.B);
         using var sourceToReceiver = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
@@ -64,7 +64,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
         if (seedFilteredLineage)
             Assert.Contains(sourceSnapshots, snapshot => ContainsNodeEntry(snapshot.KeyChangeVector, LineageNode.C));
 
-        await lab.InjectExistingTicketAsync(SubjectDocId, LineageNode.A, LineageNode.B);
+        await lab.InjectExistingTicketAsync(SubjectDocId, sourceNode: LineageNode.A, targetNode: LineageNode.B);
 
         Assert.True(lab.WaitForRevisionTombstones(LineageNode.B, SubjectDocId, sourceSnapshots.Count, timeout: 60_000),
             userMessage: $"Expected revision tombstones for '{SubjectDocId}' to reach B via filtered pull.");
@@ -74,12 +74,12 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    public async Task DirectFilteredRevisionTombstone_ShouldKeepSinkDbIdOutOfDbCvAndStoreEquivalentKeys(Options options, bool assertInternalReceiverDbCv, bool assertFilteredReceiverDbCv)
+    [RavenData(Data = [false, false])]
+    [RavenData(Data = [true, false])]
+    [RavenData(Data = [false, true])]
+    public async Task DirectFilteredRevisionTombstone_ShouldKeepSinkDbIdOutOfDbCvAndStoreEquivalentKeys(bool assertInternalReceiverDbCv, bool assertFilteredReceiverDbCv)
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var sourceToReceiver = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
 
         var externalSink = await lab.CreateExternalSinkStoreAsync(LineageNode.A, PullReplicationMode.SinkToHub);
@@ -122,7 +122,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
 
         if (assertFilteredReceiverDbCv)
         {
-            await lab.InjectExistingTicketAsync(SubjectDocId, LineageNode.A, LineageNode.B);
+            await lab.InjectExistingTicketAsync(SubjectDocId, sourceNode: LineageNode.A, targetNode: LineageNode.B);
 
             Assert.True(lab.WaitForRevisionTombstones(LineageNode.B, SubjectDocId, sourceSnapshots.Count, timeout: 60_000),
                 userMessage: $"Expected direct filtered-pull revision tombstones for '{SubjectDocId}' to reach B via filtered pull.");
@@ -138,11 +138,11 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    public async Task LocalRevisionTombstone_OnUnknownSinkLineageWithoutSiblingEntries_ShouldStoreEquivalentKeys(Options options, bool assertInternalReceiver, bool assertFilteredReceiver)
+    [RavenData(Data = [true, false])]
+    [RavenData(Data = [false, true])]
+    public async Task LocalRevisionTombstone_OnUnknownSinkLineageWithoutSiblingEntries_ShouldStoreEquivalentKeys(bool assertInternalReceiver, bool assertFilteredReceiver)
     {
-        await using var lab = await CreateLabAsync(options);
+        await using var lab = await CreateLabAsync(new Options());
         using var sourceToReceiver = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
 
         await lab.ConfigureRevisionsAsync(CreateRevisionsConfiguration());
@@ -156,8 +156,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
         var sourceDoc = lab.GetDocumentSnapshot(LineageNode.A, SubjectDocId);
         Assert.True(sourceDoc.Exists, userMessage: $"Expected unknown-sink document '{SubjectDocId}' on A.");
         AssertNotFlagged(sourceDoc.Flags);
-        Assert.True(
-            ContainsDatabaseId(sourceDoc.ChangeVector, externalDbId),
+        Assert.True(ContainsDatabaseId(sourceDoc.ChangeVector, externalDbId),
             userMessage: $"Expected unknown-sink document '{SubjectDocId}' on A to preserve external sink dbId '{externalDbId}', but CV was '{sourceDoc.ChangeVector}'.");
 
         var hubDbCv = lab.GetDatabaseChangeVector(LineageNode.A);
@@ -192,7 +191,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
 
         if (assertFilteredReceiver)
         {
-            await lab.InjectExistingTicketAsync(SubjectDocId, LineageNode.A, LineageNode.B);
+            await lab.InjectExistingTicketAsync(SubjectDocId, sourceNode: LineageNode.A, targetNode: LineageNode.B);
 
             Assert.True(lab.WaitForRevisionTombstones(LineageNode.B, SubjectDocId, sourceSnapshots.Count, timeout: 60_000),
                 userMessage: $"Expected local unknown-sink revision tombstones for '{SubjectDocId}' to reach B via filtered pull.");
@@ -207,14 +206,14 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     }
 
     [RavenTheory(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [true, false])]
-    [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [false, true])]
-    public async Task LocalRevisionTombstone_OnUnknownSinkLineageWithSiblingEntries_ShouldStoreEquivalentKeys(Options options, bool assertInternalReceiver, bool assertFilteredReceiver)
+    [RavenData(Data = [true, false])]
+    [RavenData(Data = [false, true])]
+    public async Task LocalRevisionTombstone_OnUnknownSinkLineageWithSiblingEntries_ShouldStoreEquivalentKeys(bool assertInternalReceiver, bool assertFilteredReceiver)
     {
-        await using var lab = await CreateLabAsync(options);
-        using var writerToSource = lab.BlockLink(LineageNode.C, LineageNode.A);
-        using var writerToReceiver = lab.BlockLink(LineageNode.C, LineageNode.B);
-        using var sourceToReceiver = lab.BlockLink(LineageNode.A, LineageNode.B);
+        await using var lab = await CreateLabAsync(new Options());
+        using var writerToSource = lab.BlockLink(source: LineageNode.C, target: LineageNode.A);
+        using var writerToReceiver = lab.BlockLink(source: LineageNode.C, target: LineageNode.B);
+        using var sourceToReceiver = lab.BlockLink(source: LineageNode.A, target: LineageNode.B);
 
         await lab.ConfigureRevisionsAsync(CreateRevisionsConfiguration());
 
@@ -225,7 +224,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
         var externalDbId = externalDatabase.DbBase64Id;
 
         var sourceDoc = await SeedFlaggedUnknownSinkDocumentOnHubAsync(lab, externalSink);
-        Assert.True(sourceDoc.Exists, $"Expected flagged unknown-sink document '{SubjectDocId}' on A.");
+        Assert.True(sourceDoc.Exists, userMessage: $"Expected flagged unknown-sink document '{SubjectDocId}' on A.");
         AssertFlagged(sourceDoc.Flags);
         Assert.True(ContainsDatabaseId(sourceDoc.ChangeVector, externalDbId),
             userMessage: $"Expected flagged unknown-sink document '{SubjectDocId}' on A to preserve external sink dbId '{externalDbId}', but CV was '{sourceDoc.ChangeVector}'.");
@@ -261,7 +260,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
 
         if (assertFilteredReceiver)
         {
-            await lab.InjectExistingTicketAsync(SubjectDocId, LineageNode.A, LineageNode.B);
+            await lab.InjectExistingTicketAsync(SubjectDocId, sourceNode: LineageNode.A, targetNode: LineageNode.B);
 
             Assert.True(lab.WaitForRevisionTombstones(LineageNode.B, SubjectDocId, sourceSnapshots.Count, timeout: 60_000),
                 userMessage: $"Expected maximal-lineage revision tombstones for '{SubjectDocId}' to reach B via filtered pull.");
@@ -293,7 +292,7 @@ public class RevisionTombstoneLineageTests : TombstoneLineagePreservationTestBas
     {
         if (seedFilteredLineage)
         {
-            await lab.WriteAndInjectTicketAsync(SubjectDocId, LineageNode.C, LineageNode.A);
+            await lab.WriteAndInjectTicketAsync(SubjectDocId, sourceNode: LineageNode.C, targetNode: LineageNode.A);
 
             Assert.True(lab.WaitForDoc(LineageNode.A, SubjectDocId, timeout: 60_000),
                 userMessage: $"Expected seeded document '{SubjectDocId}' to arrive on A via filtered pull.");
