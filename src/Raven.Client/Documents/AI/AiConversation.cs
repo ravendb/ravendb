@@ -54,7 +54,7 @@ internal class AiConversation : IAiConversationOperations
             throw new ArgumentNullException(nameof(stream));
 
         var attachmentName = name;
-        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: string.Empty));
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: null));
     }
 
     public void CopyAttachmentFrom(string sourceDocumentId, string fileName)
@@ -63,7 +63,7 @@ internal class AiConversation : IAiConversationOperations
         ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
 
-        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
+        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: null));
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
