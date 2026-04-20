@@ -930,7 +930,7 @@ namespace SlowTests.Issues
                     using (var clonedKey = context.AllocateStringValue(null, buffer.Ptr, buffer.Length))
                     using (Slice.External(context.Allocator, clonedKey, out var countersGroupKey))
                     using (Slice.From(context.Allocator, changeVector, out var cv))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, "Users", out _, out Slice collectionSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, "Users", out _, out Slice collectionSlice))
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeContext))
                     using (var tx = writeContext.OpenWriteTransaction())
                     {

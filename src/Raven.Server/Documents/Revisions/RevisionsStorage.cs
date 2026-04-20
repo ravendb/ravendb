@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.Revisions
                 nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler) == false)
                 return false;
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
@@ -524,7 +524,7 @@ namespace Raven.Server.Documents.Revisions
             if (flags.Contain(DocumentFlags.Conflicted))
                 return; // but, conflicted revision can't
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out var lowerId, out _))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out var lowerId, out _))
             {
                 var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, id, changeVector, flags);
                 if (conflictStatus != ConflictStatus.Update)
@@ -1538,7 +1538,7 @@ namespace Raven.Server.Documents.Revisions
         {
             BlittableJsonReaderObject.AssertNoModifications(deleteRevisionDocument, id, assertChildren: true);
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var collectionName = _documentsStorage.ExtractCollectionName(context, deleteRevisionDocument);
                 Delete(context, lowerId, idPtr, id, collectionName, deleteRevisionDocument, changeVector, lastModifiedTicks, nonPersistentFlags, flags);
@@ -2298,7 +2298,7 @@ namespace Raven.Server.Documents.Revisions
             flags = flags.Strip(DocumentFlags.HasAttachments);
             flags |= DocumentFlags.HasRevisions;
 
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, id, out Slice lowerId, out Slice idSlice))
             using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             {
                 using var _ = GetKeyPrefix(context, lowerId, out Slice lowerIdPrefix);

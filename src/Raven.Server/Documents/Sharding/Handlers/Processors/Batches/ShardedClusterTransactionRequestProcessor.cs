@@ -40,5 +40,5 @@ public sealed class ShardedClusterTransactionRequestProcessor : AbstractClusterT
             raftRequestId);
     }
     
-    protected override SupportedFeature GetSupportedFeatures() => new SupportedFeature(RequestHandler.DatabaseContext.DatabaseRecord);
+    protected override SupportedFeature GetSupportedFeatures() => RequestHandler.DatabaseContext.SupportedFeature;
 }

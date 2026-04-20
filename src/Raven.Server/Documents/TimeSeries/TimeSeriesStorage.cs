@@ -1747,22 +1747,23 @@ namespace Raven.Server.Documents.TimeSeries
             {
                 while (appendEnumerator.MoveNext())
                 {
-                    var current = appendEnumerator.Current;
-                    Debug.Assert(current != null);
-
-                    if (options.ChangeVectorFromReplication == null)
-                    {
-                        // not from replication
-                        AssertNoNanValue(current);
-                    }
-                    
-                    if (options.VerifyName)
-                        ValidateTag(current.Tag);
-                    
                     var retry = true;
+                    
                     while (retry)
                     {
                         retry = false;
+                        var current = appendEnumerator.Current;
+                        Debug.Assert(current != null);
+
+                        if (options.ChangeVectorFromReplication == null)
+                        {
+                            // not from replication
+                            AssertNoNanValue(current);
+                        }
+                    
+                        if (options.VerifyName)
+                            ValidateTag(current!.Tag);
+                        
                         using (var slicer = new TimeSeriesSliceHolder(context, documentId, name, collection).WithBaseline(current.Timestamp))
                         {
                             var segmentHolder = new TimeSeriesSegmentHolder(this, context, slicer, documentId, name, collectionName, options);
@@ -1775,7 +1776,7 @@ namespace Raven.Server.Documents.TimeSeries
 
                             if (EnsureNumberOfValues(segmentHolder.ReadOnlySegment.NumberOfValues, ref current))
                             {
-                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, out var newValueFetched))
+                                if (TryAppendToCurrentSegment(context, segmentHolder, appendEnumerator, current, options, out var newValueFetched))
                                     break;
 
                                 if (newValueFetched)
@@ -1831,7 +1832,7 @@ namespace Raven.Server.Documents.TimeSeries
                                                         $"Time series names cannot contain '{TimeSeriesConfiguration.TimeSeriesRollupSeparator}' character, " +
                                                         "since this character is reserved for time series rollups.");
                 
-                if(checkControlChars && DocumentIdWorker.IsControlCharacter(c))
+                if (checkControlChars && StringUtils.IsControlCharacter(c))
                     DocumentIdWorker.ThrowIdentifierWithControlCharacters(name, "TimeSeries name");
             }
         }
@@ -1872,6 +1873,7 @@ namespace Raven.Server.Documents.TimeSeries
             TimeSeriesSegmentHolder segmentHolder,
             IEnumerator<SingleResult> appendEnumerator,
             SingleResult current,
+            AppendOptions options,
             out bool newValueFetched)
         {
             var segment = segmentHolder.ReadOnlySegment;
@@ -1911,6 +1913,9 @@ namespace Raven.Server.Documents.TimeSeries
                         }
 
                         current = appendEnumerator.Current;
+                        if (options.VerifyName)
+                            ValidateTag(current!.Tag);
+                        
                         if (current!.Timestamp < nextSegmentBaseline)
                         {
                             if (EnsureNumberOfValues(newSegment.NumberOfValues, ref current))

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = tempBuffer)
             {
-                if(id.Size > 0)
+                if (id.Size > 0)
                     charCount = Encodings.Utf8.GetChars(id.Buffer, id.Size, pChars, tempBuffer.Length);
                 return GetLoweredIdSliceFromId(context.Allocator, new Span<char>(pChars, charCount), out lowerIdSlice, separator);
             }
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents
             var strLength = id.Length;
 
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            var escapeAndControlSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(id, out _);
+            var escapeAndControlSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(id, out _);
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id);
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents
                     buffer.Ptr[i] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapedPositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize);
+            _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(buffer.Ptr, ref strLength, escapeAndControlSize);
             if (separator != null)
             {
                 buffer.Ptr[strLength] = separator.Value;
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
                 {
                     if (ch <= 90) // 90 = 'Z'
                         ch = (byte)(ch | 0x20); //Turn on the sixth bit to apply lower case 
-                    else if(ch > 127)
+                    else if (ch > 127)
                         goto UnlikelyUnicode; // not ASCII, use slower mode
                 }
 
@@ -227,14 +227,16 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
+        // RavenDB-25738 Control character are invalid for new databases
+        // but use it for backward compatibility for document ID, collection name, attachment name, attachment content, and time series tag
+        public static ByteStringContext.InternalScope GetLowerIdSliceAndStorageKeyForBackwardCompatibility<TTransaction>(
             TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
-            return GetLowerIdSliceAndStorageKey(context.Allocator, str, out lowerIdSlice, out idSlice);
+            return GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context.Allocator, str, out lowerIdSlice, out idSlice);
         }
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKey(ByteStringContext allocator, ReadOnlySpan<char> str, out Slice lowerIdSlice,
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKeyForBackwardCompatibility(ByteStringContext allocator, ReadOnlySpan<char> str, out Slice lowerIdSlice,
             out Slice idSlice)
         {
             // Because we need to also store escape positions for the key when we store it
@@ -259,7 +261,7 @@ namespace Raven.Server.Documents
             if (originalStrLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out var controlCount);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(str, out var controlCount);
 
             /*
              *  add the size of all control characters
@@ -302,11 +304,11 @@ namespace Raven.Server.Documents
             }
 
             int lowerIdLength = originalStrLength;
-            _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr, ref lowerIdLength, escapePositionsSize);
+            _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(ptr, ref lowerIdLength, escapePositionsSize);
             if (lowerIdLength != originalStrLength)
             {
                 var idLength = originalStrLength;
-                _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref idLength, escapePositionsSize);
+                _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(ptr + maxIdLenSize + maxIdSize, ref idLength, escapePositionsSize);
 
 #if DEBUG
                 if (lowerIdLength != idLength)
@@ -342,7 +344,7 @@ namespace Raven.Server.Documents
             ByteStringContext allocator, ReadOnlySpan<char> str,
             out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int maxIdLenSize, int escapePositionsSize)
         {
-            // See comment in GetLowerIdSliceAndStorageKey for the format
+            // See comment in GetLowerIdSliceAndStorageKeyForBackwardCompatibility for the format
 
             int strLength = str.Length;
 
@@ -366,7 +368,7 @@ namespace Raven.Server.Documents
                     ThrowDocumentIdTooBig(str);
                 
                 var originalLowerSize = lowerIdSize;
-                _jsonParserState.FindEscapedPositionsAndEscapeControls(lowerId, ref lowerIdSize, escapePositionsSize);
+                _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(lowerId, ref lowerIdSize, escapePositionsSize);
                 
                 byte* actualIdPtr = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
                 int actualIdSize = Encoding.GetBytes(pChars, strLength, actualIdPtr + maxIdLenSize, maxStrSize);
@@ -379,7 +381,7 @@ namespace Raven.Server.Documents
                 
                 //We already checked if there are control characters to escape
                 if (originalLowerSize != lowerIdSize)
-                    _jsonParserState.FindEscapedPositionsAndEscapeControls(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize);
+                    _jsonParserState.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(actualIdPtr + maxIdLenSize, ref actualIdSize, escapePositionsSize);
 
                 JsonParserState.WriteVariableSizeInt(ref writePos, actualIdSize);
                 escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + actualIdSize);
@@ -412,87 +414,46 @@ namespace Raven.Server.Documents
 
         public static ByteStringContext.InternalScope GetStringPreserveCase(DocumentsOperationContext context, string str, out Slice strSlice)
         {
-            return GetLowerIdSliceAndStorageKey(context, str, out var _, out strSlice);
+            return GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, str, out var _, out strSlice);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CheckAndThrowContainsControlCharacters(ReadOnlySpan<char> str, string identifierName)
         {
-            if(HasControlCharacters(str))
+            if (StringUtils.HasControlCharacters(str))
                 ThrowIdentifierWithControlCharacters(str, identifierName);
         }
-        
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CheckAndThrowContainsControlCharacters(LazyStringValue str, string identifierName)
         {
-            if(HasControlCharacters(str.AsReadOnlySpan()))
-                ThrowIdentifierWithControlCharacters(str, identifierName);
+            if (str == null)
+                return;
+
+            if (StringUtils.HasControlCharacters(str.AsReadOnlySpan()))
+                ThrowIdentifierWithControlCharacters(str.ToString().AsSpan(), identifierName);
         }
 
         [DoesNotReturn]
         public static void ThrowIdentifierWithControlCharacters(ReadOnlySpan<char> str, string identifierName)
         {
-            throw new NotSupportedException($"{identifierName} cannot contain control characters : '{EscapeControlCharacters(str)}' (escaped version)");
-        }
-    
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasControlCharacters(ReadOnlySpan<char> str)
-        {
-            for (int i = 0; i < str.Length; i++)
+            throw new NotSupportedException($"{identifierName} cannot contain control characters: '{EscapeControlCharacters(str)}' (escaped version)");
+            
+            static string EscapeControlCharacters(ReadOnlySpan<char> str)
             {
-                if (IsControlCharacter(str[i]))
-                    return true;
-            }
-            return false;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool HasControlCharacters(ReadOnlySpan<byte> str)
-        {
-            for (int i = 0; i < str.Length; i++)
-            {
-                if (IsControlCharacter(str[i]))
-                    return true;
-            }
-            return false;
-        }
-    
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsControlCharacter(char c)
-        {
-            // Exclude escape characters that are valid inside JSON
-            // 8  => '\b' => 0000 1000
-            // 9  => '\t' => 0000 1001
-            // 10 => '\n' => 0000 1010
-            // 12 => '\f' => 0000 1100
-            // 13 => '\r' => 0000 1101
-            return c < 8 || c > 13 && c < 32 || c == 11;
-        }
-        
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsControlCharacter(byte c)
-        {
-            // Exclude escape characters that are valid inside JSON
-            // 8  => '\b' => 0000 1000
-            // 9  => '\t' => 0000 1001
-            // 10 => '\n' => 0000 1010
-            // 12 => '\f' => 0000 1100
-            // 13 => '\r' => 0000 1101
-            return c < 8 || c > 13 && c < 32 || c == 11;
-        }
-    
-        private static string EscapeControlCharacters(ReadOnlySpan<char> str)
-        {
-            var sb = new StringBuilder();
-            foreach (var c in str)
-            {
-                if (IsControlCharacter(c) == false)
+                var sb = new StringBuilder();
+                foreach (var c in str)
                 {
-                    sb.Append(c);
-                    continue;
+                    if (StringUtils.IsControlCharacter(c) == false)
+                    {
+                        sb.Append(c);
+                        continue;
+                    }
+                    sb.Append("\\u");
+                    sb.Append(((int)c).ToString("x4"));
                 }
-                sb.Append("\\u");
-                sb.Append(((int)c).ToString("x4"));
+                return sb.ToString();
             }
-            return sb.ToString();
         }
     }
 }

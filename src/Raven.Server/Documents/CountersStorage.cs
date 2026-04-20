@@ -462,7 +462,7 @@ namespace Raven.Server.Documents
             if (name.Length > DocumentIdWorker.MaxIdSize)
                 ThrowCounterNameTooBig(name);
 
-            if(_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
+            if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier)
                 DocumentIdWorker.CheckAndThrowContainsControlCharacters(name, "Counter name");
         }
         

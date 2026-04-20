@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Schemas
                 e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it. */
             LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
             Etag = 1,
-            Name = 2, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
-            ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
+            Name = 2, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKeyForBackwardCompatibility
+            ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKeyForBackwardCompatibility
             Hash = 4, // base64 hash
             TransactionMarker = 5,
             ChangeVector = 6

@@ -14,7 +14,14 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
+using Raven.Server.Documents;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Threading;
 using Tests.Infrastructure;
+using Voron;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +32,7 @@ public class ControlCharacterTests : ClusterTestBase
     private const string TestStr = "myRavenDB\u0001b\tb";
     private const string EscapedValue = @"myRavenDB\u0001b\tb";
     private const string DocId = "TestObj/1";
-    
+
     public ControlCharacterTests(ITestOutputHelper output) : base(output)
     {
     }
@@ -36,9 +43,9 @@ public class ControlCharacterTests : ClusterTestBase
     {
         const string value = TestStr + "value";
         const string prop = "myProp";
-        
+
         const int numberOfNodes = 3;
-        
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
@@ -51,7 +58,7 @@ public class ControlCharacterTests : ClusterTestBase
             {
                 Prop = new Dictionary<string, object>
                 {
-                    {prop, value}
+                    { prop, value }
                 }
             }, DocId);
             await session.SaveChangesAsync();
@@ -64,7 +71,7 @@ public class ControlCharacterTests : ClusterTestBase
             using var session = nodeStore.OpenAsyncSession();
             var obj = await session.LoadAsync<TestObj>(DocId);
             Assert.Equal(obj.Prop[prop], value);
-            
+
             var response = await client.GetAsync($"{node.WebUrl}/databases/{store.Database}/docs?id={Uri.EscapeDataString(DocId)}");
             var responseStr = await response.Content.ReadAsStringAsync();
             var match = Regex.Match(responseStr, """
@@ -74,20 +81,20 @@ public class ControlCharacterTests : ClusterTestBase
             Assert.Equal(EscapedValue + "value", actual);
         }
     }
-    
+
     [RavenTheory(RavenTestCategory.Core)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ControlCharactersInPropName_WhenReplicated_ShouldBeReplicated(Options options)
     {
         const string prop = TestStr + "prop";
-        
+
         const int numberOfNodes = 3;
-        
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         using var store = GetDocumentStore(options);
-        
+
         using (var session = store.OpenAsyncSession())
         {
             session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
@@ -95,7 +102,7 @@ public class ControlCharacterTests : ClusterTestBase
             {
                 Prop = new Dictionary<string, object>
                 {
-                    {prop, "somevalue"}
+                    { prop, "somevalue" }
                 }
             }, DocId);
             await session.SaveChangesAsync();
@@ -108,7 +115,7 @@ public class ControlCharacterTests : ClusterTestBase
             using var session = nodeStore.OpenAsyncSession();
             var obj = await session.LoadAsync<TestObj>(DocId);
             Assert.Contains(prop, obj.Prop);
-            
+
             var response = await client.GetAsync($"{node.WebUrl}/databases/{store.Database}/docs?id={Uri.EscapeDataString(DocId)}");
             var responseStr = await response.Content.ReadAsStringAsync();
             var match = Regex.Match(responseStr, """
@@ -118,7 +125,7 @@ public class ControlCharacterTests : ClusterTestBase
             Assert.Equal(EscapedValue + "prop", actual);
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Core)]
     public async Task ControlCharacters_InCollectionName_ShouldReject()
     {
@@ -131,7 +138,7 @@ public class ControlCharacterTests : ClusterTestBase
                 s.Conventions.FindCollectionName = _ => TestStr + "s";
             }
         });
-        
+
         await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {
             using var session = store.OpenAsyncSession();
@@ -139,7 +146,7 @@ public class ControlCharacterTests : ClusterTestBase
             await session.SaveChangesAsync();
         });
     }
-    
+
     [RavenFact(RavenTestCategory.Core)]
     public async Task ControlCharacters_InAttachmentNameAndContentType_ShouldReject()
     {
@@ -160,7 +167,7 @@ public class ControlCharacterTests : ClusterTestBase
             session.Advanced.Attachments.Store(DocId, attachmentName, stream, "application/pdf");
             await session.SaveChangesAsync();
         });
-        
+
         await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {
             using var session = store.OpenAsyncSession();
@@ -169,7 +176,7 @@ public class ControlCharacterTests : ClusterTestBase
             await session.SaveChangesAsync();
         });
     }
-    
+
     [RavenTheory(RavenTestCategory.Core)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ControlCharactersInAttachmentNameAndType_WhenPermittedDatabase_ReplicationAndReadShouldWork(Options options)
@@ -177,13 +184,13 @@ public class ControlCharacterTests : ClusterTestBase
         const int numberOfNodes = 3;
         const string attachmentName = TestStr + "attachment";
         const string attachmentType = TestStr + "attachmenttype";
-        
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         AllowControlCharactersInIdentifier(options);
         using var store = GetDocumentStore(options);
-        
+
         using (var session = store.OpenAsyncSession())
         {
             session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
@@ -203,14 +210,14 @@ public class ControlCharacterTests : ClusterTestBase
         {
             using var nodeStore = new DocumentStore { Database = store.Database, Urls = [node.WebUrl], Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize();
             using var session = nodeStore.OpenAsyncSession();
-            var attachment = await session.Advanced.Attachments.GetAsync(DocId,attachmentName);
+            var attachment = await session.Advanced.Attachments.GetAsync(DocId, attachmentName);
             Assert.Equal(attachmentName, attachment.Details.Name);
             // We had same behavior before the PR
             var actualType = attachment.Details.ContentType;
             Assert.True(actualType is attachmentType or "myRavenDB\\u0001b\tbattachmenttype", actualType);
         }
     }
-    
+
     [RavenFact(RavenTestCategory.Core)]
     public async Task ControlCharacters_InCounterName_ShouldReject()
     {
@@ -232,20 +239,20 @@ public class ControlCharacterTests : ClusterTestBase
             await session.SaveChangesAsync();
         });
     }
-    
+
     [RavenTheory(RavenTestCategory.Core)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ControlCharactersInCounterName_WhenPermittedDatabase_ReplicationAndReadShouldWork(Options options)
     {
         const int numberOfNodes = 3;
         const string counterName = TestStr + "counter";
-        
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         AllowControlCharactersInIdentifier(options);
         using var store = GetDocumentStore(options);
-        
+
         using (var session = store.OpenAsyncSession())
         {
             await session.StoreAsync(new TestObj(), DocId);
@@ -256,7 +263,7 @@ public class ControlCharacterTests : ClusterTestBase
         {
             session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
             session.CountersFor(DocId).Increment(counterName);
-            
+
             await session.SaveChangesAsync();
         }
 
@@ -267,8 +274,8 @@ public class ControlCharacterTests : ClusterTestBase
             var counterValue = await session.CountersFor(DocId).GetAsync(counterName);
             Assert.Equal(1, counterValue.Value);
         }
-    }   
-    
+    }
+
     [RavenFact(RavenTestCategory.Core)]
     public async Task ControlCharacters_InTimeSeriesNameAndTag_ShouldReject()
     {
@@ -291,7 +298,7 @@ public class ControlCharacterTests : ClusterTestBase
 
             await session.SaveChangesAsync();
         });
-        
+
         await AssertThrowsAnyAsync<BulkInsertAbortedException>(async () =>
         {
             await using var bulkInsert = store.BulkInsert();
@@ -306,7 +313,7 @@ public class ControlCharacterTests : ClusterTestBase
                 await ts.AppendAsync(DateTime.Now, [7547.31], timeSeriesTag);
         });
     }
-    
+
     [RavenTheory(RavenTestCategory.Core)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ControlCharactersInTimeSeriesNameAndTag_WhenPermittedDatabase_ReplicationAndReadShouldWork(Options options)
@@ -314,13 +321,13 @@ public class ControlCharacterTests : ClusterTestBase
         const int numberOfNodes = 3;
         const string timeSeriesName = TestStr + "timeseries";
         const string tag = TestStr + "tag";
-        
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         AllowControlCharactersInIdentifier(options);
         using var store = GetDocumentStore(options);
-        
+
         using (var session = store.OpenAsyncSession())
         {
             session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
@@ -334,7 +341,7 @@ public class ControlCharacterTests : ClusterTestBase
             session.TimeSeriesFor(DocId, timeSeriesName).Append(DateTime.Now, 59d, tag);
             await session.SaveChangesAsync();
         }
-        
+
         foreach (var node in nodes)
         {
             using var nodeStore = new DocumentStore { Database = store.Database, Urls = [node.WebUrl], Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize();
@@ -365,7 +372,7 @@ public class ControlCharacterTests : ClusterTestBase
         options.ModifyDatabaseRecord = record =>
         {
             modifyDatabaseRecord?.Invoke(record);
-            
+
             // Get all public const string fields from SupportedFeatures class dynamically
             record.SupportedFeatures = typeof(Constants.DatabaseRecord.SupportedFeatures)
                 .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
@@ -383,27 +390,27 @@ public class ControlCharacterTests : ClusterTestBase
         const string key = TestStr + "somecmpxchgkey";
 
         using var store = GetDocumentStore();
-        
+
         await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {
             using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
             session.Advanced.ClusterTransaction.CreateCompareExchangeValue(key, "somevalue");
             await session.SaveChangesAsync();
         });
-        
+
         await Assert.ThrowsAnyAsync<RavenException>(async () =>
         {
             using var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide });
             await session.StoreAsync(new TestObj(), TestStr);
             await session.SaveChangesAsync();
         });
-        
+
         await AssertThrowsAnyAsync<NotSupportedException>(async () =>
         {
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(key + 2, "somevalue", 0));
         });
     }
-    
+
     [RavenTheory(RavenTestCategory.Core)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task ControlCharactersInCompareExchange_WhenPermittedDatabase_ShouldWork(Options options)
@@ -411,28 +418,28 @@ public class ControlCharacterTests : ClusterTestBase
         const int numberOfNodes = 3;
         const string cmpxchg = TestStr + "cmpxchg";
         const string id = TestStr + "someid";
-        
+
         var (_, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         AllowControlCharactersInIdentifier(options);
         using var store = GetDocumentStore(options);
-        
-        using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             session.Advanced.ClusterTransaction.CreateCompareExchangeValue(id, cmpxchg);
             await session.SaveChangesAsync();
         }
 
-        using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id);
             Assert.Equal(cmpxchg, result.Value);
         }
-        
+
         await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(id + 2, cmpxchg, 0));
-        
-        using (var session = store.OpenAsyncSession(new SessionOptions{TransactionMode = TransactionMode.ClusterWide}))
+
+        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
         {
             var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id + 2);
             Assert.Equal(cmpxchg, result.Value);
@@ -450,9 +457,9 @@ public class ControlCharacterTests : ClusterTestBase
                 {
                     Id = "doc-1", StrDict = new Dictionary<string, string>
                     {
-                        { "nullChar\u0001", "value1" }, 
-                        { @"nullChar\u0001", "value2" }, 
-                    } 
+                        { "nullChar\u0001", "value1" },
+                        { @"nullChar\u0001", "value2" },
+                    }
                 });
                 session.SaveChanges();
             }
@@ -465,19 +472,19 @@ public class ControlCharacterTests : ClusterTestBase
             }
         }
     }
-    
+
     private class TestObj
     {
         public string Id { get; set; }
         public Dictionary<string, object> Prop { get; set; }
         public Dictionary<string, string> StrDict { get; set; }
     }
-    
+
     private class TsIndex : AbstractTimeSeriesIndexCreationTask<TestObj>
     {
         public TsIndex()
         {
-            AddMapForAll(timeSeries => 
+            AddMapForAll(timeSeries =>
                 from segment in timeSeries
                 from entry in segment.Entries
                 select new TimeSeriesEntry
@@ -486,12 +493,101 @@ public class ControlCharacterTests : ClusterTestBase
                     Timestamp = entry.Timestamp,
                     Tag = entry.Tag,
                 });
-            
+
             StoreAllFields(FieldStorage.Yes);
         }
     }
+
+    public static object[][] Ids =>
+        new object[][]
+        {
+            ["\0{\r\n>"],
+            [new string('\0', AbstractPager.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'],
+            ['a' + new string('\r', AbstractPager.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
+        };
+
+    [RavenTheory(RavenTestCategory.Memory)]
+    [MemberData(nameof(Ids))]
+    public async Task DocumentId_WhenStore_ShouldBeAbleToLoadAndDelete(string id)
+    {
+        var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
+
+        using var store = GetDocumentStore(AllowControlCharactersInIdentifier());
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new TestObj(), id);
+            await session.StoreAsync(new TestObj(), idWithNonAscii);
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            Assert.NotNull(await session.LoadAsync<TestObj>(id));
+            Assert.NotNull(await session.LoadAsync<TestObj>(idWithNonAscii));
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            session.Delete(id);
+            session.Delete(idWithNonAscii);
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            Assert.Null(await session.LoadAsync<TestObj>(id));
+            Assert.Null(await session.LoadAsync<TestObj>(idWithNonAscii));
+        }
+    }
     
-    
+    [RavenTheory(RavenTestCategory.Memory)]
+    [MemberData(nameof(Ids))]
+    public async Task DocumentId_WhenWrite_ShouldBeAbleToRead(string id)
+    {
+        const char nonAscii = 'Ć';
+
+        var idWithNonAscii = id + nonAscii;
+
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        using var memoryStream = new MemoryStream();
+
+        using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
+        using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
+        {
+            var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
+            var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
+
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
+            {
+                Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
+
+                writer.WriteStartObject();
+                writer.WritePropertyName("withoutAsciiSlice");
+                writer.WriteString(withoutAsciiLazyString);
+                writer.WriteComma();
+                writer.WritePropertyName("withAsciiSlice");
+                writer.WriteString(withAsciiLazyString);
+                writer.WriteEndObject();
+            }
+
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using (var reader = await context.ReadForMemoryAsync(memoryStream, "result"))
+            {
+                Assert.True(reader["withoutAsciiSlice"].Equals(id));
+                Assert.True(reader["withAsciiSlice"].Equals(idWithNonAscii));
+            }
+
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
+            {
+                Assert.Equal(withoutAsciiSliceLower, withoutAsciiSlice2, new SliceComparer());
+                Assert.Equal(withAsciiSliceLower, withAsciiSlice2, new SliceComparer());
+            }
+        }
+    }
+
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
         var e = await Assert.ThrowsAnyAsync<Exception>(testCode);
@@ -500,5 +596,12 @@ public class ControlCharacterTests : ClusterTestBase
             e = temp;
 
         Assert.IsType<T>(e);
+    }
+    
+    private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
+    {
+        var ret = context.GetLazyStringValue(idSlice.Content.Ptr, out var success);
+        Assert.True(success);
+        return ret;
     }
 }
