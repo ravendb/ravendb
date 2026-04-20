@@ -857,8 +857,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     using (DocumentIdWorker.GetLoweredIdSliceFromId(_context, document.Id, out Slice lowerDocumentId))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(_context, name, out Slice lowerName, out Slice nameSlice))
+                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
                     using (Slice.From(_context.Allocator, document.ChangeVector, out Slice cv))
                     using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,

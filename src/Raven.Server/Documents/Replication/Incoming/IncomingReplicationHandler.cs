@@ -396,8 +396,8 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     handledAttachmentStreams.Add(attachment.Base64Hash);
                                 }
 
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.Name, out _, out Slice attachmentName));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.ContentType, out _, out Slice contentType));
 
                                 var local = context.GetChangeVector(result.ChangeVector);
                                 var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch

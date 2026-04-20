@@ -447,7 +447,7 @@ namespace Sparrow.Json
             if (_intBuffer == null)
                 _intBuffer = new FastList<int>();
 
-            var escapePositionsMaxSize = JsonParserState.FindMaxEscapePositionSize(str.AsSpan());
+            var escapePositionsMaxSize = StringUtils.FindMaxEscapePositionSize(str.AsSpan());
             int size = Encodings.Utf8.GetMaxByteCount(str.Length) + escapePositionsMaxSize;
             if (size > 8 * 1024 * 1024)
             {
@@ -460,7 +460,7 @@ namespace Sparrow.Json
                 buffer = _context.GetMemory(size);
 
                 var stringSize = Encodings.Utf8.GetBytes(str.AsSpan(), buffer.AsSpan());
-                JsonParserState.FindEscapedPositions(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
+                StringUtils.FindEscapedPositions(_intBuffer, buffer.Address, stringSize, escapePositionsMaxSize);
                 return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);                
             }
             finally
