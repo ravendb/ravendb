@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.CodeAnalysis;
@@ -51,6 +53,7 @@ public class Program
     }
 }
 """;
+        generatedCode = ExtractClassesFromMain(generatedCode);
 
         var syntaxTree = CSharpSyntaxTree.ParseText(generatedCode);
 
@@ -79,6 +82,79 @@ public class Program
 
             Assert.Fail($"Generated code failed to compile:\n{string.Join("\n", errors)}\n\nGenerated source:\n{generatedCode}");
         }
+    }
+
+    public static string ExtractClassesFromMain(string code)
+    {
+        int mainStart = code.IndexOf("public static async Task Main()");
+        if (mainStart == -1)
+            return code;
+
+        int bodyStart = code.IndexOf('{', mainStart);
+        int bodyEnd = FindMatchingBrace(code, bodyStart);
+
+        if (bodyStart == -1 || bodyEnd == -1)
+            return code;
+
+        var mainBody = code.Substring(bodyStart + 1, bodyEnd - bodyStart - 1);
+
+        var extractedClasses = new StringBuilder();
+        var cleanedMain = new StringBuilder();
+
+        int i = 0;
+        while (i < mainBody.Length)
+        {
+            if (IsClassAt(mainBody, i))
+            {
+                int classStart = i;
+                int braceStart = mainBody.IndexOf('{', i);
+                int classEnd = FindMatchingBrace(mainBody, braceStart);
+
+                var classText = mainBody.Substring(classStart, classEnd - classStart + 1);
+                extractedClasses.AppendLine(classText).AppendLine();
+
+                i = classEnd + 1;
+            }
+            else
+            {
+                cleanedMain.Append(mainBody[i]);
+                i++;
+            }
+        }
+
+        // rebuild code
+        var result = new StringBuilder();
+        result.Append(code.Substring(0, bodyStart + 1));
+        result.Append(cleanedMain);
+        result.Append(code.Substring(bodyEnd));
+
+        result.AppendLine("\n// Extracted classes");
+        result.AppendLine(extractedClasses.ToString());
+
+        return result.ToString();
+    }
+
+    private static bool IsClassAt(string text, int index)
+    {
+        return text.Substring(index).StartsWith("class ");
+    }
+
+    private static int FindMatchingBrace(string text, int start)
+    {
+        int depth = 0;
+
+        for (int i = start; i < text.Length; i++)
+        {
+            if (text[i] == '{')
+                depth++;
+            else if (text[i] == '}')
+                depth--;
+
+            if (depth == 0)
+                return i;
+        }
+
+        return -1;
     }
 
     [RavenFact(RavenTestCategory.Ai)]

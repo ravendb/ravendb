@@ -228,62 +228,159 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 {
     public override string GenerateFullFile(AiAgentConfiguration obj, string varName = "obj")
     {
+        return $$"""
+                 using System;
+                 using System.Collections.Generic;
+                 using System.Threading.Tasks;
+                 using Raven.Client.Documents;
+                 using Raven.Client.Documents.AI;
+                 using Raven.Client.Documents.Operations.AI.Agents;
+
+                 {{GenerateObject(obj, varName)}}
+
+                 var documentStore = new DocumentStore
+                 {
+                     Urls = new[] { "http://localhost:8080" },
+                     Database = "TestDB"
+                 }.Initialize();
+
+                 // Create/deploy the agent
+                 await documentStore.AI.CreateAgentAsync({{varName}});
+
+                 // Create a conversation/chat with the agent
+                 var conversation = documentStore.AI.Conversation(
+                     agentId: "{{obj.Identifier}}",
+                     conversationId: "Conversations/",
+                     {{GenerateConversationParameters(obj)}}
+                 );
+
+                 {{GenerateHandleCalls(obj)}}
+
+                 // Set user prompt and run
+                 conversation.SetUserPrompt("Your question here");
+
+                 {{GenerateResponseClassDefinition(obj)}}var result = await conversation.RunAsync<{{GetResponseTypeName(obj)}}>();
+                 var answer = result.Answer;
+                 """;
+    }
+
+    private static string GenerateConversationParameters(AiAgentConfiguration obj)
+    {
         var sb = new StringBuilder();
-
-        sb.AppendLine("using System;");
-        sb.AppendLine("using System.Collections.Generic;");
-        sb.AppendLine("using System.Threading.Tasks;");
-        sb.AppendLine("using Raven.Client.Documents;");
-        sb.AppendLine("using Raven.Client.Documents.AI;");
-        sb.AppendLine("using Raven.Client.Documents.Operations.AI.Agents;");
-        sb.AppendLine();
-        sb.AppendLine(GenerateObject(obj, varName));
-        sb.AppendLine();
-
-        sb.AppendLine("var documentStore = new DocumentStore");
-        sb.AppendLine("{");
-        sb.AppendLine("    Urls = new[] { \"http://localhost:8080\" },");
-        sb.AppendLine("    Database = \"TestDB\"");
-        sb.AppendLine("}.Initialize();");
-
-        sb.AppendLine("// Create/deploy the agent");
-        sb.AppendLine($"await documentStore.AI.CreateAgentAsync({varName});");
-        sb.AppendLine();
-
-        sb.AppendLine("// Create a conversation/chat with the agent");
-        sb.AppendLine("var conversation = documentStore.AI.Conversation(");
-        sb.AppendLine($"    agentId: \"{obj.Identifier}\",");
-        sb.AppendLine("    conversationId: \"Conversations/\",");
-
         if (obj.Parameters is { Count: > 0 })
         {
-            sb.AppendLine("    new AiConversationCreationOptions()");
+            sb.AppendLine("new AiConversationCreationOptions()");
             foreach (var param in obj.Parameters)
                 sb.AppendLine($"        .AddParameter(\"{param.Name}\", \"your-{param.Name}-here\")  // {param.Description}");
         }
+        return sb.ToString();
+    }
 
-        sb.AppendLine(");");
-        sb.AppendLine();
+    private static string GenerateHandleCalls(AiAgentConfiguration obj)
+    {
+        var actions = obj.Actions ?? [];
+        if (actions.Count == 0)
+            return string.Empty;
 
-        foreach (var action in obj.Actions ?? [])
+        var sb = new StringBuilder();
+        sb.Append("""
+        class ActionToolResult
         {
+            public bool IsSuccessful { get; set; }
+            public string Answer { get; set; }
+        }
+
+        """);
+
+        foreach (var action in actions)
+        {
+            var argsClassName = $"{action.Name}Args";
+            var argsClassDef = GenerateArgsClass(argsClassName, action.ParametersSampleObject);
+            if (argsClassDef != null)
+            {
+                sb.AppendLine(argsClassDef);
+                sb.AppendLine();
+            }
+
+            var argType = argsClassDef != null ? argsClassName : "object";
             sb.AppendLine($"// Define a handler for the \"{action.Name}\" action tool");
-            sb.AppendLine($"conversation.Handle<object, string>(\"{action.Name}\", async (args) =>");
+            sb.AppendLine($"conversation.Handle<{argType}, ActionToolResult>(\"{action.Name}\", async (args) =>");
             sb.AppendLine("{");
-            AppendJsonComment(sb, action.ParametersSampleObject, "    ");
             sb.AppendLine($"    // TODO: handle \"{action.Name}\" action");
-            sb.AppendLine("    return \"done\";");
+            sb.AppendLine("    return new ActionToolResult { IsSuccessful = true };");
             sb.AppendLine("});");
             sb.AppendLine();
         }
 
-        sb.AppendLine("// Set user prompt and run");
-        sb.AppendLine("conversation.SetUserPrompt(\"Your question here\");");
-        sb.AppendLine();
-        sb.AppendLine("var result = await conversation.RunAsync</* your response type */>();");
-        sb.AppendLine("var answer = result.Answer;");
-
         return sb.ToString();
+    }
+
+    private static string GenerateArgsClass(string className, string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return null;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return null;
+            var props = doc.RootElement.EnumerateObject().ToList();
+            if (props.Count == 0)
+                return null;
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"class {className}");
+            sb.AppendLine("{");
+            foreach (var prop in props)
+                sb.AppendLine($"    public {GetCSharpType(prop.Value)} {prop.Name} {{ get; set; }}");
+            sb.Append("}");
+            return sb.ToString();
+        }
+        catch { return null; }
+    }
+
+    private static string GenerateResponseClassDefinition(AiAgentConfiguration obj)
+    {
+        if (string.IsNullOrWhiteSpace(obj.SampleObject))
+            return string.Empty;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(obj.SampleObject);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return string.Empty;
+            var props = doc.RootElement.EnumerateObject().ToList();
+            if (props.Count == 0)
+                return string.Empty;
+
+            var sb = new StringBuilder();
+            sb.AppendLine("class AgentResponse");
+            sb.AppendLine("{");
+            foreach (var prop in props)
+                sb.AppendLine($"    public {GetCSharpType(prop.Value)} {prop.Name} {{ get; set; }}");
+            sb.AppendLine("}");
+            sb.AppendLine();
+            return sb.ToString();
+        }
+        catch { return string.Empty; }
+    }
+
+    private static string GetResponseTypeName(AiAgentConfiguration obj) =>
+        string.IsNullOrWhiteSpace(obj.SampleObject) ? "/* your response type */" : "AgentResponse";
+
+    private static string GetCSharpType(System.Text.Json.JsonElement element) => element.ValueKind switch
+    {
+        System.Text.Json.JsonValueKind.String => "string",
+        System.Text.Json.JsonValueKind.Number => element.TryGetInt64(out _) ? "long" : "double",
+        System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False => "bool",
+        System.Text.Json.JsonValueKind.Array => $"List<{GetArrayItemType(element)}>",
+        _ => "object"
+    };
+
+    private static string GetArrayItemType(System.Text.Json.JsonElement array)
+    {
+        foreach (var item in array.EnumerateArray())
+            return GetCSharpType(item);
+        return "object";
     }
 
     protected override string FormatValue(object value, int indent) => value switch
@@ -369,29 +466,48 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
 {
     public override string GenerateFullFile(AiAgentConfiguration obj, string varName = "obj")
     {
+        return $$"""
+                 const { DocumentStore } = require('ravendb');
+
+                 async function runConversation() {
+                 {{GenerateObject(obj, varName, indent: 1).TrimEnd()}}
+
+                     const documentStore = new DocumentStore('http://localhost:8080', 'YourDatabase');
+                     documentStore.initialize();
+
+                     // Create/deploy the agent
+                     const createdAgentResult = await documentStore.ai.createAgent({{varName}});
+
+                     // Create a conversation/chat with the agent
+                     const chat = documentStore.ai.conversation(
+                         createdAgentResult.identifier,  // The agent ID
+                         'Conversations/',                // The conversation document prefix
+                         {{GenerateConversationParameters(obj)}}
+                     );
+
+                     {{GenerateHandleCalls(obj)}}
+                     // Set user prompt
+                     chat.setUserPrompt('Your question here');
+
+                     // Run the chat/conversation
+                     const response = await chat.run();
+
+                     if (response.status === 'Done') {
+                         const answer = response.answer;
+                         console.log(answer);
+                     }
+                 }
+
+                 runConversation();
+                 """;
+    }
+
+    private static string GenerateConversationParameters(AiAgentConfiguration obj)
+    {
         var sb = new StringBuilder();
-
-        sb.AppendLine("const { DocumentStore } = require('ravendb');");
-        sb.AppendLine();
-        sb.AppendLine("async function runConversation() {");
-        sb.AppendLine(GenerateObject(obj, varName, indent: 1).TrimEnd());
-        sb.AppendLine();
-        sb.AppendLine("    const documentStore = new DocumentStore('http://localhost:8080', 'YourDatabase');");
-        sb.AppendLine("    documentStore.initialize();");
-        sb.AppendLine();
-
-        sb.AppendLine("    // Create/deploy the agent");
-        sb.AppendLine($"    const createdAgentResult = await documentStore.ai.createAgent({varName});");
-        sb.AppendLine();
-
-        sb.AppendLine("    // Create a conversation/chat with the agent");
-        sb.AppendLine("    const chat = documentStore.ai.conversation(");
-        sb.AppendLine("        createdAgentResult.identifier,  // The agent ID");
-        sb.AppendLine("        'Conversations/',               // The conversation document prefix");
-
         if (obj.Parameters is { Count: > 0 })
         {
-            sb.AppendLine("        {");
+            sb.AppendLine("{");
             sb.AppendLine("            parameters: {");
             for (int i = 0; i < obj.Parameters.Count; i++)
             {
@@ -402,35 +518,22 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
             sb.AppendLine("            }");
             sb.AppendLine("        }");
         }
+        return sb.ToString();
+    }
 
-        sb.AppendLine("    );");
-        sb.AppendLine();
-
+    private static string GenerateHandleCalls(AiAgentConfiguration obj)
+    {
+        var sb = new StringBuilder();
         foreach (var action in obj.Actions ?? [])
         {
-            sb.AppendLine($"    // Define a handler for the '{action.Name}' action tool");
-            sb.AppendLine($"    chat.handle('{action.Name}', async (params) => {{");
-            AppendJsonComment(sb, action.ParametersSampleObject, "        ");
-            sb.AppendLine($"        // TODO: handle '{action.Name}' action");
-            sb.AppendLine("        return 'done';");
-            sb.AppendLine("    });");
+            sb.AppendLine($"// Define a handler for the '{action.Name}' action tool");
+            sb.AppendLine($"chat.handle('{action.Name}', async (params) => {{");
+            AppendJsonComment(sb, action.ParametersSampleObject, "    ");
+            sb.AppendLine($"    // TODO: handle '{action.Name}' action");
+            sb.AppendLine("    return 'done';");
+            sb.AppendLine("});");
             sb.AppendLine();
         }
-
-        sb.AppendLine("    // Set user prompt");
-        sb.AppendLine("    chat.setUserPrompt('Your question here');");
-        sb.AppendLine();
-        sb.AppendLine("    // Run the chat/conversation");
-        sb.AppendLine("    const response = await chat.run();");
-        sb.AppendLine();
-        sb.AppendLine("    if (response.status === 'Done') {");
-        sb.AppendLine("        const answer = response.answer;");
-        sb.AppendLine("        console.log(answer);");
-        sb.AppendLine("    }");
-        sb.AppendLine("}");
-        sb.AppendLine();
-        sb.AppendLine("runConversation();");
-
         return sb.ToString();
     }
 
@@ -507,25 +610,34 @@ public class PythonCodeGenerator : AbstractCodeGenerator
 {
     public override string GenerateFullFile(AiAgentConfiguration obj, string varName = "obj")
     {
+        return $$"""
+                 from ravendb import *
+
+                 document_store = DocumentStore(
+                     urls=["http://127.0.0.1:8080"],
+                     database="YourDatabaseName"
+                 )
+                 document_store.initialize()
+
+                 {{GenerateObject(obj, varName)}}
+
+                 # Create/deploy the agent
+                 agent_id = document_store.ai.add_or_update_agent({{varName}}).identifier
+
+                 # Create a conversation/chat with the agent
+                 {{GenerateConversation(obj)}}
+
+                 {{GenerateHandleCalls(obj)}}
+                 # Set user prompt and run
+                 chat.set_user_prompt('Your question here')
+                 result = chat.run()
+                 answer = result.answer
+                 """;
+    }
+
+    private static string GenerateConversation(AiAgentConfiguration obj)
+    {
         var sb = new StringBuilder();
-
-        sb.AppendLine("from ravendb import *");
-        sb.AppendLine();
-        sb.AppendLine("document_store = DocumentStore(");
-        sb.AppendLine("    urls=[\"http://127.0.0.1:8080\"],");
-        sb.AppendLine("    database=\"YourDatabaseName\"");
-        sb.AppendLine(")");
-        sb.AppendLine("document_store.initialize()").AppendLine();
-        sb.AppendLine();
-
-        sb.AppendLine(GenerateObject(obj, varName));
-        sb.AppendLine();
-        sb.AppendLine();
-
-        sb.AppendLine("# Create/deploy the agent");
-        sb.AppendLine($"agent_id = document_store.ai.add_or_update_agent({varName}).identifier");
-
-        sb.AppendLine("# Create a conversation/chat with the agent");
         if (obj.Parameters is { Count: > 0 })
         {
             sb.AppendLine("with document_store.ai.conversation(");
@@ -541,9 +653,12 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         {
             sb.AppendLine("with document_store.ai.conversation(agent_id, conversation_id='Conversations/') as chat:");
         }
+        return sb.ToString();
+    }
 
-        sb.AppendLine();
-
+    private static string GenerateHandleCalls(AiAgentConfiguration obj)
+    {
+        var sb = new StringBuilder();
         foreach (var action in obj.Actions ?? [])
         {
             var handlerName = $"handle_{ToSnakeCase(action.Name)}";
@@ -556,12 +671,6 @@ public class PythonCodeGenerator : AbstractCodeGenerator
             sb.AppendLine($"chat.handle('{action.Name}', {handlerName})");
             sb.AppendLine();
         }
-
-        sb.AppendLine("# Set user prompt and run");
-        sb.AppendLine("chat.set_user_prompt('Your question here')");
-        sb.AppendLine("result = chat.run()");
-        sb.AppendLine("answer = result.answer");
-
         return sb.ToString();
     }
 
