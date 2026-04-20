@@ -476,16 +476,19 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     break;
                 case FullUpdateMessage fullUpdate:
                 {
-                    // REPLICA IDENTITY FULL — old row available for reparent detection
+                    // Per Npgsql: OldRow MUST be consumed before NewRow (sequential replication stream).
+                    var (proc, oldValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.OldRow, ct);
                     var newOp = await DecodeRow(fullUpdate.Relation, fullUpdate.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct);
+
                     if (newOp?.Processor is { IsRoot: false })
                     {
-                        var (_, oldValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.OldRow, ct);
                         foreach (var evt in CreateEmbeddedUpdateEvents(newOp, oldValues))
                             yield return evt;
                     }
                     else
                     {
+                        // Root table FullUpdateMessage — return oldValues to pool (unused) and yield the upsert.
+                        proc.ReturnValues(oldValues);
                         yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
                     }
                     break;
