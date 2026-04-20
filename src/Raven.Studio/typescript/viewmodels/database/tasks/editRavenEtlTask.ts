@@ -6,6 +6,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
+import { settingsEntry } from "models/database/settings/databaseSettingsModels";
 import configurationConstants = require("configuration");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
@@ -294,15 +295,14 @@ class editRavenEtlTask extends shardViewModelBase {
             .execute()
             .done((result: Raven.Server.Config.SettingsResult) => {
                 const key = configurationConstants.etl.ravenLoadRequestTimeout;
-                const entry = result.Settings.find(x => x.Metadata.Keys.includes(key)) as Raven.Server.Config.ConfigurationEntryDatabaseValue;
+                const rawEntry = result.Settings.find(x => x.Metadata.Keys.includes(key));
 
-                if (!entry) {
+                if (!rawEntry) {
                     return;
                 }
 
-                const effectiveValue = entry.DatabaseValues?.[key]?.HasValue ? entry.DatabaseValues[key].Value :
-                    entry.ServerValues?.[key]?.HasValue ? entry.ServerValues[key].Value :
-                    entry.Metadata.DefaultValue;
+                const entry = settingsEntry.getEntry(rawEntry);
+                const effectiveValue = entry.effectiveValue();
 
                 if (effectiveValue) {
                     this.loadRequestTimeoutPlaceholder(`Use database default timeout (${effectiveValue}s)`);
