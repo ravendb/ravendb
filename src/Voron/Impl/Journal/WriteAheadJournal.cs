@@ -1074,15 +1074,17 @@ namespace Voron.Impl.Journal
                 var minScratchNumber = int.MaxValue;
                 var maxScratchNumber = int.MinValue;
 #endif
-
-                foreach (var pageFromScratchBuffer in bufferOfPageFromScratchBuffersToFree)
+                
+                for (var i = 0; i < bufferOfPageFromScratchBuffersToFree.Count; i++)
                 {
+                    var pageFromScratchBuffer = bufferOfPageFromScratchBuffersToFree[i];
                     if (pageFromScratchBuffer == null)
-                        throw new ArgumentNullException(nameof(pageFromScratchBuffer));
+                        continue; // it could be already freed in a previous (partial) execution of this action
                     if (pageFromScratchBuffer.File == null)
                         throw new ArgumentNullException(nameof(pageFromScratchBuffer.File));
 
                     scratchBufferPool.Free(txw, pageFromScratchBuffer.File.Number, pageFromScratchBuffer.PositionInScratchBuffer);
+                    bufferOfPageFromScratchBuffersToFree[i] = null;
 
 #if DEBUG
                     freedUpToTx = long.Max(freedUpToTx, pageFromScratchBuffer.AllocatedInTransaction);
