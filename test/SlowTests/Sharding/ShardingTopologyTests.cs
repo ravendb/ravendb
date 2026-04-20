@@ -115,6 +115,12 @@ namespace SlowTests.Sharding
                 var res = store.Maintenance.Server.Send(new AddDatabaseShardOperation(store.Database, replicationFactor: 1));
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(res.RaftCommandIndex);
 
+                await AssertWaitForValueAsync(async () =>
+                {
+                    var s = await Sharding.GetShardingConfigurationAsync(store);
+                    return s.Shards.Count;
+                }, 3);
+
                 var sharding = await Sharding.GetShardingConfigurationAsync(store);
                 var nodeToInstanceCount = new Dictionary<string, int>();
 
@@ -317,10 +323,17 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                DatabaseRecord record = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    var firstShard = record.Sharding.Shards.Values.FirstOrDefault();
+                    return firstShard?.AllNodes.Count() ?? 0;
+                }, 1);
+
                 var chosenShard = record.Sharding.Shards.Keys.First();
                 var shardTopology = record.Sharding.Shards[chosenShard];
-                Assert.Equal(1, shardTopology.AllNodes.Count());
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(1, shardTopology.ReplicationFactor);
 
@@ -511,9 +524,15 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                DatabaseRecord record = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
                 var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
@@ -574,9 +593,16 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
+                DatabaseRecord record = null;
+                DatabaseTopology shardTopology = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
+                shardTopology = record.Sharding.Shards[0];
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
@@ -624,9 +650,16 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
+                DatabaseRecord record = null;
+                DatabaseTopology shardTopology = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
+                shardTopology = record.Sharding.Shards[0];
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
@@ -669,9 +702,16 @@ namespace SlowTests.Sharding
 
             using (var store = GetDocumentStore(options))
             {
-                var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var shardTopology = record.Sharding.Shards[0];
-                Assert.Equal(2, shardTopology.Members.Count);
+                DatabaseRecord record = null;
+                DatabaseTopology shardTopology = null;
+
+                await AssertWaitForValueAsync(async () =>
+                {
+                    record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+                    return record.Sharding.Shards[0].Members.Count;
+                }, 2);
+
+                shardTopology = record.Sharding.Shards[0];
                 Assert.Equal(0, shardTopology.Promotables.Count);
                 Assert.Equal(2, shardTopology.ReplicationFactor);
 
