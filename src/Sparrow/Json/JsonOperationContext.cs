@@ -506,7 +506,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(value.Length);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionSize(value);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSize(value);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -514,7 +514,7 @@ namespace Sparrow.Json
                 var address = memory.Address;
             var actualSize = Encodings.Utf8.GetBytes(value, new Span<byte>(address, memory.SizeInBytes));
 
-            state.FindEscapedPositions(address, ref actualSize, escapePositionsSize);
+                state.FindEscapedPositions(address,  actualSize, escapePositionsSize);
 
             state.WriteEscapedPositionsTo(address + actualSize);
             LazyStringValue result = longLived == false ? AllocateStringValue(strValue, address, actualSize) : new LazyStringValue(strValue, address, actualSize, this);
@@ -537,7 +537,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePosition(ptr, size);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSizeLinearScan(ptr, size);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -546,7 +546,7 @@ namespace Sparrow.Json
 
             Memory.Copy(address, ptr, size);
 
-            state.FindEscapedPositions(address, ref size, escapePositionsSize);
+            state.FindEscapedPositions(address,  size, escapePositionsSize);
 
             state.WriteEscapedPositionsTo(address + size);
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
@@ -561,7 +561,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
 
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(ptr, size, out _);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, size, out _);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -570,7 +570,7 @@ namespace Sparrow.Json
 
             Memory.Copy(address, ptr, size);
 
-            state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize);
+            state.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(address, ref size, escapePositionsSize);
 
             state.WriteEscapedPositionsTo(address + size);
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);

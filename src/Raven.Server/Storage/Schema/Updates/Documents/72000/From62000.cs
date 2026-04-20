@@ -210,8 +210,8 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             toDispose.Add(writeTable.Allocate(out tvb));
             toDispose.Add(Slice.From(context.Allocator, attachment.ChangeVector, out var changeVectorSlice));
             toDispose.Add(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out keySlice));
-            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName1, out Slice namePtr));
-            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerName2, out Slice contentTypePtr));
+            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.Name, out Slice lowerName1, out Slice namePtr));
+            toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, attachment.ContentType, out Slice lowerName2, out Slice contentTypePtr));
 
             tvb.Add(keySlice.Content.Ptr, keySlice.Size);
             tvb.Add(Bits.SwapBytes(attachment.Etag));

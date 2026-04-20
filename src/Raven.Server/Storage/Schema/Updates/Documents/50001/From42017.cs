@@ -223,7 +223,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                     doc.Data = context.ReadObject(doc.Data, docId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 }
 
-                using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, doc.Id, out Slice lowerId, out Slice idPtr))
+                using (DocumentIdWorker.GetLowerIdSliceAndStorageKeyForBackwardCompatibility(context, doc.Id, out Slice lowerId, out Slice idPtr))
                 using (Slice.From(context.Allocator, doc.ChangeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
