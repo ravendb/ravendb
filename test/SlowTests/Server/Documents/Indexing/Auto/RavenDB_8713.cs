@@ -120,7 +120,10 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                     session.SaveChanges();
 
-                    var results = session.Query<Item>().Statistics(out var stats).GroupBy(x => new {x.name, x.Name}).Select(g => new
+                    var results = session.Query<Item>()
+                        .Statistics(out var stats)
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => new {x.name, x.Name}).Select(g => new
                     {
                         g.Key.name,
                         g.Key.Name,
