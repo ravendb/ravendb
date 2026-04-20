@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.ETL
@@ -31,6 +32,19 @@ namespace Raven.Client.Documents.Operations.ETL
         public override string GetDefaultTaskName()
         {
             return $"RavenDB ETL to {ConnectionStringName}";
+        }
+
+        internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<RavenConnectionString> config, Dictionary<string, RavenConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
+        {
+            var diff = base.Compare(config, connectionStrings, transformationDiffs);
+
+            if (config is RavenEtlConfiguration ravenConfig)
+            {
+                if (ravenConfig.LoadRequestTimeoutInSec != LoadRequestTimeoutInSec)
+                    diff |= EtlConfigurationCompareDifferences.ConfigurationOptions;
+            }
+
+            return diff;
         }
 
         public override DynamicJsonValue ToJson()

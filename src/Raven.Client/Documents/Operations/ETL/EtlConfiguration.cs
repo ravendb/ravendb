@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Operations.ETL
             return ToJson();
         }
 
-        internal EtlConfigurationCompareDifferences Compare(
+        internal virtual EtlConfigurationCompareDifferences Compare(
             EtlConfiguration<T> config,
             Dictionary<string, T> connectionStrings,
             List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)

@@ -5,6 +5,8 @@ import database = require("models/resources/database");
 import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
+import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
+import configurationConstants = require("configuration");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
 import ongoingTaskRavenEtlEditModel = require("models/database/tasks/ongoingTaskRavenEtlEditModel");
@@ -193,6 +195,7 @@ class editRavenEtlTask extends shardViewModelBase {
     ravenEtlConnectionStringsDetails = ko.observableArray<Raven.Client.Documents.Operations.ETL.RavenConnectionString>([]);
 
     possibleMentors = ko.observableArray<string>([]);
+    loadRequestTimeoutPlaceholder = ko.observable<string>("Use database default timeout");
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     
@@ -257,7 +260,7 @@ class editRavenEtlTask extends shardViewModelBase {
             deferred.resolve();
         }
 
-        return $.when<any>(this.getAllConnectionStrings(), deferred)
+        return $.when<any>(this.getAllConnectionStrings(), this.loadDatabaseSettings(), deferred)
             .done(() => {
                 this.initObservables();
             })
@@ -283,6 +286,27 @@ class editRavenEtlTask extends shardViewModelBase {
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 const connectionStrings = Object.values(result.RavenConnectionStrings);
                 this.ravenEtlConnectionStringsDetails(typeUtils.sortBy(connectionStrings, x => x.Name.toUpperCase()));
+            });
+    }
+
+    private loadDatabaseSettings() {
+        return new getDatabaseSettingsCommand(this.db)
+            .execute()
+            .done((result: Raven.Server.Config.SettingsResult) => {
+                const key = configurationConstants.etl.ravenLoadRequestTimeout;
+                const entry = result.Settings.find(x => x.Metadata.Keys.includes(key)) as Raven.Server.Config.ConfigurationEntryDatabaseValue;
+
+                if (!entry) {
+                    return;
+                }
+
+                const effectiveValue = entry.DatabaseValues?.[key]?.HasValue ? entry.DatabaseValues[key].Value :
+                    entry.ServerValues?.[key]?.HasValue ? entry.ServerValues[key].Value :
+                    entry.Metadata.DefaultValue;
+
+                if (effectiveValue) {
+                    this.loadRequestTimeoutPlaceholder(`Use database default timeout (${effectiveValue}s)`);
+                }
             });
     }
 
