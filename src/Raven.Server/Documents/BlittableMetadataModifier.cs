@@ -608,7 +608,7 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
-                    if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false ||
+                    if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false &&
                         "Raven-Replication-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;

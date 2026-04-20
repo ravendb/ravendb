@@ -61,7 +61,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     "Raven-Replication-Merged-History": "true",
                     "Non-Authoritative-Information": "false",
                     "Raven-Document-Parent-Revision": "0",
-                    "Raven-Document-Revision-Status": "Current"
+                    "Raven-Document-Revision-Status": "Current",
+                    "Raven-Replication-Version": "1",
+                    "Raven-Replication-History": []
                 }
             }
             """;
@@ -104,6 +106,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.False(metadata.TryGet("Raven-Document-Parent-Revision", out string _), "Raven-Document-Parent-Revision should be stripped");
                 Assert.False(metadata.TryGet("Raven-Document-Revision-Status", out string _), "Raven-Document-Revision-Status should be stripped");
                 Assert.False(metadata.TryGet("Raven-Replication-Merged-History", out string _), "Raven-Replication-Merged-History should be stripped");
+                Assert.False(metadata.TryGet("Raven-Replication-Version", out string _), "Raven-Replication-Version should be stripped");
+                Assert.False(metadata.TryGet("Raven-Replication-History", out BlittableJsonReaderArray _), "Raven-Replication-History should be stripped");
 
                 Assert.True(metadata.TryGet("@collection", out string _));
                 Assert.True(metadata.TryGet("@expires", out DateTime _));
@@ -131,7 +135,9 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     "Raven-Replication-Merged-History": "true",
                     "Non-Authoritative-Information": "false",
                     "Raven-Document-Parent-Revision": "0",
-                    "Raven-Document-Revision-Status": "Current"
+                    "Raven-Document-Revision-Status": "Current",
+                    "Raven-Replication-Version": "1",
+                    "Raven-Replication-History": []
                 }
             }
             """;
@@ -174,6 +180,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 Assert.True(metadata.TryGet("Raven-Document-Parent-Revision", out string _));
                 Assert.True(metadata.TryGet("Raven-Document-Revision-Status", out string _));
                 Assert.True(metadata.TryGet("Raven-Replication-Merged-History", out string _));
+                Assert.True(metadata.TryGet("Raven-Replication-Version", out string _));
+                Assert.True(metadata.TryGet("Raven-Replication-History", out BlittableJsonReaderArray _));
 
                 Assert.False(metadata.TryGet("@collection", out string _));
                 Assert.False(metadata.TryGet("@expires", out DateTime _));
