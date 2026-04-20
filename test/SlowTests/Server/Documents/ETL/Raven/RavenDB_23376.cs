@@ -122,19 +122,25 @@ namespace SlowTests.Server.Documents.ETL.Raven
                     Assert.Equal(2, categorySummaries.Count);
                 }
 
-                etlDone.Reset();
-
                 // Update the index definition - this will cause artificial document IDs to be regenerated
                 await new ProductsByCategoryUpdated().ExecuteAsync(src);
 
                 await Indexes.WaitForIndexingAsync(src);
-                
+
                 using (var session = src.OpenSession())
                 {
                     WaitForValue(() => session.Query<ProductsByCategories>().Count(), 2, 0, interval: 500);
                 }
 
-                etlDone.Wait(TimeSpan.FromMinutes(1));
+                // poll destination directly - the ETL may need multiple batches to process both
+                // the new artificial docs (inserts) and old artificial doc tombstones (deletes)
+                WaitForValue(() =>
+                {
+                    using (var session = dest.OpenSession())
+                    {
+                        return session.Query<ProductsByCategories>().Count();
+                    }
+                }, 2, timeout: 60_000, interval: 500);
 
                 using (var session = dest.OpenAsyncSession())
                 {
