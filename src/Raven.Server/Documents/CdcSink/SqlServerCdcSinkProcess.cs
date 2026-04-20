@@ -282,8 +282,12 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         var pkKey = processor.GenerateDocumentId(values);
                         if (pendingPreUpdate.Remove(pkKey, out var oldValues))
                         {
-                            foreach (var evt in CreateEmbeddedUpdateEvents(op, oldValues))
-                                buffer.Add((rowLsn, rowSeq, buffer.Count, evt));
+                            var (delete, upsert) = CreateEmbeddedUpdateEvents(op, oldValues);
+                            if (delete.HasValue)
+                                buffer.Add((rowLsn, rowSeq, buffer.Count, delete.Value));
+                            else
+                                processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                            buffer.Add((rowLsn, rowSeq, buffer.Count, upsert));
                             continue;
                         }
                     }
@@ -508,8 +512,9 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             // For embedded tables we keep pre-update images (op 3) so we can detect join column
             // changes (reparenting). For root tables we still filter them out.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
+            // GetProcessor throws if the table isn't registered; every configured table is, so proc is always non-null.
             var proc = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
-            var filterPreUpdate = proc == null || proc.IsRoot;
+            var filterPreUpdate = proc.IsRoot;
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
                 FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'all')

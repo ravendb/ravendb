@@ -482,12 +482,16 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
                     if (newOp?.Processor is { IsRoot: false })
                     {
-                        foreach (var evt in CreateEmbeddedUpdateEvents(newOp, oldValues))
-                            yield return evt;
+                        var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
+                        if (delete.HasValue)
+                            yield return delete.Value;
+                        else
+                            proc.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                        yield return upsert;
                     }
                     else
                     {
-                        // Root table FullUpdateMessage — return oldValues to pool (unused) and yield the upsert.
+                        // Root table FullUpdateMessage — old values unused, return to pool.
                         proc.ReturnValues(oldValues);
                         yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
                     }

@@ -18,6 +18,7 @@ using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
+using Sparrow.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -427,39 +428,41 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     /// <summary>
     /// Builds the <see cref="CdcEvent"/>(s) for an UPDATE on an embedded table.
-    /// When the join column changed (reparenting), returns two events: a Delete from the
-    /// old parent followed by an Upsert to the new parent.  Otherwise returns a single Upsert.
-    /// Providers call this after decoding both old and new row values.
+    /// When the join column changed (reparenting), returns a Delete against the old parent
+    /// plus an Upsert against the new parent. Otherwise <c>Delete</c> is null and only the
+    /// Upsert event is returned. The caller is responsible for returning <paramref name="oldValues"/>
+    /// to the processor pool when <c>Delete</c> is null (when it is non-null, the values array
+    /// lives on as <c>deleteOp.RawValues</c> and is released with the batch).
+    /// Precondition: <paramref name="newOp"/>.Processor.IsRoot must be false.
     /// </summary>
     /// <param name="newOp">The op produced by <see cref="CdcSinkDocumentProcessor.ProcessRow(CdcSinkTableProcessor, CdcSinkOperation, object[], JsonOperationContext)"/> for the new row.</param>
-    /// <param name="oldValues">Decoded column values from the row BEFORE the update (same positional layout as <see cref="CdcSinkTableProcessor.SourceColumnNames"/>). May be null if the provider cannot supply old data.</param>
-    protected CdcEvent[] CreateEmbeddedUpdateEvents(CdcSinkDocumentOp newOp, object[] oldValues)
+    /// <param name="oldValues">Decoded column values from the row BEFORE the update (same positional layout as <see cref="CdcSinkTableProcessor.SourceColumnNames"/>).</param>
+    protected (CdcEvent? Delete, CdcEvent Upsert) CreateEmbeddedUpdateEvents(
+        CdcSinkDocumentOp newOp, object[] oldValues)
     {
-        if (oldValues != null && newOp?.Processor is { IsRoot: false } proc)
+        var upsert = new CdcEvent(CdcEventType.Upsert, newOp, null);
+        var proc = newOp.Processor;
+
+        var oldParentId = proc.GetParentDocumentId(oldValues);
+        if (string.Equals(oldParentId, newOp.DocumentId, StringComparison.Ordinal))
+            return (null, upsert);
+
+        // Reparent: build the delete op with MappedData derived from the OLD row so that
+        // $old in OnDelete patches (and any PK-based array/map matching) reflects the
+        // actual item being removed from the old parent.
+        var oldMappedData = proc.MapColumns(oldValues, StreamingJsonContext);
+        proc.ApplyLinks(oldMappedData, oldValues);
+
+        var deleteOp = new CdcSinkDocumentOp
         {
-            var oldParentId = proc.GetParentDocumentId(oldValues);
-            if (string.Equals(oldParentId, newOp.DocumentId, StringComparison.Ordinal) == false)
-            {
-                // MappedData is shared with newOp: reparenting changes the join (FK) column,
-                // not the PK. The PK values used by MatchesPrimaryKey to find the array element
-                // are identical in old and new rows.
-                var deleteOp = new CdcSinkDocumentOp
-                {
-                    Type = CdcSinkDocumentOpType.EmbeddedModify,
-                    DocumentId = oldParentId,
-                    Processor = proc,
-                    MappedData = newOp.MappedData,
-                    RawValues = oldValues,
-                    Operation = CdcSinkOperation.Delete,
-                };
-                return [new CdcEvent(CdcEventType.Delete, deleteOp, null), new CdcEvent(CdcEventType.Upsert, newOp, null)];
-            }
-
-            // Same parent — no reparent. Return the pooled old-values array since we won't use it.
-            proc.ReturnValues(oldValues);
-        }
-
-        return [new CdcEvent(CdcEventType.Upsert, newOp, null)];
+            Type = CdcSinkDocumentOpType.EmbeddedModify,
+            DocumentId = oldParentId,
+            Processor = proc,
+            MappedData = oldMappedData,
+            RawValues = oldValues,
+            Operation = CdcSinkOperation.Delete,
+        };
+        return (new CdcEvent(CdcEventType.Delete, deleteOp, null), upsert);
     }
 
     /// <summary>

@@ -541,8 +541,13 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                             var newOp = DecodeRow(uTable, row.AfterUpdate.Cells, CdcSinkOperation.Upsert, StreamingJsonContext);
                             if (newOp?.Processor is { IsRoot: false })
                             {
-                                foreach (var evt in CreateEmbeddedUpdateEvents(newOp, DecodeRowInternal(uTable, row.BeforeUpdate.Cells)))
-                                    yield return evt;
+                                var oldValues = DecodeRowInternal(uTable, row.BeforeUpdate.Cells);
+                                var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
+                                if (delete.HasValue)
+                                    yield return delete.Value;
+                                else
+                                    uTable.Processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                                yield return upsert;
                             }
                             else
                             {
