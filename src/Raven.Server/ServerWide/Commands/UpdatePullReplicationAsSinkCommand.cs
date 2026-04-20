@@ -24,7 +24,8 @@ namespace Raven.Server.ServerWide.Commands
             if (PullReplicationAsSink == null)
                 return ;
 
-            PullReplicationPathFilterUtils.NormalizeAndValidate(ref PullReplicationAsSink.AllowedHubToSinkPaths, ref PullReplicationAsSink.AllowedSinkToHubPaths, PullReplicationAsSink.Name ?? PullReplicationAsSink.HubName);
+            PullReplicationAsSink.AllowedHubToSinkPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(PullReplicationAsSink.AllowedHubToSinkPaths, PullReplicationAsSink.Name ?? PullReplicationAsSink.HubName);
+            PullReplicationAsSink.AllowedSinkToHubPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(PullReplicationAsSink.AllowedSinkToHubPaths, PullReplicationAsSink.Name ?? PullReplicationAsSink.HubName);
 
             if (PullReplicationAsSink.TaskId == 0)
             {

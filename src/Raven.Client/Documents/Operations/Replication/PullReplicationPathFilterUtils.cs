@@ -12,20 +12,7 @@ namespace Raven.Client.Documents.Operations.Replication
             return normalizedPaths;
         }
 
-        public static void NormalizeAndValidate(ref string[] allowedHubToSinkPaths, ref string[] allowedSinkToHubPaths, string name)
-        {
-            Normalize(ref allowedHubToSinkPaths, ref allowedSinkToHubPaths);
-            Validate(allowedHubToSinkPaths, name);
-            Validate(allowedSinkToHubPaths, name);
-        }
-
-        public static void Normalize(ref string[] allowedHubToSinkPaths, ref string[] allowedSinkToHubPaths)
-        {
-            allowedHubToSinkPaths = Normalize(allowedHubToSinkPaths);
-            allowedSinkToHubPaths = Normalize(allowedSinkToHubPaths);
-        }
-
-        private static string[] Normalize(string[] allowedPaths)
+        public static string[] Normalize(string[] allowedPaths)
         {
             if (allowedPaths == null)
                 return null;

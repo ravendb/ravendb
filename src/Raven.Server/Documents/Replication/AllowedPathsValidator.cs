@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Replication
             _allowedPaths = new List<LazyStringValue>();
             _allowedPathsPrefixes = new List<LazyStringValue>();
 
-            var normalizedAllowedPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(allowedPaths, name: "pull replication path filter");
+            var normalizedAllowedPaths = PullReplicationPathFilterUtils.Normalize(allowedPaths);
             if ((normalizedAllowedPaths?.Length ?? 0) == 0)
                 return;
 

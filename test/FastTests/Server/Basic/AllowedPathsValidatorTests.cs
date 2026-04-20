@@ -26,5 +26,23 @@ namespace FastTests.Server.Basic
             Assert.True(validator.ShouldAllow(matchingItem));
             Assert.False(validator.ShouldAllow(nonMatchingItem));
         }
+
+        [RavenFact(RavenTestCategory.Replication)]
+        public void Should_keep_legacy_invalid_wildcard_patterns_operational_at_runtime()
+        {
+            using var validator = new AllowedPathsValidator([" issues* "]);
+            using var context = JsonOperationContext.ShortTermSingleUse();
+
+            using var matchingItem = new DocumentReplicationItem();
+            matchingItem.Type = ReplicationBatchItem.ReplicationItemType.Document;
+            matchingItem.Id = context.GetLazyString("issues/ABCD/1");
+
+            using var nonMatchingItem = new DocumentReplicationItem();
+            nonMatchingItem.Type = ReplicationBatchItem.ReplicationItemType.Document;
+            nonMatchingItem.Id = context.GetLazyString("tasks/1");
+
+            Assert.True(validator.ShouldAllow(matchingItem));
+            Assert.False(validator.ShouldAllow(nonMatchingItem));
+        }
     }
 }

@@ -43,7 +43,8 @@ namespace Raven.Client.Documents.Operations.Replication
             if (string.IsNullOrEmpty(Name))
                 throw new ArgumentNullException(nameof(Name));
 
-            PullReplicationPathFilterUtils.NormalizeAndValidate(ref AllowedHubToSinkPaths, ref AllowedSinkToHubPaths, Name);
+            AllowedHubToSinkPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(AllowedHubToSinkPaths, Name);
+            AllowedSinkToHubPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(AllowedSinkToHubPaths, Name);
 
             if (filteringIsRequired)
             {
