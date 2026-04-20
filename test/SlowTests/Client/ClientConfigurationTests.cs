@@ -220,6 +220,7 @@ namespace SlowTests.Client
             await AssertWaitForClientConfiguration(origin);
 
             await store.Maintenance.SendAsync(new PutClientConfigurationOperation(GetClientConfiguration(101)));
+            await AssertWaitForClientConfiguration(101);
             await store.Maintenance.Server.SendAsync(new PutServerWideClientConfigurationOperation(GetClientConfiguration(102)));
             await AssertWaitForClientConfiguration(101);
 
