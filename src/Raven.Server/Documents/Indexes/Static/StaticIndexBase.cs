@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Indexes.Static
         protected static Logger Log = LoggingSource.Instance.GetLogger<AbstractStaticIndexBase>("Server");
 
         
-        public int StackSizeInSelectClause { get; set; }
+        public int LetClausesDepth { get; set; }
         
         public bool HasDynamicFields { get; set; }
 
@@ -243,18 +243,18 @@ namespace Raven.Server.Documents.Indexes.Static
         internal void CheckDepthOfStackInOutputMap(IndexDefinition indexMetadata, DocumentDatabase documentDatabase)
         {
             var performanceHintConfig = documentDatabase.Configuration.PerformanceHints;
-            if (StackSizeInSelectClause > performanceHintConfig.MaxDepthOfRecursionInLinqSelect)
+            if (LetClausesDepth > performanceHintConfig.MaxDepthOfRecursionInLinqSelect)
             {
                 documentDatabase.NotificationCenter.Add(PerformanceHint.Create(
                     documentDatabase.Name,
-                    $"Index '{indexMetadata.Name}' contains {StackSizeInSelectClause} `let` clauses.",
+                    $"Index '{indexMetadata.Name}' contains {LetClausesDepth} `let` clauses.",
                     $"We have detected that your index contains many `let` clauses. This can be not optimal approach because it might cause to allocate a lot of stack-based memory. Please consider to simplify your index definition. We suggest not to exceed {performanceHintConfig.MaxDepthOfRecursionInLinqSelect} `let` statements.",
                     PerformanceHintType.Indexing,
                     NotificationSeverity.Info,
                     nameof(IndexCompiler)));
-                
+
                 if (Log.IsOperationsEnabled)
-                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {StackSizeInSelectClause}.");
+                    Log.Operations($"Index '{indexMetadata.Name}' contains a lot of `let` clauses. Stack size is {LetClausesDepth}.");
             }
         }
         
