@@ -1007,7 +1007,7 @@ namespace Sparrow.Json.Parsing
             // max possible size - we avoid using GetByteCount because profiling showed it to take 2% of runtime
             // the buffer might be a bit longer, but we'll reuse it, and it is better than the computing cost
            
-            int escapePositionsSize = JsonParserState.FindMaxEscapePositionSize(str.AsSpan());
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSize(str.AsSpan());
 
             int byteCount = str.Length * 5 + escapePositionsSize;
             if (_currentStateBuffer == null || _currentStateBuffer.SizeInBytes < byteCount)
@@ -1031,7 +1031,7 @@ namespace Sparrow.Json.Parsing
             {
                 _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, _currentStateBuffer.SizeInBytes);
                 _state.CompressedSize = null; // don't even try
-                _state.FindEscapedPositions(_state.StringBuffer, ref _state.StringSize, escapePositionsSize);
+                _state.FindEscapedPositions(_state.StringBuffer, _state.StringSize, escapePositionsSize);
 
                 var escapePos = _state.StringBuffer + _state.StringSize;
                 _state.WriteEscapePositionsTo(escapePos);
