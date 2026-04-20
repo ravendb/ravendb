@@ -671,7 +671,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var changeVector = revisions[1].GetString(Constants.Documents.Metadata.ChangeVector);
             
             var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Operations.SendAsync(new RevertRevisionsByIdOperation(id, changeVector)));
-            Assert.Contains("System.InvalidOperationException: Reverting documents to revisions is not allowed when Schema Validation is enabled. Please disable Schema Validation and try again.", e.Message);
+            Assert.Contains("Reverting documents to revisions is not allowed when Schema Validation is enabled. Please disable Schema Validation and try again.", e.Message);
             
             configuration.Disabled = true;
             await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -726,7 +726,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var operation = await store.Maintenance.SendAsync(new RevisionsHelper.RevertRevisionsOperation(revisionTime, 1));
             await operation.WaitForCompletionAsync<RevertResult>(TimeSpan.FromSeconds(5));
         });
-        Assert.Contains("System.InvalidOperationException: Reverting documents to revisions is not allowed when Schema Validation is enabled. Please disable Schema Validation and try again.", e.Message);
+        Assert.Contains("Reverting documents to revisions is not allowed when Schema Validation is enabled. Please disable Schema Validation and try again.", e.Message);
         
         configuration.Disabled = true;
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
