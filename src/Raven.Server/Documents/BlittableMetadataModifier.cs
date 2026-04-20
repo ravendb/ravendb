@@ -45,7 +45,9 @@ namespace Raven.Server.Documents
 
         // Change vector is null when importing from v3.5.
         // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
-        // Also skips all legacy v3 metadata properties instead of renaming/processing them.
+        // Legacy import handling does not preserve legacy v3 metadata properties as-is.
+        // Selected legacy properties are still recognized and may be mapped to current metadata fields
+        // or read to populate internal flags/state needed during import.
         public bool HandleLegacyProperties;
 
         public bool ReadLegacyEtag;
