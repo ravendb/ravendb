@@ -13,6 +13,7 @@
 
     .docEditor {
         flex-grow: 1;
+        min-width: 0;
     }
 
     .differences_summary {
@@ -74,9 +75,30 @@
         overflow-x: hidden;
     }
 
+    .copy-area {
+        > .left-header {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .icon-copy, .icon-json {
+            font-size: 20px;
+        }
+
+        a.inherit-position, a.flex-shrink-0 {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        p.on-base-background {
+            margin-bottom: 0;
+        }
+    }
+
     .documentId {
         font-size: 25px;
-        margin-bottom: 8px;
+        overflow: hidden;
 
         .fav-object {
             position: relative;
@@ -85,11 +107,12 @@
         }
 
         span.obj-name {
-            flex-shrink: 1;
-            flex-grow: 1;
+            flex: 0 1 auto;
+            min-width: 0;
+            max-width: 35vw;
             overflow: hidden;
             text-overflow: ellipsis;
-            width: 100px;
+            white-space: nowrap;
         }
 
         @obj-name-placeholder-color: darken(@gray,10%);
