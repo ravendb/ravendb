@@ -33,8 +33,8 @@ namespace Raven.Server.Documents.Replication.Senders
         protected readonly Logger Log;
         private long _lastEtag;
 
-        private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new SortedList<long, ReplicationBatchItem>();
-        private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new Dictionary<Slice, AttachmentReplicationItem>(SliceComparer.Instance);
+        private readonly SortedList<long, ReplicationBatchItem> _orderedReplicaItems = new();
+        private readonly Dictionary<Slice, AttachmentReplicationItem> _replicaAttachmentStreams = new(SliceComparer.Instance);
         private readonly byte[] _tempBuffer = new byte[32 * 1024];
         private readonly Stream _stream;
         internal readonly DatabaseOutgoingReplicationHandler _parent;
@@ -496,7 +496,12 @@ namespace Raven.Server.Documents.Replication.Senders
             if (item is AttachmentReplicationItem attachment)
             {
                 if (ShouldSendAttachmentStream(attachment))
+                {
                     _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
+
+                    // Add the actual size of the stream sent
+                    state._size += attachment.StreamSize;
+                }
 
                 if (MissingAttachmentsInLastBatch)
                     state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
