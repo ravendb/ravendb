@@ -20,9 +20,9 @@ public static unsafe partial class StringUtils
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int FindMaxEscapePositionSize(ReadOnlySpan<char> str) => FindMaxEscapePositionSizeLinearScan(str);
 #endif
-
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool HasControlCharactersLinearSearch(ReadOnlySpan<char> str)
+    private static bool HasControlCharactersLinearSearch(ReadOnlySpan<byte> str)
     {
         for (int i = 0; i < str.Length; i++)
         {
@@ -31,9 +31,9 @@ public static unsafe partial class StringUtils
         }
         return false;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool HasControlCharactersLinearSearch(ReadOnlySpan<byte> str)
+    private static bool HasControlCharactersLinearSearch(ReadOnlySpan<char> str)
     {
         for (int i = 0; i < str.Length; i++)
         {
