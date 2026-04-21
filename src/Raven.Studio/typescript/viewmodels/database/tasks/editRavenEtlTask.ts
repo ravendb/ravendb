@@ -6,7 +6,7 @@ import getOngoingTaskInfoCommand = require("commands/database/tasks/getOngoingTa
 import eventsCollector = require("common/eventsCollector");
 import getConnectionStringsCommand = require("commands/database/settings/getConnectionStringsCommand");
 import getDatabaseSettingsCommand = require("commands/database/settings/getDatabaseSettingsCommand");
-import { settingsEntry } from "models/database/settings/databaseSettingsModels";
+import models = require("models/database/settings/databaseSettingsModels");
 import configurationConstants = require("configuration");
 import saveEtlTaskCommand = require("commands/database/tasks/saveEtlTaskCommand");
 import generalUtils = require("common/generalUtils");
@@ -301,7 +301,7 @@ class editRavenEtlTask extends shardViewModelBase {
                     return;
                 }
 
-                const entry = settingsEntry.getEntry(rawEntry);
+                const entry = models.settingsEntry.getEntry(rawEntry);
                 const effectiveValue = entry.effectiveValue();
 
                 if (effectiveValue) {
