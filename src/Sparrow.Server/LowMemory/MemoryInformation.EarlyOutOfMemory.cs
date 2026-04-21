@@ -113,7 +113,7 @@ public static partial class MemoryInformation
 
                 if (limits.JobMemoryLimit != UIntPtr.Zero)
                 {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
+                    maxSize = Math.Min(maxSize, (long)limits.JobMemoryLimit);
                 }
 
                 if (maxSize != long.MaxValue)
