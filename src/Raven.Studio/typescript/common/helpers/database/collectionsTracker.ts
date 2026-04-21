@@ -21,6 +21,32 @@ class collectionsTracker {
 
     conflictsCount = ko.observable<number>();
 
+    systemCollectionsExpanded = ko.observable<boolean>(true);
+
+    systemCollections = ko.pureComputed<collection[]>(() => {
+        return this.collections().filter(x => x.isSystem);
+    });
+
+    userCollections = ko.pureComputed<collection[]>(() => {
+        return this.collections().filter(x => !x.isAllDocuments && !x.isSystem);
+    });
+
+    systemCollectionsDocumentCount = ko.pureComputed<number>(() => {
+        return this.systemCollections().reduce((total, c) => total + c.documentCount(), 0);
+    });
+
+    systemCollectionsCountPrefix = ko.pureComputed<string>(() => {
+        return generalUtils.getCountPrefix(this.systemCollectionsDocumentCount());
+    });
+
+    systemCollectionsSizeClass = ko.pureComputed<string>(() => {
+        return generalUtils.getSizeClass(this.systemCollectionsDocumentCount());
+    });
+
+    toggleSystemCollections() {
+        this.systemCollectionsExpanded(!this.systemCollectionsExpanded());
+    }
+
     private db: database;
 
     private events = {

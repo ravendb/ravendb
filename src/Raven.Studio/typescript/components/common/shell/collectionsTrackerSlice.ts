@@ -52,7 +52,7 @@ const selectCollectionNames = createSelector(
 );
 
 const selectUserCollectionNames = createSelector(selectCollectionNames, (collections) =>
-    collections.filter((name) => name !== collectionNames.empty && name !== collectionNames.hilo)
+    collections.filter((name) => !String(name).startsWith("@"))
 );
 
 export const collectionsTrackerSelectors = {
