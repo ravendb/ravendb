@@ -25,7 +25,7 @@ using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Data;
+namespace SlowTests.SparrowTests;
 
 public class ControlCharacterTests : ClusterTestBase
 {
@@ -587,7 +587,7 @@ public class ControlCharacterTests : ClusterTestBase
             }
         }
     }
-
+    
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
         var e = await Assert.ThrowsAnyAsync<Exception>(testCode);
