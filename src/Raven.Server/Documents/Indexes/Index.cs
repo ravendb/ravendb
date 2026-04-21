@@ -294,6 +294,8 @@ namespace Raven.Server.Documents.Indexes
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
+        private IndexHeavinessGrade _cachedStaticHeavinessGrade;
+        private IndexDefinitionBaseServerSide _cachedHeavinessDefinition;
         public HashSet<IndexField> ComplexFieldsNotIndexedByCorax { get; private set; }
 
         protected Index(IndexType type, IndexSourceType sourceType, IndexDefinitionBaseServerSide definition, AbstractStaticIndexBase compiled)
@@ -3273,6 +3275,8 @@ namespace Raven.Server.Documents.Indexes
                 if (indexDefinition == null)
                     return null;
 
+                IndexHeavinessGrade staticGrade = GetOrComputeStaticHeavinessGrade(indexDefinition);
+
                 IndexDefinitionHeavinessAnalyzer.CollectionDataProvider collectionDataProvider = null;
                 DocumentsOperationContext docsContext = null;
                 IDisposable contextRelease = null;
@@ -3299,7 +3303,7 @@ namespace Raven.Server.Documents.Indexes
                         };
                     }
 
-                    return IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(indexDefinition, Collections, stats, collectionDataProvider);
+                    return IndexDefinitionHeavinessAnalyzer.ComputeFullGrade(staticGrade, Collections, stats, collectionDataProvider);
                 }
                 finally
                 {
@@ -3310,6 +3314,19 @@ namespace Raven.Server.Documents.Indexes
             {
                 return null;
             }
+        }
+
+        private IndexHeavinessGrade GetOrComputeStaticHeavinessGrade(IndexDefinition indexDefinition)
+        {
+            IndexDefinitionBaseServerSide currentDefinition = Definition;
+
+            if (_cachedStaticHeavinessGrade != null && ReferenceEquals(_cachedHeavinessDefinition, currentDefinition))
+                return _cachedStaticHeavinessGrade;
+
+            IndexHeavinessGrade staticGrade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(indexDefinition, Collections);
+            _cachedStaticHeavinessGrade = staticGrade;
+            _cachedHeavinessDefinition = currentDefinition;
+            return staticGrade;
         }
 
         private IndexStats.MemoryStats GetMemoryStats()

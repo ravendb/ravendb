@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (additionalFromCount > 0)
             {
-                if (HasFanout)
+                if (HasFanout || additionalFromCount > 1)
                     HasNestedFanout = true;
                 HasFanout = true;
             }

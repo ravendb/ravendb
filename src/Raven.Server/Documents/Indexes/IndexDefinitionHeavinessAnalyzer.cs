@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
 using Raven.Client;
@@ -66,6 +67,8 @@ namespace Raven.Server.Documents.Indexes
         private const int PenaltyExtraLetClause = 2;      // per extra beyond 3
         private const int PenaltyWhere = 1;
         private const int PenaltyRecurse = 10;
+
+        private const int PenaltyTooComplexToAnalyze = 20;
 
         // 1.4 Structural penalties
         private const int PenaltyOutputReduceToCollection = 10;
@@ -145,8 +148,25 @@ namespace Raven.Server.Documents.Indexes
             IndexStats stats,
             CollectionDataProvider collectionDataProvider)
         {
-            var staticPenalties = new List<IndexHeavinessPenalty>();
-            int staticScore = ComputeStaticScore(definition, collections, staticPenalties);
+            IndexHeavinessGrade staticGrade = ComputeStaticGrade(definition, collections);
+            return ComputeFullGrade(staticGrade, collections, stats, collectionDataProvider);
+        }
+
+        /// <summary>
+        /// Computes the full heaviness grade using a pre-computed static grade.
+        /// Avoids re-parsing map expressions when the static grade is cached.
+        /// </summary>
+        /// <param name="staticGrade">A previously computed static grade (from <see cref="ComputeStaticGrade"/>).</param>
+        /// <param name="collections">Collections indexed by this index (from Index.Collections).</param>
+        /// <param name="stats">Current runtime stats for the index, used for runtime penalties.</param>
+        /// <param name="collectionDataProvider">Delegate to retrieve per-collection document count and total size.</param>
+        public static IndexHeavinessGrade ComputeFullGrade(
+            IndexHeavinessGrade staticGrade,
+            IEnumerable<string> collections,
+            IndexStats stats,
+            CollectionDataProvider collectionDataProvider)
+        {
+            int staticScore = staticGrade.StaticScore;
 
             double dataScaleMultiplier = 1.0;
             if (collectionDataProvider != null)
@@ -163,10 +183,10 @@ namespace Raven.Server.Documents.Indexes
             {
                 StaticScore = staticScore,
                 FullScore = Math.Round(fullScore, 2),
-                StaticGradeLabel = GetStaticLabel(staticScore),
+                StaticGradeLabel = staticGrade.StaticGradeLabel,
                 FullGradeLabel = GetFullLabel(fullScore),
                 DataScaleMultiplier = Math.Round(dataScaleMultiplier, 2),
-                StaticPenalties = staticPenalties,
+                StaticPenalties = staticGrade.StaticPenalties,
                 RuntimePenalties = runtimePenalties
             };
         }
@@ -330,9 +350,13 @@ namespace Raven.Server.Documents.Indexes
                 if (visitor.HasRecurse)
                     score += AddPenalty(penalties, "Recurse (unbounded recursive traversal)", PenaltyRecurse);
             }
+            catch (InvalidDataException)
+            {
+                score += AddPenalty(penalties, "Map expression too complex to fully analyze (stack depth exceeded)", PenaltyTooComplexToAnalyze);
+            }
             catch
             {
-                // Ignore parse errors; we simply skip map analysis for that expression
+                // Ignore benign parse errors; we simply skip map analysis for that expression
             }
 
             return score;
