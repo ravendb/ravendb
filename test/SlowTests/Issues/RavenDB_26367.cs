@@ -99,12 +99,12 @@ public class RavenDB_26367 : ClusterTestBase
         // iterations (i.e., at least one multi-batch result).
         Assert.True(tombstonesBefore > 8192, $"Expected more than 8192 tombstones in place before cleanup, got {tombstonesBefore}.");
 
-        // Force the next observer iteration to run the tombstone cleanup immediately.
-        leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks = 0;
-
-        // Wait for all tombstones to drain (requires >= 2 cleanup iterations).
+        // Reset the tick on every poll: the cluster-wide transaction bump propagates to the
+        // observer via heartbeat, so a single reset races that heartbeat and can close the
+        // gate before any cleanup runs.
         var allDrained = await WaitForValueAsync(() =>
         {
+            leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks = 0;
             using (leader.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -113,6 +113,10 @@ public class RavenDB_26367 : ClusterTestBase
         }, expectedVal: true, timeout: 60_000, interval: 250);
 
         Assert.True(allDrained, "Expected all compare-exchange tombstones to be drained by the observer.");
+
+        // Give the observer one cycle to advance the tick naturally now that the queue is empty,
+        // before we start counting attempts below.
+        await Task.Delay(2_000);
 
         // Now count how many times the observer attempts tombstone cleanup during a short
         // observation window. With the configured interval of `cleanupIntervalInMin` minutes,
