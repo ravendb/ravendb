@@ -137,6 +137,9 @@ namespace Raven.Server.Documents.Indexes
 
         /// <summary>
         /// Computes the full heaviness grade including data scale modifiers and runtime observations.
+        /// This convenience overload recomputes the static grade on every call (involves Roslyn parsing).
+        /// For repeated calls on the same index definition, prefer caching the static grade via
+        /// <see cref="ComputeStaticGrade"/> and using the <see cref="ComputeFullGrade(IndexHeavinessGrade, IEnumerable{string}, IndexStats, CollectionDataProvider)"/> overload.
         /// </summary>
         /// <param name="definition">The index definition.</param>
         /// <param name="collections">Collections indexed by this index (from Index.Collections).</param>
