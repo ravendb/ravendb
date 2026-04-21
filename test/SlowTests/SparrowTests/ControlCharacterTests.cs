@@ -586,7 +586,7 @@ public class ControlCharacterTests : ClusterTestBase
             }
         }
     }
-
+    
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
         var e = await Assert.ThrowsAnyAsync<Exception>(testCode);
