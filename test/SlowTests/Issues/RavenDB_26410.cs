@@ -129,7 +129,7 @@ namespace SlowTests.Issues
                 Assert.Null(etlProcess.Configuration.LoadRequestTimeoutInSec);
 
                 var database = await GetDocumentDatabaseInstanceFor(src);
-                Assert.Equal(TimeSpan.FromSeconds(100), database.Configuration.Etl.RavenLoadRequestTimeout.AsTimeSpan);
+                Assert.Equal(TimeSpan.FromSeconds(300), database.Configuration.Etl.RavenLoadRequestTimeout.AsTimeSpan);
 
                 TimeSpan? actualTimeout = null;
                 var afterRun = new AsyncManualResetEvent();
@@ -148,7 +148,7 @@ namespace SlowTests.Issues
 
                 Assert.True(await afterRun.WaitAsync(TimeSpan.FromSeconds(30)));
 
-                Assert.Equal(TimeSpan.FromSeconds(100), actualTimeout);
+                Assert.Equal(TimeSpan.FromSeconds(300), actualTimeout);
             }
         }
 
