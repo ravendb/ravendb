@@ -36,7 +36,7 @@ namespace SlowTests.Issues
 
                 var json = context.ReadObject(djv, "input");
 
-                AssertItem(json, string.Join(string.Empty, Enumerable.Range(0, size).Select(x => "\\u0000")));
+                AssertItem(json, s);
 
                 await using (var ms = new MemoryStream())
                 {
@@ -57,6 +57,7 @@ namespace SlowTests.Issues
             {
                 Assert.True(result.TryGet("ProductName", out string productName));
 
+                Assert.Equal(expected, productName);
                 if (productName != expected)
                     throw new InvalidOperationException($"Expected: {s} but was {productName}.");
             }
