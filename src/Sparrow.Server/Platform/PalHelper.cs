@@ -13,17 +13,27 @@ namespace Sparrow.Server.Platform
         {
             public static class Windows
             {
-                public const int ERROR_WRITE_PROTECT = 19; 
+                public const int ERROR_WRITE_PROTECT = 19;
                 public const string ErrorMediaIsWriteProtectedHintMessage =
                     "This might indicate a hardware or OS issue. If you are running in the cloud, please consider contacting your provider since your volume's data might be inconsistent.";
 
                 public const int ERROR_NOT_SUPPORTED = 50;
+                public const int ERROR_TOO_MANY_LINKS = 1142;
             }
 
             public class Posix
             {
                 public const int ENOTSUP = 95;
+                public const int EMLINK = 31;
             }
+        }
+
+        public static bool IsHardLinkLimitError(int errorCode)
+        {
+            if (PlatformDetails.RunningOnWindows)
+                return errorCode == ErrorCodes.Windows.ERROR_TOO_MANY_LINKS;
+
+            return errorCode == ErrorCodes.Posix.EMLINK;
         }
 
         [DoesNotReturn]

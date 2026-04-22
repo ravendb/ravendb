@@ -1833,7 +1833,15 @@ namespace Voron.Impl.Journal
             }
         }
 
-        public IJournalMerger BranchJournalMerger; 
+        public IJournalMerger BranchJournalMerger;
+
+        /// <summary>
+        /// Called when a branch environment cannot be hard-linked because the file system
+        /// hard-link limit has been reached. The environment's RootJournal is already null
+        /// at call time — subsequent commits from that branch go to its own local journals.
+        /// </summary>
+        public Action<StorageEnvironment> OnBranchHardLinkLimitReached;
+
         private void SubmitBranchJournalEntry(Task commitCompleted)
         {
             Debug.Assert(_env.Options.RootJournal is null, "_env.Options.RootJournal is null");
@@ -1926,17 +1934,36 @@ namespace Voron.Impl.Journal
             foreach (var rec in SharedJournalState.JournalRecords)
             {
                 var environment = rec.Transaction.Environment;
-                JournalFile journalFile = environment.Journal.EnsureRegistered(CurrentFile, out var alreadyExists);
+                JournalFile journalFile;
+                bool alreadyExists;
+                try
+                {
+                    journalFile = environment.Journal.EnsureRegistered(CurrentFile, out alreadyExists);
+                }
+                catch (HardLinkLimitExceededException ex)
+                {
+                    // The file system hard-link limit was reached for this branch. Switch it to
+                    // unshared (local journal) mode and fail only this branch's commit. The branch
+                    // will retry and write directly to its own Journals/ directory. Its data entry
+                    // remains in SharedJournalState.Entries and will be written to the root journal
+                    // as a phantom — this is safe because recovery filters transactions by JournalId,
+                    // so neither root nor branch will apply the phantom during recovery.
+                    environment.Options.RootJournal = null;
+                    OnBranchHardLinkLimitReached?.Invoke(environment);
+                    rec.Tcs.TrySetException(ex);
+                    continue;
+                }
+
                 rec.Transaction.WrittenToJournalNumber = journalFile.Number;
                 journalFile.SetTransactionFrom(rec.Entry);
-                if (alreadyExists) 
+                if (alreadyExists)
                     continue;
-                
+
                 // here we need to register the new journal file link as a journal entry so on recovery, we'll
                 // know to restore any dropped hard links that may have been lost (since we are *not* calling fsync()
                 // on the directory during the creation of the link)
                 string relativePath = Path.GetRelativePath(
-                    CurrentFile.JournalWriter.FileName.FullPath, 
+                    CurrentFile.JournalWriter.FileName.FullPath,
                     journalFile.JournalWriter.FileName.FullPath);
                 _linkedJournalsRecord.Add(relativePath, environment.HeaderAccessor.JournalId);
 
@@ -1984,6 +2011,9 @@ namespace Voron.Impl.Journal
 
             foreach (var rec in SharedJournalState.JournalRecords)
             {
+                if (rec.Tcs.Task.IsCompleted)
+                    continue; // already failed (e.g. hard-link limit), do not overwrite the exception
+
                 var llt = rec.Transaction;
                 llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
                 rec.Tcs.TrySetResult();
