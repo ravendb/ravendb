@@ -25,11 +25,24 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         var mock = new DummyBigMatch();
         var memoizer = searcher.Memoize(mock).Replay();
         var results = memoizer.FillAndRetrieve();
-        Assert.True(results.Length > 1_000_000);
+        Assert.Equal(DummyBigMatch.TotalItemsToProduce, results.Length);
         for (int i = 1; i < Math.Min(1000, results.Length); i++)
         {
             Assert.True(results[i] > results[i - 1]);
         }
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
+    public void MemoizationMatchProviderThrowsWhenResultSetExceedsBuffer()
+    {
+        using var fields = CreateFields(Allocator);
+        using var searcher = new IndexSearcher(Env, fields);
+
+        searcher.MaxMemoizationSizeInBytes = 16 * 1024 * 1024;
+
+        var mock = new DummyBigMatch();
+        var memoizer = searcher.Memoize(mock).Replay();
+        Assert.Throws<InvalidOperationException>(() => memoizer.FillAndRetrieve());
     }
 
     private static IndexFieldsMapping CreateFields(ByteStringContext bsc)
@@ -44,10 +57,12 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
 
     private struct DummyBigMatch : IQueryMatch
     {
-        private int _fillCallCount;
+        public const int TotalItemsToProduce = 200_000_000;
+
+        private long _totalGenerated;
         private bool _completed;
 
-        public long Count => int.MaxValue;
+        public long Count => 1000;
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
         public bool IsBoosting => false;
         public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
@@ -58,21 +73,17 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         {
             if (_completed) return 0;
 
-            _fillCallCount++;
+            int fillCount = (int)Math.Min(Math.Min(matches.Length, 10_000_000), TotalItemsToProduce - _totalGenerated);
 
-            var fillCount = Math.Min(matches.Length - 1, 90_000_000);
-
-            long baseId = (_fillCallCount - 1L) * fillCount + 1;
+            long baseId = _totalGenerated + 1;
             for (int i = 0; i < fillCount; i++)
             {
                 matches[i] = baseId + i;
             }
 
-            if (_fillCallCount >= 20)
-            {
+            _totalGenerated += fillCount;
+            if (_totalGenerated >= TotalItemsToProduce)
                 _completed = true;
-                return fillCount / 2;
-            }
 
             return fillCount;
         }
@@ -86,7 +97,7 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         public QueryInspectionNode Inspect() => new(nameof(DummyBigMatch),
             parameters: new Dictionary<string, string>
             {
-                { "FillCallCount", _fillCallCount.ToString() },
+                { "TotalGenerated", _totalGenerated.ToString() },
                 { "Count", Count.ToString() }
             });
     }
