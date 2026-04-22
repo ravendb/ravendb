@@ -33,6 +33,10 @@
                 border-top: sizes.$border-width solid colors.$border-color-light-var;
             }
 
+            & + div.no-top-border {
+                border-top: none;
+            }
+
             &:first-of-type {
                 height: 50px;
             }

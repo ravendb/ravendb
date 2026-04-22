@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import classNames from "classnames";
 import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
@@ -7,6 +7,9 @@ import { OngoingEtlTaskProgressTooltip } from "../partials/OngoingEtlTaskProgres
 import { Icon } from "components/common/Icon";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
+import copyToClipboard from "common/copyToClipboard";
 
 interface OngoingEtlTaskDistributionProps {
     task: AnyEtlOngoingTaskInfo;
@@ -18,10 +21,85 @@ interface ItemWithTooltipProps {
     sharded: boolean;
     task: AnyEtlOngoingTaskInfo;
     showPreview: (transformationName: string) => void;
+    expectsTxId: boolean;
+    txIdScripts: string[];
+    singleScript: boolean;
+}
+
+function buildTxIdCells(
+    expectsTxId: boolean,
+    txIdScripts: string[],
+    singleScript: boolean,
+    nodeInfo: OngoingEtlTaskNodeInfo
+): React.JSX.Element[] {
+    if (!expectsTxId) {
+        return [];
+    }
+
+    const hasProgress = !!nodeInfo.etlProgress?.length;
+
+    const loadingDiv = (key: string) => (
+        <div key={key} className="d-flex align-items-center justify-content-center gap-1 text-muted">
+            <Spinner animation="border" size="sm" />
+            <small>Loading...</small>
+        </div>
+    );
+
+    const txIdDiv = (key: string, txId: string | undefined, noTopBorder = false) => {
+        const borderClass = noTopBorder ? "no-top-border" : undefined;
+        if (!txId) {
+            return hasProgress ? (
+                <div key={key} className={borderClass}>
+                    -
+                </div>
+            ) : (
+                loadingDiv(key)
+            );
+        }
+        return (
+            <div
+                key={key}
+                className={classNames(
+                    "d-flex align-items-center justify-content-center gap-1 overflow-hidden",
+                    borderClass
+                )}
+            >
+                <span className="text-truncate" title={txId}>
+                    {txId}
+                </span>
+                <Button
+                    variant="link"
+                    size="xs"
+                    className="p-0 flex-shrink-0"
+                    onClick={() => copyToClipboard.copy(txId, "Transactional Id was copied to clipboard.")}
+                    title="Copy to clipboard"
+                >
+                    <Icon icon="copy" margin="m-0" />
+                </Button>
+            </div>
+        );
+    };
+
+    if (txIdScripts.length === 0) {
+        return [loadingDiv("txid-loading")];
+    }
+
+    if (singleScript) {
+        const txId = nodeInfo.etlProgress?.find((ep) => ep.transformationName === txIdScripts[0])?.transactionalId;
+        return [txIdDiv(`txid-${txIdScripts[0]}`, txId)];
+    }
+
+    return [
+        <div key="txid-header"></div>,
+        ...txIdScripts.map((script) => {
+            const txId = nodeInfo.etlProgress?.find((ep) => ep.transformationName === script)?.transactionalId;
+            return txIdDiv(`txid-${script}`, txId, true);
+        }),
+    ];
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, task, showPreview } = props;
+    const { nodeInfo, sharded, task, showPreview, expectsTxId, txIdScripts, singleScript } = props;
 
     const shard = (
         <div className="top shard">
@@ -44,6 +122,8 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     const hasError = !!nodeInfo.details?.error;
     const [node, setNode] = useState<HTMLDivElement>();
 
+    const txIdCells = buildTxIdCells(expectsTxId, txIdScripts, singleScript, nodeInfo);
+
     return (
         <div ref={setNode}>
             <DistributionItem loading={nodeInfo.status === "loading" || nodeInfo.status === "idle"} key={key}>
@@ -63,6 +143,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
+                {txIdCells}
                 <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node &&
@@ -91,11 +172,37 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
             nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
     );
 
+    const expectsTxId = task.shared.taskType === "KafkaQueueEtl";
+
+    const txIdScripts: string[] = expectsTxId
+        ? Array.from(
+              visibleNodes.reduce((acc, nodeInfo) => {
+                  nodeInfo.etlProgress?.forEach((ep) => {
+                      if (ep.transactionalId) {
+                          acc.add(ep.transformationName);
+                      }
+                  });
+                  return acc;
+              }, new Set<string>())
+          )
+        : [];
+
+    const singleScript = txIdScripts.length === 1;
+
     const items = visibleNodes.map((nodeInfo) => {
         const key = taskNodeInfoKey(nodeInfo);
 
         return (
-            <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} showPreview={showPreview} task={task} />
+            <ItemWithTooltip
+                key={key}
+                nodeInfo={nodeInfo}
+                sharded={sharded}
+                showPreview={showPreview}
+                task={task}
+                expectsTxId={expectsTxId}
+                txIdScripts={txIdScripts}
+                singleScript={singleScript}
+            />
         );
     });
 
@@ -115,6 +222,23 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                     <div>
                         <Icon icon="warning" /> Error
                     </div>
+                    {expectsTxId && txIdScripts.length <= 1 && (
+                        <div className="pe-1">
+                            <Icon icon="identities" /> Transactional ID
+                        </div>
+                    )}
+                    {expectsTxId && txIdScripts.length > 1 && (
+                        <>
+                            <div className="pe-1">
+                                <Icon icon="identities" /> Transactional IDs
+                            </div>
+                            {txIdScripts.map((script) => (
+                                <div key={script} className="no-top-border ps-3">
+                                    {script}
+                                </div>
+                            ))}
+                        </>
+                    )}
                     <div>
                         <Icon icon="changes" /> State
                     </div>
