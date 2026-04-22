@@ -1282,5 +1282,25 @@ namespace FastTests
                 return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
             }
         }
+        
+        protected static Options AllowControlCharactersInIdentifier(Options options = null)
+        {
+            options ??= new Options();
+            var modifyDatabaseRecord = options.ModifyDatabaseRecord;
+            options.ModifyDatabaseRecord = record =>
+            {
+                modifyDatabaseRecord?.Invoke(record);
+
+                // Get all public const string fields from SupportedFeatures class dynamically
+                record.SupportedFeatures = typeof(Constants.DatabaseRecord.SupportedFeatures)
+                    .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    .Where(f => f.IsLiteral && f.FieldType == typeof(string))
+                    .Select(f => (string)f.GetValue(null))
+                    .Where(x => x != Constants.DatabaseRecord.SupportedFeatures.ThrowControlCharactersInIdentifier)
+                    .ToList();
+            };
+            return options;
+        }
+
     }
 }
