@@ -36,7 +36,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Attachments)]
         public void EntityShouldNotBeMarkedAsChangedWhenItContainsControlCharacters()
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(AllowControlCharactersInIdentifier());
 
             using (var session = store.OpenSession())
             using (var stream = new MemoryStream())
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Core)]
         public void CanHaveControlCharacterInId()
         {
-            var store = GetDocumentStore();
+            var store = GetDocumentStore(AllowControlCharactersInIdentifier());
 
             var id = ((char)1).ToString();
             using (var session = store.OpenSession())
