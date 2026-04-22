@@ -28,7 +28,9 @@ export function CellWithCopy({ value, children, additionalButtons }: CellWithCop
 
     return (
         <>
-            <div ref={setValuePopover}>{children}</div>
+            <div ref={setValuePopover} className="table-font">
+                {children}
+            </div>
             <PopoverWithHover target={valuePopover} placement="bottom-start">
                 <Popover.Body>
                     <pre

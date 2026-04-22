@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Logging;
@@ -114,6 +115,8 @@ namespace Sparrow.Server.LowMemory
             _lowMemoryCommitLimitInMb = lowMemoryCommitLimitInMb;
         }
 
+        private static readonly MultipleUseFlag _isAboutToRunOutOfMemory = new MultipleUseFlag();
+
         public static void AssertNotAboutToRunOutOfMemory()
         {
             if (EnableEarlyOutOfMemoryChecks == false)
@@ -126,6 +129,12 @@ namespace Sparrow.Server.LowMemory
                 EnableEarlyOutOfMemoryCheck == false)   // but we want to enable this manually if needed
                 return;
 
+            if (_isAboutToRunOutOfMemory.IsRaised() == false)
+                return;
+
+            // The background thread flagged potential memory pressure.
+            // Re-check with fresh data so allocations can still proceed
+            // if memory has been freed since the last background check.
             var memInfo = GetEarlyOutOfMemoryInfo();
             if (IsEarlyOutOfMemoryInternal(memInfo, earlyOutOfMemoryWarning: false, out _))
                 ThrowInsufficientMemory(GetMemoryInfo());
@@ -140,12 +149,23 @@ namespace Sparrow.Server.LowMemory
                 return false;
             }
 
-            return IsEarlyOutOfMemoryInternal(new LightWeightMemoryInfoResult
+            var lightWeight = new LightWeightMemoryInfoResult
             {
                 AvailableMemory = memInfo.AvailableMemory,
                 CurrentCommitCharge = memInfo.CurrentCommitCharge,
                 TotalCommittableMemory = memInfo.TotalCommittableMemory
-            }, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
+            };
+
+            bool result = IsEarlyOutOfMemoryInternal(lightWeight, earlyOutOfMemoryWarning: true, out commitChargeThreshold);
+
+            // Update the flag for the allocation hot-path (AssertNotAboutToRunOutOfMemory).
+            // Piggybacking on the background thread's periodic check avoids fetching memory info twice.
+            if (result)
+                _isAboutToRunOutOfMemory.Raise();
+            else
+                _isAboutToRunOutOfMemory.Lower();
+
+            return result;
         }
 
         private static bool IsEarlyOutOfMemoryInternal(LightWeightMemoryInfoResult memInfo, bool earlyOutOfMemoryWarning, out Size commitChargeThreshold)

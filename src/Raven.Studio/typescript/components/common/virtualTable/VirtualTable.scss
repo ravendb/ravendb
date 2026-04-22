@@ -101,6 +101,10 @@
         }
     }
 
+    .document-id-cell {
+        font-family: var(--table-font, "Figtree");
+    }
+
     tbody {
         border-radius: sizes.$gutter-xxs;
         overflow: hidden;

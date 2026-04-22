@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             Interlocked.Exchange(ref _requestExecutor, newRequestExecutor);
         }
 
-        internal Action<RavenEtl> BeforeActualLoad = null;
+        internal Action<RavenEtl, SingleNodeBatchCommand> BeforeActualLoad = null;
 
         private static RequestExecutor CreateNewRequestExecutor(RavenEtlConfiguration configuration, ServerStore serverStore)
         {
@@ -175,14 +175,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (commands.Count == 0)
                 return 0;
 
-            BatchOptions options = null;
-            if (Configuration.LoadRequestTimeoutInSec != null)
+            var requestTimeout = Configuration.LoadRequestTimeoutInSec != null
+                ? TimeSpan.FromSeconds(Configuration.LoadRequestTimeoutInSec.Value)
+                : Database.Configuration.Etl.RavenLoadRequestTimeout.AsTimeSpan;
+
+            var options = new BatchOptions
             {
-                options = new BatchOptions
-                {
-                    RequestTimeout = TimeSpan.FromSeconds(Configuration.LoadRequestTimeoutInSec.Value)
-                };
-            }
+                RequestTimeout = requestTimeout
+            };
 
             using (var batchCommand = new SingleNodeBatchCommand(DocumentConventions.DefaultForServer, commands, options))
             {
@@ -190,7 +190,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
                 try
                 {
-                    BeforeActualLoad?.Invoke(this);
+                    BeforeActualLoad?.Invoke(this, batchCommand);
 
                     AsyncHelpers.RunSync(() => _requestExecutor.ExecuteAsync(batchCommand, context, token: CancellationToken));
                     _recentUrl = _requestExecutor.Url;

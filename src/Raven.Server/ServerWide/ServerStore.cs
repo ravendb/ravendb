@@ -2002,6 +2002,11 @@ namespace Raven.Server.ServerWide
 
             pullReplicationAsSink = JsonDeserializationClient.PullReplicationAsSink(pullReplicationBlittable);
 
+            if (pullReplicationAsSink.CertificateWithPrivateKey != null && pullReplicationAsSink.HasPrivateKey() == false)
+            {
+                throw new InvalidOperationException("Certificate with private key is required.");
+            }
+
             var replicationAsSinkCommand = new UpdatePullReplicationAsSinkCommand(dbName, raftRequestId)
             {
                 PullReplicationAsSink = pullReplicationAsSink,

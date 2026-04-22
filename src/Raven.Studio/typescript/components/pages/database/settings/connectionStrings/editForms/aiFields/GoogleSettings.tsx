@@ -109,21 +109,23 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 />
             </div>
             <PromptCacheField baseName="googleSettings" serverDefaultValue={false} />
-            <div className="mb-2">
-                <FormLabel>
-                    Dimensions <OptionalLabel />
-                    <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
-                        <Icon icon="info" color="info" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput
-                    control={control}
-                    name="googleSettings.dimensions"
-                    type="number"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-            <EmbeddingsMaxConcurrentBatches baseName="googleSettings" />
+            {formValues.modelType === "TextEmbeddings" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        Dimensions <OptionalLabel />
+                        <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
+                            <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput
+                        control={control}
+                        name="googleSettings.dimensions"
+                        type="number"
+                        disabled={isUsedByAnyTask}
+                    />
+                </div>
+            )}
+            {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="googleSettings" />}
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

@@ -149,8 +149,6 @@
                  var count = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(ProductsByCategoriesIndexName)));
                  Assert.Equal(2, count.Count);
 
-                 etlDone.Reset();
-
                  await new ProductsByCategoryUpdated().ExecuteAsync(store);
 
                  await Indexes.WaitForIndexingAsync(store);
@@ -160,15 +158,14 @@
                      WaitForValue(() => session.Query<ProductsByCategories>().Count(), 2, 0, interval: 500);
                  }
 
-                 await etlDone.WaitAsync(TimeSpan.FromMinutes(1));
-
-                 await client.Indices.RefreshAsync(ProductsByCategoriesIndexName);
-                 
+                 // poll destination directly - the ETL may need multiple batches to process both
+                 // the new artificial docs (inserts) and old artificial doc tombstones (deletes)
                  var countAfterUpdate = await WaitForValueAsync(async () =>
                  {
+                     await client.Indices.RefreshAsync(ProductsByCategoriesIndexName);
                      var count = await client.CountAsync<object>(descriptor => descriptor.Indices(Indices.Index(ProductsByCategoriesIndexName)));
                      return (int)count.Count;
-                 }, 2, interval: 500);
+                 }, 2, timeout: 60_000, interval: 500);
                  
                  Assert.Equal(2, countAfterUpdate);
 

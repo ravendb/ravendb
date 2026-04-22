@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Operations.ETL
         ConfigurationDisabled = 1 << 10,
         TransformationDocumentIdPostfix = 1 << 11,
         ConnectionString = 1 << 12,
-        Other = 1 << 13
+        ConfigurationOptions = 1 << 13,
+        Other = 1 << 14
     }
 }

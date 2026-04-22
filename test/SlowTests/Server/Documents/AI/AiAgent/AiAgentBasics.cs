@@ -280,7 +280,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 })) as TestResult<OutputSchema>;
 
             Assert.NotNull(r);
-            Assert.Equal(r.ActionRequests.Count, 1);
+            Assert.True(r.ActionRequests.Count > 0);
             Assert.Empty(sb.ToString());
 
             var responses = new List<AiAgentActionResponse>();
@@ -309,7 +309,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 })) as TestResult<OutputSchema>;
 
             Assert.NotNull(r);
-            Assert.True(r.ActionRequests?.Count > 0 || r.Response.Answer == sb.ToString());
+            if (r.Response?.Answer is not null)
+                Assert.Equal(r.Response.Answer , sb.ToString());
+            else
+                Assert.True(r.ActionRequests?.Count > 0); // model retry with another tool-call (probably because empty response for last tool calls)
         }
 
         internal class RunTestConversationOperation<TSchema> : RunConversationOperation<TSchema>

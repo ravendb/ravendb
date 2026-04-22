@@ -123,7 +123,7 @@
                                     <label for="loadTimeout" class="control-label">Http Request Timeout</label>
                                     <div class="flex-grow">
                                         <div class="input-group">
-                                            <input type="number" min="0" class="form-control" placeholder="Use default timeout (100s)" id="loadTimeout" data-bind="numericInput: loadRequestTimeout">
+                                            <input type="number" min="0" class="form-control" id="loadTimeout" data-bind="numericInput: loadRequestTimeout, attr: { placeholder: $root.loadRequestTimeoutPlaceholder }">
                                             <div class="input-group-addon">seconds</div>
                                         </div>
                                     </div>

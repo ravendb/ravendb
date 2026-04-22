@@ -5,7 +5,7 @@ $pre-bg: colors.$well-bg-var;
 
 .ace-editor {
     border: 1px solid var(--border-color-light);
-    font-family: var(--bs-font-monospace);
+    font-family: var(--monospace-font, var(--bs-font-monospace));
     border-radius: var(--bs-border-radius) !important;
     &:not(&.has-error) {
         .ace-raven {
@@ -70,6 +70,7 @@ $pre-bg: colors.$well-bg-var;
     color: $pre-color;
     border-top-left-radius: var(--bs-border-radius);
     border-top-right-radius: var(--bs-border-radius);
+    font-family: var(--monospace-font, var(--bs-font-monospace)) !important;
 
     .ace_gutter {
         background: colors.$ace-gutter-bg-var;

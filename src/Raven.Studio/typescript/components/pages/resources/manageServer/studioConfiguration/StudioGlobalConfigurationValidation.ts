@@ -9,6 +9,8 @@ const schema = yup
         replicationFactor: yup.number().nullable().positive().integer(),
         isCollapseDocsWhenOpening: yup.boolean(),
         isSendUsageStats: yup.boolean(),
+        tableFont: yup.string().required(),
+        monospaceFont: yup.string().required(),
     })
     .required();
 
