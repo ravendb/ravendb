@@ -6,6 +6,7 @@ using Raven.Server.Config;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
