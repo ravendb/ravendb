@@ -33,7 +33,7 @@ module.exports = {
     ],
     "react/react-in-jsx-scope": "off",
     "react-hooks/exhaustive-deps": "off", // for now turned off (we must better handle DB switching, etc.)
-    "local-rules/mixed-imports": "warn",
+    "local-rules/mixed-imports": "error",
     "curly": "warn",
     "react/jsx-curly-brace-presence": [
       'warn',

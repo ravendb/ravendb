@@ -26,6 +26,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -86,6 +87,7 @@ using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
 using Sparrow.Platform;
+using static Raven.Client.ServerWide.Tcp.TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod;
 using Constants = Sparrow.Global.Constants;
 using TelemetryConstants = Raven.Server.Monitoring.OpenTelemetry.Constants;
 using ClientConstants = Raven.Client.Constants;
@@ -338,6 +340,11 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new HostBuilder()
+                    .ConfigureAppConfiguration(builder =>
+                    {
+                        if (Configuration.Monitoring.OpenTelemetry.Enabled)
+                            builder.Add(new OpenTelemetryEnvironmentVariablesReader());
+                    })
                     .ConfigureWebHost(configure =>
                     {
                         configure.CaptureStartupErrors(captureStartupErrors: true)
@@ -537,7 +544,6 @@ namespace Raven.Server
             openTelemetryBuilder.WithMetrics(ConfigureMetrics);
             void ConfigureMetrics(MeterProviderBuilder builder)
             {
-                builder.ConfigureResource(x => x.AddEnvironmentVariableDetector());
                 var configuration = Configuration.Monitoring.OpenTelemetry;
                 builder.SetResourceBuilder(
                     ResourceBuilder.CreateDefault()
@@ -3041,6 +3047,7 @@ namespace Raven.Server
             }
 
             var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
+            var info = header.AuthorizeInfo;
 
             switch (auth.Status)
             {
@@ -3054,9 +3061,32 @@ namespace Raven.Server
 
                 case AuthenticationStatus.ClusterAdmin:
                 case AuthenticationStatus.Operator:
+                    if (info?.AuthorizeAs is PullReplication or PushReplication)
+                    {
+                        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+                        using (ctx.OpenReadTransaction())
+                        {
+                            if (CheckPullReplicationMode(ctx, header, info, out msg) is false)
+                                return false;
+                        }
+                        // Create a ReplicationHubAccess that allows full access for admin
+                        header.ReplicationHubAccess = new DetailedReplicationHubAccess
+                        {
+                            Name = auth.Status.ToString(),
+                            Thumbprint = certificate.Thumbprint,
+                            Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                            NotBefore = certificate.NotBefore,
+                            NotAfter = certificate.NotAfter,
+                            Subject = certificate.Subject,
+                            Issuer = certificate.Issuer,
+                            AllowedHubToSinkPaths = null, // null means all paths allowed
+                            AllowedSinkToHubPaths = null  // null means all paths allowed
+                        };
+                        return true;
+                    }
+
                     msg = "Admin can do it all";
                     return true;
-
                 case AuthenticationStatus.Allowed:
                     switch (header.Operation)
                     {
@@ -3073,7 +3103,15 @@ namespace Raven.Server
                                 msg = "Cannot allow access. Database name is empty.";
                                 return false;
                             }
-                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication))
+
+                            bool isReplication = header.Operation == TcpConnectionHeaderMessage.OperationTypes.Replication;
+
+                            if (isReplication && info?.AuthorizeAs is PullReplication or PushReplication)
+                            {
+                                return CanProceedOnReplication(header, certificate, remoteAddress: tcpClient.Client.RemoteEndPoint?.ToString(), out msg);
+                            }
+
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false, requireWrite: isReplication))
                                 return true;
                             msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName}";
                             return false;
@@ -3088,50 +3126,76 @@ namespace Raven.Server
                     return false;
 
                 case AuthenticationStatus.UnfamiliarCertificate:
-                    var info = header.AuthorizeInfo;
-                    switch (info?.AuthorizeAs)
+                    if (info?.AuthorizeAs is PullReplication or PushReplication)
                     {
-                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication:
-                        case TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication:
-                            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-                            using (ctx.OpenReadTransaction())
-                            {
-                                if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication))
-                                {
-                                    var expectedMode = info.AuthorizeAs switch
-                                    {
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PullReplication => PullReplicationMode.HubToSink,
-                                        TcpConnectionHeaderMessage.AuthorizationInfo.AuthorizeMethod.PushReplication => PullReplicationMode.SinkToHub,
-                                        _ => PullReplicationMode.None
-                                    };
-
-                                    if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
-                                    {
-                                        msg = "The expected replication mode does not match the replication mode on the replication hub";
-                                        return false;
-                                    }
-
-                                    if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
-                                        return true;
-
-                                    if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate, configuration.Security, out header.ReplicationHubAccess))
-                                    {
-                                        RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(tcpClient.Client.RemoteEndPoint.ToString(), header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
-
-                                        return true;
-                                    }
-                                }
-
-                                msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor} ({info.AuthorizeAs})";
-                                return false;
-                            }
-                        default:
-                            throw new ArgumentOutOfRangeException("AuthorizeAs", "Unknown value for AuthorizeAs: " + info?.AuthorizeAs);
+                        return CanProceedOnReplication(header, certificate, remoteAddress: tcpClient.Client.RemoteEndPoint?.ToString(), out msg);
                     }
+
+                    throw new ArgumentOutOfRangeException(nameof(info.AuthorizeAs), "Unknown value for AuthorizeAs: " + info?.AuthorizeAs);
                 default:
                     msg = "Cannot allow access to a certificate with status: " + auth.Status;
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Checks the <see cref="TcpConnectionHeaderMessage.AuthorizeInfo"/> and checks if it can proceed as replication.
+        /// </summary>
+        private bool CanProceedOnReplication(
+            TcpConnectionHeaderMessage header,
+            X509Certificate2 certificate,
+            string remoteAddress,
+            out string msg)
+        {
+            msg = null;
+            var info = header.AuthorizeInfo;
+
+            Debug.Assert(info?.AuthorizeAs is PullReplication or PushReplication, "It should be called only for replication.");
+            
+            using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                if (CheckPullReplicationMode(ctx, header, info, out msg) is false) 
+                    return false;
+
+                // For non-admin certificates, check if the certificate is registered
+                if (ServerStore.Cluster.IsReplicationCertificate(ctx, header.DatabaseName, info.AuthorizationFor, certificate, out header.ReplicationHubAccess))
+                    return true;
+
+                if (ServerStore.Cluster.IsReplicationCertificateByPublicKeyPinningHash(ctx, header.DatabaseName, info.AuthorizationFor, certificate, ServerStore.Configuration.Security, out header.ReplicationHubAccess))
+                {
+                    RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(remoteAddress, header.DatabaseName, info.AuthorizationFor, header.ReplicationHubAccess, certificate);
+                    return true;
+                }
+
+                msg = $"The certificate {certificate.FriendlyName} does not allow access to {header.DatabaseName} for {info.AuthorizationFor} ({info.AuthorizeAs})";
+                return false;
+            }
+        }
+
+        private bool CheckPullReplicationMode(ClusterOperationContext ctx, TcpConnectionHeaderMessage header, TcpConnectionHeaderMessage.AuthorizationInfo info, out string msg)
+        {
+            if (ServerStore.Cluster.TryReadPullReplicationDefinition(header.DatabaseName, info.AuthorizationFor, ctx, out var pullReplication) == false)
+            {
+                msg = $"The pull replication hub '{info.AuthorizationFor}' does not exist in database '{header.DatabaseName}'";
+                return false;
+            }
+
+            var expectedMode = info.AuthorizeAs switch
+            {
+                PullReplication => PullReplicationMode.HubToSink,
+                PushReplication => PullReplicationMode.SinkToHub,
+                _ => PullReplicationMode.None
+            };
+
+            if ((pullReplication.Mode & expectedMode) != expectedMode || expectedMode == PullReplicationMode.None)
+            {
+                msg = "The expected replication mode does not match the replication mode on the replication hub";
+                return false;
+            }
+
+            msg = null;
+            return true;
         }
 
         private void RegisterNewReplicationCertificateWithSamePublicKeyPinningHash(
@@ -3239,7 +3303,7 @@ namespace Raven.Server
                 ea.Execute(() => AdminConsolePipe?.Dispose());
                 ea.Execute(() => LogStreamPipe?.Dispose());
                 ea.Execute(() => _redirectingWebHost?.Dispose());
-                ea.Execute(() => _webHost?.Dispose());
+                ea.Execute(() => DisposeWebHost());
                 ea.Execute(() => _tcpContextPool?.Dispose());
                 if (_tcpListenerStatus != null)
                 {
@@ -3276,6 +3340,36 @@ namespace Raven.Server
 
                 ea.ThrowIfNeeded();
             }
+        }
+
+        private void DisposeWebHost()
+        {
+            try
+            {
+                _webHost?.Dispose();
+            }
+            catch (Exception e) when (IsExpectedShutdownException(e))
+            {
+                // During shutdown, active HTTP connections may throw I/O exceptions
+                // (broken pipe, connection reset) as they are torn down. This is expected.
+                if (_tcpLogger.IsInfoEnabled)
+                    _tcpLogger.Info("Ignoring expected I/O error during web host shutdown", e);
+            }
+        }
+
+        private static bool IsExpectedShutdownException(Exception e)
+        {
+            if (e is IOException or SocketException)
+                return true;
+
+            if (e is AggregateException ae)
+            {
+                AggregateException flattened = ae.Flatten();
+                return flattened.InnerExceptions.Count > 0 &&
+                       flattened.InnerExceptions.All(ie => ie is IOException or SocketException);
+            }
+
+            return false;
         }
 
         private void CloseTcpListeners(List<TcpListener> listeners)

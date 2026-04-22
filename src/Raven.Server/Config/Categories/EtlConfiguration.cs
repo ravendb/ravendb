@@ -8,6 +8,12 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Etl)]
     public sealed class EtlConfiguration : ConfigurationCategory
     {
+        [Description("Number of seconds after which Raven ETL load request will timeout. Default: 300 seconds. Can be overriden by setting LoadRequestTimeoutInSec property value in Raven ETL configuration.")]
+        [DefaultValue(300)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("ETL.Raven.LoadRequestTimeoutInSec", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting RavenLoadRequestTimeout { get; set; }
+
         [Description("Number of seconds after which SQL command will timeout. Default: null (use provider default). Can be overriden by setting CommandTimeout property value in SQL ETL configuration.")]
         [DefaultValue(null)]
         [TimeUnit(TimeUnit.Seconds)]

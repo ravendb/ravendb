@@ -528,19 +528,6 @@ namespace Voron.Impl
             return GetPageHeaderInternal<T>(pageNumber);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Page GetPageWithoutCache(long pageNumber)
-        {
-            if (IsValid == false)
-                ThrowObjectDisposed();
-
-            var p = GetPageInternal(pageNumber);
-            if (VoronConfiguration.FailFastForStability && p.PageNumber != pageNumber)
-                VoronUnrecoverableErrorException.Raise(this, $"Requested ReadOnly page #{pageNumber}. Got #{p.PageNumber} from data file");
-
-            TrackReadOnlyPage(p);
-            return p;
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Page GetPageInternal(long pageNumber)
@@ -628,6 +615,8 @@ namespace Voron.Impl
                 return;
 
             DataPager.TryReleasePage(ref PagerTransactionState, pageNumber);
+            
+            _pageLocator.Reset(pageNumber);
         }
 
         [DoesNotReturn]

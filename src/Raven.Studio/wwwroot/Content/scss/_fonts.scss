@@ -6,7 +6,7 @@ $fonts-url: "../../../wwwroot/Content/css/fonts/";
     src:
         url(#{$fonts-url}Figtree[wght].woff2) format("woff2 supports variations"),
         url(#{$fonts-url}Figtree[wght].woff2) format("woff2-variations");
-    font-weight: 100 1000;
+    font-weight: 300 900;
 }
 
 @font-face {
@@ -16,4 +16,51 @@ $fonts-url: "../../../wwwroot/Content/css/fonts/";
         url(#{$fonts-url}Figtree-Italic[wght].woff2) format("woff2 supports variations"),
         url(#{$fonts-url}Figtree-Italic[wght].woff2) format("woff2-variations");
     font-weight: 100 1000;
+}
+
+@font-face {
+    font-family: "Google Sans Code";
+    src:
+        url(#{$fonts-url}GoogleSansCode.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}GoogleSansCode.woff2) format("woff2-variations");
+    font-weight: 300 800;
+}
+@font-face {
+    font-family: "JetBrains Mono";
+    src:
+        url(#{$fonts-url}JetBrainsMono.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}JetBrainsMono.woff2) format("woff2-variations");
+    font-weight: 100 800;
+}
+
+@font-face {
+    font-family: "Fira Code";
+    src:
+        url(#{$fonts-url}FiraCode.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}FiraCode.woff2) format("woff2-variations");
+    font-weight: 300 700;
+}
+
+@font-face {
+    font-family: "IBM Plex Mono";
+    src:
+        url(#{$fonts-url}IBMPlexMono.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}IBMPlexMono.woff2) format("woff2-variations");
+    font-weight: 100 700;
+}
+
+@font-face {
+    font-family: "Space Mono";
+    src:
+        url(#{$fonts-url}SpaceMono.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}SpaceMono.woff2) format("woff2-variations");
+    font-weight: 500;
+}
+
+@font-face {
+    font-family: "Source Code Pro";
+    src:
+        url(#{$fonts-url}SourceCodePro.woff2) format("woff2 supports variations"),
+        url(#{$fonts-url}SourceCodePro.woff2) format("woff2-variations");
+    font-weight: 200 900;
 }

@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Sharding;
+using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Replication;
@@ -50,6 +51,25 @@ public partial class RavenTestBase
             Subscriptions = new ShardedSubscriptionTestBase(_parent);
             Replication = new ShardedReplicationTestBase(_parent);
             Etl = new ShardedEtlTestBase(_parent);
+        }
+
+        public void WaitForRaftIndexOnShards(IDocumentStore store, long raftCommandIndex)
+        {
+            var record = store.Maintenance.Server.Send(new GetDatabaseRecordOperation(store.Database));
+            if (record.IsSharded == false)
+                return;
+
+            var servers = _parent.GetServers();
+            foreach (var shardNumber in record.Sharding.Shards.Keys)
+            {
+                var shardName = ShardHelper.ToShardName(store.Database, shardNumber);
+                foreach (var server in servers)
+                {
+                    var database = AsyncHelpers.RunSync(() => server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(shardName));
+                    if (database != null)
+                        AsyncHelpers.RunSync(() => database.RachisLogIndexNotifications.WaitForIndexNotification(raftCommandIndex, TimeSpan.FromSeconds(15)));
+                }
+            }
         }
 
         public DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null, Dictionary<int, DatabaseTopology> shards = null)

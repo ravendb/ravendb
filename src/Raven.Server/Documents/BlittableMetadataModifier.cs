@@ -32,7 +32,7 @@ namespace Raven.Server.Documents
         public BlittableMetadataModifier(JsonOperationContext context, bool legacyImport, bool readLegacyEtag, DatabaseItemType operateOnTypes)
         {
             _ctx = context;
-            ReadFirstEtagOfLegacyRevision = legacyImport;
+            HandleLegacyProperties = legacyImport;
             ReadLegacyEtag = readLegacyEtag;
             OperateOnTypes = operateOnTypes;
         }
@@ -45,7 +45,10 @@ namespace Raven.Server.Documents
 
         // Change vector is null when importing from v3.5.
         // We'll generate a new change vector in this format: "RV:{revisionsCount}-{firstEtagOfLegacyRevision}"
-        public bool ReadFirstEtagOfLegacyRevision;
+        // Legacy import handling does not preserve legacy v3 metadata properties as-is.
+        // Selected legacy properties are still recognized and may be mapped to current metadata fields
+        // or read to populate internal flags/state needed during import.
+        public bool HandleLegacyProperties;
 
         public bool ReadLegacyEtag;
         public DatabaseItemType OperateOnTypes;
@@ -258,7 +261,7 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
-                    if (ReadFirstEtagOfLegacyRevision &&
+                    if (HandleLegacyProperties &&
                         (NonPersistentFlags & NonPersistentDocumentFlags.LegacyRevision) == NonPersistentDocumentFlags.LegacyRevision)
                     {
                         if (FirstEtagOfLegacyRevision == null)
@@ -382,7 +385,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 13: //Last-Modified
-                    if ("Last-Modified"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Last-Modified"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -432,7 +435,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 15: //Raven-Read-Only
-                    if ("Raven-Read-Only"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Read-Only"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -441,7 +444,7 @@ namespace Raven.Server.Documents
                     goto case -1;
 
                 case 17: //Raven-Entity-Name --> @collection
-                    if ("Raven-Entity-Name"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Entity-Name"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -455,7 +458,7 @@ namespace Raven.Server.Documents
 
                 case 19: //Raven-Last-Modified or Raven-Delete-Marker
 
-                    if ("Raven-"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -494,7 +497,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 21: //Raven-Expiration-Date
-                    if ("Raven-Expiration-Date"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Expiration-Date"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -507,7 +510,7 @@ namespace Raven.Server.Documents
                     return true;
 
                 case 23: //Raven-Document-Revision
-                    if ("Raven-Document-Revision"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Document-Revision"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -515,7 +518,7 @@ namespace Raven.Server.Documents
 
                     goto case -1;
                 case 24: //Raven-Replication-Source
-                    if ("Raven-Replication-Source"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Replication-Source"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -524,6 +527,12 @@ namespace Raven.Server.Documents
                     goto case -1;
                 case 25: //Raven-Replication-Version OR Raven-Replication-History
 
+                    if (HandleLegacyProperties == false)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
+
                     var lastByte = state.StringBuffer[24];
                     if (lastByte != (byte)'n' && lastByte != (byte)'y')
                     {
@@ -531,7 +540,7 @@ namespace Raven.Server.Documents
                         return true;
                     }
 
-                    if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false ||
+                    if ("Raven-Replication-Version"u8.IsEqualConstant(state.StringBuffer) == false &&
                         "Raven-Replication-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
@@ -557,7 +566,7 @@ namespace Raven.Server.Documents
 
                 case 29: //Non-Authoritative-Information
 
-                    if ("Non-Authoritative-Information"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Non-Authoritative-Information"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;
@@ -566,6 +575,12 @@ namespace Raven.Server.Documents
                     goto case -1;
 
                 case 30: //Raven-Document-Parent-Revision OR Raven-Document-Revision-Status
+
+                    if (HandleLegacyProperties == false)
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
 
                     if ("Raven-Document-Parent-Revision"u8.IsEqualConstant(state.StringBuffer) == false &&
                         "Raven-Document-Revision-Status"u8.IsEqualConstant(state.StringBuffer) == false)
@@ -603,7 +618,7 @@ namespace Raven.Server.Documents
                     break;
 
                 case 32: //Raven-Replication-Merged-History
-                    if ("Raven-Replication-Merged-History"u8.IsEqualConstant(state.StringBuffer) == false)
+                    if (HandleLegacyProperties == false || "Raven-Replication-Merged-History"u8.IsEqualConstant(state.StringBuffer) == false)
                     {
                         aboutToReadPropertyName = true;
                         return true;

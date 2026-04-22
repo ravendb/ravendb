@@ -19,11 +19,18 @@ class certificateUtils {
         const der = forge.util.decode64(base64EncodedCertificate);
         const asn1 = forge.asn1.fromDer(der, { parseAllBytes: false, strict: true, decodeBitStrings: true });
         const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, password);
-        
+
+        const keyBags = p12.getBags({
+            bagType: forge.pki.oids.pkcs8ShroudedKeyBag
+        });
+        if (!keyBags[forge.pki.oids.pkcs8ShroudedKeyBag]?.length) {
+            throw new Error("The provided certificate file does not contain a private key. Please provide a PFX file with a private key.");
+        }
+
         const bags = p12.getBags({
             bagType: forge.pki.oids.certBag
         });
-        
+
         return bags[forge.pki.oids.certBag].map(x => forge.pki.certificateToPem(x.cert));
     }
     

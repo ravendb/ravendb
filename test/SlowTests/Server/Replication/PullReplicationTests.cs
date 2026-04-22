@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -12,12 +14,18 @@ using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -977,6 +985,150 @@ namespace SlowTests.Server.Replication
             }
         }
 
+        [RavenTheory(RavenTestCategory.Replication)]
+        [InlineData(SecurityClearance.ClusterAdmin)]
+        [InlineData(SecurityClearance.Operator)]
+        [InlineData(SecurityClearance.ValidUser)]
+        public async Task SinkToHubWithThisClearanceShouldWork(SecurityClearance clearance)
+        {
+            var settings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(settings);
+
+            using (var hubServer = GetNewServer(new ServerCreationOptions { CustomSettings = settings }))
+            using (var sinkServer = GetNewServer(new ServerCreationOptions { CustomSettings = settings }))
+            {
+                Certificates.RegisterClientCertificate(
+                    certificates.ServerCertificate.Value,
+                    certificates.ClientCertificate1.Value,
+                    new Dictionary<string, DatabaseAccess>(),
+                    SecurityClearance.ClusterAdmin,
+                    server: hubServer);
+
+                using (var hubStore = GetDocumentStore(new Options
+                {
+                    Server = hubServer,
+                    ModifyDatabaseName = s => $"HubDB_{s}",
+                    ClientCertificate = certificates.ServerCertificate.Value,
+                    AdminCertificate = certificates.ClientCertificate1.Value,
+                }))
+                {
+                    Certificates.RegisterClientCertificate(
+                        certificates.ServerCertificate.Value,
+                        certificates.ClientCertificate1.Value,
+                        new Dictionary<string, DatabaseAccess>(),
+                        SecurityClearance.ClusterAdmin,
+                        server: sinkServer);
+
+                    using (var sinkStore = GetDocumentStore(new Options
+                    {
+                        Server = sinkServer,
+                        CreateDatabase = true,
+                        ModifyDatabaseName = s => $"SinkDB_{s}",
+                        ClientCertificate = certificates.ServerCertificate.Value,
+                        AdminCertificate = certificates.ClientCertificate1.Value,
+                    }))
+                    {
+                        Dictionary<string, DatabaseAccess> permissions = clearance == SecurityClearance.ValidUser
+                            ? new()
+                            {
+                                [hubStore.Database] = DatabaseAccess.ReadWrite
+                            }
+                            : new();
+
+                        // Registering certificate with ClusterAdmin permissions
+                        Certificates.RegisterClientCertificate(
+                            certificates.ServerCertificate.Value, 
+                            certificates.ClientCertificate2.Value, 
+                            permissions: permissions,
+                            clearance,
+                            server: hubServer);
+
+                        await hubStore.Maintenance.ForDatabase(hubStore.Database).SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition("pull-replication-task")
+                        {
+                            Mode = PullReplicationMode.SinkToHub
+                        }));
+
+                        await hubStore.Maintenance.SendAsync(new RegisterReplicationHubAccessOperation("pull-replication-task", new ReplicationHubAccess
+                        {
+                            Name = "SinkUser",
+                            CertificateBase64 = Convert.ToBase64String(certificates.ClientCertificate2.Value.Export(X509ContentType.Cert))
+                        }));
+
+                        const string connectionStringName = "ConnectToHub";
+                        await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+                        {
+                            Name = connectionStringName,
+                            Database = hubStore.Database,
+                            TopologyDiscoveryUrls = hubStore.Urls
+                        }));
+
+                        await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(new PullReplicationAsSink
+                        {
+                            ConnectionStringName = connectionStringName,
+                            HubName = "pull-replication-task",
+                            Mode = PullReplicationMode.SinkToHub,
+                            CertificateWithPrivateKey = Convert.ToBase64String(certificates.ClientCertificate2.Value.Export(X509ContentType.Pfx))
+                        }));
+
+                        // Add a document to sink and wait for it to replicate to hub
+                        using (var session = sinkStore.OpenSession())
+                        {
+                            session.Store(new User { Name = "Test User" }, "users/1");
+                            session.SaveChanges();
+                        }
+
+                        // Wait for the document to replicate to hub
+                        var timeout = 10000;
+                        Assert.True(WaitForDocument(hubStore, "users/1", timeout), hubStore.Identifier);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        public async Task ShouldRejectPullReplicationSinkCertificateWithoutPrivateKey()
+        {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings: customSettings);
+            using var server = GetNewServer(new ServerCreationOptions
+            {
+                CustomSettings = customSettings
+            });
+
+            using var sinkStore = GetDocumentStore(new Options
+            {
+                Server = server,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
+            });
+
+            // Export certificate as public-only (no private key)
+            var publicOnlyCert = Convert.ToBase64String(certificates.ClientCertificate1.Value.Export(X509ContentType.Cert));
+
+            var pull = new PullReplicationAsSink
+            {
+                ConnectionStringName = "dummy",
+                HubName = "hub",
+                CertificateWithPrivateKey = publicOnlyCert
+            };
+
+            // Set up a dummy connection string so the server doesn't fail on that
+            await sinkStore.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
+            {
+                Database = sinkStore.Database,
+                Name = "dummy",
+                TopologyDiscoveryUrls = sinkStore.Urls
+            }));
+
+            // Skip client-side validation to test the server-side validation in isolation
+            var exception = await Assert.ThrowsAsync<RavenException>(async () =>
+            {
+                await sinkStore.Maintenance.SendAsync(new UpdatePullReplicationAsSinkOperation(pull, skipClientCertificateValidation: true));
+            });
+
+            Assert.Contains("private key", exception.Message);
+        }
+
         //TODO write test for deletion! - make sure replication is stopped after we delete hub!
 
         public static Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
@@ -984,7 +1136,7 @@ namespace SlowTests.Server.Replication
             return SetupPullReplicationAsync(remoteName, sink, null, hub);
         }
 
-        public static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
+        private static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
         {
             var tasks = new List<Task<ModifyOngoingTaskResult>>();
             var resList = new List<ModifyOngoingTaskResult>();

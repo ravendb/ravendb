@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
 {
-    private readonly OpenAiSettings _settings;
+    private new readonly OpenAiSettings _settings;
     public OpenAiChatCompletionClientSettings(OpenAiSettings settings) 
         : base(settings)
     {

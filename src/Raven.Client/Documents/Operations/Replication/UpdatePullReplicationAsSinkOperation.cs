@@ -26,6 +26,20 @@ namespace Raven.Client.Documents.Operations.Replication
         public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication) : this(pullReplication, false)
         {
         }
+
+        /// <inheritdoc cref="UpdatePullReplicationAsSinkOperation"/>
+        /// <param name="pullReplication">
+        /// The <see cref="PullReplicationAsSink"/> object containing the updated configuration for the pull replication sink task.
+        /// This configuration includes details such as the source database, connection strings, allowed paths for data flow 
+        /// between the sink and hub, and an optional private key for a certificate used in secure communication.
+        /// </param>
+        /// <param name="useServerCertificate">Makes the replication use the server certificate. Requires <see cref="PullReplicationAsSink.CertificateWithPrivateKey"/> to be null.</param>
+        /// <exception cref="AuthorizationException">
+        /// Thrown if the provided certificate does not include a private key but is required for secure replication.
+        /// </exception>
+        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false) : this(pullReplication, useServerCertificate,false)
+        {
+        }
         
         /// <inheritdoc cref="UpdatePullReplicationAsSinkOperation"/>
         /// <param name="pullReplication">
@@ -37,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Replication
         /// <exception cref="AuthorizationException">
         /// Thrown if the provided certificate does not include a private key but is required for secure replication.
         /// </exception>
-        public UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false)
+        internal UpdatePullReplicationAsSinkOperation(PullReplicationAsSink pullReplication, bool useServerCertificate = false, bool skipClientCertificateValidation = false)
         {
             _pullReplication = pullReplication;
             _useServerCertificate = useServerCertificate;
@@ -48,16 +62,9 @@ namespace Raven.Client.Documents.Operations.Replication
                     throw new ArgumentException(
                         $"When {nameof(useServerCertificate)} is set to true, " +
                         $"{nameof(PullReplicationAsSink.CertificateWithPrivateKey)} should be null to use server certificate.");
-                
-                
-                var certBytes = Convert.FromBase64String(pullReplication.CertificateWithPrivateKey);
-                using (var certificate = CertificateLoaderUtil.CreateCertificateFromAny(certBytes,
-                    pullReplication.CertificatePassword,
-                    CertificateLoaderUtil.FlagsForExport))
-                {
-                    if (certificate.HasPrivateKey == false)
-                        throw new AuthorizationException("Certificate with private key is required");
-                }
+
+                if (skipClientCertificateValidation == false && pullReplication.HasPrivateKey() == false)
+                    throw new AuthorizationException("Certificate with private key is required");
             }
         }
 

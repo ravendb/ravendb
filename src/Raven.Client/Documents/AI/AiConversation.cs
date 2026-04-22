@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Extensions;
+using Newtonsoft.Json;
 using Sparrow.Json.Sync;
 using System;
 using System.Collections.Generic;
@@ -28,12 +29,15 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
     private readonly List<ICommandData> _attachmentsCommands = new();
+    private StringBuilder _jsonBuffer;
+    private StringWriter _jsonWriter;
     
     public string ChangeVector => _changeVector;
 
     private delegate Task HandleActionDelegate(JsonOperationContext context, AiAgentActionRequest actionRequest, CancellationToken token);
 
     private readonly Dictionary<string, HandleActionDelegate> _invocations = new();
+    private readonly HashSet<string> _dispatchedToolIds = new();
 
     public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector)
     {
@@ -54,7 +58,7 @@ internal class AiConversation : IAiConversationOperations
             throw new ArgumentNullException(nameof(stream));
 
         var attachmentName = name;
-        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: string.Empty));
+        _attachmentsCommands.Add(new PutAttachmentCommandData("__this__", attachmentName, stream, contentType, changeVector: null));
     }
 
     public void CopyAttachmentFrom(string sourceDocumentId, string fileName)
@@ -63,7 +67,7 @@ internal class AiConversation : IAiConversationOperations
         ValidationMethods.AssertNotNullOrEmpty(fileName, nameof(fileName));
         ValidationMethods.AssertNotNullOrEmpty(sourceDocumentId, nameof(sourceDocumentId));
 
-        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: string.Empty));
+        _attachmentsCommands.Add(new CopyAttachmentCommandData(sourceDocumentId, fileName, "__this__", fileName, changeVector: null));
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
@@ -106,12 +110,7 @@ internal class AiConversation : IAiConversationOperations
             return;
         }
 
-        using (_aiOperations.AllocateOperationContext(out var context))
-        {
-            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
-            var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddArtificialActionWithResponse(toolId, json.ToString());
-        }
+        AddArtificialActionWithResponse(toolId, SerializeToJson(actionResponse));
     }
 
     public void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
@@ -126,12 +125,7 @@ internal class AiConversation : IAiConversationOperations
             return;
         }
 
-        using (_aiOperations.AllocateOperationContext(out var context))
-        {
-            var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
-            var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddActionResponse(toolId, json.ToString());
-        }
+        AddActionResponse(toolId, SerializeToJson(actionResponse));
     }
 
     public void AddActionResponse(string toolId, string actionResponse)
@@ -242,6 +236,8 @@ internal class AiConversation : IAiConversationOperations
 
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
     {
+        _dispatchedToolIds.Clear();
+
         while (true)
         {
             var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, token).ConfigureAwait(false);
@@ -262,6 +258,9 @@ internal class AiConversation : IAiConversationOperations
         {
             foreach (var action in _actionRequests)
             {
+                if (_dispatchedToolIds.Add(action.ToolId) == false)
+                    continue;
+
                 if (_invocations.TryGetValue(action.Name, out var invocation))
                 {
                     // error handling here is expected to be done by the invocation based on the error strategy the user choose
@@ -291,7 +290,7 @@ internal class AiConversation : IAiConversationOperations
     {
         if (
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
-            _actionRequests != null &&
+            _actionRequests is { Count: 0 } &&
             // otherwise, we already went to the server and have nothing new to tell it, so we are done
             _promptParts.Count == 0 && _actionResponses.Count == 0 && _attachmentsCommands.Count == 0)
         {
@@ -330,6 +329,16 @@ internal class AiConversation : IAiConversationOperations
             _artificialActions.Clear();
             _attachmentsCommands.Clear();
         }
+    }
+
+    private string SerializeToJson(object value)
+    {
+        _jsonBuffer ??= new StringBuilder();
+        _jsonWriter ??= new StringWriter(_jsonBuffer);
+        _jsonBuffer.Clear();
+        var serializer = (JsonSerializer)_aiOperations._store.Conventions.Serialization.CreateSerializer();
+        serializer.Serialize(_jsonWriter, value);
+        return _jsonBuffer.ToString();
     }
 
     internal class AiActionContext<TActionParametersSchema>

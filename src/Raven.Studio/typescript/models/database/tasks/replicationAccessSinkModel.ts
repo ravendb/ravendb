@@ -59,10 +59,10 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
 
     onCertificateSelected(certAsBase64: string) {
         this.selectedFileCertificate(certAsBase64);
-        this.tryReadCertificate();
+        this.tryReadCertificate(false);
     }
 
-    tryReadCertificate(): boolean {
+    tryReadCertificate(reportErrors = true): boolean {
         const certificate = this.selectedFileCertificate();
         const password = this.selectedFilePassphrase() || undefined;
 
@@ -74,8 +74,12 @@ class replicationAccessSinkModel extends replicationAccessBaseModel {
                 this.certificateExtracted(true);
                 return true;
             } catch ($e) {
-                messagePublisher.reportError("Unable to extract certificate from file. " +
-                    "Verify file is .pfx containing a single private key and check provided password.", $e);
+                if (reportErrors) {
+                    const errorMessage = $e instanceof Error && $e.message.includes("private key")
+                        ? $e.message
+                        : "Unable to extract certificate from file. Verify file is .pfx containing a single private key and check provided password.";
+                    messagePublisher.reportError(errorMessage, $e);
+                }
                 this.certificateExtracted(false);
                 return false;
             }

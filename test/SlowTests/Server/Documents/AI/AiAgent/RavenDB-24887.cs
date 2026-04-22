@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
@@ -234,6 +235,6 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
         Assert.NotNull(addToCartArgs);
         // and were able to "solve" it properly
         Assert.Equal(AiConversationResult.Done, result.Status);
-        Assert.Contains("added", result.Answer.Message);
+        Assert.Contains("added", result.Answer.Message, StringComparison.OrdinalIgnoreCase);
     }
 }
