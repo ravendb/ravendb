@@ -536,16 +536,16 @@ public partial class AbstractStaticIndexBase
         return value is null or DynamicNullObject or DynamicJsNull or JsNull;
     }
 
-    public static object LoadVectorJs(string fieldName, string path, string embeddingGeneratorTaskName, object embeddingSourceDocumentId, string embeddingSourceDocumentCollectionName, out IndexField vectorField)
+    public static object LoadVectorJs(string fieldName, string path, string embeddingGeneratorTaskIdentifier, object embeddingSourceDocumentId, string embeddingSourceDocumentCollectionName, out IndexField vectorField)
     {
         if (IsDictionaryTrainingPhase(CurrentIndexingScope.Current))
         {
             vectorField = null;
             return null;
         }
-        
+
         //todo
-        var vectors = ProcessLoadVector(fieldName, path, embeddingGeneratorTaskName, GetStringFromObject(embeddingSourceDocumentId), embeddingSourceDocumentCollectionName, out vectorField);
+        var vectors = ProcessLoadVector(fieldName, path, embeddingGeneratorTaskIdentifier, GetStringFromObject(embeddingSourceDocumentId), embeddingSourceDocumentCollectionName, out vectorField);
 
         // for js indexes we've no choice than create dynamic field, in such cases let's assume it is single. 
         if (vectorField == null)

@@ -129,7 +129,7 @@ public static partial class CoraxQueryBuilder
 
         (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
         int numberOfDimensions;
-        if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
+        if (VectorHelpers.TryRetrieveEtlTaskIdentifier(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
@@ -239,7 +239,7 @@ public static partial class CoraxQueryBuilder
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryRetrieveEtlTaskName(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
+        public static bool TryRetrieveEtlTaskIdentifier(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
         {
             var existsInPersistence =
                 builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out embeddingsGenerationTaskIdentifier);
@@ -247,7 +247,7 @@ public static partial class CoraxQueryBuilder
             if (builderParameters.Metadata.IsDynamic == false)
                 return existsInPersistence;
 
-            if (((builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField)) || (builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField))) && indexField.Vector is AutoVectorOptions avo)
+            if (((builderParameters.FieldsToFetch != null && builderParameters.FieldsToFetch.IndexFields.TryGetValue(fieldName, out var indexField)) || builderParameters.Index.Definition.IndexFields.TryGetValue(fieldName, out indexField)) && indexField.Vector is AutoVectorOptions avo)
             {
                 embeddingsGenerationTaskIdentifier = avo.EmbeddingsGenerationTaskIdentifier;
                 return avo.EmbeddingsGenerationTaskIdentifier != null;            

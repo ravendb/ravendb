@@ -88,7 +88,7 @@ public class RavenDB_25692(ITestOutputHelper output) : EmbeddingsGenerationTestB
         public TextualValueIndex()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = LoadVector("TextualValue", DefaultEmbeddingGenerationTaskName) };
+                select new { Vector = LoadVector("TextualValue", "localaitask") };
 
             SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType.Corax;
         }
