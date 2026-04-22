@@ -486,7 +486,11 @@ namespace Voron
                 finalFileName = path.FullPath;
                 var rc = Pal.rvn_hard_link_non_durable(fileName, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
+                {
+                    if (PalHelper.IsHardLinkLimitError(errorCode))
+                        throw new HardLinkLimitExceededException($"Failed to link files {fileName} to {path.FullPath}. Errno: {errorCode}. The file system hard-link limit has been reached.");
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
+                }
             }
 
             public override bool IsLinked(long journalNumber, string fileName, out string finalFileName)
