@@ -2,7 +2,7 @@ import { AboutViewHeading } from "components/common/AboutView";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, useFieldArray, useForm } from "react-hook-form";
 import { LoadingView } from "components/common/LoadingView";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
@@ -14,6 +14,7 @@ import {
     editCdcSinkTaskResolver,
 } from "./utils/editCdcSinkTaskValidation";
 import EditCdcSinkTaskBasicSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskBasicSection";
+import EditCdcSinkTaskExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskExplorer";
 
 interface QueryParams {
     taskId?: string;
@@ -59,6 +60,11 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         defaultValues: asyncGetDefaultValues.execute,
     });
 
+    const tablesFieldArray = useFieldArray({
+        control: form.control,
+        name: "tables",
+    });
+
     const reloadEditForm = async () => {
         const result = await asyncGetDefaultValues.execute();
         form.reset(result);
@@ -82,6 +88,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
             <FormProvider {...form}>
                 <form onSubmit={form.handleSubmit(console.log)}>
                     <EditCdcSinkTaskBasicSection />
+                    <EditCdcSinkTaskExplorer tablesFieldArray={tablesFieldArray} />
                 </form>
             </FormProvider>
         </div>

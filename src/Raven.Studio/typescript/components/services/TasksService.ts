@@ -40,6 +40,7 @@ import getEtlErrorsCommand from "commands/database/tasks/getEtlErrorsCommand";
 import getEtlStatsCommand from "commands/database/tasks/getEtlStatsCommand";
 import deleteEtlErrorsCommand from "commands/database/tasks/deleteEtlErrorsCommand";
 import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
+import fetchSqlDatabaseSchemaCommand from "commands/database/tasks/fetchSqlDatabaseSchemaCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -227,5 +228,9 @@ export default class TasksService {
 
     async retryBatch(...args: ConstructorParameters<typeof retryBatchEtlCommand>) {
         return new retryBatchEtlCommand(...args).execute();
+    }
+
+    async fetchSqlDatabaseSchema(...args: ConstructorParameters<typeof fetchSqlDatabaseSchemaCommand>) {
+        return new fetchSqlDatabaseSchemaCommand(...args).execute();
     }
 }
