@@ -1508,6 +1508,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     DocumentQuery.Intersect();
                     _chainedWhere = false;
                     break;
+                case nameof(LinqExtensions.WhereClrTypeIs):
+                    VisitExpression(expression.Arguments[0]);
+                    DocumentQuery.WhereClrTypeIs(expression.Method.GetGenericArguments()[1]);
+                    break;
                 case nameof(RavenQueryableExtensions.In):
                     var memberInfo = GetMember(expression.Arguments[0]);
                     var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));

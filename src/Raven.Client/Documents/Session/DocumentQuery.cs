@@ -475,6 +475,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereClrTypeIs<TDocument>()
+        {
+            WhereClrTypeIs(typeof(TDocument));
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IFilterDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(string fieldName, object value, bool exact)
         {
             WhereNotEquals(fieldName, value, exact);

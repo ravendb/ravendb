@@ -655,6 +655,19 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
+        public void WhereClrTypeIs(Type type)
+        {
+            if (type == null)
+                throw new ArgumentNullException(nameof(type));
+            var clrTypeName = Conventions.GetClrTypeName(type);
+            WhereEquals(new WhereParams
+            {
+                FieldName = "@metadata." + Constants.Documents.Metadata.RavenClrType,
+                Value = clrTypeName,
+                IsNestedPath = true
+            });
+        }
+
         private bool IfValueIsMethod(WhereOperator op, WhereParams whereParams, LinkedList<QueryToken> tokens)
         {
             if (whereParams.Value is MethodCall mc)

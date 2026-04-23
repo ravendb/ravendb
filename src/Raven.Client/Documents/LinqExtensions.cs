@@ -621,6 +621,18 @@ namespace Raven.Client.Documents
             return Search(self, fieldSelector, termToSearch, boost, options, @operator);
         }
 
+        /// <inheritdoc cref="IFilterDocumentQueryBase{T, TSelf}.WhereClrTypeIs{TDocument}"/>
+        public static IRavenQueryable<T> WhereClrTypeIs<T, TDocument>(this IQueryable<T> self)
+        {
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+
+            currentMethod = ConvertMethodIfNecessary(currentMethod, new[] { typeof(T), typeof(TDocument) });
+            var expression = ConvertExpressionIfNecessary(self);
+
+            var queryable = self.Provider.CreateQuery(Expression.Call(null, currentMethod, expression));
+            return (IRavenQueryable<T>)queryable;
+        }
+
         /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByScore"/>
         public static IOrderedQueryable<T> OrderByScore<T>(this IQueryable<T> self)
         {
