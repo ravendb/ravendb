@@ -95,6 +95,10 @@ export default class TasksService {
         return new getManualBackupCommand(databaseName).execute();
     }
 
+    async getCdcSinkTaskInfo(...args: Parameters<typeof getOngoingTaskInfoCommand.forCdcSink>) {
+        return getOngoingTaskInfoCommand.forCdcSink(...args).execute();
+    }
+
     async getSampleDataClasses(databaseName: string): Promise<string> {
         return new createSampleDataClassCommand(databaseName).execute();
     }
