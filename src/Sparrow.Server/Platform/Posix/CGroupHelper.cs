@@ -191,7 +191,7 @@ public abstract class CGroup
     //memory 0	205	1
     //cpu    2  232 1
     private static readonly Regex FindControllerGroupsAvailability = new Regex(@"^(?<subsys_name>[\w|_]+)\s+(?<hierarchy>\d+)\s+(?<num_cgroups>\d+)\s+(?<enabled>[1|0])$", RegexOptions.Compiled);
-    private bool IsControllerGroupsAvailable(string subsysName)
+    protected virtual bool IsControllerGroupsAvailable(string subsysName)
     {
         foreach (string line in File.ReadLines(PROC_CGROUPS_FILENAME))
         {
@@ -287,8 +287,41 @@ public sealed class CGroupV2 : CGroup
     protected override string MemoryLimitFileName => "memory.max";
     protected override string MemoryUsageFileName => "memory.current";
     protected override string MaxMemoryUsageFileName => "memory.peak";
-    
+
     protected override string FindCGroupPathForMemoryInternal() => FindCGroupPath();
+
+    protected override bool IsControllerGroupsAvailable(string subsysName)
+    {
+        // /proc/cgroups only lists cgroup v1 controllers, which may not include the memory
+        // controller on kernels where memory is managed exclusively by cgroup v2 (e.g. Azure Linux).
+        // For cgroup v2, we check the cgroup.controllers file at the process's cgroup path instead.
+        try
+        {
+            string cgroupPath = FindCGroupPath();
+            if (cgroupPath == null)
+                return false;
+
+            string controllersFilePath = Path.Combine(cgroupPath, "cgroup.controllers");
+            if (File.Exists(controllersFilePath) == false)
+                return false;
+
+            string controllers = File.ReadAllText(controllersFilePath).Trim();
+            foreach (string controller in controllers.Split(' '))
+            {
+                if (controller == subsysName)
+                    return true;
+            }
+
+            return false;
+        }
+        catch (Exception e)
+        {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Failed to check cgroup v2 controller availability for '{subsysName}', falling back to /proc/cgroups", e);
+
+            return base.IsControllerGroupsAvailable(subsysName);
+        }
+    }
     
     private static string FindCGroupPath()
     {
