@@ -1,6 +1,8 @@
 using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using Sparrow.Extensions;
 using Sparrow.Json;
@@ -21,6 +23,42 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             Modifiers.Add(ModifyTypeInfo);
+        }
+
+        /// <summary>
+        /// Returns a resolver that tries the user's source-generated context first,
+        /// then falls back to reflection, applying Raven modifications to both.
+        /// </summary>
+        internal IJsonTypeInfoResolver WithSourceGenerationContext(JsonSerializerContext context)
+        {
+            return new SourceGenCombinedResolver(context, this);
+        }
+
+        private sealed class SourceGenCombinedResolver : IJsonTypeInfoResolver
+        {
+            private readonly JsonSerializerContext _context;
+            private readonly RavenJsonTypeInfoResolver _fallback;
+
+            public SourceGenCombinedResolver(JsonSerializerContext context, RavenJsonTypeInfoResolver fallback)
+            {
+                _context = context;
+                _fallback = fallback;
+            }
+
+            public JsonTypeInfo GetTypeInfo(Type type, JsonSerializerOptions options)
+            {
+                // Try the source-generated context first (returns null for unknown types)
+                JsonTypeInfo typeInfo = ((IJsonTypeInfoResolver)_context).GetTypeInfo(type, options);
+                if (typeInfo != null)
+                {
+                    // Apply Raven modifications (identity property handling, property filtering)
+                    _fallback.ModifyTypeInfo(typeInfo);
+                    return typeInfo;
+                }
+
+                // Fall back to reflection-based resolver (Raven mods applied via Modifiers)
+                return ((IJsonTypeInfoResolver)_fallback).GetTypeInfo(type, options);
+            }
         }
 
         private void ModifyTypeInfo(JsonTypeInfo typeInfo)
