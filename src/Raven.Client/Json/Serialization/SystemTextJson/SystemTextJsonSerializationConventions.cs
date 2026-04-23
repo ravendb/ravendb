@@ -20,6 +20,7 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
         private Func<Type, BlittableJsonReaderObject, object> _deserializeEntityFromBlittable;
         private bool _ignoreByRefMembers;
         private bool _ignoreUnsafeMembers;
+        private System.Text.Json.Serialization.JsonSerializerContext _sourceGenerationContext;
         private JsonSerializerOptions _cachedSerializerOptions;
         private JsonSerializerOptions _cachedDeserializerOptions;
 
@@ -73,6 +74,21 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
             {
                 Conventions?.AssertNotFrozen();
                 _ignoreUnsafeMembers = value;
+            }
+        }
+
+        /// <summary>
+        ///     Set a source-generated <see cref="System.Text.Json.Serialization.JsonSerializerContext"/>
+        ///     to avoid runtime reflection. Types included in the context use compile-time
+        ///     generated metadata; types not in the context fall back to reflection.
+        /// </summary>
+        public System.Text.Json.Serialization.JsonSerializerContext SourceGenerationContext
+        {
+            get => _sourceGenerationContext;
+            set
+            {
+                Conventions?.AssertNotFrozen();
+                _sourceGenerationContext = value;
             }
         }
 
@@ -135,9 +151,13 @@ namespace Raven.Client.Json.Serialization.SystemTextJson
 
         internal JsonSerializerOptions CreateJsonSerializerOptions()
         {
+            var ravenResolver = new RavenJsonTypeInfoResolver(this);
+
             var options = new JsonSerializerOptions
             {
-                TypeInfoResolver = new RavenJsonTypeInfoResolver(this),
+                TypeInfoResolver = _sourceGenerationContext != null
+                    ? ravenResolver.WithSourceGenerationContext(_sourceGenerationContext)
+                    : ravenResolver,
                 NumberHandling = JsonNumberHandling.AllowReadingFromString,
                 PropertyNameCaseInsensitive = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.Never
