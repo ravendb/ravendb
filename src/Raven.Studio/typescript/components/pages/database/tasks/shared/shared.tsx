@@ -438,6 +438,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     const hasAmazonSqsEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
     const hasEmbeddingGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
@@ -732,6 +733,18 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
                     licenseBadge: "Enterprise",
                     showLicenseBadge: !hasRabbitMqSink,
                     link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
+                    accessRequired: "DatabaseAdmin",
+                },
+                {
+                    title: "CDC Sink",
+                    description:
+                        "Consume database change streams from external sources and write the changes into RavenDB.",
+                    iconName: "sql-etl",
+                    target: "CdcSink",
+                    variant: "Sink",
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasCdcSink,
+                    link: forCurrentDatabase.editCdcSinkTaskUrl(),
                     accessRequired: "DatabaseAdmin",
                 },
             ],

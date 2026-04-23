@@ -31,6 +31,7 @@ import {
     OngoingTaskReplicationHubNodeInfoDetails,
     OngoingInternalReplicationNodeInfo,
     OngoingTaskAmazonSqsEtlSharedInfo,
+    OngoingTaskCdcSinkSharedInfo,
     OngoingTaskEmbeddingsGenerationSharedInfo,
     OngoingTaskGenAiSharedInfo,
 } from "components/models/tasks";
@@ -54,6 +55,7 @@ import { produce, Draft } from "immer";
 import OngoingTaskSubscription = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSubscription;
 import OngoingTaskQueueEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import SubscriptionConnectionsDetails = Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails;
 import DatabaseUtils from "components/utils/DatabaseUtils";
@@ -397,6 +399,15 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 default:
                     throw new Error("Invalid broker type: " + incoming.BrokerType);
             }
+        }
+        case "CdcSink": {
+            const incoming = task as OngoingTaskCdcSink;
+            const result: OngoingTaskCdcSinkSharedInfo = {
+                ...commonProps,
+                connectionStringName: incoming.ConnectionStringName,
+                factoryName: incoming.FactoryName,
+            };
+            return result;
         }
         case "Backup": {
             const incoming = task as OngoingTaskBackup;
