@@ -15,6 +15,7 @@ import {
 } from "./utils/editCdcSinkTaskValidation";
 import EditCdcSinkTaskBasicSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskBasicSection";
 import EditCdcSinkTaskExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskExplorer";
+import EditCdcSinkTaskTables from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskTables";
 
 interface QueryParams {
     taskId?: string;
@@ -89,6 +90,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                 <form onSubmit={form.handleSubmit(console.log)}>
                     <EditCdcSinkTaskBasicSection />
                     <EditCdcSinkTaskExplorer tablesFieldArray={tablesFieldArray} />
+                    <EditCdcSinkTaskTables tablesFieldArray={tablesFieldArray} />
                 </form>
             </FormProvider>
         </div>
