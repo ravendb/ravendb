@@ -1,8 +1,8 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
@@ -42,7 +42,8 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
                  // Set user prompt and run
                  conversation.SetUserPrompt("Your question here");
 
-                 {{GenerateResponseClassDefinition(obj)}}var result = await conversation.RunAsync<{{GetResponseTypeName(obj)}}>();
+                 {{GenerateClassDefinition("AgentResponse", obj.SampleObject, obj.OutputSchema)}}
+                 var result = await conversation.RunAsync<AgentResponse>();
                  var answer = result.Answer;
                  """;
     }
@@ -78,7 +79,7 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
         foreach (var action in actions)
         {
             var argsClassName = $"{action.Name}Args";
-            var argsClassDef = GenerateArgsClass(argsClassName, action.ParametersSampleObject);
+            var argsClassDef = GenerateClassDefinition(argsClassName, action.ParametersSampleObject, action.ParametersSchema);
             if (argsClassDef != null)
             {
                 sb.AppendLine(argsClassDef);
@@ -86,26 +87,28 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
             }
 
             var argType = argsClassDef != null ? argsClassName : "object";
-            sb.AppendLine($"// Define a handler for the \"{action.Name}\" action tool");
-            sb.AppendLine($"conversation.Handle<{argType}, ActionToolResult>(\"{action.Name}\", async (args) =>");
-            sb.AppendLine("{");
-            sb.AppendLine($"    // TODO: handle \"{action.Name}\" action");
-            sb.AppendLine("    return new ActionToolResult { IsSuccessful = true };");
-            sb.AppendLine("});");
-            sb.AppendLine();
-        }
+            sb.AppendLine($$"""
+                            // Define a handler for the "{{action.Name}}" action tool
+                            conversation.Handle<{{argType}}, ActionToolResult>("{{action.Name}}", async (args) =>
+                            {
+                                // TODO: handle "{{action.Name}}" action
+                                return new ActionToolResult { IsSuccessful = true };
+                            });
 
+                            """);
+        }
         return sb.ToString();
     }
 
-    private static string GenerateArgsClass(string className, string json)
+    private static string GenerateClassDefinition(string className, string sampleObject, string outputSchema)
     {
+        var json = GetSampleObject(sampleObject, outputSchema);
         if (string.IsNullOrWhiteSpace(json))
             return null;
         try
         {
-            var doc = System.Text.Json.JsonDocument.Parse(json);
-            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+            var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
                 return null;
             var props = doc.RootElement.EnumerateObject().ToList();
             if (props.Count == 0)
@@ -119,47 +122,19 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
             sb.Append("}");
             return sb.ToString();
         }
-        catch { return null; }
+        catch (JsonException) { return null; }
     }
 
-    private static string GenerateResponseClassDefinition(AiAgentConfiguration obj)
+    private static string GetCSharpType(JsonElement element) => element.ValueKind switch
     {
-        if (string.IsNullOrWhiteSpace(obj.SampleObject))
-            return string.Empty;
-        try
-        {
-            var doc = System.Text.Json.JsonDocument.Parse(obj.SampleObject);
-            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
-                return string.Empty;
-            var props = doc.RootElement.EnumerateObject().ToList();
-            if (props.Count == 0)
-                return string.Empty;
-
-            var sb = new StringBuilder();
-            sb.AppendLine("class AgentResponse");
-            sb.AppendLine("{");
-            foreach (var prop in props)
-                sb.AppendLine($"    public {GetCSharpType(prop.Value)} {prop.Name} {{ get; set; }}");
-            sb.AppendLine("}");
-            sb.AppendLine();
-            return sb.ToString();
-        }
-        catch { return string.Empty; }
-    }
-
-    private static string GetResponseTypeName(AiAgentConfiguration obj) =>
-        string.IsNullOrWhiteSpace(obj.SampleObject) ? "/* your response type */" : "AgentResponse";
-
-    private static string GetCSharpType(System.Text.Json.JsonElement element) => element.ValueKind switch
-    {
-        System.Text.Json.JsonValueKind.String => "string",
-        System.Text.Json.JsonValueKind.Number => element.TryGetInt64(out _) ? "long" : "double",
-        System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False => "bool",
-        System.Text.Json.JsonValueKind.Array => $"List<{GetArrayItemType(element)}>",
+        JsonValueKind.String => "string",
+        JsonValueKind.Number => element.TryGetInt64(out _) ? "long" : "double",
+        JsonValueKind.True or JsonValueKind.False => "bool",
+        JsonValueKind.Array => $"List<{GetArrayItemType(element)}>",
         _ => "object"
     };
 
-    private static string GetArrayItemType(System.Text.Json.JsonElement array)
+    private static string GetArrayItemType(JsonElement array)
     {
         foreach (var item in array.EnumerateArray())
             return GetCSharpType(item);
@@ -215,7 +190,7 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
     }
 
     protected override void WriteEnumerableStart(StringBuilder sb, string name, IEnumerable value, int indent) =>
-        sb.AppendLine($"{Indent(indent)}{name} = new {GetFriendlyTypeName(value.GetType())}\n{Indent(indent)}{{");
+        sb.AppendLine($"{Indent(indent)}{name} = new {GetFriendlyTypeName(value.GetType())}{Environment.NewLine}{Indent(indent)}{{");
 
     private string GetFriendlyTypeName(Type type)
     {
@@ -234,12 +209,4 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
     protected override void WriteEnumerableEnd(StringBuilder sb, string name, int indent, bool isLast) =>
         sb.AppendLine($"{Indent(indent)}}}{(isLast ? "" : ",")}");
-
-    private static void AppendJsonComment(StringBuilder sb, string json, string linePrefix)
-    {
-        if (TryGetJsonKeys(json).Count == 0)
-            return;
-        foreach (var line in TryPrettyPrintJson(json).Split(Environment.NewLine))
-            sb.AppendLine($"{linePrefix}// {line}");
-    }
 }

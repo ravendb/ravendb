@@ -28,12 +28,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             using (ctx.OpenReadTransaction())
             using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, RequestHandler.DatabaseName))
             {
-                if (string.IsNullOrEmpty(identifier) == false)
+                if (record.TryGetAiAgent(identifier, out agent) == false)
                 {
-                    if (record.TryGetAiAgent(identifier, out agent) == false)
-                    {
-                        throw new InvalidOperationException($"Agent '{identifier}' doesn't exist");
-                    }
+                    throw new InvalidOperationException($"Agent '{identifier}' doesn't exist");
                 }
             }
 

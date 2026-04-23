@@ -29,7 +29,7 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
                          {{GenerateConversationParameters(obj)}}
                      );
 
-                     {{GenerateHandleCalls(obj)}}
+                 {{GenerateHandleCalls(obj)}}
                      // Set user prompt
                      chat.setUserPrompt('Your question here');
 
@@ -70,13 +70,15 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
         var sb = new StringBuilder();
         foreach (var action in obj.Actions ?? [])
         {
-            sb.AppendLine($"    // Define a handler for the '{action.Name}' action tool");
-            sb.AppendLine($"    chat.handle('{action.Name}', async (params) => {{");
-            AppendJsonComment(sb, action.ParametersSampleObject, "        ");
-            sb.AppendLine($"        // TODO: handle '{action.Name}' action");
-            sb.AppendLine("        return 'done';");
-            sb.AppendLine("    });");
-            sb.AppendLine();
+            sb.AppendLine($$"""
+                                // Define a handler for the '{{action.Name}}' action tool
+                                chat.handle('{{action.Name}}', async (params) => {
+                            {{GetJsonComment(GetSampleObject(action.ParametersSampleObject, action.ParametersSchema), "        ")}}
+                                    // TODO: handle '{{action.Name}}' action
+                                    return 'done';
+                                });
+
+                            """);
         }
         return sb.ToString();
     }
@@ -138,12 +140,15 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
     protected override void WriteEnumerableEnd(StringBuilder sb, string name, int indent, bool isLast) =>
         sb.AppendLine($"{Indent(indent)}]{(isLast ? "" : ",")}");
 
-    private static void AppendJsonComment(StringBuilder sb, string json, string linePrefix)
+    private static string GetJsonComment(string json, string linePrefix)
     {
+        var sb = new StringBuilder();
         if (TryGetJsonKeys(json).Count == 0)
-            return;
-        foreach (var line in TryPrettyPrintJson(json).Split(System.Environment.NewLine))
+            return string.Empty;
+        foreach (var line in TryPrettyPrintJson(json).Split(Environment.NewLine))
             sb.AppendLine($"{linePrefix}// {line}");
+
+        return sb.ToString();
     }
 
     private static string ToCamelCase(string str) =>

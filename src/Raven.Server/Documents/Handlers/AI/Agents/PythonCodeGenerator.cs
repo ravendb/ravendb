@@ -26,12 +26,11 @@ public class PythonCodeGenerator : AbstractCodeGenerator
 
                  # Create a conversation/chat with the agent
                  {{GenerateConversation(obj)}}
-
                  {{GenerateHandleCalls(obj)}}
-                 # Set user prompt and run
-                 chat.set_user_prompt('Your question here')
-                 result = chat.run()
-                 answer = result.answer
+                     # Set user prompt and run
+                     chat.set_user_prompt('Your question here')
+                     result = chat.run()
+                     answer = result.answer
                  """;
     }
 
@@ -40,14 +39,18 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         var sb = new StringBuilder();
         if (obj.Parameters is { Count: > 0 })
         {
-            sb.AppendLine("with document_store.ai.conversation(");
-            sb.AppendLine("    agent_id,");
-            sb.AppendLine("    conversation_id='Conversations/',");
-            sb.AppendLine("    parameters={");
+            sb.AppendLine("""
+                          with document_store.ai.conversation(
+                              agent_id,
+                              conversation_id='Conversations/',
+                              parameters={
+                          """);
             foreach (var param in obj.Parameters)
                 sb.AppendLine($"        '{param.Name}': 'your-{param.Name}-here',  # {param.Description}");
-            sb.AppendLine("    }");
-            sb.AppendLine(") as chat:");
+            sb.AppendLine("""
+                              }
+                          ) as chat:
+                          """);
         }
         else
         {
@@ -62,14 +65,17 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         foreach (var action in obj.Actions ?? [])
         {
             var handlerName = $"handle_{ToSnakeCase(action.Name)}";
-            sb.AppendLine($"# Define a handler for the '{action.Name}' action tool");
-            sb.AppendLine($"def {handlerName}(params):");
-            AppendJsonComment(sb, action.ParametersSampleObject, "    ");
-            sb.AppendLine($"    # TODO: handle '{action.Name}' action");
-            sb.AppendLine($"    return 'done'");
-            sb.AppendLine();
-            sb.AppendLine($"chat.handle('{action.Name}', {handlerName})");
-            sb.AppendLine();
+
+            sb.AppendLine($$"""
+                                # Define a handler for the '{{action.Name}}' action tool
+                                def {{handlerName}}(params):
+                            {{GetJsonComment(GetSampleObject(action.ParametersSampleObject, action.ParametersSchema), "        ")}}
+                                    # TODO: handle '{{action.Name}}' action
+                                    return 'done'
+
+                                chat.handle('{{action.Name}}', {{handlerName}})
+
+                            """);
         }
         return sb.ToString();
     }
@@ -139,12 +145,15 @@ public class PythonCodeGenerator : AbstractCodeGenerator
     protected override void WriteEnumerableEnd(StringBuilder sb, string name, int indent, bool isLast) =>
         sb.AppendLine($"{Indent(indent)}]{(isLast ? "" : ",")}");
 
-    private static void AppendJsonComment(StringBuilder sb, string json, string linePrefix)
+    private static string GetJsonComment(string json, string linePrefix)
     {
+        var sb = new StringBuilder();
         if (TryGetJsonKeys(json).Count == 0)
-            return;
-        foreach (var line in TryPrettyPrintJson(json).Split(System.Environment.NewLine))
+            return string.Empty;
+        foreach (var line in TryPrettyPrintJson(json).Split(Environment.NewLine))
             sb.AppendLine($"{linePrefix}# {line}");
+
+        return sb.ToString();
     }
 
     private static string ToSnakeCase(string str)

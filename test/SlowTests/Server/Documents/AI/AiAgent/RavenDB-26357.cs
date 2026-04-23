@@ -4,12 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using FastTests;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Newtonsoft.Json;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -17,6 +17,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -29,13 +30,37 @@ public class RavenDB_26357 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public async Task CSharp_GeneratedCodeCompiles()
+    // For manual testing
+    public async Task PrintOutputTest()
     {
         using var store = GetDocumentStore();
 
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString");
+
+        var resultCSharp = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
+        var resultPython = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "Python"));
+        var resultJavascript = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "Javascript"));
+
+        Console.WriteLine("C#");
+        Console.WriteLine(resultCSharp.GeneratedCode);
+        Console.WriteLine();
+        Console.WriteLine("Python");
+        Console.WriteLine(resultPython.GeneratedCode);
+        Console.WriteLine();
+        Console.WriteLine("JavaScript");
+        Console.WriteLine(resultJavascript.GeneratedCode);
+        Console.WriteLine();
+    }
+
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CSharp_GeneratedCodeCompiles(bool useSchema)
+    {
+        using var store = GetDocumentStore();
+
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString", useSchema);
 
         var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
 
@@ -157,76 +182,450 @@ public class Program
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenerateCode_CSharp_ContainsAgentProperties()
+    public async Task GenerateCode_CSharp()
     {
+        const string expected = """"
+                                using System;
+                                using System.Collections.Generic;
+                                using System.Threading.Tasks;
+                                using Raven.Client.Documents;
+                                using Raven.Client.Documents.AI;
+                                using Raven.Client.Documents.Operations.AI.Agents;
+                                
+                                var agent = new AiAgentConfiguration
+                                {
+                                    Identifier = "user-info-agent-1",
+                                    Name = "user-info-agent-1",
+                                    ConnectionStringName = "OpenAi_ConnectionString",
+                                    SystemPrompt = "Your role responsibility is to provide the user's name when requested.",
+                                    SampleObject = """
+                                    {
+                                      "Answer": "Answer to the user question",
+                                      "MoviesIds": [
+                                        "The movies ids relevant to the query or response"
+                                      ],
+                                      "MoviesNames": [
+                                        "The movies names relevant to the query or response"
+                                      ]
+                                    }
+                                    """,
+                                    Queries = new List<AiAgentToolQuery>
+                                    {
+                                        new AiAgentToolQuery
+                                        {
+                                            Name = "GetUserName",
+                                            Description = "Get the user name",
+                                            Query = "from Users where id() = $userId select Name",
+                                            ParametersSampleObject = "{}"
+                                        }
+                                    },
+                                    Actions = new List<AiAgentToolAction>
+                                    {
+                                        new AiAgentToolAction
+                                        {
+                                            Name = "ChangeUserName",
+                                            Description = "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.",
+                                            ParametersSampleObject = """
+                                            {
+                                              "UserId": "Users/123456789",
+                                              "NewUserName": "Jame's Smith",
+                                              "OldUserName": "Jame's Parker"
+                                            }
+                                            """
+                                        },
+                                        new AiAgentToolAction
+                                        {
+                                            Name = "ChangeUserName2",
+                                            Description = "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.",
+                                            ParametersSampleObject = """
+                                            {
+                                              "UserId": "Users/123456789",
+                                              "NewUserName": "Jame's Smith",
+                                              "OldUserName": "Jame's Parker"
+                                            }
+                                            """
+                                        }
+                                    },
+                                    SubAgents = new List<AiAgentToolSubAgent>
+                                    {
+                                        new AiAgentToolSubAgent
+                                        {
+                                            Identifier = "userAgent2Id",
+                                            Description = "Use to ask about user name."
+                                        }
+                                    },
+                                    Parameters = new List<AiAgentParameter>
+                                    {
+                                        new AiAgentParameter
+                                        {
+                                            Name = "currentUserId",
+                                            Description = "the id of the current user that you talk with"
+                                        },
+                                        new AiAgentParameter
+                                        {
+                                            Name = "userId",
+                                            Description = "the id of the user that you talk with"
+                                        }
+                                    },
+                                    ChatTrimming = new AiAgentChatTrimmingConfiguration
+                                    {
+                                        History = new AiAgentHistoryConfiguration
+                                        {
+                                            HistoryExpirationInSec = 86400
+                                        }
+                                    }
+                                };
+                                
+                                var documentStore = new DocumentStore
+                                {
+                                    Urls = new[] { "http://localhost:8080" },
+                                    Database = "TestDB"
+                                }.Initialize();
+                                
+                                // Create/deploy the agent
+                                await documentStore.AI.CreateAgentAsync(agent);
+                                
+                                // Create a conversation/chat with the agent
+                                var conversation = documentStore.AI.Conversation(
+                                    agentId: "user-info-agent-1",
+                                    conversationId: "Conversations/",
+                                    new AiConversationCreationOptions()
+                                        .AddParameter("currentUserId", "your-currentUserId-here")  // the id of the current user that you talk with
+                                        .AddParameter("userId", "your-userId-here")  // the id of the user that you talk with
+                                
+                                );
+                                
+                                class ActionToolResult
+                                {
+                                    public bool IsSuccessful { get; set; }
+                                    public string Answer { get; set; }
+                                }
+                                class ChangeUserNameArgs
+                                {
+                                    public string UserId { get; set; }
+                                    public string NewUserName { get; set; }
+                                    public string OldUserName { get; set; }
+                                }
+                                
+                                // Define a handler for the "ChangeUserName" action tool
+                                conversation.Handle<ChangeUserNameArgs, ActionToolResult>("ChangeUserName", async (args) =>
+                                {
+                                    // TODO: handle "ChangeUserName" action
+                                    return new ActionToolResult { IsSuccessful = true };
+                                });
+                                
+                                class ChangeUserName2Args
+                                {
+                                    public string UserId { get; set; }
+                                    public string NewUserName { get; set; }
+                                    public string OldUserName { get; set; }
+                                }
+                                
+                                // Define a handler for the "ChangeUserName2" action tool
+                                conversation.Handle<ChangeUserName2Args, ActionToolResult>("ChangeUserName2", async (args) =>
+                                {
+                                    // TODO: handle "ChangeUserName2" action
+                                    return new ActionToolResult { IsSuccessful = true };
+                                });
+                                
+                                
+                                
+                                // Set user prompt and run
+                                conversation.SetUserPrompt("Your question here");
+                                
+                                class AgentResponse
+                                {
+                                    public string Answer { get; set; }
+                                    public List<string> MoviesIds { get; set; }
+                                    public List<string> MoviesNames { get; set; }
+                                }
+                                var result = await conversation.RunAsync<AgentResponse>();
+                                var answer = result.Answer;
+                                """"; 
+
+
         using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString");
 
         var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
-
-        Assert.Contains("user-info-agent-1", result.GeneratedCode);
-        Assert.Contains("OpenAi_ConnectionString", result.GeneratedCode);
-        Assert.Contains("GetUserName", result.GeneratedCode);
-        Assert.Contains("ChangeUserName", result.GeneratedCode);
-        Assert.Contains("currentUserId", result.GeneratedCode);
-        Assert.Contains("userId", result.GeneratedCode);
+        Assert.Equal(expected.ReplaceLineEndings("\n"), result.GeneratedCode.ReplaceLineEndings("\n"));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenerateCode_Python_ContainsAgentProperties()
+    public async Task GenerateCode_Python()
     {
+        const string expected = """"
+                                from ravendb import *
+                                
+                                document_store = DocumentStore(
+                                    urls=["http://127.0.0.1:8080"],
+                                    database="YourDatabaseName"
+                                )
+                                document_store.initialize()
+                                
+                                agent = AiAgentConfiguration(
+                                    identifier='user-info-agent-1',
+                                    name='user-info-agent-1',
+                                    connection_string_name='OpenAi_ConnectionString',
+                                    system_prompt='Your role responsibility is to provide the user\'s name when requested.',
+                                    sample_object="""{
+                                      "Answer": "Answer to the user question",
+                                      "MoviesIds": [
+                                        "The movies ids relevant to the query or response"
+                                      ],
+                                      "MoviesNames": [
+                                        "The movies names relevant to the query or response"
+                                      ]
+                                    }""",
+                                    queries=[
+                                        AiAgentToolQuery(
+                                            name='GetUserName',
+                                            description='Get the user name',
+                                            query='from Users where id() = $userId select Name',
+                                            parameters_sample_object='{}'
+                                        )
+                                    ],
+                                    actions=[
+                                        AiAgentToolAction(
+                                            name='ChangeUserName',
+                                            description='Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
+                                            parameters_sample_object="""{
+                                              "UserId": "Users/123456789",
+                                              "NewUserName": "Jame's Smith",
+                                              "OldUserName": "Jame's Parker"
+                                            }"""
+                                        ),
+                                        AiAgentToolAction(
+                                            name='ChangeUserName2',
+                                            description='Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
+                                            parameters_sample_object="""{
+                                              "UserId": "Users/123456789",
+                                              "NewUserName": "Jame's Smith",
+                                              "OldUserName": "Jame's Parker"
+                                            }"""
+                                        )
+                                    ],
+                                    sub_agents=[
+                                        AiAgentToolSubAgent(
+                                            identifier='userAgent2Id',
+                                            description='Use to ask about user name.'
+                                        )
+                                    ],
+                                    parameters=[
+                                        AiAgentParameter(
+                                            name='currentUserId',
+                                            description='the id of the current user that you talk with'
+                                        ),
+                                        AiAgentParameter(
+                                            name='userId',
+                                            description='the id of the user that you talk with'
+                                        )
+                                    ],
+                                    chat_trimming=AiAgentChatTrimmingConfiguration(
+                                        history=AiAgentHistoryConfiguration(
+                                            history_expiration_in_sec=86400
+                                        )
+                                    )
+                                )
+                                
+                                # Create/deploy the agent
+                                agent_id = document_store.ai.add_or_update_agent(agent).identifier
+                                
+                                # Create a conversation/chat with the agent
+                                with document_store.ai.conversation(
+                                    agent_id,
+                                    conversation_id='Conversations/',
+                                    parameters={
+                                        'currentUserId': 'your-currentUserId-here',  # the id of the current user that you talk with
+                                        'userId': 'your-userId-here',  # the id of the user that you talk with
+                                    }
+                                ) as chat:
+                                
+                                    # Define a handler for the 'ChangeUserName' action tool
+                                    def handle_change_user_name(params):
+                                        # {
+                                        #   "UserId": "Users/123456789",
+                                        #   "NewUserName": "Jame's Smith",
+                                        #   "OldUserName": "Jame's Parker"
+                                        # }
+                                
+                                        # TODO: handle 'ChangeUserName' action
+                                        return 'done'
+                                
+                                    chat.handle('ChangeUserName', handle_change_user_name)
+                                
+                                    # Define a handler for the 'ChangeUserName2' action tool
+                                    def handle_change_user_name2(params):
+                                        # {
+                                        #   "UserId": "Users/123456789",
+                                        #   "NewUserName": "Jame's Smith",
+                                        #   "OldUserName": "Jame's Parker"
+                                        # }
+                                
+                                        # TODO: handle 'ChangeUserName2' action
+                                        return 'done'
+                                
+                                    chat.handle('ChangeUserName2', handle_change_user_name2)
+                                
+                                
+                                    # Set user prompt and run
+                                    chat.set_user_prompt('Your question here')
+                                    result = chat.run()
+                                    answer = result.answer
+                                """";
+
         using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString");
 
         var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "python"));
-
-        Assert.Contains("user-info-agent-1", result.GeneratedCode);
-        Assert.Contains("OpenAi_ConnectionString", result.GeneratedCode);
-        Assert.Contains("GetUserName", result.GeneratedCode);
-        Assert.Contains("ChangeUserName", result.GeneratedCode);
-        Assert.Contains("currentUserId", result.GeneratedCode);
-        Assert.Contains("userId", result.GeneratedCode);
+        Assert.Equal(expected.ReplaceLineEndings("\n"), result.GeneratedCode.ReplaceLineEndings("\n"));
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenerateCode_NodeJs_ContainsAgentProperties()
+    public async Task GenerateCode_NodeJs()
     {
+        const string expected = """"
+                                const { DocumentStore } = require('ravendb');
+                                
+                                async function runConversation() {
+                                    const agent =
+                                    {
+                                        identifier: 'user-info-agent-1',
+                                        name: 'user-info-agent-1',
+                                        connectionStringName: 'OpenAi_ConnectionString',
+                                        systemPrompt: 'Your role responsibility is to provide the user\'s name when requested.',
+                                        sampleObject: `{
+                                          "Answer": "Answer to the user question",
+                                          "MoviesIds": [
+                                            "The movies ids relevant to the query or response"
+                                          ],
+                                          "MoviesNames": [
+                                            "The movies names relevant to the query or response"
+                                          ]
+                                        }`,
+                                        queries: [
+                                            {
+                                                name: 'GetUserName',
+                                                description: 'Get the user name',
+                                                query: 'from Users where id() = $userId select Name',
+                                                parametersSampleObject: '{}'
+                                            }
+                                        ],
+                                        actions: [
+                                            {
+                                                name: 'ChangeUserName',
+                                                description: 'Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
+                                                parametersSampleObject: `{
+                                                  "UserId": "Users/123456789",
+                                                  "NewUserName": "Jame's Smith",
+                                                  "OldUserName": "Jame's Parker"
+                                                }`
+                                            },
+                                            {
+                                                name: 'ChangeUserName2',
+                                                description: 'Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
+                                                parametersSampleObject: `{
+                                                  "UserId": "Users/123456789",
+                                                  "NewUserName": "Jame's Smith",
+                                                  "OldUserName": "Jame's Parker"
+                                                }`
+                                            }
+                                        ],
+                                        subAgents: [
+                                            {
+                                                identifier: 'userAgent2Id',
+                                                description: 'Use to ask about user name.'
+                                            }
+                                        ],
+                                        parameters: [
+                                            {
+                                                name: 'currentUserId',
+                                                description: 'the id of the current user that you talk with'
+                                            },
+                                            {
+                                                name: 'userId',
+                                                description: 'the id of the user that you talk with'
+                                            }
+                                        ],
+                                        chatTrimming: {
+                                            history: {
+                                                historyExpirationInSec: 86400
+                                            }
+                                        }
+                                    };
+                                
+                                    const documentStore = new DocumentStore('http://localhost:8080', 'YourDatabase');
+                                    documentStore.initialize();
+                                
+                                    // Create/deploy the agent
+                                    const createdAgentResult = await documentStore.ai.createAgent(agent);
+                                
+                                    // Create a conversation/chat with the agent
+                                    const chat = documentStore.ai.conversation(
+                                        createdAgentResult.identifier,  // The agent ID
+                                        'Conversations/',                // The conversation document prefix
+                                        {
+                                            parameters: {
+                                                currentUserId: 'your-currentUserId-here',  // the id of the current user that you talk with
+                                                userId: 'your-userId-here'  // the id of the user that you talk with
+                                            }
+                                        }
+                                
+                                    );
+                                
+                                    // Define a handler for the 'ChangeUserName' action tool
+                                    chat.handle('ChangeUserName', async (params) => {
+                                        // {
+                                        //   "UserId": "Users/123456789",
+                                        //   "NewUserName": "Jame's Smith",
+                                        //   "OldUserName": "Jame's Parker"
+                                        // }
+                                
+                                        // TODO: handle 'ChangeUserName' action
+                                        return 'done';
+                                    });
+                                
+                                    // Define a handler for the 'ChangeUserName2' action tool
+                                    chat.handle('ChangeUserName2', async (params) => {
+                                        // {
+                                        //   "UserId": "Users/123456789",
+                                        //   "NewUserName": "Jame's Smith",
+                                        //   "OldUserName": "Jame's Parker"
+                                        // }
+                                
+                                        // TODO: handle 'ChangeUserName2' action
+                                        return 'done';
+                                    });
+                                
+                                
+                                    // Set user prompt
+                                    chat.setUserPrompt('Your question here');
+                                
+                                    // Run the chat/conversation
+                                    const response = await chat.run();
+                                
+                                    if (response.status === 'Done') {
+                                        const answer = response.answer;
+                                        console.log(answer);
+                                    }
+                                }
+                                
+                                runConversation();
+                                """";
+
         using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString");
 
         var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "javascript"));
-
-        Assert.Contains("user-info-agent-1", result.GeneratedCode);
-        Assert.Contains("OpenAi_ConnectionString", result.GeneratedCode);
-        Assert.Contains("GetUserName", result.GeneratedCode);
-        Assert.Contains("ChangeUserName", result.GeneratedCode);
-        Assert.Contains("currentUserId", result.GeneratedCode);
-        Assert.Contains("userId", result.GeneratedCode);
+        Assert.Equal(expected.ReplaceLineEndings("\n"), result.GeneratedCode.ReplaceLineEndings("\n"));
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenerateCode_CSharp_ContainsUsings()
-    {
-        using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
-
-        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
-
-        Assert.Contains("using System;", result.GeneratedCode);
-        Assert.Contains("using System.Collections.Generic;", result.GeneratedCode);
-        Assert.Contains("using Raven.Client.Documents.Operations.AI.Agents;", result.GeneratedCode);
-    }
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GenerateCode_UnsupportedLanguage_Throws()
     {
         using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        var agentId = await CreateAgent(store, "OpenAi_ConnectionString");
 
         var ex = await Assert.ThrowsAsync<RavenException>(async () =>
             await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "ruby")));
@@ -246,27 +645,19 @@ public class Program
         Assert.Contains("Agent 'non-existent-agent' doesn't exist", ex.Message);
     }
 
-    [RavenFact(RavenTestCategory.Ai)]
-    public async Task GenerateCode_LanguageIsCaseInsensitive()
+    private static async Task<string> CreateAgent(IDocumentStore store, string connectionStringName, bool useSchema = false)
     {
-        using var store = GetDocumentStore();
-        var agent = BuildAgent("OpenAi_ConnectionString");
-        var agentId = (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
+        string changeUserNameSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance);
+        string moviesOutputSampleObject = JsonConvert.SerializeObject(MoviesSampleObject.Instance);
 
-        var lower = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
-        var upper = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "C#"));
-        var mixed = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "Python"));
+        string changeUserNameParametersSchema = ChatCompletionClient.GetSchemaForTool(null, changeUserNameSampleObject);
+        string moviesOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(moviesOutputSampleObject);
 
-        Assert.Equal(lower.GeneratedCode, upper.GeneratedCode);
-        Assert.NotNull(mixed.GeneratedCode);
-    }
-
-    private static AiAgentConfiguration BuildAgent(string connectionStringName)
-    {
         var agent = new AiAgentConfiguration("user-info-agent-1",
             connectionStringName,
             "Your role responsibility is to provide the user's name when requested.")
         {
+            OutputSchema = useSchema ? moviesOutputSchema : null,
             SubAgents =
             [
                 new AiAgentToolSubAgent
@@ -290,12 +681,14 @@ public class Program
                 new AiAgentToolAction("ChangeUserName",
                     "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.")
                 {
-                    ParametersSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance)
+                    ParametersSampleObject = useSchema ? null : changeUserNameSampleObject,
+                    ParametersSchema = useSchema ? changeUserNameParametersSchema : null
                 },
                 new AiAgentToolAction("ChangeUserName2",
                     "Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.")
                 {
-                    ParametersSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance)
+                    ParametersSampleObject = useSchema ? null : changeUserNameSampleObject,
+                    ParametersSchema = useSchema ? changeUserNameParametersSchema : null
                 }
             },
             ChatTrimming = new AiAgentChatTrimmingConfiguration
@@ -310,7 +703,11 @@ public class Program
         };
         agent.Parameters.Add(new AiAgentParameter("currentUserId", "the id of the current user that you talk with"));
         agent.Parameters.Add(new AiAgentParameter("userId", "the id of the user that you talk with"));
-        return agent;
+
+        if (useSchema)
+            return (await store.AI.CreateAgentAsync(agent)).Identifier;
+
+        return (await store.AI.CreateAgentAsync<MoviesSampleObject>(agent, MoviesSampleObject.Instance)).Identifier;
     }
 
     private class ChangeUserNameSampleRequest

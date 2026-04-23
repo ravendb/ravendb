@@ -135,7 +135,81 @@ public abstract class AbstractCodeGenerator
                     Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
                 });
         }
-        catch { return s; }
+        catch (System.Text.Json.JsonException) { return s; }
+    }
+
+    protected static string GetSampleObject(string sampleObject, string schema)
+    {
+        if (string.IsNullOrWhiteSpace(sampleObject) == false)
+            return sampleObject;
+        if (string.IsNullOrWhiteSpace(schema))
+            return null;
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(schema);
+            var root = doc.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                return schema;
+            if (root.TryGetProperty("schema", out var inner) && inner.ValueKind == System.Text.Json.JsonValueKind.Object)
+                root = inner;
+
+            using var stream = new System.IO.MemoryStream();
+            using (var writer = new System.Text.Json.Utf8JsonWriter(stream, new System.Text.Json.JsonWriterOptions
+            {
+                Indented = true,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            }))
+            {
+                WriteSchemaAsSample(writer, root);
+            }
+            return Encoding.UTF8.GetString(stream.ToArray());
+        }
+        catch (System.Text.Json.JsonException) { }
+        return schema;
+    }
+
+    private static void WriteSchemaAsSample(System.Text.Json.Utf8JsonWriter writer, System.Text.Json.JsonElement schema)
+    {
+        var type = schema.TryGetProperty("type", out var t) ? t.GetString() : null;
+
+        switch (type)
+        {
+            case "object":
+                writer.WriteStartObject();
+                if (schema.TryGetProperty("properties", out var properties) &&
+                    properties.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    foreach (var prop in properties.EnumerateObject())
+                    {
+                        writer.WritePropertyName(prop.Name);
+                        WriteSchemaAsSample(writer, prop.Value);
+                    }
+                }
+                writer.WriteEndObject();
+                return;
+
+            case "array":
+                writer.WriteStartArray();
+                if (schema.TryGetProperty("items", out var items))
+                    WriteSchemaAsSample(writer, items);
+                writer.WriteEndArray();
+                return;
+        }
+
+        if (schema.TryGetProperty("description", out var description) && description.ValueKind == System.Text.Json.JsonValueKind.String)
+        {
+            writer.WriteStringValue(description.GetString());
+            return;
+        }
+
+        switch (type)
+        {
+            case "string":  writer.WriteStringValue("<string>"); return;
+            case "integer": writer.WriteNumberValue(0); return;
+            case "number":  writer.WriteNumberValue(0.0); return;
+            case "boolean": writer.WriteBooleanValue(false); return;
+            default:        writer.WriteNullValue(); return;
+        }
     }
 
     protected static List<string> TryGetJsonKeys(string json)
@@ -146,7 +220,7 @@ public abstract class AbstractCodeGenerator
             if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
                 return doc.RootElement.EnumerateObject().Select(p => p.Name).ToList();
         }
-        catch { }
+        catch (System.Text.Json.JsonException) { }
         return new List<string>();
     }
 
