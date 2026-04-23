@@ -15,24 +15,6 @@ namespace SlowTests.Issues;
 public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
 {
     [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
-    public void MemoizationMatchProviderCanMemoizeLargeResultSet()
-    {
-        using var fields = CreateFields(Allocator);
-        using var searcher = new IndexSearcher(Env, fields);
-
-        searcher.MaxMemoizationSizeInBytes = long.MaxValue;
-
-        var mock = new DummyBigMatch();
-        var memoizer = searcher.Memoize(mock).Replay();
-        var results = memoizer.FillAndRetrieve();
-        Assert.Equal(DummyBigMatch.TotalItemsToProduce, results.Length);
-        for (int i = 1; i < Math.Min(1000, results.Length); i++)
-        {
-            Assert.True(results[i] > results[i - 1]);
-        }
-    }
-
-    [RavenMultiplatformFact(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     public void MemoizationMatchProviderThrowsWhenResultSetExceedsBuffer()
     {
         using var fields = CreateFields(Allocator);
@@ -45,7 +27,7 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         Assert.Throws<InvalidOperationException>(() => memoizer.FillAndRetrieve());
     }
 
-    private static IndexFieldsMapping CreateFields(ByteStringContext bsc)
+    protected static IndexFieldsMapping CreateFields(ByteStringContext bsc)
     {
         Slice.From(bsc, "Id", ByteStringType.Immutable, out var idSlice);
 
@@ -55,7 +37,7 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         return builder.Build();
     }
 
-    private struct DummyBigMatch : IQueryMatch
+    protected struct DummyBigMatch : IQueryMatch
     {
         public const int TotalItemsToProduce = 200_000_000;
 
@@ -63,11 +45,11 @@ public class RavenDB_26110(ITestOutputHelper output) : StorageTest(output)
         private bool _completed;
 
         public long Count => 1000;
-        public QueryCountConfidence Confidence => QueryCountConfidence.High;
+        public QueryCountConfidence Confidence => QueryCountConfidence.Low;
         public bool IsBoosting => false;
         public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
 
-        public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
+        public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.ResultsNativelySorted;
 
         public int Fill(Span<long> matches)
         {

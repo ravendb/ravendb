@@ -109,11 +109,15 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
     public void Init(ByteStringContext context, in long initialSize, long maxAllocationInBytes = long.MaxValue)
     {
         _context = context;
-        _maxAllocationInBytes = maxAllocationInBytes > Progressive.MaxBufferSizeInBytes
-            ? Progressive.MaxBufferSizeInBytes
-            : (int)Math.Max(0, maxAllocationInBytes);
 
-        var initial = _growthCalculator.GetInitialSize(initialSize * sizeof(long));
+        long clampedMax = Math.Min(Math.Max(0, maxAllocationInBytes), Progressive.MaxBufferSizeInBytes);
+        _maxAllocationInBytes = (int)(clampedMax - (clampedMax % sizeof(long)));
+
+        long initialSizeInBytes = initialSize >= Progressive.MaxBufferSizeInBytes / sizeof(long)
+            ? Progressive.MaxBufferSizeInBytes
+            : initialSize * sizeof(long);
+
+        var initial = _growthCalculator.GetInitialSize(initialSizeInBytes);
         if (initial > _maxAllocationInBytes)
             initial = _maxAllocationInBytes;
 

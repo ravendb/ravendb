@@ -130,8 +130,13 @@ namespace Corax.Querying.Matches
                     inner += " - DebugView failure " + e.Message;
                 }
 
+                var configuredLimit = new Size(_indexSearcher.MaxMemoizationSizeInBytes, SizeUnit.Bytes);
+                var reason = _buffer.MaxAllocationInBytes < _indexSearcher.MaxMemoizationSizeInBytes
+                    ? $"which exceeds the internal allocation maximum ('Indexing.Corax.MaxMemoizationSizeInMb' is configured to: {configuredLimit})"
+                    : $"but 'Indexing.Corax.MaxMemoizationSizeInMb' is set to: {configuredLimit}";
+
                 throw new InvalidOperationException(
-                    $"Memoization clause needs more than {new Size(_buffer.MaxAllocationInBytes, SizeUnit.Bytes)} to fit its results, but 'Indexing.Corax.MaxMemoizationSizeInMb' is set to: {new Size(_indexSearcher.MaxMemoizationSizeInBytes, SizeUnit.Bytes)}, in query: {inner}");
+                    $"Memoization clause needs more than {new Size(_buffer.MaxAllocationInBytes, SizeUnit.Bytes)} to fit its results, {reason}, in query: {inner}");
             }
         }
 
