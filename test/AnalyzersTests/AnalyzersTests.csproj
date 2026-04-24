@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>AnalyzersTests</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <LangVersion>preview</LangVersion>
+    <!-- Analyzer tests do not follow the usual RavenDB test base-class conventions
+         because they need no running server. They are not referenced from SlowTests
+         and therefore are not scanned by TestsInheritanceTests. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Raven.Analyzers\Raven.Analyzers.csproj" />
+    <!-- Reference Raven.Client so the test harness can add it as a MetadataReference
+         to in-memory compilations, keeping KnownTypes FQN strings honest. -->
+    <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Direct reference so the harness can use CSharpCompilation, etc. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,270 @@
+using System.Collections.Immutable;
+using System.Threading.Tasks;
+using AnalyzersTests.Framework;
+using Microsoft.CodeAnalysis;
+using Raven.Analyzers;
+using Raven.Analyzers.Indexes;
+using Xunit;
+
+namespace AnalyzersTests.Indexes
+{
+    public class IndexUnsupportedMethodAnalyzerTests
+    {
+        private const string CommonUsings = @"
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Raven.Client.Documents.Indexes;
+";
+
+        // ── Flag cases ──────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task LocalStaticMethod_In_Map_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Name = MyHelpers.Normalize(p.Name) };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Contains("Normalize", d.GetMessage());
+            Assert.Contains("Map", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task InstanceMethod_On_UserType_In_Map_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Product
+{
+    public string Name { get; set; }
+    public string ComputeKey() => Name + ""_key"";
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new { Key = p.ComputeKey() };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("ComputeKey", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_Reduce_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Utils { public static int Combine(int a, int b) => a + b; }
+
+class CountIndex : AbstractIndexCreationTask<Order, CountIndex.Result>
+{
+    public class Result { public string Tag { get; set; } public int Count { get; set; } }
+
+    public CountIndex()
+    {
+        Map = orders => from o in orders select new { o.Tag, Count = 1 };
+        Reduce = results => from r in results
+                            group r by r.Tag into g
+                            select new { Tag = g.Key, Count = Utils.Combine(g.Sum(x => x.Count), 0) };
+    }
+}
+
+class Order { public string Tag { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Combine", d.GetMessage());
+            Assert.Contains("Reduce", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_AddMap_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers { public static string Slug(string s) => s; }
+
+class MultiIndex : AbstractMultiMapIndexCreationTask
+{
+    public MultiIndex()
+    {
+        AddMap<Product>(products => from p in products
+                                    select new { Name = MyHelpers.Slug(p.Name) });
+        AddMap<Order>(orders => from o in orders
+                                select new { Name = o.Title });
+    }
+}
+
+class Product { public string Name { get; set; } }
+class Order { public string Title { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Slug", d.GetMessage());
+        }
+
+        // ── No-flag cases ────────────────────────────────────────────────────────
+
+        [Fact]
+        public async Task BCL_StringMethod_In_Map_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new
+                          {
+                              Lower = p.Name.ToLower(),
+                              Empty = string.IsNullOrEmpty(p.Name),
+                              Abs = Math.Abs(p.Qty)
+                          };
+    }
+}
+
+class Product { public string Name { get; set; } public int Qty { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Linq_Methods_In_Map_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => orders
+            .SelectMany(o => o.Lines)
+            .Select(l => new { l.Product, l.Quantity });
+    }
+}
+
+class Order { public IEnumerable<Line> Lines { get; set; } }
+class Line { public string Product { get; set; } public int Quantity { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task InvocationOutsideLambda_In_Ctor_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers { public static string Slug(string s) => s; }
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products select new { p.Name };
+        Store(MyHelpers.Slug(""Name""), Raven.Client.Documents.Indexes.FieldStorage.Yes);
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            // The Store() call is outside the Map lambda — should not fire RVN009.
+            // Store itself may cause other issues, but not RVN009.
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task JavaScriptIndex_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Indexes;
+
+class MyHelpers { public static string Slug(string s) => s; }
+
+class JsIndex : AbstractJavaScriptIndexCreationTask
+{
+    public JsIndex()
+    {
+        Maps = new System.Collections.Generic.HashSet<string>
+        {
+            ""map('Products', p => ({ Name: p.Name }))""
+        };
+    }
+}
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Multiple_UserMethods_In_Map_Reports_Each()
+        {
+            const string source = CommonUsings + @"
+class Helpers
+{
+    public static string Normalize(string s) => s;
+    public static int Score(int n) => n;
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        Map = products => from p in products
+                          select new
+                          {
+                              Name = Helpers.Normalize(p.Name),
+                              Score = Helpers.Score(p.Rating)
+                          };
+    }
+}
+
+class Product { public string Name { get; set; } public int Rating { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id));
+        }
+    }
+}
