@@ -655,7 +655,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             tokens.AddLast(whereToken);
         }
 
-        public void WhereClrTypeIs(Type type)
+        public void OnlyOfType(Type type)
         {
             if (type == null)
                 throw new ArgumentNullException(nameof(type));

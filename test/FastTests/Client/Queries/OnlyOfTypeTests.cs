@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class WhereClrTypeIsTests(ITestOutputHelper output) : RavenTestBase(output)
+    public class OnlyOfTypeTests(ITestOutputHelper output) : RavenTestBase(output)
     {
         private class Animal
         {
@@ -30,7 +30,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var query = session.Query<Animal>().WhereClrTypeIs<Animal, Dog>();
+                var query = session.Query<Animal>().OnlyOfType<Dog>();
                 Assert.Equal("from 'Animals' where @metadata.Raven-Clr-Type = $p0", query.ToString());
             }
         }
@@ -41,7 +41,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var query = session.Advanced.DocumentQuery<Animal>().WhereClrTypeIs<Dog>();
+                var query = session.Advanced.DocumentQuery<Animal>().OnlyOfType<Dog>();
                 Assert.Equal("from 'Animals' where @metadata.Raven-Clr-Type = $p0", query.ToString());
             }
         }
@@ -52,7 +52,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore())
             using (var session = store.OpenAsyncSession())
             {
-                var query = session.Advanced.AsyncDocumentQuery<Animal>().WhereClrTypeIs<Dog>();
+                var query = session.Advanced.AsyncDocumentQuery<Animal>().OnlyOfType<Dog>();
                 Assert.Equal("from 'Animals' where @metadata.Raven-Clr-Type = $p0", query.ToString());
             }
         }
@@ -63,7 +63,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var query = session.Advanced.DocumentQuery<Animal>().WhereClrTypeIs<Dog>();
+                var query = session.Advanced.DocumentQuery<Animal>().OnlyOfType<Dog>();
                 var iq = query.GetIndexQuery();
                 Assert.Equal("from 'Animals' where @metadata.Raven-Clr-Type = $p0", iq.Query);
                 var expectedClrTypeName = store.Conventions.GetClrTypeName(typeof(Dog));
@@ -95,7 +95,7 @@ namespace FastTests.Client.Queries
                 using (var session = store.OpenSession())
                 {
                     var dogs = session.Query<Animal>()
-                        .WhereClrTypeIs<Animal, Dog>()
+                        .OnlyOfType<Dog>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
@@ -106,7 +106,7 @@ namespace FastTests.Client.Queries
         }
 
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
-        public void EndToEnd_ComposedWithOfType()
+        public void EndToEnd_NarrowsElementType()
         {
             var options = new Options
             {
@@ -129,9 +129,8 @@ namespace FastTests.Client.Queries
                 using (var session = store.OpenSession())
                 {
                     var dogs = session.Query<Animal>()
-                        .WhereClrTypeIs<Animal, Dog>()
+                        .OnlyOfType<Dog>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .OfType<Dog>()
                         .ToList();
 
                     Assert.Equal(1, dogs.Count);
@@ -164,7 +163,7 @@ namespace FastTests.Client.Queries
                 using (var session = store.OpenSession())
                 {
                     var views = session.Query<Animal>()
-                        .WhereClrTypeIs<Animal, Dog>()
+                        .OnlyOfType<Dog>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Select(x => new AnimalView { Name = x.Name })
                         .ToList();
@@ -198,7 +197,7 @@ namespace FastTests.Client.Queries
             using (var store = GetDocumentStore(options))
             using (var session = store.OpenSession())
             {
-                var query = session.Advanced.DocumentQuery<Animal>().WhereClrTypeIs<Dog>();
+                var query = session.Advanced.DocumentQuery<Animal>().OnlyOfType<Dog>();
                 var iq = query.GetIndexQuery();
                 Assert.Equal(customTypeName, iq.QueryParameters["p0"]);
             }

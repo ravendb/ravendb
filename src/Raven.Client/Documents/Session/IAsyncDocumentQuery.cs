@@ -173,6 +173,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
+        /// <inheritdoc cref="IDocumentQuery{T}.OnlyOfType{TDocument}"/>
+        IAsyncDocumentQuery<TDocument> OnlyOfType<TDocument>();
+
         ///<inheritdoc cref="IDocumentQuery{T}.GroupBy(string,string[])"/>
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 

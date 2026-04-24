@@ -274,7 +274,7 @@ namespace Raven.Client.Documents.Session
 
         void Intersect();
         void AddRootType(Type type);
-        void WhereClrTypeIs(Type type);
+        void OnlyOfType(Type type);
         void Distinct();
 
         /// <summary>

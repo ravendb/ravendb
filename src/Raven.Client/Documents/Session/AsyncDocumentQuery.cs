@@ -135,10 +135,10 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IFilterDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereClrTypeIs<TDocument>()
+        IAsyncDocumentQuery<TDocument> IAsyncDocumentQuery<T>.OnlyOfType<TDocument>()
         {
-            WhereClrTypeIs(typeof(TDocument));
-            return this;
+            OnlyOfType(typeof(TDocument));
+            return CreateDocumentQueryInternal<TDocument>();
         }
 
         /// <inheritdoc />

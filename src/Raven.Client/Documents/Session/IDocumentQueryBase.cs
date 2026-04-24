@@ -196,17 +196,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="whereParams">WhereParams containing query parameters.</param>
         TSelf WhereEquals(WhereParams whereParams);
 
-        /// <summary>
-        ///     Matches documents whose <c>@metadata.Raven-Clr-Type</c> equals the CLR type name of
-        ///     <typeparamref name="TDocument"/>, as produced by <see cref="Raven.Client.Documents.Conventions.DocumentConventions.FindClrTypeName"/>.
-        ///     This is the value stamped by the client when the document was stored.
-        ///     Complementary to <c>OfType&lt;T&gt;()</c>, which only switches the client-side result type without filtering.
-        ///     Note: when used against a static index, the index must expose <c>@metadata.Raven-Clr-Type</c> directly
-        ///     (via <c>MetadataFor(doc)["Raven-Clr-Type"]</c> without aliasing).
-        /// </summary>
-        TSelf WhereClrTypeIs<TDocument>();
-
-        /// <summary>
+/// <summary>
         ///     Matches documents with value of the chosen field different than the specified value.
         /// </summary>
         /// <param name="fieldName">Name of the field to get value from.</param>

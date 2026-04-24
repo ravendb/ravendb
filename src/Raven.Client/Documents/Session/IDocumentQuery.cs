@@ -172,6 +172,17 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
 
+        /// <summary>
+        ///     Filters documents to those whose <c>@metadata.Raven-Clr-Type</c> equals the CLR type name of
+        ///     <typeparamref name="TDocument"/>, as produced by <see cref="Raven.Client.Documents.Conventions.DocumentConventions.FindClrTypeName"/>,
+        ///     and narrows the result element type to <typeparamref name="TDocument"/>.
+        ///     Unlike <c>OfType&lt;T&gt;()</c>, which only switches the client-side result type without filtering, this method
+        ///     emits a WHERE predicate against <c>@metadata.Raven-Clr-Type</c>.
+        ///     Note: when used against a static index, the index must expose <c>@metadata.Raven-Clr-Type</c> directly
+        ///     (via <c>MetadataFor(doc)["Raven-Clr-Type"]</c> without aliasing).
+        /// </summary>
+        IDocumentQuery<TDocument> OnlyOfType<TDocument>();
+
         /// <inheritdoc cref="IAbstractDocumentQuery{T}.GroupBy(string,string[])"/>
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
 
