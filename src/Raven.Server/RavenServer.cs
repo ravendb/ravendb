@@ -13,6 +13,7 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Formats.Asn1;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -1581,7 +1582,8 @@ namespace Raven.Server
                         NotAfter = Certificate.ServerCertificate.NotAfter,
                         NotBefore = Certificate.ServerCertificate.NotBefore,
                         Name = "Old Server Certificate - can delete",
-                        SecurityClearance = SecurityClearance.ClusterNode
+                        SecurityClearance = SecurityClearance.ClusterNode,
+                        Usage = CertificateUsage.RavenServer
                     }, $"{raftRequestId}/put-old-certificate"));
 
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(newCertificate.Thumbprint,
@@ -1593,7 +1595,8 @@ namespace Raven.Server
                         NotAfter = newCertificate.NotAfter,
                         NotBefore = newCertificate.NotBefore,
                         Name = "Server Certificate",
-                        SecurityClearance = SecurityClearance.ClusterNode
+                        SecurityClearance = SecurityClearance.ClusterNode,
+                        Usage = CertificateUsage.RavenServer
                     }, $"{raftRequestId}/put-new-certificate"));
 
                 await ServerStore.Cluster.WaitForIndexNotification(res.Index);
@@ -1821,6 +1824,10 @@ namespace Raven.Server
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
             public int WrittenToAuditLog;
+
+            public bool IsSsoAuthenticated;
+            public string SsoUserIdentity;
+            public string SsoServerPublicKeyPinningHash;
 
             public readonly DateTime CreatedAt = SystemTime.UtcNow;
 
@@ -2058,6 +2065,11 @@ namespace Raven.Server
                         MaybeAllowConnectionBasedOnPinningHash(certificate, ctx, ref authenticationStatus, ref cert, connectionInfo);
                     }
 
+                    if (cert == null && ServerStore.LicenseManager.LicenseStatus.HasSso)
+                    {
+                        MaybeAllowConnectionBasedOnSsoServer(certificate, ctx, ref authenticationStatus, ref cert, connectionInfo, log);
+                    }
+
                     if (cert != null)
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
@@ -2066,7 +2078,8 @@ namespace Raven.Server
 
                         var hasTwoFactorKey = cert.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string _);
 
-                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey;
+                        // SSO-authenticated connections skip 2FA - the SSO server handles its own authentication
+                        authenticationStatus.RequiresTwoFactor = hasTwoFactorKey && authenticationStatus.IsSsoAuthenticated == false;
 
                         if (authenticationStatus.RequiresTwoFactor && TwoFactor.ValidateTwoFactorConnectionLimits(certificate.Thumbprint) == false)
                         {
@@ -2170,6 +2183,121 @@ namespace Raven.Server
             cert = ctx.ReadObject(newCertDef.ToJson(), "Client/Certificate/Definition");
         }
 
+        private void MaybeAllowConnectionBasedOnSsoServer(X509Certificate2 certificate,
+            TransactionOperationContext ctx,
+            ref AuthenticateConnection authenticationStatus,
+            ref BlittableJsonReaderObject cert,
+            object connectionInfo,
+            StringBuilder log)
+        {
+            var ssoServerDefs = ServerStore.Cluster.GetSsoServerCertificates(ctx).ToList();
+            if (ssoServerDefs.Count == 0)
+                return;
+
+            foreach (var ssoServerDef in ssoServerDefs)
+            {
+                if (ssoServerDef.Disabled || string.IsNullOrEmpty(ssoServerDef.Certificate))
+                    continue;
+
+                using var ssoServerCert = CertificateLoaderUtil.CreateCertificate(Convert.FromBase64String(ssoServerDef.Certificate));
+
+                using var chain = new X509Chain(false);
+                chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+                chain.ChainPolicy.DisableCertificateDownloads = true;
+                chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+                chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority
+                                                      | X509VerificationFlags.IgnoreInvalidBasicConstraints
+                                                      | X509VerificationFlags.IgnoreWrongUsage;
+                chain.ChainPolicy.CustomTrustStore.Add(ssoServerCert);
+
+                if (chain.Build(certificate) == false)
+                {
+                    if (Logger.IsInfoEnabled)
+                    {
+                        Logger.Info($"Failed to validate certificate chain for SSO server '{ssoServerDef.Name}' with thumbprint '{ssoServerCert.Thumbprint}'");
+                    }
+
+                    foreach (var chainStatus in chain.ChainStatus)
+                    {
+                        log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
+                    }
+                    continue;
+                }
+
+                // Chain validated - this cert was signed by this SSO server cert.
+                // Extract the SSO user ID from the custom OID extension.
+                var ssoUserIdExtension = certificate.Extensions[Raven.Client.Constants.Certificates.SsoUserIdExtensionOid];
+                if (ssoUserIdExtension == null)
+                {
+                    if (_auditLogger.IsAuditEnabled)
+                        _auditLogger.Audit(
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                            $"which was signed by SSO server '{ssoServerDef.Name}' but does not contain the SSO user ID extension (OID {Raven.Client.Constants.Certificates.SsoUserIdExtensionOid}).");
+                    return;
+                }
+
+                var ssoUserId = DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+                var ssoServerPinningHash = ssoServerDef.PublicKeyPinningHash;
+
+                // Look up the SSO user entry by user ID
+                var ssoUserDef = ServerStore.Cluster.GetCertificateBySsoUserId(ctx, ssoUserId);
+                if (ssoUserDef == null)
+                {
+                    string remoteAddress = GetRemoteAddress(connectionInfo);
+                    if (_auditLogger.IsAuditEnabled)
+                        _auditLogger.Audit(
+                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user ID '{ssoUserId}' is not registered in the cluster - rejecting.");
+
+                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    return;
+                }
+
+                if (ssoUserDef.Disabled)
+                {
+                    string remoteAddress = GetRemoteAddress(connectionInfo);
+                    if (_auditLogger.IsAuditEnabled)
+                        _auditLogger.Audit(
+                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user '{ssoUserId}' is disabled - rejecting.");
+
+                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    return;
+                }
+
+                // Verify this SSO server is allowed for the user entry
+                if (ssoUserDef.AllowAnySsoServer == false &&
+                    (ssoUserDef.SsoServerPublicKeyPinningHashes == null || ssoUserDef.SsoServerPublicKeyPinningHashes.Contains(ssoServerPinningHash) == false))
+                {
+                    string remoteAddress = GetRemoteAddress(connectionInfo);
+                    if (_auditLogger.IsAuditEnabled)
+                        _auditLogger.Audit(
+                            $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                            $"signed by SSO server '{ssoServerDef.Name}' (hash '{ssoServerPinningHash}'). " +
+                            $"SSO user '{ssoUserId}' exists but is not bound to this SSO server - rejecting.");
+
+                    authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    return;
+                }
+
+                // Found the SSO user entry - SSO-specific fields set here, permissions set by main flow
+                authenticationStatus.IsSsoAuthenticated = true;
+                authenticationStatus.SsoUserIdentity = ssoUserId;
+                authenticationStatus.SsoServerPublicKeyPinningHash = ssoServerPinningHash;
+
+                cert = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/User/Certificate/Definition");
+
+                if (_auditLogger.IsAuditEnabled)
+                    _auditLogger.Audit(
+                        $"Connection from {GetRemoteAddress(connectionInfo)} with SSO-authenticated certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})'. " +
+                        $"SSO user: '{ssoUserId}', SSO server: '{ssoServerDef.Name}' ({ssoServerDef.Thumbprint}). " +
+                        $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
+                        $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
+
+                return;
+            }
+        }
+
         private static string GetRemoteAddress(object connectionInfo)
         {
             string remoteAddress = null;
@@ -2179,7 +2307,7 @@ namespace Raven.Server
                     remoteAddress = tcp.Client.RemoteEndPoint.ToString();
                     break;
 
-                case HttpConnectionFeature http:
+                case IHttpConnectionFeature http:
                     remoteAddress = $"{http.RemoteIpAddress}:{http.RemotePort}";
                     break;
             }
@@ -2191,6 +2319,20 @@ namespace Raven.Server
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
+
+        /// <summary>
+        /// Decodes the SSO user ID from a custom X.509 extension's RawData.
+        /// The value is expected to be a DER-encoded ASN.1 UTF8String, as written
+        /// by AsnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, ...).
+        /// </summary>
+        internal static string DecodeSsoUserIdExtension(byte[] rawData)
+        {
+            if (rawData == null || rawData.Length == 0)
+                return string.Empty;
+
+            var reader = new AsnReader(rawData, AsnEncodingRules.DER);
+            return reader.ReadCharacterString(UniversalTagNumber.UTF8String);
+        }
 
         internal X509Certificate2[] WellKnownIssuers;
         internal string[] WellKnownIssuersThumbprints = Array.Empty<string>();

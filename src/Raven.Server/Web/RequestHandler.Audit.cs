@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -57,7 +58,17 @@ namespace Raven.Server.Web
 
         public string RequestIp => GetRequestIp(HttpContext);
 
-        public static string GetRequestIp(HttpContext httpContext) => IsLocalRequest(httpContext) ? Environment.MachineName : httpContext.Connection.RemoteIpAddress.ToString();
+        public static string GetRequestIp(HttpContext httpContext)
+        {
+            var auth = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (auth?.IsSsoAuthenticated == true)
+            {
+                var (clientIp, _) = SsoForwardedForHelper.GetIps(httpContext, auth);
+                return clientIp;
+            }
+
+            return IsLocalRequest(httpContext) ? Environment.MachineName : httpContext.Connection.RemoteIpAddress.ToString();
+        }
 
         public void LogAuditForServer(string action, string target, Exception e = null)
         {
@@ -82,8 +93,22 @@ namespace Raven.Server.Web
 
             var clientCert = GetCurrentCertificate(httpContext);
 
+            var auth = httpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+
             var sb = new StringBuilder();
             sb.Append(GetRequestIp(httpContext));
+            if (auth?.IsSsoAuthenticated == true)
+            {
+                var (_, proxyIp) = SsoForwardedForHelper.GetIps(httpContext, auth);
+                if (proxyIp != null)
+                    sb.Append($" (via SSO proxy {proxyIp}, user: {auth.SsoUserIdentity})");
+            }
+            else if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var xff))
+            {
+                var xffStr = xff.ToString().Trim();
+                if (string.IsNullOrEmpty(xffStr) == false)
+                    sb.Append($" (X-Forwarded-For: {xffStr})");
+            }
             sb.Append(", ");
             if (clientCert != null)
                 sb.Append($"CN={clientCert.GetDisplayName()} [{clientCert.Thumbprint}], ");

@@ -3598,6 +3598,31 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public IEnumerable<CertificateDefinition> GetSsoServerCertificates<TTransaction>(TransactionOperationContext<TTransaction> context)
+            where TTransaction : RavenTransaction
+        {
+            var certTable = context.Transaction.InnerTransaction.OpenTable(CertificatesSchema, CertificatesSlice);
+
+            foreach (var result in certTable.SeekByPrimaryKeyPrefix(Slices.Empty, Slices.Empty, 0))
+            {
+                var def = GetCertificateDefinition(context, result.Value);
+                if (def.Usage == CertificateUsage.SsoServer)
+                    yield return def;
+            }
+        }
+
+        public CertificateDefinition GetCertificateBySsoUserId<TTransaction>(TransactionOperationContext<TTransaction> context, string ssoUserId)
+            where TTransaction : RavenTransaction
+        {
+            // SSO user entries are keyed by the SSO user identifier stored as Thumbprint
+            var certificate = GetCertificateByThumbprint(context, ssoUserId);
+            if (certificate == null)
+                return null;
+
+            var def = JsonDeserializationServer.CertificateDefinition(certificate);
+            return def.Usage == CertificateUsage.SsoClient ? def : null;
+        }
+
         public Raven.Client.ServerWide.Sharding.ShardingConfiguration ReadShardingConfiguration(string database)
         {
             using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))

@@ -1,13 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Formats.Asn1;
 using System.IO;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Client.Properties;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
@@ -15,6 +19,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Sparrow.Json;
 using Sparrow.Platform;
 
 namespace FastTests;
@@ -27,6 +32,7 @@ public partial class RavenTestBase
     {
         private static TestCertificatesHolder SelfSignedCertificates1Eku;
         private static TestCertificatesHolder SelfSignedCertificates2Eku;
+        private static SsoTestCertificates CachedSsoTestCertificates;
 
         private static int Counter;
 
@@ -257,6 +263,310 @@ public partial class RavenTestBase
 
                 return clientCertificatePath;
             }
+        }
+
+        public SsoTestCertificates GenerateAndSaveSsoTestCertificates()
+        {
+            if (CachedSsoTestCertificates != null)
+                return CachedSsoTestCertificates;
+
+            lock (typeof(TestBase))
+            {
+                if (CachedSsoTestCertificates != null)
+                    return CachedSsoTestCertificates;
+
+                var name = $"{Environment.MachineName}_SSO_{RavenVersionAttribute.Instance.Build}_{DateTime.Today:yyyy-MM-dd}";
+                var ssoServerCertPath = Path.Combine(Path.GetTempPath(), $"{name}.pfx");
+
+                RSA ssoServerKey;
+                X509Certificate2 ssoServerCert;
+
+                if (File.Exists(ssoServerCertPath))
+                {
+                    var existingBytes = File.ReadAllBytes(ssoServerCertPath);
+#pragma warning disable SYSLIB0057
+                    ssoServerCert = new X509Certificate2(existingBytes, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+#pragma warning restore SYSLIB0057
+                    ssoServerKey = ssoServerCert.GetRSAPrivateKey();
+                }
+                else
+                {
+                    ssoServerKey = RSA.Create(4096);
+
+                    var commonNameValue = name[..Math.Min(name.Length, 64)];
+                    var subjectName = new X500DistinguishedName($"CN={commonNameValue}");
+
+                    CertificateUtils.CreateSelfSignedCertificateBasedOnPrivateKey(
+                        commonNameValue: commonNameValue,
+                        issuerCN: subjectName,
+                        issuerKeyPair: (ssoServerKey, ssoServerKey),
+                        isClientCertificate: false,
+                        isCaCertificate: true,
+                        notAfter: DateTime.UtcNow.AddMonths(3),
+                        certBytes: out var certBytes,
+                        subjectPrivateKey: ssoServerKey,
+                        with2Eku: false);
+
+#pragma warning disable SYSLIB0057
+                    ssoServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+#pragma warning restore SYSLIB0057
+                    ssoServerKey = ssoServerCert.GetRSAPrivateKey();
+
+                    File.WriteAllBytes(ssoServerCertPath, certBytes);
+                }
+
+                var publicCertBytes = ssoServerCert.Export(X509ContentType.Cert);
+                var pinningHash = ssoServerCert.GetPublicKeyPinningHash();
+
+                CachedSsoTestCertificates = new SsoTestCertificates(
+                    ssoServerCert,
+                    ssoServerKey,
+                    pinningHash,
+                    Convert.ToBase64String(publicCertBytes));
+
+                return CachedSsoTestCertificates;
+            }
+        }
+
+        public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId)
+        {
+            const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
+
+            using var userKey = RSA.Create(2048);
+            var subjectName = new X500DistinguishedName($"CN=SSO User {ssoUserId}");
+
+            var request = new CertificateRequest(subjectName, userKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+            request.CertificateExtensions.Add(new X509KeyUsageExtension(
+                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
+
+            request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+                new OidCollection { new Oid("1.3.6.1.5.5.7.3.2") }, false));
+
+            // Add the SSO user ID custom OID extension, DER-encoded as a UTF8String using AsnWriter —
+            // identical to how real SSO servers encode it via BuildSsoIdentityExtension.
+            var asnWriter = new AsnWriter(AsnEncodingRules.DER);
+            asnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, ssoUserId);
+            request.CertificateExtensions.Add(new X509Extension(new Oid(ssoUserIdExtensionOid), asnWriter.Encode(), false));
+
+            byte[] serialNumber = new byte[20];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(serialNumber);
+            serialNumber[0] &= 0x7F;
+
+            var signatureGenerator = X509SignatureGenerator.CreateForRSA(
+                (RSA)ssoCerts.SsoServerPrivateKey, RSASignaturePadding.Pkcs1);
+
+            var cert = request.Create(
+                ssoCerts.SsoServerCert.SubjectName,
+                signatureGenerator,
+                DateTimeOffset.UtcNow.AddDays(-1),
+                DateTimeOffset.UtcNow.AddYears(1),
+                serialNumber);
+
+            // Combine with private key and return
+            var certWithKey = cert.CopyWithPrivateKey(userKey);
+            var pfxBytes = certWithKey.Export(X509ContentType.Pfx, string.Empty);
+            return CertificateLoaderUtil.CreateCertificate(pfxBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+        }
+
+        public void RegisterSsoServerCert(TestCertificatesHolder certificates, SsoTestCertificates ssoCerts, string name = "SSO Server Certificate", RavenServer server = null)
+        {
+            RegisterSsoServerCertCore(certificates, ssoCerts.SsoServerCertBase64, name, server);
+        }
+
+        public void RegisterSsoServerCert(TestCertificatesHolder certificates, X509Certificate2 cert, string name = "SSO Server Certificate", RavenServer server = null)
+        {
+            RegisterSsoServerCertCore(certificates, Convert.ToBase64String(cert.Export(X509ContentType.Cert)), name, server);
+        }
+
+        private void RegisterSsoServerCertCore(TestCertificatesHolder certificates, string certBase64, string name, RavenServer server)
+        {
+            using var store = _parent.GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = server,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
+                }
+            });
+            var requestExecutor = store.GetRequestExecutor();
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var command = new PutSsoServerCertCommand(store.Conventions, name, certBase64);
+                requestExecutor.Execute(command, context);
+            }
+        }
+
+        public void RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
+            Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        {
+            RegisterSsoUserEntry(certificates, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer: false, permissions, clearance, server);
+        }
+
+        public void RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
+            bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        {
+            using var store = _parent.GetDocumentStore(new Options
+            {
+                CreateDatabase = false,
+                Server = server,
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ModifyDocumentStore = s => s.Conventions = new DocumentConventions
+                {
+                    DisableTopologyUpdates = true,
+                    DisposeCertificate = false
+                }
+            });
+            var requestExecutor = store.GetRequestExecutor();
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var command = new PutSsoUserEntryCommand(store.Conventions, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer, permissions, clearance);
+                requestExecutor.Execute(command, context);
+            }
+        }
+
+        private sealed class PutSsoServerCertCommand : RavenCommand, IRaftCommand
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly string _name;
+            private readonly string _certBase64;
+
+            public PutSsoServerCertCommand(DocumentConventions conventions, string name, string certBase64)
+            {
+                _conventions = conventions;
+                _name = name;
+                _certBase64 = certBase64;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/certificates?raftRequestId={RaftUniqueRequestId}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                        {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Name));
+                            writer.WriteString(_name);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
+                            writer.WriteString(_certBase64);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.SecurityClearance));
+                            writer.WriteString(SecurityClearance.ValidUser.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Usage));
+                            writer.WriteString(CertificateUsage.SsoServer.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
+                            writer.WriteStartObject();
+                            writer.WriteEndObject();
+                            writer.WriteEndObject();
+                        }
+                    }, _conventions)
+                };
+            }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+        }
+
+        private sealed class PutSsoUserEntryCommand : RavenCommand, IRaftCommand
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly string _ssoUserId;
+            private readonly List<string> _ssoServerPublicKeyPinningHashes;
+            private readonly bool _allowAnySsoServer;
+            private readonly Dictionary<string, DatabaseAccess> _permissions;
+            private readonly SecurityClearance _clearance;
+
+            public PutSsoUserEntryCommand(DocumentConventions conventions, string ssoUserId, string ssoServerPublicKeyPinningHash,
+                bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+            {
+                _conventions = conventions;
+                _ssoUserId = ssoUserId;
+                _ssoServerPublicKeyPinningHashes = ssoServerPublicKeyPinningHash != null ? [ssoServerPublicKeyPinningHash] : [];
+                _allowAnySsoServer = allowAnySsoServer;
+                _permissions = permissions;
+                _clearance = clearance;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/admin/certificates/sso/user?raftRequestId={RaftUniqueRequestId}";
+                return new HttpRequestMessage
+                {
+                    Method = HttpMethod.Put,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+                        {
+                            writer.WriteStartObject();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Name));
+                            writer.WriteString($"SSO User: {_ssoUserId}");
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Thumbprint));
+                            writer.WriteString(_ssoUserId);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Usage));
+                            writer.WriteString(CertificateUsage.SsoClient.ToString());
+                            writer.WriteComma();
+                            writer.WriteArray(nameof(CertificateDefinition.SsoServerPublicKeyPinningHashes), _ssoServerPublicKeyPinningHashes);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.AllowAnySsoServer));
+                            writer.WriteBool(_allowAnySsoServer);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.SecurityClearance));
+                            writer.WriteString(_clearance.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
+                            writer.WriteStartObject();
+                            var first = true;
+                            foreach (var kvp in _permissions)
+                            {
+                                if (first == false)
+                                    writer.WriteComma();
+                                first = false;
+                                writer.WriteString(kvp.Key);
+                                writer.WriteComma();
+                                writer.WriteString(kvp.Value.ToString());
+                            }
+                            writer.WriteEndObject();
+                            writer.WriteEndObject();
+                        }
+                    }, _conventions)
+                };
+            }
+
+            public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
+        }
+    }
+
+    public sealed class SsoTestCertificates
+    {
+        public X509Certificate2 SsoServerCert { get; }
+        public AsymmetricAlgorithm SsoServerPrivateKey { get; }
+        public string SsoServerPublicKeyPinningHash { get; }
+        public string SsoServerCertBase64 { get; }
+
+        public SsoTestCertificates(X509Certificate2 ssoServerCert, AsymmetricAlgorithm ssoServerPrivateKey, string ssoServerPublicKeyPinningHash, string ssoServerCertBase64)
+        {
+            SsoServerCert = ssoServerCert;
+            SsoServerPrivateKey = ssoServerPrivateKey;
+            SsoServerPublicKeyPinningHash = ssoServerPublicKeyPinningHash;
+            SsoServerCertBase64 = ssoServerCertBase64;
         }
     }
 }

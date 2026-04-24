@@ -84,6 +84,7 @@ internal sealed class TrafficWatchToLog : IDynamicJson
                 .Append("HTTP, ")
                 .Append(twhc.DatabaseName).Append(", ")
                 .Append(twhc.ClientIP).Append(", ")
+                .Append(twhc.ProxyIP ?? "N/A").Append(", ")
                 .Append(twhc.CertificateThumbprint ?? "N/A").Append(", ")
                 .Append("request ID: ").Append(twhc.RequestId).Append(", ")
                 .Append(twhc.HttpMethod).Append(", ")

@@ -110,21 +110,25 @@ namespace Raven.Server.Routing
                     // here, because there is a single connection, but better to be safe
                     if (Interlocked.CompareExchange(ref feature.WrittenToAuditLog, 1, 0) == 0)
                     {
+                        var xffHeader = context.Request.Headers.TryGetValue("X-Forwarded-For", out var xffVal) ? xffVal.ToString().Trim() : null;
+                        var remoteAddr = $"{context.Connection.RemoteIpAddress}:{context.Connection.RemotePort}";
+                        var ipInfo = string.IsNullOrEmpty(xffHeader) ? remoteAddr : $"{remoteAddr}, X-Forwarded-For: {xffHeader}";
+
                         if (feature.WrongProtocolMessage != null)
                         {
-                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Audit($"Connection from {ipInfo} " +
                                            $"used the wrong protocol and will be rejected. {feature.WrongProtocolMessage}");
                         }
                         else
                         {
-                            auditLog.Audit($"Connection from {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} " +
+                            auditLog.Audit($"Connection from {ipInfo} " +
                                 $"with certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                 $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]");
 
                             var conLifetime = context.Features.Get<IConnectionLifetimeFeature>();
                             if (conLifetime != null)
                             {
-                                var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
+                                var msg = $"Connection {ipInfo} closed. Was used with: " +
                                  $"certificate '{feature.Certificate?.GetDisplayName()} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                  $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
 
