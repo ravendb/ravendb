@@ -793,7 +793,7 @@ public static partial class CoraxQueryBuilder
     {
         PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
-        var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery(expression.Arguments[0], builderParameters.QueryParameters);
+        var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery(expression.Arguments[0], builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters);
         if (constantExpressionResult == false)
             return new CoraxWhenQuery();
             
