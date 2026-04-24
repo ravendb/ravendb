@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using Raven.Server.Config.Categories;
+using Raven.Server.Logging;
 using Raven.Server.Utils;
+using Sparrow.Logging;
 using Sparrow;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
@@ -57,7 +59,9 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
         options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
 
         _env = new StorageEnvironment(options);
+        _logger = RavenLogManager.Instance.GetLoggerForDatabase<SharedIndexJournals>(documentDatabase);
         _env.Journal.BranchJournalMerger = this;
+        _env.Journal.OnBranchHardLinkLimitReached = OnBranchHardLinkLimitReached;
         _scopeForSharedJournals = _env.Journal.SharedJournalsScope();
 
         _sharedJournalsThread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(
@@ -72,6 +76,7 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
     private bool _disposed;
     private readonly PoolOfThreads.LongRunningWork _sharedJournalsThread;
     private readonly WriteAheadJournal.ScopeForSharedJournals _scopeForSharedJournals;
+    private readonly RavenLogger _logger;
 
     private void WriteSharedJournals(object _)
     {
@@ -122,6 +127,12 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
     public void JournalMergeSubmitted()
     {
         _waitForJournals.Set();
+    }
+
+    private void OnBranchHardLinkLimitReached(StorageEnvironment branchEnv)
+    {
+        if (_logger.IsWarnEnabled)
+            _logger.Warn($"Index environment at '{branchEnv.Options.BasePath}' exceeded the file system hard-link limit and switched to unshared journal mode. Subsequent journal writes for this index will go to its own Journals directory.");
     }
 
     public void Dispose()

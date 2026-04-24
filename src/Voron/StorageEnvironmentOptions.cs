@@ -222,9 +222,11 @@ namespace Voron
         /// </summary>
         internal bool CopyOnWriteMode { get; set; }
 
-        public abstract void LinkFiles(long journalNumber, string fileName, out string finalFileName);
+        public abstract void LinkFiles(long journalNumber, string filePath, out string finalFilePath);
 
-        public abstract bool IsLinked(long journalNumber, string fileName, out string finalFileName);
+        internal Action<long> ForTestingPurposes_BeforeLinkFiles;
+
+        public abstract bool IsLinked(long journalNumber, string filePath, out string finalFilePath);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
         
@@ -479,31 +481,33 @@ namespace Voron
 
             public override VoronPathSetting BasePath => _basePath;
 
-            public override void LinkFiles(long journalNumber, string fileName, out string finalFileName)
+            public override void LinkFiles(long journalNumber, string filePath, out string finalFilePath)
             {
+                ForTestingPurposes_BeforeLinkFiles?.Invoke(journalNumber);
+
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
-                finalFileName = path.FullPath;
-                var rc = Pal.rvn_hard_link_non_durable(fileName, path.FullPath, out var errorCode);
+                finalFilePath = path.FullPath;
+                var rc = Pal.rvn_hard_link_non_durable(filePath, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
                 {
                     if (PalHelper.IsHardLinkLimitError(errorCode))
-                        throw new HardLinkLimitExceededException($"Failed to link files {fileName} to {path.FullPath}. Errno: {errorCode}. The file system hard-link limit has been reached.");
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
+                        throw new HardLinkLimitExceededException($"Failed to link files {filePath} to {path.FullPath}. Errno: {errorCode}. The file system hard-link limit has been reached.");
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {filePath} to {path.FullPath}");
                 }
             }
 
-            public override bool IsLinked(long journalNumber, string fileName, out string finalFileName)
+            public override bool IsLinked(long journalNumber, string filePath, out string finalFilePath)
             {
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
-                finalFileName = path.FullPath;
+                finalFilePath = path.FullPath;
                 if (File.Exists(path.FullPath) is false)
                     return false;
 
-                var rc = Pal.rvn_is_same_hard_link(fileName, path.FullPath, out var isSame, out var errorCode);
+                var rc = Pal.rvn_is_same_hard_link(filePath, path.FullPath, out var isSame, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {fileName} and {path.FullPath} are the same");
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {filePath} and {path.FullPath} are the same");
                 return isSame;
             }
 
@@ -923,26 +927,32 @@ namespace Voron
 
             public override VoronPathSetting BasePath { get; } = new MemoryVoronPathSetting();
 
-            public override bool IsLinked(long journalNumber, string fileName, out string finalFileName)
+            public override bool IsLinked(long journalNumber, string filePath, out string finalFilePath)
             {
                 var path = GetJournalPath(journalNumber);
-                finalFileName = path.FullPath;
+                finalFilePath = path.FullPath;
                 if (File.Exists(path.FullPath) is false)
                     return false;
-                var rc = Pal.rvn_is_same_hard_link(fileName, path.FullPath, out var isSame, out var errorCode);
+                var rc = Pal.rvn_is_same_hard_link(filePath, path.FullPath, out var isSame, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {fileName} and {path.FullPath} are the same");
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if files {filePath} and {path.FullPath} are the same");
 
                 return isSame;
             }
 
-            public override void LinkFiles(long journalNumber, string fileName, out string finalFileName)
+            public override void LinkFiles(long journalNumber, string filePath, out string finalFilePath)
             {
+                ForTestingPurposes_BeforeLinkFiles?.Invoke(journalNumber);
+
                 var path = GetJournalPath(journalNumber);
-                finalFileName = path.FullPath; 
-                var rc = Pal.rvn_hard_link_non_durable(fileName, path.FullPath, out var errorCode);
+                finalFilePath = path.FullPath;
+                var rc = Pal.rvn_hard_link_non_durable(filePath, path.FullPath, out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
-                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {fileName} to {path.FullPath}");
+                {
+                    if (PalHelper.IsHardLinkLimitError(errorCode))
+                        throw new HardLinkLimitExceededException($"Failed to link files {filePath} to {path.FullPath}. Errno: {errorCode}. The file system hard-link limit has been reached.");
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to link files {filePath} to {path.FullPath}");
+                }
             }
 
             public override JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile)
