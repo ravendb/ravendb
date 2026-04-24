@@ -1858,11 +1858,20 @@ namespace Voron.Impl.Journal
             handler.JournalMergeSubmitted();
             
             // here we are going to wait for the root to do the actual write to disk
-            // note that we *explicitly* do NOT use the cancellation token, since 
-            // we _must_ wait in the branch until the root releases us, because the 
+            // note that we *explicitly* do NOT use the cancellation token, since
+            // we _must_ wait in the branch until the root releases us, because the
             // may be in the middle of writing from our buffer and returning here
             // will release this memory pre-maturely
-            commitCompleted.Wait();
+            try
+            {
+                commitCompleted.Wait();
+            }
+            catch (AggregateException ae) when (ae.InnerException != null)
+            {
+                // unwrap so callers see the real exception (e.g. HardLinkLimitExceededException)
+                // instead of AggregateException and can take specific action per exception type
+                ExceptionDispatchInfo.Capture(ae.InnerException).Throw();
+            }
         }
 
         private void WriteBuffersToJournal(LowLevelTransaction tx, JournalStateRecord rootEntry)
