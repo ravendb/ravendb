@@ -49,8 +49,10 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const serverCertificateRenewalDate = useAppSelector(certificatesSelectors.serverCertificateRenewalDate);
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const ssoServerCertificates = useAppSelector(certificatesSelectors.ssoServerCertificates);
+    const ssoUserCertificates = useAppSelector(certificatesSelectors.ssoUserCertificates);
 
-    const state = certificatesUtils.getState(certificate);
+    const state = certificate.NotAfter ? certificatesUtils.getState(certificate) : null;
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
     const isServerCertForCommunication = certificate.Thumbprints.includes(serverCertificateForCommunicationThumbprint);
@@ -60,8 +62,9 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const isDisabled = certificate.Disabled ?? false;
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
-    const canEdit = !isServerCert && !isServerCertForCommunication && state !== "Expired";
-    const canClone = !isServerCert && !isServerCertForCommunication;
+    const canEdit = !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer" && state !== "Expired";
+    const canClone =
+        !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer" && certificate.Usage !== "SsoClient";
     const canToggleDisable =
         !isServerCert &&
         !isServerCertForCommunication &&
@@ -162,7 +165,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     return (
         <RichPanel className="flex-row with-status" hover>
-            <CertificatesItemStatus state={state} />
+            <CertificatesItemStatus state={state ?? "Valid"} />
             <div className="flex-grow">
                 <RichPanelHeader>
                     <div className="flex-grow">
@@ -200,6 +203,26 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     2FA
                                 </Badge>
                             )}
+                            {certificate.Usage === "SsoServer" && (
+                                <Badge
+                                    bg="info"
+                                    className="ms-1 fs-6"
+                                    pill
+                                    title="This certificate acts as an SSO server"
+                                >
+                                    SSO Server
+                                </Badge>
+                            )}
+                            {certificate.Usage === "SsoClient" && (
+                                <Badge
+                                    bg="primary"
+                                    className="ms-1 fs-6"
+                                    pill
+                                    title={`SSO user: ${certificate.Thumbprint}`}
+                                >
+                                    SSO: {certificate.Thumbprint}
+                                </Badge>
+                            )}
                         </div>
                         {certificate.Thumbprints.join(", ")}
                         <Button
@@ -228,7 +251,11 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         {canEdit && (
                             <Button
                                 title="Edit certificate"
-                                onClick={() => dispatch(certificatesActions.editModalOpen(certificate))}
+                                onClick={() =>
+                                    certificate.Usage === "SsoClient"
+                                        ? dispatch(certificatesActions.ssoUserEditModalOpen(certificate))
+                                        : dispatch(certificatesActions.editModalOpen(certificate))
+                                }
                                 variant="secondary"
                             >
                                 <Icon icon="edit" margin="m-0" />
@@ -255,40 +282,44 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                     </RichPanelActions>
                 </RichPanelHeader>
                 <RichPanelDetails>
-                    <RichPanelDetailItem
-                        label={
-                            <>
-                                <Icon icon="user" />
-                                Security clearance
-                            </>
-                        }
-                    >
-                        {getFormattedSecurityClearance(certificate.SecurityClearance)}
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem
-                        label={
-                            <>
-                                <Icon icon="check" />
-                                Valid from
-                            </>
-                        }
-                    >
-                        {certificate.NotBefore
-                            ? moment.utc(certificate.NotBefore).format(genUtils.basicDateFormat)
-                            : "Unavailable"}
-                    </RichPanelDetailItem>
-                    <RichPanelDetailItem
-                        label={
-                            <>
-                                <Icon icon="expiration" />
-                                {state === "Expired" ? "Expired at" : "Expiration"}
-                            </>
-                        }
-                    >
-                        <span className={`text-${certificatesUtils.getStateDateColor(state)}`}>
-                            {moment.utc(certificate.NotAfter).format(genUtils.basicDateFormat)}
-                        </span>
-                    </RichPanelDetailItem>
+                    {certificate.Usage !== "SsoServer" && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="user" />
+                                    Security clearance
+                                </>
+                            }
+                        >
+                            {getFormattedSecurityClearance(certificate.SecurityClearance)}
+                        </RichPanelDetailItem>
+                    )}
+                    {certificate.NotBefore && certificate.Usage !== "SsoClient" && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="check" />
+                                    Valid from
+                                </>
+                            }
+                        >
+                            {moment.utc(certificate.NotBefore).format(genUtils.basicDateFormat)}
+                        </RichPanelDetailItem>
+                    )}
+                    {certificate.NotAfter && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="expiration" />
+                                    {state === "Expired" ? "Expired at" : "Expiration"}
+                                </>
+                            }
+                        >
+                            <span className={`text-${certificatesUtils.getStateDateColor(state)}`}>
+                                {moment.utc(certificate.NotAfter).format(genUtils.basicDateFormat)}
+                            </span>
+                        </RichPanelDetailItem>
+                    )}
                     <RichPanelDetailItem
                         label={
                             <>
@@ -301,6 +332,47 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             ? moment.utc(certificate.LastUsedDate).format(genUtils.basicDateFormat)
                             : "(not used)"}
                     </RichPanelDetailItem>
+                    {certificate.Usage === "SsoServer" && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="user" />
+                                    Entries authorized
+                                </>
+                            }
+                        >
+                            {
+                                ssoUserCertificates.filter(
+                                    (u) =>
+                                        u.AllowAnySsoServer ||
+                                        (u.SsoServerPublicKeyPinningHashes ?? []).includes(
+                                            certificate.PublicKeyPinningHash
+                                        )
+                                ).length
+                            }
+                        </RichPanelDetailItem>
+                    )}
+                    {certificate.Usage === "SsoClient" && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="lock" />
+                                    Authorizing SSO
+                                </>
+                            }
+                        >
+                            {certificate.AllowAnySsoServer
+                                ? "Allow any SSO to authorize"
+                                : ssoServerCertificates
+                                      .filter((s) =>
+                                          (certificate.SsoServerPublicKeyPinningHashes ?? []).includes(
+                                              s.PublicKeyPinningHash
+                                          )
+                                      )
+                                      .map((s) => s.Name)
+                                      .join(", ") || "None"}
+                        </RichPanelDetailItem>
+                    )}
                     {canBeAutomaticallyRenewed && (
                         <RichPanelDetailItem
                             label={
@@ -323,16 +395,18 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             </ButtonWithSpinner>
                         </RichPanelDetailItem>
                     )}
-                    <RichPanelDetailItem
-                        label={
-                            <>
-                                <Icon icon="database" />
-                                Database permissions
-                            </>
-                        }
-                    >
-                        <PermissionsBadge certificate={certificate} />
-                    </RichPanelDetailItem>
+                    {certificate.Usage !== "SsoServer" && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="database" />
+                                    Database permissions
+                                </>
+                            }
+                        >
+                            <PermissionsBadge certificate={certificate} />
+                        </RichPanelDetailItem>
+                    )}
                 </RichPanelDetails>
             </div>
         </RichPanel>

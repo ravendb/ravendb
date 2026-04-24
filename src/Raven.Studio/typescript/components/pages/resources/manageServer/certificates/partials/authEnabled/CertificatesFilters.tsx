@@ -10,7 +10,10 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
-import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
+import {
+    CertificatesManagementType,
+    CertificatesSortMode,
+} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -31,6 +34,8 @@ export default function CertificatesFilters() {
         label: x,
     }));
     const sortMode = useAppSelector(certificatesSelectors.sortMode);
+    const managementTypeFilter = useAppSelector(certificatesSelectors.managementTypeFilter);
+    const managementTypeFilterOptions = useAppSelector(certificatesSelectors.managementTypeFilterOptions);
 
     const { localValue: nameOrThumbprintFilterInputValue, handleChange: nameOrThumbprintFilterInputHandleChange } =
         useDebouncedInput({
@@ -101,6 +106,19 @@ export default function CertificatesFilters() {
                     setSelectedItems={(x) => {
                         dispatch(certificatesActions.stateFilterSet(x));
                     }}
+                    selectAll
+                    selectAllLabel="All"
+                    selectAllCount={allCertificatesCount}
+                />
+            </div>
+            <div>
+                <span className="small-label">Filter by management type</span>
+                <MultiCheckboxToggle
+                    inputItems={managementTypeFilterOptions}
+                    selectedItems={managementTypeFilter}
+                    setSelectedItems={(x: CertificatesManagementType[]) =>
+                        dispatch(certificatesActions.managementTypeFilterSet(x))
+                    }
                     selectAll
                     selectAllLabel="All"
                     selectAllCount={allCertificatesCount}

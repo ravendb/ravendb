@@ -7,6 +7,8 @@ export type CertificatesClearance = "Admin" | "Operator" | "User";
 
 export type CertificatesState = "Valid" | "About to expire" | "Expired" | "Disabled";
 
+export type CertificatesManagementType = "SSO" | "Client" | "Server";
+
 export type CertificatesSortMode =
     | "By Name - Asc"
     | "By Name - Desc"
@@ -39,6 +41,8 @@ export interface UpdateCertificateDto {
     Permissions: Record<string, DatabaseAccess>;
     TwoFactorAuthenticationKey: string;
     Disabled?: boolean;
+    SsoServerPublicKeyPinningHashes?: string[];
+    AllowAnySsoServer?: boolean;
 }
 
 export interface UploadCertificateDto {
@@ -54,6 +58,24 @@ export interface UploadCertificateDto {
 export interface ReplaceServerCertificateDto {
     Certificate: string;
     Password: string;
+}
+
+export interface RegisterSsoServerCertDto {
+    Name: string;
+    Certificate: string;
+    Usage: "SsoServer";
+    SecurityClearance: "ValidUser";
+    Permissions: Record<string, DatabaseAccess>;
+}
+
+export interface RegisterSsoUserEntryDto {
+    Name: string;
+    Thumbprint: string;
+    Usage: "SsoClient";
+    SsoServerPublicKeyPinningHashes: string[];
+    AllowAnySsoServer: boolean;
+    SecurityClearance: SecurityClearance;
+    Permissions: Record<string, DatabaseAccess>;
 }
 
 export type ExpireTimeUnit = Extract<unitOfTime.Base, "days" | "months">;

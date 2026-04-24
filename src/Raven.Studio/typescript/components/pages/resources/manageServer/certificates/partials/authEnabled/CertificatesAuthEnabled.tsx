@@ -11,11 +11,14 @@ import { StickyHeader } from "components/common/StickyHeader";
 import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import CertificatesWellKnownList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesWellKnownList";
+import CertificatesSsoList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesSsoList";
 import { useChanges } from "components/hooks/useChanges";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import CertificatesFilters from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesFilters";
 import CertificatesManageDropdown from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesManageDropdown";
+import CertificatesRegisterSsoServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoServerModal";
+import CertificatesRegisterSsoUserModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoUserModal";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -26,6 +29,8 @@ export default function CertificatesAuthEnabled() {
     const isReplaceServerModalOpen = useAppSelector(certificatesSelectors.isReplaceServerModalOpen);
     const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
     const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
+    const isRegisterSsoServerModalOpen = useAppSelector(certificatesSelectors.isRegisterSsoServerModalOpen);
+    const isRegisterSsoUserModalOpen = useAppSelector(certificatesSelectors.isRegisterSsoUserModalOpen);
 
     // Initial load
     useEffect(() => {
@@ -73,6 +78,7 @@ export default function CertificatesAuthEnabled() {
             {!isInitialLoad && (
                 <>
                     <CertificatesWellKnownList />
+                    <CertificatesSsoList />
                     <CertificatesServerList />
                     <CertificatesClientList />
                 </>
@@ -84,6 +90,8 @@ export default function CertificatesAuthEnabled() {
             {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
             {certificateToClone && <CertificatesCloneModal />}
             {certificateToEdit && <CertificatesEditModal />}
+            {isRegisterSsoServerModalOpen && <CertificatesRegisterSsoServerModal />}
+            {isRegisterSsoUserModalOpen && <CertificatesRegisterSsoUserModal />}
         </div>
     );
 }

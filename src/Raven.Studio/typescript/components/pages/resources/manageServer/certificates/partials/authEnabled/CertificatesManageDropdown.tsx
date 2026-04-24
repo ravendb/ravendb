@@ -17,18 +17,18 @@ export default function CertificatesManageDropdown() {
     return (
         <>
             <Dropdown>
-                <Dropdown.Toggle title="Manage certificates" variant="primary" className="rounded-pill">
-                    Manage certificates
+                <Dropdown.Toggle title="Manage user access" variant="primary" className="rounded-pill">
+                    Manage user access
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
-                    <Dropdown.Header className="small-label">Client</Dropdown.Header>
-                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
-                        <Icon icon="certificate" addon="plus" />
-                        Generate client certificate
+                    <Dropdown.Header className="small-label">SSO</Dropdown.Header>
+                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isRegisterSsoServerModalOpenToggled())}>
+                        <Icon icon="certificate" addon="upload" />
+                        Upload SSO certificate
                     </Dropdown.Item>
-                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
-                        <Icon icon="upload" />
-                        Upload client certificate
+                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isRegisterSsoUserModalOpenToggled())}>
+                        <Icon icon="user" addon="plus" />
+                        Generate SSO user
                     </Dropdown.Item>
                     <Dropdown.Divider />
                     <Dropdown.Header className="small-label">Server</Dropdown.Header>
@@ -59,7 +59,7 @@ export default function CertificatesManageDropdown() {
                             disabled={!hasClusterNodeCertificate}
                         >
                             <Icon icon="download" />
-                            Export server certificate
+                            Export server certificates
                         </Dropdown.Item>
                     </ConditionalPopover>
                     <ConditionalPopover
@@ -73,13 +73,21 @@ export default function CertificatesManageDropdown() {
                             disabled={!hasClusterNodeCertificate}
                         >
                             <Icon icon="refresh" />
-                            Replace server certificate
+                            Replace server certificates
                         </Dropdown.Item>
                     </ConditionalPopover>
+                    <Dropdown.Divider />
+                    <Dropdown.Header className="small-label">Client</Dropdown.Header>
+                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isGenerateModalOpenToggled())}>
+                        <Icon icon="certificate" addon="plus" />
+                        Generate client certificate
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => dispatch(certificatesActions.isUploadModalOpenToggled())}>
+                        <Icon icon="upload" />
+                        Upload client certificate
+                    </Dropdown.Item>
                 </Dropdown.Menu>
             </Dropdown>
-
-            {/* This form is used to export server certificate */}
             <form
                 ref={exportServerCertFormRef}
                 action={endpoints.global.adminCertificates.adminCertificatesExport}
