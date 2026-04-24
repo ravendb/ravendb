@@ -7,12 +7,8 @@ using Xunit;
 
 namespace FastTests.Client.Queries
 {
-    public class WhereClrTypeIsTests : RavenTestBase
+    public class WhereClrTypeIsTests(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public WhereClrTypeIsTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private class Animal
         {
             public string Name { get; set; }
