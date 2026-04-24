@@ -9,7 +9,6 @@ namespace FastTests.Client.Queries
 {
     public class OnlyOfTypeTests(ITestOutputHelper output) : RavenTestBase(output)
     {
-        
         /// <summary>
         /// Options assigning both, <see cref="Animal"/> and <see cref="Dog"/> under one
         /// </summary>
