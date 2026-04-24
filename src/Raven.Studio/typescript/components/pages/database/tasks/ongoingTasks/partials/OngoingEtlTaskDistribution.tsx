@@ -18,7 +18,7 @@ interface OngoingEtlTaskDistributionProps {
 
 interface TxIdLayout {
     scripts: string[];
-    singleScript: boolean;
+    isSingleScript: boolean;
 }
 
 interface ItemWithTooltipProps {
@@ -78,7 +78,7 @@ interface TransactionalIdCellsProps {
 }
 
 function TransactionalIdCells({ txIdLayout, nodeInfo }: TransactionalIdCellsProps) {
-    const { scripts, singleScript } = txIdLayout;
+    const { scripts, isSingleScript } = txIdLayout;
     const hasProgress = !!nodeInfo.etlProgress?.length;
 
     if (scripts.length === 0) {
@@ -90,7 +90,7 @@ function TransactionalIdCells({ txIdLayout, nodeInfo }: TransactionalIdCellsProp
         );
     }
 
-    if (singleScript) {
+    if (isSingleScript) {
         const txId = nodeInfo.etlProgress?.find((ep) => ep.transformationName === scripts[0])?.transactionalId;
         return <TransactionalIdCell txId={txId} hasProgress={hasProgress} />;
     }
@@ -197,6 +197,25 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     );
 }
 
+function getTxIdLayout(task: AnyEtlOngoingTaskInfo, visibleNodes: OngoingEtlTaskNodeInfo[]): TxIdLayout | null {
+    if (task.shared.taskType !== "KafkaQueueEtl") {
+        return null;
+    }
+
+    const scripts = Array.from(
+        visibleNodes.reduce((acc, nodeInfo) => {
+            nodeInfo.etlProgress?.forEach((ep) => {
+                if (ep.transactionalId) {
+                    acc.add(ep.transformationName);
+                }
+            });
+            return acc;
+        }, new Set<string>())
+    );
+
+    return { scripts, isSingleScript: scripts.length === 1 };
+}
+
 export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
     const { task, showPreview } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
@@ -206,24 +225,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
             nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
     );
 
-    const expectsTxId = task.shared.taskType === "KafkaQueueEtl";
-
-    const txIdScripts: string[] = expectsTxId
-        ? Array.from(
-              visibleNodes.reduce((acc, nodeInfo) => {
-                  nodeInfo.etlProgress?.forEach((ep) => {
-                      if (ep.transactionalId) {
-                          acc.add(ep.transformationName);
-                      }
-                  });
-                  return acc;
-              }, new Set<string>())
-          )
-        : [];
-
-    const txIdLayout: TxIdLayout | null = expectsTxId
-        ? { scripts: txIdScripts, singleScript: txIdScripts.length === 1 }
-        : null;
+    const txIdLayout = getTxIdLayout(task, visibleNodes);
 
     const items = visibleNodes.map((nodeInfo) => {
         const key = taskNodeInfoKey(nodeInfo);
