@@ -9,6 +9,19 @@ namespace FastTests.Client.Queries
 {
     public class OnlyOfTypeTests(ITestOutputHelper output) : RavenTestBase(output)
     {
+        
+        /// <summary>
+        /// Options assigning both, <see cref="Animal"/> and <see cref="Dog"/> under one
+        /// </summary>
+        private static readonly Options CollectionAwareOptions = new()
+        {
+            ModifyDocumentStore = store =>
+                store.Conventions.FindCollectionName = type =>
+                    typeof(Animal).IsAssignableFrom(type)
+                        ? "Animals"
+                        : DocumentConventions.DefaultGetCollectionName(type)
+        };
+
         private class Animal
         {
             public string Name { get; set; }
@@ -74,16 +87,7 @@ namespace FastTests.Client.Queries
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void EndToEnd_FiltersByClrType()
         {
-            var options = new Options
-            {
-                ModifyDocumentStore = store =>
-                    store.Conventions.FindCollectionName = type =>
-                        typeof(Animal).IsAssignableFrom(type)
-                            ? "Animals"
-                            : DocumentConventions.DefaultGetCollectionName(type)
-            };
-
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(CollectionAwareOptions))
             {
                 using (var session = store.OpenSession())
                 {
@@ -108,16 +112,7 @@ namespace FastTests.Client.Queries
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void EndToEnd_NarrowsElementType()
         {
-            var options = new Options
-            {
-                ModifyDocumentStore = store =>
-                    store.Conventions.FindCollectionName = type =>
-                        typeof(Animal).IsAssignableFrom(type)
-                            ? "Animals"
-                            : DocumentConventions.DefaultGetCollectionName(type)
-            };
-
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(CollectionAwareOptions))
             {
                 using (var session = store.OpenSession())
                 {
@@ -142,16 +137,7 @@ namespace FastTests.Client.Queries
         [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void EndToEnd_ComposedWithSelect()
         {
-            var options = new Options
-            {
-                ModifyDocumentStore = store =>
-                    store.Conventions.FindCollectionName = type =>
-                        typeof(Animal).IsAssignableFrom(type)
-                            ? "Animals"
-                            : DocumentConventions.DefaultGetCollectionName(type)
-            };
-
-            using (var store = GetDocumentStore(options))
+            using (var store = GetDocumentStore(CollectionAwareOptions))
             {
                 using (var session = store.OpenSession())
                 {
