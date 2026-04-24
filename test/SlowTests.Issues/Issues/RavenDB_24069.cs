@@ -23,7 +23,7 @@ public class RavenDB_24069 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Voron)]
-    public void CanCreateRootAndManyBranchEnvironments_RavenDB_24069()
+    public void CanCreateRootAndManyBranchEnvironments()
     {
         string rootPath = NewDataPath(suffix: "root");
         IOExtensions.DeleteDirectory(rootPath);
@@ -188,7 +188,7 @@ public class RavenDB_24069 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Voron)]
-    public async Task SharedJournalsFallbackToUnsharedWhenHardLinkLimitIsReached_RavenDB_24069()
+    public async Task SharedJournalsFallbackToUnsharedWhenHardLinkLimitIsReached()
     {
         using (var store = GetDocumentStore())
         {
