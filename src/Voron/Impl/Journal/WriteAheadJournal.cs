@@ -1940,6 +1940,8 @@ namespace Voron.Impl.Journal
                     _logger.Debug($"New journal file created {CurrentFile.Number:D19} with size {CurrentFile.JournalSize}");
             }
 
+            List<(JournalStateRecord Record, Exception Exception)> failedBranchRecords = null;
+
             foreach (var rec in SharedJournalState.JournalRecords)
             {
                 var environment = rec.Transaction.Environment;
@@ -1951,15 +1953,19 @@ namespace Voron.Impl.Journal
                 }
                 catch (HardLinkLimitExceededException ex)
                 {
-                    // The file system hard-link limit was reached for this branch. Switch it to
-                    // unshared (local journal) mode and fail only this branch's commit. The branch
-                    // will retry and write directly to its own Journals/ directory. Its data entry
+                    // Switch to unshared journal mode and fail only this branch's commit. The branch
+                    // is supposed to retry and write directly to its own Journals/ directory. Its data entry
                     // remains in SharedJournalState.Entries and will be written to the root journal
-                    // as a phantom — this is safe because recovery filters transactions by JournalId,
+                    // as a phantom - this is safe because recovery filters transactions by JournalId,
                     // so neither root nor branch will apply the phantom during recovery.
+                    //
+                    // We must defer setting the exception until after the write operation here; otherwise the branch
+                    // wakes up and its next commit reuses the journal_entry buffer that the root is
+                    // still writing from.
                     environment.Options.RootJournal = null;
                     OnBranchHardLinkLimitReached?.Invoke(environment);
-                    rec.Tcs.TrySetException(ex);
+                    failedBranchRecords ??= new List<(JournalStateRecord, Exception)>();
+                    failedBranchRecords.Add((rec, ex));
                     continue;
                 }
 
@@ -2018,10 +2024,21 @@ namespace Voron.Impl.Journal
 
             var elapsed = Stopwatch.GetElapsedTime(start);
 
+            HashSet<JournalStateRecord> failedSet = null;
+            if (failedBranchRecords != null)
+            {
+                failedSet = new HashSet<JournalStateRecord>();
+                foreach (var (rec, _) in failedBranchRecords)
+                    failedSet.Add(rec);
+            }
+
             foreach (var rec in SharedJournalState.JournalRecords)
             {
+                if (failedSet != null && failedSet.Contains(rec))
+                    continue; // hard-link fallback: exception will be set below, after the write.
+
                 if (rec.Tcs.Task.IsCompleted)
-                    continue; // already failed (e.g. hard-link limit), do not overwrite the exception
+                    continue;
 
                 var llt = rec.Transaction;
                 llt.UpdateJournal(llt.WrittenToJournalNumber, positionIn4Kbs);
@@ -2029,6 +2046,12 @@ namespace Voron.Impl.Journal
             }
 
             SharedJournalState.Reset();
+
+            if (failedBranchRecords != null)
+            {
+                foreach (var (rec, ex) in failedBranchRecords)
+                    rec.Tcs.TrySetException(ex);
+            }
 
             if (_logger.IsDebugEnabled)
                 _logger.Debug(
