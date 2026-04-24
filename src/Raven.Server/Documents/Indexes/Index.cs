@@ -3251,7 +3251,8 @@ namespace Raven.Server.Documents.Indexes
                     if (calculateMemoryStats)
                         stats.Memory = GetMemoryStats();
 
-                    stats.HeavinessGrade = ComputeHeavinessGrade(stats, queryContext);
+                    if (queryContext != null)
+                        stats.HeavinessGrade = ComputeHeavinessGrade(stats, queryContext);
 
                     return stats;
                 }
@@ -3298,6 +3299,21 @@ namespace Raven.Server.Documents.Indexes
                         DocumentsOperationContext capturedContext = docsContext;
                         collectionDataProvider = collectionName =>
                         {
+                            if (string.Equals(collectionName, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase))
+                            {
+                                long totalCountOfDocuments = 0;
+                                long totalDocumentsSizeInBytes = 0;
+
+                                foreach (string name in DocumentDatabase.DocumentsStorage.GetCollectionsNames(capturedContext))
+                                {
+                                    CollectionDetails collectionDetails = DocumentDatabase.DocumentsStorage.GetCollectionDetails(capturedContext, name);
+                                    totalCountOfDocuments += collectionDetails.CountOfDocuments;
+                                    totalDocumentsSizeInBytes += collectionDetails.DocumentsSize.SizeInBytes;
+                                }
+
+                                return (totalCountOfDocuments, totalDocumentsSizeInBytes);
+                            }
+
                             CollectionDetails details = DocumentDatabase.DocumentsStorage.GetCollectionDetails(capturedContext, collectionName);
                             return (details.CountOfDocuments, details.DocumentsSize.SizeInBytes);
                         };
