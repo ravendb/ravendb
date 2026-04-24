@@ -79,7 +79,7 @@ export default function RavenConnectionString({
                     control={control}
                     name="database"
                     type="text"
-                    placeholder="Enter database for the connection string"
+                    placeholder="Enter the destination database name"
                     autoComplete="off"
                 />
             </div>

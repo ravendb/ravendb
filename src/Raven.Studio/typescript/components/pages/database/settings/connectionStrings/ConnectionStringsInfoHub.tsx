@@ -4,6 +4,7 @@ import FeatureAvailabilitySummaryWrapper, {
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
 import useConnectionStringsLicense from "./useConnectionStringsLicense";
+import appUrl from "common/appUrl";
 
 export function ConnectionStringsInfoHub() {
     const { hasAll, features } = useConnectionStringsLicense();
@@ -77,6 +78,14 @@ export function ConnectionStringsInfoHub() {
                         <li className="margin-top-xxs">
                             Connection strings that are in use by ongoing-tasks cannot be deleted, as they are essential
                             for task functionality and data access.
+                        </li>
+                        <li className="margin-top-xxs">
+                            Connection strings can also be defined at the cluster level in the{" "}
+                            <a href={appUrl.forServerwideConnectionStrings()} target="_blank">
+                                Server-Wide Connection Strings view
+                            </a>
+                            . Those connection strings are propagated to all databases in the cluster, unless specific
+                            databases are excluded.
                         </li>
                     </ul>
                 </div>
