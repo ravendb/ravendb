@@ -10,5 +10,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public BlittableJsonReaderObject Response { get; set; }
         public AiUsage Usage { get; set; }
         public int ToolsIterations { get; set; }
+        public string SnapshotToken { get; set; }
     }
 }

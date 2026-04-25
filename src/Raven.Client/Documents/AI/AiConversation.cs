@@ -314,7 +314,8 @@ internal class AiConversation : IAiConversationOperations
                 Answer = r.Response,
                 Status = _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done,
                 Usage = r.Usage,
-                Elapsed = r.Elapsed
+                Elapsed = r.Elapsed,
+                SnapshotToken = r.SnapshotToken
             };
         }
         catch (ConcurrencyException e)
