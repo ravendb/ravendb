@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -22,15 +19,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             // Create a fake token with a change vector that doesn't exist
-            string fakeToken;
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            var fakeRevisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                var fakeRevisions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    ["chats/1"] = "FAKE:99-nonexistent"
-                };
-                fakeToken = SnapshotTokenDto.Build(ctx, "chats/1", DateTime.UtcNow, fakeRevisions);
-            }
+                ["chats/1"] = "FAKE:99-nonexistent"
+            };
+            var fakeToken = BuildFakeSnapshotToken(database, "chats/1", fakeRevisions);
 
             var ex = await Assert.ThrowsAnyAsync<Exception>(async () =>
                 await store.AI.ForkConversationAsync(fakeToken, "forked/1"));

@@ -1,12 +1,5 @@
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
-using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -51,24 +44,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await CreateSubConversationDocAsync(database, "chats/1", "chats/1/sub1");
             await CreateSubConversationDocAsync(database, "chats/1", "chats/1/sub2");
 
-            // Verify sub-conversations exist (SubConversationIds not exposed for checking creation, use server-side)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "chats/1/sub1"));
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "chats/1/sub2"));
-            }
+            Assert.True(DocumentExists(store, "chats/1/sub1"));
+            Assert.True(DocumentExists(store, "chats/1/sub2"));
 
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "chats/1");
             Assert.Equal("chats/1", forkResult.ConversationId);
 
-            // Sub-conversations should be deleted (not tracked in snapshot, use server-side check)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
-            using (ctx2.OpenReadTransaction())
-            {
-                Assert.Null(database.DocumentsStorage.Get(ctx2, "chats/1/sub1"));
-                Assert.Null(database.DocumentsStorage.Get(ctx2, "chats/1/sub2"));
-            }
+            Assert.False(DocumentExists(store, "chats/1/sub1"));
+            Assert.False(DocumentExists(store, "chats/1/sub2"));
         }
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -88,36 +71,16 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             }
             var r4 = await RunTurnWithAgentAsync(database, "chats/1", "turn 4", snapshotBeforeRunning: true, agent);
 
-            // Get history document IDs (LinkedConversations not exposed via client API)
-            List<string> historyIds;
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var doc = database.DocumentsStorage.Get(ctx, "chats/1");
-                doc.Data.TryGet(nameof(ConversationDocument.LinkedConversations), out BlittableJsonReaderArray linked);
-                historyIds = new List<string>();
-                if (linked != null)
-                {
-                    for (int i = 0; i < linked.Length; i++)
-                        historyIds.Add(linked[i].ToString());
-                }
-            }
-
+            List<string> historyIds = GetLinkedConversations(store, "chats/1");
             Assert.NotEmpty(historyIds);
 
             var forkResult = await store.AI.ForkConversationAsync(r4.SnapshotToken, "chats/1");
             Assert.Equal("chats/1", forkResult.ConversationId);
 
             // History documents should still exist after rewind
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
-            using (ctx2.OpenReadTransaction())
+            foreach (string historyId in historyIds)
             {
-                Assert.NotEmpty(historyIds);
-                foreach (string historyId in historyIds)
-                {
-                    var historyDoc = database.DocumentsStorage.Get(ctx2, historyId);
-                    Assert.NotNull(historyDoc);
-                }
+                Assert.True(DocumentExists(store, historyId));
             }
         }
     }

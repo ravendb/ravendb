@@ -1,10 +1,7 @@
-using System.Net;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -127,20 +124,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
                 Assert.Equal("forked/1", forkResult.ConversationId);
 
-                // Parameters not exposed via client API, use server-side read
-                using (context.OpenReadTransaction())
-                {
-                    var forkedDoc = database.DocumentsStorage.Get(context, "forked/1");
-                    Assert.NotNull(forkedDoc);
-                    Assert.True(forkedDoc.Data.TryGet(nameof(ConversationDocument.Parameters), out BlittableJsonReaderObject forkedParams));
-                    Assert.NotNull(forkedParams);
+                var forkedDoc = GetDocumentAsJObject(store, "forked/1");
+                Assert.NotNull(forkedDoc);
+                var forkedParams = forkedDoc[nameof(ConversationDocument.Parameters)] as JObject;
+                Assert.NotNull(forkedParams);
 
-                    // Parameters are stored as AiConversationParameter with Value/SendToModel
-                    Assert.True(forkedParams.TryGet("company", out BlittableJsonReaderObject companyParam));
-                    Assert.NotNull(companyParam);
-                    Assert.True(companyParam.TryGet("Value", out string companyValue));
-                    Assert.Equal("companies/90-A", companyValue);
-                }
+                var companyParam = forkedParams["company"] as JObject;
+                Assert.NotNull(companyParam);
+                Assert.Equal("companies/90-A", companyParam["Value"]?.ToString());
             }
         }
     }

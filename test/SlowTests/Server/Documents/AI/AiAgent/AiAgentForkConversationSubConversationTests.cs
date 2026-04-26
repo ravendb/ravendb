@@ -1,11 +1,5 @@
-using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -42,13 +36,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.Contains("forked/1/Search/abc", forkedMessages.SubConversationIds);
             Assert.DoesNotContain("chats/1/Search/abc", forkedMessages.SubConversationIds);
 
-            // Verify the adjusted sub-conversation document exists (server-side, document existence check)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "forked/1/Search/abc"));
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "chats/1/Search/abc"));
-            }
+            Assert.True(DocumentExists(store, "forked/1/Search/abc"));
+            Assert.True(DocumentExists(store, "chats/1/Search/abc"));
         }
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -71,24 +60,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
             // Create a rogue document not tracked in SubConversationIds
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            {
-                using var tx = ctx.OpenWriteTransaction();
-                var rogueData = ctx.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue { ["Rogue"] = true }, "rogue");
-                database.DocumentsStorage.Put(ctx, "chats/1/Rogue/xyz", null, rogueData);
-                tx.Commit();
-            }
+            PutRogueDocument(database, "chats/1/Rogue/xyz");
 
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "chats/1");
             Assert.Equal("chats/1", forkResult.ConversationId);
 
             // Rogue document survives because it is not tracked in SubConversationIds
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx2))
-            using (ctx2.OpenReadTransaction())
-            {
-                var rogueDoc = database.DocumentsStorage.Get(ctx2, "chats/1/Rogue/xyz");
-                Assert.NotNull(rogueDoc);
-            }
+            Assert.True(DocumentExists(store, "chats/1/Rogue/xyz"));
         }
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -120,13 +98,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotEmpty(forkedMessages.SubConversationIds);
             Assert.Contains("forked/1/A", forkedMessages.SubConversationIds);
 
-            // Verify the sub-conversation document was forked too (server-side check)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "forked/1"));
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "forked/1/A"));
-            }
+            Assert.True(DocumentExists(store, "forked/1"));
+            Assert.True(DocumentExists(store, "forked/1/A"));
         }
     }
 }

@@ -1,8 +1,8 @@
 using System;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -36,16 +36,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var forkResult = await store.AI.ForkConversationAsync(snapshot.Token, "forked/1");
             Assert.Equal("forked/1", forkResult.ConversationId);
 
-            // Verify OpenActionCalls preserved (not exposed via client API)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var forkedDoc = database.DocumentsStorage.Get(ctx, "forked/1");
-                Assert.NotNull(forkedDoc);
-                forkedDoc.Data.TryGet(nameof(ConversationDocument.OpenActionCalls), out BlittableJsonReaderObject openCalls);
-                Assert.NotNull(openCalls);
-                Assert.True(openCalls.Count > 0, "Forked doc should have open action calls from the snapshot");
-            }
+            Assert.True(HasOpenActionCalls(store, "forked/1"), "Forked doc should have open action calls from the snapshot");
         }
 
         [RavenFact(RavenTestCategory.Ai)]
@@ -65,24 +56,16 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var forkResult = await store.AI.ForkConversationAsync(snapshot.Token, "forked/1");
 
-            // Verify OpenActionCalls SubConversationId adjusted (not exposed via client API)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                var forkedDoc = database.DocumentsStorage.Get(ctx, "forked/1");
-                Assert.NotNull(forkedDoc);
-                forkedDoc.Data.TryGet(nameof(ConversationDocument.OpenActionCalls), out BlittableJsonReaderObject openCalls);
-                Assert.NotNull(openCalls);
-                Assert.True(openCalls.Count > 0);
+            var openCalls = GetOpenActionCalls(store, "forked/1");
+            Assert.NotNull(openCalls);
+            Assert.True(openCalls.Count > 0);
 
-                foreach (var callId in openCalls.GetPropertyNames())
+            foreach (var (callId, callFields) in openCalls)
+            {
+                if (callFields.TryGetValue("SubConversationId", out var subConvIdObj) && subConvIdObj is string subConvId)
                 {
-                    if (openCalls[callId] is BlittableJsonReaderObject callObj &&
-                        callObj.TryGet("SubConversationId", out string subConvId))
-                    {
-                        Assert.StartsWith("forked/1/", subConvId);
-                        Assert.DoesNotContain("chats/1/", subConvId);
-                    }
+                    Assert.StartsWith("forked/1/", subConvId);
+                    Assert.DoesNotContain("chats/1/", subConvId);
                 }
             }
         }
@@ -302,16 +285,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
                 Assert.Equal("forked/1", forkResult.ConversationId);
 
-                // Verify the Expires field (not exposed via client API)
-                using (context.OpenReadTransaction())
-                {
-                    var forkedDoc = database.DocumentsStorage.Get(context, "forked/1");
-                    Assert.NotNull(forkedDoc);
-
-                    forkedDoc.Data.TryGet(nameof(ConversationDocument.Expires), out TimeSpan? expires);
-                    Assert.NotNull(expires);
-                    Assert.Equal(TimeSpan.FromSeconds(3600), expires.Value);
-                }
+                var forkedDoc = GetDocumentAsJObject(store, "forked/1");
+                Assert.NotNull(forkedDoc);
+                var expiresValue = forkedDoc[nameof(ConversationDocument.Expires)]?.ToString();
+                Assert.NotNull(expiresValue);
+                var expires = TimeSpan.Parse(expiresValue);
+                Assert.Equal(TimeSpan.FromSeconds(3600), expires);
             }
         }
     }

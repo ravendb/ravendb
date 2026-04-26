@@ -1,9 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents;
-using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -74,13 +71,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var forkResult = await store.AI.ForkConversationAsync(snapshot.Token, "archives/fork-1");
             Assert.Equal("archives/fork-1", forkResult.ConversationId);
 
-            // Verify sub-conversation was adjusted (server-side check needed for doc existence)
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "archives/fork-1"));
-                Assert.NotNull(database.DocumentsStorage.Get(ctx, "archives/fork-1/Search/abc"));
-            }
+            Assert.True(DocumentExists(store, "archives/fork-1"));
+            Assert.True(DocumentExists(store, "archives/fork-1/Search/abc"));
         }
     }
 }

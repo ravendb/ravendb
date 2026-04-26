@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents;
@@ -291,6 +292,101 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             // System prompt = 1 message, each turn = 2 messages (user + assistant)
             int expected = 1 + 2 * expectedTurnCount;
             Assert.Equal(expected, result.Messages.Count);
+        }
+
+        protected List<string> GetLinkedConversations(IDocumentStore store, string conversationId)
+        {
+            using var session = store.OpenSession();
+            var doc = session.Load<JObject>(conversationId);
+            if (doc == null)
+                return new List<string>();
+            var linked = doc[nameof(ConversationDocument.LinkedConversations)] as JArray;
+            return linked?.Select(x => x.ToString()).ToList() ?? new List<string>();
+        }
+
+        protected HashSet<string> GetSubConversationIds(IDocumentStore store, string conversationId)
+        {
+            using var session = store.OpenSession();
+            var doc = session.Load<JObject>(conversationId);
+            if (doc == null)
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var subs = doc[nameof(ConversationDocument.SubConversationIds)] as JArray;
+            if (subs == null)
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return subs.Select(x => x.ToString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        protected bool DocumentExists(IDocumentStore store, string documentId)
+        {
+            using var session = store.OpenSession();
+            return session.Advanced.Exists(documentId);
+        }
+
+        protected bool HasOpenActionCalls(IDocumentStore store, string conversationId)
+        {
+            using var session = store.OpenSession();
+            var doc = session.Load<JObject>(conversationId);
+            if (doc == null)
+                return false;
+            var openCalls = doc[nameof(ConversationDocument.OpenActionCalls)] as JObject;
+            return openCalls != null && openCalls.Count > 0;
+        }
+
+        protected Dictionary<string, Dictionary<string, object>> GetOpenActionCalls(IDocumentStore store, string conversationId)
+        {
+            using var session = store.OpenSession();
+            var doc = session.Load<JObject>(conversationId);
+            var openCalls = doc?[nameof(ConversationDocument.OpenActionCalls)] as JObject;
+            if (openCalls == null)
+                return new Dictionary<string, Dictionary<string, object>>();
+
+            var result = new Dictionary<string, Dictionary<string, object>>();
+            foreach (var prop in openCalls.Properties())
+            {
+                var callObj = prop.Value as JObject;
+                if (callObj == null)
+                    continue;
+                var entry = new Dictionary<string, object>();
+                foreach (var inner in callObj.Properties())
+                    entry[inner.Name] = inner.Value.Type == JTokenType.String ? inner.Value.ToString() : (object)inner.Value;
+                result[prop.Name] = entry;
+            }
+            return result;
+        }
+
+        protected JObject GetDocumentAsJObject(IDocumentStore store, string documentId)
+        {
+            using var session = store.OpenSession();
+            return session.Load<JObject>(documentId);
+        }
+
+        protected void PutRogueDocument(DocumentDatabase database, string documentId)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            {
+                using var tx = ctx.OpenWriteTransaction();
+                var rogueData = ctx.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue { ["Rogue"] = true }, "rogue");
+                database.DocumentsStorage.Put(ctx, documentId, null, rogueData);
+                tx.Commit();
+            }
+        }
+
+        protected void DeleteDocumentServerSide(DocumentDatabase database, string documentId)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            {
+                using var tx = ctx.OpenWriteTransaction();
+                database.DocumentsStorage.Delete(ctx, documentId, null);
+                tx.Commit();
+            }
+        }
+
+        protected string BuildFakeSnapshotToken(DocumentDatabase database, string conversationId, Dictionary<string, string> revisions)
+        {
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+            {
+                return SnapshotTokenDto.Build(ctx, conversationId, DateTime.UtcNow, revisions);
+            }
         }
     }
 }
