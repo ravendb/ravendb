@@ -2,7 +2,6 @@ using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.Handlers.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -98,19 +97,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 SampleObject = "{\"Answer\":\"response\"}"
             };
 
-            var agentB = new AiAgentConfiguration("agent-beta", "fake-connection",
-                "You are agent beta.")
-            {
-                Identifier = "agent-beta-id",
-                SampleObject = "{\"Answer\":\"response\"}"
-            };
-
             // Create and run the conversation with agentA
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true, agent: agentA);
             var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true, agent: agentA);
 
-            // Fork should succeed because the token references revisions, not agent configurations.
-            // The existence of agentB is irrelevant to fork validity.
+            // Fork succeeds because the token references revisions, not agent configurations.
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
             Assert.Equal("forked/1", forkResult.ConversationId);
 

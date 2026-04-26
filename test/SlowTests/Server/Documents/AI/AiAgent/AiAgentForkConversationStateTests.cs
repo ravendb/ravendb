@@ -54,7 +54,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(openCalls);
             Assert.True(openCalls.Count > 0);
 
-            foreach (var (callId, callFields) in openCalls)
+            foreach (var (_, callFields) in openCalls)
             {
                 if (callFields.TryGetValue("SubConversationId", out var subConvIdObj) && subConvIdObj is string subConvId)
                 {
