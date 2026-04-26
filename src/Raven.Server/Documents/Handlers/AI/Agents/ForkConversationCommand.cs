@@ -198,7 +198,7 @@ internal sealed class ForkConversationCommand : MergedTransactionCommand<Documen
 
             foreach (var attachment in existing)
             {
-                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, documentId, attachment.Name, null, out _, updateDocument: true);
+                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, documentId, attachment.Name, null, out _, updateDocument: false);
             }
         }
     }
