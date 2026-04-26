@@ -161,5 +161,42 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var r4 = await RunTurnAsync(database, "chats/1", "turn 4 after purge", snapshotBeforeRunning: false);
             Assert.NotNull(r4.Response);
         }
+
+        [RavenFact(RavenTestCategory.Ai)]
+        public async Task K9_RevisionsRetention_LimitsSnapshotCount()
+        {
+            // Test: With revisions retention set to max 3, running 5 turns with snapshots
+            //        should result in only 3 snapshots being available (oldest are purged).
+            // Reasoning: The standard revisions retention policy on @conversations controls
+            //            how many snapshots are kept.
+
+            using var store = GetDocumentStore();
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+            // Configure revisions: keep at most 3 for the @conversations collection
+            await store.Maintenance.SendAsync(new Raven.Client.Documents.Operations.Revisions.ConfigureRevisionsOperation(
+                new Raven.Client.Documents.Operations.Revisions.RevisionsConfiguration
+                {
+                    Collections = new System.Collections.Generic.Dictionary<string, Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration>
+                    {
+                        [Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection] = new()
+                        {
+                            Disabled = false,
+                            MinimumRevisionsToKeep = 3
+                        }
+                    }
+                }));
+
+            // Run 5 turns with snapshots
+            await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
+            await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
+            await RunTurnAsync(database, "chats/1", "turn 3", snapshotBeforeRunning: true);
+            await RunTurnAsync(database, "chats/1", "turn 4", snapshotBeforeRunning: true);
+            await RunTurnAsync(database, "chats/1", "turn 5", snapshotBeforeRunning: true);
+
+            // Only 3 snapshots should be available (retention purged the oldest)
+            var snapshots = await store.AI.GetConversationSnapshotsAsync("chats/1");
+            Assert.Equal(3, snapshots.Count);
+        }
     }
 }

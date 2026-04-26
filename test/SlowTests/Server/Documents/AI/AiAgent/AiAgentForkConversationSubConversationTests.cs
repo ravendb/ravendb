@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            await CreateSubConversationDocAsync(database, "chats/1", "chats/1/Search/abc");
+            CreateSubConversationDoc(store, "chats/1", "chats/1/Search/abc");
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
             Assert.NotNull(snapshot);
@@ -60,7 +60,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
             // Create a rogue document not tracked in SubConversationIds
-            PutRogueDocument(database, "chats/1/Rogue/xyz");
+            PutRogueDocument(store, "chats/1/Rogue/xyz");
 
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "chats/1");
             Assert.Equal("chats/1", forkResult.ConversationId);
@@ -83,7 +83,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            await CreateSubConversationDocAsync(database, "chats/1", "chats/1/A");
+            CreateSubConversationDoc(store, "chats/1", "chats/1/A");
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
             Assert.NotNull(snapshot);

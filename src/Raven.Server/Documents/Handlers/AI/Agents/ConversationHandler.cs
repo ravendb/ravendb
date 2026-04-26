@@ -54,6 +54,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     internal List<string> _persistedAttachmentsNames;
     private string _snapshotToken;
     private bool _isNewConversation;
+    private bool _requireSnapshot;
     public required RavenServer.AuthenticateConnection Authentication;
     public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
     {
@@ -131,22 +132,17 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 _document.ChangeVector = conversation.ChangeVector;
             }
 
-            // Create a snapshot before processing the user's prompt (not action responses).
-            // This captures the conversation state at this point for potential forking later.
+            // Determine whether we need a snapshot, but defer creation until after
+            // TryHandleActionResponses validates the request (so invalid requests
+            // such as ActionResponses + user prompt don't create revisions).
             bool hasUserPrompt = RequestBody.HasUserPrompt(_request.Content) ||
                                  _request.Attachments is { Count: > 0 } ||
                                  _request.AttachmentCommands?.ParsedCommands is { Count: > 0 } ||
                                  _request.ArtificialActions is { Length: > 0 };
 
-            bool requireSnapshot = _request.CreationOptions?.SnapshotBeforeRunning == true &&
-                                   _isNewConversation == false &&
-                                   hasUserPrompt;
-
-            if (requireSnapshot)
-            {
-                var (token, _) = await CreateSnapshotForConversationAsync(database, _document.Id);
-                _snapshotToken = token;
-            }
+            _requireSnapshot = _request.CreationOptions?.SnapshotBeforeRunning == true &&
+                               _isNewConversation == false &&
+                               hasUserPrompt;
         }
 
         if (_request.AttachmentCommands?.ParsedCommands is { Count: >0})
@@ -806,6 +802,15 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         return (cmd.SnapshotToken, cmd.CreatedAt);
     }
 
+    private async Task CreateSnapshotIfRequiredAsync()
+    {
+        if (_requireSnapshot == false)
+            return;
+
+        var (token, _) = await CreateSnapshotForConversationAsync(database, _document.Id);
+        _snapshotToken = token;
+    }
+
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
@@ -1143,6 +1148,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         if (await TryHandleActionResponses(context) is false)
             return AiInternalConversationResult.Default;
 
+        await CreateSnapshotIfRequiredAsync();
+
         return await TalkAsync(context, token: token);
     }
 
@@ -1156,6 +1163,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         if (await TryHandleActionResponses(context) is false)
             return AiInternalConversationResult.Default;
+
+        await CreateSnapshotIfRequiredAsync();
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, outputStream);
         return await StreamingTalkAsync(context, streamPropertyPath, async (data) =>

@@ -41,8 +41,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            await CreateSubConversationDocAsync(database, "chats/1", "chats/1/sub1");
-            await CreateSubConversationDocAsync(database, "chats/1", "chats/1/sub2");
+            CreateSubConversationDoc(store, "chats/1", "chats/1/sub1");
+            CreateSubConversationDoc(store, "chats/1", "chats/1/sub2");
 
             Assert.True(DocumentExists(store, "chats/1/sub1"));
             Assert.True(DocumentExists(store, "chats/1/sub2"));
@@ -67,9 +67,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             // After 3 turns: 1 + 6 = 7 messages => exceeds 5 => truncation triggered => LinkedConversations populated
             for (int i = 1; i <= 3; i++)
             {
-                await RunTurnWithAgentAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent);
+                await RunTurnAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent: agent);
             }
-            var r4 = await RunTurnWithAgentAsync(database, "chats/1", "turn 4", snapshotBeforeRunning: true, agent);
+            var r4 = await RunTurnAsync(database, "chats/1", "turn 4", snapshotBeforeRunning: true, agent: agent);
 
             List<string> historyIds = GetLinkedConversations(store, "chats/1");
             Assert.NotEmpty(historyIds);

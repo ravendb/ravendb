@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -62,81 +61,43 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             session.SaveChanges();
         }
 
-        protected async Task CreateSubConversationDocAsync(DocumentDatabase database, string parentId, string subConversationId)
+        protected void CreateSubConversationDoc(IDocumentStore store, string parentId, string subConversationId)
         {
-            var cmd = new CreateSubConversationDocCommand(database, parentId, subConversationId);
-            await database.TxMerger.Enqueue(cmd);
-        }
-
-        protected sealed class CreateSubConversationDocCommand : Raven.Server.Documents.TransactionMerger.Commands.MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
-        {
-            private readonly DocumentDatabase _database;
-            private readonly string _parentId;
-            private readonly string _subConversationId;
-
-            public CreateSubConversationDocCommand(DocumentDatabase database, string parentId, string subConversationId)
+            using (var session = store.OpenSession())
             {
-                _database = database;
-                _parentId = parentId;
-                _subConversationId = subConversationId;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                var subData = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+                var subDoc = new JObject
                 {
                     ["Agent"] = "sub-agent",
-                    ["Messages"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
-                    ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
-                    ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
-                    {
-                        ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
-                    },
-                    ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                    ["Messages"] = new JArray(),
+                    ["LinkedConversations"] = new JArray(),
+                    ["TotalUsage"] = new JObject { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
+                    ["OpenActionCalls"] = new JObject(),
                     ["LastMessageAt"] = DateTime.UtcNow,
                     ["CreatedAt"] = DateTime.UtcNow,
                     ["Expires"] = null,
-                    ["CurrentUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
-                    {
-                        ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
-                    },
+                    ["CurrentUsage"] = new JObject { ["PromptTokens"] = 0, ["CompletionTokens"] = 0, ["TotalTokens"] = 0, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 },
                     ["RemainingToolIterations"] = 16,
-                    ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
-                    [Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
-                    {
-                        [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationCollection
-                    }
-                }, "sub-conversation");
+                    ["SubConversationIds"] = new JArray()
+                };
+                session.Store(subDoc, subConversationId);
 
-                _database.DocumentsStorage.Put(context, _subConversationId, null, subData,
-                    nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
+                var metadata = session.Advanced.GetMetadataFor(subDoc);
+                metadata[Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection;
 
-                var parentDoc = _database.DocumentsStorage.Get(context, _parentId);
-                if (parentDoc != null)
-                {
-                    var parentData = parentDoc.Data;
-                    parentData.TryGet("SubConversationIds", out BlittableJsonReaderArray existingSubIds);
-
-                    var newSubIds = new Sparrow.Json.Parsing.DynamicJsonArray();
-                    if (existingSubIds != null)
-                    {
-                        for (int i = 0; i < existingSubIds.Length; i++)
-                            newSubIds.Add(existingSubIds[i].ToString());
-                    }
-                    newSubIds.Add(_subConversationId);
-
-                    parentData.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(parentData);
-                    parentData.Modifications["SubConversationIds"] = newSubIds;
-
-                    var updatedData = context.ReadObject(parentData, "updated-parent");
-                    _database.DocumentsStorage.Put(context, _parentId, null, updatedData,
-                        nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
-                }
-
-                return 1;
+                session.SaveChanges();
             }
 
-            public override Raven.Server.Documents.TransactionMerger.Commands.IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, Raven.Server.Documents.TransactionMerger.Commands.MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context) => null;
+            using (var session = store.OpenSession())
+            {
+                var parentDoc = session.Load<JObject>(parentId);
+                if (parentDoc != null)
+                {
+                    var subIds = parentDoc["SubConversationIds"] as JArray ?? new JArray();
+                    subIds.Add(subConversationId);
+                    parentDoc["SubConversationIds"] = subIds;
+                    session.SaveChanges();
+                }
+            }
         }
 
         protected static AiAgentConfiguration CreateTestAgent()
@@ -169,73 +130,18 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         protected async Task<AiInternalConversationResult> RunTurnAsync(
             DocumentDatabase database, string conversationId, string prompt,
-            bool snapshotBeforeRunning)
+            bool snapshotBeforeRunning = false,
+            AiAgentConfiguration agent = null,
+            Dictionary<string, object> parameters = null)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = snapshotBeforeRunning };
-                var blittable = context.ReadObject(creation.ToJson(), "params");
-                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
-
-                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
-                    onRequest: _ => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(MockLlm.CreateAnswerResponse($"\"{prompt} - response\""))
-                    })
+                if (parameters != null)
                 {
-                    Authentication = null
-                };
-
-                handler.Initialize(CreateTestAgent(), conversationId, new RequestBody
-                {
-                    Parameters = parameters,
-                    CreationOptions = creation,
-                    UserPrompt = prompt
-                }, changeVector: null);
-
-                return await handler.HandleRequest(context, CancellationToken.None);
-            }
-        }
-
-        protected async Task<AiInternalConversationResult> RunTurnWithAgentAsync(
-            DocumentDatabase database, string conversationId, string prompt,
-            bool snapshotBeforeRunning, AiAgentConfiguration agent)
-        {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = snapshotBeforeRunning };
-                var blittable = context.ReadObject(creation.ToJson(), "params");
-                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
-
-                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
-                    onRequest: _ => new HttpResponseMessage(HttpStatusCode.OK)
-                    {
-                        Content = new StringContent(MockLlm.CreateAnswerResponse($"\"{prompt} - response\""))
-                    })
-                {
-                    Authentication = null
-                };
-
-                handler.Initialize(agent, conversationId, new RequestBody
-                {
-                    Parameters = parameters,
-                    CreationOptions = creation,
-                    UserPrompt = prompt
-                }, changeVector: null);
-
-                return await handler.HandleRequest(context, CancellationToken.None);
-            }
-        }
-
-        protected async Task<AiInternalConversationResult> RunTurnWithParamsAsync(
-            DocumentDatabase database, string conversationId, string prompt,
-            Dictionary<string, object> parameters, bool snapshotBeforeRunning = false)
-        {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            {
-                var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = snapshotBeforeRunning };
-                foreach (var (key, value) in parameters)
-                    creation.AddParameter(key, value);
+                    foreach (var (key, value) in parameters)
+                        creation.AddParameter(key, value);
+                }
 
                 var blittable = context.ReadObject(creation.ToJson(), "params");
                 blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject blittableParams);
@@ -249,7 +155,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Authentication = null
                 };
 
-                handler.Initialize(CreateTestAgent(), conversationId, new RequestBody
+                handler.Initialize(agent ?? CreateTestAgent(), conversationId, new RequestBody
                 {
                     Parameters = blittableParams,
                     CreationOptions = creation,
@@ -345,25 +251,18 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             return session.Load<JObject>(documentId);
         }
 
-        protected void PutRogueDocument(DocumentDatabase database, string documentId)
+        protected void PutRogueDocument(IDocumentStore store, string documentId)
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            {
-                using var tx = ctx.OpenWriteTransaction();
-                var rogueData = ctx.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue { ["Rogue"] = true }, "rogue");
-                database.DocumentsStorage.Put(ctx, documentId, null, rogueData);
-                tx.Commit();
-            }
+            using var session = store.OpenSession();
+            session.Store(new JObject { ["Rogue"] = true }, documentId);
+            session.SaveChanges();
         }
 
-        protected void DeleteDocumentServerSide(DocumentDatabase database, string documentId)
+        protected void DeleteDocument(IDocumentStore store, string documentId)
         {
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-            {
-                using var tx = ctx.OpenWriteTransaction();
-                database.DocumentsStorage.Delete(ctx, documentId, null);
-                tx.Commit();
-            }
+            using var session = store.OpenSession();
+            session.Delete(documentId);
+            session.SaveChanges();
         }
 
         protected string BuildFakeSnapshotToken(DocumentDatabase database, string conversationId, Dictionary<string, string> revisions)

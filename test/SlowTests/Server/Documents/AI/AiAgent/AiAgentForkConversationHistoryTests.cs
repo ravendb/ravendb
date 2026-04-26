@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             // Run enough turns to trigger truncation and populate LinkedConversations
             for (int i = 1; i <= 4; i++)
             {
-                await RunTurnWithAgentAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent);
+                await RunTurnAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent: agent);
             }
 
             // Take a snapshot after history docs have been created
@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             for (int i = 1; i <= 4; i++)
             {
-                await RunTurnWithAgentAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent);
+                await RunTurnAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent: agent);
             }
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
@@ -89,7 +89,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             for (int i = 1; i <= 4; i++)
             {
-                await RunTurnWithAgentAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent);
+                await RunTurnAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent: agent);
             }
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
@@ -116,21 +116,22 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var agent = CreateTestAgentWithTruncation();
 
-            for (int i = 1; i <= 4; i++)
+            // Run enough turns to trigger truncation and create history documents
+            for (int i = 1; i <= 6; i++)
             {
-                await RunTurnWithAgentAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent);
+                await RunTurnAsync(database, "chats/1", $"turn {i}", snapshotBeforeRunning: true, agent: agent);
             }
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
 
-            // Delete some history docs (simulate expiration)
+            // Verify that truncation actually produced history documents
             var historyIds = GetLinkedConversations(store, "chats/1");
-            if (historyIds.Count > 0)
-            {
-                DeleteDocumentServerSide(database, historyIds[0]);
-            }
+            Assert.NotEmpty(historyIds);
 
-            // Fork should still work
+            // Delete one history doc to simulate expiration
+            DeleteDocument(store, historyIds[0]);
+
+            // Fork should still work even with a missing history doc
             var forkResult = await store.AI.ForkConversationAsync(snapshot.Token, "forked/1");
             Assert.Equal("forked/1", forkResult.ConversationId);
         }

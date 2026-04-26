@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
@@ -113,8 +111,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             {
                 var parameters = new Dictionary<string, object> { ["company"] = "companies/90-A" };
 
-                await RunTurnWithParamsAsync(database, "chats/1", "turn 1", parameters, snapshotBeforeRunning: true);
-                var r2 = await RunTurnWithParamsAsync(database, "chats/1", "turn 2", parameters, snapshotBeforeRunning: true);
+                await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true, parameters: parameters);
+                var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true, parameters: parameters);
 
                 var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
                 Assert.Equal("forked/1", forkResult.ConversationId);

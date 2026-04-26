@@ -1,11 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using Raven.Client.Documents.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 

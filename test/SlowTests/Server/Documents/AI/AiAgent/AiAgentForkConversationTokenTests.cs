@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
@@ -89,11 +90,34 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
-            var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
+            // Create two distinct agent configurations with different names and system prompts
+            var agentA = new AiAgentConfiguration("agent-alpha", "fake-connection",
+                "You are agent alpha.")
+            {
+                Identifier = "agent-alpha-id",
+                SampleObject = "{\"Answer\":\"response\"}"
+            };
 
+            var agentB = new AiAgentConfiguration("agent-beta", "fake-connection",
+                "You are agent beta.")
+            {
+                Identifier = "agent-beta-id",
+                SampleObject = "{\"Answer\":\"response\"}"
+            };
+
+            // Create and run the conversation with agentA
+            await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true, agent: agentA);
+            var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true, agent: agentA);
+
+            // Fork should succeed because the token references revisions, not agent configurations.
+            // The existence of agentB is irrelevant to fork validity.
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
             Assert.Equal("forked/1", forkResult.ConversationId);
+
+            // Verify the forked doc preserves the original agent identifier
+            var forkedDoc = GetDocumentAsJObject(store, "forked/1");
+            Assert.NotNull(forkedDoc);
+            Assert.Equal(agentA.Identifier, forkedDoc["Agent"]?.ToString());
 
             var messages = await store.AI.GetConversationMessagesAsync("forked/1");
             Assert.NotNull(messages);

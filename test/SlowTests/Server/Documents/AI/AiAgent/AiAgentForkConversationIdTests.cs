@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/42", "turn 1", snapshotBeforeRunning: true);
             await RunTurnAsync(database, "chats/42", "turn 2", snapshotBeforeRunning: true);
 
-            await CreateSubConversationDocAsync(database, "chats/42", "chats/42/Search/abc");
+            CreateSubConversationDoc(store, "chats/42", "chats/42/Search/abc");
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/42");
             Assert.NotNull(snapshot);
