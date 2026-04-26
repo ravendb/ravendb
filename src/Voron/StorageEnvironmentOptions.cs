@@ -224,8 +224,6 @@ namespace Voron
 
         public abstract void LinkFiles(long journalNumber, string filePath, out string finalFilePath);
 
-        internal Action<long> ForTestingPurposes_BeforeLinkFiles;
-
         public abstract bool IsLinked(long journalNumber, string filePath, out string finalFilePath);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
@@ -483,7 +481,7 @@ namespace Voron
 
             public override void LinkFiles(long journalNumber, string filePath, out string finalFilePath)
             {
-                ForTestingPurposes_BeforeLinkFiles?.Invoke(journalNumber);
+                ForTestingPurposes?.BeforeLinkFiles?.Invoke(journalNumber);
 
                 var name = JournalName(journalNumber);
                 var path = JournalPath.Combine(name);
@@ -942,7 +940,7 @@ namespace Voron
 
             public override void LinkFiles(long journalNumber, string filePath, out string finalFilePath)
             {
-                ForTestingPurposes_BeforeLinkFiles?.Invoke(journalNumber);
+                ForTestingPurposes?.BeforeLinkFiles?.Invoke(journalNumber);
 
                 var path = GetJournalPath(journalNumber);
                 finalFilePath = path.FullPath;
@@ -1356,6 +1354,28 @@ namespace Voron
                 
             File.Delete(dst);
             return true;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff(this);
+        }
+
+        internal sealed class TestingStuff
+        {
+            private readonly StorageEnvironmentOptions _parent;
+
+            internal Action<long> BeforeLinkFiles;
+
+            public TestingStuff(StorageEnvironmentOptions parent)
+            {
+                _parent = parent;
+            }
         }
     }
 }

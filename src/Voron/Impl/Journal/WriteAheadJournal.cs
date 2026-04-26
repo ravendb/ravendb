@@ -1856,22 +1856,13 @@ namespace Voron.Impl.Journal
                 throw new InvalidOperationException($"Call to {nameof(SubmitBranchJournalEntry)} when there is no handler registered for the {nameof(BranchJournalMerger)}");
            
             handler.JournalMergeSubmitted();
-            
+
             // here we are going to wait for the root to do the actual write to disk
             // note that we *explicitly* do NOT use the cancellation token, since
             // we _must_ wait in the branch until the root releases us, because the
             // may be in the middle of writing from our buffer and returning here
             // will release this memory pre-maturely
-            try
-            {
-                commitCompleted.Wait();
-            }
-            catch (AggregateException ae) when (ae.InnerException != null)
-            {
-                // unwrap so callers see the real exception (e.g. HardLinkLimitExceededException)
-                // instead of AggregateException and can take specific action per exception type
-                ExceptionDispatchInfo.Capture(ae.InnerException).Throw();
-            }
+            commitCompleted.GetAwaiter().GetResult();
         }
 
         private void WriteBuffersToJournal(LowLevelTransaction tx, JournalStateRecord rootEntry)
@@ -1942,7 +1933,7 @@ namespace Voron.Impl.Journal
                     _logger.Debug($"New journal file created {CurrentFile.Number:D19} with size {CurrentFile.JournalSize}");
             }
 
-            List<(JournalStateRecord Record, Exception Exception)> failedBranchRecords = null;
+            Dictionary<JournalStateRecord, Exception> failedBranchRecords = null;
 
             foreach (var rec in SharedJournalState.JournalRecords)
             {
@@ -1966,8 +1957,8 @@ namespace Voron.Impl.Journal
                     // still writing from.
                     environment.Options.RootJournal = null;
                     OnBranchHardLinkLimitReached?.Invoke(environment);
-                    failedBranchRecords ??= new List<(JournalStateRecord, Exception)>();
-                    failedBranchRecords.Add((rec, ex));
+                    failedBranchRecords ??= new Dictionary<JournalStateRecord, Exception>();
+                    failedBranchRecords[rec] = ex;
                     continue;
                 }
 
@@ -2026,17 +2017,9 @@ namespace Voron.Impl.Journal
 
             var elapsed = Stopwatch.GetElapsedTime(start);
 
-            HashSet<JournalStateRecord> failedSet = null;
-            if (failedBranchRecords != null)
-            {
-                failedSet = new HashSet<JournalStateRecord>();
-                foreach (var (rec, _) in failedBranchRecords)
-                    failedSet.Add(rec);
-            }
-
             foreach (var rec in SharedJournalState.JournalRecords)
             {
-                if (failedSet != null && failedSet.Contains(rec))
+                if (failedBranchRecords != null && failedBranchRecords.ContainsKey(rec))
                     continue; // hard-link fallback: exception will be set below, after the write.
 
                 if (rec.Tcs.Task.IsCompleted)
