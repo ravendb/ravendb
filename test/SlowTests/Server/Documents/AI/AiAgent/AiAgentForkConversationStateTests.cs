@@ -26,8 +26,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            // Inject OpenActionCalls (test setup requires direct DB access)
-            await InjectOpenActionCallAsync(database, "chats/1", "call_pending", "UserAction", "{\"query\":\"test\"}");
+            InjectOpenActionCall(store, "chats/1", "call_pending", "UserAction", "{\"query\":\"test\"}");
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
             Assert.NotNull(snapshot);
@@ -48,8 +47,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            // Inject OpenActionCall with SubConversationId (test setup requires direct DB access)
-            await InjectOpenActionCallWithSubConversationAsync(database, "chats/1",
+            InjectOpenActionCallWithSubConversation(store, "chats/1",
                 "call_sub", "SubAgentTool", "{}", "chats/1/SubAgent/hash123");
 
             var snapshot = await store.AI.CreateSnapshotAsync("chats/1");
@@ -269,18 +267,19 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var creation = new AiConversationCreationOptions
-                {
-                    SnapshotBeforeRunning = true,
-                    ExpirationInSec = 3600
-                };
-                var blittable = context.ReadObject(creation.ToJson(), "params");
-                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+                // Use RunTurnAsync for the first turn, then set expiration on the doc via session
+                await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
 
-                await RunTurnWithParamsAsync(database, "chats/1", "turn 1", parameters, creation);
-                var r2 = await RunTurnWithParamsAsync(database, "chats/1", "turn 2", parameters, creation);
+                // Set Expires on the conversation document
+                using (var session = store.OpenSession())
+                {
+                    var doc = session.Load<JObject>("chats/1");
+                    doc["Expires"] = "01:00:00"; // 1 hour as TimeSpan string
+                    session.SaveChanges();
+                }
+
+                var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
                 var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
                 Assert.Equal("forked/1", forkResult.ConversationId);

@@ -32,72 +32,34 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             return SnapshotTokenDto.Parse(ctx, token);
         }
 
-        protected Task InjectOpenActionCallWithSubConversationAsync(DocumentDatabase database, string conversationId, string toolId, string toolName, string arguments, string subConversationId)
+        protected void InjectOpenActionCallWithSubConversation(IDocumentStore store, string conversationId, string toolId, string toolName, string arguments, string subConversationId)
         {
-            var cmd = new InjectOpenActionCallCommand(database, conversationId, toolId, toolName, arguments, subConversationId);
-            return database.TxMerger.Enqueue(cmd);
+            InjectOpenActionCall(store, conversationId, toolId, toolName, arguments, subConversationId);
         }
 
-        protected async Task InjectOpenActionCallAsync(DocumentDatabase database, string conversationId, string toolId, string toolName, string arguments)
+        protected void InjectOpenActionCall(IDocumentStore store, string conversationId, string toolId, string toolName, string arguments, string subConversationId = null)
         {
-            var cmd = new InjectOpenActionCallCommand(database, conversationId, toolId, toolName, arguments);
-            await database.TxMerger.Enqueue(cmd);
-        }
+            using var session = store.OpenSession();
+            var doc = session.Load<JObject>(conversationId);
+            if (doc == null)
+                return;
 
-        protected sealed class InjectOpenActionCallCommand : Raven.Server.Documents.TransactionMerger.Commands.MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
-        {
-            private readonly DocumentDatabase _database;
-            private readonly string _conversationId;
-            private readonly string _toolId;
-            private readonly string _toolName;
-            private readonly string _arguments;
-            private readonly string _subConversationId;
+            var openCalls = doc[nameof(ConversationDocument.OpenActionCalls)] as JObject ?? new JObject();
 
-            public InjectOpenActionCallCommand(DocumentDatabase database, string conversationId, string toolId, string toolName, string arguments, string subConversationId = null)
+            var callValue = new JObject
             {
-                _database = database;
-                _conversationId = conversationId;
-                _toolId = toolId;
-                _toolName = toolName;
-                _arguments = arguments;
-                _subConversationId = subConversationId;
-            }
+                ["ToolId"] = toolId,
+                ["Name"] = toolName,
+                ["Arguments"] = arguments
+            };
 
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                var doc = _database.DocumentsStorage.Get(context, _conversationId);
-                if (doc == null)
-                    return 0;
+            if (subConversationId != null)
+                callValue["SubConversationId"] = subConversationId;
 
-                doc.Data.TryGet(nameof(ConversationDocument.OpenActionCalls), out BlittableJsonReaderObject existingCalls);
+            openCalls[toolId] = callValue;
+            doc[nameof(ConversationDocument.OpenActionCalls)] = openCalls;
 
-                var newCalls = existingCalls != null
-                    ? new Sparrow.Json.Parsing.DynamicJsonValue(existingCalls)
-                    : new Sparrow.Json.Parsing.DynamicJsonValue();
-
-                var callValue = new Sparrow.Json.Parsing.DynamicJsonValue
-                {
-                    ["ToolId"] = _toolId,
-                    ["Name"] = _toolName,
-                    ["Arguments"] = _arguments
-                };
-
-                if (_subConversationId != null)
-                    callValue["SubConversationId"] = _subConversationId;
-
-                newCalls[_toolId] = callValue;
-
-                doc.Data.Modifications = new Sparrow.Json.Parsing.DynamicJsonValue(doc.Data);
-                doc.Data.Modifications[nameof(ConversationDocument.OpenActionCalls)] = newCalls;
-
-                var updated = context.ReadObject(doc.Data, "inject-action-call");
-                _database.DocumentsStorage.Put(context, _conversationId, null, updated,
-                    nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
-
-                return 1;
-            }
-
-            public override Raven.Server.Documents.TransactionMerger.Commands.IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, Raven.Server.Documents.TransactionMerger.Commands.MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context) => null;
+            session.SaveChanges();
         }
 
         protected async Task CreateSubConversationDocAsync(DocumentDatabase database, string parentId, string subConversationId)
@@ -215,7 +177,23 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 var blittable = context.ReadObject(creation.ToJson(), "params");
                 blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
 
-                return await RunTurnWithParamsAsync(database, conversationId, prompt, parameters, creation);
+                var handler = new MockLlmConversationHandler(Server.ServerStore, database,
+                    onRequest: _ => new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent(MockLlm.CreateAnswerResponse($"\"{prompt} - response\""))
+                    })
+                {
+                    Authentication = null
+                };
+
+                handler.Initialize(CreateTestAgent(), conversationId, new RequestBody
+                {
+                    Parameters = parameters,
+                    CreationOptions = creation,
+                    UserPrompt = prompt
+                }, changeVector: null);
+
+                return await handler.HandleRequest(context, CancellationToken.None);
             }
         }
 
@@ -251,10 +229,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         protected async Task<AiInternalConversationResult> RunTurnWithParamsAsync(
             DocumentDatabase database, string conversationId, string prompt,
-            BlittableJsonReaderObject parameters, AiConversationCreationOptions creation)
+            Dictionary<string, object> parameters, bool snapshotBeforeRunning = false)
         {
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
+                var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = snapshotBeforeRunning };
+                foreach (var (key, value) in parameters)
+                    creation.AddParameter(key, value);
+
+                var blittable = context.ReadObject(creation.ToJson(), "params");
+                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject blittableParams);
+
                 var handler = new MockLlmConversationHandler(Server.ServerStore, database,
                     onRequest: _ => new HttpResponseMessage(HttpStatusCode.OK)
                     {
@@ -266,7 +251,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                 handler.Initialize(CreateTestAgent(), conversationId, new RequestBody
                 {
-                    Parameters = parameters,
+                    Parameters = blittableParams,
                     CreationOptions = creation,
                     UserPrompt = prompt
                 }, changeVector: null);

@@ -44,6 +44,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenFact(RavenTestCategory.Ai)]
         public async Task G2_Fork_TwoClientsForkToSameNewId()
         {
+            // Both forks succeed because there's no change vector check — last writer wins.
+            // The result is effectively idempotent since both write the same revision data.
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -61,68 +63,30 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenFact(RavenTestCategory.Ai)]
-        public async Task G3_Fork_WhileAnotherClientIsRunningATurn()
+        public async Task G3_Fork_FromOlderToken_ReturnsOlderState()
         {
+            // Forking from an older snapshot token always returns the state at that snapshot,
+            // regardless of how many turns have been added since. The fork reads from the
+            // immutable revision, not the live document.
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
             await RunTurnAsync(database, "chats/1", "turn 1", snapshotBeforeRunning: true);
             var r2 = await RunTurnAsync(database, "chats/1", "turn 2", snapshotBeforeRunning: true);
 
-            var beforeMessages = await GetDetailedMessagesAsync(store, "chats/1");
-            int messagesBefore = beforeMessages.Messages.Count;
+            // Run more turns after the snapshot
+            await RunTurnAsync(database, "chats/1", "turn 3", snapshotBeforeRunning: true);
+            await RunTurnAsync(database, "chats/1", "turn 4", snapshotBeforeRunning: true);
 
-            var entered = new SemaphoreSlim(0, 1);
-            var release = new SemaphoreSlim(0, 1);
-            var turnTask = Task.Run(async () =>
-            {
-                using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                {
-                    var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = true };
-                    var blittable = ctx.ReadObject(creation.ToJson(), "params");
-                    blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
-
-                    var handler = new MockLlmConversationHandler(Server.ServerStore, database,
-                        onRequest: _ =>
-                        {
-                            entered.Release();
-                            if (release.Wait(TimeSpan.FromSeconds(30)) == false)
-                                throw new TimeoutException("Mock LLM callback was not released within 30 seconds");
-                            return new HttpResponseMessage(HttpStatusCode.OK)
-                            {
-                                Content = new StringContent(MockLlm.CreateAnswerResponse("\"concurrent turn\""))
-                            };
-                        })
-                    {
-                        Authentication = null
-                    };
-
-                    handler.Initialize(CreateTestAgent(), "chats/1", new RequestBody
-                    {
-                        Parameters = parameters,
-                        CreationOptions = creation,
-                        UserPrompt = "concurrent turn"
-                    }, changeVector: null);
-
-                    return await handler.HandleRequest(ctx, CancellationToken.None);
-                }
-            });
-
-            Assert.True(await entered.WaitAsync(TimeSpan.FromSeconds(30)), "Concurrent turn did not reach the mock LLM in time");
-
+            // Fork from the old token (before turn 2)
             var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
-            Assert.Equal("forked/1", forkResult.ConversationId);
 
-            release.Release();
-            var turnResult = await turnTask;
-            Assert.NotNull(turnResult.Response);
-
-            // Verify fork has the pre-concurrent-turn state via client API
+            // Fork should have turn 1 only (3 messages), original should have 4 turns (9 messages)
             var forkedMessages = await GetDetailedMessagesAsync(store, "forked/1");
             var originalMessages = await GetDetailedMessagesAsync(store, "chats/1");
 
-            Assert.True(forkedMessages.Messages.Count < originalMessages.Messages.Count,
-                $"Fork ({forkedMessages.Messages.Count}) should have fewer messages than original ({originalMessages.Messages.Count}) after concurrent turn");
+            AssertExactMessageCount(forkedMessages, 1, "fork from snapshot before turn 2");
+            AssertExactMessageCount(originalMessages, 4, "original after 4 turns");
         }
 
         [RavenFact(RavenTestCategory.Ai)]

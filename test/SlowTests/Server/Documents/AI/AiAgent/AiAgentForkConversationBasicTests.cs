@@ -1,10 +1,9 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.AI.Agents;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -111,15 +110,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var store = GetDocumentStore();
             var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
-            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var creation = new AiConversationCreationOptions { SnapshotBeforeRunning = true }
-                    .AddParameter("company", "companies/90-A");
-                var blittable = context.ReadObject(creation.ToJson(), "params");
-                blittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+                var parameters = new Dictionary<string, object> { ["company"] = "companies/90-A" };
 
-                await RunTurnWithParamsAsync(database, "chats/1", "turn 1", parameters, creation);
-                var r2 = await RunTurnWithParamsAsync(database, "chats/1", "turn 2", parameters, creation);
+                await RunTurnWithParamsAsync(database, "chats/1", "turn 1", parameters, snapshotBeforeRunning: true);
+                var r2 = await RunTurnWithParamsAsync(database, "chats/1", "turn 2", parameters, snapshotBeforeRunning: true);
 
                 var forkResult = await store.AI.ForkConversationAsync(r2.SnapshotToken, "forked/1");
                 Assert.Equal("forked/1", forkResult.ConversationId);
