@@ -207,10 +207,10 @@ public class RavenDB_24069 : RavenTestBase
                     return;
 
                 var branchOptions = index._environment.Options;
-                branchOptions.ForTestingPurposes_BeforeLinkFiles = _ =>
+                branchOptions.ForTestingPurposesOnly().BeforeLinkFiles = _ =>
                 {
                     // one-shot: clear so any later call (should not happen once RootJournal is null) doesn't throw
-                    branchOptions.ForTestingPurposes_BeforeLinkFiles = null;
+                    branchOptions.ForTestingPurposesOnly().BeforeLinkFiles = null;
                     throw new HardLinkLimitExceededException($"simulated hard-link limit for '{index.Name}'");
                 };
             };
@@ -310,9 +310,9 @@ public class RavenDB_24069 : RavenTestBase
 
                 // arm a one-shot hook: the next LinkFiles throws as if NTFS hit the hard-link limit
                 var bo = branchOptions;
-                bo.ForTestingPurposes_BeforeLinkFiles = _ =>
+                bo.ForTestingPurposesOnly().BeforeLinkFiles = _ =>
                 {
-                    bo.ForTestingPurposes_BeforeLinkFiles = null;
+                    bo.ForTestingPurposesOnly().BeforeLinkFiles = null;
                     throw new HardLinkLimitExceededException("simulated hard-link limit");
                 };
 
