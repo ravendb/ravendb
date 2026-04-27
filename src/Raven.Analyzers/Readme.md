@@ -466,3 +466,76 @@ public void Subscribe(SubscriptionWorker<Order> worker)
 **Note:** This rule applies to lambda expressions passed directly to `Run()`. Named method-group references are not detected (e.g., `worker.Run(ProcessBatch)` where `ProcessBatch` is a separate method).
 
 **Docs:** [Subscriptions](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/subscriptions/what-are-subscriptions)
+
+---
+
+## RVN012: Batch independent session operations using the lazy API
+
+**Triggered by:** a method that contains two or more independent materializing session operations — `session.Load<T>(id)` or `session.Query<T>()...ToList()` / `.First()` / etc. — each of which causes a separate HTTP round-trip to the RavenDB server.
+
+RavenDB's lazy API queues operations and sends them as a single multi-get HTTP request. Use `session.Advanced.Lazily.Load<T>(id)` and `query.Lazily()` to register operations lazily, then call `session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()` (or `await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()` for async contexts) to execute the batch.
+
+Operations that depend on an earlier result cannot be made lazy — the analyzer only flags calls where the argument is provably independent of prior session results (a parameter, field, constant, or simple local not derived from a session call).
+
+```csharp
+// ❌ Bad: two round-trips
+void GetData(IDocumentSession session, string userId, string orderId)
+{
+    var user  = session.Load<User>(userId);   // RVN012
+    var order = session.Load<Order>(orderId); // RVN012
+}
+
+// ✅ Good: one round-trip
+void GetData(IDocumentSession session, string userId, string orderId)
+{
+    var lazyUser  = session.Advanced.Lazily.Load<User>(userId);
+    var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);
+    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+    var user  = lazyUser.Value;
+    var order = lazyOrder.Value;
+}
+```
+
+```csharp
+// ❌ Bad: query + load as two round-trips
+void GetData(IDocumentSession session, string managerId)
+{
+    var employees = session.Query<Employee>().Where(e => e.Active).ToList(); // RVN012
+    var manager   = session.Load<User>(managerId);                           // RVN012
+}
+
+// ✅ Good: one round-trip
+void GetData(IDocumentSession session, string managerId)
+{
+    var lazyEmployees = session.Query<Employee>().Where(e => e.Active).Lazily();
+    var lazyManager   = session.Advanced.Lazily.Load<User>(managerId);
+    session.Advanced.Eagerly.ExecuteAllPendingLazyOperations();
+    var employees = lazyEmployees.Value.ToList();
+    var manager   = lazyManager.Value;
+}
+```
+
+The same optimization applies to async contexts:
+
+```csharp
+// ❌ Bad: two async round-trips
+async Task GetDataAsync(IAsyncDocumentSession session, string userId, string orderId)
+{
+    var user  = await session.LoadAsync<User>(userId);   // RVN012
+    var order = await session.LoadAsync<Order>(orderId); // RVN012
+}
+
+// ✅ Good: one round-trip
+async Task GetDataAsync(IAsyncDocumentSession session, string userId, string orderId)
+{
+    var lazyUser  = session.Advanced.Lazily.Load<User>(userId);
+    var lazyOrder = session.Advanced.Lazily.Load<Order>(orderId);
+    await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync();
+    var user  = lazyUser.Value;
+    var order = lazyOrder.Value;
+}
+```
+
+**Note:** Loads whose ID argument is derived from a prior session result are not flagged — they genuinely depend on the earlier call and cannot be batched with it. Only single-method analysis is performed; cross-method patterns are not detected.
+
+**Docs:** [Lazy requests - batching requests](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/how-to/defer-operations)
