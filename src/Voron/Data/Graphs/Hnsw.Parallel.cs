@@ -276,6 +276,17 @@ public partial class Hnsw
                         ref var edgeList = ref edge.EdgesPerLevel[level];
                         edgeList.Add(_searchState.Llt.Allocator, node.NodeId);
 
+                        // Mirror the append into EdgesIndexesPerLevel so RegisterForPreloading
+                        // can skip its O(M) NodeId -> index rebuild. We only update when the
+                        // cache is already populated for this level and was in sync before this
+                        // append; otherwise we leave the lazy rebuild to fix it.
+                        if (edge.EdgesIndexesPerLevel.Count > level)
+                        {
+                            ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
+                            if (edgeIndexes.Count == edgeList.Count - 1)
+                                edgeIndexes.Add(_searchState.Llt.Allocator, currentNodeIndex);
+                        }
+
                         if (edgeList.Count <= _searchState.Options.NumberOfEdges)
                             continue;
 
@@ -303,6 +314,18 @@ public partial class Hnsw
                             foreach (var idx in _candidates)
                             {
                                 edgeList.AddUnsafe(_searchState.GetNodeByIndex(idx).NodeId);
+                            }
+
+                            // _candidates already holds node indexes, so we can rewrite the
+                            // mirrored cache directly without touching the node id table.
+                            if (edge.EdgesIndexesPerLevel.Count > level)
+                            {
+                                ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
+                                edgeIndexes.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
+                                foreach (var idx in _candidates)
+                                {
+                                    edgeIndexes.AddUnsafe(idx);
+                                }
                             }
                         }
                     }
