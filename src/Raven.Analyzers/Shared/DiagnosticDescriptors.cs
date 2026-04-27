@@ -163,5 +163,21 @@ namespace Raven.Analyzers.Shared
             isEnabledByDefault: true,
             description: "Inside a subscription worker Run delegate, sessions must be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the store bypasses the batch's internal transaction tracking, which means the session will not participate in the batch acknowledgement and documents may be re-processed.",
             helpLinkUri: HelpLinkBase + DiagnosticIds.SubscriptionStoreOpenSession);
+
+        /// <summary>
+        /// Descriptor for <see cref="DiagnosticIds.SessionLazyBatching"/>.
+        /// Fires when a method contains 2+ independent materializing session operations
+        /// (eager Load or materializing Query calls) that could be batched together
+        /// using the lazy API.
+        /// </summary>
+        public static readonly DiagnosticDescriptor SessionLazyBatching = new(
+            id: DiagnosticIds.SessionLazyBatching,
+            title: "Batch independent session operations using the lazy API",
+            messageFormat: "'{0}' is an eager session operation. This method contains multiple independent session operations; use session.Advanced.Lazily or query.Lazily() to batch them into a single server round-trip.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: "Each eager Load or materializing Query (ToList, First, etc.) sends a separate HTTP request to the RavenDB server. When a method contains two or more independent operations, they can be registered as lazy and executed together in a single multi-get request, reducing latency. Use session.Advanced.Lazily.Load<T>() and query.Lazily() to register operations lazily, then access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to trigger the batch.",
+            helpLinkUri: HelpLinkBase + DiagnosticIds.SessionLazyBatching);
     }
 }

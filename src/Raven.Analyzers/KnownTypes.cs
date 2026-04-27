@@ -125,5 +125,9 @@ namespace Raven.Analyzers
         /// Matched with Contains() to cover both AbstractSubscriptionWorker and SubscriptionWorker.
         /// </summary>
         public const string SubscriptionWorkerTypeName = "SubscriptionWorker";
+
+        // ── Session lazy batching ──────────────────────────────────────────────────
+        public const string LoadMethodName = "Load";
+        public const string LoadAsyncMethodName = "LoadAsync";
     }
 }
