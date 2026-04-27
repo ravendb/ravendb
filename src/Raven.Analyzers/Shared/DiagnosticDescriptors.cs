@@ -146,5 +146,22 @@ namespace Raven.Analyzers.Shared
             isEnabledByDefault: true,
             description: "RavenDB translates LINQ query lambdas (Where, OrderBy, Select, etc.) to RQL on the server. User-defined methods inside these lambdas cannot be translated and will throw at runtime. Compute the value before the query, inline the logic, or call ToList() first to evaluate client-side.",
             helpLinkUri: HelpLinkBase + DiagnosticIds.QueryUnsupportedMethodCall);
+
+        /// <summary>
+        /// Descriptor for <see cref="DiagnosticIds.SubscriptionStoreOpenSession"/>.
+        /// Fires when <c>OpenSession</c> or <c>OpenAsyncSession</c> is called on an
+        /// <c>IDocumentStore</c> receiver inside a lambda passed to a subscription worker's
+        /// <c>Run</c> method. The batch's own <c>OpenSession</c> / <c>OpenAsyncSession</c>
+        /// must be used instead to participate in the batch's acknowledge transaction.
+        /// </summary>
+        public static readonly DiagnosticDescriptor SubscriptionStoreOpenSession = new(
+            id: DiagnosticIds.SubscriptionStoreOpenSession,
+            title: "Use batch.OpenSession inside a subscription Run delegate",
+            messageFormat: "'{0}' is called on an IDocumentStore inside a subscription Run lambda. Use batch.{0}() instead to participate in the batch's acknowledge transaction.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: "Inside a subscription worker Run delegate, sessions must be opened via the batch object (batch.OpenSession() / batch.OpenAsyncSession()), not via the document store. Using the store bypasses the batch's internal transaction tracking, which means the session will not participate in the batch acknowledgement and documents may be re-processed.",
+            helpLinkUri: HelpLinkBase + DiagnosticIds.SubscriptionStoreOpenSession);
     }
 }

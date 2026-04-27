@@ -54,5 +54,11 @@ namespace Raven.Analyzers
         /// Identifier for the "unsupported method call inside RavenDB query expression" diagnostic.
         /// </summary>
         public const string QueryUnsupportedMethodCall = "RVN010";
+
+        /// <summary>
+        /// Identifier for the "OpenSession/OpenAsyncSession called on IDocumentStore inside a
+        /// subscription Run lambda" diagnostic.
+        /// </summary>
+        public const string SubscriptionStoreOpenSession = "RVN011";
     }
 }
