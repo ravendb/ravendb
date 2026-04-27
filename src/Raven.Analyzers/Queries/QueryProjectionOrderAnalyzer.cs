@@ -8,10 +8,10 @@ using Raven.Analyzers.Shared;
 namespace Raven.Analyzers.Queries
 {
     /// <summary>
-    /// Reports RVNQ002 when a filtering or ordering method (Where, OrderBy, etc.) appears
+    /// Reports RVN002 when a filtering or ordering method (Where, OrderBy, etc.) appears
     /// after a projection (ProjectInto or Select) in a RavenDB LINQ query chain.
     ///
-    /// Reports RVNQ003 when ProjectInto is called more than once in the same chain.
+    /// Reports RVN003 when ProjectInto is called more than once in the same chain.
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public sealed class QueryProjectionOrderAnalyzer : DiagnosticAnalyzer
@@ -45,7 +45,7 @@ namespace Raven.Analyzers.Queries
             if (!SyntaxHelpers.IsRavenQueryable(receiverType))
                 return;
 
-            // RVNQ002 — filtering/ordering after projection
+            // RVN002 — filtering/ordering after projection
             if (IsPostProjectionForbiddenMethod(methodName))
             {
                 if (FindProjectionInChain(receiver, context.SemanticModel))
@@ -59,7 +59,7 @@ namespace Raven.Analyzers.Queries
                 return;
             }
 
-            // RVNQ003 — double ProjectInto
+            // RVN003 — double ProjectInto
             if (methodName == KnownTypes.ProjectIntoMethodName)
             {
                 foreach (var prior in SyntaxHelpers.EnumerateInvocationChain(receiver))
