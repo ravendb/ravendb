@@ -223,6 +223,7 @@ export default function StudioGlobalConfiguration() {
                                                 options={predefinedFontOptions}
                                                 formatOptionLabel={formatFontOptionLabel}
                                                 components={tableFontSelectComponents}
+                                                styles={fontSelectStyles}
                                                 onMenuClose={() => setTableHoveredFont(null)}
                                             />
                                         </FontHoverContext.Provider>
@@ -249,6 +250,7 @@ export default function StudioGlobalConfiguration() {
                                                 options={predefinedFontOptions}
                                                 formatOptionLabel={formatFontOptionLabel}
                                                 components={codeFontSelectComponents}
+                                                styles={fontSelectStyles}
                                                 onMenuClose={() => setCodeHoveredFont(null)}
                                             />
                                         </FontHoverContext.Provider>
@@ -453,6 +455,10 @@ function CodePreview({ fontFamily }: { fontFamily: string }) {
         </div>
     );
 }
+
+const fontSelectStyles = {
+    menuList: (base: Record<string, unknown>) => ({ ...base, maxHeight: "none" }),
+};
 
 const tableFontSelectComponents = { Menu: TableFontMenu, Option: FontPreviewOption };
 const codeFontSelectComponents = { Menu: CodeFontMenu, Option: FontPreviewOption };
