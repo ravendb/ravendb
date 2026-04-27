@@ -619,7 +619,7 @@ public partial class Hnsw
             {
                 if (currentNodeIndex is -1)
                     return _indexes.Count > 0; // has work
-                
+
                 ref var n = ref _searchState.GetNodeByIndex(currentNodeIndex);
                 _indexes.Clear();
                 _vectors.Clear();
@@ -628,7 +628,13 @@ public partial class Hnsw
                     _indexes.Add(currentNodeIndex);
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
-                
+
+                // The slow path runs RegisterForPreloading first, which sizes both lists.
+                // The all-in-memory fast path skips that step, so we must guarantee the slot
+                // exists before we ref into it. SetCapacity is a no-op when already sized.
+                n.EdgesPerLevel.SetCapacity(_searchState.Llt.Allocator, level + 1);
+                n.EdgesIndexesPerLevel.SetCapacity(_searchState.Llt.Allocator, level + 1);
+
                 ref var edgesList = ref n.EdgesPerLevel[level];
                 ref var edgesIndexes = ref n.EdgesIndexesPerLevel[level];
                 if (edgesIndexes.Count != edgesList.Count)
@@ -672,6 +678,14 @@ public partial class Hnsw
             private readonly CancellationTokenSource _mainCts;
             private readonly List<Exception> _errors = [];
             private readonly LinkedList<int> _inFlightIndexes = [];
+
+            // Latches to true once an iteration completes with nothing left to preload, meaning
+            // every node touched so far is resident. From that point we skip the RegisterForPreloading
+            // scan (its O(items * edgesPerNode) VectorLoaded / TryGetNodeById sweep) and call
+            // AfterPreloading directly. The fast path stays correct even if the heuristic is wrong
+            // for a future item: GetVectorUnmanagedSpan falls back to a single-vector load on miss,
+            // so the worst case is degrading to one cold load instead of a batched one.
+            private bool _allVectorsInMemory;
 
             public bool IsCancelled => _mainCts.IsCancellationRequested;
             
@@ -739,17 +753,39 @@ public partial class Hnsw
                         return; // done
                     }
                     
+                    if (_allVectorsInMemory)
+                    {
+                        // Fast path: every previously touched node is resident, so the bulk preload
+                        // scan has nothing to find. Dispatch each item directly through AfterPreloading
+                        // and skip RegisterForPreloading entirely.
+                        for (int index = 0; index < _items.Count; index++)
+                        {
+                            WorkItem item = _items[index];
+                            if (item.Owner.AfterPreloading(item.CurrentNodeIndex, item.Level))
+                            {
+                                ThreadPool.UnsafeQueueUserWorkItem(item, preferLocal: false);
+                            }
+                            else
+                            {
+                                Enqueue(item.Iterator);
+                            }
+                        }
+
+                        _items.Clear();
+                        continue;
+                    }
+
                     // we executed all that we could, now let's check if we have
                     // any edges to load that we can do in bulk
                     batch.Clear();
                     for (int index = 0; index < _items.Count; index++)
                     {
                         WorkItem item = _items[index];
-                        if (item.RegisterForPreloading(_searchState, batch)) 
+                        if (item.RegisterForPreloading(_searchState, batch))
                             continue;
-                        
+
                         // we can run this directly, since there is nothing to preload
-                        
+
                         _items[index] = null; // skip it in the rest of the process
                         if (item.Owner.AfterPreloading(item.CurrentNodeIndex, item.Level) is false)
                         {
@@ -765,6 +801,11 @@ public partial class Hnsw
                     if (used > 0)
                     {
                         _searchState.PreloadNodesVectors(batchSpan[..used]);
+                    }
+                    else
+                    {
+                        // The whole working set is resident, switch to the fast path on the next iteration.
+                        _allVectorsInMemory = true;
                     }
 
                     foreach (var item in _items)
