@@ -539,3 +539,50 @@ async Task GetDataAsync(IAsyncDocumentSession session, string userId, string ord
 **Note:** Loads whose ID argument is derived from a prior session result are not flagged — they genuinely depend on the earlier call and cannot be batched with it. Only single-method analysis is performed; cross-method patterns are not detected.
 
 **Docs:** [Lazy requests - batching requests](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/how-to/defer-operations)
+
+---
+
+## RVN013: Add Take() to bound the query result set
+
+**Triggered by:** calling `ToList()`, `ToArray()`, `ToListAsync()`, or `ToArrayAsync()` on an `IRavenQueryable<T>` chain that does not have a `.Take(n)` call anywhere in the chain.
+
+RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit `.Take(n)`, the intent is invisible. As your dataset grows, the query may silently fetch far more data than you originally intended, degrading performance. Add `.Take(n)` to make the limit explicit.
+
+```csharp
+// ❌ Bad: implicitly bounded by 128 documents
+var users = session.Query<User>().ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var users = session.Query<User>().Take(10).ToList();
+```
+
+This applies to filtered queries as well:
+
+```csharp
+// ❌ Bad: implicitly bounded by 128 documents
+var activeUsers = session.Query<User>()
+    .Where(u => u.Active)
+    .ToList();   // RVN013
+
+// ✅ Good: explicit bound
+var activeUsers = session.Query<User>()
+    .Where(u => u.Active)
+    .Take(10)
+    .ToList();
+```
+
+And to async queries:
+
+```csharp
+// ❌ Bad: implicitly bounded by 128 documents
+var users = await session.Query<User>().ToListAsync();   // RVN013
+
+// ✅ Good: explicit bound
+var users = await session.Query<User>().Take(10).ToListAsync();
+```
+
+**Not flagged** (inherently bounded or scalar): `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`, `Any()`, `Count()`, `LongCount()`.
+
+**Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
+
+**Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/paging)

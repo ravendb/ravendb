@@ -179,5 +179,19 @@ namespace Raven.Analyzers.Shared
             isEnabledByDefault: true,
             description: "Each eager Load or materializing Query (ToList, First, etc.) sends a separate HTTP request to the RavenDB server. When a method contains two or more independent operations, they can be registered as lazy and executed together in a single multi-get request, reducing latency. Use session.Advanced.Lazily.Load<T>() and query.Lazily() to register operations lazily, then access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to trigger the batch.",
             helpLinkUri: HelpLinkBase + DiagnosticIds.SessionLazyBatching);
+
+        /// <summary>
+        /// Descriptor for <see cref="DiagnosticIds.QueryUnboundedResult"/>.
+        /// Fires when a query materializes a full result set without an explicit .Take(n) call.
+        /// </summary>
+        public static readonly DiagnosticDescriptor QueryUnboundedResult = new(
+            id: DiagnosticIds.QueryUnboundedResult,
+            title: "Query result is not bounded by Take()",
+            messageFormat: "'{0}' returns an unbounded result set. Add .Take(n) before {0} to limit the number of documents fetched from the server.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: "RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit .Take(n), the intent is invisible and the query may silently fetch far more data than intended as the dataset grows. Add .Take(n) to make the limit explicit.",
+            helpLinkUri: HelpLinkBase + DiagnosticIds.QueryUnboundedResult);
     }
 }
