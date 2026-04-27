@@ -12,3 +12,4 @@ RVN007 | Usage | Info    |
 RVN008 | Usage | Info    |
 RVN009 | Usage | Warning |
 RVN010 | Usage | Warning |
+RVN011 | Usage | Warning |
