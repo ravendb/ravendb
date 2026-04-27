@@ -193,5 +193,19 @@ namespace Raven.Analyzers.Shared
             isEnabledByDefault: true,
             description: "RavenDB queries default to returning at most 128 documents per request (the server's page size). Without an explicit .Take(n), the intent is invisible and the query may silently fetch far more data than intended as the dataset grows. Add .Take(n) to make the limit explicit.",
             helpLinkUri: HelpLinkBase + DiagnosticIds.QueryUnboundedResult);
+
+        /// <summary>
+        /// Descriptor for <see cref="DiagnosticIds.IndexFanOut"/>.
+        /// Fires when an index Map or AddMap lambda contains a fan-out operation (SelectMany or nested from clause).
+        /// </summary>
+        public static readonly DiagnosticDescriptor IndexFanOut = new(
+            id: DiagnosticIds.IndexFanOut,
+            title: "Index Map fans out over a collection",
+            messageFormat: "Index Map fans out via '{0}'. Each source document yields one index entry per element in the collection; unbounded collections can significantly degrade indexing performance.",
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
+            helpLinkUri: HelpLinkBase + DiagnosticIds.IndexFanOut);
     }
 }
