@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using Amazon;
 using Amazon.SQS;
 using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 using Azure.Storage.Queues;
-using System.Security.Cryptography;
 using Confluent.Kafka;
 using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
@@ -168,11 +168,16 @@ public static class QueueBrokerConnectionHelper
         return sqsClient;
     }
 
-    public static ServiceBusClient CreateAzureServiceBusClient(AzureServiceBusConnectionSettings azureServiceBusConnectionSettings)
+    public static ServiceBusClient CreateAzureServiceBusClient(string identifier, AzureServiceBusConnectionSettings azureServiceBusConnectionSettings)
     {
+        var options = new ServiceBusClientOptions
+        {
+            Identifier = identifier
+        };
+
         if (string.IsNullOrWhiteSpace(azureServiceBusConnectionSettings.ConnectionString) == false)
         {
-            return new ServiceBusClient(azureServiceBusConnectionSettings.ConnectionString);
+            return new ServiceBusClient(azureServiceBusConnectionSettings.ConnectionString, options);
         }
 
         if (azureServiceBusConnectionSettings.EntraId != null)
@@ -182,14 +187,14 @@ public static class QueueBrokerConnectionHelper
                 new ClientSecretCredential(
                     azureServiceBusConnectionSettings.EntraId.TenantId,
                     azureServiceBusConnectionSettings.EntraId.ClientId,
-                    azureServiceBusConnectionSettings.EntraId.ClientSecret));
+                    azureServiceBusConnectionSettings.EntraId.ClientSecret), options);
         }
 
         if (azureServiceBusConnectionSettings.Passwordless != null)
         {
             return new ServiceBusClient(
                 azureServiceBusConnectionSettings.Passwordless.Namespace,
-                new DefaultAzureCredential());
+                new DefaultAzureCredential(), options);
         }
 
         throw new InvalidOperationException("No valid Azure Service Bus connection settings provided.");

@@ -65,7 +65,7 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
 
         var connectionStringName = $"AzureServiceBus-{databaseName}";
 
-        store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
         {
             Name = connectionStringName,
             BrokerType = QueueBrokerType.AzureServiceBus,
@@ -75,7 +75,7 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
             }
         }));
 
-        var addSinkResult = store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(new QueueSinkConfiguration
+        var config = new QueueSinkConfiguration
         {
             Name = connectionStringName,
             ConnectionStringName = connectionStringName,
@@ -89,21 +89,25 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
                     Queues = new List<string> { queueName }
                 }
             }
-        }));
+        };
+        var r = await store.Maintenance.SendAsync(new AddQueueSinkOperation<QueueConnectionString>(config));
+        var respNode = await WaitForResponsibleNodeAsync(store, r.TaskId, OngoingTaskType.QueueSink, previousResponsibleNode: null);
 
         // Poll documents directly instead of counting BatchCompleted events: per-process ConsumeSuccesses
         // resets whenever the sink process is restarted (e.g. task reassignment, config change),
         // so `ConsumeSuccesses >= messageCount` on any single process is not guaranteed to ever hold
         // even when all messages were consumed cluster-wide.
         var ids = Enumerable.Range(0, messageCount).Select(i => $"users/{i}").ToArray();
-        var loaded = await AssertWaitForValueAsync(async () =>
+        var loaded = await WaitForValueAsync(async () =>
         {
             using var session = store.OpenAsyncSession();
             var users = await session.LoadAsync<User>(ids);
             return users.Count(kv => kv.Value != null);
         }, messageCount, timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds, interval: 500);
 
-        Assert.Equal(messageCount, loaded);
+        var database = await GetDocumentDatabaseInstanceForAsync(store.Database, Servers.Single(s => s.ServerStore.NodeTag == respNode));
+
+        Assert.True(messageCount == loaded, QueueSinkTestBase.BuildSinkErrorMessage(database, config));
     }
 
     [RavenFact(RavenTestCategory.Sinks | RavenTestCategory.Cluster, AzureServiceBusRequired = true)]
@@ -137,7 +141,7 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
 
         var connectionStringName = $"AzureServiceBus-{databaseName}";
 
-        store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(new QueueConnectionString
         {
             Name = connectionStringName,
             BrokerType = QueueBrokerType.AzureServiceBus,
@@ -147,7 +151,7 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
             }
         }));
 
-        store.Maintenance.Send(new AddQueueSinkOperation<QueueConnectionString>(new QueueSinkConfiguration
+        var config = new QueueSinkConfiguration
         {
             Name = connectionStringName,
             ConnectionStringName = connectionStringName,
@@ -161,19 +165,23 @@ public class AzureServiceBusClusterSinkTests : ClusterTestBase
                     Queues = new List<string> { AzureServiceBusSinkSource.Subscription(topicName, subscriptionName) }
                 }
             }
-        }));
+        };
+        var addSinkResult = await store.Maintenance.SendAsync(new AddQueueSinkOperation<QueueConnectionString>(config));
+        var respNode = await WaitForResponsibleNodeAsync(store, addSinkResult.TaskId, OngoingTaskType.QueueSink, previousResponsibleNode: null);
 
         // See note on sibling test: per-process ConsumeSuccesses resets on restart, so poll the destination
         // directly rather than relying on a per-process counter crossing messageCount.
         var ids = Enumerable.Range(0, messageCount).Select(i => $"users/{i}").ToArray();
-        var loaded = await AssertWaitForValueAsync(async () =>
+        var loaded = await WaitForValueAsync(async () =>
         {
             using var session = store.OpenAsyncSession();
             var users = await session.LoadAsync<User>(ids);
             return users.Count(kv => kv.Value != null);
         }, messageCount, timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds, interval: 500);
 
-        Assert.Equal(messageCount, loaded);
+        var database = await GetDocumentDatabaseInstanceForAsync(store.Database, Servers.Single(s => s.ServerStore.NodeTag == respNode));
+
+        Assert.True(messageCount == loaded, QueueSinkTestBase.BuildSinkErrorMessage(database, config));
     }
 
     [RavenFact(RavenTestCategory.Sinks | RavenTestCategory.Cluster, AzureServiceBusRequired = true)]

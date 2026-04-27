@@ -35,7 +35,7 @@ internal sealed class
         try
         {
             var probeEntity = $"ravendb-connection-test-{Guid.NewGuid():N}";
-            await using var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient(connectionSettings);
+            await using var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient("RavenDB-test-connectivity", connectionSettings);
             await using var receiver = client.CreateReceiver(probeEntity);
             await CheckConnectivityAsync(receiver, token);
             result[nameof(NodeConnectionTestResult.Success)] = true;

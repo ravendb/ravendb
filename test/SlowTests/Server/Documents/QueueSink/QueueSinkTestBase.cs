@@ -40,7 +40,7 @@ namespace SlowTests.Server.Documents.QueueSink
             return addResult;
         }
 
-        public IEnumerable<QueueSinkErrorsDetails> GetAlerts(DocumentDatabase database, QueueSinkConfiguration config)
+        public static IEnumerable<QueueSinkErrorsDetails> GetAlerts(DocumentDatabase database, QueueSinkConfiguration config)
         {
             string tag = config.BrokerType switch
             {
@@ -82,22 +82,27 @@ namespace SlowTests.Server.Documents.QueueSink
             {
                 var database = await GetDatabase(databaseName);
 
-                var sb = new StringBuilder();
-                sb.AppendLine($"Queue Sink '{config.Name}' ({config.BrokerType}) did not complete within {timeout} on database '{databaseName}'.");
-                sb.AppendLine($"Active processes: {database.QueueSinkLoader.Processes.Length}");
-                foreach (var process in database.QueueSinkLoader.Processes)
-                {
-                    var stats = process.Statistics;
-                    sb.AppendLine($"  - {process.Name}: ConsumeSuccesses={stats.ConsumeSuccesses}, ConsumeErrors={stats.ConsumeErrors}, WasLatestConsumeSuccessful={stats.WasLatestConsumeSuccessful}, LastConsumeErrorTime={stats.LastConsumeErrorTime}");
-                }
-
-                foreach (var alert in GetAlerts(database, config))
-                {
-                    sb.AppendJoin(Environment.NewLine, alert.Errors.Select(x => $"{x.Date} : {x.Error}"));
-                }
-
-                Assert.Fail(sb.ToString());
+                Assert.Fail(BuildSinkErrorMessage(database, config));
             }
+        }
+
+        public static string BuildSinkErrorMessage(DocumentDatabase database, QueueSinkConfiguration config)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Queue Sink '{config.Name}' ({config.BrokerType}) did not complete on database '{database.Name}'.");
+            sb.AppendLine($"Active processes: {database.QueueSinkLoader.Processes.Length}");
+            foreach (var process in database.QueueSinkLoader.Processes)
+            {
+                var stats = process.Statistics;
+                sb.AppendLine($"  - {process.Name}: ConsumeSuccesses={stats.ConsumeSuccesses}, ConsumeErrors={stats.ConsumeErrors}, WasLatestConsumeSuccessful={stats.WasLatestConsumeSuccessful}, LastConsumeErrorTime={stats.LastConsumeErrorTime}");
+            }
+
+            foreach (var alert in GetAlerts(database, config))
+            {
+                sb.AppendJoin(Environment.NewLine, alert.Errors.Select(x => $"{x.Date} : {x.Error}"));
+            }
+
+            return sb.ToString();
         }
 
         protected class User

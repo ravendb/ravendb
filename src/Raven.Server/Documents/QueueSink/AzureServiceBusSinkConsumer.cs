@@ -16,78 +16,103 @@ public class AzureServiceBusSinkConsumer : IQueueSinkConsumer
 
     private readonly ServiceBusClient _client;
     private readonly RavenLogger _logger;
-    private readonly CancellationToken _cancellationToken;
-    private readonly List<ServiceBusProcessor> _processors = new();
+    private readonly CancellationToken _token;
+    private readonly List<Task> _receiveTasks = new();
 
-    private readonly Channel<MessageContext> _deliveries =
-        Channel.CreateBounded<MessageContext>(new BoundedChannelOptions(ChannelCapacity)
+    private readonly Channel<IMessage> _deliveries =
+        Channel.CreateBounded<IMessage>(new BoundedChannelOptions(ChannelCapacity)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true
         });
-    private readonly ConcurrentQueue<MessageContext> _pendingCompletions = new();
+    private readonly ConcurrentBag<IMessage> _pendingCompletions = new();
+    private readonly CancellationTokenSource _cts;
 
-    public AzureServiceBusSinkConsumer(ServiceBusClient client, RavenLogger logger, CancellationToken cancellationToken)
+    public AzureServiceBusSinkConsumer(ServiceBusClient client, RavenLogger logger, CancellationToken token)
     {
         _client = client;
         _logger = logger;
-        _cancellationToken = cancellationToken;
+
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        _token = _cts.Token;
     }
 
-    public void SubscribeToQueue(string queue) => _processors.Add(_client.CreateProcessor(queue, CreateProcessorOptions()));
-
-    public void SubscribeToSubscription(string topic, string subscription) => _processors.Add(_client.CreateProcessor(topic, subscription, CreateProcessorOptions()));
-
-    private static ServiceBusProcessorOptions CreateProcessorOptions() => new()
+    public void SubscribeToQueue(string queue)
     {
+        var receiver = _client.CreateReceiver(queue, CreateReceiverOptions());
+        _receiveTasks.Add(Run(receiver));
+    }
+
+    public void SubscribeToSubscription(string topic, string subscription)
+    {
+        var receiver = _client.CreateReceiver(topic, subscription, CreateReceiverOptions());
+        _receiveTasks.Add(Run(receiver));
+    }
+
+    private static ServiceBusReceiverOptions CreateReceiverOptions() => new()
+    {
+        // The default renewal time is 30s if more time is needed, has to be configured on the entity itself (max is 5 min).
         ReceiveMode = ServiceBusReceiveMode.PeekLock,
-        AutoCompleteMessages = false,
-        MaxConcurrentCalls = 8,
-        MaxAutoLockRenewalDuration = TimeSpan.FromMinutes(5)
+        PrefetchCount = 32
     };
 
-    public async Task StartAsync()
+    private async Task Run(ServiceBusReceiver receiver)
     {
-        foreach (var processor in _processors)
+        while (_token.IsCancellationRequested == false)
         {
-            processor.ProcessMessageAsync += OnMessageAsync;
-            processor.ProcessErrorAsync += OnErrorAsync;
-            await processor.StartProcessingAsync(_cancellationToken);
+            try
+            {
+                var message = await receiver.ReceiveMessageAsync(cancellationToken: _token);
+                if (message == null)
+                    continue;
+
+                await _deliveries.Writer.WriteAsync(new MessageContext(receiver, message), _token);
+            }
+            catch (Exception e) when (e is ChannelClosedException or OperationCanceledException)
+            {
+                // shutdown requested, exit the loop
+                break;
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Error while processing messages from Azure Service Bus receiver for '{receiver.EntityPath}'", e);
+
+                try
+                {
+                    await _deliveries.Writer.WriteAsync(new ExceptionMessage(e), _token);
+                    await Task.Delay(TimeSpan.FromSeconds(15), _token);
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+            }
         }
-    }
-
-    private async Task OnMessageAsync(ProcessMessageEventArgs args)
-    {
-        var ctx = new MessageContext(args);
-        await _deliveries.Writer.WriteAsync(ctx, args.CancellationToken);
-        await ctx.Gate.Task;
-    }
-
-    private async Task OnErrorAsync(ProcessErrorEventArgs args)
-    {
-        if (_logger.IsErrorEnabled)
-            _logger.Error($"Azure Service Bus processor error for '{args.EntityPath}' (source: {args.ErrorSource})", args.Exception);
 
         try
         {
-            await _deliveries.Writer.WriteAsync(new MessageContext(args.Exception), _cancellationToken);
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+            await receiver.CloseAsync(cts.Token); // same as dispose but with token
         }
-        catch (OperationCanceledException)
+        catch (Exception e)
         {
-            // shutting down, ignore
+            if (_logger.IsErrorEnabled)
+                _logger.Error($"Error while disposing Azure Service Bus receiver for '{receiver.EntityPath}'", e);
         }
     }
 
     public byte[] Consume(CancellationToken cancellationToken)
     {
-        // Called only on a new batch start.
-        EnsureNoPendingRequests();
-
-        var ctx = _deliveries.Reader.ReadAsync(cancellationToken).AsTask().GetAwaiter().GetResult();
-        ctx.EnsureNoException();
-
-        _pendingCompletions.Enqueue(ctx);
-        return ctx.Args.Message.Body.ToArray();
+        try
+        {
+            var ctx = _deliveries.Reader.ReadAsync(cancellationToken).AsTask().GetAwaiter().GetResult();
+            return ctx.Consume(_pendingCompletions);
+        }
+        catch (Exception e) when (e is ChannelClosedException or OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     public byte[] Consume(TimeSpan timeout)
@@ -97,25 +122,12 @@ public class AzureServiceBusSinkConsumer : IQueueSinkConsumer
             if (_deliveries.Reader.TryRead(out var ctx) == false)
                 return null;
 
-            ctx.EnsureNoException();
-            
-            _pendingCompletions.Enqueue(ctx);
-            return ctx.Args.Message.Body.ToArray();
+            return ctx.Consume(_pendingCompletions);
         }
 
-        using var cts = new CancellationTokenSource(timeout);
-        try
-        {
-            var ctx = _deliveries.Reader.ReadAsync(cts.Token).AsTask().GetAwaiter().GetResult();
-            ctx.EnsureNoException();
-            
-            _pendingCompletions.Enqueue(ctx);
-            return ctx.Args.Message.Body.ToArray();
-        }
-        catch (OperationCanceledException)
-        {
-            return null;
-        }
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token);
+        cts.CancelAfter(timeout);
+        return Consume(cts.Token);
     }
 
     public void Commit()
@@ -123,91 +135,68 @@ public class AzureServiceBusSinkConsumer : IQueueSinkConsumer
         if (_pendingCompletions.IsEmpty)
             return;
 
-        var batch = new List<MessageContext>();
-        while (_pendingCompletions.TryDequeue(out var ctx))
-            batch.Add(ctx);
-
-        Parallel.ForEachAsync(batch, _cancellationToken, async (ctx, token) =>
+        Parallel.ForEachAsync(_pendingCompletions, _token, async (ctx, token) =>
         {
             try
             {
-                await ctx.Args.CompleteMessageAsync(ctx.Args.Message, token);
+                await ctx.Receiver.CompleteMessageAsync(ctx.Message, token);
             }
-            finally
+            catch (Exception e)
             {
-                ctx.Gate.TrySetResult();
+                // The broker will redeliver the message once its lock expires. Most common cause is
+                // a batch that took longer than the entity's LockDuration - configure it to its max (5 min).
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to complete Azure Service Bus message '{ctx.Message.MessageId}' on '{ctx.Receiver.EntityPath}'", e);
             }
         }).GetAwaiter().GetResult();
-    }
 
-    private void EnsureNoPendingRequests()
-    {
-        // Release any pending gates so parked handlers can return
-        while (_pendingCompletions.TryDequeue(out var ctx))
-        {
-            ctx.Gate.TrySetResult();
-        }
+        _pendingCompletions.Clear();
     }
 
     public void Dispose()
     {
-        _deliveries.Writer.TryComplete();
-
-        EnsureNoPendingRequests();
-
-        // Drain any contexts still sitting in the channel
-        while (_deliveries.Reader.TryRead(out var ctx))
+        using (_cts)
         {
-            ctx.Gate.TrySetResult();
-        }
+            _cts.Cancel();
+            _deliveries.Writer.TryComplete();
 
-        // Bounded timeout so a hung Service Bus SDK can't block database/server shutdown.
-        using var stopCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        Parallel.ForEachAsync(_processors, async (processor, _) =>
-        {
+            Task.WaitAll(_receiveTasks.ToArray(), TimeSpan.FromMinutes(1));
             try
             {
-                await using (processor)
-                {
-                    await processor.StopProcessingAsync(stopCts.Token);
-                }
+                _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
             }
-            catch (Exception ex)
+            catch
             {
-                if (_logger.IsErrorEnabled)
-                    _logger.Error($"Error while disposing Azure Service Bus processor for '{processor.EntityPath}'", ex);
+                // nothing we can do
             }
-        }).GetAwaiter().GetResult();
-
-        _processors.Clear();
-        _client.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
     }
 
-    private sealed class MessageContext
+    private interface IMessage
     {
-        private Exception Exception { get; }
+        public ServiceBusReceivedMessage Message { get; }
 
-        public ProcessMessageEventArgs Args { get; }
+        public ServiceBusReceiver Receiver => throw new NotImplementedException();
 
-        public TaskCompletionSource Gate { get; }
-
-        public MessageContext(Exception exception)
+        public byte[] Consume(ConcurrentBag<IMessage> pending)
         {
-            Exception = exception;
-        }
-
-        public MessageContext(ProcessMessageEventArgs args)
-        {
-            Args = args;
-            Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        }
-
-        public void EnsureNoException()
-        {
-            if (Exception == null)
-                return;
-
-            ExceptionDispatchInfo.Capture(Exception).Throw();
+            var message = Message.Body.ToArray();
+            pending.Add(this);
+            return message;
         }
     }
+
+    private sealed record ExceptionMessage(Exception Exception) : IMessage
+    {
+        public ServiceBusReceivedMessage Message
+        {
+            get
+            {
+                ExceptionDispatchInfo.Throw(Exception);
+                return null; // Unreachable, but required to satisfy the compiler.
+            }
+        }
+    }
+
+    private sealed record MessageContext(ServiceBusReceiver Receiver, ServiceBusReceivedMessage Message) : IMessage;
 }

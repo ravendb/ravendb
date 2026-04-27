@@ -12,27 +12,25 @@ public sealed class AzureServiceBusQueueSink : QueueSinkProcess
 
     protected override IQueueSinkConsumer CreateConsumer()
     {
-        var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient(Configuration.Connection.AzureServiceBusConnectionSettings);
+        var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient($"RavenDB-{Database.Name}-{Configuration.Name}", Configuration.Connection.AzureServiceBusConnectionSettings);
         var consumer = new AzureServiceBusSinkConsumer(client, Logger, CancellationToken);
-
-        foreach (var entry in Script.Queues)
-        {
-            if (AzureServiceBusSinkSource.TryParseSubscription(entry, out var topic, out var subscription))
-                consumer.SubscribeToSubscription(topic, subscription);
-            else
-                consumer.SubscribeToQueue(entry);
-        }
 
         try
         {
-            consumer.StartAsync().GetAwaiter().GetResult();
+            foreach (var entry in Script.Queues)
+            {
+                if (AzureServiceBusSinkSource.TryParseSubscription(entry, out var topic, out var subscription))
+                    consumer.SubscribeToSubscription(topic, subscription);
+                else
+                    consumer.SubscribeToQueue(entry);
+            }
+
+            return consumer;
         }
         catch
         {
             consumer.Dispose();
             throw;
         }
-
-        return consumer;
     }
 }
