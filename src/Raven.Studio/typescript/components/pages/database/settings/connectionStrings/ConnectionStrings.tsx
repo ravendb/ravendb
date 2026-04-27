@@ -16,6 +16,7 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import { LoadError } from "components/common/LoadError";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { StudioConnectionType } from "./connectionStringsTypes";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 export interface ConnectionStringsUrlParameters {
     name?: string;
@@ -25,6 +26,8 @@ export interface ConnectionStringsUrlParameters {
 export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const { appUrl } = useAppUrls();
 
     const dispatch = useAppDispatch();
 
@@ -64,16 +67,29 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
             <Row className="gy-sm">
                 <Col>
                     <AboutViewHeading title="Connection Strings" icon="manage-connection-strings" />
-                    {hasDatabaseAdminAccess && (
-                        <Button
-                            variant="primary"
-                            onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
-                            title="Add new connection string"
-                        >
-                            <Icon icon="plus" />
-                            Add new
-                        </Button>
-                    )}
+                    <div className="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-1">
+                        {hasDatabaseAdminAccess && (
+                            <Button
+                                variant="primary"
+                                onClick={() => dispatch(connectionStringsActions.newConnectionModalOpened())}
+                                title="Add new connection string"
+                            >
+                                <Icon icon="plus" />
+                                Add new
+                            </Button>
+                        )}
+                        {hasClusterAdminAccess && (
+                            <Button
+                                size="xs"
+                                variant="link"
+                                href={appUrl.forServerwideConnectionStrings()}
+                                title="Navigate to the Server-Wide Connection Strings View"
+                            >
+                                <Icon icon="link" />
+                                Go to Server-Wide Connection Strings View
+                            </Button>
+                        )}
+                    </div>
                     <LazyLoad active={loadStatus === "idle" || loadStatus === "loading"} className="mt-2">
                         {isEmpty ? (
                             <EmptySet className="mw-100">No connection strings</EmptySet>

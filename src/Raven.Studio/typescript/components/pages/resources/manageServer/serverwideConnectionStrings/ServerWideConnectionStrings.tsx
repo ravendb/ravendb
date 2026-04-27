@@ -41,7 +41,7 @@ export default function ServerWideConnectionStrings() {
     const dispatch = useAppDispatch();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
-    const [editConnection, setEditConnection] = useState<Connection | null>(null);
+    const [editConnection, setEditConnection] = useState<Connection>(null);
 
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("serverWideConnectionStrings"));
