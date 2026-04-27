@@ -60,5 +60,11 @@ namespace Raven.Analyzers
         /// subscription Run lambda" diagnostic.
         /// </summary>
         public const string SubscriptionStoreOpenSession = "RVN011";
+
+        /// <summary>
+        /// Identifier for the "multiple independent eager session operations could be batched
+        /// using the lazy API to reduce server round-trips" diagnostic.
+        /// </summary>
+        public const string SessionLazyBatching = "RVN012";
     }
 }
