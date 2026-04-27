@@ -11,6 +11,7 @@ using Sparrow.Binary;
 using Sparrow.Compression;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Platform;
 using Sparrow.Server.Utils;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
@@ -632,16 +633,33 @@ public unsafe partial class Hnsw
         public Random Random;
         private readonly CompactTree _vectorsByHash;
         private readonly int _vectorBatchSizeInPages;
+        private readonly int _targetPlacementTasks;
         private readonly ContainerId _globalVectorsContainerId;
         private PostingList _largePostingListSet;
 
         public int AmountOfModifiedVectorsInTransaction => _vectorHashCache.Count;
+
+        // The hot working set per concurrent placement task during distance compute is
+        // the query vector plus the NumberOfCandidates neighbor vectors being scored
+        // against it. Once the aggregate of that across all in-flight tasks spills L3
+        // the comparison loop becomes memory bound. Reserving a quarter of L3 for the
+        // candidate-vector footprint leaves enough budget for code, per-task scratch
+        // (visited bitmaps, candidate queues), and unrelated working data.
+        private static int ComputeTargetPlacementTasks(in Options options)
+        {
+            const int L3FractionForCandidateVectors = 4;
+            long perTaskCandidateBytes = (long)options.NumberOfCandidates * options.VectorSizeBytes;
+            if (perTaskCandidateBytes <= 0)
+                return 1;
+            return (int)Math.Max(1, CpuTopology.L3CacheSize / (L3FractionForCandidateVectors * perTaskCandidateBytes));
+        }
 
         public Registration(LowLevelTransaction llt, Slice name, Random random = null)
         {
             Random = random ?? Random.Shared;
             _searchState = new SearchState(llt, name);
             _vectorBatchSizeInPages = _searchState.Options.VectorBatchInPages;
+            _targetPlacementTasks = ComputeTargetPlacementTasks(in _searchState.Options);
             _globalVectorsContainerId = ReadGlobalVectorsContainerId(llt);
             _nodesByVectorId = _searchState.Tree.LookupFor<Int64LookupKey>(NodesByVectorIdSlice);
             _vectorsByHash = llt.Transaction.CompactTreeFor(VectorsIdByHashSlice);

@@ -134,10 +134,9 @@ public partial class Hnsw
                 _searchState.RegisterNodeLocation(EntryPointId, entryPointNode);
             }
 
-            // Run 1..MaxConcurrentBatches batches here, depending on how much work we have to run
-            int numberOfBatches = Math.Max(1, _searchState.CreatedNodes / MaxConcurrentBatches);
-            // but not too much...
-            int maxTasks = Math.Min(numberOfBatches, MaxConcurrentBatches);
+            int batchSize = Math.Max(MaxConcurrentBatches, _searchState.CreatedNodes / _targetPlacementTasks);
+            int numberOfBatches = Math.Max(1, _searchState.CreatedNodes / batchSize);
+            int maxTasks = Math.Min(numberOfBatches, _targetPlacementTasks);
             NodePlacementRunner runner = new(this, maxTasks, token);
             runner.Run();
         }

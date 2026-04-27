@@ -64,6 +64,9 @@ namespace Sparrow.Server.Platform.Posix
                 PlatformDetails.RunningOnMacOsx
                     ? 0x1d
                     : 0x1e;
+
+            // Linux glibc only (macOS sysconf has no cache-size names; we use sysctlbyname there).
+            public const int _SC_LEVEL3_CACHE_SIZE = 194;
         }
     }
 }
