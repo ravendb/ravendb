@@ -401,3 +401,68 @@ var results = session.Query<Order>()
 This rule applies **only** to `IRavenQueryable<T>` chains (`session.Query<T>()`). Standard LINQ on in-memory collections is not affected.
 
 **Docs:** [Querying in RavenDB](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/how-to-query)
+
+---
+
+## RVN011: Use batch.OpenSession inside a subscription Run delegate
+
+**Triggered by:** calling `OpenSession()` or `OpenAsyncSession()` on an `IDocumentStore` receiver inside a lambda passed to `SubscriptionWorker<T>.Run()`.
+
+Inside a subscription worker's `Run` delegate, sessions must be opened via the batch parameter — not via the document store directly. The batch creates a session that participates in the batch's acknowledge transaction. Using the store bypasses that mechanism, which means the session will not participate in batch acknowledgement and documents may be re-processed.
+
+```csharp
+// ❌ Bad: using store.OpenSession() in the Run delegate
+var subscription = store.Subscriptions.Create<Order>(new SubscriptionCreationOptions<Order>());
+var worker = store.Subscriptions.GetWorker<Order>(subscription);
+
+worker.Run(batch =>
+{
+    using var session = store.OpenSession();   // RVN011
+    // ... process orders ...
+});
+
+// ✅ Good: use batch.OpenSession()
+worker.Run(batch =>
+{
+    using var session = batch.OpenSession();
+    // ... process orders ...
+    // Session participates in batch acknowledgement
+});
+```
+
+This also applies to the async variant:
+
+```csharp
+// ❌ Bad: using store.OpenAsyncSession()
+worker.Run(async batch =>
+{
+    using var session = await store.OpenAsyncSession();   // RVN011
+    // ...
+});
+
+// ✅ Good
+worker.Run(async batch =>
+{
+    using var session = await batch.OpenAsyncSession();
+    // ...
+});
+```
+
+The rule correctly detects the issue regardless of how the store is accessed:
+
+```csharp
+// ❌ Also flagged: field-accessed store
+private readonly IDocumentStore _store;
+
+public void Subscribe(SubscriptionWorker<Order> worker)
+{
+    worker.Run(batch =>
+    {
+        using var session = _store.OpenSession();   // RVN011
+    });
+}
+```
+
+**Note:** This rule applies to lambda expressions passed directly to `Run()`. Named method-group references are not detected (e.g., `worker.Run(ProcessBatch)` where `ProcessBatch` is a separate method).
+
+**Docs:** [Subscriptions](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/subscriptions/what-are-subscriptions)

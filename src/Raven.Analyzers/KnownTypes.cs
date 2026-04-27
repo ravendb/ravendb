@@ -114,5 +114,16 @@ namespace Raven.Analyzers
         public const string ProjectionBehaviorFromIndexOrThrow = "FromIndexOrThrow";
         public const string ProjectionBehaviorFromDocument = "FromDocument";
         public const string ProjectionBehaviorFromDocumentOrThrow = "FromDocumentOrThrow";
+
+        // ── Subscription ──────────────────────────────────────────────────────────
+        public const string RunMethodName = "Run";
+        public const string OpenSessionMethodName = "OpenSession";
+        public const string OpenAsyncSessionMethodName = "OpenAsyncSession";
+        public const string IDocumentStoreName = "IDocumentStore";
+
+        /// <summary>
+        /// Matched with Contains() to cover both AbstractSubscriptionWorker and SubscriptionWorker.
+        /// </summary>
+        public const string SubscriptionWorkerTypeName = "SubscriptionWorker";
     }
 }
