@@ -586,3 +586,72 @@ var users = await session.Query<User>().Take(10).ToListAsync();
 **Note:** Only LINQ queries via `session.Query<T>()` are detected. The low-level `session.Advanced.DocumentQuery<T>()` API is not covered.
 
 **Docs:** [Querying: Paging](https://ravendb.net/docs/article-page/latest/csharp/client-api/session/querying/paging)
+
+---
+
+## RVN014: Index Map fans out over a collection
+
+**Triggered by:** using `SelectMany` (method-chain form) or nested `from` clauses (query-expression form) in an index `Map` or `AddMap` lambda.
+
+Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. Each element in the collection yields a separate index entry. This multiplies indexing work and storage proportional to collection cardinality. Large collections can significantly degrade indexing performance.
+
+The RavenDB server fires a runtime warning (`WarnIndexOutputsPerDocument`) when fan-out is detected, but this analyzer catches it at compile time.
+
+**Example — method-chain form:**
+
+```csharp
+// ❌ Bad: fans out over order.Lines
+class OrderLineIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderLineIndex()
+    {
+        Map = orders => orders
+            .SelectMany(o => o.Lines)   // RVN014 — each order produces N entries (one per line)
+            .Select(l => new { l.Product, l.Qty });
+    }
+}
+
+// ✅ Good: if the fan-out is intentional and cardinality is acceptable, you can suppress the diagnostic
+#pragma warning disable RVN014
+class OrderLineIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderLineIndex()
+    {
+        Map = orders => orders
+            .SelectMany(o => o.Lines)
+            .Select(l => new { l.Product, l.Qty });
+    }
+}
+#pragma warning restore RVN014
+```
+
+**Example — query-expression form (nested from):**
+
+```csharp
+// ❌ Bad: nested from creates fan-out
+class DocumentItemIndex : AbstractIndexCreationTask<Document>
+{
+    public DocumentItemIndex()
+    {
+        Map = docs => from doc in docs
+                      from item in doc.Items   // RVN014 — fans out over Items
+                      select new { item.Value };
+    }
+}
+
+// ✅ Good: single from, no fan-out
+class DocumentIndex : AbstractIndexCreationTask<Document>
+{
+    public DocumentIndex()
+    {
+        Map = docs => from doc in docs
+                      select new { doc.Title };
+    }
+}
+```
+
+**Not flagged:** Normal `Select`, `Where`, `OrderBy`, and other LINQ operators that do not iterate over a collection.
+
+**Note:** Block-body lambdas are not analyzed. RavenDB index Maps almost always use expression-body lambdas.
+
+**Docs:** [Indexes: Map-reduce fan-out](https://ravendb.net/docs/article-page/latest/csharp/indexes/map-reduce-indexes)

@@ -71,5 +71,10 @@ namespace Raven.Analyzers
         /// Identifier for the "query result is not bounded by Take()" diagnostic.
         /// </summary>
         public const string QueryUnboundedResult = "RVN013";
+
+        /// <summary>
+        /// Identifier for the "index Map fans out over a collection" diagnostic.
+        /// </summary>
+        public const string IndexFanOut = "RVN014";
     }
 }
