@@ -66,5 +66,10 @@ namespace Raven.Analyzers
         /// using the lazy API to reduce server round-trips" diagnostic.
         /// </summary>
         public const string SessionLazyBatching = "RVN012";
+
+        /// <summary>
+        /// Identifier for the "query result is not bounded by Take()" diagnostic.
+        /// </summary>
+        public const string QueryUnboundedResult = "RVN013";
     }
 }

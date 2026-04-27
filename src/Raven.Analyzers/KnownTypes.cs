@@ -61,6 +61,15 @@ namespace Raven.Analyzers
             "ProjectInto",
         ];
 
+        /// <summary>
+        /// Materializing methods that consume the full query result set and are therefore
+        /// unbounded without a prior .Take(n) call.
+        /// </summary>
+        public static readonly HashSet<string> UnboundedMaterializingMethods =
+        [
+            "ToList", "ToListAsync", "ToArray", "ToArrayAsync",
+        ];
+
         // Index class names (matched by short name against base type chain)
         public const string AbstractIndexCreationTaskGenericName = "AbstractIndexCreationTask";
         public const string AbstractGenericIndexCreationTaskName = "AbstractGenericIndexCreationTask";
@@ -82,6 +91,7 @@ namespace Raven.Analyzers
         public const string ThenByMethodName = "ThenBy";
         public const string ThenByDescendingMethodName = "ThenByDescending";
         public const string SearchMethodName = "Search";
+        public const string TakeMethodName = "Take";
 
         // Session type names (matched by short name)
         public const string IDocumentSessionName = "IDocumentSession";
