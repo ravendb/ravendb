@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Analyzers\Raven.Analyzers.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj" />
     <!-- Reference Raven.Client so the test harness can add it as a MetadataReference
          to in-memory compilations, keeping KnownTypes FQN strings honest. -->
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
