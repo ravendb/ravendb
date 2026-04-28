@@ -215,5 +215,68 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(doc2);
             Assert.Equal("During Stop", doc2.Name);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task SchemaChange_FalsePositive_OnStableSchemaWithDateColumn()
+        {
+
+            using var store = GetDocumentStore();
+            using var __ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE items (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    d  DATE
+                )");
+
+            ExecuteMySql(connectionString, "INSERT INTO items (d) VALUES ('2026-01-01')");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-schema-false-positive-date",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Items",
+                        SourceTableName = "items",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "d",  Name = "Date" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Initial load arrives — proves the sink is healthy at this point.
+            var firstDoc = await WaitForDocumentAsync<dynamic>(store, "Items/1", timeoutMs: 60_000);
+            Assert.NotNull(firstDoc);
+
+            // Subscribe to ProcessError before the post-init INSERT to catch the bug
+            // deterministically; race it against the document arriving.
+            var errorTask = await WaitForNextProcessError(store, config.Name);
+
+            ExecuteMySql(connectionString, "INSERT INTO items (d) VALUES ('2026-02-02')");
+
+            var docTask = WaitForDocumentAsync<dynamic>(store, "Items/2", timeoutMs: 60_000);
+            var winner = await Task.WhenAny(errorTask, docTask);
+
+            if (winner == errorTask)
+            {
+                var ex = await errorTask;
+                Assert.Fail(
+                    "Schema-change false-positive on stable schema with DATE column. " +
+                    "MySqlDataTypeToBinlogType[\"date\"] disagrees with the binlog wire format. " +
+                    $"Exception: {ex}");
+            }
+
+            Assert.NotNull(await docTask);
+        }
     }
 }

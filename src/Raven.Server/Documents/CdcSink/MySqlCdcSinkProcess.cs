@@ -112,7 +112,9 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         ["varbinary"]  = 15,  // MYSQL_TYPE_VARCHAR
 
         // Date/time types
-        ["date"]       = 14,  // MYSQL_TYPE_NEWDATE
+        // MYSQL_TYPE_NEWDATE (14) is an internal storage optimization; binlog row
+        // events emit the legacy MYSQL_TYPE_DATE (10) for `DATE` columns.
+        ["date"]       = 10,  // MYSQL_TYPE_DATE
         ["time"]       = 19,  // MYSQL_TYPE_TIME2
         ["datetime"]   = 18,  // MYSQL_TYPE_DATETIME2
         ["timestamp"]  = 17,  // MYSQL_TYPE_TIMESTAMP2
