@@ -1091,6 +1091,124 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        /// <summary>
+        /// UPDATE that changes an embedded-table column listed in BOTH JoinColumns and
+        /// PrimaryKeyColumns. SQL Server CDC emits a pre-image (op=3) and post-image (op=4)
+        /// pair sharing the same (__$start_lsn, __$seqval). Reparent detection must pair
+        /// them even though processor.GenerateDocumentId(values) — derived from the embedded
+        /// PrimaryKeyColumns — produces different values for op=3 (old PK) and op=4 (new PK).
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task EmbeddedArray_Reparent_WhenJoinColumnIsPartOfEmbeddedPK()
+        {
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
+                    line_num INT NOT NULL,
+                    product NVARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL,
+                    PRIMARY KEY (order_id, line_num)
+                );
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');
+                INSERT INTO [{schema}].order_lines (order_id, line_num, product, quantity) VALUES (1, 5, 'Apples', 7);");
+
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
+
+            var sqlCs = SetupSqlConnectionString(store);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-reparent-pk-includes-join",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = schema,
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = schema,
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                // Composite PK that *includes* the join column. With the pre-fix
+                                // PK-derived dictionary key, op=3 ("OrderLines/1/5") and op=4
+                                // ("OrderLines/2/5") never paired, no Delete from Orders/1 was
+                                // emitted, and Orders/1.Lines kept a ghost entry.
+                                PrimaryKeyColumns = new List<string> { "order_id", "line_num" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "order_id", Name = "OrderId" },
+                                    new CdcColumnMapping { Column = "line_num", Name = "LineNum" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                                    new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Initial load materializes the existing row in Orders/1.Lines.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                Assert.Single(order1.Lines);
+                Assert.Equal("Apples", order1.Lines[0].Product);
+            }
+
+            // Reparenting UPDATE: changes both the join column *and* a PK column.
+            ExecuteMsSql($"UPDATE [{schema}].order_lines SET order_id = 2 WHERE order_id = 1 AND line_num = 5;");
+
+            // Orders/1.Lines must lose the row (no ghost entry).
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 0, timeout: 60_000);
+
+            // Orders/2.Lines must gain the row.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                return order2?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                Assert.Single(order2.Lines);
+                Assert.Equal("Apples", order2.Lines[0].Product);
+                Assert.Equal(5, order2.Lines[0].LineNum);
+            }
+        }
+
         // ─────────────────────────────────────────────────────────────────────
         // Patch Script Tests
         // ─────────────────────────────────────────────────────────────────────

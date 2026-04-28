@@ -651,11 +651,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
 
     /// <summary>
-    /// Whether this provider uses SELECT TOP(N) (SQL Server) vs LIMIT N (Postgres/MySQL).
+    /// Builds the SELECT used by initial-load keyset pagination. Default implementation is
+    /// PostgreSQL/MySQL syntax (LIMIT + row-value comparison `(c1,c2) > (@k0,@k1)`).
+    /// SQL Server overrides this because it does not support row-value comparison.
     /// </summary>
-    protected virtual bool UsesTopN => false;
-
-    private string BuildBatchQuery(
+    protected virtual string BuildBatchQuery(
         CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
         string[] lastKeys, int maxBatchSize)
     {
@@ -665,9 +665,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             ? $" WHERE ({pkCols}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})"
             : "";
 
-        return UsesTopN
-            ? $"SELECT TOP ({maxBatchSize}) * FROM {table} {where} ORDER BY {pkCols}"
-            : $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
+        return $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
     }
 
     /// <summary>

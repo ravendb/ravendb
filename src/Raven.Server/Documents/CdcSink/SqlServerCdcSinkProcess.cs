@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -249,7 +250,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
 
                 // For embedded tables, op 3 (pre-update image) is kept so we can detect
-                // reparenting. Stash old values keyed by PK; pair with op 4 (post-update).
+                // reparenting. Stash old values keyed by (__$start_lsn, __$seqval): SQL Server
+                // CDC always emits the matching op=4 with identical LSN and seqval, so the pair
+                // is found regardless of whether the UPDATE changed any PK column (a PK-derived
+                // key would miss when the embedded PK includes the join column).
                 Dictionary<string, object[]> pendingPreUpdate = null;
 
                 while (await reader.ReadAsync(ct))
@@ -268,8 +272,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     if (operation == 3) // pre-update image for embedded table
                     {
                         pendingPreUpdate ??= new Dictionary<string, object[]>(StringComparer.Ordinal);
-                        var pkKey = processor.GenerateDocumentId(values);
-                        pendingPreUpdate[pkKey] = values;
+                        pendingPreUpdate[MakeLsnSeqKey(rowLsn, rowSeq)] = values;
                         continue;
                     }
 
@@ -279,8 +282,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     if (operation == 4 && !processor.IsRoot && pendingPreUpdate != null)
                     {
                         // Post-update image — pair with stashed pre-update for reparent detection
-                        var pkKey = processor.GenerateDocumentId(values);
-                        if (pendingPreUpdate.Remove(pkKey, out var oldValues))
+                        if (pendingPreUpdate.Remove(MakeLsnSeqKey(rowLsn, rowSeq), out var oldValues))
                         {
                             var (delete, upsert) = CreateEmbeddedUpdateEvents(op, oldValues);
                             if (delete.HasValue)
@@ -294,6 +296,16 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                     var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
                     buffer.Add((rowLsn, rowSeq, buffer.Count, new CdcEvent(eventType, op, null)));
+                }
+
+                // Defense-in-depth: under correct CDC semantics every op=3 is paired with an
+                // op=4 in the same poll, but if anything is left over (unexpected CDC shape,
+                // mid-stream cancellation), return the rented arrays to the pool.
+                if (pendingPreUpdate is { Count: > 0 })
+                {
+                    foreach (var arr in pendingPreUpdate.Values)
+                        processor.ReturnValues(arr);
+                    pendingPreUpdate.Clear();
                 }
             }
 
@@ -580,7 +592,42 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override DbCommandBuilder CommandBuilder { get; } = new SqlCommandBuilder();
 
-    protected override bool UsesTopN => true;
+    /// <summary>
+    /// SQL Server lacks support for row-value comparison (<c>(c1,c2) &gt; (@k0,@k1)</c>) and uses
+    /// <c>TOP (N)</c> instead of <c>LIMIT N</c>. Expand the keyset-pagination predicate into the
+    /// equivalent lexicographic-OR form, which yields the same logical result on every provider.
+    /// </summary>
+    protected override string BuildBatchQuery(
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        string[] lastKeys, int maxBatchSize)
+    {
+        var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
+        var quotedCols = pkColumns.Select(c => CommandBuilder.QuoteIdentifier(c)).ToArray();
+        var pkColsList = string.Join(", ", quotedCols);
+
+        var where = string.Empty;
+        if (lastKeys != null)
+        {
+            // (c1,c2,c3) > (@k0,@k1,@k2)  ⇔
+            //   c1 > @k0
+            //   OR (c1 = @k0 AND c2 > @k1)
+            //   OR (c1 = @k0 AND c2 = @k1 AND c3 > @k2)
+            var disjuncts = new List<string>(quotedCols.Length);
+            for (int i = 0; i < quotedCols.Length; i++)
+            {
+                var sb = new StringBuilder();
+                for (int j = 0; j < i; j++)
+                {
+                    sb.Append(quotedCols[j]).Append(" = @k").Append(j).Append(" AND ");
+                }
+                sb.Append(quotedCols[i]).Append(" > @k").Append(i);
+                disjuncts.Add(quotedCols.Length == 1 ? sb.ToString() : "(" + sb + ")");
+            }
+            where = " WHERE " + string.Join(" OR ", disjuncts);
+        }
+
+        return $"SELECT TOP ({maxBatchSize}) * FROM {table}{where} ORDER BY {pkColsList}";
+    }
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
 
@@ -718,6 +765,11 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         if (b == null) return 1;
 
         return ((ReadOnlySpan<byte>)a).SequenceCompareTo(b);
+    }
+
+    private static string MakeLsnSeqKey(byte[] lsn, byte[] seqVal)
+    {
+        return string.Concat(Convert.ToHexString(lsn), ":", Convert.ToHexString(seqVal));
     }
 
     private static bool IsAllZero(byte[] bytes)
