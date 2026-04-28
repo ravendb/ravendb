@@ -406,6 +406,34 @@ export class DatabasesStubs {
                     Process: "Index",
                     Estimated: false,
                 },
+                {
+                    Identifier: "ReplicationSink/Orders",
+                    Type: "Documents",
+                    Collection: "Orders",
+                    Etag: 42,
+                    NumberOfTombstoneLeft: 1500,
+                    Types: {
+                        Documents: 1200,
+                        TimeSeries: 200,
+                        Counters: 100,
+                    },
+                    Process: "InternalReplication",
+                    Estimated: true,
+                },
+                {
+                    Identifier: "ExternalReplication/Products",
+                    Type: "Documents",
+                    Collection: "Products",
+                    Etag: 42,
+                    NumberOfTombstoneLeft: 1500,
+                    Types: {
+                        Documents: 1200,
+                        TimeSeries: 200,
+                        Counters: 100,
+                    },
+                    Process: "ExternalReplication",
+                    Estimated: false,
+                },
             ],
         };
     }
