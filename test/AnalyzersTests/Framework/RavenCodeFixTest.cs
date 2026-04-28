@@ -9,7 +9,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
 
@@ -93,17 +92,9 @@ namespace AnalyzersTests.Framework
             // Use the first diagnostic
             Diagnostic firstDiagnostic = diagnostics[0];
 
-            // Create a code fix context
-            CodeFixContext context = new(
-                document: document,
-                diagnostic: firstDiagnostic,
-                registerCodeFix: (action, diags) => { /* collected in the inner callback */ },
-                cancellationToken: CancellationToken.None);
-
             TFix fixProvider = new();
             List<CodeAction> registeredActions = [];
 
-            // Re-run RegisterCodeFixesAsync with a callback that collects actions
             await fixProvider.RegisterCodeFixesAsync(
                 new CodeFixContext(
                     document,

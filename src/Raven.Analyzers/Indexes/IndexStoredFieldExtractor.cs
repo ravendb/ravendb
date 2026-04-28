@@ -117,7 +117,10 @@ namespace Raven.Analyzers.Indexes
                     if (methodName == KnownTypes.StoreMethodName)
                     {
                         SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
-                        if (args.Count == 0)
+                        if (args.Count < 2)
+                            continue;
+
+                        if (!IsFieldStorageYes(args[1].Expression))
                             continue;
 
                         string? fieldName = ExtractFieldNameFromArg(args[0].Expression);
@@ -142,6 +145,9 @@ namespace Raven.Analyzers.Indexes
                     if (indexerArgs.Count == 0)
                         return StoredFieldsStatus.BailCannotAnalyze;
 
+                    if (!IsFieldStorageYes(assignment.Right))
+                        continue;
+
                     string? fieldName = ExtractFieldNameFromArg(indexerArgs[0].Expression);
                     if (fieldName == null)
                         return StoredFieldsStatus.BailCannotAnalyze;
@@ -151,6 +157,13 @@ namespace Raven.Analyzers.Indexes
             }
 
             return StoredFieldsStatus.Ok;
+        }
+
+        private static bool IsFieldStorageYes(ExpressionSyntax expr)
+        {
+            // FieldStorage.Yes — a member access where the member name is "Yes"
+            return expr is MemberAccessExpressionSyntax ma
+                && ma.Name.Identifier.ValueText == "Yes";
         }
 
         /// <summary>

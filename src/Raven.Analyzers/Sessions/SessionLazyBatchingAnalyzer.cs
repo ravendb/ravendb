@@ -75,7 +75,6 @@ namespace Raven.Analyzers.Sessions
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;
             public readonly List<(InvocationExpressionSyntax invocation, string methodName)> BatchableCalls;
-            private SyntaxNode? _root;
 
             public MaterializingCallCollector(SemanticModel model)
             {
@@ -88,8 +87,6 @@ namespace Raven.Analyzers.Sessions
             {
                 if (node == null)
                     return;
-
-                _root = node;
 
                 // Pass 1: Collect all locals directly assigned from materializing calls
                 var pass1Visitor = new Pass1CollectMaterializationDerivedLocals(_model, _materializationDerivedSet);
@@ -234,14 +231,9 @@ namespace Raven.Analyzers.Sessions
                             return false; // Directly derived from materialization
 
                         // Check the local's initializer for dependency on any materialization-derived symbol
-                        if (_root != null)
-                        {
-                            VariableDeclaratorSyntax? declarator = FindDeclarator(_root, local);
-                            if (declarator?.Initializer?.Value is ExpressionSyntax initExpr)
-                            {
-                                return IsSimpleContextExpr(initExpr);
-                            }
-                        }
+                        VariableDeclaratorSyntax? declarator = FindDeclarator(local);
+                        if (declarator?.Initializer?.Value is ExpressionSyntax initExpr)
+                            return IsSimpleContextExpr(initExpr);
 
                         return false; // Can't determine, be conservative
                     }
@@ -278,11 +270,12 @@ namespace Raven.Analyzers.Sessions
                 return false;
             }
 
-            private static VariableDeclaratorSyntax? FindDeclarator(SyntaxNode root, ILocalSymbol local)
+            private static VariableDeclaratorSyntax? FindDeclarator(ILocalSymbol local)
             {
-                var walker = new DeclaratorFinder(local);
-                walker.Visit(root);
-                return walker.FoundDeclarator;
+                if (local.DeclaringSyntaxReferences.IsDefaultOrEmpty)
+                    return null;
+
+                return local.DeclaringSyntaxReferences[0].GetSyntax() as VariableDeclaratorSyntax;
             }
         }
 
@@ -386,56 +379,5 @@ namespace Raven.Analyzers.Sessions
             }
         }
 
-        private sealed class DeclaratorFinder : CSharpSyntaxWalker
-        {
-            private readonly ILocalSymbol _target;
-            public VariableDeclaratorSyntax? FoundDeclarator { get; private set; }
-
-            public DeclaratorFinder(ILocalSymbol target)
-            {
-                _target = target;
-            }
-
-            public override void VisitVariableDeclarator(VariableDeclaratorSyntax node)
-            {
-                if (FoundDeclarator != null)
-                {
-                    base.VisitVariableDeclarator(node);
-                    return;
-                }
-
-                // This would need semantic model to resolve, but we can't pass it in Visit.
-                // For now, store all candidates and rely on callers to match.
-                // Actually, since we're searching by symbol, we need the semantic model.
-                // This is a limitation, but for common cases the name will match.
-
-                if (node.Identifier.Text == _target.Name)
-                {
-                    FoundDeclarator = node;
-                }
-
-                base.VisitVariableDeclarator(node);
-            }
-
-            public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas
-            }
-
-            public override void VisitParenthesizedLambdaExpression(ParenthesizedLambdaExpressionSyntax node)
-            {
-                // Skip nested lambdas
-            }
-
-            public override void VisitAnonymousMethodExpression(AnonymousMethodExpressionSyntax node)
-            {
-                // Skip anonymous methods
-            }
-
-            public override void VisitLocalFunctionStatement(LocalFunctionStatementSyntax node)
-            {
-                // Skip local functions
-            }
-        }
     }
 }
