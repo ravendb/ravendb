@@ -254,7 +254,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 // CDC always emits the matching op=4 with identical LSN and seqval, so the pair
                 // is found regardless of whether the UPDATE changed any PK column (a PK-derived
                 // key would miss when the embedded PK includes the join column).
-                Dictionary<string, object[]> pendingPreUpdate = null;
+                Dictionary<LsnSeqKey, object[]> pendingPreUpdate = null;
 
                 while (await reader.ReadAsync(ct))
                 {
@@ -271,8 +271,8 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
                     if (operation == 3) // pre-update image for embedded table
                     {
-                        pendingPreUpdate ??= new Dictionary<string, object[]>(StringComparer.Ordinal);
-                        pendingPreUpdate[MakeLsnSeqKey(rowLsn, rowSeq)] = values;
+                        pendingPreUpdate ??= new Dictionary<LsnSeqKey, object[]>();
+                        pendingPreUpdate[new LsnSeqKey(rowLsn, rowSeq)] = values;
                         continue;
                     }
 
@@ -282,7 +282,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                     if (operation == 4 && !processor.IsRoot && pendingPreUpdate != null)
                     {
                         // Post-update image — pair with stashed pre-update for reparent detection
-                        if (pendingPreUpdate.Remove(MakeLsnSeqKey(rowLsn, rowSeq), out var oldValues))
+                        if (pendingPreUpdate.Remove(new LsnSeqKey(rowLsn, rowSeq), out var oldValues))
                         {
                             var (delete, upsert) = CreateEmbeddedUpdateEvents(op, oldValues);
                             if (delete.HasValue)
@@ -769,9 +769,35 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         return ((ReadOnlySpan<byte>)a).SequenceCompareTo(b);
     }
 
-    private static string MakeLsnSeqKey(byte[] lsn, byte[] seqVal)
+    /// <summary>
+    /// Pair key for SQL Server CDC pre-image (op=3) / post-image (op=4) matching. Holds
+    /// references to the byte[] LSN and seqval ADO.NET already allocated for the row, so
+    /// the dictionary lookup is allocation-free per UPDATE row.
+    /// </summary>
+    private readonly struct LsnSeqKey : IEquatable<LsnSeqKey>
     {
-        return string.Concat(Convert.ToHexString(lsn), ":", Convert.ToHexString(seqVal));
+        private readonly byte[] _lsn;
+        private readonly byte[] _seqVal;
+
+        public LsnSeqKey(byte[] lsn, byte[] seqVal)
+        {
+            _lsn = lsn;
+            _seqVal = seqVal;
+        }
+
+        public bool Equals(LsnSeqKey other) =>
+            ((ReadOnlySpan<byte>)_lsn).SequenceEqual(other._lsn) &&
+            ((ReadOnlySpan<byte>)_seqVal).SequenceEqual(other._seqVal);
+
+        public override bool Equals(object obj) => obj is LsnSeqKey other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hc = new HashCode();
+            hc.AddBytes(_lsn);
+            hc.AddBytes(_seqVal);
+            return hc.ToHashCode();
+        }
     }
 
     private static bool IsAllZero(byte[] bytes)
