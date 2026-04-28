@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Raven.Analyzers.CodeFixes</AssemblyName>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <LangVersion>preview</LangVersion>
+    <Nullable>enable</Nullable>
+    <!--
+      This assembly is intentionally split off from Raven.Analyzers. Per RS1038
+      (https://github.com/dotnet/roslyn-analyzers/issues/7438) analyzer assemblies must
+      only reference compiler-provided assemblies; Microsoft.CodeAnalysis.CSharp.Workspaces
+      (required by code-fix providers) is not one of them. Both DLLs are packed together
+      into analyzers/dotnet/cs/ inside the RavenDB.Analyzers NuGet package: IDEs load both,
+      command-line builds load only the analyzer DLL.
+    -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+    <ProjectReference Include="..\Raven.Analyzers\Raven.Analyzers.csproj" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
