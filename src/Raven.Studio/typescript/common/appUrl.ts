@@ -37,6 +37,7 @@ class appUrl {
         identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
         cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
+        sampleQueries: ko.pureComputed(() => appUrl.forPatchSamples(appUrl.currentDatabase())),
         indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         newDoc: ko.pureComputed(() => appUrl.forNewDoc(appUrl.currentDatabase())),
@@ -571,15 +572,25 @@ class appUrl {
         return "#databases/documents/conflicts?" + databasePart + docIdUrlPart;
     }
 
-    static forPatch(db: database, hashOfRecentPatch?: number): string {
+    static forPatch(db: database | string, hashOfRecentPatch?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
 
-        if (hashOfRecentPatch) {
+        if (hashOfRecentPatch != null) {
             const patchPath = "recentpatch-" + hashOfRecentPatch;
             return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
         } else {
             return "#databases/patch?" + databasePart;
         }
+    }
+
+    static forSampleQueries(db: database | string, dataKey: string, initialScriptHash?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const hashPart = initialScriptHash != null ? "&initialScriptHash=" + initialScriptHash : "";
+        return "#databases/patch-samples?" + databasePart + "&dataKey=" + encodeURIComponent(dataKey) + hashPart;
+    }
+
+    static forPatchSamples(db: database | string, initialScriptHash?: number): string {
+        return appUrl.forSampleQueries(db, "patch", initialScriptHash);
     }
 
     static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {

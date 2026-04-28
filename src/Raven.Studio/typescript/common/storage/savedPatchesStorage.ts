@@ -2,6 +2,7 @@
 
 import database = require("models/resources/database");
 import storageKeyProvider = require("common/storage/storageKeyProvider");
+import genUtils = require("common/generalUtils");
 
 class savedPatchesStorage {
 
@@ -45,6 +46,32 @@ class savedPatchesStorage {
             //no need to do anything
         }
         return savedPatchesFromLocalStorage;
+    }
+
+    static storePlaygroundScript(db: database | string, script: string) {
+        const hash = genUtils.hashCode(script);
+        const localStorageName = savedPatchesStorage.getLocalStorageKey(db instanceof database ? db.name : db);
+        let patches: storedPatchDto[] = savedPatchesStorage.getSavedPatchesFromLocalStorage(localStorageName) ?? [];
+        const exists = patches.some((dto) => dto.Hash === hash);
+        if (!exists) {
+            const entry: storedPatchDto = {
+                Name: `__playground_${hash}`,
+                Query: script,
+                RecentPatch: false,
+                ModificationDate: new Date().toISOString(),
+                Hash: hash,
+            };
+            patches = [entry, ...patches];
+            localStorage.setObject(localStorageName, patches);
+        }
+        return hash;
+    }
+
+    static getPlaygroundScript(db: database | string, hash: number) {
+        const localStorageName = savedPatchesStorage.getLocalStorageKey(db instanceof database ? db.name : db);
+        const patches: storedPatchDto[] = savedPatchesStorage.getSavedPatchesFromLocalStorage(localStorageName) ?? [];
+        const entry = patches.find((dto) => dto.Hash === hash);
+        return entry ? entry.Query : null;
     }
 
     static onDatabaseDeleted(qualifer: string, name: string) {
