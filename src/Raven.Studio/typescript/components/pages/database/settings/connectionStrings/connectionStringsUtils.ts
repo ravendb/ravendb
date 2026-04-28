@@ -5,11 +5,18 @@ export interface ConnectionStringsNameContext {
     usedNames: string[];
 }
 
+export const serverWideConnectionStringPrefix = "Server Wide Connection String";
+
 export const connectionStringsUtils = {
     nameSchema: yup
         .string()
         .nullable()
         .required()
+        .test(
+            "no-reserved-prefix",
+            `Name must not start with the reserved prefix "${serverWideConnectionStringPrefix}"`,
+            (value) => !value?.startsWith(serverWideConnectionStringPrefix)
+        )
         .test("is-name-unique", "Name must be unique", (value, ctx) => {
             const { isForNewConnection, usedNames } = ctx.options.context as ConnectionStringsNameContext;
 

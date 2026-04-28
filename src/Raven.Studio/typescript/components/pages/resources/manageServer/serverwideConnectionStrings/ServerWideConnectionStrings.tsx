@@ -134,7 +134,7 @@ export default function ServerWideConnectionStrings() {
                                                     <ConnectionStringsPanel
                                                         key={connection.type + "_" + connection.name}
                                                         connection={connection}
-                                                        isServerwide
+                                                        isServerWide
                                                         onEditConnection={setEditConnection}
                                                         onConnectionDeleted={handleConnectionDeleted}
                                                     />

@@ -24,33 +24,36 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import copyToClipboard from "common/copyToClipboard";
 import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { serverWideConnectionStringPrefix } from "./connectionStringsUtils";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
-    isServerwide?: boolean;
+    isServerWide?: boolean;
     onConnectionDeleted?: (connection: Connection) => void;
     onEditConnection?: (connection: Connection) => void;
 }
 
 export default function ConnectionStringsPanel(props: ConnectionStringsPanelProps) {
-    const { connection, isServerwide = false, onConnectionDeleted, onEditConnection } = props;
+    const { connection, isServerWide = false, onConnectionDeleted, onEditConnection } = props;
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
     const { tasksService } = useServices();
 
+    const isFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
+
     const deleteButtonId = useUniqueId("delete");
-    const isDeleteDisabled = connection.usedByTasks?.length > 0;
+    const isDeleteDisabled = connection.usedByTasks?.length > 0 || isFromServerWide;
+    const isEditDisabled = connection.usedByTasks?.length > 0 || isFromServerWide;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
-    const hasWriteAccess = isServerwide ? hasClusterAdminAccess : hasDatabaseAdminAccess;
+    const hasWriteAccess = isServerWide ? hasClusterAdminAccess : hasDatabaseAdminAccess;
     const { appUrl } = useAppUrls();
-    const isFromServerWide = !isServerwide && connection.excludedDatabases !== undefined;
 
     const asyncDelete = useAsyncCallback(async () => {
-        if (isServerwide) {
+        if (isServerWide) {
             await tasksService.deleteServerWideConnectionString(getDtoEtlType(connection.type), connection.name);
             onConnectionDeleted?.(connection);
         } else {
@@ -100,19 +103,46 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                         >
                             <div className={classNames({ "item-disabled pe-none": isFromServerWide })}>
                                 <RichPanelActions>
-                                    <Button
-                                        variant="secondary"
-                                        title="Edit connection string"
-                                        onClick={() =>
-                                            isServerwide
-                                                ? onEditConnection?.(connection)
-                                                : dispatch(
-                                                      connectionStringsActions.editConnectionModalOpened(connection)
-                                                  )
-                                        }
+                                    <ConditionalPopover
+                                        conditions={[
+                                            {
+                                                isActive: isFromServerWide,
+                                                message: (
+                                                    <>
+                                                        This connection string is managed server-wide. To edit or delete
+                                                        it, go to{" "}
+                                                        <a href={appUrl.forServerwideConnectionStrings()}>
+                                                            Server-Wide Connection Strings
+                                                        </a>
+                                                        .
+                                                    </>
+                                                ),
+                                            },
+                                            {
+                                                isActive: isEditDisabled,
+                                                message: "Connection string is being used by an ongoing task",
+                                            },
+                                        ]}
                                     >
-                                        <Icon icon="edit" margin="m-0" />
-                                    </Button>
+                                        <div>
+                                            <Button
+                                                variant="secondary"
+                                                title="Edit connection string"
+                                                onClick={() =>
+                                                    isServerWide
+                                                        ? onEditConnection?.(connection)
+                                                        : dispatch(
+                                                              connectionStringsActions.editConnectionModalOpened(
+                                                                  connection
+                                                              )
+                                                          )
+                                                }
+                                                disabled={isFromServerWide}
+                                            >
+                                                <Icon icon="edit" margin="m-0" />
+                                            </Button>
+                                        </div>
+                                    </ConditionalPopover>
                                     <ConditionalPopover
                                         conditions={{
                                             isActive: isDeleteDisabled,
@@ -123,7 +153,7 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                                             <ButtonWithSpinner
                                                 variant="danger"
                                                 title="Delete connection string"
-                                                disabled={isDeleteDisabled}
+                                                disabled={isDeleteDisabled || isFromServerWide}
                                                 onClick={onDelete}
                                                 icon="trash"
                                                 isSpinning={asyncDelete.loading}

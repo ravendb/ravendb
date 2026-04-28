@@ -420,12 +420,14 @@ export type ServerWideConnectionStringDto =
     | WithExcludedDatabases<QueueConnectionStringDto>
     | WithExcludedDatabases<AiConnectionStringDto>;
 
-const noTasks: ConnectionStringUsedTask[] = [];
-
-
 export function mapServerWideConnectionsFromDto(
-    results: ServerWideConnectionStringDto[]
-): { [key in StudioConnectionType]: Connection[] } {
+    results: ServerWideConnectionStringDto[],
+    ongoingTasks: OngoingTaskForConnection[]
+): {
+    [key in StudioConnectionType]: Connection[];
+} {
+    const getPrefixedName = (name: string) => `Server Wide Connection String, ${name}`;
+
     const mapped: Record<StudioConnectionType, Connection[]> = {
         Raven: [],
         Sql: [],
@@ -449,7 +451,7 @@ export function mapServerWideConnectionsFromDto(
                     name: d.Name,
                     database: d.Database,
                     topologyDiscoveryUrls: d.TopologyDiscoveryUrls.map((url) => ({ url })),
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Raven", getPrefixedName(d.Name)),
                     excludedDatabases,
                 } satisfies RavenConnection);
                 break;
@@ -461,7 +463,7 @@ export function mapServerWideConnectionsFromDto(
                     name: d.Name,
                     connectionString: d.ConnectionString,
                     factoryName: d.FactoryName,
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Sql", getPrefixedName(d.Name)),
                     excludedDatabases,
                 } satisfies SqlConnection);
                 break;
@@ -472,7 +474,7 @@ export function mapServerWideConnectionsFromDto(
                     type: "Snowflake",
                     name: d.Name,
                     connectionString: d.ConnectionString,
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Snowflake", getPrefixedName(d.Name)),
                     excludedDatabases,
                 } satisfies SnowflakeConnection);
                 break;
@@ -482,7 +484,7 @@ export function mapServerWideConnectionsFromDto(
                 mapped.Olap.push({
                     type: "Olap",
                     name: d.Name,
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Olap", getPrefixedName(d.Name)),
                     excludedDatabases,
                     ...mapDestinationsFromDto(_.omit(d, "Type", "Name")),
                 } satisfies OlapConnection);
@@ -500,7 +502,7 @@ export function mapServerWideConnectionsFromDto(
                     password: d.Authentication?.Basic?.Password,
                     certificatesBase64: d.Authentication?.Certificate?.CertificatesBase64,
                     nodes: d.Nodes.map((url) => ({ url })),
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "ElasticSearch", getPrefixedName(d.Name)),
                     excludedDatabases,
                 } satisfies ElasticSearchConnection);
                 break;
@@ -518,7 +520,7 @@ export function mapServerWideConnectionsFromDto(
                                 value: d.KafkaConnectionSettings.ConnectionOptions[key],
                             })),
                             isUseRavenCertificate: d.KafkaConnectionSettings.UseRavenCertificate,
-                            usedByTasks: noTasks,
+                            usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Kafka", getPrefixedName(d.Name)),
                             excludedDatabases,
                         } satisfies KafkaConnection);
                         break;
@@ -527,7 +529,11 @@ export function mapServerWideConnectionsFromDto(
                             type: "RabbitMQ",
                             name: d.Name,
                             connectionString: d.RabbitMqConnectionSettings.ConnectionString,
-                            usedByTasks: noTasks,
+                            usedByTasks: getConnectionStringUsedTasks(
+                                ongoingTasks,
+                                "RabbitMQ",
+                                getPrefixedName(d.Name)
+                            ),
                             excludedDatabases,
                         } satisfies RabbitMqConnection);
                         break;
@@ -550,7 +556,11 @@ export function mapServerWideConnectionsFromDto(
                                     storageAccountName: d.AzureQueueStorageConnectionSettings.Passwordless?.StorageAccountName,
                                 },
                             },
-                            usedByTasks: noTasks,
+                            usedByTasks: getConnectionStringUsedTasks(
+                                ongoingTasks,
+                                "AzureQueueStorage",
+                                getPrefixedName(d.Name)
+                            ),
                             excludedDatabases,
                         } satisfies AzureQueueStorageConnection);
                         break;
@@ -567,7 +577,11 @@ export function mapServerWideConnectionsFromDto(
                                     regionName: d.AmazonSqsConnectionSettings.Basic?.RegionName,
                                 },
                             },
-                            usedByTasks: noTasks,
+                            usedByTasks: getConnectionStringUsedTasks(
+                                ongoingTasks,
+                                "AmazonSqs",
+                                getPrefixedName(d.Name)
+                            ),
                             excludedDatabases,
                         } satisfies AmazonSqsConnection);
                         break;
@@ -579,7 +593,7 @@ export function mapServerWideConnectionsFromDto(
                 mapped.Ai.push({
                     type: "Ai",
                     name: d.Name,
-                    usedByTasks: noTasks,
+                    usedByTasks: getConnectionStringUsedTasks(ongoingTasks, "Ai", getPrefixedName(d.Name)),
                     excludedDatabases,
                     identifier: d.Identifier,
                     connectorType: getAiConnectorType(d),
