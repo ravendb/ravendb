@@ -44,6 +44,7 @@ export interface IndexCollectionProgress {
     documents: IndexingProgress;
     tombstones: IndexingProgress;
     deletedTimeSeries: IndexingProgress;
+    estimated: boolean;
 }
 
 export interface IndexingProgress extends Progress {

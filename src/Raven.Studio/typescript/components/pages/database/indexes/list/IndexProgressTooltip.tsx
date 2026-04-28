@@ -115,8 +115,21 @@ export function IndexProgressTooltip(props: IndexProgressTooltipProps) {
 
                 {nodeInfo.progress &&
                     nodeInfo.progress.collections.map((collection) => {
+                        const collectionName = collection.estimated ? (
+                            <>
+                                {collection.name}{" "}
+                                <small
+                                    className="text-muted"
+                                    title="Estimated value. The exact count takes too long to calculate and will be skipped for performance."
+                                >
+                                    (~)
+                                </small>
+                            </>
+                        ) : (
+                            collection.name
+                        );
                         return (
-                            <NamedProgress name={collection.name} key={collection.name}>
+                            <NamedProgress name={collectionName} key={collection.name}>
                                 <NamedProgressItem progress={collection.documents}>documents</NamedProgressItem>
                                 <NamedProgressItem progress={collection.tombstones}>tombstones</NamedProgressItem>
                                 {index.sourceType === "TimeSeries" && (
