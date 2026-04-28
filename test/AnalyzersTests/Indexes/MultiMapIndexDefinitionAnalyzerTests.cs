@@ -42,7 +42,7 @@ class Employee { public string FirstName { get; set; } }
         }
 
         [Fact]
-        public async Task MultiMap_No_AddMap_In_Ctor_Reports_Warning()
+        public async Task MultiMap_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
 class MyMultiMapIndex : AbstractMultiMapIndexCreationTask<MyResult>
@@ -57,7 +57,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("MyMultiMapIndex", d.GetMessage());
         }
 
@@ -86,7 +86,7 @@ class Company { public string Name { get; set; } }
         }
 
         [Fact]
-        public async Task MultiMap_AddMap_Only_In_Helper_Method_Reports_Warning()
+        public async Task MultiMap_AddMap_Only_In_Helper_Method_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
 class MyMultiMapIndex : AbstractMultiMapIndexCreationTask<MyResult>
@@ -161,7 +161,7 @@ class Employee { public string FirstName { get; set; } }
         }
 
         [Fact]
-        public async Task MultiMapTimeSeries_No_AddMap_In_Ctor_Reports_Warning()
+        public async Task MultiMapTimeSeries_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
 class MyTsIndex : AbstractMultiMapTimeSeriesIndexCreationTask<MyResult>
@@ -176,7 +176,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
         [Fact]
@@ -226,7 +226,7 @@ class Employee { public string FirstName { get; set; } }
         }
 
         [Fact]
-        public async Task MultiMapCounters_No_AddMap_In_Ctor_Reports_Warning()
+        public async Task MultiMapCounters_No_AddMap_In_Ctor_Reports_Diagnostics()
         {
             const string source = CommonUsings + @"
 class MyCountersIndex : AbstractMultiMapCountersIndexCreationTask<MyResult>
@@ -241,7 +241,7 @@ class MyResult { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.MultiMapIndexMissingAddMap, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
         [Fact]

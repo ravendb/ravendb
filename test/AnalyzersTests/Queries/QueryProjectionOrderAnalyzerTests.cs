@@ -39,7 +39,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("Where", d.GetMessage());
         }
 
@@ -214,7 +214,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.DoubleProjectInto, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
         }
 
         [Fact]
@@ -262,7 +262,7 @@ class Test
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryFilteringAfterProjection, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("Search", d.GetMessage());
         }
 

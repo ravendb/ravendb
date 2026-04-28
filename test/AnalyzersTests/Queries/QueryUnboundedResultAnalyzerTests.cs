@@ -37,7 +37,7 @@ class User { public string Id { get; set; } }
 
             Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryUnboundedResult, diagnostics[0].Id);
-            Assert.Equal(DiagnosticSeverity.Warning, diagnostics[0].Severity);
+            Assert.Equal(DiagnosticSeverity.Info, diagnostics[0].Severity);
         }
 
         [Fact]
