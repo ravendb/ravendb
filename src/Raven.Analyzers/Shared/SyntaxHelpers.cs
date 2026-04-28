@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Analyzers.Shared
 {
-    internal static class SyntaxHelpers
+    public static class SyntaxHelpers
     {
         /// <summary>
         /// Enumerates the invocation chain starting from <paramref name="expression"/>,
@@ -27,7 +27,7 @@ namespace Raven.Analyzers.Shared
         /// Returns the simple method name from an invocation, handling both
         /// plain member access and generic method calls.
         /// </summary>
-        internal static string? GetMethodName(InvocationExpressionSyntax invocation)
+        public static string? GetMethodName(InvocationExpressionSyntax invocation)
         {
             return invocation.Expression switch
             {
@@ -41,7 +41,7 @@ namespace Raven.Analyzers.Shared
         /// Returns true when <paramref name="type"/> is, or implements, IRavenQueryable&lt;T&gt;.
         /// Matched by name only — avoids FQN coupling with Raven.Client versioning.
         /// </summary>
-        internal static bool IsRavenQueryable(ITypeSymbol? type)
+        public static bool IsRavenQueryable(ITypeSymbol? type)
         {
             if (type == null)
                 return false;

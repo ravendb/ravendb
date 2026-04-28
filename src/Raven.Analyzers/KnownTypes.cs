@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace Raven.Analyzers
 {
-    internal static class KnownTypes
+    public static class KnownTypes
     {
         public const string IRavenQueryableName = "IRavenQueryable";
 

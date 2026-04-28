@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Raven.Analyzers.Shared;
 
-namespace Raven.Analyzers.Sessions
+namespace Raven.Analyzers.CodeFixes.Sessions
 {
     [ExportCodeFixProvider(LanguageNames.CSharp, Name = nameof(SessionLazyBatchingCodeFixProvider))]
     [Shared]
