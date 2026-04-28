@@ -74,17 +74,23 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (collector.BatchableCalls.Count < 2)
                 return;
 
-            // Find indices of batchable statements in the block's statement list
+            // Find indices of batchable statements that are direct children of this block.
+            // The collector may include calls from nested blocks; we only fix direct statements.
             List<int> batchableIndices = [];
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad)> directBatchableCalls = [];
+
             for (int i = 0; i < block.Statements.Count; i++)
             {
-                StatementSyntax stmt = block.Statements[i];
-                if (stmt is LocalDeclarationStatementSyntax localDecl)
+                if (block.Statements[i] is not LocalDeclarationStatementSyntax localDecl)
+                    continue;
+
+                foreach (var call in collector.BatchableCalls)
                 {
-                    if (collector.BatchableCalls.Any(call =>
-                        call.statement == localDecl))
+                    if (call.statement == localDecl)
                     {
                         batchableIndices.Add(i);
+                        directBatchableCalls.Add(call);
+                        break;
                     }
                 }
             }
@@ -100,7 +106,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             }
 
             // Determine if any call is async
-            bool isAsync = collector.BatchableCalls.Any(call =>
+            bool isAsync = directBatchableCalls.Any(call =>
                 call.methodName.EndsWith("Async", StringComparison.Ordinal));
 
             // Register the code fix
@@ -110,7 +116,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     ct => ApplyLazyBatchFixAsync(
                         context.Document,
                         block,
-                        collector.BatchableCalls,
+                        directBatchableCalls,
                         batchableIndices,
                         isAsync,
                         ct),
@@ -410,17 +416,12 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
         private sealed class BatchableCallCollector : CSharpSyntaxWalker
         {
+            // Only ToList/ToArray have direct Lazily() equivalents via IRavenQueryable.Lazily().
+            // Count/First/Single/Any etc. would need dedicated CountLazily() APIs and are excluded.
             private static readonly HashSet<string> QueryMaterializingMethods = new(StringComparer.Ordinal)
             {
-                "ToList",    "ToListAsync",
-                "ToArray",   "ToArrayAsync",
-                "First",     "FirstAsync",
-                "FirstOrDefault",  "FirstOrDefaultAsync",
-                "Single",    "SingleAsync",
-                "SingleOrDefault", "SingleOrDefaultAsync",
-                "Any",       "AnyAsync",
-                "Count",     "CountAsync",
-                "LongCount", "LongCountAsync",
+                "ToList",  "ToListAsync",
+                "ToArray", "ToArrayAsync",
             };
 
             private readonly SemanticModel _model;
