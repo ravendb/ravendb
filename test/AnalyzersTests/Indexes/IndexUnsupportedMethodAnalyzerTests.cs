@@ -44,7 +44,7 @@ class Product { public string Name { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("Normalize", d.GetMessage());
             Assert.Contains("Map", d.GetMessage());
         }

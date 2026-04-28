@@ -41,7 +41,7 @@ class Line { public string Product { get; set; } public int Quantity { get; set;
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("SelectMany", d.GetMessage());
         }
 

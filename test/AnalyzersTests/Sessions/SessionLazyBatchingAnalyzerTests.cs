@@ -44,7 +44,7 @@ class Order { public string Id { get; set; } }
             Assert.All(diagnostics, d =>
             {
                 Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id);
-                Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+                Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             });
         }
 
@@ -70,7 +70,7 @@ class User { public string Id { get; set; } }
             Assert.All(diagnostics, d =>
             {
                 Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id);
-                Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+                Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             });
         }
 
@@ -96,7 +96,7 @@ class User { public string Id { get; set; } public bool Active { get; set; } }
             Assert.All(diagnostics, d =>
             {
                 Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id);
-                Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+                Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             });
         }
 
