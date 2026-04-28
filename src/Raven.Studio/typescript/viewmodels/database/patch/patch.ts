@@ -24,6 +24,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
+import appUrl = require("common/appUrl");
 
 class patchList {
 
@@ -155,6 +156,14 @@ class patch extends shardViewModelBase {
 
     inSaveMode = ko.observable<boolean>();
 
+    samplesUrl = ko.pureComputed(() => appUrl.forPatchSamples(this.db));
+
+    navigateToSamples() {
+        const script = this.patchDocument().query();
+        const hash = script ? savedPatchesStorage.storePlaygroundScript(this.db, script) : undefined;
+        this.navigate(appUrl.forPatchSamples(this.db, hash));
+    }
+
     spinners = {
         save: ko.observable<boolean>(false),
         countMatchingDocuments: ko.observable<boolean>(false)
@@ -209,7 +218,7 @@ class patch extends shardViewModelBase {
         });
     }
 
-    activate(recentPatchHash?: string) {
+    activate(recentPatchHash?: string, queryParams?: { script?: string }) {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
 
@@ -217,8 +226,23 @@ class patch extends shardViewModelBase {
 
         this.loadLastQuery();
 
+        if (queryParams?.script) {
+            this.patchDocument().query(decodeURIComponent(queryParams.script));
+        }
+
+        if (recentPatchHash?.startsWith("recentpatch-")) {
+            const hashStr = recentPatchHash.slice("recentpatch-".length);
+            const hash = parseInt(hashStr, 10);
+            if (!isNaN(hash)) {
+                const script = savedPatchesStorage.getPlaygroundScript(this.db, hash);
+                if (script != null) {
+                    this.patchDocument().query(script);
+                }
+            }
+        }
+
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
-        
+
         return $.when<any>(this.fetchIndexNames(this.db), this.savedPatches.loadAll(this.db));
     }
 

@@ -16,6 +16,7 @@ interface computedAppUrls {
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
     patch: KnockoutComputed<string>;
+    sampleQueries: KnockoutComputed<string>;
     cmpXchg: KnockoutComputed<string>;
     identities: KnockoutComputed<string>;
     indexes: (indexName?: string, staleOnly?: boolean, isImportOpen?: boolean) => KnockoutComputed<string>;

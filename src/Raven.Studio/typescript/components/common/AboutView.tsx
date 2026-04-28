@@ -19,7 +19,7 @@ interface AboutViewProps {
 }
 
 interface AboutViewHeadingBaseProps {
-    title: string;
+    title: ReactNode;
     licenseBadgeText?: LicenseBadgeText;
     iconAddon?: IconName;
     marginBottom?: number;
