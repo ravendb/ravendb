@@ -150,6 +150,30 @@
   <ItemGroup>
     <ProjectReference Include="..\Sparrow\Sparrow.csproj" PrivateAssets="All" />
   </ItemGroup>
+  <!--
+    RavenDB analyzers ship embedded in this package under analyzers/dotnet/cs/.
+    Both DLLs are built by the pre-pack target below before GenerateNuspec runs,
+    so their bin paths are populated when the <None Include> items are evaluated.
+    Using a <Target> instead of <ProjectReference> avoids NETSDK1005 TFM-resolution
+    failures: Raven.Analyzers targets netstandard2.0 and cannot satisfy Raven.Client's
+    net8.0/net10.0/netstandard2.1 TFMs in the asset resolution step.
+    See analyzer-strategy.md for the embedded-distribution rationale.
+  -->
+  <ItemGroup>
+    <None Include="..\Raven.Analyzers\bin\$(Configuration)\netstandard2.0\Raven.Analyzers.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\Raven.Analyzers.CodeFixes\bin\$(Configuration)\netstandard2.0\Raven.Analyzers.CodeFixes.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="BuildAnalyzerProjects" BeforeTargets="GenerateNuspec">
+    <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"
+             Properties="Configuration=$(Configuration)"
+             Targets="Build" />
+    <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
+             Properties="Configuration=$(Configuration)"
+             Targets="Build" />
+  </Target>
   <ItemGroup>
     <PackageReference Include="Lambda2Js.Signed" />
     <PackageReference Include="Microsoft.AspNetCore.JsonPatch" />

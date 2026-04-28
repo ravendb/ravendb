@@ -120,6 +120,23 @@ function BuildSparrow ( $srcDir ) {
     CheckLastExitCode
 }
 
+function BuildAnalyzers ( $analyzerSrcDir, $codeFixesSrcDir ) {
+    $command = "dotnet"
+    $commandArgs = @( "build", "--no-incremental", "--configuration", "Release" )
+
+    if ($env:RAVEN_IS_RUNNING_ON_CI){
+        $commandArgs += '/p:ContinuousIntegrationBuild=true'
+    }
+
+    write-host -ForegroundColor Cyan "Building Analyzers: $command $commandArgs $analyzerSrcDir"
+    Invoke-Expression -Command "$command $commandArgs $analyzerSrcDir"
+    CheckLastExitCode
+
+    write-host -ForegroundColor Cyan "Building Analyzers.CodeFixes: $command $commandArgs $codeFixesSrcDir"
+    Invoke-Expression -Command "$command $commandArgs $codeFixesSrcDir"
+    CheckLastExitCode
+}
+
 function NpmInstall () {
     write-host "Doing npm ci..."
 

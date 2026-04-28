@@ -7,12 +7,13 @@
     <DevelopmentDependency>true</DevelopmentDependency>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
     <!--
       This assembly is intentionally split off from Raven.Analyzers. Per RS1038
       (https://github.com/dotnet/roslyn-analyzers/issues/7438) analyzer assemblies must
       only reference compiler-provided assemblies; Microsoft.CodeAnalysis.CSharp.Workspaces
-      (required by code-fix providers) is not one of them. Both DLLs are packed together
-      into analyzers/dotnet/cs/ inside the RavenDB.Analyzers NuGet package: IDEs load both,
+      (required by code-fix providers) is not one of them. Both DLLs are embedded together
+      into analyzers/dotnet/cs/ inside the RavenDB.Client NuGet package: IDEs load both,
       command-line builds load only the analyzer DLL.
     -->
   </PropertyGroup>
