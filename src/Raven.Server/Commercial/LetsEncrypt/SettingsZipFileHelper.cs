@@ -749,6 +749,8 @@ public static class SettingsZipFileHelper
     private static void AddExperimentalFeaturesToSettingsJson(BlittableJsonReaderObject settingsJson)
     {
         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+#if !RVN
         settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)] = true;
+#endif
     }
 }
