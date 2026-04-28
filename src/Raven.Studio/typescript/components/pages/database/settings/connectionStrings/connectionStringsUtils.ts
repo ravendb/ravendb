@@ -14,7 +14,7 @@ export const connectionStringsUtils = {
         .required()
         .test(
             "no-reserved-prefix",
-            `Name must not start with the reserved prefix "${serverWideConnectionStringPrefix}"`,
+            `Name cannot start with the reserved prefix "${serverWideConnectionStringPrefix}"`,
             (value) => !value?.startsWith(serverWideConnectionStringPrefix)
         )
         .test("is-name-unique", "Name must be unique", (value, ctx) => {

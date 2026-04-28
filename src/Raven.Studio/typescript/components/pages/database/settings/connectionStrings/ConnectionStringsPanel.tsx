@@ -15,7 +15,7 @@ import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useServices } from "components/hooks/useServices";
-import { connectionStringsActions } from "./store/connectionStringsSlice";
+import { connectionStringsActions, connectionStringSelectors } from "./store/connectionStringsSlice";
 import { useDispatch } from "react-redux";
 import useConfirm from "components/common/ConfirmDialog";
 import useUniqueId from "components/hooks/useUniqueId";
@@ -28,13 +28,11 @@ import { serverWideConnectionStringPrefix } from "./connectionStringsUtils";
 
 interface ConnectionStringsPanelProps {
     connection: Connection;
-    isServerWide?: boolean;
-    onConnectionDeleted?: (connection: Connection) => void;
-    onEditConnection?: (connection: Connection) => void;
 }
 
-export default function ConnectionStringsPanel(props: ConnectionStringsPanelProps) {
-    const { connection, isServerWide = false, onConnectionDeleted, onEditConnection } = props;
+export default function ConnectionStringsPanel({ connection }: ConnectionStringsPanelProps) {
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const isServerWide = viewContext === "serverWideConnectionStrings";
 
     const confirm = useConfirm();
     const dispatch = useDispatch();
@@ -55,11 +53,10 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
     const asyncDelete = useAsyncCallback(async () => {
         if (isServerWide) {
             await tasksService.deleteServerWideConnectionString(getDtoEtlType(connection.type), connection.name);
-            onConnectionDeleted?.(connection);
         } else {
             await tasksService.deleteConnectionString(databaseName, getDtoEtlType(connection.type), connection.name);
-            dispatch(connectionStringsActions.connectionDeleted(connection));
         }
+        dispatch(connectionStringsActions.connectionDeleted(connection));
     });
 
     const onDelete = async () => {
@@ -130,7 +127,11 @@ export default function ConnectionStringsPanel(props: ConnectionStringsPanelProp
                                                 title="Edit connection string"
                                                 onClick={() =>
                                                     isServerWide
-                                                        ? onEditConnection?.(connection)
+                                                        ? dispatch(
+                                                              connectionStringsActions.serverWideEditConnectionOpened(
+                                                                  connection
+                                                              )
+                                                          )
                                                         : dispatch(
                                                               connectionStringsActions.editConnectionModalOpened(
                                                                   connection

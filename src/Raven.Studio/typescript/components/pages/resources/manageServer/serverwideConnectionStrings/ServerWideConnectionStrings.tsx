@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Button from "react-bootstrap/Button";
@@ -7,10 +7,7 @@ import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import {
-    Connection,
-    StudioConnectionType,
-} from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
+import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
 import { getIcon, getTypeLabel } from "components/pages/database/settings/connectionStrings/ConnectionStringsPanels";
@@ -40,8 +37,7 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
 export default function ServerWideConnectionStrings() {
     const dispatch = useAppDispatch();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
-
-    const [editConnection, setEditConnection] = useState<Connection>(null);
+    const initialEditConnection = useAppSelector(connectionStringSelectors.initialEditConnection);
 
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("serverWideConnectionStrings"));
@@ -56,11 +52,7 @@ export default function ServerWideConnectionStrings() {
 
     const handleSave = async (_name: string) => {
         dispatch(connectionStringsActions.fetchServerWideData());
-        setEditConnection(null);
-    };
-
-    const handleConnectionDeleted = (connection: Connection) => {
-        dispatch(connectionStringsActions.connectionDeleted(connection));
+        dispatch(connectionStringsActions.editConnectionModalClosed());
     };
 
     if (loadStatus === "failure") {
@@ -74,11 +66,11 @@ export default function ServerWideConnectionStrings() {
 
     return (
         <div className="content-margin">
-            {editConnection && (
+            {initialEditConnection && (
                 <EditConnectionStrings
-                    initialConnection={editConnection}
+                    initialConnection={initialEditConnection}
                     afterSave={handleSave}
-                    afterClose={() => setEditConnection(null)}
+                    afterClose={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
                     isServerwide
                 />
             )}
@@ -89,16 +81,15 @@ export default function ServerWideConnectionStrings() {
                         <Button
                             variant="primary"
                             className="mb-3 mt-4"
-                            onClick={() => setEditConnection({ type: null } as Connection)}
+                            onClick={() =>
+                                dispatch(connectionStringsActions.serverWideEditConnectionOpened({ type: null }))
+                            }
                             disabled={!hasClusterAdminAccess}
                         >
                             <Icon icon="plus" />
                             Add a server-wide connection string
                         </Button>
-                        <ServerWideConnectionStringsBody
-                            onEditConnection={setEditConnection}
-                            onConnectionDeleted={handleConnectionDeleted}
-                        />
+                        <ServerWideConnectionStringsBody />
                     </Col>
                     <Col sm={12} lg={4}>
                         <ServerWideConnectionStringsInfoHub />
@@ -109,15 +100,8 @@ export default function ServerWideConnectionStrings() {
     );
 }
 
-interface ServerWideConnectionStringsBodyProps {
-    onEditConnection: (connection: Connection) => void;
-    onConnectionDeleted: (connection: Connection) => void;
-}
-
-function ServerWideConnectionStringsBody({
-    onEditConnection,
-    onConnectionDeleted,
-}: ServerWideConnectionStringsBodyProps) {
+function ServerWideConnectionStringsBody() {
+    const dispatch = useAppDispatch();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
@@ -144,7 +128,13 @@ function ServerWideConnectionStringsBody({
                                                 size="sm"
                                                 className="rounded-pill"
                                                 title="Add new connection string"
-                                                onClick={() => onEditConnection({ type })}
+                                                onClick={() =>
+                                                    dispatch(
+                                                        connectionStringsActions.serverWideEditConnectionOpened({
+                                                            type,
+                                                        })
+                                                    )
+                                                }
                                             >
                                                 <Icon icon="plus" />
                                                 Add new
@@ -159,9 +149,6 @@ function ServerWideConnectionStringsBody({
                                     <ConnectionStringsPanel
                                         key={connection.type + "_" + connection.name}
                                         connection={connection}
-                                        isServerWide
-                                        onEditConnection={onEditConnection}
-                                        onConnectionDeleted={onConnectionDeleted}
                                     />
                                 ))}
                             </div>

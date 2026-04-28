@@ -1,8 +1,12 @@
 import { AboutViewAnchored, AccordionItemWrapper } from "components/common/AboutView";
+import FeatureAvailabilitySummaryWrapper from "components/common/FeatureAvailabilitySummary";
+import useConnectionStringsLicense from "components/pages/database/settings/connectionStrings/useConnectionStringsLicense";
 
 export default function ServerWideConnectionStringsInfoHub() {
+    const { hasAll, featureAvailability } = useConnectionStringsLicense();
+
     return (
-        <AboutViewAnchored>
+        <AboutViewAnchored defaultOpen={hasAll ? null : "licensing"}>
             <AccordionItemWrapper
                 targetId="about"
                 icon="about"
@@ -31,6 +35,11 @@ export default function ServerWideConnectionStringsInfoHub() {
                     </ul>
                 </div>
             </AccordionItemWrapper>
+            <FeatureAvailabilitySummaryWrapper
+                data={featureAvailability}
+                isUnlimited={hasAll}
+                isOpenedByDefault={false}
+            />
         </AboutViewAnchored>
     );
 }

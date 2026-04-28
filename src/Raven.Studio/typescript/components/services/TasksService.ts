@@ -138,8 +138,8 @@ export default class TasksService {
         return new getServerWideConnectionStringsCommand().execute();
     }
 
-    async saveServerWideConnectionString(connectionString: ConnectionStringDto) {
-        return new saveServerWideConnectionStringCommand(connectionString).execute();
+    async saveServerWideConnectionString(...args: ConstructorParameters<typeof saveServerWideConnectionStringCommand>) {
+        return new saveServerWideConnectionStringCommand(...args).execute();
     }
 
     async deleteServerWideConnectionString(
