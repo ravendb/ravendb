@@ -1071,6 +1071,7 @@ type ReactInKnockout<T> = KnockoutComputed<ReactInKnockoutOptions<T>>;
 interface Progress {
     processed: number;
     total: number;
+    estimated?: boolean;
 }
 
 interface rawTaskItem {

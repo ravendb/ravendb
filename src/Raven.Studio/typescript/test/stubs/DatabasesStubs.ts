@@ -404,6 +404,7 @@ export class DatabasesStubs {
                         Counters: 0,
                     },
                     Process: "Index",
+                    Estimated: false,
                 },
             ],
         };

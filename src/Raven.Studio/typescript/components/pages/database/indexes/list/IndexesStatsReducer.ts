@@ -178,6 +178,7 @@ function mapProgress(progress: IndexProgress): IndexProgressInfo {
         const stats = progress.Collections[name];
         return {
             name,
+            estimated: stats.Estimated,
             documents: {
                 processedPerSecond: 0,
                 total: stats.TotalNumberOfItems,

@@ -92,6 +92,7 @@ export class IndexesStubs {
                 LastProcessedTimeSeriesDeletedRangeEtag: 5,
                 NumberOfTimeSeriesDeletedRangesToProcess: 10,
                 TotalNumberOfTimeSeriesDeletedRanges: 20,
+                Estimated: true,
             },
             SecondCollection: {
                 LastProcessedItemEtag: 5,
@@ -103,6 +104,7 @@ export class IndexesStubs {
                 LastProcessedTimeSeriesDeletedRangeEtag: 5,
                 NumberOfTimeSeriesDeletedRangesToProcess: 10,
                 TotalNumberOfTimeSeriesDeletedRanges: 20,
+                Estimated: false,
             },
         };
     }
