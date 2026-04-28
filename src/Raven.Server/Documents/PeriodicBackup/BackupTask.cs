@@ -821,7 +821,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                         onProgress: _onProgress,
                         token: TaskCancelToken.Token);
 
-                    smuggler.ExecuteAsync().Wait();
+                    // force AsyncHelpers to use ExclusiveSynchronizationContext pump so all async
+                    // continuations execute on this dedicated backup thread (not ThreadPool threads).
+                    var previousContext = SynchronizationContext.Current;
+                    SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+
+                    try
+                    {
+                        AsyncHelpers.RunSync(() => smuggler.ExecuteAsync());
+                    }
+                    finally
+                    {
+                        SynchronizationContext.SetSynchronizationContext(previousContext);
+                    }
 
                     FlushToDisk(outputStream);
 
