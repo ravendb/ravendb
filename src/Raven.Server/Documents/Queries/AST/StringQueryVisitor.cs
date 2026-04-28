@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Queries.AST
             VisitExpressionList(load);
         }
 
-        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)> orderBy)
         {
             EnsureLine();
             _sb.Append("ORDER BY ");
@@ -128,6 +128,10 @@ namespace Raven.Server.Documents.Queries.AST
                 if (orderBy[i].Ascending == false)
                 {
                     _sb.Append(" DESC");
+                }
+                if (orderBy[i].NullFirst.HasValue)
+                {
+                    _sb.Append(orderBy[i].NullFirst.Value ? " NULLS FIRST" : " NULLS LAST");
                 }
             }
         }

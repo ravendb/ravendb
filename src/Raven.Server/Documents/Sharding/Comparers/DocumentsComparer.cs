@@ -16,15 +16,15 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly OrderByField[] _orderByFields;
     private readonly bool _extractFromData;
-    private readonly bool _nullFirst;
+    private readonly bool _defaultNullIsSmallest;
     private readonly bool _acceptMissingValues;
     private readonly Random[] _randoms;
 
-    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData, bool hasOrderByRandom, bool nullFirst, bool acceptMissingValues)
+    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData, bool hasOrderByRandom, bool defaultNullIsSmallest, bool acceptMissingValues)
     {
         _orderByFields = orderByFields;
         _extractFromData = extractFromData;
-        _nullFirst = nullFirst;
+        _defaultNullIsSmallest = defaultNullIsSmallest;
         _acceptMissingValues = acceptMissingValues;
         _randoms = hasOrderByRandom == false
             ? null
@@ -68,6 +68,8 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private int CompareField(in OrderByField order, int index, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
+        var nullIsSmallest = order.GetNullIsSmallest(_defaultNullIsSmallest);
+
         switch (order.OrderingType)
         {
             case OrderByFieldType.Implicit:
@@ -82,9 +84,9 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                             return 0;
                         
                         if (yVal == null)
-                            return _nullFirst ? 1 : -1;
-                        
-                        return _nullFirst ? -1 : 1;
+                            return nullIsSmallest ? 1 : -1;
+
+                        return nullIsSmallest ? -1 : 1;
                     }
                     
                     return string.Compare(xVal, yVal, StringComparison.OrdinalIgnoreCase);
@@ -100,9 +102,9 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                             return 0;
                         
                         if (hasY == false)
-                            return _nullFirst ? 1 : -1;
-                        
-                        return _nullFirst ? -1 : 1;
+                            return nullIsSmallest ? 1 : -1;
+
+                        return nullIsSmallest ? -1 : 1;
                     }
                     
                     if (hasX == false && hasY == false)
@@ -125,9 +127,9 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                             return 0;
                         
                         if (hasY == false)
-                            return _nullFirst ? 1 : -1;
-                        
-                        return _nullFirst ? -1 : 1;
+                            return nullIsSmallest ? 1 : -1;
+
+                        return nullIsSmallest ? -1 : 1;
                     }
                     
                     if (hasX == false && hasY == false)
@@ -149,9 +151,9 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
                             return 0;
                         
                         if (yVal == null)
-                            return _nullFirst ? 1 : -1;
-                        
-                        return _nullFirst ? -1 : 1;
+                            return nullIsSmallest ? 1 : -1;
+
+                        return nullIsSmallest ? -1 : 1;
                     }
                     
                     if (xVal == null && yVal == null)
@@ -378,9 +380,9 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         throw new InvalidOperationException($"Expected to get type: {expectedType} but got: {actualValue} of type: {actualValue.GetType()}");
     }
     
-    public static void RetrieveConfigurationForDocumentsComparer(ShardedDatabaseContext databaseContext, string indexName, out bool nullFirst, out bool acceptMissing)
+    public static void RetrieveConfigurationForDocumentsComparer(ShardedDatabaseContext databaseContext, string indexName, out bool nullIsSmallest, out bool acceptMissing)
     {
-        nullFirst = true;
+        nullIsSmallest = true;
         acceptMissing = false;
 
         if (indexName == null)
@@ -397,7 +399,7 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         if (searchEngine == SearchEngineType.Lucene)
             return;
 
-        nullFirst = index.Configuration.NullFirst;
+        nullIsSmallest = index.Configuration.NullIsSmallest;
         acceptMissing = true;
     }
 }

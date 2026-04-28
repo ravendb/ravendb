@@ -8,13 +8,14 @@ namespace Raven.Server.Documents.Queries
 {
     public struct OrderByField
     {
-        public OrderByField(QueryFieldName name, OrderByFieldType orderingType, bool ascending, MethodType? method = null, Argument[] arguments = null)
+        public OrderByField(QueryFieldName name, OrderByFieldType orderingType, bool ascending, MethodType? method = null, Argument[] arguments = null, bool? nullFirst = null)
         {
             Method = method;
             Name = name;
             OrderingType = orderingType;
             Ascending = ascending;
             Arguments = arguments;
+            NullFirst = nullFirst;
             AggregationOperation = AggregationOperation.None;
 
             OrderByName = orderingType switch
@@ -31,11 +32,15 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool Ascending;
 
+        public readonly bool? NullFirst;
+
         public readonly Argument[] Arguments;
 
         public readonly MethodType? Method;
 
         public readonly string OrderByName;
+
+        public bool GetNullIsSmallest(bool defaultValue) => NullFirst.HasValue ? Ascending == NullFirst.Value : defaultValue;
 
         public struct Argument
         {

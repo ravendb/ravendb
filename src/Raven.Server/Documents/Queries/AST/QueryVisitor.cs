@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries.AST
             }
         }
 
-        public virtual void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public virtual void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)> orderBy)
         {
             foreach (var tuple in orderBy)
             {

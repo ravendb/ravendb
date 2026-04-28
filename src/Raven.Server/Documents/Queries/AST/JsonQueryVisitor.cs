@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Queries.AST
             WriteExpressionList(load);
         }
 
-        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> orderBy)
+        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)> orderBy)
         {
             _writer.WritePropertyName("OrderBy");
             _writer.WriteStartArray();
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Queries.AST
             {
                 _writer.WriteStartObject();
                 _writer.WritePropertyName("Field");
-                
+
                 VisitExpression(field.Expression);
 
                 if (field.FieldType != OrderByFieldType.Implicit)
@@ -112,6 +112,13 @@ namespace Raven.Server.Documents.Queries.AST
 
                 _writer.WritePropertyName("Ascending");
                 _writer.WriteValue(field.Ascending);
+
+                if (field.NullFirst.HasValue)
+                {
+                    _writer.WritePropertyName("NullFirst");
+                    _writer.WriteValue(field.NullFirst.Value);
+                }
+
                 _writer.WriteEndObject();
             }
             _writer.WriteEndArray();

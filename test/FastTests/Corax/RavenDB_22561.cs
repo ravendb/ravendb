@@ -44,7 +44,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
         {
             var indexes = new int[pageSize].AsSpan();
             var terms = new long[pageSize].AsSpan();
-            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleNumericalSorter(indexes, terms, false, nullFirst: true);
+            var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildSingleNumericalSorter(indexes, terms, false, nullIsSmallest: true);
 
             for (var docPos = 0; docPos < size; ++docPos)
                 sorter.Insert(docPos, table[docPos]);
@@ -79,7 +79,7 @@ public class RavenDB_22561_LLT : NoDisposalNeeded
             var indexes = new int[pageSize].AsSpan();
             var terms = new long[pageSize].AsSpan();
             var sorter = global::Corax.Querying.Matches.SortingMatches.HeapSorterBuilder.BuildCompoundNumericalSorter(indexes, terms, false,
-                new TestLongComparable(secondTable), nullFirst: true);
+                new TestLongComparable(secondTable), nullIsSmallest: true);
 
             for (var docPos = 0; docPos < size; ++docPos)
                 sorter.Insert(docPos, table[docPos]);

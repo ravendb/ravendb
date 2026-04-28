@@ -385,7 +385,7 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
     {
         options.ModifyDatabaseRecord += record =>
         {
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullFirst)] = nullFirst.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullIsSmallest)] = nullFirst.ToString();
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
 

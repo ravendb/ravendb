@@ -17,6 +17,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private static readonly string[] StaticValues = { "true", "false", "null" };
         private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
         private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
+        private static readonly string[] OrderByNullsOptions = { "FIRST", "LAST" };
 
         private int _depth;
         private QueryParser _timeSeriesParser;
@@ -635,9 +636,9 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             return fields;
         }
 
-        private List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> OrderBy()
+        private List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, bool? NullFirst)> OrderBy()
         {
-            var orderBy = new List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)>();
+            var orderBy = new List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, bool? NullFirst)>();
             do
             {
                 if (Field(out var field) == false)
@@ -684,7 +685,16 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                         asc = false;
                 }
 
-                orderBy.Add((op, type, asc));
+                bool? nullFirst = null;
+                if (Scanner.TryScan("NULLS"))
+                {
+                    if (Scanner.TryScan(OrderByNullsOptions, out var nullsMatch) == false)
+                        ThrowParseException("Expected FIRST or LAST after NULLS in ORDER BY clause");
+
+                    nullFirst = string.Equals(nullsMatch, "FIRST", StringComparison.OrdinalIgnoreCase);
+                }
+
+                orderBy.Add((op, type, asc, nullFirst));
 
                 if (Scanner.TryScan(",") == false)
                     break;

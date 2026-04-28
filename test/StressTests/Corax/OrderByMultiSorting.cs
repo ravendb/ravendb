@@ -49,7 +49,7 @@ namespace StressTests.Corax
                     new(searcher.FieldMetadataBuilder("Content2", Content2), true, MatchCompareFieldType.Integer, fieldHasNoTerms: false)
                 };
                 
-                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, nullIsSmallest: true);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = _buffer;
@@ -89,7 +89,7 @@ namespace StressTests.Corax
                     new(searcher.FieldMetadataBuilder("Content2", Content2), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false)
                 };
 
-                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, nullIsSmallest: true);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = _buffer;

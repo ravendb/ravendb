@@ -671,11 +671,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
         
-        [Description("Corax: Null values appear first when sorting in ascending order.")]
+        [Description("Corax: when true, null values are treated as the smallest possible key (so they sort first in ascending order, last in descending order).")]
         [DefaultValue(true)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public bool NullFirst { get; protected set; }
+        [ConfigurationEntry("Indexing.Querying.Corax.NullIsSmallest", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)] //backward
+        public bool NullIsSmallest { get; protected set; }
         
         protected override void ValidateProperty(PropertyInfo property)
         {

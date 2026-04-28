@@ -322,7 +322,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
         }
         else if (queryChanges.HasFlag(QueryChanges.UpdateOrderByFieldsInMapReduce))
         {
-            var orderByExpressions = new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)>();
+            var orderByExpressions = new List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)>();
             var orderByFields = new List<OrderByField>();
 
             if (Query.Metadata.OrderBy != null)
@@ -330,7 +330,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 // add existing order by fields
                 foreach (var orderByField in Query.Metadata.OrderBy)
                 {
-                    orderByExpressions.Add((new FieldExpression(new List<StringSegment> { orderByField.Name.Value }), orderByField.OrderingType, orderByField.Ascending));
+                    orderByExpressions.Add((new FieldExpression(new List<StringSegment> { orderByField.Name.Value }), orderByField.OrderingType, orderByField.Ascending, orderByField.NullFirst));
                     orderByFields.Add(orderByField);
                 }
             }
@@ -341,7 +341,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
                 if (Query.Metadata.OrderBy != null && Query.Metadata.OrderByFieldNames.Contains(groupByField))
                     continue;
 
-                orderByExpressions.Add((new FieldExpression(new List<StringSegment> { groupByField }), OrderByFieldType.Implicit, Ascending: true));
+                orderByExpressions.Add((new FieldExpression(new List<StringSegment> { groupByField }), OrderByFieldType.Implicit, Ascending: true, NullFirst: null));
                 orderByFields.Add(new OrderByField(new QueryFieldName(groupByField, isQuoted: false), OrderByFieldType.Implicit, ascending: true));
             }
 
@@ -479,7 +479,7 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (queryChanges.HasFlag(QueryChanges.AddOrderByScoreForVectorSearch))
         {
-            clone.OrderBy = [(new MethodExpression("score", new List<QueryExpression>()), OrderByFieldType.Score, true)];
+            clone.OrderBy = [(new MethodExpression("score", new List<QueryExpression>()), OrderByFieldType.Score, true, null)];
             Query.Metadata.OrderBy = [new OrderByField(null, OrderByFieldType.Score, ascending: true)];
         }
 
@@ -1038,8 +1038,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (query.Metadata.OrderBy?.Length > 0)
         {
-            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var nullFirst, out var acceptMissing);
-            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, nullFirst, acceptMissing);
+            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var nullIsSmallest, out var acceptMissing);
+            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, nullIsSmallest, acceptMissing);
         }
 
         if (queryType == QueryType.IndexEntries)

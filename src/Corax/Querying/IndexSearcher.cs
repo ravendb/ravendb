@@ -580,17 +580,17 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
+    public IncludeNullMatch<TInner> IncludeNullMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullIsSmallest)
         where TInner : IQueryMatch
     {
-        return new IncludeNullMatch<TInner>(this, inner, field, forward, nullFirsts);
+        return new IncludeNullMatch<TInner>(this, inner, field, forward, nullIsSmallest);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullFirsts)
+    public IncludeNonExistingMatch<TInner> IncludeNonExistingMatch<TInner>(in FieldMetadata field, in TInner inner, bool forward, bool nullIsSmallest)
         where TInner : IQueryMatch
     {
-        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward, nullFirsts);
+        return new IncludeNonExistingMatch<TInner>(this, inner, field, forward, nullIsSmallest);
     }
 
     public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 

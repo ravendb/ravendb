@@ -56,8 +56,8 @@ class configurationItem {
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
         "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",
         "Indexing.Corax.VectorSearch.VectorSearchScanningThreshold",
-        "Indexing.Querying.Corax.NullFirst",
-        
+        "Indexing.Querying.Corax.NullIsSmallest",
+
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
@@ -68,6 +68,7 @@ class configurationItem {
                 "Indexing.MaxTimeForMergesToKeepRunningInSec",
                 "Indexing.MergeFactor",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
+                "Indexing.Querying.Corax.NullFirst",
          */
     ];
 

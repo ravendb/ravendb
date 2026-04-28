@@ -941,7 +941,7 @@ namespace FastTests.Corax
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullIsSmallest: true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -966,7 +966,7 @@ namespace FastTests.Corax
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, nullIsSmallest: true);
 
                 Span<long> ids = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids));
@@ -1031,7 +1031,7 @@ namespace FastTests.Corax
             OrderMetadata orderMetadata = new OrderMetadata(contentMetadata, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false);
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, nullIsSmallest: true);
 
                 Span<long> ids = stackalloc long[16];
                 Assert.Equal(3, match.Fill(ids));
@@ -1047,7 +1047,7 @@ namespace FastTests.Corax
 
             {
                 var match1 = searcher.StartWithQuery("Id", "e");
-                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullFirst: true);
+                var match = searcher.OrderBy(match1, orderMetadata, take: 16, nullIsSmallest: true);
 
                 Span<long> ids1 = stackalloc long[2];
                 Assert.Equal(2, match.Fill(ids1));

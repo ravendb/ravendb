@@ -114,7 +114,7 @@ public class CoraxCrud : StorageTest
             using var indexSearcher = new IndexSearcher(Env, fields);
             
             var match = indexSearcher.TermQuery("Content", "oren", hasBoost: true);
-            var sort = indexSearcher.OrderBy(match, new OrderMetadata(true, MatchCompareFieldType.Score), nullFirst: true);
+            var sort = indexSearcher.OrderBy(match, new OrderMetadata(true, MatchCompareFieldType.Score), nullIsSmallest: true);
             Assert.Equal(2, sort.Fill(ids));
             Assert.Equal("users/2", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[0]));
             Assert.Equal("users/1", indexSearcher.TermsReaderFor("Id").GetTermFor(ids[1]));
