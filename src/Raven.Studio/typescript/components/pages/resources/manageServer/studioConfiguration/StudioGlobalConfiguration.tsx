@@ -34,7 +34,7 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
-import { components as rsComponents, MenuProps, OptionProps } from "react-select";
+import { components as rsComponents, MenuProps, OptionProps, StylesConfig } from "react-select";
 import { ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
@@ -456,8 +456,8 @@ function CodePreview({ fontFamily }: { fontFamily: string }) {
     );
 }
 
-const fontSelectStyles = {
-    menuList: (base: Record<string, unknown>) => ({ ...base, maxHeight: "none" }),
+const fontSelectStyles: StylesConfig = {
+    menuList: (base) => ({ ...base, maxHeight: "none" }),
 };
 
 const tableFontSelectComponents = { Menu: TableFontMenu, Option: FontPreviewOption };
