@@ -19,10 +19,24 @@
   <ItemGroup>
     <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true"
           PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <!--
+      Code-fix providers ship in a sibling assembly (Raven.Analyzers.CodeFixes). Both DLLs
+      are packed into analyzers/dotnet/cs/ so IDEs load both while command-line builds
+      only load the analyzer DLL, satisfying RS1038. Build CodeFixes before running
+      dotnet pack on this project.
+      See https://github.com/dotnet/roslyn-analyzers/issues/7438.
+    -->
+    <None Include="$(MSBuildThisFileDirectory)..\Raven.Analyzers.CodeFixes\bin\$(Configuration)\netstandard2.0\Raven.Analyzers.CodeFixes.dll"
+          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" PrivateAssets="all" />
+    <!--
+      Microsoft.CodeAnalysis.CSharp.Workspaces is intentionally NOT referenced here.
+      Per RS1038 (https://github.com/dotnet/roslyn-analyzers/issues/7438) analyzer
+      assemblies must only depend on compiler-provided references. Code-fix providers
+      that need Workspaces live in the sibling Raven.Analyzers.CodeFixes project.
+    -->
   </ItemGroup>
 </Project>

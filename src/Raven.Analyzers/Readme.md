@@ -7,6 +7,19 @@ All rules default to **Warning** (or **Info** where noted) and can be promoted t
 dotnet_diagnostic.RVN004.severity = error
 ```
 
+## Assembly structure
+
+The `RavenDB.Analyzers` NuGet package ships two DLLs under `analyzers/dotnet/cs/`:
+
+| Assembly | Contents | References |
+|---|---|---|
+| `Raven.Analyzers.dll` (`src/Raven.Analyzers`) | All diagnostic analyzers and shared helpers | `Microsoft.CodeAnalysis.CSharp` only |
+| `Raven.Analyzers.CodeFixes.dll` (`src/Raven.Analyzers.CodeFixes`) | All `CodeFixProvider` implementations | `+ Microsoft.CodeAnalysis.CSharp.Workspaces` |
+
+The split follows the [RS1038](https://github.com/dotnet/roslyn-analyzers/issues/7438) rule: analyzer assemblies must only depend on compiler-provided references. `Microsoft.CodeAnalysis.CSharp.Workspaces` is not a compiler-provided reference — it is only available inside an IDE host — so code-fix providers must live in a separate assembly. IDEs load both DLLs from the analyzer folder automatically; `dotnet build` loads only the analyzer DLL, which keeps command-line builds free of the Workspaces dependency and the RS1038 warning.
+
+`KnownTypes` and `SyntaxHelpers` in `Raven.Analyzers` are `internal` but made available to `Raven.Analyzers.CodeFixes` via `[assembly: InternalsVisibleTo("Raven.Analyzers.CodeFixes")]` in `Properties/AssemblyInfo.cs`.
+
 ## RVN001: Map or Reduce assigned outside constructor
 
 **Triggered by:** assigning the `Map` or `Reduce` property of an index class inside a regular method (not a constructor).
