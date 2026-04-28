@@ -42,7 +42,7 @@ class Order { public string Status { get; set; } }
 
             Diagnostic d = Assert.Single(diagnostics);
             Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
-            Assert.Equal(DiagnosticSeverity.Warning, d.Severity);
+            Assert.Equal(DiagnosticSeverity.Info, d.Severity);
             Assert.Contains("IsActive", d.GetMessage());
         }
 
