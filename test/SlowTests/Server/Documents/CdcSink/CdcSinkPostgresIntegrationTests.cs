@@ -948,6 +948,108 @@ namespace SlowTests.Server.Documents.CdcSink
             }
         }
 
+        /// <summary>
+        /// UPDATE that changes only the FK (join column) on an embedded table whose own PK is
+        /// unchanged. Postgres delivers a FullUpdateMessage (REPLICA IDENTITY FULL) with both
+        /// OldRow and NewRow; CdcSinkProcess.CreateEmbeddedUpdateEvents must produce a Delete
+        /// against the old parent and an Upsert against the new parent in the same transaction.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task EmbeddedArray_Reparent_OnJoinColumnChange()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE orders (id SERIAL PRIMARY KEY, customer_name VARCHAR(200) NOT NULL);
+                CREATE TABLE order_lines (
+                    id SERIAL PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES orders(id),
+                    product VARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL
+                );
+                ALTER TABLE order_lines REPLICA IDENTITY FULL;
+                INSERT INTO orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO orders (id, customer_name) VALUES (2, 'Bob');
+                INSERT INTO order_lines (id, order_id, product, quantity) VALUES (10, 1, 'Apples', 7);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-embedded-reparent",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = "public",
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = "public",
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                                    new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Initial load materializes the row in Orders/1.Lines.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            // Reparenting UPDATE: changes only the join column.
+            ExecuteNpgSql(connectionString, "UPDATE order_lines SET order_id = 2 WHERE id = 10;");
+
+            // Orders/1.Lines must lose the row.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 0, timeout: 60_000);
+
+            // Orders/2.Lines must gain the row.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                return order2?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                Assert.Single(order2.Lines);
+                Assert.Equal("Apples", order2.Lines[0].Product);
+            }
+        }
+
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ThreeWayNesting()
         {

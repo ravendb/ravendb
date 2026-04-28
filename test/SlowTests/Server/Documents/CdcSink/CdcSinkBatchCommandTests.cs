@@ -3680,9 +3680,13 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // --- Step 3: Simulate UPDATE group_members SET group_id=2 WHERE id=10 ---
             // In real providers, this UPDATE decodes both old and new row values and calls
-            // CreateEmbeddedUpdateEvents, which yields two CdcEvents when the join column
-            // changed: a Delete from the old parent followed by an Upsert to the new parent.
-            // The test constructs both ops directly since it bypasses the provider layer.
+            // CdcSinkProcess.CreateEmbeddedUpdateEvents, which yields two CdcEvents when the
+            // join column changed: a Delete from the old parent followed by an Upsert to the
+            // new parent. The helper itself is protected on CdcSinkProcess and not reachable
+            // from this unit test, so we mirror its body here — keep this in sync with
+            // src/Raven.Server/Documents/CdcSink/CdcSinkProcess.cs:CreateEmbeddedUpdateEvents.
+
+            var oldRowValues = new object[] { 10, "2024-01-01", 1 }; // id=10, group_id=1 (OLD)
 
             var upsertToNewParent = docProcessor.ProcessRow(new CdcSinkRow
             {
@@ -3694,20 +3698,32 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(upsertToNewParent);
             Assert.Equal("Groups/2", upsertToNewParent.DocumentId);
 
-            var deleteFromOldParent = new CdcSinkDocumentOp
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext mapCtx))
             {
-                Type = CdcSinkDocumentOpType.EmbeddedModify,
-                DocumentId = "Groups/1", // OLD parent
-                Processor = embProcessor,
-                MappedData = upsertToNewParent.MappedData, // same PK values identify the entry
-                RawValues = new object[] { 10, "2024-01-01", 1 }, // old row with group_id=1
-                Operation = CdcSinkOperation.Delete,
-            };
+                // Build the delete op's MappedData from the OLD row values, exactly like
+                // CreateEmbeddedUpdateEvents does in production. This ensures $old in
+                // OnDelete patches and PK-based array matching see the entry as it lived
+                // on the old parent. Keep mapCtx alive through the merger enqueue —
+                // production keeps the equivalent StreamingJsonContext alive across the
+                // batch.
+                var oldMappedData = embProcessor.MapColumns(oldRowValues, mapCtx);
+                embProcessor.ApplyLinks(oldMappedData, oldRowValues);
 
-            var reparentOps = new List<CdcSinkDocumentOp> { deleteFromOldParent, upsertToNewParent };
-            var reparentCmd = new CdcSinkBatchCommand(database,
-                reparentOps, "test-reparent", null, null, null, null, null, null);
-            await database.TxMerger.Enqueue(reparentCmd);
+                var deleteFromOldParent = new CdcSinkDocumentOp
+                {
+                    Type = CdcSinkDocumentOpType.EmbeddedModify,
+                    DocumentId = "Groups/1", // OLD parent
+                    Processor = embProcessor,
+                    MappedData = oldMappedData,
+                    RawValues = oldRowValues,
+                    Operation = CdcSinkOperation.Delete,
+                };
+
+                var reparentOps = new List<CdcSinkDocumentOp> { deleteFromOldParent, upsertToNewParent };
+                var reparentCmd = new CdcSinkBatchCommand(database,
+                    reparentOps, "test-reparent", null, null, null, null, null, null);
+                await database.TxMerger.Enqueue(reparentCmd);
+            }
 
             // --- Step 4: Assert correct behavior ---
             using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext readCtx))

@@ -1092,6 +1092,111 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         /// <summary>
+        /// UPDATE that changes only the FK (join column), embedded-table PK unchanged.
+        /// SQL Server CDC delivers this as op=3 (pre-image) + op=4 (post-image) sharing the
+        /// same (__$start_lsn, __$seqval). pendingPreUpdate pairs them and
+        /// CreateEmbeddedUpdateEvents emits a Delete from the old parent and an Upsert to
+        /// the new parent.
+        /// </summary>
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task EmbeddedArray_Reparent_OnJoinColumnChange()
+        {
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].orders (id INT PRIMARY KEY, customer_name NVARCHAR(200) NOT NULL);
+                CREATE TABLE [{schema}].order_lines (
+                    id INT PRIMARY KEY,
+                    order_id INT NOT NULL REFERENCES [{schema}].orders(id),
+                    product NVARCHAR(200) NOT NULL,
+                    quantity INT NOT NULL
+                );
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (1, 'Alice');
+                INSERT INTO [{schema}].orders (id, customer_name) VALUES (2, 'Bob');
+                INSERT INTO [{schema}].order_lines (id, order_id, product, quantity) VALUES (10, 1, 'Apples', 7);");
+
+            EnableCdcOnTables((schema, "orders"), (schema, "order_lines"));
+
+            var sqlCs = SetupSqlConnectionString(store);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-reparent-fk-only",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Orders",
+                        SourceTableSchema = schema,
+                        SourceTableName = "orders",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "customer_name", Name = "CustomerName" }
+                        },
+                        EmbeddedTables = new List<CdcSinkEmbeddedTableConfig>
+                        {
+                            new CdcSinkEmbeddedTableConfig
+                            {
+                                SourceTableSchema = schema,
+                                SourceTableName = "order_lines",
+                                PropertyName = "Lines",
+                                Type = CdcSinkRelationType.Array,
+                                JoinColumns = new List<string> { "order_id" },
+                                PrimaryKeyColumns = new List<string> { "id" },
+                                Columns = new List<CdcColumnMapping>
+                                {
+                                    new CdcColumnMapping { Column = "id", Name = "LineId" },
+                                    new CdcColumnMapping { Column = "product", Name = "Product" },
+                                    new CdcColumnMapping { Column = "quantity", Name = "Quantity" }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+
+            // Initial load materializes the row in Orders/1.Lines.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            // Reparenting UPDATE: changes only the FK. Embedded PK (id) stays at 10, so SQL
+            // Server CDC delivers op=3+op=4 (not op=1+op=2 like a PK change would).
+            ExecuteMsSql($"UPDATE [{schema}].order_lines SET order_id = 2 WHERE id = 10;");
+
+            // Orders/1.Lines must lose the row.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order1 = await session.LoadAsync<Order>("Orders/1");
+                return order1?.Lines?.Count ?? 0;
+            }, 0, timeout: 60_000);
+
+            // Orders/2.Lines must gain the row.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                return order2?.Lines?.Count ?? 0;
+            }, 1, timeout: 60_000);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var order2 = await session.LoadAsync<Order>("Orders/2");
+                Assert.Single(order2.Lines);
+                Assert.Equal("Apples", order2.Lines[0].Product);
+            }
+        }
+
+        /// <summary>
         /// UPDATE that changes an embedded-table column listed in BOTH JoinColumns and
         /// PrimaryKeyColumns. SQL Server CDC emits a pre-image (op=3) and post-image (op=4)
         /// pair sharing the same (__$start_lsn, __$seqval). Reparent detection must pair

@@ -521,17 +521,19 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var columnList = string.Join(", ", quotedColumns);
 
             // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
-            // For embedded tables we keep pre-update images (op 3) so we can detect join column
-            // changes (reparenting). For root tables we still filter them out.
+            // Embedded tables need pre-update images to detect join-column changes (reparenting),
+            // so we use the 'all update old' row-filter option which delivers op=3 alongside op=4.
+            // (The default 'all' option drops op=3 and only returns the post-image — which means
+            // the previous code path here never actually saw a pre-image.) For root tables we
+            // don't need pre-images, so we still use 'all' and skip the extra row.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
             // GetProcessor throws if the table isn't registered; every configured table is, so proc is always non-null.
             var proc = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
-            var filterPreUpdate = proc.IsRoot;
+            var rowFilterOption = proc.IsRoot ? "all" : "all update old";
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
-                FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'all')
-                {(filterPreUpdate ? "WHERE __$operation <> 3" : "")}
-                ORDER BY __$start_lsn, __$seqval";
+                FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'{rowFilterOption}')
+                ORDER BY __$start_lsn, __$seqval, __$operation";
 
             var columnsArray = columns.ToArray();
 

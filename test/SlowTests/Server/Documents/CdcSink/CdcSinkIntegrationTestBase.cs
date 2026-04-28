@@ -38,8 +38,14 @@ namespace SlowTests.Server.Documents.CdcSink
             var baseDispose = base.WithSqlDatabase(provider, out connectionString, out schemaName, dataSet, includeData);
             return new DisposableAction(() =>
             {
-                StopTrackedSinks();
-                baseDispose.Dispose();
+                try
+                {
+                    StopTrackedSinks();
+                }
+                finally
+                {
+                    baseDispose.Dispose();
+                }
             });
         }
 
