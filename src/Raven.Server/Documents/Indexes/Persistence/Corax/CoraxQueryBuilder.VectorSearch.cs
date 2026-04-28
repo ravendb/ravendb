@@ -129,7 +129,7 @@ public static partial class CoraxQueryBuilder
 
         (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
         int numberOfDimensions;
-        if (VectorHelpers.TryRetrieveEtlTaskIdentifier(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
+        if (VectorHelpers.TryRetrieveEmbeddingsGenerationTaskIdentifier(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
@@ -239,7 +239,7 @@ public static partial class CoraxQueryBuilder
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool TryRetrieveEtlTaskIdentifier(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
+        public static bool TryRetrieveEmbeddingsGenerationTaskIdentifier(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
         {
             var existsInPersistence =
                 builderParameters.Index.IndexFieldsPersistence.TryReadEmbeddingsGenerationTaskIdentifier(fieldName, out embeddingsGenerationTaskIdentifier);
