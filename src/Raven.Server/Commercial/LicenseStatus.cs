@@ -258,6 +258,8 @@ namespace Raven.Server.Commercial
 
         public bool HasServerWideAnalyzers => Enabled(LicenseAttribute.ServerWideAnalyzers);
 
+        public bool HasServerWideConnectionStrings => Enabled(LicenseAttribute.ServerWideConnectionStrings);
+
         public bool HasIndexCleanup => Enabled(LicenseAttribute.IndexCleanup);
 
         public bool HasPeriodicBackup => Enabled(LicenseAttribute.PeriodicBackup);
@@ -371,6 +373,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasServerWideExternalReplications)] = HasServerWideExternalReplications,
                 [nameof(HasServerWideCustomSorters)] = HasServerWideCustomSorters,
                 [nameof(HasServerWideAnalyzers)] = HasServerWideAnalyzers,
+                [nameof(HasServerWideConnectionStrings)] = HasServerWideConnectionStrings,
                 [nameof(HasIndexCleanup)] = HasIndexCleanup,
                 [nameof(HasPeriodicBackup)] = HasPeriodicBackup,
                 [nameof(HasClientConfiguration)] = HasClientConfiguration,

@@ -876,6 +876,12 @@ public sealed partial class ClusterStateMachine
 
                 break;
 
+            case LicenseAttribute.ServerWideConnectionStrings:
+                if (serverStore.LicenseManager.LicenseStatus.HasServerWideConnectionStrings == false)
+                    throw new LicenseLimitException(LimitType.ServerWideConnectionStrings, "Your license doesn't support adding server wide connection strings.");
+
+                break;
+
             case LicenseAttribute.ClientConfiguration:
                 if (serverStore.LicenseManager.LicenseStatus.HasClientConfiguration == false)
                     throw new LicenseLimitException(LimitType.ClientConfiguration, "Your license doesn't support adding server wide Client Configuration.");

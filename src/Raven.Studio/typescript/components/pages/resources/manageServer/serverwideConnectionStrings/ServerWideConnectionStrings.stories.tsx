@@ -1,6 +1,11 @@
 import React from "react";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { withStorybookContexts, withBootstrap5, withForceRerender, securityClearanceArgType } from "test/storybookTestUtils";
+import {
+    securityClearanceArgType,
+    withBootstrap5,
+    withForceRerender,
+    withStorybookContexts,
+} from "test/storybookTestUtils";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
 import { SharedStubs } from "test/stubs/SharedStubs";
@@ -16,7 +21,7 @@ interface ServerWideConnectionStringsStoryArgs {
     isEmpty: boolean;
     isTestSuccess: boolean;
     securityClearance: securityClearance;
-    licenseType: Raven.Server.Commercial.LicenseType;
+    hasServerWideConnectionStrings: boolean;
     hasRavenEtl: boolean;
     hasSqlEtl: boolean;
     hasSnowflakeEtl: boolean;
@@ -46,12 +51,13 @@ export const ServerWideConnectionStringsStory: StoryObj<ServerWideConnectionStri
         mockTestResults(args.isTestSuccess);
 
         license.with_LicenseLimited({
-            Type: args.licenseType,
+            Type: "Enterprise",
             HasRavenEtl: args.hasRavenEtl,
             HasSqlEtl: args.hasSqlEtl,
             HasSnowflakeEtl: args.hasSnowflakeEtl,
             HasOlapEtl: args.hasOlapEtl,
             HasElasticSearchEtl: args.hasElasticSearchEtl,
+            HasServerWideConnectionStrings: args.hasServerWideConnectionStrings,
             HasQueueEtl: args.hasQueueEtl,
             HasEmbeddingsGeneration: args.hasEmbeddingsGeneration,
         });
@@ -62,7 +68,7 @@ export const ServerWideConnectionStringsStory: StoryObj<ServerWideConnectionStri
         isEmpty: false,
         isTestSuccess: true,
         securityClearance: "ClusterAdmin",
-        licenseType: "Enterprise",
+        hasServerWideConnectionStrings: true,
         hasRavenEtl: true,
         hasSqlEtl: true,
         hasSnowflakeEtl: true,

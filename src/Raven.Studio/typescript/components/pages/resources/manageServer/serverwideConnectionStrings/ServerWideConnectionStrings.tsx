@@ -7,6 +7,7 @@ import { Icon } from "components/common/Icon";
 import { HrHeader } from "components/common/HrHeader";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { StudioConnectionType } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import ConnectionStringsPanel from "components/pages/database/settings/connectionStrings/ConnectionStringsPanel";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
@@ -20,6 +21,8 @@ import {
     connectionStringsActions,
     connectionStringSelectors,
 } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 
 const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Ai",
@@ -37,16 +40,22 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
 export default function ServerWideConnectionStrings() {
     const dispatch = useAppDispatch();
     const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasServerWideConnectionStrings = useAppSelector(
+        licenseSelectors.statusValue("HasServerWideConnectionStrings")
+    );
     const initialEditConnection = useAppSelector(connectionStringSelectors.initialEditConnection);
 
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("serverWideConnectionStrings"));
-        dispatch(connectionStringsActions.fetchServerWideData());
+
+        if (hasServerWideConnectionStrings) {
+            dispatch(connectionStringsActions.fetchServerWideData());
+        }
 
         return () => {
             dispatch(connectionStringsActions.reset());
         };
-    }, [dispatch]);
+    }, [dispatch, hasServerWideConnectionStrings]);
 
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
 
@@ -77,19 +86,32 @@ export default function ServerWideConnectionStrings() {
             <Col xxl={12}>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading title="Server-Wide Connection Strings" icon="manage-connection-strings" />
-                        <Button
-                            variant="primary"
-                            className="mb-3 mt-4"
-                            onClick={() =>
-                                dispatch(connectionStringsActions.serverWideEditConnectionOpened({ type: null }))
-                            }
-                            disabled={!hasClusterAdminAccess}
+                        <AboutViewHeading
+                            title="Server-Wide Connection Strings"
+                            icon="manage-connection-strings"
+                            licenseBadgeText={hasServerWideConnectionStrings ? null : "Professional +"}
+                        />
+                        <ConditionalPopover
+                            conditions={{
+                                isActive: !hasServerWideConnectionStrings,
+                                message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                            }}
                         >
-                            <Icon icon="plus" />
-                            Add a server-wide connection string
-                        </Button>
-                        <ServerWideConnectionStringsBody />
+                            <Button
+                                variant="primary"
+                                className="mb-3 mt-4"
+                                onClick={() =>
+                                    dispatch(connectionStringsActions.serverWideEditConnectionOpened({ type: null }))
+                                }
+                                disabled={!hasClusterAdminAccess || !hasServerWideConnectionStrings}
+                            >
+                                <Icon icon="plus" />
+                                Add a server-wide connection string
+                            </Button>
+                        </ConditionalPopover>
+                        <div className={hasServerWideConnectionStrings ? null : "item-disabled pe-none"}>
+                            <ServerWideConnectionStringsBody />
+                        </div>
                     </Col>
                     <Col sm={12} lg={4}>
                         <ServerWideConnectionStringsInfoHub />
