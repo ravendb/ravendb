@@ -86,7 +86,7 @@ public sealed class SpatialMatch<TBoosting> : IQueryMatch
         return false;
     }
 
-    public long Count => long.MaxValue;
+    public long Count => _indexSearcher.NumberOfEntries;
 
     public SkipSortingResult AttemptToSkipSorting() => SkipSortingResult.WillSkipSorting;
     public QueryCountConfidence Confidence => QueryCountConfidence.Low;
