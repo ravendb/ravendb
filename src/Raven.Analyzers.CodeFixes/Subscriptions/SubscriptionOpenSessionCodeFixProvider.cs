@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.CodeFixes;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Raven.Analyzers.Subscriptions
+namespace Raven.Analyzers.CodeFixes.Subscriptions
 {
     /// <summary>
     /// Provides a code fix for RVN011: replaces the <c>IDocumentStore</c> receiver in a
