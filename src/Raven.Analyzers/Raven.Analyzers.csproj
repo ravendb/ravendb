@@ -2,33 +2,20 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Raven.Analyzers</AssemblyName>
-    <PackageId>RavenDB.Analyzers</PackageId>
-    <Authors>RavenDB</Authors>
-    <Description>Roslyn analyzers for RavenDB.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>ravendb;analyzers;roslyn;linq</PackageTags>
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
-    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IsPackable>false</IsPackable>
     <LangVersion>preview</LangVersion>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true"
-          PackagePath="analyzers/dotnet/cs" Visible="false" />
     <!--
-      Code-fix providers ship in a sibling assembly (Raven.Analyzers.CodeFixes). Both DLLs
-      are packed into analyzers/dotnet/cs/ so IDEs load both while command-line builds
-      only load the analyzer DLL, satisfying RS1038. Build CodeFixes before running
-      dotnet pack on this project.
-      See https://github.com/dotnet/roslyn-analyzers/issues/7438.
+      This project is not packaged on its own. Raven.Analyzers.dll and
+      Raven.Analyzers.CodeFixes.dll are embedded inside RavenDB.Client.nupkg
+      under analyzers/dotnet/cs/. See src/Raven.Client/Raven.Client.csproj
+      and analyzer-strategy.md.
     -->
-    <None Include="$(MSBuildThisFileDirectory)..\Raven.Analyzers.CodeFixes\bin\$(Configuration)\netstandard2.0\Raven.Analyzers.CodeFixes.dll"
-          Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
-  </ItemGroup>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />

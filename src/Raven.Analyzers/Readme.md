@@ -1,10 +1,30 @@
-# RavenDB.Analyzers
+# RavenDB analyzers
 
-Roslyn analyzers that catch common RavenDB misuses at compile time.
-All rules default to **Warning** (or **Info** where noted) and can be promoted to errors via `.editorconfig`:
+Roslyn analyzers that catch common RavenDB misuses at compile time. They ship
+**embedded inside the `RavenDB.Client` NuGet package** — every consumer of
+`RavenDB.Client` gets them automatically; there is no separate
+`RavenDB.Analyzers` package to install.
+
+All rules default to **Warning** (or **Info** where noted). Promote a rule to
+**Error** or silence it via `.editorconfig`:
 
 ```editorconfig
+# Promote a single rule to error
 dotnet_diagnostic.RVN004.severity = error
+
+# Silence a single rule
+dotnet_diagnostic.RVN014.severity = none
+
+# Silence every RavenDB analyzer
+dotnet_diagnostic.RVN*.severity = none
+```
+
+Or in code, around a single intentional violation:
+
+```csharp
+#pragma warning disable RVN014
+Map = orders => orders.SelectMany(o => o.Lines).Select(l => new { l.Product });
+#pragma warning restore RVN014
 ```
 
 ## Assembly structure
