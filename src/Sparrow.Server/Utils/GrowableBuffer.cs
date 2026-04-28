@@ -3,17 +3,17 @@ using Sparrow.Platform;
 
 namespace Sparrow.Server.Utils;
 
-public interface IBufferGrowth
+public unsafe interface IBufferGrowth
 {
+    public static readonly int MaxBufferSizeInBytes = int.MaxValue - sizeof(ByteStringStorage);
+
     public int GetInitialSize(in long initialSize);
     public int GetNewSize(in int currentSizeInBytes);
     public bool GrowingThresholdExceed(in int count, in int sizeInBytes);
 }
 
-public readonly unsafe struct Progressive : IBufferGrowth
+public readonly struct Progressive : IBufferGrowth
 {
-    public static readonly int MaxBufferSizeInBytes = int.MaxValue - sizeof(ByteStringStorage);
-
     public int GetNewSize(in int currentSizeInBytes)
     {
         // Slower growth on 32-bit platforms
@@ -23,8 +23,8 @@ public readonly unsafe struct Progressive : IBufferGrowth
             ? (long)(currentSizeInBytes * platformScalar)
             : (long)currentSizeInBytes * 2;
 
-        if (size > MaxBufferSizeInBytes)
-            size = MaxBufferSizeInBytes;
+        if (size > IBufferGrowth.MaxBufferSizeInBytes)
+            size = IBufferGrowth.MaxBufferSizeInBytes;
 
         int truncated = (int)size;
 
@@ -36,15 +36,15 @@ public readonly unsafe struct Progressive : IBufferGrowth
     {
         // 1/16 left
         var amountOfLongs = (sizeInBytes / sizeof(long));
-        return (amountOfLongs - count) < amountOfLongs / 16;
+        return (amountOfLongs - count) < Math.Max(1, amountOfLongs / 16);
     }
 
     public int GetInitialSize(in long initialSize)
     {
         long suggested = 4 * Math.Min(Math.Max(Sparrow.Global.Constants.Size.Kilobyte, initialSize), 16 * Sparrow.Global.Constants.Size.Kilobyte);
         long size = Math.Max(suggested, initialSize);
-        if (size > MaxBufferSizeInBytes)
-            size = MaxBufferSizeInBytes;
+        if (size > IBufferGrowth.MaxBufferSizeInBytes)
+            size = IBufferGrowth.MaxBufferSizeInBytes;
 
         int truncated = (int)size;
 
@@ -108,22 +108,40 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
 
     public void Init(ByteStringContext context, in long initialSize, long maxAllocationInBytes = long.MaxValue)
     {
+        if (TryInit(context, initialSize, maxAllocationInBytes) == false)
+            ThrowFailedToInitialize(initialSize, maxAllocationInBytes);
+    }
+
+    public bool TryInit(ByteStringContext context, in long initialSize, long maxAllocationInBytes = long.MaxValue)
+    {
         _context = context;
 
-        long clampedMax = Math.Min(Math.Max(0, maxAllocationInBytes), Progressive.MaxBufferSizeInBytes);
+        long clampedMax = Math.Min(Math.Max(0, maxAllocationInBytes), IBufferGrowth.MaxBufferSizeInBytes);
         _maxAllocationInBytes = (int)(clampedMax - (clampedMax % sizeof(long)));
 
-        long initialSizeInBytes = initialSize >= Progressive.MaxBufferSizeInBytes / sizeof(long)
-            ? Progressive.MaxBufferSizeInBytes
-            : initialSize * sizeof(long);
+        int initial;
+        if (initialSize <= 0)
+        {
+            initial = _growthCalculator.GetInitialSize(0);
+        }
+        else
+        {
+            long requested = initialSize >= IBufferGrowth.MaxBufferSizeInBytes / sizeof(long)
+                ? IBufferGrowth.MaxBufferSizeInBytes
+                : initialSize * sizeof(long);
+            initial = (int)(requested - (requested % sizeof(long)));
+        }
 
-        var initial = _growthCalculator.GetInitialSize(initialSizeInBytes);
         if (initial > _maxAllocationInBytes)
-            initial = _maxAllocationInBytes;
+            return false;
 
         _context.Allocate(initial, out _buffer);
         IsInitialized = true;
+        return true;
     }
+
+    private static void ThrowFailedToInitialize(long initialSize, long maxAllocationInBytes) =>
+        throw new InvalidOperationException($"GrowableBuffer cannot allocate the requested buffer: initialSize={initialSize} items would exceed maxAllocationInBytes={maxAllocationInBytes}. You might want to increase `Indexing.Corax.MaxMemoizationSizeInMb`.");
 
     private void Grow()
     {
@@ -142,7 +160,9 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
 
     public void Dispose()
     {
-        _context.Release(ref _buffer);
+        if (_buffer.HasValue)
+            _context.Release(ref _buffer);
         _buffer = default;
+        IsInitialized = false;
     }
 }

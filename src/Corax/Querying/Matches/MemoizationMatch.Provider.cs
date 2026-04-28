@@ -77,7 +77,14 @@ namespace Corax.Querying.Matches
 
         private void InitializeInner()
         {
-            _buffer.Init(_ctx, _inner.Count, _indexSearcher.MaxMemoizationSizeInBytes);
+            var maxItemsInBudget = _indexSearcher.MaxMemoizationSizeInBytes / sizeof(long);
+            var initialSize = _inner.Confidence switch
+            {
+                QueryCountConfidence.High => _inner.Count,
+                QueryCountConfidence.Normal => Math.Min(_inner.Count / 2, maxItemsInBudget),
+                _ => 16,
+            };
+            _buffer.Init(_ctx, initialSize, _indexSearcher.MaxMemoizationSizeInBytes);
 
             while (true)
             {

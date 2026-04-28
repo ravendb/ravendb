@@ -18,12 +18,12 @@ public class GrowableBufferTests : NoDisposalNoOutputNeeded
     [InlineData(4 * Sparrow.Global.Constants.Size.Megabyte)]
     [InlineData(8 * Sparrow.Global.Constants.Size.Megabyte)]
     public void CanExtendAndNotLooseAnything(int size) => CanExtendAndNotLooseAnythingBase(size);
-    
+
     [RavenMultiplatformTheory(RavenTestCategory.Corax, RavenArchitecture.AllX64)]
     [InlineData(16 * Sparrow.Global.Constants.Size.Megabyte)]
     [InlineData(32 * Sparrow.Global.Constants.Size.Megabyte)]
     public void CanExtendAndNotLooseAnythingExtended(int size) => CanExtendAndNotLooseAnythingBase(size);
-    
+
     private void CanExtendAndNotLooseAnythingBase(int size)
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -37,14 +37,14 @@ public class GrowableBufferTests : NoDisposalNoOutputNeeded
         {
             growableBuffer.AddUsage(read);
         }
-        
+
         Assert.Equal(size, growableBuffer.Results.Length);
         var results = growableBuffer.Results;
         for (var i = 0; i < size; ++i)
         {
             Assert.Equal(random2.NextInt64(), results[i]);
         }
-        
+
         int Fill(Span<long> buffer)
         {
             var i = 0;
@@ -53,5 +53,47 @@ public class GrowableBufferTests : NoDisposalNoOutputNeeded
 
             return i;
         }
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitWithNoHintFallsBackToGrowthStrategyDefaultProgressive()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<Progressive>();
+
+        Assert.True(buffer.TryInit(bsc, initialSize: 0));
+
+        // Progressive.GetInitialSize(0) yields 4 KB (4 * Constants.Size.Kilobyte).
+        Assert.Equal(4 * Sparrow.Global.Constants.Size.Kilobyte, buffer.AllocatedSizeInBytes);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitFailsWhenHintExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<Progressive>();
+
+        Assert.False(buffer.TryInit(bsc, initialSize: 1000, maxAllocationInBytes: 512));
+        Assert.False(buffer.IsInitialized);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitFailsWhenStrategyDefaultExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<Progressive>();
+
+        Assert.False(buffer.TryInit(bsc, initialSize: 0, maxAllocationInBytes: 64));
+        Assert.False(buffer.IsInitialized);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void InitThrowsWhenHintExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<Progressive>();
+
+        Assert.Throws<InvalidOperationException>(() => buffer.Init(bsc, initialSize: 1000, maxAllocationInBytes: 512));
+        Assert.False(buffer.IsInitialized);
     }
 }
