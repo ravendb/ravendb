@@ -53,8 +53,6 @@ export default function ServerWideConnectionStrings() {
     }, [dispatch]);
 
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
-    const connections = useAppSelector(connectionStringSelectors.connections);
-    const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
 
     const handleSave = async (_name: string) => {
         dispatch(connectionStringsActions.fetchServerWideData());
@@ -97,60 +95,80 @@ export default function ServerWideConnectionStrings() {
                             <Icon icon="plus" />
                             Add a server-wide connection string
                         </Button>
-                        <div className={hasClusterAdminAccess ? null : "item-disabled pe-none"}>
-                            <LazyLoad active={loadStatus === "loading"}>
-                                {isEmpty ? (
-                                    <EmptySet>No server-wide connection strings have been defined</EmptySet>
-                                ) : (
-                                    allStudioEtlTypes.map((type) => {
-                                        const typeConnections = connections[type];
-                                        if (typeConnections.length === 0) {
-                                            return null;
-                                        }
-                                        return (
-                                            <div key={type} className="mb-4 connection-strings-panels">
-                                                <HrHeader
-                                                    right={
-                                                        hasClusterAdminAccess && (
-                                                            <Button
-                                                                variant="info"
-                                                                size="sm"
-                                                                className="rounded-pill"
-                                                                title="Add new connection string"
-                                                                onClick={() =>
-                                                                    setEditConnection({ type } as Connection)
-                                                                }
-                                                            >
-                                                                <Icon icon="plus" />
-                                                                Add new
-                                                            </Button>
-                                                        )
-                                                    }
-                                                >
-                                                    <Icon icon={getIcon(type)} />
-                                                    {getTypeLabel(type)}
-                                                </HrHeader>
-                                                {typeConnections.map((connection) => (
-                                                    <ConnectionStringsPanel
-                                                        key={connection.type + "_" + connection.name}
-                                                        connection={connection}
-                                                        isServerWide
-                                                        onEditConnection={setEditConnection}
-                                                        onConnectionDeleted={handleConnectionDeleted}
-                                                    />
-                                                ))}
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </LazyLoad>
-                        </div>
+                        <ServerWideConnectionStringsBody
+                            onEditConnection={setEditConnection}
+                            onConnectionDeleted={handleConnectionDeleted}
+                        />
                     </Col>
                     <Col sm={12} lg={4}>
                         <ServerWideConnectionStringsInfoHub />
                     </Col>
                 </Row>
             </Col>
+        </div>
+    );
+}
+
+interface ServerWideConnectionStringsBodyProps {
+    onEditConnection: (connection: Connection) => void;
+    onConnectionDeleted: (connection: Connection) => void;
+}
+
+function ServerWideConnectionStringsBody({
+    onEditConnection,
+    onConnectionDeleted,
+}: ServerWideConnectionStringsBodyProps) {
+    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
+    const connections = useAppSelector(connectionStringSelectors.connections);
+    const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
+
+    return (
+        <div className={hasClusterAdminAccess ? null : "item-disabled pe-none"}>
+            <LazyLoad active={loadStatus === "loading"}>
+                {isEmpty ? (
+                    <EmptySet>No server-wide connection strings have been defined</EmptySet>
+                ) : (
+                    allStudioEtlTypes.map((type) => {
+                        const typeConnections = connections[type];
+                        if (typeConnections.length === 0) {
+                            return null;
+                        }
+                        return (
+                            <div key={type} className="mb-4 connection-strings-panels">
+                                <HrHeader
+                                    right={
+                                        hasClusterAdminAccess && (
+                                            <Button
+                                                variant="info"
+                                                size="sm"
+                                                className="rounded-pill"
+                                                title="Add new connection string"
+                                                onClick={() => onEditConnection({ type })}
+                                            >
+                                                <Icon icon="plus" />
+                                                Add new
+                                            </Button>
+                                        )
+                                    }
+                                >
+                                    <Icon icon={getIcon(type)} />
+                                    {getTypeLabel(type)}
+                                </HrHeader>
+                                {typeConnections.map((connection) => (
+                                    <ConnectionStringsPanel
+                                        key={connection.type + "_" + connection.name}
+                                        connection={connection}
+                                        isServerWide
+                                        onEditConnection={onEditConnection}
+                                        onConnectionDeleted={onConnectionDeleted}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })
+                )}
+            </LazyLoad>
         </div>
     );
 }
