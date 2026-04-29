@@ -825,6 +825,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // continuations execute on this dedicated backup thread (not ThreadPool threads).
                     var previousContext = SynchronizationContext.Current;
                     SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
+                    var previousValue = AsyncContextHelper.ContinueOnCapturedContext.Value;
                     AsyncContextHelper.ContinueOnCapturedContext.Value = true;
 
                     try
@@ -839,7 +840,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                     finally
                     {
-                        AsyncContextHelper.ContinueOnCapturedContext.Value = false;
+                        AsyncContextHelper.ContinueOnCapturedContext.Value = previousValue;
                         SynchronizationContext.SetSynchronizationContext(previousContext);
                     }
 
