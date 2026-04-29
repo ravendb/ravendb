@@ -20,7 +20,13 @@ import { SelectOption } from "components/common/select/Select";
 import TemperatureField from "./TemperatureField";
 import PromptCacheField from "./PromptCacheField";
 
-export default function AzureOpenAiSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
+export default function AzureOpenAiSettings({
+    isUsedByAnyTask,
+    isServerwide,
+}: {
+    isUsedByAnyTask: boolean;
+    isServerwide?: boolean;
+}) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);

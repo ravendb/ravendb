@@ -22,7 +22,13 @@ import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function GoogleSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
+export default function GoogleSettings({
+    isUsedByAnyTask,
+    isServerwide,
+}: {
+    isUsedByAnyTask: boolean;
+    isServerwide?: boolean;
+}) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);

@@ -20,7 +20,13 @@ import TemperatureField from "./TemperatureField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function OllamaSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
+export default function OllamaSettings({
+    isUsedByAnyTask,
+    isServerwide,
+}: {
+    isUsedByAnyTask: boolean;
+    isServerwide?: boolean;
+}) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
