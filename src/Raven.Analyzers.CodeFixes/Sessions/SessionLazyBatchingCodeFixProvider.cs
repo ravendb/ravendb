@@ -151,16 +151,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (sessionReceiver == null && batchableCalls.Count > 0)
             {
                 var (stmt, _, receiver, _) = batchableCalls[0];
-                // Walk to the root of the query chain
-                ExpressionSyntax chainRoot = receiver;
-                while (chainRoot is MemberAccessExpressionSyntax mae)
-                    chainRoot = mae.Expression;
-                if (chainRoot is IdentifierNameSyntax)
-                    sessionReceiver = chainRoot;
+                sessionReceiver = ExtractSessionReceiverFromQueryChain(receiver);
             }
 
             if (sessionReceiver == null)
                 return document;
+
+            // Collect identifiers already in scope so generated lazy names don't collide.
+            HashSet<string> reservedNames = CollectReservedNames(block);
 
             // Build a map of statement index to new statement
             Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
@@ -172,11 +170,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 var (stmt, methodName, receiver, isLoad) = batchableCalls[i];
 
                 if (stmt.Declaration.Variables.Count != 1)
-                    continue;
+                    return document; // bail rather than apply a partial fix
 
                 VariableDeclaratorSyntax declarator = stmt.Declaration.Variables[0];
                 string originalName = declarator.Identifier.Text;
-                string lazyName = "lazy" + char.ToUpperInvariant(originalName[0]) + originalName.Substring(1);
+                string lazyName = GenerateLazyName(originalName, reservedNames);
 
                 // Build the new lazy invocation
                 ExpressionSyntax newInitializer;
@@ -220,7 +218,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         }
                         else
                         {
-                            continue;
+                            return document; // bail rather than apply a partial fix
                         }
                     }
                     else if (stmt.Declaration.Variables[0].Initializer?.Value is InvocationExpressionSyntax origInv2 &&
@@ -248,7 +246,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     }
                     else
                     {
-                        continue;
+                        return document; // bail rather than apply a partial fix
                     }
                 }
                 else
@@ -265,7 +263,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         }
                         else
                         {
-                            continue;
+                            return document; // bail rather than apply a partial fix
                         }
                     }
                     else if (stmt.Declaration.Variables[0].Initializer?.Value is InvocationExpressionSyntax origInv3 &&
@@ -277,7 +275,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     }
                     else
                     {
-                        continue;
+                        return document; // bail rather than apply a partial fix
                     }
                 }
 
@@ -411,6 +409,66 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             SyntaxNode newRoot = root.ReplaceNode(block, newBlock);
 
             return document.WithSyntaxRoot(newRoot);
+        }
+
+        private static ExpressionSyntax? ExtractSessionReceiverFromQueryChain(ExpressionSyntax expression)
+        {
+            // For a query call like session.Query<T>().Where(...).ToList(), the stored receiver is
+            // the chain that precedes the materializer (everything left of .ToList). Walk it down
+            // through both member-access and invocation nodes until we reach the session identifier.
+            ExpressionSyntax current = expression;
+            while (true)
+            {
+                switch (current)
+                {
+                    case MemberAccessExpressionSyntax mae:
+                        current = mae.Expression;
+                        continue;
+                    case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax invMae:
+                        current = invMae.Expression;
+                        continue;
+                    case ParenthesizedExpressionSyntax paren:
+                        current = paren.Expression;
+                        continue;
+                    default:
+                        return current is IdentifierNameSyntax ? current : null;
+                }
+            }
+        }
+
+        private static HashSet<string> CollectReservedNames(BlockSyntax block)
+        {
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            foreach (SyntaxNode node in block.DescendantNodes())
+            {
+                switch (node)
+                {
+                    case VariableDeclaratorSyntax v:
+                        names.Add(v.Identifier.ValueText);
+                        break;
+                    case ParameterSyntax p:
+                        names.Add(p.Identifier.ValueText);
+                        break;
+                    case ForEachStatementSyntax fe:
+                        names.Add(fe.Identifier.ValueText);
+                        break;
+                    case SingleVariableDesignationSyntax svd:
+                        names.Add(svd.Identifier.ValueText);
+                        break;
+                }
+            }
+            return names;
+        }
+
+        private static string GenerateLazyName(string originalName, HashSet<string> reservedNames)
+        {
+            string baseName = "lazy" + char.ToUpperInvariant(originalName[0]) + originalName.Substring(1);
+            string candidate = baseName;
+            int suffix = 2;
+            while (reservedNames.Contains(candidate))
+                candidate = baseName + suffix++;
+            reservedNames.Add(candidate);
+            return candidate;
         }
 
         private sealed class BatchableCallCollector : CSharpSyntaxWalker

@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Linq;
 ";
 
         // ── Flag cases ──────────────────────────────────────────────────────────
