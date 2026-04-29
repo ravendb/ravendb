@@ -45,13 +45,6 @@ namespace Sparrow.Json.Parsing
             return count;
         }
 
-        //RavenDB-25738 For backward compatibility only. Use only for document IDs, collection, attachment name & type, and timeseries tag
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(byte* str, ref int len, int previousComputedMaxSize)
-        {
-            StringUtils.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(EscapePositions, str, ref len, previousComputedMaxSize);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void FindEscapedPositions(byte* str, int len, int previousComputedMaxSize) => StringUtils.FindEscapedPositions(EscapePositions, str, len, previousComputedMaxSize);
 
@@ -78,5 +71,14 @@ namespace Sparrow.Json.Parsing
             Continuation = JsonParserTokenContinuation.None;
             EscapePositions.Clear();
         }
+        
+#if NET8_0_OR_GREATER
+        //RavenDB-25738 For backward compatibility only. Use only for document IDs, collection, attachment name & type, and timeseries tag
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(byte* str, ref int len, int previousComputedMaxSize)
+        {
+            StringUtils.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(EscapePositions, str, ref len, previousComputedMaxSize);
+        }
+#endif
     }
 }
