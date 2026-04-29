@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -49,15 +50,30 @@ namespace Raven.Analyzers.Sessions
             if (collector.BatchableCalls.Count < 2)
                 return;
 
-            foreach ((InvocationExpressionSyntax invocation, string methodName) in collector.BatchableCalls)
+            // Group by session receiver: only flag when 2+ batchable operations resolve to
+            // the same session instance. Calls on different sessions can't share a multi-get.
+            // Calls whose session symbol cannot be resolved are excluded from grouping.
+            IEnumerable<IGrouping<ISymbol, (InvocationExpressionSyntax invocation, string methodName, ISymbol sessionSymbol)>> groups =
+                collector.BatchableCalls
+                    .Where(c => c.sessionSymbol != null)
+                    .Select(c => (c.invocation, c.methodName, sessionSymbol: c.sessionSymbol!))
+                    .GroupBy(c => c.sessionSymbol, SymbolEqualityComparer.Default);
+
+            foreach (var group in groups)
             {
-                if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                if (group.Count() < 2)
                     continue;
 
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.SessionLazyBatching,
-                    memberAccess.Name.GetLocation(),
-                    methodName));
+                foreach ((InvocationExpressionSyntax invocation, string methodName, ISymbol _) in group)
+                {
+                    if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
+                        continue;
+
+                    context.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.SessionLazyBatching,
+                        memberAccess.Name.GetLocation(),
+                        methodName));
+                }
             }
         }
 
@@ -78,13 +94,13 @@ namespace Raven.Analyzers.Sessions
 
             private readonly SemanticModel _model;
             private readonly HashSet<ISymbol> _materializationDerivedSet;
-            public readonly List<(InvocationExpressionSyntax invocation, string methodName)> BatchableCalls;
+            public readonly List<(InvocationExpressionSyntax invocation, string methodName, ISymbol? sessionSymbol)> BatchableCalls;
 
             public MaterializingCallCollector(SemanticModel model, HashSet<ISymbol> derivedSet)
             {
                 _model = model;
                 _materializationDerivedSet = derivedSet;
-                BatchableCalls = new List<(InvocationExpressionSyntax, string)>();
+                BatchableCalls = new List<(InvocationExpressionSyntax, string, ISymbol?)>();
             }
 
             public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
@@ -127,7 +143,8 @@ namespace Raven.Analyzers.Sessions
                 // Check for query materializations on IRavenQueryable only (avoids false positives on EF etc.)
                 if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
-                    BatchableCalls.Add((invocation, methodName));
+                    ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
+                    BatchableCalls.Add((invocation, methodName, sessionSymbol));
                     base.VisitInvocationExpression(invocation);
                     return;
                 }
@@ -141,7 +158,8 @@ namespace Raven.Analyzers.Sessions
                         ArgumentSyntax firstArg = invocation.ArgumentList.Arguments[0];
                         if (IsIndependentArg(firstArg))
                         {
-                            BatchableCalls.Add((invocation, methodName));
+                            ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
+                            BatchableCalls.Add((invocation, methodName, sessionSymbol));
                         }
                     }
                     base.VisitInvocationExpression(invocation);
@@ -149,6 +167,29 @@ namespace Raven.Analyzers.Sessions
                 }
 
                 base.VisitInvocationExpression(invocation);
+            }
+
+            // For a query chain like `session.Query<T>().Where(x).OrderBy(y)`, walk back
+            // through invocations and member accesses to find the session expression at
+            // the root. Returns null when the root is not a resolvable symbol (e.g. a
+            // method call result whose instance identity we can't track).
+            private ISymbol? ResolveSessionSymbolFromQueryChain(ExpressionSyntax queryChain)
+            {
+                ExpressionSyntax current = queryChain;
+                while (true)
+                {
+                    switch (current)
+                    {
+                        case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax ma:
+                            current = ma.Expression;
+                            continue;
+                        case ParenthesizedExpressionSyntax paren:
+                            current = paren.Expression;
+                            continue;
+                        default:
+                            return _model.GetSymbolInfo(current).Symbol;
+                    }
+                }
             }
 
             private static bool IsSessionType(ITypeSymbol? type)

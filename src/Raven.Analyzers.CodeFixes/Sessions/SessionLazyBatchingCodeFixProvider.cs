@@ -77,7 +77,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             // Find indices of batchable statements that are direct children of this block.
             // The collector may include calls from nested blocks; we only fix direct statements.
             List<int> batchableIndices = [];
-            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad)> directBatchableCalls = [];
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> directBatchableCalls = [];
 
             for (int i = 0; i < block.Statements.Count; i++)
             {
@@ -105,6 +105,19 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     return; // Non-consecutive
             }
 
+            // Bail unless every batchable call resolves to the same session symbol —
+            // routing different sessions through one shared receiver would silently
+            // change semantics.
+            ISymbol? firstSessionSymbol = directBatchableCalls[0].sessionSymbol;
+            if (firstSessionSymbol == null)
+                return;
+
+            for (int i = 1; i < directBatchableCalls.Count; i++)
+            {
+                if (!SymbolEqualityComparer.Default.Equals(firstSessionSymbol, directBatchableCalls[i].sessionSymbol))
+                    return;
+            }
+
             // Determine if any call is async
             bool isAsync = directBatchableCalls.Any(call =>
                 call.methodName.EndsWith("Async", StringComparison.Ordinal));
@@ -127,7 +140,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
         private static async Task<Document> ApplyLazyBatchFixAsync(
             Document document,
             BlockSyntax block,
-            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad)> batchableCalls,
+            List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> batchableCalls,
             List<int> batchableIndices,
             bool isAsync,
             CancellationToken cancellationToken)
@@ -136,9 +149,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             if (root == null)
                 return document;
 
-            // Extract session receiver from the first Load call, or from query chain root
+            // Extract session receiver from the first Load call, or from query chain root.
+            // RegisterCodeFixesAsync has already verified all calls share the same session
+            // symbol, so any batchable call's receiver yields a correct session expression.
             ExpressionSyntax? sessionReceiver = null;
-            foreach (var (stmt, methodName, receiver, isLoad) in batchableCalls)
+            foreach (var (stmt, methodName, receiver, isLoad, _) in batchableCalls)
             {
                 if (isLoad || methodName.Contains("Load", StringComparison.Ordinal))
                 {
@@ -150,7 +165,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             // If no Load found, try to extract from query chain
             if (sessionReceiver == null && batchableCalls.Count > 0)
             {
-                var (stmt, _, receiver, _) = batchableCalls[0];
+                var (stmt, _, receiver, _, _) = batchableCalls[0];
                 sessionReceiver = ExtractSessionReceiverFromQueryChain(receiver);
             }
 
@@ -167,7 +182,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             // Transform each batchable statement
             for (int i = 0; i < batchableCalls.Count; i++)
             {
-                var (stmt, methodName, receiver, isLoad) = batchableCalls[i];
+                var (stmt, methodName, receiver, isLoad, _) = batchableCalls[i];
 
                 if (stmt.Declaration.Variables.Count != 1)
                     return document; // bail rather than apply a partial fix
@@ -482,7 +497,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             };
 
             private readonly SemanticModel _model;
-            public readonly List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad)> BatchableCalls;
+            public readonly List<(LocalDeclarationStatementSyntax statement, string methodName, ExpressionSyntax receiver, bool isLoad, ISymbol? sessionSymbol)> BatchableCalls;
 
             public BatchableCallCollector(SemanticModel model)
             {
@@ -519,7 +534,8 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 // Check for query materializations on IRavenQueryable only
                 if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
-                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false));
+                    ISymbol? sessionSymbol = ResolveSessionSymbolFromQueryChain(memberAccess.Expression);
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false, sessionSymbol));
                     return;
                 }
 
@@ -527,7 +543,27 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 if ((methodName == KnownTypes.LoadMethodName || methodName == KnownTypes.LoadAsyncMethodName) &&
                     IsSessionType(receiverType))
                 {
-                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, true));
+                    ISymbol? sessionSymbol = _model.GetSymbolInfo(memberAccess.Expression).Symbol;
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, true, sessionSymbol));
+                }
+            }
+
+            private ISymbol? ResolveSessionSymbolFromQueryChain(ExpressionSyntax queryChain)
+            {
+                ExpressionSyntax current = queryChain;
+                while (true)
+                {
+                    switch (current)
+                    {
+                        case InvocationExpressionSyntax inv when inv.Expression is MemberAccessExpressionSyntax ma:
+                            current = ma.Expression;
+                            continue;
+                        case ParenthesizedExpressionSyntax paren:
+                            current = paren.Expression;
+                            continue;
+                        default:
+                            return _model.GetSymbolInfo(current).Symbol;
+                    }
                 }
             }
 
