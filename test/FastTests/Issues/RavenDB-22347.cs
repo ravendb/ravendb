@@ -28,6 +28,8 @@ namespace FastTests.Issues
         [InlineData("\u3712")]
         [InlineData("\ud83d\ude00")]
         [InlineData("key \ud83d\udd11 with emoji")]
+        [InlineData("'key'")]
+        [InlineData("\"key\"")]
         public void CanPatchDictionaryViaIndexerWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
@@ -79,6 +81,8 @@ namespace FastTests.Issues
         [InlineData("\u3712")]
         [InlineData("\ud83d\ude00")]
         [InlineData("key \ud83d\udd11 with emoji")]
+        [InlineData("'key'")]
+        [InlineData("\"key\"")]
         public void CanAddDictionaryEntryWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
@@ -131,6 +135,8 @@ namespace FastTests.Issues
         [InlineData("\u3712")]
         [InlineData("\ud83d\ude00")]
         [InlineData("key \ud83d\udd11 with emoji")]
+        [InlineData("'key'")]
+        [InlineData("\"key\"")]
         public void CanRemoveDictionaryEntryWithVariousKeys(string key)
         {
             using var store = GetDocumentStore();
