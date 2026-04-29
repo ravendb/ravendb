@@ -39,23 +39,7 @@ namespace Raven.Analyzers.Queries
             if (receiverType == null)
                 return;
 
-            // Accept both IRavenQueryable and IQueryable (covers cases where extension methods return IQueryable)
-            bool isQueryable = SyntaxHelpers.IsRavenQueryable(receiverType) ||
-                receiverType.Name == "IQueryable";
-
-            if (!isQueryable)
-            {
-                foreach (var iface in receiverType.AllInterfaces)
-                {
-                    if (iface.Name == "IQueryable")
-                    {
-                        isQueryable = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!isQueryable)
+            if (!SyntaxHelpers.IsRavenQueryable(receiverType))
                 return;
 
             // Walk the receiver chain. A .Take(...) call anywhere before the materializing
