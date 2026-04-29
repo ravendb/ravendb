@@ -534,7 +534,7 @@ namespace Sparrow.Json
             var state = new JsonParserState();
             var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
 
-            int escapePositionsSize = StringUtils.FindMaxEscapePositionSizeLinearScan(ptr, size);
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionSize(ptr, size);
 
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
@@ -553,30 +553,6 @@ namespace Sparrow.Json
             return result;
         }
         
-        public unsafe LazyStringValue GetLazyStringForBackwardCompatibility(byte* ptr, int size, bool longLived = false)
-        {
-            var state = new JsonParserState();
-            var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
-
-            int escapePositionsSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, size, out _);
-
-            int memorySize = maxByteCount + escapePositionsSize;
-            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
-
-            var address = memory.Address;
-
-            Memory.Copy(address, ptr, size);
-
-            state.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(address, ref size, escapePositionsSize);
-
-            state.WriteEscapePositionsTo(address + size);
-            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
-            result.AllocatedMemoryData = memory;
-
-            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
-            return result;
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe LazyStringValue GetLazyStringValue(byte* ptr, out bool success)
         {
@@ -1265,6 +1241,32 @@ namespace Sparrow.Json
             return allocatedArray;
         }
 
+#if NET8_0_OR_GREATER
+        public unsafe LazyStringValue GetLazyStringForBackwardCompatibility(byte* ptr, int size, bool longLived = false)
+        {
+            var state = new JsonParserState();
+            var maxByteCount = Encodings.Utf8.GetMaxByteCount(size);
+
+            int escapePositionsSize = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, size, out _);
+
+            int memorySize = maxByteCount + escapePositionsSize;
+            var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
+
+            var address = memory.Address;
+
+            Memory.Copy(address, ptr, size);
+
+            state.FindEscapedPositionsAndEscapeControlsForBackwardCompatibility(address, ref size, escapePositionsSize);
+
+            state.WriteEscapePositionsTo(address + size);
+            LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);
+            result.AllocatedMemoryData = memory;
+
+            result.EscapePositions = state.EscapePositions.Count > 0 ? state.EscapePositions.ToArray() : [];
+            return result;
+        }
+#endif
+        
 #if DEBUG || VALIDATE
 
         private sealed class IntReference

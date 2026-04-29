@@ -16,7 +16,7 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
         Escape = 1,
         Control = 2,
     }
-    
+
     private readonly record struct CharCase(char Value, CharType Type, string EscapeSequence = null);
 
     private static readonly CharCase[] Chars =
@@ -55,11 +55,98 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
 
     [RavenTheory(RavenTestCategory.Core)]
     [MemberData(nameof(IsControlCharacterData))]
-    public void IsControlCharacter_Byte(int value, bool expected) => Assert.Equal(expected, StringUtils.IsControlCharacter((byte)value));
+    public void IsControlCharacter_Char(int value, bool expected) => Assert.Equal(expected, StringUtils.IsControlCharacter((char)value));
+
+    // ── FindEscapedPositions ─────────────────────────────────────────────────
+    //
+    // Buffer stores relative offsets between successive escape chars.
+    // Chars < 32, '"', and '\' all contribute an entry.
+
+    public static TheoryData<string, int[]> FindEscapedPositionsOffsetData
+    {
+        get
+        {
+            var data = new TheoryData<string, int[]>();
+            foreach (var c in Chars)
+            {
+                var isEsc = c.Type != CharType.None;
+                data.Add($"{c.Value}",       isEsc ? [0]    : []);
+                data.Add($"{c.Value}a",      isEsc ? [0]    : []);
+                data.Add($"a{c.Value}a",     isEsc ? [1]    : []);
+                data.Add($"a{c.Value}",      isEsc ? [1]    : []);
+                data.Add($"a{c.Value}a{c.Value}", isEsc ? [1, 1] : []);
+            }
+            return data;
+        }
+    }
 
     [RavenTheory(RavenTestCategory.Core)]
-    [MemberData(nameof(IsControlCharacterData))]
-    public void IsControlCharacter_Char(int value, bool expected) => Assert.Equal(expected, StringUtils.IsControlCharacter((char)value));
+    [MemberData(nameof(FindEscapedPositionsOffsetData))]
+    public void FindEscapedPositions_CharMaxSize(string input, int[] expectedOffsets)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        int maxSize = StringUtils.FindMaxEscapePositionSize(input.AsSpan());
+        var list = new FastList<int>();
+        fixed (byte* ptr = bytes)
+        {
+            StringUtils.FindEscapedPositions(list, ptr, bytes.Length, maxSize);
+        }
+        Assert.Equal(expectedOffsets, list.ToArray());
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    [MemberData(nameof(FindEscapedPositionsOffsetData))]
+    public void FindEscapedPositions_ByteMaxSize(string input, int[] expectedOffsets)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        var list = new FastList<int>();
+        fixed (byte* ptr = bytes)
+        {
+            int maxSize = StringUtils.FindMaxEscapePositionSize(ptr, bytes.Length);
+            StringUtils.FindEscapedPositions(list, ptr, bytes.Length, maxSize);
+        }
+        Assert.Equal(expectedOffsets, list.ToArray());
+    }
+
+    // ── FindMaxEscapePositionSize ────────────────────────────────────────────
+    //
+    // All chars < 32, '"', and '\' are counted as escape chars.
+    // formula: (escapeCount + 1) * 5
+    //   Escape or Control → size = 10
+    //   None              → size = 5
+
+    public static TheoryData<string, int> FindMaxEscapePositionSizeData
+    {
+        get
+        {
+            var data = new TheoryData<string, int>();
+            foreach (var c in Chars)
+            {
+                var size = c.Type == CharType.None ? 5 : 10;
+                data.Add($"{c.Value}", size);
+                data.Add($"{c.Value}a", size);
+                data.Add($"a{c.Value}a", size);
+                data.Add($"a{c.Value}", size);
+            }
+            return data;
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    [MemberData(nameof(FindMaxEscapePositionSizeData))]
+    public void FindMaxEscapePositionSize_Bytes(string input, int expectedSize)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        fixed (byte* ptr = bytes)
+        {
+            Assert.Equal(expectedSize, StringUtils.FindMaxEscapePositionSize(ptr, bytes.Length));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    [MemberData(nameof(FindMaxEscapePositionSizeData))]
+    public void FindMaxEscapePositionSize_Chars(string input, int expectedSize) =>
+        Assert.Equal(expectedSize, StringUtils.FindMaxEscapePositionSize(input.AsSpan()));
 
     // ── HasControlCharacters ────────────────────────────────────────────────
 
@@ -82,13 +169,13 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
 
     [RavenTheory(RavenTestCategory.Core)]
     [MemberData(nameof(HasControlCharactersData))]
-    public void HasControlCharacters_Char(string input, bool expected) =>
-        Assert.Equal(expected, StringUtils.HasControlCharacters(input.AsSpan()));
+    public void HasControlCharacters_Byte(string input, bool expected) =>
+        Assert.Equal(expected, StringUtils.HasControlCharacters(Encoding.UTF8.GetBytes(input).AsSpan()));
 
     [RavenTheory(RavenTestCategory.Core)]
     [MemberData(nameof(HasControlCharactersData))]
-    public void HasControlCharacters_Byte(string input, bool expected) =>
-        Assert.Equal(expected, StringUtils.HasControlCharacters(Encoding.UTF8.GetBytes(input).AsSpan()));
+    public void HasControlCharacters_Char(string input, bool expected) =>
+        Assert.Equal(expected, StringUtils.HasControlCharacters(input.AsSpan()));
 
     // ── FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility ──────
     //
@@ -121,7 +208,20 @@ public unsafe class ControlCharacterTests(ITestOutputHelper output) : NoDisposal
 
     [RavenTheory(RavenTestCategory.Core)]
     [MemberData(nameof(FindMaxEscapePositionAndControlCharSizeData))]
-    public void FindMaxEscapePositionAndControlCharSize(string input, int expectedSize, int expectedControlCount)
+    public void FindMaxEscapePositionAndControlCharSize_Bytes(string input, int expectedSize, int expectedControlCount)
+    {
+        var bytes = Encoding.UTF8.GetBytes(input);
+        fixed (byte* ptr = bytes)
+        {
+            int result = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(ptr, bytes.Length, out int controlCount);
+            Assert.Equal(expectedSize, result);
+            Assert.Equal(expectedControlCount, controlCount);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Core)]
+    [MemberData(nameof(FindMaxEscapePositionAndControlCharSizeData))]
+    public void FindMaxEscapePositionAndControlCharSize_Chars(string input, int expectedSize, int expectedControlCount)
     {
         int result = StringUtils.FindMaxEscapePositionAndControlCharSizeForBackwardCompatibility(input.AsSpan(), out int controlCount);
         Assert.Equal(expectedSize, result);
