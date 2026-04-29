@@ -25,7 +25,6 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow;
-using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
@@ -827,9 +826,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var previousContext = SynchronizationContext.Current;
                     SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
                     AsyncContextHelper.ContinueOnCapturedContext.Value = true;
+
                     try
                     {
                         AsyncHelpers.RunSync(() => smuggler.ExecuteAsync());
+                    }
+                    catch (TimeoutException e) when (TaskCancelToken.Token.IsCancellationRequested)
+                    {
+                        // AsyncHelpers.RunSync converts OperationCanceledException to TimeoutException.
+                        // Restore the correct exception type so the backup runner treats this as a clean cancellation.
+                        throw new OperationCanceledException("Backup was canceled.", e);
                     }
                     finally
                     {
