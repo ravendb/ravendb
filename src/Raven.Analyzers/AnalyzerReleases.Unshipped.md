@@ -2,17 +2,17 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|--------------------
-RVN001 | Usage | Warning |
-RVN002 | Usage | Warning |
-RVN003 | Usage | Warning |
-RVN004 | Usage | Warning |
-RVN005 | Usage | Warning |
-RVN006 | Usage | Info    |
-RVN007 | Usage | Info    |
-RVN008 | Usage | Info    |
-RVN009 | Usage | Warning |
-RVN010 | Usage | Warning |
-RVN011 | Usage | Warning |
-RVN012 | Usage | Warning |
-RVN013 | Usage | Warning |
-RVN014 | Usage | Warning |
+RVN001 | Usage | Info |
+RVN002 | Usage | Info |
+RVN003 | Usage | Info |
+RVN004 | Usage | Info |
+RVN005 | Usage | Info |
+RVN006 | Usage | Info |
+RVN007 | Usage | Info |
+RVN008 | Usage | Info |
+RVN009 | Usage | Info |
+RVN010 | Usage | Info |
+RVN011 | Usage | Info |
+RVN012 | Usage | Info |
+RVN013 | Usage | Info |
+RVN014 | Usage | Info |

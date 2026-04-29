@@ -39,7 +39,11 @@ namespace Raven.Analyzers.Sessions
                 { MethodKind: MethodKind.Ordinary or MethodKind.LocalFunction or MethodKind.Constructor })
                 return;
 
-            var collector = new MaterializingCallCollector(context.SemanticModel);
+            var derivedSet = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+            var pass1 = new Pass1CollectMaterializationDerivedLocals(context.SemanticModel, derivedSet);
+            pass1.Visit(context.CodeBlock);
+
+            var collector = new MaterializingCallCollector(context.SemanticModel, derivedSet);
             collector.Visit(context.CodeBlock);
 
             if (collector.BatchableCalls.Count < 2)
@@ -76,24 +80,11 @@ namespace Raven.Analyzers.Sessions
             private readonly HashSet<ISymbol> _materializationDerivedSet;
             public readonly List<(InvocationExpressionSyntax invocation, string methodName)> BatchableCalls;
 
-            public MaterializingCallCollector(SemanticModel model)
+            public MaterializingCallCollector(SemanticModel model, HashSet<ISymbol> derivedSet)
             {
                 _model = model;
-                _materializationDerivedSet = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+                _materializationDerivedSet = derivedSet;
                 BatchableCalls = new List<(InvocationExpressionSyntax, string)>();
-            }
-
-            public override void Visit(SyntaxNode? node)
-            {
-                if (node == null)
-                    return;
-
-                // Pass 1: Collect all locals directly assigned from materializing calls
-                var pass1Visitor = new Pass1CollectMaterializationDerivedLocals(_model, _materializationDerivedSet);
-                pass1Visitor.Visit(node);
-
-                // Pass 2: Collect batchable calls using the populated _materializationDerivedSet
-                base.Visit(node);
             }
 
             public override void VisitSimpleLambdaExpression(SimpleLambdaExpressionSyntax node)
@@ -133,37 +124,12 @@ namespace Raven.Analyzers.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations: any LINQ materializing method on IQueryable-like types
-                if (QueryMaterializingMethods.Contains(methodName))
+                // Check for query materializations on IRavenQueryable only (avoids false positives on EF etc.)
+                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
-                    // Accept both IRavenQueryable and standard IQueryable<T>
-                    bool isQueryable = SyntaxHelpers.IsRavenQueryable(receiverType);
-
-                    if (!isQueryable && receiverType != null)
-                    {
-                        if (receiverType.Name == "IQueryable")
-                        {
-                            isQueryable = true;
-                        }
-                        else
-                        {
-                            foreach (var iface in receiverType.AllInterfaces)
-                            {
-                                if (iface.Name == "IQueryable")
-                                {
-                                    isQueryable = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (isQueryable)
-                    {
-                        BatchableCalls.Add((invocation, methodName));
-                        base.VisitInvocationExpression(invocation);
-                        return;
-                    }
+                    BatchableCalls.Add((invocation, methodName));
+                    base.VisitInvocationExpression(invocation);
+                    return;
                 }
 
                 // Check for session loads
