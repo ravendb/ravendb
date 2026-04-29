@@ -390,14 +390,14 @@ class Test
         }
 
         [Fact]
-        public async Task Double_ProjectInto_Also_Reports_RVN002_For_Any_Filter_After_First()
+        public async Task Double_ProjectInto_With_Filter_Between_Reports_Both_Diagnostics()
         {
             const string source = CommonUsings + @"
 class Test
 {
     void Run(IDocumentSession session)
     {
-        // ProjectInto then Where (RVN002) then ProjectInto again (RVN003)
+        // ProjectInto then Where then ProjectInto again
         var q = session.Query<Order>()
             .ProjectInto<OrderView>()
             .Where(x => x.Id == ""1"")
