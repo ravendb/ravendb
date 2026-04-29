@@ -26,6 +26,14 @@ import saveConnectionStringCommand from "commands/database/settings/saveConnecti
 import getServerWideConnectionStringsCommand from "commands/serverWide/connectionStrings/getServerWideConnectionStringsCommand";
 import saveServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/saveServerWideConnectionStringCommand";
 import deleteServerWideConnectionStringCommand from "commands/serverWide/connectionStrings/deleteServerWideConnectionStringCommand";
+import testServerWideSqlConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideSqlConnectionStringCommand";
+import testServerWideSnowflakeConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideSnowflakeConnectionStringCommand";
+import testServerWideElasticSearchNodeConnectionCommand from "commands/serverWide/connectionStrings/testServerWideElasticSearchNodeConnectionCommand";
+import testServerWideKafkaServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideKafkaServerConnectionCommand";
+import testServerWideRabbitMqServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideRabbitMqServerConnectionCommand";
+import testServerWideAzureQueueStorageServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAzureQueueStorageServerConnectionCommand";
+import testServerWideAmazonSqsServerConnectionCommand from "commands/serverWide/connectionStrings/testServerWideAmazonSqsServerConnectionCommand";
+import testServerWideAiConnectionStringCommand from "commands/serverWide/connectionStrings/testServerWideAiConnectionStringCommand";
 import { ConnectionStringDto } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import getFolderPathOptionsCommand from "commands/resources/getFolderPathOptionsCommand";
 import getBackupLocationCommand from "commands/database/tasks/getBackupLocationCommand";
@@ -146,6 +154,54 @@ export default class TasksService {
         ...args: ConstructorParameters<typeof deleteServerWideConnectionStringCommand>
     ) {
         return new deleteServerWideConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideSqlConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideSqlConnectionStringCommand>
+    ) {
+        return new testServerWideSqlConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideSnowflakeConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideSnowflakeConnectionStringCommand>
+    ) {
+        return new testServerWideSnowflakeConnectionStringCommand(...args).execute();
+    }
+
+    async testServerWideElasticSearchNodeConnection(
+        ...args: ConstructorParameters<typeof testServerWideElasticSearchNodeConnectionCommand>
+    ) {
+        return new testServerWideElasticSearchNodeConnectionCommand(...args).execute();
+    }
+
+    async testServerWideKafkaServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideKafkaServerConnectionCommand>
+    ) {
+        return new testServerWideKafkaServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideRabbitMqServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideRabbitMqServerConnectionCommand>
+    ) {
+        return new testServerWideRabbitMqServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAzureQueueStorageServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAzureQueueStorageServerConnectionCommand>
+    ) {
+        return new testServerWideAzureQueueStorageServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAmazonSqsServerConnection(
+        ...args: ConstructorParameters<typeof testServerWideAmazonSqsServerConnectionCommand>
+    ) {
+        return new testServerWideAmazonSqsServerConnectionCommand(...args).execute();
+    }
+
+    async testServerWideAiConnectionString(
+        ...args: ConstructorParameters<typeof testServerWideAiConnectionStringCommand>
+    ) {
+        return new testServerWideAiConnectionStringCommand(...args).execute();
     }
 
     async testClusterNodeConnection(serverUrl: string, databaseName?: string, bidirectional = true) {

@@ -18,7 +18,7 @@ import { SelectOption } from "components/common/select/Select";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function MistralAiSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -31,11 +31,14 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "MistralAi", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.mistralAiSettings.apiKey,
             Endpoint: formValues.mistralAiSettings.endpoint,
             Model: formValues.mistralAiSettings.model,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("MistralAi", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "MistralAi", formValues.modelType, settings);
     });
 
     return (

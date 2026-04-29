@@ -20,7 +20,7 @@ import TemperatureField from "./TemperatureField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function OllamaSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -33,12 +33,15 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Ollama", formValues.modelType, {
+        const settings = {
             Model: formValues.ollamaSettings.model,
             Uri: formValues.ollamaSettings.uri,
             Think: formValues.ollamaSettings.think,
             Temperature: formValues.ollamaSettings.isSetTemperature ? formValues.ollamaSettings.temperature : null,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("Ollama", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "Ollama", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(

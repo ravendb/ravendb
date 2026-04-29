@@ -140,6 +140,7 @@ export default function ElasticSearchConnectionString({
                             isDeleteButtonVisible={urlFieldArray.fields.length > 1}
                             onDelete={() => urlFieldArray.remove(idx)}
                             trigger={trigger}
+                            isServerwide={isServerwide}
                         />
                     ))}
                 </div>
@@ -267,9 +268,10 @@ interface NodeUrlProps {
     isDeleteButtonVisible: boolean;
     onDelete: () => void;
     trigger: UseFormTrigger<FormData>;
+    isServerwide?: boolean;
 }
 
-function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
+function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger, isServerwide }: NodeUrlProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { tasksService } = useServices();
 
@@ -280,11 +282,10 @@ function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, tr
         }
 
         const url = formValues.nodes[idx].url;
-        return tasksService.testElasticSearchNodeConnection(
-            databaseName,
-            url,
-            mapElasticSearchAuthenticationToDto(formValues)
-        );
+        const authDto = mapElasticSearchAuthenticationToDto(formValues);
+        return isServerwide
+            ? tasksService.testServerWideElasticSearchNodeConnection(url, authDto)
+            : tasksService.testElasticSearchNodeConnection(databaseName, url, authDto);
     });
 
     return (

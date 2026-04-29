@@ -18,7 +18,7 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function HuggingFaceSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -31,11 +31,14 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.huggingFaceSettings.apiKey,
             Endpoint: formValues.huggingFaceSettings.endpoint,
             Model: formValues.huggingFaceSettings.model,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("HuggingFace", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, settings);
     });
 
     return (

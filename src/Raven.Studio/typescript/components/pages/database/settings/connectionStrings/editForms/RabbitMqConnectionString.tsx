@@ -57,7 +57,9 @@ export default function RabbitMqConnectionString({
             return;
         }
 
-        return tasksService.testRabbitMqServerConnection(databaseName, formValues.connectionString);
+        return isServerwide
+            ? tasksService.testServerWideRabbitMqServerConnection(formValues.connectionString)
+            : tasksService.testRabbitMqServerConnection(databaseName, formValues.connectionString);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

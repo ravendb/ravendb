@@ -56,7 +56,9 @@ export default function SnowflakeConnectionString({
             return;
         }
 
-        return tasksService.testSnowflakeConnectionString(databaseName, formValues.connectionString);
+        return isServerwide
+            ? tasksService.testServerWideSnowflakeConnectionString(formValues.connectionString)
+            : tasksService.testSnowflakeConnectionString(databaseName, formValues.connectionString);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

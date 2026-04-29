@@ -75,12 +75,10 @@ export default function KafkaConnectionString({
             return;
         }
 
-        return tasksService.testKafkaServerConnection(
-            databaseName,
-            formValues.bootstrapServers,
-            false,
-            getConnectionOptionsDto(formValues.connectionOptions)
-        );
+        const connectionOptionsDto = getConnectionOptionsDto(formValues.connectionOptions);
+        return isServerwide
+            ? tasksService.testServerWideKafkaServerConnection(formValues.bootstrapServers, false, connectionOptionsDto)
+            : tasksService.testKafkaServerConnection(databaseName, formValues.bootstrapServers, false, connectionOptionsDto);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

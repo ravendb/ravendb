@@ -3,9 +3,12 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -488,6 +491,120 @@ public class RavenDB_24310 : RavenTestBase
         finally
         {
             IOExtensions.DeleteFile(file);
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestSqlConnection_BadConnectionString_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestSqlConnectionStringOperation("System.Data.SqlClient", "Server=tcp:127.0.0.1:1;Connect Timeout=1"));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestSnowflakeConnection_BadConnectionString_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestSnowflakeConnectionStringOperation("account=invalid;user=invalid;password=invalid"));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestElasticSearchConnection_UnreachableUrl_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestElasticSearchConnectionStringOperation("http://127.0.0.1:1", authentication: null));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestKafkaConnection_UnreachableBroker_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestKafkaConnectionStringOperation(new KafkaConnectionSettings { BootstrapServers = "127.0.0.1:1" }));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestRabbitMqConnection_BadConnectionString_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestRabbitMqConnectionStringOperation(new RabbitMqConnectionSettings { ConnectionString = "amqp://guest:guest@127.0.0.1:1/" }));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestAzureQueueStorageConnection_BadCredentials_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestAzureQueueStorageConnectionStringOperation(new AzureQueueStorageConnectionSettings
+                {
+                    ConnectionString = "DefaultEndpointsProtocol=https;AccountName=invalid;AccountKey=aW52YWxpZA==;EndpointSuffix=core.windows.net"
+                }));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestAmazonSqsConnection_BadCredentials_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestAmazonSqsConnectionStringOperation(new AmazonSqsConnectionSettings
+                {
+                    Basic = new AmazonSqsCredentials { AccessKey = "invalid", SecretKey = "invalid", RegionName = "us-east-1" }
+                }));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task ServerWideTestAiConnection_UnreachableEndpoint_ReturnsFailure()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var result = await store.Maintenance.Server.SendAsync(
+                new TestAiConnectionStringOperation(AiConnectorType.Ollama, AiModelType.Chat, new OllamaSettings
+                {
+                    Uri = "http://127.0.0.1:1",
+                    Model = "test"
+                }));
+
+            Assert.False(result.Success);
+            Assert.False(string.IsNullOrEmpty(result.Error));
         }
     }
 }

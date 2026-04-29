@@ -22,7 +22,7 @@ import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function OpenAiSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -35,7 +35,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.openAiSettings.apiKey,
             Endpoint: formValues.openAiSettings.endpoint,
             EnablePromptCache: formValues.openAiSettings.enablePromptCache,
@@ -43,7 +43,10 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             OrganizationId: formValues.openAiSettings.organizationId,
             ProjectId: formValues.openAiSettings.projectId,
             Temperature: formValues.openAiSettings.isSetTemperature ? formValues.openAiSettings.temperature : null,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("OpenAi", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(

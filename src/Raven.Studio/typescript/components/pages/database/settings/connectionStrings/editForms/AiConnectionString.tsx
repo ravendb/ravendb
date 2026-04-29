@@ -171,15 +171,31 @@ export default function AiConnectionString({
                         }}
                     />
                 </div>
-                {connectorType === "azureOpenAiSettings" && <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "azureOpenAiSettings" && (
+                    <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
+                {connectorType === "googleSettings" && (
+                    <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
+                {connectorType === "huggingFaceSettings" && (
+                    <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
+                {connectorType === "ollamaSettings" && (
+                    <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
                 {connectorType === "embeddedSettings" && <EmbeddedSettings />}
-                {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "openAiSettings" && (
+                    <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
+                {connectorType === "mistralAiSettings" && (
+                    <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                )}
                 {connectorType === "vertexSettings" && (
-                    <VertexSettings isUsedByAnyTask={isUsedByAnyTask} isForNewConnection={isForNewConnection} />
+                    <VertexSettings
+                        isUsedByAnyTask={isUsedByAnyTask}
+                        isForNewConnection={isForNewConnection}
+                        isServerwide={isServerwide}
+                    />
                 )}
 
                 {isUsedByAnyTask && (

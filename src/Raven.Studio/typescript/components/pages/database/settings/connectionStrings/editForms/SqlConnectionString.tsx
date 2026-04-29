@@ -62,7 +62,9 @@ export default function SqlConnectionString({
             return;
         }
 
-        return tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
+        return isServerwide
+            ? tasksService.testServerWideSqlConnectionString(formValues.connectionString, formValues.factoryName)
+            : tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
     });
 
     const handleSave: SubmitHandler<FormData> = (formData: FormData) => {

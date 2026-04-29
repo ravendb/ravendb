@@ -68,10 +68,10 @@ export default function AzureQueueStorageConnectionString({
             return;
         }
 
-        return tasksService.testAzureQueueStorageServerConnection(
-            databaseName,
-            mapAzureQueueStorageConnectionStringSettingsToDto(formValues)
-        );
+        const dto = mapAzureQueueStorageConnectionStringSettingsToDto(formValues);
+        return isServerwide
+            ? tasksService.testServerWideAzureQueueStorageServerConnection(dto)
+            : tasksService.testAzureQueueStorageServerConnection(databaseName, dto);
     });
 
     // Clear test result after changing auth type

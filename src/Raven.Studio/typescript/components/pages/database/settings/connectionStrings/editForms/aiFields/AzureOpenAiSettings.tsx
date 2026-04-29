@@ -20,7 +20,7 @@ import { SelectOption } from "components/common/select/Select";
 import TemperatureField from "./TemperatureField";
 import PromptCacheField from "./PromptCacheField";
 
-export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function AzureOpenAiSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -33,7 +33,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, {
+        const settings = {
             ApiKey: formValues.azureOpenAiSettings.apiKey,
             Endpoint: formValues.azureOpenAiSettings.endpoint,
             EnablePromptCache: formValues.azureOpenAiSettings.enablePromptCache,
@@ -43,7 +43,10 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             Temperature: formValues.azureOpenAiSettings.isSetTemperature
                 ? formValues.azureOpenAiSettings.temperature
                 : null,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("AzureOpenAi", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, settings);
     });
 
     const asyncGetModelOptions = useAsyncDebounce(

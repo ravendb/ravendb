@@ -22,7 +22,7 @@ import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+export default function GoogleSettings({ isUsedByAnyTask, isServerwide }: { isUsedByAnyTask: boolean; isServerwide?: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -35,13 +35,16 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, {
+        const settings = {
             AiVersion: formValues.googleSettings.aiVersion,
             ApiKey: formValues.googleSettings.apiKey,
             EnablePromptCache: formValues.googleSettings.enablePromptCache,
             Model: formValues.googleSettings.model,
             Endpoint: formValues.googleSettings.endpoint,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("Google", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, settings);
     });
 
     return (

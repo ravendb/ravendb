@@ -26,9 +26,10 @@ type FormData = ConnectionFormData<AiConnection>;
 interface VertexSettingsProps {
     isUsedByAnyTask: boolean;
     isForNewConnection: boolean;
+    isServerwide?: boolean;
 }
 
-export default function VertexSettings({ isUsedByAnyTask, isForNewConnection }: VertexSettingsProps) {
+export default function VertexSettings({ isUsedByAnyTask, isForNewConnection, isServerwide }: VertexSettingsProps) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -41,12 +42,15 @@ export default function VertexSettings({ isUsedByAnyTask, isForNewConnection }: 
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Vertex", formValues.modelType, {
+        const settings = {
             AiVersion: formValues.vertexSettings.aiVersion,
             GoogleCredentialsJson: formValues.vertexSettings.googleCredentialsJson,
             Model: formValues.vertexSettings.model,
             Location: formValues.vertexSettings.location,
-        });
+        };
+        return isServerwide
+            ? tasksService.testServerWideAiConnectionString("Vertex", formValues.modelType, settings)
+            : tasksService.testAiConnectionString(databaseName, "Vertex", formValues.modelType, settings);
     });
 
     return (

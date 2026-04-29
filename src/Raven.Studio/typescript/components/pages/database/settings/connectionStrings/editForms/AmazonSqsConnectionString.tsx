@@ -62,10 +62,10 @@ export default function AmazonSqsConnectionString({
             return;
         }
 
-        return tasksService.testAmazonSqsServerConnection(
-            databaseName,
-            mapAmazonSqsConnectionStringSettingsToDto(formValues)
-        );
+        const dto = mapAmazonSqsConnectionStringSettingsToDto(formValues);
+        return isServerwide
+            ? tasksService.testServerWideAmazonSqsServerConnection(dto)
+            : tasksService.testAmazonSqsServerConnection(databaseName, dto);
     });
 
     // Clear test result after changing auth type
