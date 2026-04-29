@@ -343,11 +343,12 @@ namespace Raven.Server.Documents
                 || nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromSmuggler))
                 return;
 
+            DocumentIdWorker.CheckAndThrowContainsControlCharacters(collection, "Collection");
+            
             if (_documentDatabase.SupportedFeatures.SupportedFeatureTypes.ThrowControlCharactersInIdentifier == false)
                 return;
 
             DocumentIdWorker.CheckAndThrowContainsControlCharacters(id, "Document ID");
-            DocumentIdWorker.CheckAndThrowContainsControlCharacters(collection, "Collection");
         }
 
         [Conditional("DEBUG")]
