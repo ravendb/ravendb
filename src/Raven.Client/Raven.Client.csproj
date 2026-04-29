@@ -167,6 +167,14 @@
   </ItemGroup>
 
   <Target Name="BuildAnalyzerProjects" BeforeTargets="GenerateNuspec">
+    <!-- Restore first: these projects are not referenced by Raven.Client, so without an
+         explicit Restore here a clean machine has no project.assets.json and Build fails. -->
+    <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"
+             Properties="Configuration=$(Configuration)"
+             Targets="Restore" />
+    <MSBuild Projects="..\Raven.Analyzers.CodeFixes\Raven.Analyzers.CodeFixes.csproj"
+             Properties="Configuration=$(Configuration)"
+             Targets="Restore" />
     <MSBuild Projects="..\Raven.Analyzers\Raven.Analyzers.csproj"
              Properties="Configuration=$(Configuration)"
              Targets="Build" />
