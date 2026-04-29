@@ -1,4 +1,3 @@
-import { EmptySet } from "components/common/EmptySet";
 import { HrHeader } from "components/common/HrHeader";
 import { Icon } from "components/common/Icon";
 import CertificatesListItem from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesListItem";
@@ -15,36 +14,42 @@ export default function CertificatesSsoList() {
     const allSsoServerCerts = useAppSelector(certificatesSelectors.ssoServerCertificates);
     const allSsoUserCerts = useAppSelector(certificatesSelectors.ssoUserCertificates);
 
-    if (allSsoServerCerts.length === 0 && allSsoUserCerts.length === 0) {
+    if (!ssoServerCerts.length && !ssoUserCerts.length) {
         return null;
     }
 
     return (
         <div>
             <HrHeader count={allSsoServerCerts.length + allSsoUserCerts.length}>
-                <Icon icon="lock" />
+                <Icon icon="key" />
                 SSO
             </HrHeader>
-            <div className="ms-1 mb-2">
-                <Badge bg="faded-primary" className="me-2">
-                    <Icon icon="certificate" margin="m-0" />
-                    {` Certificates: ${allSsoServerCerts.length}`}
-                </Badge>
-            </div>
-            {!ssoServerCerts.length && <EmptySet compact>No SSO certificates</EmptySet>}
-            {ssoServerCerts.map((cert) => (
-                <CertificatesListItem key={cert.Thumbprint} certificate={cert} />
-            ))}
-            <div className="ms-1 mb-2 mt-3">
-                <Badge bg="faded-primary" className="me-2">
-                    <Icon icon="user" margin="m-0" />
-                    {` Users: ${allSsoUserCerts.length}`}
-                </Badge>
-            </div>
-            {!ssoUserCerts.length && <EmptySet compact>No SSO users</EmptySet>}
-            {ssoUserCerts.map((cert) => (
-                <CertificatesListItem key={cert.Thumbprint} certificate={cert} />
-            ))}
+            {ssoServerCerts.length > 0 && (
+                <>
+                    <div className="ms-1 mb-2">
+                        <Badge bg="secondary" className="me-2">
+                            <Icon icon="certificate" margin="me-1" />
+                            {` Certificates: ${allSsoServerCerts.length}`}
+                        </Badge>
+                    </div>
+                    {ssoServerCerts.map((cert) => (
+                        <CertificatesListItem key={cert.Thumbprint} certificate={cert} />
+                    ))}
+                </>
+            )}
+            {ssoUserCerts.length > 0 && (
+                <>
+                    <div className="ms-1 mb-2 mt-3">
+                        <Badge bg="secondary" className="me-2">
+                            <Icon icon="user" margin="me-1" />
+                            {` Users: ${allSsoUserCerts.length}`}
+                        </Badge>
+                    </div>
+                    {ssoUserCerts.map((cert) => (
+                        <CertificatesListItem key={cert.Thumbprint} certificate={cert} />
+                    ))}
+                </>
+            )}
         </div>
     );
 }

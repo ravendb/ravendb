@@ -16,6 +16,7 @@ import { useEventsCollector } from "components/hooks/useEventsCollector";
 import { useServices } from "components/hooks/useServices";
 import { ThemeColor } from "components/models/common";
 import CertificatesItemStatus from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesItemStatus";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import {
@@ -62,9 +63,17 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
 
     const isDisabled = certificate.Disabled ?? false;
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
-    const canEdit = !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer" && state !== "Expired";
-    const canClone =
-        !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer" && certificate.Usage !== "SsoClient";
+    const authorizedSsoUsers =
+        certificate.Usage === "SsoServer"
+            ? ssoUserCertificates.filter(
+                  (u) =>
+                      u.AllowAnySsoServer ||
+                      (u.SsoServerPublicKeyPinningHashes ?? []).includes(certificate.PublicKeyPinningHash)
+              )
+            : [];
+    const canEdit =
+        !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer" && state !== "Expired";
+    const canClone = !isServerCert && !isServerCertForCommunication && certificate.Usage !== "SsoServer";
     const canToggleDisable =
         !isServerCert &&
         !isServerCertForCommunication &&
@@ -214,12 +223,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                 </Badge>
                             )}
                             {certificate.Usage === "SsoClient" && (
-                                <Badge
-                                    bg="primary"
-                                    className="ms-1 fs-6"
-                                    pill
-                                    title={`SSO user: ${certificate.Thumbprint}`}
-                                >
+                                <Badge bg="primary" className="ms-1 fs-6" pill>
                                     SSO: {certificate.Thumbprint}
                                 </Badge>
                             )}
@@ -242,7 +246,11 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         {canClone && (
                             <Button
                                 title="Clone certificate"
-                                onClick={() => dispatch(certificatesActions.cloneModalOpen(certificate))}
+                                onClick={() =>
+                                    certificate.Usage === "SsoClient"
+                                        ? dispatch(certificatesActions.ssoUserCloneModalOpen(certificate))
+                                        : dispatch(certificatesActions.cloneModalOpen(certificate))
+                                }
                                 variant="secondary"
                             >
                                 <Icon icon="copy" margin="m-0" />
@@ -341,22 +349,29 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                 </>
                             }
                         >
-                            {
-                                ssoUserCertificates.filter(
-                                    (u) =>
-                                        u.AllowAnySsoServer ||
-                                        (u.SsoServerPublicKeyPinningHashes ?? []).includes(
-                                            certificate.PublicKeyPinningHash
-                                        )
-                                ).length
-                            }
+                            {authorizedSsoUsers.length}
+                            {authorizedSsoUsers.length > 0 && (
+                                <PopoverWithHoverWrapper
+                                    message={
+                                        <ul className="mb-0 ps-3">
+                                            {authorizedSsoUsers.map((u) => (
+                                                <li key={u.Thumbprint}>
+                                                    {u.Name?.replace(/^SSO User:\s*/, "") ?? u.Thumbprint}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    }
+                                >
+                                    <Icon icon="info" color="info" margin="ms-1" className="small" />
+                                </PopoverWithHoverWrapper>
+                            )}
                         </RichPanelDetailItem>
                     )}
                     {certificate.Usage === "SsoClient" && (
                         <RichPanelDetailItem
                             label={
                                 <>
-                                    <Icon icon="lock" />
+                                    <Icon icon="key" />
                                     Authorizing SSO
                                 </>
                             }

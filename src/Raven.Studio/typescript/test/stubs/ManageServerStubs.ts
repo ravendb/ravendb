@@ -688,6 +688,79 @@ export class ManageServerStubs {
         };
     }
 
+    static certificatesWithSso(): CertificatesResponseDto {
+        const ssoServerPinningHash1 = "SEZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/NJc=";
+        const ssoServerPinningHash2 = "hyaqn9MDYitTWCf+oGwvu+GG9xqyxzZoZLANt5F/BL4=";
+
+        return {
+            Certificates: [
+                ...ManageServerStubs.certificates().Certificates,
+                {
+                    Name: "Corporate SSO Server",
+                    Thumbprint: "AA11904E1926ED2EDD5BB4BA8BC34742960BAAA1",
+                    SecurityClearance: "ValidUser",
+                    Permissions: {},
+                    NotAfter: moment().add(2 as const, "years").format(),
+                    NotBefore: moment().add(-10 as const, "days").format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: ssoServerPinningHash1,
+                    Usage: "SsoServer",
+                    HasTwoFactor: false,
+                },
+                {
+                    Name: "Backup SSO Server",
+                    Thumbprint: "BB22904E1926ED2EDD5BB4BA8BC34742960BBBB2",
+                    SecurityClearance: "ValidUser",
+                    Permissions: {},
+                    NotAfter: moment().add(1 as const, "years").format(),
+                    NotBefore: moment().add(-5 as const, "days").format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: ssoServerPinningHash2,
+                    Usage: "SsoServer",
+                    HasTwoFactor: false,
+                },
+                {
+                    Name: "SSO User: john@example.com",
+                    Thumbprint: "CC33904E1926ED2EDD5BB4BA8BC34742960BCCC3",
+                    SecurityClearance: "ValidUser",
+                    Permissions: {
+                        db1: "ReadWrite",
+                    },
+                    NotAfter: moment().add(2 as const, "years").format(),
+                    NotBefore: moment().add(-10 as const, "days").format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: "CCZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/CC3=",
+                    Usage: "SsoClient",
+                    SsoServerPublicKeyPinningHashes: [ssoServerPinningHash1],
+                    AllowAnySsoServer: false,
+                    HasTwoFactor: false,
+                },
+                {
+                    Name: "SSO User: alice@example.com",
+                    Thumbprint: "DD44904E1926ED2EDD5BB4BA8BC34742960BDDD4",
+                    SecurityClearance: "Operator",
+                    Permissions: {},
+                    NotAfter: moment().add(2 as const, "years").format(),
+                    NotBefore: moment().add(-10 as const, "days").format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: "DDZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/DD4=",
+                    Usage: "SsoClient",
+                    SsoServerPublicKeyPinningHashes: [],
+                    AllowAnySsoServer: true,
+                    HasTwoFactor: false,
+                },
+            ],
+            LoadedServerCert: ManageServerStubs.certificates().LoadedServerCert,
+            LoadedServerCertForCommunication: ManageServerStubs.certificates().LoadedServerCertForCommunication,
+            WellKnownAdminCerts: ManageServerStubs.certificates().WellKnownAdminCerts,
+            WellKnownIssuers: ManageServerStubs.certificates().WellKnownIssuers,
+        };
+    }
+
     static adminStats(): Raven.Server.ServerWide.ServerStatistics {
         return {
             LastRequestTime: moment().format(),

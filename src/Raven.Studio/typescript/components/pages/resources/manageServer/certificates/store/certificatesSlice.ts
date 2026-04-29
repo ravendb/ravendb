@@ -34,6 +34,7 @@ interface InitialState {
     isRegisterSsoServerModalOpen: boolean;
     isRegisterSsoUserModalOpen: boolean;
     ssoUserToEdit: CertificateItem;
+    ssoUserToClone: CertificateItem;
 }
 
 const initialState: InitialState = {
@@ -60,6 +61,7 @@ const initialState: InitialState = {
     isRegisterSsoServerModalOpen: false,
     isRegisterSsoUserModalOpen: false,
     ssoUserToEdit: null,
+    ssoUserToClone: null,
 };
 
 export const certificatesSlice = createSlice({
@@ -111,9 +113,16 @@ export const certificatesSlice = createSlice({
         isRegisterSsoUserModalOpenToggled: (state) => {
             state.isRegisterSsoUserModalOpen = !state.isRegisterSsoUserModalOpen;
             state.ssoUserToEdit = null;
+            state.ssoUserToClone = null;
         },
         ssoUserEditModalOpen: (state, action: PayloadAction<CertificateItem>) => {
             state.ssoUserToEdit = action.payload;
+            state.ssoUserToClone = null;
+            state.isRegisterSsoUserModalOpen = true;
+        },
+        ssoUserCloneModalOpen: (state, action: PayloadAction<CertificateItem>) => {
+            state.ssoUserToClone = action.payload;
+            state.ssoUserToEdit = null;
             state.isRegisterSsoUserModalOpen = true;
         },
     },

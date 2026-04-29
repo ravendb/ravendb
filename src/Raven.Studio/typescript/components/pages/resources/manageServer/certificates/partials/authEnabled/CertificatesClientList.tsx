@@ -10,6 +10,7 @@ export default function CertificatesClientList() {
     const serverCertificateForCommunicationThumbprint = useAppSelector(
         certificatesSelectors.serverCertificateForCommunicationThumbprint
     );
+    const hasActiveFilter = useAppSelector(certificatesSelectors.hasActiveFilter);
 
     const allClientCertsCount = useAppSelector(certificatesSelectors.certificates).filter(
         (cert) =>
@@ -26,6 +27,10 @@ export default function CertificatesClientList() {
             cert.Usage !== "SsoServer" &&
             cert.Usage !== "SsoClient"
     );
+
+    if (hasActiveFilter && !filteredCertificates.length) {
+        return null;
+    }
 
     return (
         <div>

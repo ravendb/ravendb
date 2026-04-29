@@ -1,5 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import fileImporter from "common/fileImporter";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { FormGroup, FormInput, FormLabel, FormValidationMessage } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useServices } from "components/hooks/useServices";
@@ -79,12 +80,26 @@ export default function CertificatesRegisterSsoServerModal() {
                             <FormInput control={control} type="text" name="name" placeholder="e.g. My SSO Server" />
                         </FormGroup>
                         <FormGroup>
-                            <FormLabel>Certificate File</FormLabel>
-                            <p className="small text-muted mb-2">
-                                Select the SSO server&apos;s public certificate file (<code>.pfx</code> or{" "}
-                                <code>.cer</code>). Only the public key is needed — no private key or passphrase
-                                required.
-                            </p>
+                            <div className="hstack gap-1">
+                                <FormLabel className="d-flex align-items-center gap-1">
+                                    Certificate File{" "}
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: true,
+                                            message: (
+                                                <>
+                                                    Select the SSO server&apos;s public certificate file (
+                                                    <code>.pfx</code> or <code>.cer</code>). Only the public key is
+                                                    needed — no private key or passphrase required.
+                                                </>
+                                            ),
+                                        }}
+                                        popoverPlacement="right"
+                                    >
+                                        <Icon icon="info" margin="m-0" className="small" color="info" />
+                                    </ConditionalPopover>
+                                </FormLabel>
+                            </div>
                             <input id="ssoServerFilePicker" type="file" onChange={selectFile} className="d-none" />
                             <InputGroup>
                                 <span className="static-name form-control d-flex align-items-center">

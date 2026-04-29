@@ -7,13 +7,9 @@ import Select, {
 } from "components/common/select/Select";
 import SelectCreatable from "components/common/select/SelectCreatable";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxToggle";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
-import {
-    CertificatesManagementType,
-    CertificatesSortMode,
-} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
+import { CertificatesSortMode } from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -23,7 +19,6 @@ export default function CertificatesFilters() {
     const dispatch = useAppDispatch();
 
     const nameOrThumbprintFilter = useAppSelector(certificatesSelectors.nameOrThumbprintFilter);
-    const allCertificatesCount = useAppSelector(certificatesSelectors.certificates).length;
     const clearanceFilter = useAppSelector(certificatesSelectors.clearanceFilter);
     const clearanceFilterOptions = useAppSelector(certificatesSelectors.clearanceFilterOptions);
     const stateFilter = useAppSelector(certificatesSelectors.stateFilter);
@@ -87,41 +82,58 @@ export default function CertificatesFilters() {
             </div>
             <div>
                 <span className="small-label">Filter by security clearance</span>
-                <MultiCheckboxToggle
-                    inputItems={clearanceFilterOptions}
-                    selectedItems={clearanceFilter}
-                    setSelectedItems={(x) => {
-                        dispatch(certificatesActions.clearanceFilterSet(x));
+                <Select
+                    isMulti
+                    isClearable
+                    options={clearanceFilterOptions}
+                    value={clearanceFilterOptions.filter((x) => clearanceFilter.includes(x.value))}
+                    onChange={(options) =>
+                        dispatch(certificatesActions.clearanceFilterSet(options ? options.map((o) => o.value) : []))
+                    }
+                    styles={{
+                        container: (base) => ({
+                            ...base,
+                            minWidth: "220px",
+                        }),
                     }}
-                    selectAll
-                    selectAllLabel="All"
-                    selectAllCount={allCertificatesCount}
                 />
             </div>
             <div>
                 <span className="small-label">Filter by state</span>
-                <MultiCheckboxToggle
-                    inputItems={stateFilterOptions}
-                    selectedItems={stateFilter}
-                    setSelectedItems={(x) => {
-                        dispatch(certificatesActions.stateFilterSet(x));
+                <Select
+                    isMulti
+                    isClearable
+                    options={stateFilterOptions}
+                    value={stateFilterOptions.filter((x) => stateFilter.includes(x.value))}
+                    onChange={(options) =>
+                        dispatch(certificatesActions.stateFilterSet(options ? options.map((o) => o.value) : []))
+                    }
+                    styles={{
+                        container: (base) => ({
+                            ...base,
+                            minWidth: "220px",
+                        }),
                     }}
-                    selectAll
-                    selectAllLabel="All"
-                    selectAllCount={allCertificatesCount}
                 />
             </div>
             <div>
                 <span className="small-label">Filter by management type</span>
-                <MultiCheckboxToggle
-                    inputItems={managementTypeFilterOptions}
-                    selectedItems={managementTypeFilter}
-                    setSelectedItems={(x: CertificatesManagementType[]) =>
-                        dispatch(certificatesActions.managementTypeFilterSet(x))
+                <Select
+                    isMulti
+                    isClearable
+                    options={managementTypeFilterOptions}
+                    value={managementTypeFilterOptions.filter((x) => managementTypeFilter.includes(x.value))}
+                    onChange={(options) =>
+                        dispatch(
+                            certificatesActions.managementTypeFilterSet(options ? options.map((o) => o.value) : [])
+                        )
                     }
-                    selectAll
-                    selectAllLabel="All"
-                    selectAllCount={allCertificatesCount}
+                    styles={{
+                        container: (base) => ({
+                            ...base,
+                            minWidth: "220px",
+                        }),
+                    }}
                 />
             </div>
             <div style={{ minWidth: 250 }}>

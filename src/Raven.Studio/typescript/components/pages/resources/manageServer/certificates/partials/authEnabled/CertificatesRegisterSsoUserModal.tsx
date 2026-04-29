@@ -36,18 +36,23 @@ export default function CertificatesRegisterSsoUserModal() {
     const hasReadOnlyCertificates = useAppSelector(licenseSelectors.statusValue("HasReadOnlyCertificates"));
     const ssoServerCertificates = useAppSelector(certificatesSelectors.ssoServerCertificates);
     const ssoUserToEdit = useAppSelector(certificatesSelectors.ssoUserToEdit);
+    const ssoUserToClone = useAppSelector(certificatesSelectors.ssoUserToClone);
 
     const isEditing = ssoUserToEdit != null;
+    const isCloning = ssoUserToClone != null;
+
+    const sourceForDefaults = ssoUserToEdit ?? ssoUserToClone;
 
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
         defaultValues: {
-            ssoUserId: ssoUserToEdit?.Thumbprint ?? "",
-            ssoServerPublicKeyPinningHashes: ssoUserToEdit?.SsoServerPublicKeyPinningHashes ?? [],
-            allowAnySso: ssoUserToEdit?.AllowAnySsoServer ?? false,
+            ssoUserId: isEditing ? (ssoUserToEdit?.Thumbprint ?? "") : "",
+            ssoServerPublicKeyPinningHashes: sourceForDefaults?.SsoServerPublicKeyPinningHashes ?? [],
+            allowAnySso: sourceForDefaults?.AllowAnySsoServer ?? false,
             securityClearance:
-                (ssoUserToEdit?.SecurityClearance as "ValidUser" | "Operator" | "ClusterAdmin") ?? "ValidUser",
-            databasePermissions: isEditing ? certificatesUtils.mapDatabasePermissionsFromDto(ssoUserToEdit) : [],
+                (sourceForDefaults?.SecurityClearance as "ValidUser" | "Operator" | "ClusterAdmin") ?? "ValidUser",
+            databasePermissions:
+                sourceForDefaults != null ? certificatesUtils.mapDatabasePermissionsFromDto(sourceForDefaults) : [],
         },
     });
 
@@ -122,40 +127,42 @@ export default function CertificatesRegisterSsoUserModal() {
                         <div className="text-center">
                             <Icon
                                 icon="user"
-                                addon={isEditing ? "edit" : "plus"}
+                                addon={isEditing ? "edit" : isCloning ? "copy" : "plus"}
                                 className="fs-1"
                                 color="primary"
                                 margin="m-0"
                             />
                         </div>
                         <div className="text-center lead">
-                            {isEditing ? "Edit SSO user" : "Generate SSO user"}
+                            {isEditing ? "Edit SSO user" : isCloning ? "Clone SSO user" : "Generate SSO user"}
                         </div>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
                             <div className="hstack gap-1">
-                                <FormLabel>User ID</FormLabel>
-                                <ConditionalPopover
-                                    conditions={{
-                                        isActive: true,
-                                        message: (
-                                            <>
-                                                The way the user will identify.
-                                                <br />
-                                                Available formats:
-                                                <ul className="mb-0">
-                                                    <li>username,</li>
-                                                    <li>email,</li>
-                                                    <li>domain + username</li>
-                                                </ul>
-                                            </>
-                                        ),
-                                    }}
-                                    popoverPlacement="right"
-                                >
-                                    <Icon icon="info" margin="m-0" className="text-muted small" />
-                                </ConditionalPopover>
+                                <FormLabel className="d-flex align-items-center gap-1">
+                                    User ID{" "}
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: true,
+                                            message: (
+                                                <>
+                                                    The way the user will identify.
+                                                    <br />
+                                                    Available formats:
+                                                    <ul className="mb-0">
+                                                        <li>username,</li>
+                                                        <li>email,</li>
+                                                        <li>domain + username</li>
+                                                    </ul>
+                                                </>
+                                            ),
+                                        }}
+                                        popoverPlacement="right"
+                                    >
+                                        <Icon icon="info" margin="m-0" className="small" color="info" />
+                                    </ConditionalPopover>
+                                </FormLabel>
                             </div>
                             {isEditing ? (
                                 <Form.Control type="text" value={ssoUserToEdit.Thumbprint} disabled />
@@ -245,10 +252,6 @@ export default function CertificatesRegisterSsoUserModal() {
                                             isClearedAfterSelect
                                             isDisabled={formState.isSubmitting}
                                         />
-                                        <Button variant="primary" className="rounded-pill" disabled>
-                                            <Icon icon="plus" margin="m-0" />
-                                            Add
-                                        </Button>
                                     </div>
                                 </FormGroup>
                                 <FormGroup className="vstack gap-2">
@@ -324,7 +327,7 @@ export default function CertificatesRegisterSsoUserModal() {
                             variant="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
-                            icon={isEditing ? undefined : "user"}
+                            icon={isEditing ? undefined : undefined}
                         >
                             {isEditing ? "Save changes" : "Generate user"}
                         </ButtonWithSpinner>

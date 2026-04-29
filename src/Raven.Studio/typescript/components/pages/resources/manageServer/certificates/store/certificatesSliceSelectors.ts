@@ -135,9 +135,12 @@ const selectFilteredCertificates = createSelector(
                 return false;
             }
 
+            const isSso = cert.Usage === "SsoServer" || cert.Usage === "SsoClient";
+
             if (
                 clearanceFilter.length > 0 &&
-                !clearanceFilter.includes(certificatesUtils.getClearance(cert.SecurityClearance))
+                (cert.Usage === "SsoServer" ||
+                    !clearanceFilter.includes(certificatesUtils.getClearance(cert.SecurityClearance)))
             ) {
                 return false;
             }
@@ -155,7 +158,6 @@ const selectFilteredCertificates = createSelector(
                 const isServer =
                     cert.Thumbprints.includes(serverThumbprint) ||
                     cert.Thumbprints.includes(serverForCommThumbprint);
-                const isSso = cert.Usage === "SsoServer" || cert.Usage === "SsoClient";
                 const isClient = !isServer && !isSso;
 
                 const matchesFilter =
@@ -209,6 +211,16 @@ const selectSsoUserCertificates = createSelector(
     (certificates) => certificates.filter((c) => c.Usage === "SsoClient")
 );
 
+const selectHasActiveFilter = createSelector(
+    (state: RootState) => state.certificates.nameOrThumbprintFilter,
+    (state: RootState) => state.certificates.databaseFilter,
+    (state: RootState) => state.certificates.clearanceFilter,
+    (state: RootState) => state.certificates.stateFilter,
+    (state: RootState) => state.certificates.managementTypeFilter,
+    (nameOrThumbprint, database, clearance, state, managementType) =>
+        !!nameOrThumbprint || !!database || clearance.length > 0 || state.length > 0 || managementType.length > 0
+);
+
 export const certificatesSelectors = {
     certificates: (state: RootState) => state.certificates.certificates,
     isInitialLoad: (state: RootState) => state.certificates.isInitialLoad,
@@ -239,6 +251,8 @@ export const certificatesSelectors = {
     isRegisterSsoServerModalOpen: (state: RootState) => state.certificates.isRegisterSsoServerModalOpen,
     isRegisterSsoUserModalOpen: (state: RootState) => state.certificates.isRegisterSsoUserModalOpen,
     ssoUserToEdit: (state: RootState) => state.certificates.ssoUserToEdit,
+    ssoUserToClone: (state: RootState) => state.certificates.ssoUserToClone,
     ssoServerCertificates: selectSsoServerCertificates,
     ssoUserCertificates: selectSsoUserCertificates,
+    hasActiveFilter: selectHasActiveFilter,
 };

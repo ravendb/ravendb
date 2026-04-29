@@ -19,6 +19,7 @@ import CertificatesFilters from "components/pages/resources/manageServer/certifi
 import CertificatesManageDropdown from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesManageDropdown";
 import CertificatesRegisterSsoServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoServerModal";
 import CertificatesRegisterSsoUserModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegisterSsoUserModal";
+import { EmptySet } from "components/common/EmptySet";
 
 export default function CertificatesAuthEnabled() {
     const dispatch = useAppDispatch();
@@ -31,6 +32,8 @@ export default function CertificatesAuthEnabled() {
     const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
     const isRegisterSsoServerModalOpen = useAppSelector(certificatesSelectors.isRegisterSsoServerModalOpen);
     const isRegisterSsoUserModalOpen = useAppSelector(certificatesSelectors.isRegisterSsoUserModalOpen);
+    const hasActiveFilter = useAppSelector(certificatesSelectors.hasActiveFilter);
+    const filteredCertificates = useAppSelector(certificatesSelectors.filteredCertificates);
 
     // Initial load
     useEffect(() => {
@@ -81,6 +84,9 @@ export default function CertificatesAuthEnabled() {
                     <CertificatesSsoList />
                     <CertificatesServerList />
                     <CertificatesClientList />
+                    {hasActiveFilter && filteredCertificates.length === 0 && (
+                        <EmptySet>No certificates match the current filters</EmptySet>
+                    )}
                 </>
             )}
 
