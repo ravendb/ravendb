@@ -344,5 +344,75 @@ class User { public string Id { get; set; } }
             // Already using lazy API; no diagnostics
             Assert.Empty(diagnostics);
         }
+
+        [Fact]
+        public async Task LoadsOnDifferentSessions_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session1, IDocumentSession session2, string userId, string orderId)
+    {
+        var user = session1.Load<User>(userId);
+        var order = session2.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            // Two batchable Loads but on different sessions — cannot share a lazy multi-get.
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task QueriesOnDifferentSessions_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session1, IDocumentSession session2)
+    {
+        var users = session1.Query<User>().ToList();
+        var orders = session2.Query<Order>().ToList();
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            // Two materializing queries but on different sessions — cannot share a multi-get.
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task TwoLoadsOnSession1_PlusOneOnSession2_Reports_Two_Diagnostics()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session1, IDocumentSession session2, string a, string b, string c)
+    {
+        var x = session1.Load<User>(a);
+        var y = session2.Load<User>(b);
+        var z = session1.Load<User>(c);
+    }
+}
+
+class User { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<SessionLazyBatchingAnalyzer>(source);
+
+            // session1 group has 2 loads, session2 has 1 — only the session1 group fires.
+            Assert.Equal(2, diagnostics.Length);
+            Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.SessionLazyBatching, d.Id));
+        }
     }
 }
