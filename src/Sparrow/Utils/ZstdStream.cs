@@ -177,9 +177,11 @@ namespace Sparrow.Utils
             return WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken).AsTask();
         }
 
+        #pragma warning disable RDB0002
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
+            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(continueOnCapturedContext))
             {
                 while (buffer.Length > 0)
                 {
@@ -189,10 +191,11 @@ namespace Sparrow.Utils
                     if (outputBytes == 0)
                         continue;
 
-                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+                    await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                 }
             }
         }
+        #pragma warning restore RDB0002
 
         public override void Flush()
         {
@@ -215,27 +218,33 @@ namespace Sparrow.Utils
             _inner.Flush();
         }
 
+        #pragma warning disable RDB0002
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
-            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(false))
+            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            using (await _disposerLock.EnsureNotDisposedAsync().ConfigureAwait(continueOnCapturedContext))
             {
-                await FlushInternalAsync(cancellationToken).ConfigureAwait(false);
+                await FlushInternalAsync(cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
         }
+        #pragma warning restore RDB0002
 
+        #pragma warning disable RDB0002
         private async Task FlushInternalAsync(CancellationToken cancellationToken = default)
         {
+            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
             while (true)
             {
                 var (outputBytes, _, _) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_flush);
                 if (outputBytes == 0)
                     break;
 
-                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(false);
+                await _inner.WriteAsync(_tempBuffer, 0, outputBytes, cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
 
-            await _inner.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await _inner.FlushAsync(cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }
+        #pragma warning restore RDB0002
 
         public override async ValueTask DisposeAsync()
         {
@@ -249,16 +258,19 @@ namespace Sparrow.Utils
 
                 _disposed = true;
 
+                #pragma warning disable RDB0002
+                var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+
                 if (_compressContext != null)
                 {
                     if (_compression)
-                        await FlushInternalAsync().ConfigureAwait(false);
+                        await FlushInternalAsync().ConfigureAwait(continueOnCapturedContext);
 
                     while (_compression)
                     {
                         var (outputBytes, _, done) = CompressStep(ReadOnlySpan<byte>.Empty, ZstdLib.ZSTD_EndDirective.ZSTD_e_end);
 
-                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(false);
+                        await _inner.WriteAsync(_tempBuffer, 0, outputBytes).ConfigureAwait(continueOnCapturedContext);
 
                         if (done)
                             break;
@@ -266,7 +278,8 @@ namespace Sparrow.Utils
                 }
 
                 if (_leaveOpen == false)
-                    await _inner.DisposeAsync().ConfigureAwait(false);
+                    await _inner.DisposeAsync().ConfigureAwait(continueOnCapturedContext);
+                #pragma warning restore RDB0002
 
                 ReleaseResources();
             }

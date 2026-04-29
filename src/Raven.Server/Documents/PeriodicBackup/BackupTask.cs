@@ -25,6 +25,7 @@ using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Json.Sync;
@@ -825,13 +826,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                     // continuations execute on this dedicated backup thread (not ThreadPool threads).
                     var previousContext = SynchronizationContext.Current;
                     SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
-
+                    AsyncContextHelper.ContinueOnCapturedContext.Value = true;
                     try
                     {
                         AsyncHelpers.RunSync(() => smuggler.ExecuteAsync());
                     }
                     finally
                     {
+                        AsyncContextHelper.ContinueOnCapturedContext.Value = false;
                         SynchronizationContext.SetSynchronizationContext(previousContext);
                     }
 

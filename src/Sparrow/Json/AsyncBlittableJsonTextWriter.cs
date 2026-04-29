@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -78,12 +79,14 @@ namespace Sparrow.Json
             return FlushAsyncSlow(writeTask, _innerStream, bytesCount);
         }
         
+        #pragma warning disable RDB0002 // ConfigureAwait is intentionally dynamic to support dedicated backup thread pump
         private static async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
         {
-            await writeTask.ConfigureAwait(false);
+            await writeTask.ConfigureAwait(AsyncContextHelper.ContinueOnCapturedContext.Value);
             innerStream.SetLength(0);
             return bytesCount;
         }
+        #pragma warning restore RDB0002
 
         public ValueTask DisposeAsync()
         {
@@ -117,20 +120,26 @@ namespace Sparrow.Json
             return DisposeAsyncSlow(flushTask);
         }
 
+        #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
         {
-            var bytesWritten = await flushTask.ConfigureAwait(false);
+            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            var bytesWritten = await flushTask.ConfigureAwait(continueOnCapturedContext);
             if (bytesWritten > 0)
-                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(false);
+                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-            await DisposeStreamAsync().ConfigureAwait(false);
+            await DisposeStreamAsync().ConfigureAwait(continueOnCapturedContext);
         }
+        #pragma warning restore RDB0002
 
+        #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
-            await outputFlushTask.ConfigureAwait(false);
-            await DisposeStreamAsync().ConfigureAwait(false);
+            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            await outputFlushTask.ConfigureAwait(continueOnCapturedContext);
+            await DisposeStreamAsync().ConfigureAwait(continueOnCapturedContext);
         }
+        #pragma warning restore RDB0002
 
         private ValueTask DisposeStreamAsync()
         {
