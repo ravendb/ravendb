@@ -27,19 +27,21 @@ namespace Sparrow.Json
                 throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
         }
 
+        #pragma warning disable RDB0002
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
         {
-            await FlushAsync(token).ConfigureAwait(false);
+            await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
 
             while (true)
             {
-                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(false);
+                _pos = await stream.ReadAsync(_pinnedBuffer.Memory.Memory, token).ConfigureAwait(_continueOnCapturedContext);
                 if (_pos == 0)
                     break;
 
-                await FlushAsync(token).ConfigureAwait(false);
+                await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
             }
         }
+        #pragma warning restore RDB0002
 
         public bool ShouldFlushAsync
         {
