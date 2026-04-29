@@ -14,13 +14,15 @@ namespace Sparrow.Json
         
         // PERF: Cache the MemoryStream reference to avoid repeated casting
         private readonly MemoryStream _innerStream;
+        private readonly bool _continueOnCapturedContext;
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
             _innerStream = _stream as MemoryStream; // Cache the cast since we know it's always MemoryStream
-            
+            _continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+
             if (_innerStream == null)
                 throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
         }
@@ -79,14 +81,15 @@ namespace Sparrow.Json
             return FlushAsyncSlow(writeTask, _innerStream, bytesCount);
         }
         
-        #pragma warning disable RDB0002 // ConfigureAwait is intentionally dynamic to support dedicated backup thread pump
-        private static async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
+        private async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
         {
-            await writeTask.ConfigureAwait(AsyncContextHelper.ContinueOnCapturedContext.Value);
+            #pragma warning disable RDB0002 // ConfigureAwait is intentionally dynamic to support dedicated backup thread pump
+            await writeTask.ConfigureAwait(_continueOnCapturedContext);
+            #pragma warning restore RDB0002
+
             innerStream.SetLength(0);
             return bytesCount;
         }
-        #pragma warning restore RDB0002
 
         public ValueTask DisposeAsync()
         {
@@ -123,21 +126,19 @@ namespace Sparrow.Json
         #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
         {
-            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
-            var bytesWritten = await flushTask.ConfigureAwait(continueOnCapturedContext);
+            var bytesWritten = await flushTask.ConfigureAwait(_continueOnCapturedContext);
             if (bytesWritten > 0)
-                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(_continueOnCapturedContext);
 
-            await DisposeStreamAsync().ConfigureAwait(continueOnCapturedContext);
+            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
         #pragma warning restore RDB0002
 
         #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
-            var continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
-            await outputFlushTask.ConfigureAwait(continueOnCapturedContext);
-            await DisposeStreamAsync().ConfigureAwait(continueOnCapturedContext);
+            await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
+            await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
         #pragma warning restore RDB0002
 

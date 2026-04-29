@@ -44,13 +44,13 @@ namespace Sparrow.Utils
             return disposable;
         }
 
-        public async ValueTask<IDisposable> EnsureNotDisposedAsync()
+        public async ValueTask<IDisposable> EnsureNotDisposedAsync(bool continueOnCapturedContext)
         {
             IDisposable disposable = null;
             try
             {
                 #pragma warning disable RDB0002
-                disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(AsyncContextHelper.ContinueOnCapturedContext.Value);
+                disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(continueOnCapturedContext);
                 #pragma warning restore RDB0002
             }
             catch
