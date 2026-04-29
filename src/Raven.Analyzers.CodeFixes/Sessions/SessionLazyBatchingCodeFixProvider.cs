@@ -178,8 +178,6 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 string originalName = declarator.Identifier.Text;
                 string lazyName = "lazy" + char.ToUpperInvariant(originalName[0]) + originalName.Substring(1);
 
-                renamings.Add((lazyName, originalName, methodName));
-
                 // Build the new lazy invocation
                 ExpressionSyntax newInitializer;
                 if (isLoad || methodName.Contains("Load", StringComparison.Ordinal))
@@ -292,6 +290,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     .WithDeclaration(stmt.Declaration.WithVariables(
                         SyntaxFactory.SingletonSeparatedList(newDeclarator)));
 
+                renamings.Add((lazyName, originalName, methodName));
                 replacements[batchableIndices[i]] = newStmt;
             }
 
@@ -459,35 +458,11 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
                 ITypeSymbol? receiverType = _model.GetTypeInfo(memberAccess.Expression).Type;
 
-                // Check for query materializations
-                if (QueryMaterializingMethods.Contains(methodName))
+                // Check for query materializations on IRavenQueryable only
+                if (QueryMaterializingMethods.Contains(methodName) && SyntaxHelpers.IsRavenQueryable(receiverType))
                 {
-                    bool isQueryable = SyntaxHelpers.IsRavenQueryable(receiverType);
-
-                    if (!isQueryable && receiverType != null)
-                    {
-                        if (receiverType.Name == "IQueryable")
-                        {
-                            isQueryable = true;
-                        }
-                        else
-                        {
-                            foreach (var iface in receiverType.AllInterfaces)
-                            {
-                                if (iface.Name == "IQueryable")
-                                {
-                                    isQueryable = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (isQueryable)
-                    {
-                        BatchableCalls.Add((statement, methodName, memberAccess.Expression, false));
-                        return;
-                    }
+                    BatchableCalls.Add((statement, methodName, memberAccess.Expression, false));
+                    return;
                 }
 
                 // Check for session loads
