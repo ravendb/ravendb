@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,18 +27,13 @@ namespace Raven.Server.ServerWide.Commands
         public override BlittableJsonReaderObject GetUpdatedValue(JsonOperationContext context, BlittableJsonReaderObject previousValue, long index)
         {
             if (previousValue == null)
-                throw new RachisInvalidOperationException(
-                    "There are no server-wide connection strings so nothing to delete: " +
-                    $"raftIndex {index}, configuration {context.ReadObject(Value.ToJson(), "")}");
+                return null;
 
             var propertyIndex = previousValue.GetPropertyIndex(Value.ConnectionStringName);
             if (propertyIndex == -1)
-                throw new RachisInvalidOperationException(
-                    "The server-wide connection string to delete doesn't exist: " +
-                    $"raftIndex {index}, previousValue {previousValue}, configuration {context.ReadObject(Value.ToJson(), "")}");
+                return null;
 
-            if (previousValue.Modifications == null)
-                previousValue.Modifications = new DynamicJsonValue();
+            previousValue.Modifications ??= new DynamicJsonValue();
 
             previousValue.Modifications.Removals = new HashSet<int> { propertyIndex };
             return context.ReadObject(previousValue, Name);

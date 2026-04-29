@@ -216,6 +216,13 @@ public class RavenDB_24310 : RavenTestBase
             // excluded database should NOT have it
             var record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db2Name));
             Assert.False(record2.RavenConnectionStrings.ContainsKey(expectedName));
+
+            // clear the excluded list and verify the connection string is now propagated to the previously-excluded database
+            ravenCS.ExcludedDatabases = null;
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCS));
+
+            record2 = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(db2Name));
+            Assert.True(record2.RavenConnectionStrings.ContainsKey(expectedName));
         }
     }
 
@@ -248,7 +255,7 @@ public class RavenDB_24310 : RavenTestBase
 
             var ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(dbLevelCS)));
-            Assert.Contains(ServerWideConnectionString.NamePrefix, ex.Message);
+            Assert.StartsWith(ServerWideConnectionString.NamePrefix, prefixedName);
 
             // attempt to DELETE via database-level API should fail
             var removeCS = new RavenConnectionString
@@ -260,7 +267,7 @@ public class RavenDB_24310 : RavenTestBase
 
             ex = await Assert.ThrowsAsync<Raven.Client.Exceptions.RavenException>(async () =>
                 await store.Maintenance.SendAsync(new RemoveConnectionStringOperation<RavenConnectionString>(removeCS)));
-            Assert.Contains(ServerWideConnectionString.NamePrefix, ex.Message);
+            Assert.StartsWith(ServerWideConnectionString.NamePrefix, prefixedName);
         }
     }
 
@@ -307,8 +314,9 @@ public class RavenDB_24310 : RavenTestBase
             Assert.True(record.RavenConnectionStrings.ContainsKey(ravenExpectedName));
             Assert.True(record.SqlConnectionStrings.ContainsKey(sqlExpectedName));
 
-            // delete just the raven one
-            await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>(new RavenConnectionString { Name = "MyRavenCS" }));
+            // delete just the raven one (using the connection string returned by Get)
+            var ravenServerWide = allResult.Results.First(r => r.Type == ConnectionStringType.Raven);
+            await store.Maintenance.Server.SendAsync(new RemoveServerWideConnectionStringOperation<RavenConnectionString>((RavenConnectionString)ravenServerWide.ConnectionString));
 
             record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
             Assert.False(record.RavenConnectionStrings.ContainsKey(ravenExpectedName));
