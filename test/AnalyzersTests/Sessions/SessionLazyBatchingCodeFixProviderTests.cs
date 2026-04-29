@@ -117,14 +117,14 @@ class Order { public string Id { get; set; } }
 
             string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
 
-            // Async loads should become sync lazy registrations (lazy API is always sync)
-            Assert.Contains("session.Advanced.Lazily.Load<User>(userId)", fixed_code);
-            Assert.Contains("session.Advanced.Lazily.Load<Order>(orderId)", fixed_code);
+            // Async sessions expose IAsyncLazySessionOperations.LoadAsync, returning Lazy<Task<T>>.
+            Assert.Contains("session.Advanced.Lazily.LoadAsync<User>(userId)", fixed_code);
+            Assert.Contains("session.Advanced.Lazily.LoadAsync<Order>(orderId)", fixed_code);
             // Execute should be async
             Assert.Contains("await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()", fixed_code);
-            // Value extractions remain sync
-            Assert.Contains("var user = lazyUser.Value;", fixed_code);
-            Assert.Contains("var order = lazyOrder.Value;", fixed_code);
+            // .Value is a Task<T> for async loads, so it must be awaited.
+            Assert.Contains("var user = await lazyUser.Value;", fixed_code);
+            Assert.Contains("var order = await lazyOrder.Value;", fixed_code);
         }
 
         [Fact]
@@ -169,15 +169,16 @@ class User { public string Id { get; set; } }
 
             string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
 
-            // Query should use .Lazily() (removing the async variant)
+            // Query should use .Lazily() (the async ToListAsync becomes the sync Lazily registration)
             Assert.Contains(".Lazily()", fixed_code);
-            // Load should use Lazily.Load
-            Assert.Contains("session.Advanced.Lazily.Load<User>(managerId)", fixed_code);
+            // Load on async session should use Lazily.LoadAsync (returning Lazy<Task<T>>)
+            Assert.Contains("session.Advanced.Lazily.LoadAsync<User>(managerId)", fixed_code);
             // Execute should be async
             Assert.Contains("await session.Advanced.Eagerly.ExecuteAllPendingLazyOperationsAsync()", fixed_code);
-            // Value extractions
+            // Query .Value is IEnumerable<T> — call ToList() as before.
             Assert.Contains("var employees = lazyEmployees.Value.ToList();", fixed_code);
-            Assert.Contains("var manager = lazyManager.Value;", fixed_code);
+            // Async load .Value is Task<T> — must be awaited.
+            Assert.Contains("var manager = await lazyManager.Value;", fixed_code);
         }
     }
 }

@@ -244,5 +244,37 @@ class User { public string Name { get; set; } public string Email { get; set; } 
 
             Assert.Empty(diagnostics);
         }
+
+        [Fact]
+        public async Task Reduce_WithSelectMany_No_Diagnostic()
+        {
+            // RVN014 is about source-document fan-out (Map/AddMap producing >1 entry per
+            // input document). SelectMany inside Reduce groups already-mapped entries and
+            // does not affect outputs-per-source-document, so it must not be flagged.
+            const string source = CommonUsings + @"
+class TagsByCount : AbstractIndexCreationTask<Order, TagsByCount.Result>
+{
+    public class Result { public string Tag { get; set; } public int Count { get; set; } }
+
+    public TagsByCount()
+    {
+        Map = orders => orders.SelectMany(o => o.Tags, (o, t) => new Result { Tag = t, Count = 1 });
+
+        Reduce = results => results
+            .GroupBy(x => x.Tag)
+            .SelectMany(g => g.Select(_ => new Result { Tag = g.Key, Count = g.Sum(x => x.Count) }));
+    }
+}
+
+class Order { public IEnumerable<string> Tags { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            // Map has a SelectMany (one diagnostic). Reduce has a SelectMany too but is excluded.
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
+            Assert.Contains("SelectMany", d.GetMessage());
+        }
     }
 }
