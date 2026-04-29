@@ -36,6 +36,7 @@ internal sealed unsafe class SortHelper
         long* leftEndPtr = leftPtr + leftLength;
         long* rightEndPtr = rightPtr + rightLength;
 
+        Debug.Assert(leftLength <= rightLength);
         //We've to assert in good order, so lets check which array is "first" (lowest first item)
         var cmp = (*leftPtr & long.MaxValue) - (*rightPtr & long.MaxValue);
         switch (cmp)
@@ -62,6 +63,10 @@ internal sealed unsafe class SortHelper
             long leftValue = *leftPtr++;
             var inc = GallopSearch(leftValue);
             rightPtr += inc;
+            
+            if (rightPtr >= rightEndPtr)
+                break;
+            
             if (leftValue != *rightPtr) 
                 continue;
 
