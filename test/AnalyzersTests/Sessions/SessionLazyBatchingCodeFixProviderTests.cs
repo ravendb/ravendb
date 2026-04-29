@@ -128,6 +128,29 @@ class Order { public string Id { get; set; } }
         }
 
         [Fact]
+        public async Task TwoLoads_OnDifferentSessions_Offers_No_Fix()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session1, IDocumentSession session2, string userId, string orderId)
+    {
+        var user = session1.Load<User>(userId);
+        var order = session2.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            // Analyzer reports nothing for cross-session loads, so the harness throws before
+            // a fix is even attempted. This documents that the fix never engages here.
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source));
+        }
+
+        [Fact]
         public async Task AsyncQueryAndAsyncLoad_Transforms_To_Lazy()
         {
             const string source = CommonUsings + @"
