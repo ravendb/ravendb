@@ -56,7 +56,7 @@ namespace Raven.Analyzers.Indexes
         {
             foreach (SyntaxNode node in body.DescendantNodes())
             {
-                SyntaxNode? lambdaBody = TryGetMapReduceLambdaBody(node, context.SemanticModel);
+                SyntaxNode? lambdaBody = TryGetMapLambdaBody(node, context.SemanticModel);
                 if (lambdaBody == null)
                     continue;
 
@@ -96,14 +96,16 @@ namespace Raven.Analyzers.Indexes
             }
         }
 
-        private static SyntaxNode? TryGetMapReduceLambdaBody(SyntaxNode node, SemanticModel model)
+        // Returns the lambda body for Map = ... / AddMap<T>(...) / AddMapForAll<T>(...).
+        // Reduce is intentionally excluded: a Reduce lambda runs over already-mapped entries
+        // and never produces additional outputs per source document, so it cannot fan out.
+        private static SyntaxNode? TryGetMapLambdaBody(SyntaxNode node, SemanticModel model)
         {
-            // Map = lambda  or  Reduce = lambda
+            // Map = lambda
             if (node is AssignmentExpressionSyntax assignment
                 && assignment.Left is IdentifierNameSyntax identifier)
             {
-                string name = identifier.Identifier.Text;
-                if (name != KnownTypes.MapFieldName && name != KnownTypes.ReduceFieldName)
+                if (identifier.Identifier.Text != KnownTypes.MapFieldName)
                     return null;
 
                 ISymbol? sym = model.GetSymbolInfo(identifier).Symbol;

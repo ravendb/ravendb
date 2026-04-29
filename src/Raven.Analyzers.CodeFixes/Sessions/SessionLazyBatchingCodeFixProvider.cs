@@ -195,7 +195,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 ExpressionSyntax newInitializer;
                 if (isLoad || methodName.Contains("Load", StringComparison.Ordinal))
                 {
-                    // Load/LoadAsync -> session.Advanced.Lazily.Load<T>(id)
+                    // session.Advanced.Lazily
                     var lazilyExpr = SyntaxFactory.MemberAccessExpression(
                         SyntaxKind.SimpleMemberAccessExpression,
                         SyntaxFactory.MemberAccessExpression(
@@ -204,25 +204,18 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                             SyntaxFactory.IdentifierName("Advanced")),
                         SyntaxFactory.IdentifierName("Lazily"));
 
+                    // IDocumentSession.Advanced.Lazily.Load<T>(id)            -> Lazy<T>
+                    // IAsyncDocumentSession.Advanced.Lazily.LoadAsync<T>(id)  -> Lazy<Task<T>>
+                    string lazyLoadMethodName =
+                        methodName == KnownTypes.LoadAsyncMethodName ? KnownTypes.LoadAsyncMethodName : KnownTypes.LoadMethodName;
+
                     // Extract type arguments from original invocation
-                    // For both LoadAsync and Load, use "Load" in the lazy API
                     if (stmt.Declaration.Variables[0].Initializer?.Value is AwaitExpressionSyntax awaitExpr)
                     {
                         if (awaitExpr.Expression is InvocationExpressionSyntax origInv &&
                             origInv.Expression is MemberAccessExpressionSyntax origMem)
                         {
-                            // Preserve type arguments from the original method
-                            SimpleNameSyntax loadMethod;
-                            if (origMem.Name is GenericNameSyntax genName)
-                            {
-                                loadMethod = SyntaxFactory.GenericName(
-                                    SyntaxFactory.Identifier("Load"),
-                                    genName.TypeArgumentList);
-                            }
-                            else
-                            {
-                                loadMethod = SyntaxFactory.IdentifierName("Load");
-                            }
+                            SimpleNameSyntax loadMethod = BuildLoadMethodName(origMem.Name, lazyLoadMethodName);
 
                             newInitializer = SyntaxFactory.InvocationExpression(
                                 SyntaxFactory.MemberAccessExpression(
@@ -239,18 +232,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     else if (stmt.Declaration.Variables[0].Initializer?.Value is InvocationExpressionSyntax origInv2 &&
                              origInv2.Expression is MemberAccessExpressionSyntax origMem2)
                     {
-                        // Preserve type arguments from the original method
-                        SimpleNameSyntax loadMethod;
-                        if (origMem2.Name is GenericNameSyntax genName)
-                        {
-                            loadMethod = SyntaxFactory.GenericName(
-                                SyntaxFactory.Identifier("Load"),
-                                genName.TypeArgumentList);
-                        }
-                        else
-                        {
-                            loadMethod = SyntaxFactory.IdentifierName("Load");
-                        }
+                        SimpleNameSyntax loadMethod = BuildLoadMethodName(origMem2.Name, lazyLoadMethodName);
 
                         newInitializer = SyntaxFactory.InvocationExpression(
                             SyntaxFactory.MemberAccessExpression(
@@ -372,10 +354,18 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 }
 
                 // Build: var x = lazyX.Value [.Method()];
+                // For async loads, Lazily.LoadAsync returns Lazy<Task<T>> so we must await
+                // the .Value to materialize the document.
                 ExpressionSyntax valueExpr = SyntaxFactory.MemberAccessExpression(
                     SyntaxKind.SimpleMemberAccessExpression,
                     SyntaxFactory.IdentifierName(lazyName),
                     SyntaxFactory.IdentifierName("Value"));
+
+                bool isAsyncLoad = methodName == KnownTypes.LoadAsyncMethodName;
+                if (isAsyncLoad)
+                {
+                    valueExpr = SyntaxFactory.AwaitExpression(valueExpr);
+                }
 
                 if (!string.IsNullOrEmpty(valueMethod))
                 {
@@ -424,6 +414,19 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             SyntaxNode newRoot = root.ReplaceNode(block, newBlock);
 
             return document.WithSyntaxRoot(newRoot);
+        }
+
+        // Preserve any type arguments from the original Load[Async] call when constructing
+        // the lazy load method name (Load or LoadAsync depending on the original).
+        private static SimpleNameSyntax BuildLoadMethodName(SimpleNameSyntax originalName, string lazyLoadMethodName)
+        {
+            if (originalName is GenericNameSyntax genName)
+            {
+                return SyntaxFactory.GenericName(
+                    SyntaxFactory.Identifier(lazyLoadMethodName),
+                    genName.TypeArgumentList);
+            }
+            return SyntaxFactory.IdentifierName(lazyLoadMethodName);
         }
 
         private static ExpressionSyntax? ExtractSessionReceiverFromQueryChain(ExpressionSyntax expression)
