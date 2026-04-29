@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
-using Raven.Client.Util;
 using Raven.Server.SqlMigration;
 using Sparrow.Collections;
 using Tests.Infrastructure;
@@ -26,7 +25,7 @@ namespace SlowTests.Server.Documents.CdcSink
         // fails — orphaning the slot and eventually saturating max_replication_slots.
         private readonly ConcurrentSet<(IDocumentStore Store, string Name)> _createdSinks = new();
 
-        protected new AddCdcSinkOperationResult AddCdcSink(IDocumentStore store, CdcSinkConfiguration config)
+        protected AddCdcSinkOperationResult AddCdcSink(IDocumentStore store, CdcSinkConfiguration config)
         {
             var result = store.Maintenance.Send(new AddCdcSinkOperation(config));
             _createdSinks.Add((store, config.Name));
