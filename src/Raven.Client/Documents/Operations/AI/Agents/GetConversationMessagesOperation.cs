@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
@@ -119,6 +121,99 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
                 return; // 404 — conversation not found
 
             Result = JsonDeserializationClient.AiConversationMessagesResult(response);
+
+            // LazyStringValue / BlittableJsonReaderArray point into the context's byte buffer which
+            // is returned to the pool after this method returns. Materialize to managed types now.
+            if (Result.Parameters != null)
+            {
+                foreach (var param in Result.Parameters.Values)
+                    param.Value = Materialize(param.Value);
+            }
+        }
+
+        private static object Materialize(object value)
+        {
+            switch (value)
+            {
+                case LazyStringValue lsv:
+                    return lsv.ToString(CultureInfo.InvariantCulture);
+                case LazyCompressedStringValue lcsv:
+                    return lcsv.ToString();
+                case LazyNumberValue lnv:
+                    var numStr = lnv.ToString(CultureInfo.InvariantCulture);
+                    if (int.TryParse(numStr, NumberStyles.Any, CultureInfo.InvariantCulture, out int i))
+                        return i;
+                    if (long.TryParse(numStr, NumberStyles.Any, CultureInfo.InvariantCulture, out long l))
+                        return l;
+                    return double.Parse(numStr, NumberStyles.Any, CultureInfo.InvariantCulture);
+                case BlittableJsonReaderArray arr:
+                    var items = new List<object>(arr.Length);
+                    foreach (var item in arr)
+                        items.Add(Materialize(item));
+                    return ToTypedList(items);
+                default:
+                    return value;
+            }
+        }
+
+        private static object ToTypedList(List<object> items)
+        {
+            if (items.Count == 0)
+                return items;
+
+            bool allString = true, allBool = true, allNumber = true;
+            bool hasLong = false, hasDouble = false;
+
+            foreach (var item in items)
+            {
+                if (item is not string) allString = false;
+                if (item is not bool)   allBool   = false;
+
+                if (item is int)        { }
+                else if (item is long)  hasLong   = true;
+                else if (item is double) hasDouble = true;
+                else                    allNumber = false;
+
+                if (allString == false && allBool == false && allNumber == false)
+                    break;
+            }
+
+            if (allString)
+            {
+                var typed = new List<string>(items.Count);
+                foreach (var item in items) typed.Add((string)item);
+                return typed;
+            }
+
+            if (allBool)
+            {
+                var typed = new List<bool>(items.Count);
+                foreach (var item in items) typed.Add((bool)item);
+                return typed;
+            }
+
+            if (allNumber)
+            {
+                if (hasDouble)
+                {
+                    var typed = new List<double>(items.Count);
+                    foreach (var item in items) typed.Add(Convert.ToDouble(item));
+                    return typed;
+                }
+
+                if (hasLong)
+                {
+                    var typed = new List<long>(items.Count);
+                    foreach (var item in items) typed.Add(item is long l ? l : (long)(int)item);
+                    return typed;
+                }
+
+                var ints = new List<int>(items.Count);
+                foreach (var item in items) ints.Add((int)item);
+                return ints;
+            }
+
+            return items;
         }
     }
 }

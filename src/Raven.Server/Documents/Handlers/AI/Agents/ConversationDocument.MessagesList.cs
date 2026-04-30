@@ -10,21 +10,23 @@ public partial class ConversationDocument
     /// Wraps conversation messages with lazy materialization. When constructed from a
     /// BlittableJsonReaderArray (via ToDocument), provides zero-copy read access.
     /// On first mutation (Add, RemoveRange, Clear), materializes to an internal list.
-    /// Points back to the owning ConversationDocument for its backing storage.
     /// </summary>
-    public struct MessagesList : IList<BlittableJsonReaderObject>
+    public sealed class MessagesList : IList<BlittableJsonReaderObject>
     {
-        private readonly ConversationDocument _owner;
+        private BlittableJsonReaderArray _messagesArray;
+        private List<BlittableJsonReaderObject> _messagesList;
 
-        internal MessagesList(ConversationDocument owner) => _owner = owner;
+        internal MessagesList() { }
 
-        public int Count => _owner._messagesList?.Count ?? _owner._messagesArray?.Length ?? 0;
+        internal MessagesList(BlittableJsonReaderArray array) => _messagesArray = array.Clone(); // Clone (at the same context) to allow disposing this array disposing its elements
+
+        public int Count => _messagesList?.Count ?? _messagesArray?.Length ?? 0;
 
         public bool IsReadOnly => false;
 
         public BlittableJsonReaderObject this[int index]
         {
-            get => _owner._messagesList != null ? _owner._messagesList[index] : (BlittableJsonReaderObject)_owner._messagesArray[index];
+            get => _messagesList != null ? _messagesList[index] : (BlittableJsonReaderObject)_messagesArray[index];
             set => Materialize()[index] = value;
         }
 
@@ -40,8 +42,9 @@ public partial class ConversationDocument
 
         public void Clear()
         {
-            _owner._messagesArray = null;
-            _owner._messagesList = [];
+            _messagesArray?.Dispose();
+            _messagesArray = null;
+            _messagesList = [];
         }
 
         public bool Contains(BlittableJsonReaderObject item)
@@ -109,23 +112,27 @@ public partial class ConversationDocument
         /// Returns the underlying storage in a form that ObjectJsonParser can serialize
         /// (either List or BlittableJsonReaderArray — both natively supported).
         /// </summary>
-        internal object AsSerializable() => (object)_owner._messagesList ?? _owner._messagesArray;
+        internal object AsSerializable() => (object)_messagesList ?? _messagesArray;
 
         private List<BlittableJsonReaderObject> Materialize()
         {
-            if (_owner._messagesList != null)
-                return _owner._messagesList;
+            if (_messagesList != null)
+                return _messagesList;
 
-            var array = _owner._messagesArray;
+            var array = _messagesArray;
             var list = new List<BlittableJsonReaderObject>(array?.Length ?? 0);
             if (array != null)
             {
                 for (int i = 0; i < array.Length; i++)
-                    list.Add(((BlittableJsonReaderObject)array[i]).CloneOnTheSameContext());
+                {
+                    if (array[i] is BlittableJsonReaderObject oldMessage)
+                        list.Add(oldMessage.CloneOnTheSameContext());
+                }
             }
 
-            _owner._messagesList = list;
-            _owner._messagesArray = null;
+            _messagesList = list;
+            _messagesArray?.Dispose();
+            _messagesArray = null;
             return list;
         }
     }

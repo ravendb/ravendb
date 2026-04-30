@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.AI;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
@@ -17,6 +18,11 @@ public class AiConversationMessagesResult
     /// The identifier of the AI agent this conversation belongs to.
     /// </summary>
     public string Agent { get; set; }
+
+    /// <summary>
+    /// The conversation parameters, normalized from the stored format.
+    /// </summary>
+    public Dictionary<string, AiConversationParameter> Parameters { get; set; }
 
     /// <summary>
     /// Cumulative token usage across all turns of this conversation.
