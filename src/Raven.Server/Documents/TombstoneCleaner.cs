@@ -419,7 +419,7 @@ namespace Raven.Server.Documents
                             : documentDatabase.DocumentsStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact),
                         ITombstoneAware.TombstoneType.Counters => collection.IsNullOrEmpty()
                             ? documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch, exact)
-                            : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1),
+                            : documentDatabase.DocumentsStorage.CountersStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact),
                         ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
                             ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, tombstoneInfo.Etag + 1, stopwatch, exact)
                             : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetNumberOfTombstonesToProcess(context, collection, tombstoneInfo.Etag + 1, stopwatch, exact), 

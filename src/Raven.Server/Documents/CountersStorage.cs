@@ -1948,40 +1948,21 @@ namespace Raven.Server.Documents
             return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
-        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag)
+        public NumberOfEntriesAfterResult GetNumberOfTombstonesToProcess(DocumentsOperationContext context, string collectionName, long afterEtag, Stopwatch overallDuration, bool exact)
         {
-            var table = new Table(CounterTombstonesSchema, context.Transaction.InnerTransaction);
-            long count = 0;
+            var collection = _documentsStorage.GetCollection(collectionName, throwIfDoesNotExist: false);
+            if (collection == null)
+                return new NumberOfEntriesAfterResult();
 
-            foreach (var result in table.SeekForwardFrom(CounterTombstonesSchema.FixedSizeIndexes[AllCounterTombstonesEtagSlice], afterEtag, 0))
-            {
-                ExtractDocIdFromCounterTombstoneKey(context, ref result.Reader, out var documentId);
+            var counterTombstonesTableName = collection.GetTableName(CollectionTableType.CounterTombstones);
+            var table = context.Transaction.InnerTransaction.OpenTable(CounterTombstonesSchema, counterTombstonesTableName);
 
-                using (documentId)
-                {
-                    var documentOrTombstone = _documentsStorage.GetDocumentOrTombstone(context, documentId, fields: DocumentFields.Data);
-                    if (documentOrTombstone.Missing)
-                        continue;
+            if (table == null)
+                return new NumberOfEntriesAfterResult();
 
-                    using (documentOrTombstone.Document)
-                    using (documentOrTombstone.Tombstone)
-                    {
-                        string collection = documentOrTombstone.Document != null ?
-                            _documentDatabase.DocumentsStorage.ExtractCollectionName(context, documentOrTombstone.Document.Data).Name :
-                            documentOrTombstone.Tombstone.Collection;
+            var indexDef = CounterTombstonesSchema.FixedSizeIndexes[CollectionCounterTombstonesEtagsSlice];
 
-                        if (collection.Equals(collectionName))
-                            count++;
-                    }
-                }
-            }
-
-            return new NumberOfEntriesAfterResult
-            {
-                Count = count,
-                Total = -1, // we don't use the total for tombstones count
-                Estimated = false
-            };
+            return table.GetNumberOfEntriesAfter(indexDef, afterEtag, overallDuration, exact);
         }
 
         public long PurgeCountersAndCounterTombstones(DocumentsOperationContext context, string collection, long upto, long numberOfEntriesToDelete)
