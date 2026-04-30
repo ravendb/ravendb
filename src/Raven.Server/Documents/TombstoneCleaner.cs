@@ -215,6 +215,8 @@ namespace Raven.Server.Documents
 
             _subscriptionsLocker.Wait();
 
+            var overallDuration = Stopwatch.StartNew();
+
             try
             {
                 foreach (var subscription in _subscriptions)
@@ -263,7 +265,7 @@ namespace Raven.Server.Documents
                         }
 
                         if (addInfoForDebug)
-                            result.AddPerSubscriptionInfoExtended(subscription, lastTombstoneInfo, tombstoneType, _documentDatabase, exact);
+                            result.AddPerSubscriptionInfoExtended(subscription, lastTombstoneInfo, tombstoneType, _documentDatabase, exact, overallDuration);
                     }
                 }
 
@@ -370,10 +372,8 @@ namespace Raven.Server.Documents
             }
 
             internal void AddPerSubscriptionInfoExtended(ITombstoneAware subscription, Dictionary<string, LastTombstoneInfo> lastTombstoneInfo, ITombstoneAware.TombstoneType type,
-                DocumentDatabase documentDatabase, bool exact)
+                DocumentDatabase documentDatabase, bool exact, Stopwatch overallDuration)
             {
-                var duration = Stopwatch.StartNew();
-
                 foreach (var tombstoneInfo in lastTombstoneInfo)
                 {
                     var collection = tombstoneInfo.Value.Collection;
@@ -385,7 +385,7 @@ namespace Raven.Server.Documents
                         collection = string.Empty;
                     }
 
-                    var estimatedAfter = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection, duration, exact);
+                    var estimatedAfter = CalculateRemainingTombstones(tombstoneInfo.Value, type, documentDatabase, collection, overallDuration, exact);
 
                     var key = $"{subscription.TombstoneCleanerIdentifier}/{tombstoneInfo.Value.Name}/{collection}";
 

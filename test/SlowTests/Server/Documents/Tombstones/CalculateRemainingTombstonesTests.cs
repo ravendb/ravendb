@@ -138,7 +138,7 @@ namespace SlowTests.Server.Documents.Tombstones
                 {
                     var sw = Stopwatch.StartNew();
 
-                    // afterEtag is exclusive — entries with etag > afterEtag are counted
+                    // afterEtag is exclusive - entries with etag > afterEtag are counted
                     var result = database.DocumentsStorage.GetNumberOfTombstonesToProcess(context, "Users", firstDeleteEtag, sw, exact: true);
                     Assert.Equal(2, result.Count);
                 }
