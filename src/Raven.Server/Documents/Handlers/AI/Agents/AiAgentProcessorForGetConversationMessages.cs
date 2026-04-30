@@ -1,13 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -58,6 +56,19 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.Agent));
                 writer.WriteString(conversation.Agent);
+                writer.WriteComma();
+
+                writer.WritePropertyName(nameof(AiConversationMessagesResult.Parameters));
+                var paramsJson = new DynamicJsonValue();
+                if (conversation.Parameters != null)
+                {
+                    foreach (var paramName in conversation.Parameters.GetPropertyNames())
+                    {
+                        conversation.Parameters.TryGetMember(paramName, out object value);
+                        paramsJson[paramName] = ConversationHandler.GetAiConversationParameter(paramName, value).ToJson();
+                    }
+                }
+                writer.WriteObject(context.ReadObject(paramsJson, "params"));
                 writer.WriteComma();
 
                 writer.WritePropertyName(nameof(AiConversationMessagesResult.TotalUsage));
