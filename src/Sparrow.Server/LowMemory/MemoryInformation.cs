@@ -526,7 +526,7 @@ namespace Sparrow.Server.LowMemory
                 {
                     _reportedQueryJobObjectFailure = true;
                     Logger.Info(
-                        $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
+                        $"Failure when trying to query job object information from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
                 }
                 return false;
             }
