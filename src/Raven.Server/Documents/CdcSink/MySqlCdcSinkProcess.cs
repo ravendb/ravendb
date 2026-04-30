@@ -40,7 +40,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
 
-    private enum MySqlColumnCategory { Other, Text, Decimal, Json }
+    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean }
 
     private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category, string DataType);
 
@@ -279,7 +279,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var columns = new List<ColumnInfo>();
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT COLUMN_NAME, DATA_TYPE
+                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
                 ORDER BY ORDINAL_POSITION";
@@ -291,13 +291,21 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 var colName = reader.GetString(0);
                 var dataType = reader.GetString(1).ToLowerInvariant();
-                var category = dataType switch
+                var columnType = reader.GetString(2).ToLowerInvariant();
+                // tinyint(1) is the canonical "boolean" shape in MySQL/MariaDB. MySqlConnector
+                // returns CLR bool for it (TreatTinyAsBoolean=true is the default), but MySqlCdc's
+                // binlog parser returns sbyte. Detecting the column type up front lets the
+                // streaming pre-pass coerce sbyte/byte -> bool so both paths emit JSON booleans.
+                // bit(1) is added defensively even though both paths already produce bool today.
+                var category = (dataType, columnType) switch
                 {
-                    "json" => MySqlColumnCategory.Json,
-                    "decimal" or "numeric" => MySqlColumnCategory.Decimal,
-                    "text" or "tinytext" or "mediumtext" or "longtext"
-                        or "char" or "varchar" or "enum" or "set" => MySqlColumnCategory.Text,
-                    _ => MySqlColumnCategory.Other,
+                    (_, "tinyint(1)") or (_, "tinyint(1) unsigned") => MySqlColumnCategory.Boolean,
+                    ("bit", "bit(1)")                                => MySqlColumnCategory.Boolean,
+                    ("json", _)                                      => MySqlColumnCategory.Json,
+                    ("decimal" or "numeric", _)                      => MySqlColumnCategory.Decimal,
+                    ("text" or "tinytext" or "mediumtext" or "longtext"
+                        or "char" or "varchar" or "enum" or "set", _) => MySqlColumnCategory.Text,
+                    _                                                => MySqlColumnCategory.Other,
                 };
                 columns.Add(new ColumnInfo(colName, category, dataType));
             }
@@ -571,6 +579,13 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             values[i] = value switch
             {
                 null or DBNull => null,
+
+                // tinyint(1) / bit(1) columns: MySqlCdc returns sbyte/byte from the binlog,
+                // but MySqlConnector returns bool on the initial-load path. Coerce here so
+                // both paths produce the same JSON shape. Match MySqlConnector's semantics:
+                // any non-zero value is true.
+                sbyte sb when col.Category is MySqlColumnCategory.Boolean => sb != 0,
+                byte b when col.Category is MySqlColumnCategory.Boolean => b != 0,
 
                 // MySqlCdc may return numeric types as strings (BCD-encoded internally).
                 // Parse to decimal so they flow as numbers through the pipeline and patch scripts.

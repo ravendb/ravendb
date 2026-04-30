@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Npgsql;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -4108,6 +4109,266 @@ namespace SlowTests.Server.Documents.CdcSink
 
                 // Non-JSON column unchanged
                 Assert.Equal("Main application configuration", updated.Description);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Smallint_ProducesIntegerJsonType_FromBothInitialLoadAndStreaming()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE numbers (
+                    id    INT PRIMARY KEY,
+                    small SMALLINT NOT NULL,
+                    big   BIGINT NOT NULL
+                )");
+
+            ExecuteNpgSql(connectionString, "INSERT INTO numbers (id, small, big) VALUES (1, 23, 9999999999), (2, -1, 1);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-pg-smallint-integer",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Numbers",
+                        SourceTableSchema = "public",
+                        SourceTableName = "numbers",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "small", Name = "Small" },
+                            new CdcColumnMapping { Column = "big", Name = "Big" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-pg-smallint-integer");
+
+            // RED: today the initial-load row's Small is a JSON string ("23"), not a number,
+            // because Npgsql returns Int16 for smallint and NormalizeForJson's whitelist
+            // accepts only int and long among integer types — Int16 falls to .ToString().
+            // Bigint is already Int64, so its baseline assertion locks the contract.
+            using (var commands = store.Commands())
+            {
+                var doc1 = (await commands.GetAsync("Numbers/1")).BlittableJson;
+                Assert.NotNull(doc1);
+                Assert.True(doc1.TryGet("Small", out object small1));
+                Assert.IsType<long>(small1);
+                Assert.Equal(23L, small1);
+
+                Assert.True(doc1.TryGet("Big", out object big1));
+                Assert.IsType<long>(big1);
+                Assert.Equal(9999999999L, big1);
+            }
+
+            // Streaming insert. Postgres ConvertPostgresValue already widens Int16 -> Int64
+            // via Convert.ToInt64 in the Integer category, so the streaming row produces
+            // a JSON integer today — locks the contract on the side that already works.
+            ExecuteNpgSql(connectionString, "INSERT INTO numbers (id, small, big) VALUES (3, 14, 100);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("Numbers/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using (var commands = store.Commands())
+            {
+                var doc3 = (await commands.GetAsync("Numbers/3")).BlittableJson;
+                Assert.True(doc3.TryGet("Small", out object small3));
+                Assert.IsType<long>(small3);
+                Assert.Equal(14L, small3);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Integer_StaysIntegerJsonType_FromBothPaths()
+        {
+            // Regression guard: widening sbyte/byte/short/ushort/int/uint -> long in
+            // ConvertInitialLoadValue must not break the existing INTEGER (Int32) path.
+            // Int32 already passed through NormalizeForJson before the fix; verify it still does.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE plain_ints (
+                    id  INT PRIMARY KEY,
+                    val INTEGER NOT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO plain_ints (id, val) VALUES (1, 300), (2, -2147483648);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-pg-integer-regression",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "PlainInts",
+                        SourceTableSchema = "public",
+                        SourceTableName = "plain_ints",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "val", Name = "Val" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-pg-integer-regression");
+
+            ExecuteNpgSql(connectionString, "INSERT INTO plain_ints (id, val) VALUES (3, 2147483647);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("PlainInts/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            foreach (var (id, expected) in new[] { ("PlainInts/1", 300L), ("PlainInts/2", (long)int.MinValue), ("PlainInts/3", (long)int.MaxValue) })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.True(doc.TryGet("Val", out object val), $"missing Val on {id}");
+                Assert.IsType<long>(val);
+                Assert.Equal(expected, val);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Smallint_NullStaysNull_FromBothPaths()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE nullable_smallint (
+                    id    INT PRIMARY KEY,
+                    small SMALLINT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO nullable_smallint (id, small) VALUES (1, NULL), (2, 42);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-pg-smallint-null",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "NullableSmallInt",
+                        SourceTableSchema = "public",
+                        SourceTableName = "nullable_smallint",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "small", Name = "Small" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-pg-smallint-null");
+
+            ExecuteNpgSql(connectionString, "INSERT INTO nullable_smallint (id, small) VALUES (3, NULL);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("NullableSmallInt/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+
+            // Initial-load NULL row.
+            var doc1 = (await commands.GetAsync("NullableSmallInt/1")).BlittableJson;
+            if (doc1.TryGet("Small", out object small1))
+                Assert.Null(small1);
+
+            // Initial-load non-NULL row — must be a long, not a string.
+            var doc2 = (await commands.GetAsync("NullableSmallInt/2")).BlittableJson;
+            Assert.True(doc2.TryGet("Small", out object small2));
+            Assert.IsType<long>(small2);
+            Assert.Equal(42L, small2);
+
+            // Streamed NULL row.
+            var doc3 = (await commands.GetAsync("NullableSmallInt/3")).BlittableJson;
+            if (doc3.TryGet("Small", out object small3))
+                Assert.Null(small3);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Boolean_StaysBoolJsonType_FromBothInitialLoadAndStreaming()
+        {
+            // Cross-provider Bug #1 regression smoke. Both Postgres paths produce CLR bool today
+            // (Npgsql returns native bool; pgoutput sends "t"/"f" parsed by ParsePostgresBoolean).
+            // Lock the contract so a future refactor can't diverge.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE flags_pg (
+                    id     INT PRIMARY KEY,
+                    active BOOLEAN NOT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO flags_pg (id, active) VALUES (1, TRUE), (2, FALSE);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-pg-boolean-cross",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "FlagsPg",
+                        SourceTableSchema = "public",
+                        SourceTableName = "flags_pg",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-pg-boolean-cross");
+
+            ExecuteNpgSql(connectionString, "INSERT INTO flags_pg (id, active) VALUES (3, TRUE);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlagsPg/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            foreach (var (id, expected) in new[] { ("FlagsPg/1", true), ("FlagsPg/2", false), ("FlagsPg/3", true) })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.True(doc.TryGet("Active", out object active));
+                Assert.IsType<bool>(active);
+                Assert.Equal(expected, active);
             }
         }
 

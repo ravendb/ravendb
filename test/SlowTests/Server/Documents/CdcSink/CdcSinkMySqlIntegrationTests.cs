@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -3595,6 +3596,378 @@ namespace SlowTests.Server.Documents.CdcSink
                 var salesNames = sales.Employees.Select(e => e.EmpName).OrderBy(n => n).ToList();
                 Assert.Equal("Charlie", salesNames[0]);
                 Assert.Equal("Diana", salesNames[1]);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task TinyInt1_ProducesBooleanJsonType_FromBothInitialLoadAndStreaming()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE flagged (
+                    id     INT PRIMARY KEY,
+                    active TINYINT(1) NOT NULL DEFAULT 0
+                )");
+
+            ExecuteMySql(connectionString, "INSERT INTO flagged (id, active) VALUES (1, 1), (2, 0);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-tinyint1-boolean",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Flagged",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "flagged",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-tinyint1-boolean");
+
+            // Baseline (must hold today): initial-load row's Active is a CLR bool because
+            // MySqlConnector honours TreatTinyAsBoolean=true and returns bool for tinyint(1).
+            using (var commands = store.Commands())
+            {
+                var doc1 = (await commands.GetAsync("Flagged/1")).BlittableJson;
+                Assert.NotNull(doc1);
+                Assert.True(doc1.TryGet("Active", out object active1));
+                Assert.IsType<bool>(active1);
+                Assert.Equal(true, active1);
+            }
+
+            // Now exercise the streaming path.
+            ExecuteMySql(connectionString, "INSERT INTO flagged (id, active) VALUES (3, 1);");
+
+            // Wait until the streamed doc lands.
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("Flagged/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            // The bug: today the streamed row's Active is a JSON integer (LazyNumberValue),
+            // not a bool, because MySqlCdc returns sbyte for tinyint(1) and ConvertMySqlValue
+            // widens it to long instead of converting to bool.
+            using (var commands = store.Commands())
+            {
+                var doc3 = (await commands.GetAsync("Flagged/3")).BlittableJson;
+                Assert.NotNull(doc3);
+                Assert.True(doc3.TryGet("Active", out object active3));
+                Assert.IsType<bool>(active3);
+                Assert.Equal(true, active3);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task TinyInt1_FalseValue_RoundTripsFromStreaming()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE flags_zero (
+                    id     INT PRIMARY KEY,
+                    active TINYINT(1) NOT NULL DEFAULT 0
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO flags_zero (id, active) VALUES (1, 0);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-tinyint1-false",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "FlagsZero",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "flags_zero",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-tinyint1-false");
+
+            // Streaming insert with value 0 must produce JSON false, not 0.
+            ExecuteMySql(connectionString, "INSERT INTO flags_zero (id, active) VALUES (2, 0);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlagsZero/2");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            var doc2 = (await commands.GetAsync("FlagsZero/2")).BlittableJson;
+            Assert.True(doc2.TryGet("Active", out object active));
+            Assert.IsType<bool>(active);
+            Assert.Equal(false, active);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task TinyInt1_NullStaysNull_FromStreaming()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE flags_nullable (
+                    id     INT PRIMARY KEY,
+                    active TINYINT(1) NULL
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO flags_nullable (id, active) VALUES (1, NULL);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-tinyint1-null",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "FlagsNullable",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "flags_nullable",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-tinyint1-null");
+
+            ExecuteMySql(connectionString, "INSERT INTO flags_nullable (id, active) VALUES (2, NULL);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlagsNullable/2");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+
+            // Initial-load NULL row.
+            var doc1 = (await commands.GetAsync("FlagsNullable/1")).BlittableJson;
+            // The Active property may be present-with-null or absent depending on serialization.
+            // Either way, asserting via TryGet<object>: present rows must be null, not 0/false/string.
+            if (doc1.TryGet("Active", out object active1))
+                Assert.Null(active1);
+
+            // Streamed NULL row.
+            var doc2 = (await commands.GetAsync("FlagsNullable/2")).BlittableJson;
+            if (doc2.TryGet("Active", out object active2))
+                Assert.Null(active2);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task TinyInt1_UpdateFromOneToZero_FlipsBool_FromStreaming()
+        {
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE flags_update (
+                    id     INT PRIMARY KEY,
+                    active TINYINT(1) NOT NULL DEFAULT 0
+                )");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-tinyint1-update",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "FlagsUpdate",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "flags_update",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-tinyint1-update");
+
+            // Insert via streaming with active=1, then flip to 0 — UpdateRowsEvent has its own
+            // decode path separate from WriteRowsEvent and must also coerce sbyte -> bool.
+            ExecuteMySql(connectionString, "INSERT INTO flags_update (id, active) VALUES (1, 1);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlagsUpdate/1");
+                return (bool?)doc?.Active;
+            }, true, timeout: 60_000);
+
+            ExecuteMySql(connectionString, "UPDATE flags_update SET active = 0 WHERE id = 1;");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlagsUpdate/1");
+                return (bool?)doc?.Active;
+            }, false, timeout: 60_000);
+
+            using var commands = store.Commands();
+            var doc1 = (await commands.GetAsync("FlagsUpdate/1")).BlittableJson;
+            Assert.True(doc1.TryGet("Active", out object active));
+            Assert.IsType<bool>(active);
+            Assert.Equal(false, active);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task TinyInt4_StaysInteger_FromBothPaths()
+        {
+            // Regression guard: tinyint(N) where N != 1 is NOT a boolean. Its values must remain
+            // numeric on both paths. If the Boolean category over-matches "any tinyint", this
+            // test catches it.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE small_numbers (
+                    id  INT PRIMARY KEY,
+                    val TINYINT(4) NOT NULL
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO small_numbers (id, val) VALUES (1, 5), (2, 0);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-tinyint4-integer",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "SmallNumbers",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "small_numbers",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "val", Name = "Val" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-tinyint4-integer");
+
+            ExecuteMySql(connectionString, "INSERT INTO small_numbers (id, val) VALUES (3, 7);");
+
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("SmallNumbers/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            foreach (var (id, expected) in new[] { ("SmallNumbers/1", 5L), ("SmallNumbers/2", 0L), ("SmallNumbers/3", 7L) })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.NotNull(doc);
+                Assert.True(doc.TryGet("Val", out object val), $"missing Val on {id}");
+                Assert.IsType<long>(val);
+                Assert.Equal(expected, val);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task Smallint_StaysIntegerJsonType_FromBothPaths()
+        {
+            // Cross-provider Bug #3 regression smoke. MySqlConnector returns Int16 for SMALLINT,
+            // but ConvertMySqlValue widens to long on both paths (initial-load via
+            // ConvertInitialLoadValue, streaming via the _ => ConvertMySqlValue fallback).
+            // Lock the contract.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE smallnums_mysql (
+                    id    INT PRIMARY KEY,
+                    small SMALLINT NOT NULL
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO smallnums_mysql (id, small) VALUES (1, 23), (2, -32768);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-smallint-cross",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "SmallNumsMySql",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "smallnums_mysql",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "small", Name = "Small" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-smallint-cross");
+
+            ExecuteMySql(connectionString, "INSERT INTO smallnums_mysql (id, small) VALUES (3, 100);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("SmallNumsMySql/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            foreach (var (id, expected) in new[] { ("SmallNumsMySql/1", 23L), ("SmallNumsMySql/2", (long)short.MinValue), ("SmallNumsMySql/3", 100L) })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.True(doc.TryGet("Small", out object small), $"missing Small on {id}");
+                Assert.IsType<long>(small);
+                Assert.Equal(expected, small);
             }
         }
 

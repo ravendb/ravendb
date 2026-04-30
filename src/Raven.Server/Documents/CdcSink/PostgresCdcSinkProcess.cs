@@ -733,8 +733,26 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                 $"that cannot be read during initial load. Exclude this column from the CDC Sink column mappings.");
 
         var rawValue = reader.GetValue(ordinal);
-        // pgvector returns Pgvector.Vector which NormalizeForJson doesn't know about.
-        return rawValue is Pgvector.Vector v ? (object)v.ToArray() : rawValue;
+        return rawValue switch
+        {
+            // pgvector returns Pgvector.Vector which NormalizeForJson doesn't know about.
+            Pgvector.Vector v => v.ToArray(),
+
+            // Widen narrow integer types to long. NormalizeForJson's whitelist accepts only
+            // int and long among integer CLR types — short/byte/sbyte would otherwise fall
+            // to .ToString() and emit JSON strings (e.g. SMALLINT 23 -> "23"), while the
+            // streaming path widens via Convert.ToInt64 in ConvertPostgresValue and produces
+            // a JSON integer. This brings the initial-load path in line with streaming and
+            // matches the existing widening pattern in MySqlCdcSinkProcess / SqlServerCdcSinkProcess.
+            sbyte sb => (long)sb,
+            byte b => (long)b,
+            short s => (long)s,
+            ushort us => (long)us,
+            int i => (long)i,
+            uint ui => (long)ui,
+
+            _ => rawValue,
+        };
     }
 
     private static async Task<Dictionary<string, string>> GetColumnTypes(
