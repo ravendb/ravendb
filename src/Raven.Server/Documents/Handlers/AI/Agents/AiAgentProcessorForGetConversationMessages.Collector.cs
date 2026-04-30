@@ -62,45 +62,41 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         /// </summary>
         public void Collect()
         {
-            var currentMessages = _conversation.Messages;
             var (histStart, histEnd) = FindRelevantHistoryRange();
 
             if (_forward)
             {
+                // forward - old messages to new
+
                 // Trimming moves older messages from the current doc into history, so the
                 // chronologically earliest messages matching `after` may live in history docs.
                 // Process history first (oldest to newest), then current doc.
                 for (int i = histStart; i <= histEnd && NeedsMore; i++)
                     CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
 
-                bool visitedCurrentDoc = false;
                 if (NeedsMore)
                 {
-                    CollectFromMessages(currentMessages);
-                    visitedCurrentDoc = true;
+                    // we finished passing the history docs -> we collect also from the origin doc
+                    CollectFromMessages(_conversation.Messages);
                 }
-
-                // If we filled the page without reaching the current doc,
-                // there are *obviously* newer messages beyond this page.
-                _hasMoreMessages |= visitedCurrentDoc == false;
+                else
+                    _hasMoreMessages = true; // if we don't visit the origin doc - we have more
             }
             else
             {
+                // backward - new messages to old
+
                 // For backward paging, current doc has the newest messages — process it first,
                 // then walk history docs newest to oldest.
-                CollectFromMessages(currentMessages);
+                CollectFromMessages(_conversation.Messages);
 
-                if (NeedsMore == false && histStart <= histEnd)
+                for (int i = histEnd; i >= histStart && NeedsMore; i--)
                 {
-                    // Page was filled from current doc alone, but history docs with older
-                    // messages exist — let the client know there's more to page into.
+                    CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
+                }
+
+                if (NeedsMore == false)
                     _hasMoreMessages = true;
-                }
-                else
-                {
-                    for (int i = histEnd; i >= histStart && NeedsMore; i--)
-                        CollectFromHistoryDoc(_conversation.LinkedConversations[i]);
-                }
             }
         }
 
@@ -121,57 +117,53 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             CollectFromMessages(historyConversation.Messages);
         }
 
-        /// <summary>
-        /// Returns the (start, end) inclusive range of LinkedConversation indices that may
-        /// contain messages relevant to the current paging direction and timestamp bounds.
-        /// Binary search — LinkedConversations is chronologically ordered.
-        /// Forward: finds first doc whose LastMessageAt &gt; _after through to the end.
-        /// Backward: finds all docs whose first message &lt; _before.
-        ///
-        /// Note: we intentionally access the raw blittable here rather than using
-        /// ConversationDocument.ToDocument(), because we only need to peek at a single
-        /// timestamp field per doc. ToDocument() would clone all messages and parse
-        /// every field — wasteful during a binary search that may skip most docs.
-        /// </summary>
+        // Binary search over LinkedConversations (chronological) to find the range of history docs that may contain relevant messages.
         private (int Start, int End) FindRelevantHistoryRange()
         {
             if (_conversation.LinkedConversations.Count == 0)
                 return (0, -1);
 
             int lo = 0, hi = _conversation.LinkedConversations.Count;
+
+            if (_forward)
+            {
+                // Find the first doc whose LastMessageAt > _after.
+                while (lo < hi)
+                {
+                    int mid = lo + (hi - lo) / 2;
+                    var doc = _storage.Get(_context, _conversation.LinkedConversations[mid]);
+                    DateTime lastMessageAt = DateTime.MinValue;
+                    doc?.Data?.TryGet(nameof(ConversationDocument.LastMessageAt), out lastMessageAt);
+
+                    if (lastMessageAt <= _after)
+                        lo = mid + 1;
+                    else
+                        hi = mid;
+                }
+
+                return (lo, _conversation.LinkedConversations.Count - 1);
+            }
+
+            // Find the last doc whose first message < _before.
             while (lo < hi)
             {
                 int mid = lo + (hi - lo) / 2;
                 var doc = _storage.Get(_context, _conversation.LinkedConversations[mid]);
-
-                bool goLow;
-                if (_forward)
+                DateTime firstMessageAt = DateTime.MinValue;
+                if (doc?.Data?.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages) == true &&
+                    messages is { Length: > 0 })
                 {
-                    DateTime lastMessageAt = DateTime.MinValue;
-                    doc?.Data?.TryGet(nameof(ConversationDocument.LastMessageAt), out lastMessageAt);
-                    goLow = lastMessageAt <= _after;
-                }
-                else
-                {
-                    // Missing/expired docs should not block the backward search — treat them as
-                    // older than any real message so they're skipped naturally.
-                    DateTime firstMessageAt = DateTime.MinValue;
-                    if (doc?.Data?.TryGet(nameof(ConversationDocument.Messages), out BlittableJsonReaderArray messages) == true &&
-                        messages is { Length: > 0 })
-                    {
-                        var firstMsg = (BlittableJsonReaderObject)messages[0];
-                        firstMsg.TryGet(ConversationDocument.DateProperty, out firstMessageAt);
-                    }
-                    goLow = firstMessageAt < _before;
+                    var firstMsg = (BlittableJsonReaderObject)messages[0];
+                    firstMsg.TryGet(ConversationDocument.DateProperty, out firstMessageAt);
                 }
 
-                if (goLow)
+                if (firstMessageAt < _before)
                     lo = mid + 1;
                 else
                     hi = mid;
             }
 
-            return _forward ? (lo, _conversation.LinkedConversations.Count - 1) : (0, lo - 1);
+            return (0, lo - 1);
         }
 
         private void CollectFromMessages(ConversationDocument.MessagesList messages)
@@ -180,11 +172,13 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (_forward)
             {
+                // > _after to end
                 startIndex = BinarySearchBound(messages, _after, inclusive: true);
                 endIndex = messages.Count;
             }
             else
             {
+                // 0 to <= _before
                 startIndex = 0;
                 endIndex = BinarySearchBound(messages, _before, inclusive: false);
             }
@@ -192,18 +186,30 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             if (startIndex >= endIndex)
                 return;
 
-            int start = _forward ? startIndex : endIndex - 1;
-            int step = _forward ? 1 : -1;
             bool stoppedEarly = false;
 
-            for (int i = start; i >= startIndex && i < endIndex; i += step)
+            if (_forward)
             {
-                TryProcessMessage(messages, ref i);
-
-                if (_results.Count >= _pageSize)
+                for (int i = startIndex; i < endIndex; i++)
                 {
-                    stoppedEarly = true;
-                    break;
+                    TryProcessMessage(messages, ref i);
+                    if (_results.Count >= _pageSize)
+                    {
+                        stoppedEarly = true; 
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                for (int i = endIndex - 1; i >= startIndex; i--)
+                {
+                    TryProcessMessage(messages, ref i);
+                    if (_results.Count >= _pageSize)
+                    {
+                        stoppedEarly = true; 
+                        break;
+                    }
                 }
             }
 
@@ -238,7 +244,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         {
             var msg = messages[index];
 
-            if (_seenMessageKeys.Add(CreateDeduplicationKey(msg)) == false)
+            if (_seenMessageKeys.Add(CreateDeduplicationKey(msg)) == false) // already seen this message - skip
                 return;
 
             if (TryCollectToolResponse(msg))
@@ -302,6 +308,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
         private static int BinarySearchBound(ConversationDocument.MessagesList messages, DateTime target, bool inclusive)
         {
+            // inclusive = true: skip target
             int lo = 0, hi = messages.Count;
             while (lo < hi)
             {

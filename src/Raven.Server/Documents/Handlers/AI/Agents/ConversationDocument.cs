@@ -13,7 +13,6 @@ using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -24,13 +23,8 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
     public string Agent = agent;
 
     public BlittableJsonReaderObject Parameters = parameters;
-    public MessagesList Messages => new(this);
+    public MessagesList Messages { get; private set; } = new();
     public List<string> LinkedConversations = [];
-
-    // Backing fields for MessagesList — live on this heap-allocated class instance
-    // so the struct can reference them without an extra allocation.
-    internal BlittableJsonReaderArray _messagesArray;
-    internal List<BlittableJsonReaderObject> _messagesList;
 
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
@@ -306,7 +300,7 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
-            _messagesArray = messages,
+            Messages = new MessagesList(messages),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,
