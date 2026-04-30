@@ -3675,6 +3675,89 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
+        public async Task Bit1_StaysBoolean_FromBothPaths()
+        {
+            // Bug: MySQL BIT(1) is stored as a 1-bit value but MySqlConnector returns it
+            // as CLR ulong on the initial-load path (no analogous TreatBitAsBoolean flag),
+            // so it stringifies via NormalizeForJson's _ => value.ToString() fallback.
+            // Streaming behavior depends on what MySqlCdc decodes BIT(1) as - this test
+            // captures both observations in one run so we can plan both fix sites at once.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.MySQL_MySqlConnector, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteMySql(connectionString, @"
+                CREATE TABLE flagged_bit (
+                    id     INT PRIMARY KEY,
+                    active BIT(1) NOT NULL DEFAULT b'0'
+                )");
+            ExecuteMySql(connectionString, "INSERT INTO flagged_bit (id, active) VALUES (1, b'1'), (2, b'0');");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mysql-bit1-boolean",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "FlaggedBit",
+                        SourceTableSchema = schemaName,
+                        SourceTableName = "flagged_bit",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "active", Name = "Active" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mysql-bit1-boolean");
+
+            // Stream a third row before any assertion, so we observe both paths even if
+            // initial-load fails. (xUnit's default Assert is fail-fast.)
+            ExecuteMySql(connectionString, "INSERT INTO flagged_bit (id, active) VALUES (3, b'1');");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("FlaggedBit/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+
+            var doc1 = (await commands.GetAsync("FlaggedBit/1")).BlittableJson;
+            Assert.True(doc1.TryGet("Active", out object active1));
+            var initialLoadTypeName = active1?.GetType().FullName ?? "null";
+            var initialLoadValueRepr = active1?.ToString() ?? "null";
+
+            var doc3 = (await commands.GetAsync("FlaggedBit/3")).BlittableJson;
+            Assert.True(doc3.TryGet("Active", out object active3));
+            var streamingTypeName = active3?.GetType().FullName ?? "null";
+            var streamingValueRepr = active3?.ToString() ?? "null";
+
+            // Combined gate so the failure message reports BOTH observations regardless of
+            // which path is broken. Without this, fail-fast would mask the streaming type
+            // until initial-load is fixed.
+            Assert.True(
+                active1 is bool && active3 is bool,
+                $"BIT(1) must land as JSON bool on both paths. " +
+                $"Initial-load: type={initialLoadTypeName} value={initialLoadValueRepr}. " +
+                $"Streaming: type={streamingTypeName} value={streamingValueRepr}.");
+
+            Assert.Equal(true, active1);
+            Assert.Equal(true, active3);
+
+            // Also verify the b'0' initial-load row.
+            var doc2 = (await commands.GetAsync("FlaggedBit/2")).BlittableJson;
+            Assert.True(doc2.TryGet("Active", out object active2));
+            Assert.IsType<bool>(active2);
+            Assert.Equal(false, active2);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
         public async Task TinyInt1_FalseValue_RoundTripsFromStreaming()
         {
             using var store = GetDocumentStore();

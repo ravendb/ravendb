@@ -724,7 +724,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo)
     {
         var dataTypeName = reader.GetDataTypeName(ordinal);
         if (dataTypeName == "-.-")

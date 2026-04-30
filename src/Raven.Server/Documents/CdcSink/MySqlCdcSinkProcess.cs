@@ -395,9 +395,68 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return Task.CompletedTask;
     }
 
-    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo)
     {
-        return ConvertMySqlValue(reader.GetValue(ordinal));
+        var raw = reader.GetValue(ordinal);
+
+        // For columns resolved as MySqlColumnCategory.Boolean (tinyint(1) / bit(1)), the two
+        // libraries return different CLR shapes — MysqlConnector returns bool for tinyint(1) and
+        // ulong for bit(N), MySqlCdc returns sbyte / byte / bool[1]. CoerceToBoolean handles all
+        // of them and throws on anything else, so a future library change can't silently regress.
+        // Null is filtered upstream by reader.IsDBNull in CdcSinkProcess.ReadOneBatch.
+        if (IsBooleanColumn(tableInfo, ordinal, out var col))
+            return CoerceToBoolean(raw, col);
+
+        return ConvertMySqlValue(raw);
+    }
+
+    /// <summary>
+    /// True if the column at <paramref name="ordinal"/> on the given table was resolved as
+    /// MySqlColumnCategory.Boolean (i.e. tinyint(1) or bit(1)) during ResolveColumnNames.
+    /// Returns false (without throwing) if the table is unresolved or the ordinal is out of range,
+    /// since those represent "no metadata available, treat as a regular column".
+    /// </summary>
+    private bool IsBooleanColumn(CdcSinkConfiguration.TableInfo tableInfo, int ordinal, out ColumnInfo col)
+    {
+        if (_resolvedTables.TryGetValue((tableInfo.Schema, tableInfo.TableName), out var resolved)
+            && ordinal < resolved.Columns.Length
+            && resolved.Columns[ordinal].Category is MySqlColumnCategory.Boolean)
+        {
+            col = resolved.Columns[ordinal];
+            return true;
+        }
+        col = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Coerces a CLR value produced by MysqlConnector (initial-load) or MySqlCdc (streaming)
+    /// for a column resolved as MySqlColumnCategory.Boolean into a CLR bool.
+    ///
+    /// THROWS on unrecognised CLR types — this is intentional. If a future MysqlConnector or
+    /// MySqlCdc version produces a new CLR shape for Boolean-category columns, we want the CDC
+    /// process to fault into its alert pipeline (CdcSinkProcessStatistics / CdcSinkNotifications)
+    /// rather than silently stringify via ConvertMySqlValue's _ => value.ToString() fallback.
+    /// The throw is the forcing function that drives the team to add explicit handling.
+    ///
+    /// Caller is responsible for upstream NULL filtering.
+    /// </summary>
+    private static bool CoerceToBoolean(object value, ColumnInfo col)
+    {
+        return value switch
+        {
+            bool b => b,
+            sbyte sb => sb != 0,
+            byte by => by != 0,
+            ulong u => u != 0,
+            bool[] arr when arr.Length == 1 => arr[0],
+            _ => throw new InvalidOperationException(
+                $"Unsupported CLR value type '{value.GetType().FullName}' for Boolean-category column " +
+                $"'{col.Name}' (MySQL data type '{col.DataType}'). " +
+                "Initial-load (MysqlConnector) is expected to return bool or ulong; " +
+                "streaming (MySqlCdc) is expected to return sbyte, byte, or bool[1]. " +
+                "If a new CLR shape has appeared, add explicit handling in CoerceToBoolean."),
+        };
     }
 
     protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
@@ -580,12 +639,13 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 null or DBNull => null,
 
-                // tinyint(1) / bit(1) columns: MySqlCdc returns sbyte/byte from the binlog,
-                // but MySqlConnector returns bool on the initial-load path. Coerce here so
-                // both paths produce the same JSON shape. Match MySqlConnector's semantics:
-                // any non-zero value is true.
-                sbyte sb when col.Category is MySqlColumnCategory.Boolean => sb != 0,
-                byte b when col.Category is MySqlColumnCategory.Boolean => b != 0,
+                // tinyint(1) / bit(1) columns. MySqlCdc returns sbyte for tinyint(1) and
+                // bool[1] for bit(1); the initial-load path goes through CoerceToBoolean too,
+                // keeping a single source of truth for "what counts as a booleanish CLR value".
+                // CoerceToBoolean throws on unrecognised types so future library drift surfaces
+                // as a loud CDC process error rather than silent stringification.
+                var v when col.Category is MySqlColumnCategory.Boolean
+                    => CoerceToBoolean(v, col),
 
                 // MySqlCdc may return numeric types as strings (BCD-encoded internally).
                 // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
