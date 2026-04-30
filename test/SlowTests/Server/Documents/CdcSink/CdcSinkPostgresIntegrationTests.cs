@@ -4297,10 +4297,12 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using var commands = store.Commands();
 
-            // Initial-load NULL row.
+            // Initial-load NULL row. The property must be present-with-null (not silently
+            // dropped) so a downstream consumer can distinguish "explicit null" from "field
+            // never set". Same intent on the streamed-NULL row below.
             var doc1 = (await commands.GetAsync("NullableSmallInt/1")).BlittableJson;
-            if (doc1.TryGet("Small", out object small1))
-                Assert.Null(small1);
+            Assert.True(doc1.TryGet("Small", out object small1), "Small must be present on the initial-load NULL row");
+            Assert.Null(small1);
 
             // Initial-load non-NULL row — must be a long, not a string.
             var doc2 = (await commands.GetAsync("NullableSmallInt/2")).BlittableJson;
@@ -4310,8 +4312,8 @@ namespace SlowTests.Server.Documents.CdcSink
 
             // Streamed NULL row.
             var doc3 = (await commands.GetAsync("NullableSmallInt/3")).BlittableJson;
-            if (doc3.TryGet("Small", out object small3))
-                Assert.Null(small3);
+            Assert.True(doc3.TryGet("Small", out object small3), "Small must be present on the streamed NULL row");
+            Assert.Null(small3);
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -4369,6 +4371,71 @@ namespace SlowTests.Server.Documents.CdcSink
                 Assert.True(doc.TryGet("Active", out object active));
                 Assert.IsType<bool>(active);
                 Assert.Equal(expected, active);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task Numeric_StaysDecimal_FromBothPaths()
+        {
+            // Regression guard: NUMERIC values pass through both paths as CLR decimal today
+            // (Npgsql returns decimal on initial load; ConvertPostgresValue calls
+            // Convert.ToDecimal on the streaming text). They must continue to do so after
+            // the integer-widening change to ConvertInitialLoadValue. Without this guard,
+            // a future refactor that catches more CLR types in the widening switch could
+            // accidentally re-route decimals through long, losing scale and precision.
+            using var store = GetDocumentStore();
+            using var _ = WithSqlDatabase(Raven.Server.SqlMigration.MigrationProvider.NpgSQL, out var connectionString, out var schemaName, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE numbers_decimal (
+                    id     INT PRIMARY KEY,
+                    amount NUMERIC(12,4) NOT NULL
+                )");
+            ExecuteNpgSql(connectionString, "INSERT INTO numbers_decimal (id, amount) VALUES (1, 123.4500), (2, -0.0001);");
+
+            var sqlCs = SetupSqlConnectionString(store, connectionString);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-pg-numeric-decimal",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "NumbersDecimal",
+                        SourceTableSchema = "public",
+                        SourceTableName = "numbers_decimal",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "amount", Name = "Amount" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-pg-numeric-decimal");
+
+            ExecuteNpgSql(connectionString, "INSERT INTO numbers_decimal (id, amount) VALUES (3, 999.9999);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("NumbersDecimal/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            // Blittable surfaces non-integer numbers as LazyNumberValue rather than CLR decimal,
+            // so we don't assert IsType<decimal>. Round-trip through Convert.ToDecimal verifies
+            // the value (scale + precision) survived; the IsNotType<LazyStringValue> check
+            // ensures we didn't accidentally route decimal through the .ToString() fallback.
+            foreach (var (id, expected) in new[] { ("NumbersDecimal/1", 123.4500m), ("NumbersDecimal/2", -0.0001m), ("NumbersDecimal/3", 999.9999m) })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.True(doc.TryGet("Amount", out object amount), $"missing Amount on {id}");
+                Assert.IsNotType<Sparrow.Json.LazyStringValue>(amount);
+                Assert.Equal(expected, Convert.ToDecimal(amount));
             }
         }
 

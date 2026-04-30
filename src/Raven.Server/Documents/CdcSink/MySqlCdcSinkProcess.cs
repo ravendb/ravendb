@@ -637,7 +637,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             double => value,
             decimal => value,
 
-            // Boolean (MySQL TINYINT(1) or BIT(1))
+            // Boolean — only the initial-load path reaches this arm for booleans:
+            // MySqlConnector returns CLR bool for TINYINT(1) and BIT(1) (TreatTinyAsBoolean=true
+            // is its default). The streaming path coerces sbyte/byte -> bool earlier in DecodeRow
+            // when the column was resolved as MySqlColumnCategory.Boolean, so it never reaches here.
             bool => value,
 
             // Date/Time

@@ -3776,17 +3776,18 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using var commands = store.Commands();
 
-            // Initial-load NULL row.
+            // Initial-load NULL row. The property must be present-with-null on the document
+            // (not silently dropped) — anything else means the value-conversion pipeline lost
+            // the explicit-null distinction and a future read returning false/0/missing would
+            // be indistinguishable from this row, which breaks downstream patches.
             var doc1 = (await commands.GetAsync("FlagsNullable/1")).BlittableJson;
-            // The Active property may be present-with-null or absent depending on serialization.
-            // Either way, asserting via TryGet<object>: present rows must be null, not 0/false/string.
-            if (doc1.TryGet("Active", out object active1))
-                Assert.Null(active1);
+            Assert.True(doc1.TryGet("Active", out object active1), "Active must be present on the initial-load NULL row");
+            Assert.Null(active1);
 
             // Streamed NULL row.
             var doc2 = (await commands.GetAsync("FlagsNullable/2")).BlittableJson;
-            if (doc2.TryGet("Active", out object active2))
-                Assert.Null(active2);
+            Assert.True(doc2.TryGet("Active", out object active2), "Active must be present on the streamed NULL row");
+            Assert.Null(active2);
         }
 
         [RavenFact(RavenTestCategory.Sinks, MySqlRequired = true)]
