@@ -22,6 +22,7 @@ using Voron.Data.CompactTrees;
 using Voron.Data.Graphs;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
+using IndexWriter = Corax.Indexing.IndexWriter;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax;
 
@@ -31,9 +32,11 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     private readonly RavenLogger _logger;
     private readonly CoraxDocumentConverterBase _converter;
 
+    private Dictionary<Slice, HnswIndexCache> _hnswCaches;
     private IndexTransactionCache _currentCache;
     private StorageEnvironment _environment;
     private Action<LowLevelTransaction> _newTransactionCreatedHandler;
+    internal IndexWriter ActiveWriter;
 
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
@@ -122,6 +125,12 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             _environment = null;
         }
         _converter?.Dispose();
+        if (_hnswCaches != null)
+        {
+            foreach (var kv in _hnswCaches)
+                kv.Value.Dispose();
+            _hnswCaches = null;
+        }
     }
 
     public override bool RequireOnBeforeExecuteIndexing()
@@ -199,7 +208,8 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     public override void Initialize(StorageEnvironment environment)
     {
         using (var roTx = environment.ReadTransaction())
-            _currentCache = BuildVectorCacheSnapshot(roTx);
+            WarmInitialCaches(roTx);
+        _currentCache = BuildSnapshotWrapper();
 
         _environment = environment;
         _newTransactionCreatedHandler = tx => tx.ImmutableExternalState = Volatile.Read(ref _currentCache);
@@ -208,41 +218,55 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     public override void PublishIndexCacheToNewTransactions(IndexTransactionCache transactionCache)
     {
-        // Corax builds and publishes its cache in RecreateSearcher rather than here.
-        // BuildStreamCacheAfterTx returns null, so this method is always invoked with null.
     }
 
     internal override IndexTransactionCache BuildStreamCacheAfterTx(Transaction tx)
     {
-        // The actual vector cache build runs in RecreateSearcher, which is invoked from the
-        // post-commit hook — only after the commit is durable.
         return null;
     }
 
     internal override void RecreateSearcher(Transaction asOfTx)
     {
-        // Invoked from AfterCommitWhenNewTransactionsPrevented: at this point the commit is
-        // durable and no new read transaction can be created until this method returns. Building
-        // and assigning _currentCache here guarantees that the published cache reflects a state
-        // that is already visible on disk, and that every read transaction created afterwards
-        // captures it atomically via the NewTransactionCreated subscription in Initialize.
-        var newCache = BuildVectorCacheSnapshot(asOfTx);
-        if (newCache != null)
-            _currentCache = newCache;
+        var writer = ActiveWriter;
+        if (writer == null || _hnswCaches == null)
+            return;
+
+        if (GetMaxNodesForVectorCache() <= 0)
+        {
+            // Cache disabled at runtime (CacheSizeInMb set to 0): stop publishing the caches and drop
+            // our references so new read transactions resolve from disk and a later re-enable rebuilds
+            // from scratch rather than serving entries that missed the commits made while disabled.
+            // In-flight readers keep their captured snapshot; the dropped instances release their native
+            // memory via finalization once those transactions complete.
+            Volatile.Write(ref _currentCache, null);
+            Volatile.Write(ref _hnswCaches, null);
+            return;
+        }
+
+        var dirty = writer.DirtyVectorSets;
+        if (dirty == null)
+            return;
+
+        var llt = asOfTx.LowLevelTransaction;
+        foreach (var kv in dirty)
+        {
+            if (_hnswCaches.TryGetValue(kv.Key, out var cache) == false)
+                continue;
+            cache.ApplyCommit(llt, kv.Key, kv.Value);
+        }
     }
 
-    private IndexTransactionCache BuildVectorCacheSnapshot(Transaction tx)
+    private void WarmInitialCaches(Transaction tx)
     {
         var mapping = _converter?.GetKnownFieldsForQuerying();
         if (mapping is null)
-            return null;
+            return;
 
         var maxNodes = GetMaxNodesForVectorCache();
         if (maxNodes <= 0)
-            return null;
+            return;
 
         var llt = tx.LowLevelTransaction;
-        Dictionary<Slice, HnswIndexCache> vectorCaches = null;
         foreach (var field in mapping)
         {
             if (field.VectorOptions is null)
@@ -250,16 +274,21 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
             var cache = HnswIndexCache.WarmFromScratch(llt, field.FieldName, maxNodes);
             if (cache is null)
                 continue;
-            vectorCaches ??= new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance);
+            _hnswCaches ??= new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance);
             // FieldName is allocated against _converter's persistent scope; _converter is
-            // disposed only when this CoraxIndexPersistence is disposed, which outlives any cache
-            // reachable from _currentCache or an open read tx's ImmutableExternalState.
+            // disposed only when this CoraxIndexPersistence is disposed, which outlives any
+            // open read tx's ImmutableExternalState reference.
             Debug.Assert(field.FieldName.HasValue && field.FieldName.Size > 0,
                 "Vector field name must be allocated and non-empty for cache keying");
-            vectorCaches[field.FieldName] = cache;
+            _hnswCaches[field.FieldName] = cache;
         }
+    }
 
-        return vectorCaches is null ? null : new IndexTransactionCache { VectorNodeCaches = vectorCaches };
+    private IndexTransactionCache BuildSnapshotWrapper()
+    {
+        return _hnswCaches is null
+            ? null
+            : new IndexTransactionCache { VectorNodeCaches = _hnswCaches };
     }
 
     internal override void RecreateSuggestionsSearchers(Transaction asOfTx)

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
     public class CoraxIndexWriteOperation : IndexWriteOperationBase
     {
-        
+
         public const int MaximumPersistedCapacityOfCoraxWriter = 512;
         private readonly IndexWriter _indexWriter;
         private readonly CoraxDocumentConverterBase _converter;
@@ -32,10 +32,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         private IndexFieldsMapping _dynamicFields;
         private readonly CurrentIndexingScope _indexingScope;
         private readonly ByteStringContext _allocator;
+        private readonly CoraxIndexPersistence _persistence;
 
         public CoraxIndexWriteOperation(Index index, Transaction writeTransaction, CoraxDocumentConverterBase converter, RavenLogger logger) : base(index, logger)
         {
             _converter = converter;
+            _persistence = index.IndexPersistence as CoraxIndexPersistence;
             var knownFields = _converter.GetKnownFieldsForWriter();
             _indexingScope = CurrentIndexingScope.Current;
             if (_indexingScope != null)
@@ -82,11 +84,25 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
         
         public override void Commit(IndexingStatsScope stats, CancellationToken token)
         {
-            if (_indexWriter != null)
+            if (_indexWriter == null)
+                return;
+
+            using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
             {
-                using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
+                // Publish the writer to the persistence so RecreateSearcher (which fires from
+                // the LLT post-commit hook inside _indexWriter.Commit) can read DirtyVectorSets
+                // and mutate the long-lived HnswIndexCache instances. Cleared in finally so the
+                // back-reference never leaks beyond a single commit even if the commit throws.
+                if (_persistence != null)
+                    _persistence.ActiveWriter = _indexWriter;
+                try
                 {
                     _indexWriter.Commit(new CoraxIndexingStats(commitStats), token);
+                }
+                finally
+                {
+                    if (_persistence != null)
+                        _persistence.ActiveWriter = null;
                 }
             }
         }
