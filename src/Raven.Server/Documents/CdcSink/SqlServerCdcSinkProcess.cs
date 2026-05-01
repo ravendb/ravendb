@@ -2,6 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -205,7 +206,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
         await VerifyAgentIsRunning(conn, ct);
         bool shouldWait = false;
-        var buffer = new List<(byte[] Lsn, byte[] SeqVal, CdcEvent Event)>();
+        var buffer = new List<(byte[] Lsn, byte[] SeqVal, int Order, CdcEvent Event)>();
 
         while (true)
         {
@@ -248,12 +249,18 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                 var processor = DocumentProcessor.GetProcessor(ci.TableInfo.Schema, ci.TableInfo.TableName);
                 // Query shape: __$start_lsn (0), __$seqval (1), __$operation (2), user columns (3+)
 
+                // For embedded tables, op 3 (pre-update image) is kept so we can detect
+                // reparenting. Stash old values keyed by (__$start_lsn, __$seqval): SQL Server
+                // CDC always emits the matching op=4 with identical LSN and seqval, so the pair
+                // is found regardless of whether the UPDATE changed any PK column (a PK-derived
+                // key would miss when the embedded PK includes the join column).
+                Dictionary<LsnSeqKey, object[]> pendingPreUpdate = null;
+
                 while (await reader.ReadAsync(ct))
                 {
                     var rowLsn = reader[0] as byte[];
                     var rowSeq = reader[1] as byte[];
                     var operation = reader.GetInt32(2);
-                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
 
                     var values = processor.RentValues();
                     for (int i = 0; i < columns.Length; i++)
@@ -262,22 +269,59 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
                         values[i] = reader.IsDBNull(ordinal) ? null : ConvertSqlServerValue(reader.GetValue(ordinal));
                     }
 
+                    if (operation == 3) // pre-update image for embedded table
+                    {
+                        pendingPreUpdate ??= new Dictionary<LsnSeqKey, object[]>();
+                        pendingPreUpdate[new LsnSeqKey(rowLsn, rowSeq)] = values;
+                        continue;
+                    }
+
+                    var cdcOperation = operation == 1 ? CdcSinkOperation.Delete : CdcSinkOperation.Upsert;
                     var op = DocumentProcessor.ProcessRow(processor, cdcOperation, values, StreamingJsonContext);
+
+                    if (operation == 4 && !processor.IsRoot && pendingPreUpdate != null)
+                    {
+                        // Post-update image — pair with stashed pre-update for reparent detection
+                        if (pendingPreUpdate.Remove(new LsnSeqKey(rowLsn, rowSeq), out var oldValues))
+                        {
+                            var (delete, upsert) = CreateEmbeddedUpdateEvents(op, oldValues);
+                            if (delete.HasValue)
+                                buffer.Add((rowLsn, rowSeq, buffer.Count, delete.Value));
+                            else
+                                processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                            buffer.Add((rowLsn, rowSeq, buffer.Count, upsert));
+                            continue;
+                        }
+                    }
+
                     var eventType = cdcOperation == CdcSinkOperation.Delete ? CdcEventType.Delete : CdcEventType.Upsert;
-                    buffer.Add((rowLsn, rowSeq, new CdcEvent(eventType, op, null)));
+                    buffer.Add((rowLsn, rowSeq, buffer.Count, new CdcEvent(eventType, op, null)));
+                }
+
+                // Defense-in-depth: under correct CDC semantics every op=3 is paired with an
+                // op=4 in the same poll, but if anything is left over (unexpected CDC shape,
+                // mid-stream cancellation), return the rented arrays to the pool.
+                if (pendingPreUpdate is { Count: > 0 })
+                {
+                    foreach (var arr in pendingPreUpdate.Values)
+                        processor.ReturnValues(arr);
+                    pendingPreUpdate.Clear();
                 }
             }
 
             if (buffer.Count > 0)
             {
-                // Sort by (LSN, seqval) to preserve cross-table transaction order
+                // Sort by (LSN, seqval, insertion order) to preserve cross-table transaction order.
+                // Insertion order breaks ties when reparent emits two events with the same (LSN, seqval).
                 buffer.Sort((a, b) =>
                 {
                     int cmp = CompareLsn(a.Lsn, b.Lsn);
-                    return cmp != 0 ? cmp : CompareLsn(a.SeqVal, b.SeqVal);
+                    if (cmp != 0) return cmp;
+                    cmp = CompareLsn(a.SeqVal, b.SeqVal);
+                    return cmp != 0 ? cmp : a.Order.CompareTo(b.Order);
                 });
 
-                foreach (var (_, _, evt) in buffer)
+                foreach (var (_, _, _, evt) in buffer)
                     yield return evt;
 
                 yield return new CdcEvent(CdcEventType.TransactionCommit, null, Convert.ToHexString(lsnInfo.MaxLsn));
@@ -477,13 +521,19 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
             var columnList = string.Join(", ", quotedColumns);
 
             // __$operation values: 1=delete, 2=insert, 3=pre-update image, 4=post-update image.
-            // We filter out pre-update images (3) at the SQL level to avoid transferring rows we'd discard.
+            // Embedded tables need pre-update images to detect join-column changes (reparenting),
+            // so we use the 'all update old' row-filter option which delivers op=3 alongside op=4.
+            // (The default 'all' option drops op=3 and only returns the post-image — which means
+            // the previous code path here never actually saw a pre-image.) For root tables we
+            // don't need pre-images, so we still use 'all' and skip the extra row.
             var quotedFn = CommandBuilder.QuoteIdentifier($"fn_cdc_get_all_changes_{captureInstance}");
+            // GetProcessor throws if the table isn't registered; every configured table is, so proc is always non-null.
+            var proc = DocumentProcessor.GetProcessor(tableInfo.Schema, tableInfo.TableName);
+            var rowFilterOption = proc.IsRoot ? "all" : "all update old";
             var query = $@"
                 SELECT __$start_lsn, __$seqval, __$operation, {columnList}
-                FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'all')
-                WHERE __$operation <> 3
-                ORDER BY __$start_lsn, __$seqval";
+                FROM [cdc].{quotedFn}(@from_lsn, @to_lsn, N'{rowFilterOption}')
+                ORDER BY __$start_lsn, __$seqval, __$operation";
 
             var columnsArray = columns.ToArray();
 
@@ -544,7 +594,42 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
 
     protected override DbCommandBuilder CommandBuilder { get; } = new SqlCommandBuilder();
 
-    protected override bool UsesTopN => true;
+    /// <summary>
+    /// SQL Server lacks support for row-value comparison (<c>(c1,c2) &gt; (@k0,@k1)</c>) and uses
+    /// <c>TOP (N)</c> instead of <c>LIMIT N</c>. Expand the keyset-pagination predicate into the
+    /// equivalent lexicographic-OR form, which yields the same logical result on every provider.
+    /// </summary>
+    protected override string BuildBatchQuery(
+        CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
+        string[] lastKeys, int maxBatchSize)
+    {
+        var table = $"{CommandBuilder.QuoteIdentifier(tableInfo.Schema)}.{CommandBuilder.QuoteIdentifier(tableInfo.TableName)}";
+        var quotedCols = pkColumns.Select(c => CommandBuilder.QuoteIdentifier(c)).ToArray();
+        var pkColsList = string.Join(", ", quotedCols);
+
+        var where = string.Empty;
+        if (lastKeys != null)
+        {
+            // (c1,c2,c3) > (@k0,@k1,@k2)  ⇔
+            //   c1 > @k0
+            //   OR (c1 = @k0 AND c2 > @k1)
+            //   OR (c1 = @k0 AND c2 = @k1 AND c3 > @k2)
+            var disjuncts = new List<string>(quotedCols.Length);
+            for (int i = 0; i < quotedCols.Length; i++)
+            {
+                var sb = new StringBuilder();
+                for (int j = 0; j < i; j++)
+                {
+                    sb.Append(quotedCols[j]).Append(" = @k").Append(j).Append(" AND ");
+                }
+                sb.Append(quotedCols[i]).Append(" > @k").Append(i);
+                disjuncts.Add(quotedCols.Length == 1 ? sb.ToString() : "(" + sb + ")");
+            }
+            where = " WHERE " + string.Join(" OR ", disjuncts);
+        }
+
+        return $"SELECT TOP ({maxBatchSize}) * FROM {table}{where} ORDER BY {pkColsList}";
+    }
 
     private readonly Dictionary<string, Dictionary<string, string>> _columnTypesCache = new();
 
@@ -682,6 +767,37 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         if (b == null) return 1;
 
         return ((ReadOnlySpan<byte>)a).SequenceCompareTo(b);
+    }
+
+    /// <summary>
+    /// Pair key for SQL Server CDC pre-image (op=3) / post-image (op=4) matching. Holds
+    /// references to the byte[] LSN and seqval ADO.NET already allocated for the row, so
+    /// the dictionary lookup is allocation-free per UPDATE row.
+    /// </summary>
+    private readonly struct LsnSeqKey : IEquatable<LsnSeqKey>
+    {
+        private readonly byte[] _lsn;
+        private readonly byte[] _seqVal;
+
+        public LsnSeqKey(byte[] lsn, byte[] seqVal)
+        {
+            _lsn = lsn;
+            _seqVal = seqVal;
+        }
+
+        public bool Equals(LsnSeqKey other) =>
+            ((ReadOnlySpan<byte>)_lsn).SequenceEqual(other._lsn) &&
+            ((ReadOnlySpan<byte>)_seqVal).SequenceEqual(other._seqVal);
+
+        public override bool Equals(object obj) => obj is LsnSeqKey other && Equals(other);
+
+        public override int GetHashCode()
+        {
+            var hc = new HashCode();
+            hc.AddBytes(_lsn);
+            hc.AddBytes(_seqVal);
+            return hc.ToHashCode();
+        }
     }
 
     private static bool IsAllZero(byte[] bytes)

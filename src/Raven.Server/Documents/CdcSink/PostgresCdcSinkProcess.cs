@@ -474,6 +474,29 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
                     yield return new CdcEvent(CdcEventType.Upsert,
                         await DecodeRow(insert.Relation, insert.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
                     break;
+                case FullUpdateMessage fullUpdate:
+                {
+                    // Per Npgsql: OldRow MUST be consumed before NewRow (sequential replication stream).
+                    var (proc, oldValues) = await DecodeRowInternal(fullUpdate.Relation, fullUpdate.OldRow, ct);
+                    var newOp = await DecodeRow(fullUpdate.Relation, fullUpdate.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct);
+
+                    if (newOp?.Processor is { IsRoot: false })
+                    {
+                        var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
+                        if (delete.HasValue)
+                            yield return delete.Value;
+                        else
+                            proc.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                        yield return upsert;
+                    }
+                    else
+                    {
+                        // Root table FullUpdateMessage — old values unused, return to pool.
+                        proc.ReturnValues(oldValues);
+                        yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
+                    }
+                    break;
+                }
                 case UpdateMessage update:
                     yield return new CdcEvent(CdcEventType.Upsert,
                         await DecodeRow(update.Relation, update.NewRow, CdcSinkOperation.Upsert, StreamingJsonContext, ct), null);
@@ -543,6 +566,18 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
     private async Task<CdcSinkDocumentOp> DecodeRow(
         RelationMessage relation, ReplicationTuple row, CdcSinkOperation operation, JsonOperationContext jsonParsingContext, CancellationToken ct = default)
     {
+        var (proc, values) = await DecodeRowInternal(relation, row, ct);
+        return DocumentProcessor.ProcessRow(proc, operation, values, jsonParsingContext);
+    }
+
+    /// <summary>
+    /// Resolves the processor for a relation, decodes a replication tuple into raw column values,
+    /// and returns both. Used by <see cref="DecodeRow"/> and by the reparent detection path
+    /// (which needs the raw values without calling ProcessRow).
+    /// </summary>
+    private async Task<(CdcSinkTableProcessor Processor, object[] Values)> DecodeRowInternal(
+        RelationMessage relation, ReplicationTuple row, CancellationToken ct)
+    {
         var relationId = relation.RelationId;
 
         if ((relationId & RelationIdSentinelBit) == 0)
@@ -582,7 +617,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             columnIndex++;
         }
 
-        return DocumentProcessor.ProcessRow(proc, operation, values, jsonParsingContext);
+        return (proc, values);
     }
 
     /// <summary>

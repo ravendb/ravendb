@@ -18,6 +18,7 @@ using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
+using Sparrow.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
@@ -426,6 +427,45 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
     protected readonly record struct CdcEvent(CdcEventType Type, CdcSinkDocumentOp Op, string Checkpoint);
 
     /// <summary>
+    /// Builds the <see cref="CdcEvent"/>(s) for an UPDATE on an embedded table.
+    /// When the join column changed (reparenting), returns a Delete against the old parent
+    /// plus an Upsert against the new parent. Otherwise <c>Delete</c> is null and only the
+    /// Upsert event is returned. The caller is responsible for returning <paramref name="oldValues"/>
+    /// to the processor pool when <c>Delete</c> is null (when it is non-null, the values array
+    /// lives on as <c>deleteOp.RawValues</c> and is released with the batch).
+    /// Precondition: <paramref name="newOp"/>.Processor.IsRoot must be false.
+    /// </summary>
+    /// <param name="newOp">The op produced by <see cref="CdcSinkDocumentProcessor.ProcessRow(CdcSinkTableProcessor, CdcSinkOperation, object[], JsonOperationContext)"/> for the new row.</param>
+    /// <param name="oldValues">Decoded column values from the row BEFORE the update (same positional layout as <see cref="CdcSinkTableProcessor.SourceColumnNames"/>).</param>
+    protected (CdcEvent? Delete, CdcEvent Upsert) CreateEmbeddedUpdateEvents(
+        CdcSinkDocumentOp newOp, object[] oldValues)
+    {
+        var upsert = new CdcEvent(CdcEventType.Upsert, newOp, null);
+        var proc = newOp.Processor;
+
+        var oldParentId = proc.GetParentDocumentId(oldValues);
+        if (string.Equals(oldParentId, newOp.DocumentId, StringComparison.Ordinal))
+            return (null, upsert);
+
+        // Reparent: build the delete op with MappedData derived from the OLD row so that
+        // $old in OnDelete patches (and any PK-based array/map matching) reflects the
+        // actual item being removed from the old parent.
+        var oldMappedData = proc.MapColumns(oldValues, StreamingJsonContext);
+        proc.ApplyLinks(oldMappedData, oldValues);
+
+        var deleteOp = new CdcSinkDocumentOp
+        {
+            Type = CdcSinkDocumentOpType.EmbeddedModify,
+            DocumentId = oldParentId,
+            Processor = proc,
+            MappedData = oldMappedData,
+            RawValues = oldValues,
+            Operation = CdcSinkOperation.Delete,
+        };
+        return (new CdcEvent(CdcEventType.Delete, deleteOp, null), upsert);
+    }
+
+    /// <summary>
     /// Returns an async stream of CDC events from the source database.
     /// Each subclass converts provider-specific events into <see cref="CdcEvent"/>:
     /// <list type="bullet">
@@ -611,11 +651,11 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
 
     /// <summary>
-    /// Whether this provider uses SELECT TOP(N) (SQL Server) vs LIMIT N (Postgres/MySQL).
+    /// Builds the SELECT used by initial-load keyset pagination. Default implementation is
+    /// PostgreSQL/MySQL syntax (LIMIT + row-value comparison `(c1,c2) > (@k0,@k1)`).
+    /// SQL Server overrides this because it does not support row-value comparison.
     /// </summary>
-    protected virtual bool UsesTopN => false;
-
-    private string BuildBatchQuery(
+    protected virtual string BuildBatchQuery(
         CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
         string[] lastKeys, int maxBatchSize)
     {
@@ -625,9 +665,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             ? $" WHERE ({pkCols}) > ({string.Join(", ", pkColumns.Select((_, i) => $"@k{i}"))})"
             : "";
 
-        return UsesTopN
-            ? $"SELECT TOP ({maxBatchSize}) * FROM {table} {where} ORDER BY {pkCols}"
-            : $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
+        return $"SELECT * FROM {table} {where} ORDER BY {pkCols} LIMIT {maxBatchSize}";
     }
 
     /// <summary>

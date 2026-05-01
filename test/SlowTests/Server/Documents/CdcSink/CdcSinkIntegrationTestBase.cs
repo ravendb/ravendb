@@ -5,8 +5,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.SqlMigration;
+using Sparrow.Collections;
 using Tests.Infrastructure;
 using Xunit;
+using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace SlowTests.Server.Documents.CdcSink
 {
@@ -16,9 +19,51 @@ namespace SlowTests.Server.Documents.CdcSink
         {
         }
 
+        // Tracks sinks created via AddCdcSink so WithSqlDatabase's dispose can stop them
+        // BEFORE it attempts pg_drop_replication_slot. Without this, the Raven-side CDC
+        // loop keeps the wal_sender alive, the slot stays `active`, and the drop silently
+        // fails — orphaning the slot and eventually saturating max_replication_slots.
+        private readonly ConcurrentSet<(IDocumentStore Store, string Name)> _createdSinks = new();
+
         protected AddCdcSinkOperationResult AddCdcSink(IDocumentStore store, CdcSinkConfiguration config)
         {
-            return store.Maintenance.Send(new AddCdcSinkOperation(config));
+            var result = store.Maintenance.Send(new AddCdcSinkOperation(config));
+            _createdSinks.Add((store, config.Name));
+            return result;
+        }
+
+        internal override DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
+        {
+            var baseDispose = base.WithSqlDatabase(provider, out connectionString, out schemaName, dataSet, includeData);
+            return new DisposableAction(() =>
+            {
+                try
+                {
+                    StopTrackedSinks();
+                }
+                finally
+                {
+                    baseDispose.Dispose();
+                }
+            });
+        }
+
+        private void StopTrackedSinks()
+        {
+            foreach (var (store, name) in _createdSinks)
+            {
+                try
+                {
+                    var db = AsyncHelpers.RunSync(() => Databases.GetDocumentDatabaseInstanceFor(store));
+                    var proc = db.CdcSinkLoader.Processes.FirstOrDefault(p => p.Name == name);
+                    proc?.Stop("test teardown");
+                }
+                catch
+                {
+                    // best effort — the store or database may already be disposed
+                }
+            }
+            _createdSinks.Clear();
         }
 
         /// <summary>

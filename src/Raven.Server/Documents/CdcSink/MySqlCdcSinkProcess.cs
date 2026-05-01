@@ -537,7 +537,23 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         if (tableMapCache.TryGetValue(updateRows.TableId, out var uTable) == false)
                             break;
                         foreach (var row in updateRows.Rows)
-                            yield return new CdcEvent(CdcEventType.Upsert, DecodeRow(uTable, row.AfterUpdate.Cells, CdcSinkOperation.Upsert, StreamingJsonContext), null);
+                        {
+                            var newOp = DecodeRow(uTable, row.AfterUpdate.Cells, CdcSinkOperation.Upsert, StreamingJsonContext);
+                            if (newOp?.Processor is { IsRoot: false })
+                            {
+                                var oldValues = DecodeRowInternal(uTable, row.BeforeUpdate.Cells);
+                                var (delete, upsert) = CreateEmbeddedUpdateEvents(newOp, oldValues);
+                                if (delete.HasValue)
+                                    yield return delete.Value;
+                                else
+                                    uTable.Processor.ReturnValues(oldValues); // no reparent — release the unused old-values array
+                                yield return upsert;
+                            }
+                            else
+                            {
+                                yield return new CdcEvent(CdcEventType.Upsert, newOp, null);
+                            }
+                        }
                         break;
 
                     case DeleteRowsEvent deleteRows:
@@ -559,6 +575,18 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private CdcSinkDocumentOp DecodeRow(
         TableInfo tableInfo, IReadOnlyList<object> cells,
         CdcSinkOperation operation, DocumentsOperationContext jsonParsingContext)
+    {
+        var values = DecodeRowInternal(tableInfo, cells);
+        return DocumentProcessor.ProcessRow(tableInfo.Processor, operation, values, jsonParsingContext);
+    }
+
+    /// <summary>
+    /// Decodes binlog cells into raw column values and returns the decoded values array.
+    /// Used by <see cref="DecodeRow"/> and by the reparent detection path
+    /// (which needs the raw values without calling ProcessRow); the processor is available via <paramref name="tableInfo"/>.
+    /// </summary>
+    private object[] DecodeRowInternal(
+        TableInfo tableInfo, IReadOnlyList<object> cells)
     {
         var columns = tableInfo.Columns;
         var processor = tableInfo.Processor;
@@ -592,10 +620,8 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             };
         }
 
-        return DocumentProcessor.ProcessRow(processor, operation, values, jsonParsingContext);
+        return values;
     }
-
-
 
     /// <summary>
     /// Normalizes MySQL CLR values from both ADO.NET (initial load) and MySqlCdc (binlog)
