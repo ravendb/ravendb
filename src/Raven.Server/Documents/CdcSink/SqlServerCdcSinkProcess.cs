@@ -648,7 +648,7 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         }
     }
 
-    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo)
     {
         return ConvertSqlServerValue(reader.GetValue(ordinal));
     }

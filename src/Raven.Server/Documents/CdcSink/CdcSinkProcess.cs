@@ -677,9 +677,12 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
 
     /// <summary>
     /// Converts a single column value from the initial load DbDataReader to a
-    /// normalized CLR type for the document processor pipeline.
+    /// normalized CLR type for the document processor pipeline. Receives the source
+    /// table identity so providers can consult their own per-column metadata
+    /// (e.g. MySQL's MySqlColumnCategory) for type-aware coercions that the raw
+    /// DbDataReader value alone can't drive.
     /// </summary>
-    protected abstract object ConvertInitialLoadValue(DbDataReader reader, int ordinal);
+    protected abstract object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo);
 
     private async Task<(List<CdcSinkDocumentOp> Ops, string[] LastKeys, IDisposable Context)> ReadOneBatch(
         DbConnection conn, CdcSinkConfiguration.TableInfo tableInfo, List<string> pkColumns,
@@ -727,7 +730,7 @@ public abstract class CdcSinkProcess : IDisposable, ILowMemoryHandler
             var values = processor.RentValues();
             for (int i = 0; i < reader.FieldCount; i++)
             {
-                values[i] = reader.IsDBNull(i) ? null : ConvertInitialLoadValue(reader, i);
+                values[i] = reader.IsDBNull(i) ? null : ConvertInitialLoadValue(reader, i, tableInfo);
             }
 
             ops.Add(DocumentProcessor.ProcessRow(processor, CdcSinkOperation.Upsert, values, jsonParsingCtx));

@@ -40,7 +40,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
     private bool _isMariaDb;
     private string _serverGtid; // Current GTID set fetched from server during startup
 
-    private enum MySqlColumnCategory { Other, Text, Decimal, Json }
+    private enum MySqlColumnCategory { Other, Text, Decimal, Json, Boolean }
 
     private readonly record struct ColumnInfo(string Name, MySqlColumnCategory Category, string DataType);
 
@@ -279,7 +279,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             var columns = new List<ColumnInfo>();
             await using var cmd = conn.CreateCommand();
             cmd.CommandText = @"
-                SELECT COLUMN_NAME, DATA_TYPE
+                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
                 ORDER BY ORDINAL_POSITION";
@@ -291,13 +291,21 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 var colName = reader.GetString(0);
                 var dataType = reader.GetString(1).ToLowerInvariant();
-                var category = dataType switch
+                var columnType = reader.GetString(2).ToLowerInvariant();
+                // tinyint(1) is the canonical "boolean" shape in MySQL/MariaDB. MySqlConnector
+                // returns CLR bool for it (TreatTinyAsBoolean=true is the default), but MySqlCdc's
+                // binlog parser returns sbyte. Detecting the column type up front lets the
+                // streaming pre-pass coerce sbyte/byte -> bool so both paths emit JSON booleans.
+                // bit(1) is added defensively even though both paths already produce bool today.
+                var category = (dataType, columnType) switch
                 {
-                    "json" => MySqlColumnCategory.Json,
-                    "decimal" or "numeric" => MySqlColumnCategory.Decimal,
-                    "text" or "tinytext" or "mediumtext" or "longtext"
-                        or "char" or "varchar" or "enum" or "set" => MySqlColumnCategory.Text,
-                    _ => MySqlColumnCategory.Other,
+                    (_, "tinyint(1)") or (_, "tinyint(1) unsigned") => MySqlColumnCategory.Boolean,
+                    ("bit", "bit(1)")                                => MySqlColumnCategory.Boolean,
+                    ("json", _)                                      => MySqlColumnCategory.Json,
+                    ("decimal" or "numeric", _)                      => MySqlColumnCategory.Decimal,
+                    ("text" or "tinytext" or "mediumtext" or "longtext"
+                        or "char" or "varchar" or "enum" or "set", _) => MySqlColumnCategory.Text,
+                    _                                                => MySqlColumnCategory.Other,
                 };
                 columns.Add(new ColumnInfo(colName, category, dataType));
             }
@@ -387,9 +395,68 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
         return Task.CompletedTask;
     }
 
-    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal)
+    protected override object ConvertInitialLoadValue(DbDataReader reader, int ordinal, CdcSinkConfiguration.TableInfo tableInfo)
     {
-        return ConvertMySqlValue(reader.GetValue(ordinal));
+        var raw = reader.GetValue(ordinal);
+
+        // For columns resolved as MySqlColumnCategory.Boolean (tinyint(1) / bit(1)), the two
+        // libraries return different CLR shapes — MysqlConnector returns bool for tinyint(1) and
+        // ulong for bit(N), MySqlCdc returns sbyte / byte / bool[1]. CoerceToBoolean handles all
+        // of them and throws on anything else, so a future library change can't silently regress.
+        // Null is filtered upstream by reader.IsDBNull in CdcSinkProcess.ReadOneBatch.
+        if (IsBooleanColumn(tableInfo, ordinal, out var col))
+            return CoerceToBoolean(raw, col);
+
+        return ConvertMySqlValue(raw);
+    }
+
+    /// <summary>
+    /// True if the column at <paramref name="ordinal"/> on the given table was resolved as
+    /// MySqlColumnCategory.Boolean (i.e. tinyint(1) or bit(1)) during ResolveColumnNames.
+    /// Returns false (without throwing) if the table is unresolved or the ordinal is out of range,
+    /// since those represent "no metadata available, treat as a regular column".
+    /// </summary>
+    private bool IsBooleanColumn(CdcSinkConfiguration.TableInfo tableInfo, int ordinal, out ColumnInfo col)
+    {
+        if (_resolvedTables.TryGetValue((tableInfo.Schema, tableInfo.TableName), out var resolved)
+            && ordinal < resolved.Columns.Length
+            && resolved.Columns[ordinal].Category is MySqlColumnCategory.Boolean)
+        {
+            col = resolved.Columns[ordinal];
+            return true;
+        }
+        col = default;
+        return false;
+    }
+
+    /// <summary>
+    /// Coerces a CLR value produced by MysqlConnector (initial-load) or MySqlCdc (streaming)
+    /// for a column resolved as MySqlColumnCategory.Boolean into a CLR bool.
+    ///
+    /// THROWS on unrecognised CLR types — this is intentional. If a future MysqlConnector or
+    /// MySqlCdc version produces a new CLR shape for Boolean-category columns, we want the CDC
+    /// process to fault into its alert pipeline (CdcSinkProcessStatistics / CdcSinkNotifications)
+    /// rather than silently stringify via ConvertMySqlValue's _ => value.ToString() fallback.
+    /// The throw is the forcing function that drives the team to add explicit handling.
+    ///
+    /// Caller is responsible for upstream NULL filtering.
+    /// </summary>
+    private static bool CoerceToBoolean(object value, ColumnInfo col)
+    {
+        return value switch
+        {
+            bool b => b,
+            sbyte sb => sb != 0,
+            byte by => by != 0,
+            ulong u => u != 0,
+            bool[] arr when arr.Length == 1 => arr[0],
+            _ => throw new InvalidOperationException(
+                $"Unsupported CLR value type '{value.GetType().FullName}' for Boolean-category column " +
+                $"'{col.Name}' (MySQL data type '{col.DataType}'). " +
+                "Initial-load (MysqlConnector) is expected to return bool or ulong; " +
+                "streaming (MySqlCdc) is expected to return sbyte, byte, or bool[1]. " +
+                "If a new CLR shape has appeared, add explicit handling in CoerceToBoolean."),
+        };
     }
 
     protected override async IAsyncEnumerable<CdcEvent> GetCdcEvents([EnumeratorCancellation] CancellationToken ct)
@@ -600,6 +667,14 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             {
                 null or DBNull => null,
 
+                // tinyint(1) / bit(1) columns. MySqlCdc returns sbyte for tinyint(1) and
+                // bool[1] for bit(1); the initial-load path goes through CoerceToBoolean too,
+                // keeping a single source of truth for "what counts as a booleanish CLR value".
+                // CoerceToBoolean throws on unrecognised types so future library drift surfaces
+                // as a loud CDC process error rather than silent stringification.
+                var v when col.Category is MySqlColumnCategory.Boolean
+                    => CoerceToBoolean(v, col),
+
                 // MySqlCdc may return numeric types as strings (BCD-encoded internally).
                 // Parse to decimal so they flow as numbers through the pipeline and patch scripts.
                 string s when col.Category is MySqlColumnCategory.Decimal
@@ -648,7 +723,10 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
             double => value,
             decimal => value,
 
-            // Boolean (MySQL TINYINT(1) or BIT(1))
+            // Boolean — only the initial-load path reaches this arm for booleans:
+            // MySqlConnector returns CLR bool for TINYINT(1) and BIT(1) (TreatTinyAsBoolean=true
+            // is its default). The streaming path coerces sbyte/byte -> bool earlier in DecodeRow
+            // when the column was resolved as MySqlColumnCategory.Boolean, so it never reaches here.
             bool => value,
 
             // Date/Time

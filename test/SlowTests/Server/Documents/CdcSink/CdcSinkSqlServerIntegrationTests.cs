@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests;
 using Microsoft.Data.SqlClient;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.CdcSink;
@@ -4161,6 +4162,81 @@ namespace SlowTests.Server.Documents.CdcSink
                 var emp = await session.LoadAsync<EmployeeRecord>("Employees/1");
                 return emp?.Name;
             }, "Alice Smith", timeout: 60_000);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, MsSqlRequired = true, MsSqlCdcRequired = true)]
+        public async Task BitAndSmallint_StayConsistent_FromBothInitialLoadAndStreaming()
+        {
+            // Cross-provider regression smoke. SqlServer is expected to already produce
+            // consistent JSON shapes across both paths (ConvertSqlServerValue widens short -> long
+            // and bool passes through). This test locks the contract so a future refactor of
+            // either ConvertInitialLoadValue or the cdc.fn_cdc_get_all_changes_* reader path
+            // can't quietly diverge from each other.
+            using var store = GetDocumentStore();
+            var schema = CreateTestSchema();
+
+            ExecuteMsSql($@"
+                CREATE TABLE [{schema}].mixed (
+                    id    INT PRIMARY KEY,
+                    flag  BIT NOT NULL,
+                    small SMALLINT NOT NULL
+                )");
+            ExecuteMsSql($"INSERT INTO [{schema}].mixed (id, flag, small) VALUES (1, 1, 23), (2, 0, -32768);");
+
+            EnableCdcOnTables((schema, "mixed"));
+
+            var sqlCs = SetupSqlConnectionString(store);
+            var config = new CdcSinkConfiguration
+            {
+                Name = "test-mssql-bit-smallint",
+                ConnectionStringName = sqlCs.Name,
+                Tables = new List<CdcSinkTableConfig>
+                {
+                    new CdcSinkTableConfig
+                    {
+                        CollectionName = "Mixed",
+                        SourceTableSchema = schema,
+                        SourceTableName = "mixed",
+                        PrimaryKeyColumns = new List<string> { "id" },
+                        Columns = new List<CdcColumnMapping>
+                        {
+                            new CdcColumnMapping { Column = "id", Name = "DbId" },
+                            new CdcColumnMapping { Column = "flag", Name = "Flag" },
+                            new CdcColumnMapping { Column = "small", Name = "Small" }
+                        }
+                    }
+                }
+            };
+            AddCdcSink(store, config);
+            await WaitForCdcInitialLoadAsync(store, "test-mssql-bit-smallint");
+
+            ExecuteMsSql($"INSERT INTO [{schema}].mixed (id, flag, small) VALUES (3, 1, 100);");
+            await AssertWaitForValueAsync(async () =>
+            {
+                using var session = store.OpenAsyncSession();
+                var doc = await session.LoadAsync<dynamic>("Mixed/3");
+                return doc != null;
+            }, true, timeout: 60_000);
+
+            using var commands = store.Commands();
+            foreach (var (id, expectedFlag, expectedSmall) in new[]
+            {
+                ("Mixed/1", true,  23L),
+                ("Mixed/2", false, -32768L),
+                ("Mixed/3", true,  100L),
+            })
+            {
+                var doc = (await commands.GetAsync(id)).BlittableJson;
+                Assert.NotNull(doc);
+
+                Assert.True(doc.TryGet("Flag", out object flag), $"missing Flag on {id}");
+                Assert.IsType<bool>(flag);
+                Assert.Equal(expectedFlag, flag);
+
+                Assert.True(doc.TryGet("Small", out object small), $"missing Small on {id}");
+                Assert.IsType<long>(small);
+                Assert.Equal(expectedSmall, small);
+            }
         }
 
         // ─────────────────────────────────────────────────────────────────────
