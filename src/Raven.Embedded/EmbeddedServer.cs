@@ -228,10 +228,10 @@ namespace Raven.Embedded
                         _logger.Info($"Killing global server PID {process.Id}.");
 
                     process.Kill();
-                    if (process.WaitForExit(5_000) == false)
+                    if (process.WaitForExit((int)_serverOptions!.ProcessKillTimeout.TotalMilliseconds) == false)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info($"Process {process.Id} did not exit after Kill() within 5 seconds.");
+                            _logger.Info($"Process {process.Id} did not exit after Kill() within {_serverOptions!.ProcessKillTimeout.ToString()} seconds.");
                     }
                 }
                 catch (Exception e)
