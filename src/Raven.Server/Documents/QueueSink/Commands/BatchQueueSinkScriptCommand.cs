@@ -53,7 +53,6 @@ public sealed class BatchQueueSinkScriptCommand : DocumentMergedTransactionComma
                 {
                     processed++;
 
-                    using (message)
                     using (documentScript.Run(context, context, "execute", new object[] {message}))
                     {
                     }
