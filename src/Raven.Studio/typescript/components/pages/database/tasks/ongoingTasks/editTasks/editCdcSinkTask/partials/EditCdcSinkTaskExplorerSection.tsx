@@ -6,12 +6,18 @@ import useBoolean from "components/hooks/useBoolean";
 import { useServices } from "components/hooks/useServices";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppSelector } from "components/store";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import Collapse from "react-bootstrap/esm/Collapse";
 import { UseFieldArrayReturn } from "react-hook-form";
-import { ColumnDef, getCoreRowModel, getFilteredRowModel, useReactTable } from "@tanstack/react-table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    getFilteredRowModel,
+    getSortedRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import sqlMigration from "models/database/tasks/sql/sqlMigration";
 import rootSqlTable from "models/database/tasks/sql/rootSqlTable";
@@ -43,8 +49,6 @@ export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: Edi
         const model = new sqlMigration();
         model.onSchemaUpdated(result);
 
-        console.log("kalczur model dto", model.toDto());
-
         return model.tables();
     });
 
@@ -55,8 +59,7 @@ export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: Edi
         columns: tableColumnDefs,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
-        getSortedRowModel: getCoreRowModel(),
-        enableRowSelection: true,
+        getSortedRowModel: getSortedRowModel(),
     });
 
     const selectedRows = table.getSelectedRowModel().rows;
