@@ -37,6 +37,7 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
     private StorageEnvironment _environment;
     private Action<LowLevelTransaction> _newTransactionCreatedHandler;
     internal IndexWriter ActiveWriter;
+    internal Dictionary<Slice, HashSet<long>> PendingDirtyVectorSets;
 
     public CoraxIndexPersistence(Index index, IIndexReadOperationFactory indexReadOperationFactory) : base(index, indexReadOperationFactory)
     {
@@ -227,33 +228,57 @@ public sealed class CoraxIndexPersistence : IndexPersistenceBase
 
     internal override void RecreateSearcher(Transaction asOfTx)
     {
-        var writer = ActiveWriter;
-        if (writer == null || _hnswCaches == null)
+        var dirty = PendingDirtyVectorSets;
+        PendingDirtyVectorSets = null;
+        if (dirty == null)
             return;
 
-        if (GetMaxNodesForVectorCache() <= 0)
+        var maxNodes = GetMaxNodesForVectorCache();
+        if (maxNodes <= 0)
         {
             // Cache disabled at runtime (CacheSizeInMb set to 0): stop publishing the caches and drop
             // our references so new read transactions resolve from disk and a later re-enable rebuilds
             // from scratch rather than serving entries that missed the commits made while disabled.
             // In-flight readers keep their captured snapshot; the dropped instances release their native
             // memory via finalization once those transactions complete.
-            Volatile.Write(ref _currentCache, null);
-            Volatile.Write(ref _hnswCaches, null);
+            if (_hnswCaches != null)
+            {
+                Volatile.Write(ref _currentCache, null);
+                Volatile.Write(ref _hnswCaches, null);
+            }
             return;
         }
-
-        var dirty = writer.DirtyVectorSets;
-        if (dirty == null)
-            return;
 
         var llt = asOfTx.LowLevelTransaction;
+        Dictionary<Slice, HnswIndexCache> freshlyAdded = null;
         foreach (var kv in dirty)
         {
-            if (_hnswCaches.TryGetValue(kv.Key, out var cache) == false)
+            if (_hnswCaches != null && _hnswCaches.TryGetValue(kv.Key, out var cache))
+            {
+                cache.ApplyCommit(llt, kv.Key, kv.Value);
                 continue;
-            cache.ApplyCommit(llt, kv.Key, kv.Value);
+            }
+
+            var fresh = HnswIndexCache.WarmFromScratch(llt, kv.Key, maxNodes);
+            if (fresh is null)
+                continue;
+            (freshlyAdded ??= new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance))[kv.Key] = fresh;
         }
+
+        if (freshlyAdded is null)
+            return;
+
+        // Copy-on-write: in-flight readers that captured the previous _hnswCaches reference
+        // keep observing it unchanged; new transactions pick up the replacement via the
+        // NewTransactionCreated subscription. Single-writer here (post-commit hook is serial).
+        var grown = _hnswCaches is null
+            ? new Dictionary<Slice, HnswIndexCache>(SliceComparer.Instance)
+            : new Dictionary<Slice, HnswIndexCache>(_hnswCaches, SliceComparer.Instance);
+        foreach (var kv in freshlyAdded)
+            grown[kv.Key] = kv.Value;
+
+        Volatile.Write(ref _hnswCaches, grown);
+        Volatile.Write(ref _currentCache, new IndexTransactionCache { VectorNodeCaches = grown });
     }
 
     private void WarmInitialCaches(Transaction tx)

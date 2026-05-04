@@ -193,23 +193,27 @@ public unsafe partial class Hnsw
                     _searchState.GetNodeByIndex(cur).Visited = _visitedCounter;
                     _searchState.ResolveEdgeIndexes(cur, _level, ref _nodeIds, ref _indexes);
 
-                    for (int i = 0; i < _indexes.Count; i++)
+                    // Pin loop locals: NativeList field reads through `this` force the JIT to
+                    // reload the storage pointer on every candidate.
+                    int indexesCount = _indexes.Count;
+                    int* indexesPtr = _indexes.RawItems;
+                    int visitedCounter = _visitedCounter;
+                    for (int i = 0; i < indexesCount; i++)
                     {
-                        var nextIndex = _indexes[i];
+                        var nextIndex = indexesPtr[i];
                         ref var next = ref _searchState.GetNodeByIndex(nextIndex);
-                        if (next.Visited == _visitedCounter)
+                        if (next.Visited == visitedCounter)
                             continue; // already checked
-                        next.Visited = _visitedCounter;
+                        next.Visited = visitedCounter;
 
                         // Prefetch the next unvisited neighbor's vector data to overlap
                         // cache-miss latency with the current distance computation.
-                        // SimilarityCalc is ~65% of query time, ~80% of which is data loading.
-                        PrefetchNextNeighborVector(i + 1, _visitedCounter);
+                        PrefetchNextNeighborVector(indexesPtr, indexesCount, i + 1, visitedCounter);
 
                         var isDeleted = (next.PostingListId & Constants.Graphs.VectorId.EnsureIsSingleMask) == Constants.Graphs.VectorId.Tombstone
                                         || (_hasFilterMatch && _alreadyReturnedEdges.Contains(nextIndex));
 
-                        float nextDist = -_searchState.QueryDistance(_vector.Span, nextIndex, ref _vectorReadCounter);
+                        float nextDist = -_searchState.QueryDistance(_vector.Span, ref next, ref _vectorReadCounter);
                         if (nearestEdgesQ.Count < _internalNumberOfCandidates)
                         {
                             candidatesQ.Enqueue(nextIndex, -nextDist);
@@ -312,14 +316,14 @@ public unsafe partial class Hnsw
             /// On platforms without software prefetch the JIT eliminates this entirely.
             /// </summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private void PrefetchNextNeighborVector(int startFrom, int visitedCounter)
+            private void PrefetchNextNeighborVector(int* indexesPtr, int indexesCount, int startFrom, int visitedCounter)
             {
                 if (PortableIntrinsics.CanPrefetch == false)
                     return;
 
-                for (int j = startFrom; j < _indexes.Count; j++)
+                for (int j = startFrom; j < indexesCount; j++)
                 {
-                    var idx = _indexes[j];
+                    var idx = indexesPtr[j];
                     ref var node = ref _searchState.GetNodeByIndex(idx);
                     if (node.Visited == visitedCounter)
                         continue;

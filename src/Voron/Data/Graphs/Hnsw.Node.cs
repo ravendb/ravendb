@@ -15,27 +15,59 @@ public partial class Hnsw
     public unsafe struct Node
     {
         internal const long VectorIdMask = ~0xFFF;
+
+        // Hot fields read by the search inner loop are colocated at the start of the struct so a
+        // single cache line covers PostingListId (tombstone check), _vectorSpan (kernel input),
+        // Visited (RW per candidate), and the QueryDistance memo. VectorId / NodeId follow to keep
+        // line 0 saturated; the resolve-only fields (EdgesPerLevel / EdgesIndexesPerLevel /
+        // Cached*) land on line 1.
         public long PostingListId;
-        public long VectorId;
-        public long NodeId;
-        public NativeList<NativeList<long>> EdgesPerLevel;
-        public NativeList<NativeList<int>> EdgesIndexesPerLevel;
         internal UnmanagedSpan _vectorSpan;
         public int Visited;
+        public int QueryDistanceVersion;
         // Cached distance between this node and the current query vector. Valid only when
         // QueryDistanceVersion == SearchState._queryVectorVersion. SearchState bumps that
         // version whenever the query vector changes (see OnQueryVector), which in turn
         // invalidates this entry without touching the node.
         public float QueryDistanceValue;
-        public int QueryDistanceVersion;
+        public long VectorId;
+        public long NodeId;
+
+        public NativeList<NativeList<long>> EdgesPerLevel;
+        public NativeList<NativeList<int>> EdgesIndexesPerLevel;
+
+        // When non-null, this node's edge data lives in the HnswIndexCache buffer rather than in
+        // EdgesPerLevel. Set during search-side LoadNodeIndexes when the node hits the cache and
+        // the alternative copy was elided. Indexing-side code paths never set this pointer and
+        // continue to read/write EdgesPerLevel as before.
+        internal HnswIndexCache.CachedNodeHeader* CachedHeader;
+        internal int* CachedOffsets;
+        internal long* CachedEdges;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int GetLevelCount() => CachedHeader != null ? CachedHeader->LevelCount : EdgesPerLevel.Count;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int EdgeCountAtLevel(int level)
+        {
+            if (CachedHeader != null)
+                return CachedOffsets[level + 1] - CachedOffsets[level];
+            return EdgesPerLevel[level].Count;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<long> EdgesAtLevel(int level)
+        {
+            if (CachedHeader != null)
+            {
+                int start = CachedOffsets[level];
+                int end = CachedOffsets[level + 1];
+                return new ReadOnlySpan<long>(CachedEdges + start, end - start);
+            }
+            return EdgesPerLevel[level].ToSpan();
+        }
 
         public bool VectorLoaded => _vectorSpan.Length > 0;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal int GetLevelCount() => EdgesPerLevel.Count;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal ReadOnlySpan<long> EdgesAtLevel(int level) => EdgesPerLevel[level].ToSpan();
 
         /// <summary>
         /// Returns the vector's memory address and length without triggering I/O.

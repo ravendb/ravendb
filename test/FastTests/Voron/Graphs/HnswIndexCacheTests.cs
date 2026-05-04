@@ -235,9 +235,11 @@ public unsafe class HnswIndexCacheTests(ITestOutputHelper output) : StorageTest(
     /// </summary>
     private static unsafe IEnumerable<(long NodeId, HnswIndexCache.CachedNodeView View)> EnumerateCache(HnswIndexCache cache, int upper)
     {
+        // long.MaxValue as the reader tx id disables the visibility gate so this iterator
+        // surfaces every entry currently resident, regardless of when it was published.
         for (long nodeId = 1; nodeId <= upper; nodeId++)
         {
-            if (cache.TryGetNode(nodeId, out var view))
+            if (cache.TryGetNode(nodeId, long.MaxValue, out var view))
                 yield return (nodeId, view);
         }
     }

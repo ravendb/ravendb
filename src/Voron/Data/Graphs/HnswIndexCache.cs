@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -14,45 +13,58 @@ using Voron.Util;
 namespace Voron.Data.Graphs;
 
 /// <summary>
-/// Per-index in-memory cache of HNSW node topology backed by a single contiguous unmanaged
-/// buffer. Each cached node is laid out as a fixed header followed by per-level offsets and
-/// the flat edge list. Lookups go through a <see cref="ConcurrentDictionary{TKey,TValue}"/>
-/// keyed by node id; the dict is the publication point for newly appended records and
-/// provides the acquire load that lets readers observe the bytes a writer placed before
-/// publishing.
+/// Per-index in-memory cache of HNSW node topology. Lookups are gated on
+/// <c>PublishedAtTxId &lt;= readerTxId</c>: a reader never sees an entry stamped by a commit
+/// it cannot see on disk. The backing buffer grows monotonically; superseded regions are
+/// not reclaimed and further appends fail gracefully once full.
 ///
-/// The cache is initially populated by <see cref="WarmFromScratch"/> (BFS from the entry
-/// point through every reachable node up to the configured budget) and incrementally
-/// maintained by <see cref="ApplyCommit"/> after each indexing commit. Capacity is
-/// provisioned at construction time; if the buffer fills, further <see cref="TryAppend"/>
-/// calls fail gracefully and those nodes simply miss the cache.
+/// Hash collisions are resolved by 1-step linear probing into a secondary slot; if both
+/// slots are held by other ids the insert is refused and the node is left uncached.
+/// A per-slot even/odd Version protects the NodeId/Offset/PublishedAtTxId triple from
+/// torn reads: writers bump the version to odd while mutating and to the next even when
+/// stable; readers fail the lookup if the version changes around their field reads. This
+/// keeps the cache lock-free with single-writer-per-cache semantics and an unbounded
+/// number of concurrent readers.
 /// </summary>
 public sealed unsafe class HnswIndexCache : IDisposable
 {
     public readonly Hnsw.Options Options;
     public readonly delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> SimilarityCalc;
 
+    private Slot* _slots;
+    private readonly int _slotCount;
+    private readonly int _slotMask;
+
     private byte* _buffer;
     private long _writeHead;
     private readonly long _capacityBytes;
-    private readonly ConcurrentDictionary<long, NodeRef> _ids;
+
+    private int _published;
+
     private int _disposed;
 
-    public int Count => _ids.Count;
+    public int Count => Volatile.Read(ref _published);
     public long CapacityBytes => _capacityBytes;
     public long UsedBytes => Volatile.Read(ref _writeHead);
+    public int SlotCount => _slotCount;
 
-    public HnswIndexCache(long capacityBytes, in Hnsw.Options options,
+    public HnswIndexCache(long capacityBytes, int slotCount, in Hnsw.Options options,
         delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> similarityCalc)
     {
         if (capacityBytes <= 0)
             throw new ArgumentOutOfRangeException(nameof(capacityBytes), capacityBytes, "capacity must be positive");
+        if (slotCount <= 0 || (slotCount & (slotCount - 1)) != 0)
+            throw new ArgumentOutOfRangeException(nameof(slotCount), slotCount, "slot count must be a positive power of two");
 
         _capacityBytes = capacityBytes;
+        _slotCount = slotCount;
+        _slotMask = slotCount - 1;
         _buffer = (byte*)NativeMemory.AlignedAlloc((nuint)capacityBytes, 4096);
         if (_buffer == null)
             throw new OutOfMemoryException($"Failed to allocate {capacityBytes} bytes for the HNSW node cache.");
-        _ids = new ConcurrentDictionary<long, NodeRef>();
+        _slots = (Slot*)NativeMemory.AlignedAlloc((nuint)(sizeof(Slot) * slotCount), 64);
+        new Span<byte>(_slots, sizeof(Slot) * slotCount).Clear();
+
         Options = options;
         SimilarityCalc = similarityCalc;
     }
@@ -69,16 +81,15 @@ public sealed unsafe class HnswIndexCache : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
-        var ptr = _buffer;
-        _buffer = null;
-        if (ptr != null)
-            NativeMemory.AlignedFree(ptr);
+        var buf = _buffer; _buffer = null;
+        var slots = _slots; _slots = null;
+        if (buf != null) NativeMemory.AlignedFree(buf);
+        if (slots != null) NativeMemory.AlignedFree(slots);
     }
 
-    /// <summary>
-    /// Reserve a 64-byte-aligned region of <paramref name="sizeBytes"/> in the buffer. Lock-free
-    /// CAS on <see cref="_writeHead"/>; fails when the cap is reached.
-    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int SlotIndexFor(long nodeId) => Sparrow.Hashing.Mix(nodeId) & _slotMask;
+
     public bool TryAllocate(int sizeBytes, out long offset)
     {
         int aligned = AlignUp(sizeBytes, 64);
@@ -98,22 +109,57 @@ public sealed unsafe class HnswIndexCache : IDisposable
     }
 
     /// <summary>
-    /// Append a node record. The bytes are written first; the dict entry publishes them via the
-    /// volatile store at the end of <see cref="ConcurrentDictionary{TKey,TValue}.TryAdd"/>.
-    /// Returns false on capacity exhaustion or duplicate id.
+    /// Returns false only when the buffer is full; once that happens, every subsequent
+    /// TryAppend also fails so the caller should stop. Slot collisions (both probe slots
+    /// occupied by other ids) are skipped silently — the node simply isn't cached and the
+    /// call still returns true.
     /// </summary>
-    public bool TryAppend(long nodeId, in CachedNodeBuilder src)
+    public bool TryAppend(long nodeId, long publishAtTxId, in CachedNodeBuilder src)
     {
+        Debug.Assert(publishAtTxId > 0, "publishAtTxId must be a real tx id");
         Debug.Assert(src.LevelOffsets.Length == src.LevelCount + 1, "level offsets length mismatch");
         Debug.Assert(src.Edges.Length == src.EdgesTotalCount, "edges length mismatch");
+
+        // Refuse rather than evict when both probe slots are held by other ids: silent
+        // eviction of a still-valid entry would break readers that found it cacheable a
+        // moment ago, and the warm-up path can tolerate occasional uncached nodes.
+        int chosen = PickAppendSlot(nodeId);
+        if (chosen < 0)
+            return true;
 
         int totalBytes = sizeof(CachedNodeHeader)
                          + sizeof(int) * (src.LevelCount + 1)
                          + sizeof(long) * src.EdgesTotalCount;
-
         if (TryAllocate(totalBytes, out long offset) == false)
             return false;
 
+        WriteNodeBytes(offset, nodeId, in src);
+        PublishSlot(chosen, nodeId, publishAtTxId, offset);
+        return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int PickAppendSlot(long nodeId)
+    {
+        int primary = SlotIndexFor(nodeId);
+        if (SlotAcceptsNodeId(primary, nodeId))
+            return primary;
+        int secondary = (primary + 1) & _slotMask;
+        if (SlotAcceptsNodeId(secondary, nodeId))
+            return secondary;
+        return -1;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool SlotAcceptsNodeId(int slotIdx, long nodeId)
+    {
+        ref var slot = ref _slots[slotIdx];
+        long pub = Volatile.Read(ref slot.PublishedAtTxId);
+        return pub == 0 || Volatile.Read(ref slot.NodeId) == nodeId;
+    }
+
+    private void WriteNodeBytes(long offset, long nodeId, in CachedNodeBuilder src)
+    {
         var h = (CachedNodeHeader*)(_buffer + offset);
         h->NodeId = nodeId;
         h->PostingListId = src.PostingListId;
@@ -123,39 +169,129 @@ public sealed unsafe class HnswIndexCache : IDisposable
         h->_padding1 = 0;
         h->EdgesTotalCount = src.EdgesTotalCount;
 
-        var offsets = (int*)(h + 1);
-        src.LevelOffsets.CopyTo(new Span<int>(offsets, src.LevelCount + 1));
-
-        var edges = (long*)(offsets + src.LevelCount + 1);
+        var offs = (int*)(h + 1);
+        src.LevelOffsets.CopyTo(new Span<int>(offs, src.LevelCount + 1));
+        var edges = (long*)(offs + src.LevelCount + 1);
         src.Edges.CopyTo(new Span<long>(edges, src.EdgesTotalCount));
+    }
 
-        // Linearization point: only after the bytes above are written do readers become able to
-        // discover this record. ConcurrentDictionary does not document release semantics for the
-        // bucket store, so on weakly-ordered architectures (ARM64) the buffer writes above and the
-        // dictionary insert below could be observed out of order by a reader on another core. This
-        // fence makes the buffer writes globally visible before the record is published; the reader
-        // side gets an acquire load from the dictionary plus a control dependency on the offset.
-        Interlocked.MemoryBarrier();
-        return _ids.TryAdd(nodeId, new NodeRef(offset));
+    // Seqlock write: bump Version to odd, release the field stores, bump to next even.
+    // Readers observing the odd version (or a mismatch between their pre/post version reads)
+    // bail. Only an empty→occupied transition counts against _published.
+    private void PublishSlot(int slotIdx, long nodeId, long publishAtTxId, long offset)
+    {
+        ref var slot = ref _slots[slotIdx];
+        bool wasResident = Volatile.Read(ref slot.PublishedAtTxId) != 0;
+
+        long v = Volatile.Read(ref slot.Version);
+        Volatile.Write(ref slot.Version, v + 1);
+        Volatile.Write(ref slot.NodeId, nodeId);
+        Volatile.Write(ref slot.Offset, offset);
+        Volatile.Write(ref slot.PublishedAtTxId, publishAtTxId);
+        Volatile.Write(ref slot.Version, v + 2);
+
+        if (wasResident == false)
+            Interlocked.Increment(ref _published);
+    }
+
+    /// <summary>
+    /// Caller must invoke from the AfterCommit hook where no new reader can start: the
+    /// release-store on PublishedAtTxId must be visible before any reader at the new tx
+    /// can issue a lookup.
+    /// </summary>
+    public void Evict(long nodeId, long atTxId)
+    {
+        _ = atTxId;
+        int primary = SlotIndexFor(nodeId);
+        if (Volatile.Read(ref _slots[primary].NodeId) == nodeId)
+        {
+            EvictSlot(primary);
+            return;
+        }
+        int secondary = (primary + 1) & _slotMask;
+        if (Volatile.Read(ref _slots[secondary].NodeId) == nodeId)
+            EvictSlot(secondary);
+    }
+
+    private void EvictSlot(int slotIdx)
+    {
+        ref var slot = ref _slots[slotIdx];
+        long v = Volatile.Read(ref slot.Version);
+        Volatile.Write(ref slot.Version, v + 1);
+
+        bool wasResident = Volatile.Read(ref slot.PublishedAtTxId) != 0;
+        Volatile.Write(ref slot.PublishedAtTxId, 0);
+
+        Volatile.Write(ref slot.Version, v + 2);
+
+        if (wasResident)
+            Interlocked.Decrement(ref _published);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetNode(long nodeId, out CachedNodeView view)
+    public bool TryGetNode(long nodeId, long readerTxId, out CachedNodeView view)
     {
-        if (_ids.TryGetValue(nodeId, out var r) == false)
+        int primary = SlotIndexFor(nodeId);
+        if (TryReadSlot(primary, nodeId, readerTxId, out view))
+            return true;
+        return TryReadSlot((primary + 1) & _slotMask, nodeId, readerTxId, out view);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryReadSlot(int slotIdx, long nodeId, long readerTxId, out CachedNodeView view)
+    {
+        ref var slot = ref _slots[slotIdx];
+
+        // Seqlock read: capture version, observe fields, re-read version. If the writer
+        // raced through this slot the two version reads disagree (or the first is odd),
+        // and we return a clean miss — the caller will fall back to disk.
+        long v1 = Volatile.Read(ref slot.Version);
+        if ((v1 & 1) != 0)
         {
             view = default;
             return false;
         }
-        var h = (CachedNodeHeader*)(_buffer + r.Offset);
+
+        long ts = Volatile.Read(ref slot.PublishedAtTxId);
+        long slotNodeId = Volatile.Read(ref slot.NodeId);
+        long offset = Volatile.Read(ref slot.Offset);
+
+        long v2 = Volatile.Read(ref slot.Version);
+        if (v1 != v2 || ts == 0 || ts > readerTxId || slotNodeId != nodeId)
+        {
+            view = default;
+            return false;
+        }
+
+        var h = (CachedNodeHeader*)(_buffer + offset);
         var offs = (int*)(h + 1);
         var edges = (long*)(offs + h->LevelCount + 1);
         view = new CachedNodeView(h, offs, edges);
         return true;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ContainsNode(long nodeId) => _ids.ContainsKey(nodeId);
+    public void ForEachNode(long readerTxId, Action<long, CachedNodeView> visitor)
+    {
+        for (int i = 0; i < _slotCount; i++)
+        {
+            ref var slot = ref _slots[i];
+
+            long v1 = Volatile.Read(ref slot.Version);
+            if ((v1 & 1) != 0) continue;
+
+            long ts = Volatile.Read(ref slot.PublishedAtTxId);
+            long nodeId = Volatile.Read(ref slot.NodeId);
+            long offset = Volatile.Read(ref slot.Offset);
+
+            long v2 = Volatile.Read(ref slot.Version);
+            if (v1 != v2 || ts == 0 || ts > readerTxId || nodeId == 0) continue;
+
+            var h = (CachedNodeHeader*)(_buffer + offset);
+            var offs = (int*)(h + 1);
+            var edges = (long*)(offs + h->LevelCount + 1);
+            visitor(nodeId, new CachedNodeView(h, offs, edges));
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int AlignUp(int v, int align) => (v + align - 1) & ~(align - 1);
@@ -163,11 +299,6 @@ public sealed unsafe class HnswIndexCache : IDisposable
     private static delegate*<ReadOnlySpan<byte>, ReadOnlySpan<byte>, float> ResolveSimilarityKernel(in Hnsw.Options options) =>
         Hnsw.GetDistanceKernel(options);
 
-    /// <summary>
-    /// Conservative bytes-per-node estimate used to translate a node-count budget into a buffer
-    /// size at construction time. Worst-case node has <c>2*numberOfEdges</c> entries at level 0
-    /// across the flat edge list.
-    /// </summary>
     public static int EstimateBytesPerNode(int numberOfEdges)
     {
         const int AvgLevelCount = 4;
@@ -175,6 +306,18 @@ public sealed unsafe class HnswIndexCache : IDisposable
                + sizeof(int) * (AvgLevelCount + 1)
                + sizeof(long) * 2 * numberOfEdges
                + 64;
+    }
+
+    public static int SlotCountFor(int nodeBudget) =>
+        nodeBudget <= 0 ? 1 : Sparrow.Binary.Bits.PowerOf2(nodeBudget * 2);
+
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    internal struct Slot
+    {
+        public long Version;           // seqlock: even = stable, odd = writer in progress
+        public long NodeId;            // 0 = never written
+        public long PublishedAtTxId;   // 0 = evicted; the visibility gate
+        public long Offset;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -213,10 +356,6 @@ public sealed unsafe class HnswIndexCache : IDisposable
         }
     }
 
-    /// <summary>
-    /// Caller-built view of a node ready to be appended. The spans must remain stable for the
-    /// duration of the <see cref="TryAppend"/> call.
-    /// </summary>
     public ref struct CachedNodeBuilder
     {
         public long PostingListId;
@@ -227,16 +366,6 @@ public sealed unsafe class HnswIndexCache : IDisposable
         public ReadOnlySpan<long> Edges;
     }
 
-    private readonly record struct NodeRef(long Offset);
-
-    /// <summary>
-    /// Initial fill: BFS from the entry point. Upper levels (>= 1) are fully connected by HNSW
-    /// construction so a single sweep per level suffices. Level 0 needs full BFS because under
-    /// the standard HNSW level formula most nodes live only at level 0 and many sit &gt;1 hop
-    /// from any upper-level seed, so a single hop would silently miss them. BFS allocation
-    /// order means neighboring nodes become neighboring records in <see cref="_buffer"/>,
-    /// giving Gorder-style locality for free.
-    /// </summary>
     public static HnswIndexCache WarmFromScratch(LowLevelTransaction llt, Slice fieldName, int maxNodes)
     {
         var tree = llt.Transaction.ReadTree(fieldName);
@@ -247,8 +376,9 @@ public sealed unsafe class HnswIndexCache : IDisposable
         var simCalc = ResolveSimilarityKernel(options);
 
         long bytesPerNode = EstimateBytesPerNode(options.NumberOfEdges);
-        long capacityBytes = (long)Math.Max(1, maxNodes) * bytesPerNode * 11 / 10;
-        var cache = new HnswIndexCache(capacityBytes, options, simCalc);
+        long capacityBytes = (long)Math.Max(1, maxNodes) * bytesPerNode;
+        int slotCount = SlotCountFor(Math.Max(1, maxNodes));
+        var cache = new HnswIndexCache(capacityBytes, slotCount, options, simCalc);
 
         if (maxNodes <= 0 || locations.TryGetValue(Hnsw.EntryPointId, out _) == false)
             return cache;
@@ -273,15 +403,10 @@ public sealed unsafe class HnswIndexCache : IDisposable
                 break;
         }
 
-        builder.AppendAllPromoted(cache);
+        builder.AppendAll(cache, llt.Id);
         return cache;
     }
 
-    /// <summary>
-    /// Per-commit incremental update. Loads each dirty node from the just-committed snapshot
-    /// and appends a record. <see cref="TryAppend"/> is a no-op for nodes already present
-    /// (id collision), so re-touched nodes keep their previous cache entry.
-    /// </summary>
     public void ApplyCommit(LowLevelTransaction llt, Slice fieldName, IEnumerable<long> dirtyNodeIds)
     {
         if (dirtyNodeIds is null)
@@ -291,21 +416,17 @@ public sealed unsafe class HnswIndexCache : IDisposable
         if (tree is null || tree.TryGetLookupFor(Hnsw.NodeIdToLocationSlice, out Lookup<Int64LookupKey> locations) == false)
             return;
 
+        long txId = llt.Id;
+
         using var builder = new WarmupBuilder(llt, locations, budget: int.MaxValue);
         foreach (var nodeId in dirtyNodeIds)
         {
-            if (_ids.ContainsKey(nodeId))
-                continue;
+            Evict(nodeId, txId);
             builder.SeedAndLoad(nodeId);
         }
-        builder.AppendAllPromoted(this);
+        builder.AppendAll(this, txId);
     }
 
-    /// <summary>
-    /// BFS scratch that owns the temporary <see cref="NativeList"/>s. Emits node records in the
-    /// order they were discovered, so a subsequent bulk append produces a locality-friendly
-    /// layout in the cache buffer.
-    /// </summary>
     private sealed class WarmupBuilder : IDisposable
     {
         private readonly LowLevelTransaction _llt;
@@ -334,12 +455,6 @@ public sealed unsafe class HnswIndexCache : IDisposable
             Flush();
         }
 
-        /// <summary>
-        /// Sweep at <paramref name="level"/>: every loaded node whose level-L edge list is
-        /// non-empty contributes its neighbors to the next batch. Multiple passes are required
-        /// because a Flush appends new nodes whose own level-L edges must also be followed
-        /// before we drop down a level.
-        /// </summary>
         public void ExpandAtLevel(int level)
         {
             var seen = new HashSet<long>();
@@ -413,13 +528,7 @@ public sealed unsafe class HnswIndexCache : IDisposable
             _batch.Clear();
         }
 
-        /// <summary>
-        /// Bulk-emit every loaded node into <paramref name="cache"/>. Routers (level &gt;= 1)
-        /// and leaves (level 0 only) are both admitted; the BFS in <see cref="WarmFromScratch"/>
-        /// caps the loaded set at the configured budget, and the goal is the highest cache hit
-        /// rate over the working set rather than a structural slice of the graph.
-        /// </summary>
-        public void AppendAllPromoted(HnswIndexCache cache)
+        public void AppendAll(HnswIndexCache cache, long publishAtTxId)
         {
             Span<int> levelOffsetsScratch = stackalloc int[byte.MaxValue + 1];
             var edgesScratch = new List<long>(cache.Options.NumberOfEdges * 4);
@@ -429,7 +538,7 @@ public sealed unsafe class HnswIndexCache : IDisposable
                 ref var node = ref _working[idx];
                 int levels = node.EdgesPerLevel.Count;
                 if (levels == 0)
-                    continue; // tombstone / missing — skip
+                    continue;
 
                 edgesScratch.Clear();
                 levelOffsetsScratch[0] = 0;
@@ -450,8 +559,8 @@ public sealed unsafe class HnswIndexCache : IDisposable
                     LevelOffsets = levelOffsetsScratch[..(levels + 1)],
                     Edges = CollectionsMarshal.AsSpan(edgesScratch),
                 };
-                if (cache.TryAppend(node.NodeId, builder) == false)
-                    break; // capacity exhausted: subsequent nodes also fail, stop early
+                if (cache.TryAppend(node.NodeId, publishAtTxId, builder) == false)
+                    break;
             }
         }
 
