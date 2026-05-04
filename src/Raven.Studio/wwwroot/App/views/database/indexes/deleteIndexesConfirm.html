@@ -6,10 +6,10 @@
                 <i class="icon-cancel"></i>
             </button>
         </div>
-        <div class="modal-body force-text-wrap">
+        <div class="modal-body">
             <p data-bind="visible: indexesInfoForDelete?.length > 0, html: subTitleHtml"></p>
             <ul data-bind="foreach: indexesInfoForDelete" style="max-height: 200px; overflow-y: auto;">
-                <li class="padding padding-xs">
+                <li class="padding padding-xs force-text-wrap">
                     <strong data-bind="text: indexName"></strong>
                     <small data-bind="if: reduceOutputCollection">
                         <span data-bind="visible: referenceCollection, text: '(Reduce Results Collections: ' + reduceOutputCollection + ', ' + referenceCollection + ')'" class="margin-left margin-left-sm"></span>
@@ -19,20 +19,29 @@
             </ul>
             <p data-bind="visible: lockedIndexNames?.length > 0">Skipping locked indexes:</p>
             <ul data-bind="foreach: lockedIndexNames" style="max-height: 200px; overflow-y: auto;">
-                <li class="padding padding-xs">
+                <li class="padding padding-xs force-text-wrap">
                     <strong data-bind="text: $data"></strong>
                 </li>
             </ul>
             <hr data-bind="visible: showWarning">
             <div data-bind="if: showWarning, visible: showWarning" class="flex-horizontal text-warning bg-warning margin">
-                <span class="flex-start padding padding-xs">
+                <span class="flex-start padding padding-sm">
                     <i class="icon-warning"></i>
                 </span>
-                <span class="padding padding-xs">
-                     Note: <br>  
-                    'Reduce Results Collections' were created by above index(es).<br>  
-                     Clicking 'Delete' will delete the index(es) but Not the Results Collection(s).<br>
-                     Go to the collection itself to manually remove documents.                    
+                <span class="padding padding-sm">
+                    'Reduce Results Collections' were created by the index(es).
+                    <ul class="margin-top-sm margin-bottom-sm padding-left-sm padding-right-xs">
+                        <li>
+                            <strong>Note</strong>:<br/>
+                            Clicking 'Delete' will remove the index(es), but not the Reduce Results Collection(s).
+                            You need to manually remove the documents from these collections.
+                        </li>
+                        <li class="margin-top-xs">
+                            <strong>Important</strong>:<br/>
+                            If running in a cluster, these documents must be deleted from <strong>each node individually</strong>,
+                            because their deletion is not replicated between nodes.
+                        </li>
+                    </ul>
                 </span>
             </div>
         </div>
