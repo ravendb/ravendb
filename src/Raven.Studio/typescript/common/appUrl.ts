@@ -583,14 +583,10 @@ class appUrl {
         }
     }
 
-    static forSampleQueries(db: database | string, dataKey: string, initialScriptHash?: number): string {
+    static forPatchSamples(db: database | string, initialScriptHash?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const hashPart = initialScriptHash != null ? "&initialScriptHash=" + initialScriptHash : "";
-        return "#databases/patch-samples?" + databasePart + "&dataKey=" + encodeURIComponent(dataKey) + hashPart;
-    }
-
-    static forPatchSamples(db: database | string, initialScriptHash?: number): string {
-        return appUrl.forSampleQueries(db, "patch", initialScriptHash);
+        return "#databases/patch-samples?" + databasePart + hashPart;
     }
 
     static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
