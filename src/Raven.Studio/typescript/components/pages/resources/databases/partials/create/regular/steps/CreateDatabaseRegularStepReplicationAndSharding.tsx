@@ -48,6 +48,7 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
 
     const isReplicationFactorVisible = !isManualReplication || isSharded;
     const isReplicationFactorWarning = isSharded && maxReplicationFactorForSharding < availableNodesCount;
+    const isSingleNodeOnly = availableNodesCount === 1;
 
     const isNotBootstrapped = nodeTagsCount === 0;
     const isManualReplicationRequiredForEncryption =
@@ -182,15 +183,19 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                                             className="replication-input"
                                             min="1"
                                             max={maxReplicationFactor}
+                                            readOnly={isSingleNodeOnly}
+                                            style={isSingleNodeOnly ? { pointerEvents: "none" } : undefined}
                                         />
                                     </InputGroup>
-                                    <FormRange
-                                        control={control}
-                                        name="replicationAndShardingStep.replicationFactor"
-                                        min="1"
-                                        max={maxReplicationFactor}
-                                        className="mt-3"
-                                    />
+                                    {!isSingleNodeOnly && (
+                                        <FormRange
+                                            control={control}
+                                            name="replicationAndShardingStep.replicationFactor"
+                                            min="1"
+                                            max={maxReplicationFactor}
+                                            className="mt-3"
+                                        />
+                                    )}
                                 </div>
                             </Collapse>
                         </Col>
