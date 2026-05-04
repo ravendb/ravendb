@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -939,12 +940,19 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
             }
 
-            var certPath = serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
+            settingsJsonObject.TryGet(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath), out string setupResultingCertPath);
+
+            var certPath = setupResultingCertPath
+                           ?? serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath))
+                           ?? Path.Combine(AppContext.BaseDirectory, certificateFileName);
 
             try
             {
                 progress.AddInfo($"Saving server certificate at {certPath}.");
                 onProgress(progress);
+
+                var certDirectory = Path.GetDirectoryName(certPath);
+                Directory.CreateDirectory(certDirectory);
 
                 await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
@@ -957,6 +965,12 @@ namespace Raven.Server.Commercial
                 {
                     PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
                 }
+            }
+            catch (Exception e) when (e is UnauthorizedAccessException or SecurityException)
+            {
+                throw new InvalidOperationException(
+                    $"Failed to save server certificate at '{certPath}'. The RavenDB process does not have the required permissions to write to this location. " +
+                    $"Either grant the process write access to the target directory or choose a different certificate path.", e);
             }
             catch (Exception e)
             {
