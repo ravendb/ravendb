@@ -13,7 +13,6 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Formats.Asn1;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -2219,6 +2218,9 @@ namespace Raven.Server
 
                     foreach (var chainStatus in chain.ChainStatus)
                     {
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"SSO chain status for '{ssoServerDef.Name}': {chainStatus.Status} - {chainStatus.StatusInformation}");
+
                         log?.AppendLine($"Chain status: {chainStatus.Status} - {chainStatus.StatusInformation}");
                     }
                     continue;
@@ -2236,8 +2238,11 @@ namespace Raven.Server
                     return;
                 }
 
-                var ssoUserId = DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+                var ssoUserId = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
                 var ssoServerPinningHash = ssoServerDef.PublicKeyPinningHash;
+
+                if (string.IsNullOrEmpty(ssoServerPinningHash))
+                    continue;
 
                 // Look up the SSO user entry by user ID
                 var ssoUserDef = ServerStore.Cluster.GetCertificateBySsoUserId(ctx, ssoUserId);
@@ -2267,7 +2272,8 @@ namespace Raven.Server
 
                 // Verify this SSO server is allowed for the user entry
                 if (ssoUserDef.AllowAnySsoServer == false &&
-                    (ssoUserDef.SsoServerPublicKeyPinningHashes == null || ssoUserDef.SsoServerPublicKeyPinningHashes.Contains(ssoServerPinningHash) == false))
+                    (ssoUserDef.SsoServerPublicKeyPinningHashes == null ||
+                     ssoUserDef.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, ssoServerPinningHash)) == false))
                 {
                     string remoteAddress = GetRemoteAddress(connectionInfo);
                     if (_auditLogger.IsAuditEnabled)
@@ -2319,20 +2325,6 @@ namespace Raven.Server
         public string WebUrl { get; private set; }
 
         internal CertificateUtils.CertificateHolder Certificate;
-
-        /// <summary>
-        /// Decodes the SSO user ID from a custom X.509 extension's RawData.
-        /// The value is expected to be a DER-encoded ASN.1 UTF8String, as written
-        /// by AsnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, ...).
-        /// </summary>
-        internal static string DecodeSsoUserIdExtension(byte[] rawData)
-        {
-            if (rawData == null || rawData.Length == 0)
-                return string.Empty;
-
-            var reader = new AsnReader(rawData, AsnEncodingRules.DER);
-            return reader.ReadCharacterString(UniversalTagNumber.UTF8String);
-        }
 
         internal X509Certificate2[] WellKnownIssuers;
         internal string[] WellKnownIssuersThumbprints = Array.Empty<string>();

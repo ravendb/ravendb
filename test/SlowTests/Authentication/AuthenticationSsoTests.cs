@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Formats.Asn1;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -638,6 +639,150 @@ namespace SlowTests.Authentication
                     await adminStore.Maintenance.Server.SendAsync(new EditClientCertificateOperation(editParams));
                 });
             }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void MalformedSsoUserIdExtension_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            // Bytes that are not a valid DER UTF8String — AsnReader.ReadCharacterString must reject them.
+            var malformedExtensionData = new byte[] { 0xFF, 0xFF, 0xFF, 0xFF };
+            var ssoUserCert = CreateSsoUserCertificateWithRawExtension(ssoCerts, malformedExtensionData);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+            }
+
+            using (var ssoStore = new DocumentStore
+            {
+                Urls = new[] { Server.WebUrl },
+                Database = dbName,
+                Certificate = ssoUserCert,
+                Conventions = new DocumentConventions { DisposeCertificate = false }
+            }.Initialize())
+            {
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+                });
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void SsoUserIdExtension_WithTrailingBytes_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "trailing@example.com";
+
+            // Valid UTF8String DER for the user id, followed by trailing bytes.
+            // ThrowIfNotEmpty() must reject this even though the prefix parses correctly.
+            var asnWriter = new AsnWriter(AsnEncodingRules.DER);
+            asnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, ssoUserId);
+            var validBytes = asnWriter.Encode();
+            var withTrailing = new byte[validBytes.Length + 4];
+            Buffer.BlockCopy(validBytes, 0, withTrailing, 0, validBytes.Length);
+            withTrailing[validBytes.Length] = 0x01;
+            withTrailing[validBytes.Length + 1] = 0x02;
+            withTrailing[validBytes.Length + 2] = 0x03;
+            withTrailing[validBytes.Length + 3] = 0x04;
+
+            var ssoUserCert = CreateSsoUserCertificateWithRawExtension(ssoCerts, withTrailing);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                // Register the user entry too — the auth must still fail because the decoded id is empty,
+                // not because the user is unknown.
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+            }
+
+            using (var ssoStore = new DocumentStore
+            {
+                Urls = new[] { Server.WebUrl },
+                Database = dbName,
+                Certificate = ssoUserCert,
+                Conventions = new DocumentConventions { DisposeCertificate = false }
+            }.Initialize())
+            {
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+                });
+            }
+        }
+
+        private static X509Certificate2 CreateSsoUserCertificateWithRawExtension(SsoTestCertificates ssoCerts, byte[] rawExtensionData)
+        {
+            const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
+
+            using var userKey = RSA.Create(2048);
+            var subjectName = new X500DistinguishedName("CN=SSO User Test");
+
+            var request = new CertificateRequest(subjectName, userKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+            request.CertificateExtensions.Add(new X509KeyUsageExtension(
+                X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, false));
+
+            request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
+                new OidCollection { new Oid("1.3.6.1.5.5.7.3.2") }, false));
+
+            request.CertificateExtensions.Add(new X509Extension(new Oid(ssoUserIdExtensionOid), rawExtensionData, false));
+
+            byte[] serialNumber = new byte[20];
+            using (var rng = RandomNumberGenerator.Create())
+                rng.GetBytes(serialNumber);
+            serialNumber[0] &= 0x7F;
+
+            var signatureGenerator = X509SignatureGenerator.CreateForRSA(
+                (RSA)ssoCerts.SsoServerPrivateKey, RSASignaturePadding.Pkcs1);
+
+            var cert = request.Create(
+                ssoCerts.SsoServerCert.SubjectName,
+                signatureGenerator,
+                DateTimeOffset.UtcNow.AddDays(-1),
+                DateTimeOffset.UtcNow.AddYears(1),
+                serialNumber);
+
+            var certWithKey = cert.CopyWithPrivateKey(userKey);
+            var pfxBytes = certWithKey.Export(X509ContentType.Pfx, string.Empty);
+            return CertificateLoaderUtil.CreateCertificate(pfxBytes, flags: CertificateLoaderUtil.FlagsForPersist);
         }
 
         private static SsoTestCertificates CreateIndependentSsoServerCertificates()

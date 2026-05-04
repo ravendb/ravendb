@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Formats.Asn1;
 using System.Linq;
 using System.Net.Security;
 using System.Numerics;
@@ -896,6 +897,46 @@ namespace Raven.Server.Utils
             copy.ImportEncryptedPkcs8PrivateKey(nameof(GetExportableRsaPrivateKey), exported, out _);
 
             return copy;
+        }
+
+        /// <summary>
+        /// Compares two public-key pinning hashes using a fixed-time algorithm to avoid timing side-channels.
+        /// Both inputs must be non-null and non-empty, and have equal byte lengths — otherwise returns false.
+        /// </summary>
+        internal static bool PinningHashEquals(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+                return false;
+
+            byte[] aBytes = Encoding.UTF8.GetBytes(a);
+            byte[] bBytes = Encoding.UTF8.GetBytes(b);
+            if (aBytes.Length != bBytes.Length)
+                return false;
+
+            return CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+        }
+
+        /// <summary>
+        /// Decodes the SSO user ID from a custom X.509 extension's RawData.
+        /// The value must be a DER-encoded ASN.1 UTF8String with no trailing bytes.
+        /// Returns empty string if the input is null, empty, or malformed.
+        /// </summary>
+        public static string DecodeSsoUserIdExtension(byte[] rawData)
+        {
+            if (rawData == null || rawData.Length == 0)
+                return string.Empty;
+
+            try
+            {
+                var reader = new AsnReader(rawData, AsnEncodingRules.DER);
+                var value = reader.ReadCharacterString(UniversalTagNumber.UTF8String);
+                reader.ThrowIfNotEmpty();
+                return value;
+            }
+            catch (AsnContentException)
+            {
+                return string.Empty;
+            }
         }
     }
 }
