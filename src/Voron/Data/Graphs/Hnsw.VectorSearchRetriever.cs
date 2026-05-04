@@ -20,6 +20,7 @@ public partial class Hnsw
     {
         private int _returnedCandidates;
         private readonly SearchState _searchState;
+        private readonly bool _ownsSearchState;
         private int _currentNode, _currentMatchesIndex;
         private ContextBoundNativeList<long> _postingListResults;
         private FastPForDecoder _pforDecoder;
@@ -43,9 +44,11 @@ public partial class Hnsw
 
         public long CandidatesProcessed => _vectorsSearcher?.CandidatesProcessed ?? 0;
         
-        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity)
+        public VectorSearchRetriever(SearchState searchState, IHnswSearcher vectorsSearcher, Memory<byte> vector, float minimumSimilarity,
+            bool ownsSearchState = true)
         {
             _searchState = searchState;
+            _ownsSearchState = ownsSearchState;
             _vectorsSearcher = vectorsSearcher;
             _vector = vector;
             _postingListResults = new(_searchState.Llt.Allocator);
@@ -311,7 +314,8 @@ public partial class Hnsw
             _pforDecoder.Dispose();
             _resultsEnumerator?.Dispose();
             _vectorsSearcher?.Dispose();
-            _searchState.Dispose();
+            if (_ownsSearchState)
+                _searchState.Dispose();
         }
     }
 }

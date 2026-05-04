@@ -35,6 +35,8 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
     private readonly IndexFieldsMapping _fieldMapping;
+    private Dictionary<Slice, Hnsw.SearchState> _vectorSearchStateCache;
+    private Dictionary<Slice, HnswIndexCache> _vectorNodeCaches;
     private HashSet<long> _nullTermsMarkers;
     private HashSet<long> _nonExistingTermsMarkers;
     private long[] _vectorFieldsMarkers;
@@ -480,8 +482,50 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     }
 
     
+    /// <summary>
+    /// Returns a shared SearchState for the given vector field, creating one if needed.
+    /// The SearchState is cached per field name and disposed when the IndexSearcher is disposed.
+    /// This lets multiple vector search operations against the same field share loaded
+    /// node topology and vector pointers. The distance cache is keyed by the query vector
+    /// (see <see cref="Hnsw.SearchState.OnQueryVector"/>): sub-searches with distinct vectors
+    /// see independent caches, while same-vector re-entry (e.g. eF re-expansion in filtered
+    /// search) keeps its cached distances.
+    /// </summary>
+    internal Hnsw.SearchState GetOrCreateVectorSearchState(Slice fieldName)
+    {
+        _vectorSearchStateCache ??= new(SliceComparer.Instance);
+        ref var state = ref CollectionsMarshal.GetValueRefOrAddDefault(_vectorSearchStateCache, fieldName, out bool exists);
+        if (exists == false)
+        {
+            // Look for a shared HnswIndexCache for this field
+            HnswIndexCache nodeCache = null;
+            _vectorNodeCaches?.TryGetValue(fieldName, out nodeCache);
+            state = new Hnsw.SearchState(_transaction.LowLevelTransaction, fieldName, nodeCache);
+        }
+        return state;
+    }
+
+    /// <summary>
+    /// Attach a per-field dictionary of HNSW node caches to this IndexSearcher. Each
+    /// SearchState created by <see cref="GetOrCreateVectorSearchState"/> looks up its field's
+    /// cache here and uses it for node lookups instead of reading them through Voron.
+    /// The dictionary is read by query code only and must not be mutated while the
+    /// IndexSearcher is alive.
+    /// </summary>
+    public void AttachVectorNodeCaches(Dictionary<Slice, HnswIndexCache> caches)
+    {
+        _vectorNodeCaches = caches;
+    }
+
     public void Dispose()
     {
+        if (_vectorSearchStateCache != null)
+        {
+            foreach (var kvp in _vectorSearchStateCache)
+                kvp.Value.Dispose();
+            _vectorSearchStateCache = null;
+        }
+
         if (_ownsTransaction)
             _transaction?.Dispose();
 

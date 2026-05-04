@@ -96,6 +96,7 @@ public partial class Hnsw
 
                 lowerBound = float.MaxValue;
                 visitedCounter = ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
 
                 foreach (var nodeIdx in _startingPointIndexes)
                 {
@@ -122,8 +123,9 @@ public partial class Hnsw
                 Debug.Assert(candidatesQ.Count == 0, "_candidatesQ.Count == 0");
                 Debug.Assert(nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
 
-                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
                 visitedCounter = ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
+                lowerBound = -_searchState.QueryDistance(_vector.Span, _startingPointIndex, ref _vectorReadCounter);
                 {
                     ref var startingPoint = ref _searchState.GetNodeByIndex(_startingPointIndex);
                     startingPoint.Visited = visitedCounter;
@@ -159,6 +161,12 @@ public partial class Hnsw
                         nearestEdgesQ.Count == _internalNumberOfCandidates)
                     {
                         ProcessResults();
+                        // Drain candidatesQ before yielding. Non-filtered queries consume only
+                        // the first batch and never resume the iterator, so without this clear
+                        // the shared SearchState carries far-from-the-old-vector candidates into
+                        // the next query, polluting its priority queue and forcing the search to
+                        // expand 25-30% more nodes than a fresh state would.
+                        candidatesQ.Clear();
                         yield return true;
                         // If we need to fetch more, we'll start the query again with a higher NumberOfCandidates.
                         // The SearchState keeps its state, so traversal through already visited nodes is I/O-free
@@ -236,17 +244,13 @@ public partial class Hnsw
 
             // Reset the NearestSearcher state; however, it does not clear the data already stored inside SearchState.
             // This is important because it allows us to reduce I/O pressure during over-fetching and when restarting the query.
+            // Node.Visited uses version-based invalidation keyed on SearchState._visitsCounter
+            // (incremented in InitState), and Node.QueryDistanceVersion uses a separate version
+            // keyed on the query vector, so neither needs a per-node reset here.
             private void Reset()
             {
                 _searchState._candidatesQ.Clear();
                 _searchState._nearestEdgesQ.Clear();
-
-                for (int nodeIdx = 0; nodeIdx < _searchState._nodes.Count; nodeIdx++)
-                {
-                    _searchState._nodes[nodeIdx].Visited = 0;
-                }
-
-                _searchState._visitsCounter = 0;
                 _candidates.Clear();
                 _nodeIds.Clear();
                 _indexes.Clear();

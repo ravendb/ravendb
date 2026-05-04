@@ -44,6 +44,12 @@ public partial class Hnsw
 
             public IEnumerable<bool> Search()
             {
+                // Reset the visited set for this traversal and record the query vector so the
+                // per-node QueryDistance cache is either reused (same vector) or invalidated
+                // (different vector) — OnQueryVector decides based on Memory identity.
+                ++_searchState._visitsCounter;
+                _searchState.OnQueryVector(_vector);
+
                 _pq = new PriorityQueue<long, float>();
                 Span<byte> vector = _vector.Span;
                 IEnumerable<long> toScan = _nodesToScan.HasValue ? _nodesToScan.Value.Iterate() : AllNodes();
