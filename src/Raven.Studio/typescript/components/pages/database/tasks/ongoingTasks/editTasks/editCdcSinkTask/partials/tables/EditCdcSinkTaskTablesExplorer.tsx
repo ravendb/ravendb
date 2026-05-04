@@ -27,6 +27,35 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
     const dispatch = useAppDispatch();
     const [filter, setFilter] = useState("");
 
+    const handleAddRootTable = () => {
+        tablesFieldArray.append({
+            sourceTableName: "",
+            sourceTableSchema: "public",
+            collectionName: "NewCollection",
+            columns: [],
+            primaryKeyColumns: [],
+            linkedTables: [],
+            embeddedTables: [],
+            onDelete: {
+                ignoreDeletes: false,
+                patch: "",
+            },
+            disabled: false,
+            patch: "",
+        });
+
+        dispatch(
+            editCdcSinkTaskActions.activeTableSet({
+                parents: [],
+                current: {
+                    path: getRootTablePath(tablesFieldArray.fields.length),
+                    type: "root",
+                    label: "Unassigned table",
+                },
+            })
+        );
+    };
+
     const handleCollapseAll = () => {
         const newExpandedState = Object.fromEntries(
             getExpandableTablePaths(tablesFieldArray.fields).map((path) => [path, false])
@@ -45,7 +74,13 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
         <div className="vstack gap-2 h-100">
             <div className="hstack">
                 <div className="me-auto">Tables</div>
-                <Button variant="link" size="xs" className="text-body" title="Add new root table">
+                <Button
+                    variant="link"
+                    size="xs"
+                    className="text-body"
+                    title="Add new root table"
+                    onClick={handleAddRootTable}
+                >
                     <Icon icon="plus" margin="m-0" />
                 </Button>
                 <Button
@@ -85,6 +120,7 @@ interface TableItemsProps {
 }
 
 function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
+    console.log("kalczur tablesFieldArray", tablesFieldArray);
     const formTables = useMemo(
         () => tablesFieldArray.fields.map((table, idx) => ({ table, formIdx: idx })),
         [tablesFieldArray.fields]
@@ -95,7 +131,7 @@ function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
             return formTables;
         }
 
-        return formTables.filter(({ table }) => table.sourceTableName.toLowerCase().includes(filter.toLowerCase()));
+        return formTables.filter(({ table }) => table.sourceTableName?.toLowerCase().includes(filter.toLowerCase()));
     }, [filter, formTables]);
 
     if (formTables.length === 0) {

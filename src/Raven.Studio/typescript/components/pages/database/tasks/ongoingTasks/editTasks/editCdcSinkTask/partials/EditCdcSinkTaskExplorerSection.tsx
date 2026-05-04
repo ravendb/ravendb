@@ -28,7 +28,6 @@ interface EditCdcSinkTaskExplorerSectionProps {
 export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: EditCdcSinkTaskExplorerSectionProps) {
     const { tasksService } = useServices();
     const { value: isPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
-    const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionString = useAppSelector(editCdcSinkTaskSelectors.selectedConnectionString);
 
@@ -54,15 +53,14 @@ export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: Edi
     const table = useReactTable({
         data: tables,
         columns: tableColumnDefs,
-        state: { rowSelection },
-        onRowSelectionChange: setRowSelection,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getCoreRowModel(),
         enableRowSelection: true,
     });
 
-    const selectedCount = Object.keys(rowSelection).length;
+    const selectedRows = table.getSelectedRowModel().rows;
+    const selectedCount = selectedRows.length;
 
     const handleAddSelected = () => {
         const getTableKey = (sourceName: string, sourceSchema: string) => {
@@ -73,18 +71,14 @@ export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: Edi
             tablesFieldArray.fields.map((f) => getTableKey(f.sourceTableName, f.sourceTableSchema))
         );
 
-        const newTables = table
-            .getSelectedRowModel()
-            .rows.filter((r) => !existingKeys.has(getTableKey(r.original.tableName, r.original.tableSchema)))
+        const newTables = selectedRows
+            .filter((r) => r.original && !existingKeys.has(getTableKey(r.original.tableName, r.original.tableSchema)))
             .map((r) => mapSqlTableToFormData(r.original));
 
         console.log("kalczur newTables", newTables);
 
-        if (newTables.length > 0) {
-            tablesFieldArray.append(newTables);
-        }
-
-        setRowSelection({});
+        newTables.forEach((newTable) => tablesFieldArray.append(newTable, { shouldFocus: false }));
+        table.setRowSelection({});
     };
 
     return (
