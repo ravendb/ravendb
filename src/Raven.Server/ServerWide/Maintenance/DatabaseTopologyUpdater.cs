@@ -668,19 +668,18 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             // Collect all lag indicators instead of returning on the first one.
+            // PromotablesStatus is a single value; the aggregate demotion message below carries all reasons.
             var lagReasons = new List<string>();
             var promotionStatus = DatabasePromotionStatus.Ok;
 
-            // Check 1: Replication lag
             var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
 
             if (lastSentEtag < mentorsEtag || timeDiff)
             {
-                lagReasons.Add($"The mentor hasn't sent all of the documents yet (Last sent Etag: {lastSentEtag:#,#;;0}, Mentor's Etag: {mentorsEtag:#,#;;0})");
+                lagReasons.Add($"The mentor hasn't sent all of the documents yet (Last sent Etag: {lastSentEtag:#,#;;0}, Mentor's Etag: {mentorsEtag:#,#;;0}, mentor cluster-stats time diff exceeded: {timeDiff})");
                 promotionStatus = DatabasePromotionStatus.ChangeVectorNotMerged;
             }
 
-            // Check 2: Compare exchange lag
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Check if we're getting the proper compare exchange for shard databases");
 #pragma warning disable CS0618
             var leaderLastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(context, dbName);
@@ -692,7 +691,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotionStatus = DatabasePromotionStatus.RaftIndexNotUpToDate;
             }
 
-            // Check 3: Index lag
             var databaseEtag = -1L;
             if (state.HasActiveMigrations() == false)
             {
@@ -714,7 +712,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 promotionStatus = DatabasePromotionStatus.IndexNotUpToDate;
             }
 
-            // If no lag detected, promote
             if (lagReasons.Count == 0)
             {
                 _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
@@ -725,8 +722,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (true, $"Node {promotable} is up-to-date so promoting it to be member");
             }
 
-            // Build aggregate message with all lag reasons and log once
-            var aggregateMsg = $"The database '{dbName}' on {promotable} not ready to be promoted:" + Environment.NewLine +
+            var aggregateMsg = $"The database '{dbName}' on {promotable} is not ready to be promoted:" + Environment.NewLine +
                                string.Join(Environment.NewLine, lagReasons);
 
             _logger.Log(aggregateMsg, state.ObserverIteration, database: dbName);
