@@ -28,6 +28,7 @@ import { aiAssistantSlice } from "./common/shell/aiAssistantSlice";
 import { chatbotSlice } from "./shell/chatbot/store/chatbotSlice";
 import { chatbotMiddleware } from "./shell/chatbot/store/chatbotMiddleware";
 import { documentSchemaSlice } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
+import { editCdcSinkTaskSlice } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -57,6 +58,7 @@ export function createStoreConfiguration() {
             aiAssistant: aiAssistantSlice.reducer,
             chatbot: chatbotSlice.reducer,
             documentSchema: documentSchemaSlice.reducer,
+            editCdcSinkTask: editCdcSinkTaskSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

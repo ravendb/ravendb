@@ -1,0 +1,43 @@
+@use "Content/scss/sizes";
+
+.edit-cdc-sink-task {
+    .field-mapping-row {
+        display: grid;
+        grid-template-columns: 2fr 16.8px 2fr 1fr 34.4px;
+        gap: sizes.$gutter-xxs;
+        align-items: center;
+
+        .form-control {
+            min-height: 30px;
+            font-size: 14px;
+        }
+
+        .react-select-container {
+            font-size: 14px;
+
+            .react-select__control {
+                min-height: 30px;
+            }
+
+            .react-select__value-container {
+                min-height: 28px;
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .react-select__input-container {
+                margin: 0;
+                padding: 0;
+            }
+
+            .react-select__indicators {
+                height: 28px;
+            }
+
+            .react-select__dropdown-indicator {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+        }
+    }
+}

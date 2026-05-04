@@ -7,7 +7,7 @@ import useBoolean from "components/hooks/useBoolean";
 import { useServices } from "components/hooks/useServices";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -15,10 +15,13 @@ import InputGroup from "react-bootstrap/InputGroup";
 import Collapse from "react-bootstrap/esm/Collapse";
 import { FormErrorIcon, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
+import { useEffect, useMemo } from "react";
+import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
 export default function EditCdcSinkTaskBasicSection() {
+    const dispatch = useAppDispatch();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const nodes = useAppSelector(clusterSelectors.allNodes);
@@ -30,11 +33,19 @@ export default function EditCdcSinkTaskBasicSection() {
     const formValues = useWatch({ control });
 
     const asyncGetConnectionStrings = useAsync(async () => {
+        if (!databaseName) {
+            return {};
+        }
+
         const result = await tasksService.getConnectionStrings(databaseName);
         return result.SqlConnectionStrings ?? {};
     }, [databaseName]);
 
-    const sqlConnectionStrings = asyncGetConnectionStrings.result ?? {};
+    const sqlConnectionStrings = useMemo(
+        () => asyncGetConnectionStrings.result ?? {},
+        [asyncGetConnectionStrings.result]
+    );
+
     const connectionStringOptions: SelectOption[] = sortBy(Object.values(sqlConnectionStrings), (x) =>
         x.Name.toUpperCase()
     ).map((x) => ({
@@ -42,9 +53,15 @@ export default function EditCdcSinkTaskBasicSection() {
         label: x.Name,
     }));
 
-    const selectedConnectionString = formValues.connectionStringName
-        ? sqlConnectionStrings[formValues.connectionStringName]
-        : null;
+    const selectedConnectionString = useMemo(
+        () => (formValues.connectionStringName ? sqlConnectionStrings[formValues.connectionStringName] : null),
+        [formValues.connectionStringName, sqlConnectionStrings]
+    );
+
+    // Sync selected connection string to the store
+    useEffect(() => {
+        dispatch(editCdcSinkTaskActions.connectionStringSelected(selectedConnectionString));
+    }, [selectedConnectionString]);
 
     const hasPostgresSettings =
         selectedConnectionString?.FactoryName === "Npgsql" ||
@@ -200,9 +217,6 @@ export default function EditCdcSinkTaskBasicSection() {
                             <FormSwitch control={control} name="skipInitialLoad">
                                 Skip initial load
                             </FormSwitch>
-                            <div className="text-muted small mt-2">
-                                Start from the change stream only and skip the first full-table import.
-                            </div>
                         </FormGroup>
                     </div>
                 </div>

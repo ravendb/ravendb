@@ -41,6 +41,9 @@ import getEtlStatsCommand from "commands/database/tasks/getEtlStatsCommand";
 import deleteEtlErrorsCommand from "commands/database/tasks/deleteEtlErrorsCommand";
 import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
 import fetchSqlDatabaseSchemaCommand from "commands/database/tasks/fetchSqlDatabaseSchemaCommand";
+import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
+import verifyCdcSinkCommand from "commands/database/tasks/verifyCdcSinkCommand";
+import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -232,5 +235,17 @@ export default class TasksService {
 
     async fetchSqlDatabaseSchema(...args: ConstructorParameters<typeof fetchSqlDatabaseSchemaCommand>) {
         return new fetchSqlDatabaseSchemaCommand(...args).execute();
+    }
+
+    async testCdcSink(...args: ConstructorParameters<typeof testCdcSinkCommand>) {
+        return new testCdcSinkCommand(...args).execute();
+    }
+
+    async verifyCdcSink(...args: ConstructorParameters<typeof verifyCdcSinkCommand>) {
+        return new verifyCdcSinkCommand(...args).execute();
+    }
+
+    async saveCdcSinkTask(...args: ConstructorParameters<typeof saveCdcSinkTaskCommand>) {
+        return new saveCdcSinkTaskCommand(...args).execute();
     }
 }
