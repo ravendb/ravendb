@@ -120,9 +120,7 @@ function PatchSampleQueriesAboutView() {
                 heading="About this view"
                 description="Get additional info on this feature"
             >
-                <p className="mb-0">
-                    TODO
-                </p>
+                <p className="mb-0">TODO</p>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

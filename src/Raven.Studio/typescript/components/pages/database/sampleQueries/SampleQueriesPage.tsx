@@ -34,7 +34,7 @@ export default function SampleQueriesPage({
     onUpdateScript,
 }: SampleQueriesPageProps) {
     const [script, setScript] = useState(initialScript);
-    const [activeTab, setActiveTab] = useState<ActiveTab>("methods");
+    const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
     const aceRef = useRef<ReactAce>(null);
 
     const handleReset = () => {

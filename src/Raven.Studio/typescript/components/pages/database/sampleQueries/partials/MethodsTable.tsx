@@ -21,9 +21,7 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
-            methods: group.methods.filter((m) =>
-                m.signature.toLowerCase().includes(debouncedSearch.toLowerCase())
-            ),
+            methods: group.methods.filter((m) => m.signature.toLowerCase().includes(debouncedSearch.toLowerCase())),
         }))
         .filter((group) => group.methods.length > 0);
 
