@@ -7,7 +7,7 @@ import router from "plugins/router";
 import SampleQueriesPage from "./SampleQueriesPage";
 import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
-import savedPatchesStorage = require("common/storage/savedPatchesStorage");
+import savedPatchesStorage from "common/storage/savedPatchesStorage";
 
 const scripts: SampleScript[] = [
     {

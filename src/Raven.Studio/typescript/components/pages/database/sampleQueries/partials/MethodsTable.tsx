@@ -74,8 +74,6 @@ function MethodRow({ method }: MethodRowProps) {
                     className="text-info"
                     style={{
                         textDecoration: "underline",
-                        textDecorationColor: "rgba(164,164,164,0.2)",
-                        fontSize: "13px",
                     }}
                 >
                     {method.signature}
@@ -93,8 +91,6 @@ function MethodRow({ method }: MethodRowProps) {
                     className="text-info"
                     style={{
                         textDecoration: "underline",
-                        textDecorationColor: "rgba(164,164,164,0.2)",
-                        fontSize: "13px",
                     }}
                 >
                     {method.returnType}
