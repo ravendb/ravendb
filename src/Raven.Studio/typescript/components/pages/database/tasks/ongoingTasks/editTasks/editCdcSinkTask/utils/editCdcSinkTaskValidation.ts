@@ -5,60 +5,69 @@ type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
 type CdcTaskState = Extract<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState, "Enabled" | "Disabled">;
 
-import CdcSink = Raven.Client.Documents.Operations.CdcSink;
-import { yupObjectSchema } from "components/utils/yupUtils";
-
 export interface EditCdcSinkTaskValidationContext {
     initialTaskName?: string;
     usedTaskNames: string[];
 }
 
+const stringValueItemSchema = yup.object({
+    value: yup.string(),
+});
+
 const cdcColumnMappingSchema = yup.object({
-    Column: yup.string(),
-    Name: yup.string(),
-    Type: yup.string<CdcColumnType>(),
+    column: yup.string(),
+    name: yup.string(),
+    type: yup.string<CdcColumnType>(),
 });
 
 const cdcSinkOnDeleteSchema = yup.object({
-    IgnoreDeletes: yup.boolean(),
-    Patch: yup.string().nullable(),
+    ignoreDeletes: yup.boolean(),
+    patch: yup.string().nullable(),
 });
 
 const cdcSinkLinkedTableSchema = yup.object({
-    JoinColumns: yup.array().of(yup.string()),
-    LinkedCollectionName: yup.string(),
-    PropertyName: yup.string(),
-    SourceTableName: yup.string(),
-    SourceTableSchema: yup.string().nullable(),
+    joinColumns: yup.array().of(stringValueItemSchema),
+    linkedCollectionName: yup.string(),
+    propertyName: yup.string(),
+    sourceTableName: yup.string(),
+    sourceTableSchema: yup.string().nullable(),
 });
 
-const cdcSinkEmbeddedTableSchema = yupObjectSchema<CdcSink.CdcSinkEmbeddedTableConfig>({
-    CaseSensitiveKeys: yup.boolean(),
-    Columns: yup.array().of(cdcColumnMappingSchema),
-    EmbeddedTables: yup.array().of(yup.mixed<CdcSink.CdcSinkEmbeddedTableConfig>()),
-    JoinColumns: yup.array().of(yup.string()),
-    LinkedTables: yup.array().of(cdcSinkLinkedTableSchema),
-    OnDelete: cdcSinkOnDeleteSchema,
-    Patch: yup.string().nullable(),
-    PrimaryKeyColumns: yup.array().of(yup.string()),
-    PropertyName: yup.string(),
-    SourceTableName: yup.string(),
-    SourceTableSchema: yup.string().nullable(),
-    Type: yup.string<CdcSinkRelationType>(),
+const cdcSinkEmbeddedTableBaseSchema = yup.object({
+    caseSensitiveKeys: yup.boolean(),
+    columns: yup.array().of(cdcColumnMappingSchema),
+    joinColumns: yup.array().of(stringValueItemSchema),
+    linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
+    onDelete: cdcSinkOnDeleteSchema,
+    patch: yup.string().nullable(),
+    primaryKeyColumns: yup.array().of(stringValueItemSchema),
+    propertyName: yup.string(),
+    sourceTableName: yup.string(),
+    sourceTableSchema: yup.string().nullable(),
+    type: yup.string<CdcSinkRelationType>(),
 });
+
+type CdcSinkEmbeddedTableFormData = yup.InferType<typeof cdcSinkEmbeddedTableBaseSchema> & {
+    embeddedTables?: CdcSinkEmbeddedTableFormData[];
+};
+
+const getCdcSinkEmbeddedTableSchema = (): yup.ObjectSchema<CdcSinkEmbeddedTableFormData> =>
+    cdcSinkEmbeddedTableBaseSchema.shape({
+        embeddedTables: yup.array().of(yup.lazy(getCdcSinkEmbeddedTableSchema)),
+    });
 
 // TODO improve validation
 const cdcSinkTableSchema = yup.object({
-    CollectionName: yup.string(),
-    Columns: yup.array().of(cdcColumnMappingSchema),
-    Disabled: yup.boolean(),
-    EmbeddedTables: yup.array().of(cdcSinkEmbeddedTableSchema),
-    LinkedTables: yup.array().of(cdcSinkLinkedTableSchema),
-    OnDelete: cdcSinkOnDeleteSchema,
-    Patch: yup.string().nullable(),
-    PrimaryKeyColumns: yup.array().of(yup.string()).nullable(),
-    SourceTableName: yup.string(),
-    SourceTableSchema: yup.string().nullable(),
+    collectionName: yup.string(),
+    columns: yup.array().of(cdcColumnMappingSchema),
+    disabled: yup.boolean(),
+    embeddedTables: yup.array().of(getCdcSinkEmbeddedTableSchema()),
+    linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
+    onDelete: cdcSinkOnDeleteSchema,
+    patch: yup.string().nullable(),
+    primaryKeyColumns: yup.array().of(stringValueItemSchema),
+    sourceTableName: yup.string(),
+    sourceTableSchema: yup.string().nullable(),
 });
 
 const editCdcSinkTaskSchema = yup.object({

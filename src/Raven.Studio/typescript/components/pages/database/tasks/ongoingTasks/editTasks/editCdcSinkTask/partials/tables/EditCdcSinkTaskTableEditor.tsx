@@ -10,6 +10,7 @@ import { FormGroup, FormInput, FormLabel, FormSelect } from "components/common/F
 import { SelectOption } from "components/common/select/Select";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
+type FormTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
 
 export default function EditCdcSinkTaskTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
@@ -48,17 +49,14 @@ function RootTableEditor() {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const tablePath = activeTable.current.path;
 
-    const getRootFieldName = (field: keyof EditCdcSinkTaskFormData["tables"][number]) =>
-        getFormFieldPath(`${tablePath}.${field}`);
+    const getRootFieldName = (field: keyof FormTable) => getFormFieldPath(`${tablePath}.${field}`);
 
-    const getColumnsFieldName = (
-        idx: number,
-        field: FieldName<EditCdcSinkTaskFormData["tables"][number]["Columns"][number]>
-    ) => getFormFieldPath(`${tablePath}.Columns.${idx}.${field}`);
+    const getColumnsFieldName = (idx: number, field: FieldName<NonNullable<FormTable["columns"]>[number]>) =>
+        getFormFieldPath(`${tablePath}.columns.${idx}.${field}`);
 
     const columnsFieldArray = useFieldArray({
         control,
-        name: getFormFieldArrayPath(`${tablePath}.Columns`),
+        name: getFormFieldArrayPath(`${tablePath}.columns`),
     });
 
     return (
@@ -66,15 +64,15 @@ function RootTableEditor() {
             <div className="grid">
                 <FormGroup className="g-col-4">
                     <FormLabel>Collection name</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("CollectionName")} />
+                    <FormInput type="text" control={control} name={getRootFieldName("collectionName")} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("SourceTableSchema")} />
+                    <FormInput type="text" control={control} name={getRootFieldName("sourceTableSchema")} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("SourceTableName")} />
+                    <FormInput type="text" control={control} name={getRootFieldName("sourceTableName")} />
                 </FormGroup>
             </div>
             <div className="hstack justify-content-between mb-1">
@@ -82,7 +80,7 @@ function RootTableEditor() {
                 <Button
                     variant="link"
                     size="sm"
-                    onClick={() => columnsFieldArray.append({ Column: "", Name: "", Type: "Default" })}
+                    onClick={() => columnsFieldArray.append({ column: "", name: "", type: "Default" })}
                 >
                     <Icon icon="plus" />
                     Add field mapping
@@ -99,12 +97,12 @@ function RootTableEditor() {
                 <div className="bg-body rounded-bottom p-1 vstack gap-1">
                     {columnsFieldArray.fields.map((field, idx) => (
                         <div key={field.id} className="field-mapping-row">
-                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "Column")} />
+                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "column")} />
                             <Icon icon="arrow-thin-right" margin="m-0" />
-                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "Name")} />
+                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "name")} />
                             <FormSelect
                                 control={control}
-                                name={getColumnsFieldName(idx, "Type")}
+                                name={getColumnsFieldName(idx, "type")}
                                 options={columnTypeOptions}
                             />
                             <Button
@@ -133,28 +131,27 @@ function LinkedTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
-    const getLinkedFieldName = (
-        field: keyof NonNullable<EditCdcSinkTaskFormData["tables"][number]["LinkedTables"]>[number]
-    ) => getFormFieldPath(`${activeTable.current.path}.${field}`);
+    const getLinkedFieldName = (field: keyof NonNullable<FormTable["linkedTables"]>[number]) =>
+        getFormFieldPath(`${activeTable.current.path}.${field}`);
 
     return (
         <div>
             <div className="grid">
                 <FormGroup className="g-col-6">
                     <FormLabel>Property name</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("PropertyName")} />
+                    <FormInput type="text" control={control} name={getLinkedFieldName("propertyName")} />
                 </FormGroup>
                 <FormGroup className="g-col-6">
                     <FormLabel>Linked collection</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("LinkedCollectionName")} />
+                    <FormInput type="text" control={control} name={getLinkedFieldName("linkedCollectionName")} />
                 </FormGroup>
                 <FormGroup className="g-col-6">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("SourceTableSchema")} />
+                    <FormInput type="text" control={control} name={getLinkedFieldName("sourceTableSchema")} />
                 </FormGroup>
                 <FormGroup className="g-col-6">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("SourceTableName")} />
+                    <FormInput type="text" control={control} name={getLinkedFieldName("sourceTableName")} />
                 </FormGroup>
             </div>
         </div>
@@ -165,24 +162,23 @@ function EmbeddedTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
-    const getEmbeddedFieldName = (
-        field: keyof NonNullable<EditCdcSinkTaskFormData["tables"][number]["EmbeddedTables"]>[number]
-    ) => getFormFieldPath(`${activeTable.current.path}.${field}`);
+    const getEmbeddedFieldName = (field: keyof NonNullable<FormTable["embeddedTables"]>[number]) =>
+        getFormFieldPath(`${activeTable.current.path}.${field}`);
 
     return (
         <div>
             <div className="grid">
                 <FormGroup className="g-col-6">
                     <FormLabel>Property name</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("PropertyName")} />
+                    <FormInput type="text" control={control} name={getEmbeddedFieldName("propertyName")} />
                 </FormGroup>
                 <FormGroup className="g-col-6">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("SourceTableSchema")} />
+                    <FormInput type="text" control={control} name={getEmbeddedFieldName("sourceTableSchema")} />
                 </FormGroup>
                 <FormGroup className="g-col-6">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("SourceTableName")} />
+                    <FormInput type="text" control={control} name={getEmbeddedFieldName("sourceTableName")} />
                 </FormGroup>
             </div>
         </div>

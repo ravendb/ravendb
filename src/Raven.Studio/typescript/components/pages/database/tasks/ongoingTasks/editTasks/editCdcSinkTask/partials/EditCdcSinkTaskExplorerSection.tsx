@@ -70,7 +70,7 @@ export default function EditCdcSinkTaskExplorerSection({ tablesFieldArray }: Edi
         };
 
         const existingKeys = new Set(
-            tablesFieldArray.fields.map((f) => getTableKey(f.SourceTableName, f.SourceTableSchema))
+            tablesFieldArray.fields.map((f) => getTableKey(f.sourceTableName, f.sourceTableSchema))
         );
 
         const newTables = table
@@ -195,44 +195,44 @@ const tableColumnDefs: ColumnDef<rootSqlTable>[] = [
     },
 ];
 
-type FormDataTable = EditCdcSinkTaskFormData["tables"][number];
+type FormDataTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
 
 function mapSqlTableToFormData(table: rootSqlTable): FormDataTable {
-    const columns: FormDataTable["Columns"] = table.documentColumns().map((x) => ({
-        Column: x.sqlName,
-        Name: x.propertyName(),
-        Type: x.type === "Binary" ? "Attachment" : "Default",
+    const columns: NonNullable<FormDataTable["columns"]> = table.documentColumns().map((x) => ({
+        column: x.sqlName,
+        name: x.propertyName(),
+        type: x.type === "Binary" ? "Attachment" : "Default",
     }));
 
     const primaryKeyColumns = table.getPrimaryKeyColumnNames();
 
     primaryKeyColumns.forEach((pk) => {
-        const column = columns.find((c) => c.Column === pk);
+        const column = columns.find((c) => c.column === pk);
         if (!column) {
             columns.unshift({
-                Column: pk,
-                Name: pk,
-                Type: "Default",
+                column: pk,
+                name: pk,
+                type: "Default",
             });
         }
     });
 
     return {
-        CollectionName: table.collectionName(),
-        Columns: columns,
-        Disabled: false,
-        EmbeddedTables: [], // TODO maybe? create or or leave empty
-        LinkedTables: table.getLinkedReferencesDto().map((x) => ({
-            JoinColumns: x.JoinColumns,
-            LinkedCollectionName: x.Name,
-            PropertyName: x.Name,
-            SourceTableName: x.SourceTableName,
-            SourceTableSchema: x.SourceTableSchema,
+        collectionName: table.collectionName(),
+        columns: columns,
+        disabled: false,
+        embeddedTables: [],
+        linkedTables: table.getLinkedReferencesDto().map((x) => ({
+            joinColumns: x.JoinColumns.map((value) => ({ value })),
+            linkedCollectionName: x.Name,
+            propertyName: x.Name,
+            sourceTableName: x.SourceTableName,
+            sourceTableSchema: x.SourceTableSchema,
         })),
-        OnDelete: { IgnoreDeletes: false, Patch: null },
-        Patch: null,
-        PrimaryKeyColumns: primaryKeyColumns,
-        SourceTableName: table.tableName,
-        SourceTableSchema: table.tableSchema,
+        onDelete: { ignoreDeletes: false, patch: "" },
+        patch: "",
+        primaryKeyColumns: primaryKeyColumns.map((value) => ({ value })),
+        sourceTableName: table.tableName,
+        sourceTableSchema: table.tableSchema,
     } satisfies FormDataTable;
 }

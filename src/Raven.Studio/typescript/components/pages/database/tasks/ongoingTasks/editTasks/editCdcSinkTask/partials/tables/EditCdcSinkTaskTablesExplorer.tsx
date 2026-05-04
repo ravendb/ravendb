@@ -14,6 +14,10 @@ import {
 import classNames from "classnames";
 
 type FormTablePath = string;
+type FormTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
+type FormEmbeddedTable = NonNullable<FormTable["embeddedTables"]>[number];
+type FormLinkedTable = NonNullable<FormTable["linkedTables"]>[number];
+type FormTableItem = FormTable | FormEmbeddedTable | FormLinkedTable;
 
 interface EditCdcSinkTaskTablesExplorerProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -91,7 +95,7 @@ function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
             return formTables;
         }
 
-        return formTables.filter(({ table }) => table.SourceTableName.toLowerCase().includes(filter.toLowerCase()));
+        return formTables.filter(({ table }) => table.sourceTableName.toLowerCase().includes(filter.toLowerCase()));
     }, [filter, formTables]);
 
     if (formTables.length === 0) {
@@ -112,7 +116,7 @@ function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
 }
 
 interface TableItemProps {
-    table: EditCdcSinkTaskFormData["tables"][number];
+    table: FormTableItem;
     path: FormTablePath;
     depth: number;
     type: "root" | "linked" | "embedded";
@@ -125,7 +129,7 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [] }: Tabl
 
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
-    const hasChildren = Boolean(table.LinkedTables?.length || table.EmbeddedTables?.length);
+    const hasChildren = hasChildTables(table);
     const label = getTableLabel(table);
     const isExpanded = expandedTables[path];
 
@@ -164,24 +168,24 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [] }: Tabl
                     className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"
                     style={{ marginLeft: (depth + 1) * 9 }}
                 >
-                    {table.LinkedTables?.map((linked, idx) => (
+                    {getLinkedTables(table).map((linked, idx) => (
                         <TableItem
-                            key={`${path}.LinkedTables.${idx}`}
+                            key={`${path}.linkedTables.${idx}`}
                             type="linked"
                             table={linked}
                             depth={depth + 1}
                             parents={parentsWithCurrent}
-                            path={`${path}.LinkedTables.${idx}`}
+                            path={`${path}.linkedTables.${idx}`}
                         />
                     ))}
-                    {table.EmbeddedTables?.map((embedded, idx) => (
+                    {getEmbeddedTables(table).map((embedded, idx) => (
                         <TableItem
-                            key={`${path}.EmbeddedTables.${idx}`}
+                            key={`${path}.embeddedTables.${idx}`}
                             type="embedded"
                             table={embedded}
                             depth={depth + 1}
                             parents={parentsWithCurrent}
-                            path={`${path}.EmbeddedTables.${idx}`}
+                            path={`${path}.embeddedTables.${idx}`}
                         />
                     ))}
                 </div>
@@ -195,25 +199,33 @@ function getRootTablePath(idx: number): FormTablePath {
 }
 
 function getExpandableTablePaths(tables: EditCdcSinkTaskFormData["tables"]): FormTablePath[] {
-    return tables.flatMap((table, idx) => getExpandableTablePathsForTable(table, getRootTablePath(idx)));
+    return (tables ?? []).flatMap((table, idx) => getExpandableTablePathsForTable(table, getRootTablePath(idx)));
 }
 
-function getExpandableTablePathsForTable(
-    table: EditCdcSinkTaskFormData["tables"][number],
-    path: FormTablePath
-): FormTablePath[] {
-    const hasChildren = Boolean(table.LinkedTables?.length || table.EmbeddedTables?.length);
-    const childPaths = table.EmbeddedTables?.flatMap((embedded, idx) =>
-        getExpandableTablePathsForTable(embedded, `${path}.EmbeddedTables.${idx}`)
+function getExpandableTablePathsForTable(table: FormTableItem, path: FormTablePath): FormTablePath[] {
+    const childPaths = getEmbeddedTables(table).flatMap((embedded, idx) =>
+        getExpandableTablePathsForTable(embedded, `${path}.embeddedTables.${idx}`)
     );
 
-    return hasChildren ? [path, ...(childPaths ?? [])] : (childPaths ?? []);
+    return hasChildTables(table) ? [path, ...childPaths] : childPaths;
 }
 
-function getTableLabel(table: EditCdcSinkTaskFormData["tables"][number]) {
-    if (!table.SourceTableSchema) {
-        return table.SourceTableName || "Unassigned table";
+function getTableLabel(table: FormTableItem) {
+    if (!table.sourceTableSchema) {
+        return table.sourceTableName || "Unassigned table";
     }
 
-    return `${table.SourceTableSchema}.${table.SourceTableName || "Unassigned table"}`;
+    return `${table.sourceTableSchema}.${table.sourceTableName || "Unassigned table"}`;
+}
+
+function hasChildTables(table: FormTableItem) {
+    return getLinkedTables(table).length > 0 || getEmbeddedTables(table).length > 0;
+}
+
+function getLinkedTables(table: FormTableItem): FormLinkedTable[] {
+    return "linkedTables" in table ? (table.linkedTables ?? []) : [];
+}
+
+function getEmbeddedTables(table: FormTableItem): FormEmbeddedTable[] {
+    return "embeddedTables" in table ? (table.embeddedTables ?? []) : [];
 }
