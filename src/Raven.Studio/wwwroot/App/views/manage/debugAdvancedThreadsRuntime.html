@@ -1,7 +1,8 @@
 <div class="flex-window stretch debug-advanced">
     <div class="flex-window-head">
         <div class="clearfix padding padding-sm">
-            <div class="flex-header flex-horizontal flex-shrink-0 margin-bottom">
+            <div class="flex-header flex-horizontal flex-shrink-0 margin-bottom justify-content-between">
+                <div class="flex-header flex-horizontal flex-shrink-0">
                 <div>
                     <div class="btn-group">
                         <button class="btn btn-primary" data-bind="click: pause, visible: liveClient">
@@ -14,14 +15,6 @@
                 </div>
                 <div>
                     <input class="form-control" placeholder="Filter (Name, Thread Id)" data-bind="textInput: filter" />
-                </div>
-                <div>
-                    <div class="toggle">
-                        <input id="io-totals-since-creation" class="styled" type="checkbox" data-bind="checked: showTotalsSinceThreadCreation">
-                        <label for="io-totals-since-creation" class="properties-label" title="When enabled, IO totals show cumulative values since thread creation. When disabled, totals are relative to when monitoring started.">
-                            IO totals since thread creation
-                        </label>
-                    </div>
                 </div>
                 <div class="btn-group">
                     <select
@@ -62,6 +55,16 @@
                             <small><strong data-bind="text: dedicatedThreadsCount"></strong></small>
                         </div>
                     </div>
+                </div>
+                </div>
+                    <div class="toggle">
+                        <input id="io-totals-since-creation" class="styled" type="checkbox" data-bind="checked: showTotalsSinceThreadCreation">
+                        <label for="io-totals-since-creation" class="properties-label">
+                            IO totals since thread creation
+                        </label>
+                        <div class="js-io-totals-info">
+                        <i class="icon-info text-info"></i>
+                        </div>
                 </div>
             </div>
         </div>

@@ -11,6 +11,7 @@ import threadStackTrace = require("viewmodels/manage/threadStackTrace");
 import threadsInfoWebSocketClient = require("common/threadsInfoWebSocketClient");
 import eventsCollector = require("common/eventsCollector");
 import awesomeMultiselect = require("common/awesomeMultiselect");
+import popoverUtils = require("common/popoverUtils");
 
 type Unit = "" | "%" | "B" | "KB" | "KB/s";
 
@@ -120,11 +121,17 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
     
     attached() {
         super.attached();
-        
+
         awesomeMultiselect.build($("#visibleColumnsSelector"), opts => {
             opts.includeSelectAllOption = true;
             opts.nSelectedText = " columns selected";
             opts.allSelectedText = "All columns selected";
+        });
+
+        popoverUtils.longWithHover($(".js-io-totals-info"), {
+            content: `<small>When enabled, IO totals show cumulative values since thread creation.<br/>
+                      When disabled, totals are relative to when monitoring started.</small>`,
+            placement: "top"
         });
     }
     
