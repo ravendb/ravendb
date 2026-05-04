@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server.Utils;
@@ -19,11 +20,22 @@ public partial class Hnsw
         public long NodeId;
         public NativeList<NativeList<long>> EdgesPerLevel;
         public NativeList<NativeList<int>> EdgesIndexesPerLevel;
-        private UnmanagedSpan _vectorSpan;
+        internal UnmanagedSpan _vectorSpan;
         public int Visited;
-        public float? QueryDistance;
+        // Cached distance between this node and the current query vector. Valid only when
+        // QueryDistanceVersion == SearchState._queryVectorVersion. SearchState bumps that
+        // version whenever the query vector changes (see OnQueryVector), which in turn
+        // invalidates this entry without touching the node.
+        public float QueryDistanceValue;
+        public int QueryDistanceVersion;
 
         public bool VectorLoaded => _vectorSpan.Length > 0;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int GetLevelCount() => EdgesPerLevel.Count;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal ReadOnlySpan<long> EdgesAtLevel(int level) => EdgesPerLevel[level].ToSpan();
 
         public long GetVectorContainerId()
         {
@@ -102,7 +114,7 @@ public partial class Hnsw
             return GetVectorUnmanagedSpan(state).ToSpan();
         }
 
-        internal void SetVector(SearchState searchState, UnmanagedSpan span)
+        internal void SetVector(in Options options, UnmanagedSpan span)
         {
             if ((VectorId & Constants.Graphs.VectorStorage.VectorContainerInternalIndexer) == 0)
             {
@@ -111,8 +123,8 @@ public partial class Hnsw
             }
 
             var count = (byte)(VectorId >> 1);
-            var offset = count * searchState.Options.VectorSizeBytes;
-            _vectorSpan = new UnmanagedSpan(span.Address + offset, searchState.Options.VectorSizeBytes);
+            var offset = count * options.VectorSizeBytes;
+            _vectorSpan = new UnmanagedSpan(span.Address + offset, options.VectorSizeBytes);
         }
     }
 }
