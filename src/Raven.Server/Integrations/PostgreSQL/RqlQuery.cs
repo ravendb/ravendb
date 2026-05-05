@@ -1,5 +1,4 @@
 ﻿using System;
-using System;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
@@ -13,7 +12,6 @@ using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -36,7 +34,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             try
             {
-                if(Logger.IsOperationsEnabled)
+                if (Logger.IsOperationsEnabled)
                     Logger.Operations($"Query '{QueryString ?? "null"}' wasn't disposed properly.{Environment.NewLine}" +
                                       $"Query was run: {_queryWasRun}{Environment.NewLine}" +
                                       $"Are transactions still opened: {_queryOperationContext?.AreTransactionsOpened() ?? false}{Environment.NewLine}");
@@ -63,12 +61,12 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             // Sample only a small number of documents for schema inference.
             // The full result set is streamed during Execute().
-            _result = await RunRqlQuery(pageSize: SchemaInferenceSampleSize);
+            _result = await RunRqlQuery();
 
             return await GenerateSchema();
         }
 
-        public async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null, int? pageSize = null)
+        private async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
         {
             _queryOperationContext ??= QueryOperationContext.Allocate(DocumentDatabase);
             var parameters = DynamicJsonValue.Convert(Parameters);
@@ -76,15 +74,8 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             var indexQuery = new IndexQueryServerSide(forcedQueryToRun ?? QueryString, queryParameters);
 
-            if (pageSize.HasValue)
-            {
-                // If limit is 0, fetch one document for schema generation
-                indexQuery.PageSize = _limit == 0 ? 1 : pageSize.Value;
-            }
-            else if (_limit != null)
-            {
-                indexQuery.PageSize = _limit.Value == 0 ? 1 : _limit.Value;
-            }
+            // if limit is 0, fetch one document for schema generation
+            indexQuery.PageSize = _limit == 0 ? 1 : SchemaInferenceSampleSize;
 
             _queryWasRun = true;
             var documentQueryResult =
@@ -105,7 +96,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var queryWithoutFiltering = query.ToString();
 
-                var results = await RunRqlQuery(queryWithoutFiltering, pageSize: SchemaInferenceSampleSize);
+                var results = await RunRqlQuery(queryWithoutFiltering);
 
                 if (results == null || results.Count == 0)
                     return Array.Empty<PgColumn>();
@@ -244,7 +235,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 if (_result == null)
                 {
                     if (IsNamedStatement)
-                        _result = await RunRqlQuery(pageSize: SchemaInferenceSampleSize);
+                        _result = await RunRqlQuery();
                     else
                         throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
                 }
@@ -266,7 +257,8 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 await using var streamWriter = new PgStreamDocumentQueryResultWriter(writer, builder, Columns, DocumentDatabase);
 
-                await DocumentDatabase.QueryRunner.ExecuteStreamQuery(indexQuery, _queryOperationContext, NopHttpResponse.Instance, streamWriter, OperationCancelToken.None);
+                using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown, token);
+                await DocumentDatabase.QueryRunner.ExecuteStreamQuery(indexQuery, _queryOperationContext, NopHttpResponse.Instance, streamWriter, cancelToken);
 
                 await writer.WriteAsync(builder.CommandComplete($"SELECT {streamWriter.Count}"), token);
             }
