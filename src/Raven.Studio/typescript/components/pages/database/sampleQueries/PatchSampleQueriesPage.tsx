@@ -8,6 +8,7 @@ import SampleQueriesPage from "./SampleQueriesPage";
 import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import savedPatchesStorage from "common/storage/savedPatchesStorage";
+import messagePublisher from "common/messagePublisher";
 
 const scripts: SampleScript[] = [
     {
@@ -41,6 +42,11 @@ const methodGroups: MethodGroup[] = [
     {
         category: "Document operations",
         methods: [
+            {
+                signature: "id(document)",
+                description: "Returns the ID of the given document.",
+                returnType: "string",
+            },
             {
                 signature: "load(documentIdToLoad)",
                 description: "Returns the document with the given ID.",
@@ -138,21 +144,28 @@ export default function PatchSampleQueriesPage({ queryParams }: ReactQueryParams
 
     const initialScript = useMemo(() => {
         const hashStr = queryParams?.initialScriptHash;
+
         if (!hashStr || !databaseName) {
             return null;
         }
+
         const hash = parseInt(hashStr, 10);
+
         if (isNaN(hash)) {
             return null;
         }
 
         return savedPatchesStorage.getPlaygroundScript(databaseName, hash);
-    }, []);
+    }, [databaseName]);
 
     const handleUpdateScript = (script: string) => {
         if (databaseName) {
-            const hash = savedPatchesStorage.storePlaygroundScript(databaseName, script);
-            router.navigate(appUrl.forPatch(databaseName, hash));
+            try {
+                const hash = savedPatchesStorage.storePlaygroundScript(databaseName, script);
+                router.navigate(appUrl.forPatch(databaseName, hash));
+            } catch {
+                messagePublisher.reportError("Failed to save patch script");
+            }
         }
     };
 
