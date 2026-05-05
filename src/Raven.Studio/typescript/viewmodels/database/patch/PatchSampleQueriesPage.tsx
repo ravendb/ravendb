@@ -44,23 +44,19 @@ const methodGroups: MethodGroup[] = [
         methods: [
             {
                 signature: "id(document)",
-                description: "Returns the ID of the given document.",
-                returnType: "string",
+                description: <>Returns the ID (<code>string</code>) of the given document.</>,
             },
             {
                 signature: "load(documentIdToLoad)",
-                description: "Returns the document with the given ID.",
-                returnType: "object",
+                description: <>Returns the document (<code>object</code>) with the given ID.</>,
             },
             {
                 signature: "put(documentId, document)",
-                description: "Creates or updates a document with the specified ID.",
-                returnType: "Task",
+                description: <>Creates or updates (<code>Task</code>) a document with the specified ID.</>,
             },
             {
                 signature: "del(documentIdToRemove)",
-                description: "Deletes the document with the specified ID.",
-                returnType: "void",
+                description: <>Deletes (<code>void</code>) the document with the specified ID.</>,
             },
         ],
     },
@@ -69,18 +65,15 @@ const methodGroups: MethodGroup[] = [
         methods: [
             {
                 signature: "counter(document/documentId, name)",
-                description: "Get the counter value by document/document ID.",
-                returnType: "number",
+                description: <>Get the counter value (<code>number</code>) by document/document ID.</>,
             },
             {
                 signature: "incrementCounter(document/documentId, name, value = 1)",
-                description: "Increment a counter by document/document ID.",
-                returnType: "void",
+                description: <>Increment (<code>void</code>) a counter by document/document ID.</>,
             },
             {
                 signature: "deleteCounter(document/documentId, name)",
-                description: "Delete a counter by document/document ID.",
-                returnType: "void",
+                description: <>Delete (<code>void</code>) a counter by document/document ID.</>,
             },
         ],
     },
@@ -89,18 +82,15 @@ const methodGroups: MethodGroup[] = [
         methods: [
             {
                 signature: "timeseries(document/documentId, name).get(from, to)",
-                description: "Get timeseries entries.",
-                returnType: "Promise",
+                description: <>Get timeseries entries (<code>Promise</code>).</>,
             },
             {
                 signature: "timeseries(document/documentId, name).append(timestamp, values, tag = null)",
-                description: "Add a new entry to a timeseries.",
-                returnType: "Promise",
+                description: <>Add a new entry (<code>Promise</code>) to a timeseries.</>,
             },
             {
                 signature: "timeseries(document/documentId, name).delete(from, to)",
-                description: "Delete entries from a timeseries.",
-                returnType: "Promise<void>",
+                description: <>Delete entries (<code>{"Promise<void>"}</code>) from a timeseries.</>,
             },
         ],
     },
@@ -109,8 +99,7 @@ const methodGroups: MethodGroup[] = [
         methods: [
             {
                 signature: "output(message)",
-                description: "Output debug info when testing.",
-                returnType: "Promise<void>",
+                description: <>Output (<code>{"Promise<void>"}</code>) debug info when testing.</>,
             },
         ],
     },
