@@ -626,6 +626,11 @@ public partial class Hnsw
                 if (MarkVisited(currentNodeIndex))
                 {
                     _indexes.Add(currentNodeIndex);
+                    // Self-disarm signal: the resident-set fast path skipped RegisterForPreloading
+                    // and reached a vector that was not in fact loaded. Drop the latch so the next
+                    // iteration goes back through the bulk preload scan.
+                    if (n.VectorLoaded is false)
+                        runner.NotifyColdLoad();
                     _vectors.Add(n.GetVectorUnmanagedSpan(_searchState));
                 }
 
@@ -651,6 +656,8 @@ public partial class Hnsw
                         continue; // already checked
                     _indexes.Add(idx);
                     ref var edge = ref _searchState.GetNodeByIndex(idx);
+                    if (edge.VectorLoaded is false)
+                        runner.NotifyColdLoad();
                     _vectors.Add(edge.GetVectorUnmanagedSpan(_searchState));
                 }
 
@@ -679,13 +686,14 @@ public partial class Hnsw
             private readonly List<Exception> _errors = [];
             private readonly LinkedList<int> _inFlightIndexes = [];
 
-            // Latches to true once an iteration completes with nothing left to preload, meaning
-            // every node touched so far is resident. From that point we skip the RegisterForPreloading
-            // scan (its O(items * edgesPerNode) VectorLoaded / TryGetNodeById sweep) and call
-            // AfterPreloading directly. The fast path stays correct even if the heuristic is wrong
-            // for a future item: GetVectorUnmanagedSpan falls back to a single-vector load on miss,
-            // so the worst case is degrading to one cold load instead of a batched one.
+            // Latches to true once an iteration completes with positive residency evidence:
+            // at least one item with CurrentNodeIndex != -1 was scanned, and the resulting
+            // preload batch was empty. Cleared by NotifyColdLoad() the moment AfterPreloading
+            // observes a vector that was not actually resident, so the next iteration falls back
+            // to the bulk preload scan automatically.
             private bool _allVectorsInMemory;
+
+            internal void NotifyColdLoad() => _allVectorsInMemory = false;
 
             public bool IsCancelled => _mainCts.IsCancellationRequested;
             
@@ -778,11 +786,19 @@ public partial class Hnsw
                     // we executed all that we could, now let's check if we have
                     // any edges to load that we can do in bulk
                     batch.Clear();
+                    bool scannedAny = false;
                     for (int index = 0; index < _items.Count; index++)
                     {
                         WorkItem item = _items[index];
-                        if (item.RegisterForPreloading(_searchState, batch))
-                            continue;
+                        // RegisterForPreloading short-circuits on CurrentNodeIndex == -1 without
+                        // touching the batch. Track real residency scans separately so an iteration
+                        // dominated by -1 items cannot falsely latch the resident-set fast path.
+                        if (item.CurrentNodeIndex != -1)
+                        {
+                            scannedAny = true;
+                            if (item.RegisterForPreloading(_searchState, batch))
+                                continue;
+                        }
 
                         // we can run this directly, since there is nothing to preload
 
@@ -802,9 +818,10 @@ public partial class Hnsw
                     {
                         _searchState.PreloadNodesVectors(batchSpan[..used]);
                     }
-                    else
+                    else if (scannedAny)
                     {
                         // The whole working set is resident, switch to the fast path on the next iteration.
+                        // Requires scannedAny so an all-(-1) iteration cannot latch without evidence.
                         _allVectorsInMemory = true;
                     }
 
