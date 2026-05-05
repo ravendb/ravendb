@@ -11,6 +11,8 @@ import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SampleScript, MethodGroup } from "./partials/sampleQueriesTypes";
 import "./SampleQueriesPage.scss";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 
 type ActiveTab = "scripts" | "methods";
 
@@ -62,12 +64,12 @@ export default function SampleQueriesPage({
                     Reset
                 </Button>
             </div>
-            <div className="d-flex flex-row gap-3 flex-grow-1 overflow-hidden">
-                <div className="flex-grow-1 overflow-y-auto" style={{ minWidth: 0 }}>
+            <Row className="d-flex flex-row flex-grow-1 overflow-hidden">
+                <Col xs={6} className="overflow-hidden">
                     <AceEditor mode="rql" value={script} onChange={setScript} minHeight={300} />
-                </div>
+                </Col>
 
-                <div className="vstack overflow-hidden flex-shrink-0" style={{ width: "480px" }}>
+                <Col xs={6} className="vstack overflow-hidden">
                     <Card className="vstack panel-bg-1 border border-color-light border-1 rounded h-100 overflow-hidden">
                         <Tab.Container
                             mountOnEnter
@@ -102,8 +104,8 @@ export default function SampleQueriesPage({
                             </div>
                         </Tab.Container>
                     </Card>
-                </div>
-            </div>
+                </Col>
+            </Row>
         </div>
     );
 }
