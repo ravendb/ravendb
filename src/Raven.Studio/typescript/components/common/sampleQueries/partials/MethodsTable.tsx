@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
+import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import { Icon } from "components/common/Icon";
 import { StickyHeader } from "components/common/StickyHeader";
@@ -32,14 +33,16 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
     return (
         <div className="methods-table vstack gap-3 px-3 py-1">
             <StickyHeader className="panel-bg-1">
-                <div className="hstack gap-2">
-                    <Icon icon="search" margin="m-0" />
+                <InputGroup>
+                    <InputGroup.Text>
+                        <Icon icon="search" margin="m-0" />
+                    </InputGroup.Text>
                     <Form.Control
                         placeholder="Search by signature"
                         value={search}
                         onChange={(e) => handleChange(e.target.value)}
                     />
-                </div>
+                </InputGroup>
             </StickyHeader>
             {filteredGroups.map((group) => (
                 <MethodGroupCard key={group.category} group={group} />
