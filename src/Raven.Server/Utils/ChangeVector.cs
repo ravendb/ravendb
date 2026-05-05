@@ -204,6 +204,18 @@ public sealed class ChangeVector
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
     }
 
+    internal static ChangeVector CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(DocumentsOperationContext context, ChangeVector predecessorChangeVector, DocumentDatabase database, long etag)
+    {
+        ArgumentNullException.ThrowIfNull(predecessorChangeVector);
+
+        var changeVector = MergeWithDatabaseChangeVector(context, predecessorChangeVector);
+        changeVector = changeVector.UpdateVersion(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        changeVector = changeVector.UpdateOrder(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
+        context.LastDatabaseChangeVector = changeVector.Order;
+
+        return changeVector;
+    }
+
     public static ChangeVector MergeWithNewDatabaseChangeVector(DocumentsOperationContext context, ChangeVector changeVector, long? newEtag = null)
     {
         newEtag ??= context.DocumentDatabase.DocumentsStorage.GenerateNextEtag();

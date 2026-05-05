@@ -114,6 +114,8 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
         public bool Exists { get; init; }
 
         public long Value { get; init; }
+
+        public string ChangeVector { get; init; }
     }
 
     public sealed class AttachmentSnapshot

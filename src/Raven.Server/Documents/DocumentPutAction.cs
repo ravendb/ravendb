@@ -19,6 +19,7 @@ using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Raven.Client.Util;
+using Raven.Server.Documents.Schemas;
 using Voron.Exceptions;
 using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Documents;
@@ -137,16 +138,16 @@ namespace Raven.Server.Documents
                 var table = context.Transaction.InnerTransaction.OpenTable(_documentDatabase.GetDocsSchemaForCollection(collectionName, newFlags), collectionName.GetTableName(CollectionTableType.Documents));
 
                 var oldValue = default(TableValueReader);
+                ChangeVector oldChangeVector = null;
                 if (knownNewId == false)
                 {
                     // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
-                    DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
+                    oldChangeVector = DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
 
                     table.ReadByKey(lowerId, out oldValue);
                 }
 
                 BlittableJsonReaderObject oldDoc = null;
-                ChangeVector oldChangeVector = null;
                 if (oldValue.Pointer == null)
                 {
                     // expectedChangeVector being null means we don't care, 
@@ -711,15 +712,15 @@ namespace Raven.Server.Documents
             };
         }
 
-        private void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
+        private ChangeVector DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             if (tombstoneTable.NumberOfEntries == 0)
-                return;
+                return null;
 
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                DeleteTombstone(tombstoneTable, id);
+                return DeleteTombstone(context, tombstoneTable, id);
             }
         }
 
@@ -729,22 +730,25 @@ namespace Raven.Server.Documents
             if (tombstoneTable.NumberOfEntries == 0)
                 return;
 
-            DeleteTombstone(tombstoneTable, id);
+            DeleteTombstone(context, tombstoneTable, id);
         }
 
-        private static void DeleteTombstone(Table tombstoneTable, Slice id)
+        private static ChangeVector DeleteTombstone(DocumentsOperationContext context, Table tombstoneTable, Slice id)
         {
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
             {
                 if (IsTombstoneOfId(tombstoneKey, id) == false)
-                    return;
+                    return null;
 
                 if (tombstoneTable.IsOwned(tvh.Reader.Id))
                 {
+                    var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
                     tombstoneTable.Delete(tvh.Reader.Id);
-                    return;
+                    return changeVector;
                 }
             }
+
+            return null;
         }
 
         [Conditional("DEBUG")]

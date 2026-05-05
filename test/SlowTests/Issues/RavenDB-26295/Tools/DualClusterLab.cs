@@ -269,7 +269,7 @@ public sealed class DualClusterLab : IAsyncDisposable
     public TimeSeriesDeletedRangeSnapshot GetFilteredRoundTripTimeSeriesDeletedRange(LabNode node, string timeSeriesName) =>
         GetTimeSeriesDeletedRange(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId, timeSeriesName);
 
-    public DocumentSnapshot GetDocumentById(ClusterSide side, LabNode node, string documentId)
+    private DocumentSnapshot GetDocumentById(ClusterSide side, LabNode node, string documentId)
     {
         var database = Database(side, node);
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -495,10 +495,25 @@ public sealed class DualClusterLab : IAsyncDisposable
                 };
             }
 
+            string changeVector = null;
+            foreach (var group in database.DocumentsStorage.CountersStorage.GetCounterValuesForDocument(context, documentId))
+            {
+                var containsCounter = database.DocumentsStorage.CountersStorage
+                    .GetCountersFromCounterGroup(group)
+                    .Any(x => string.Equals(x.Name, counterName, StringComparison.OrdinalIgnoreCase));
+
+                if (containsCounter == false)
+                    continue;
+
+                changeVector = group.ChangeVector;
+                break;
+            }
+
             return new CounterSnapshot
             {
                 Exists = true,
-                Value = counter.Value.Value
+                Value = counter.Value.Value,
+                ChangeVector = changeVector
             };
         }
     }
@@ -637,11 +652,19 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     private TimeSeriesDeletedRangeSnapshot GetTimeSeriesDeletedRange(ClusterSide side, LabNode node, string documentId, string timeSeriesName)
     {
+        var ranges = GetTimeSeriesDeletedRanges(side, node, documentId, timeSeriesName);
+        return ranges.Count == 0
+            ? new TimeSeriesDeletedRangeSnapshot { Exists = false }
+            : ranges.OrderByDescending(x => x.Etag).First();
+    }
+
+    private List<TimeSeriesDeletedRangeSnapshot> GetTimeSeriesDeletedRanges(ClusterSide side, LabNode node, string documentId, string timeSeriesName)
+    {
         var database = Database(side, node);
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (context.OpenReadTransaction())
         {
-            TimeSeriesDeletedRangeSnapshot latest = null;
+            var ranges = new List<TimeSeriesDeletedRangeSnapshot>();
             foreach (var deletedRange in database.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesForDoc(context, documentId))
             {
                 using (deletedRange)
@@ -651,25 +674,31 @@ public sealed class DualClusterLab : IAsyncDisposable
                     if (string.Equals(currentName?.ToString(CultureInfo.InvariantCulture), timeSeriesName, StringComparison.OrdinalIgnoreCase) == false)
                         continue;
 
-                    if (latest != null && latest.Etag >= deletedRange.Etag)
-                        continue;
-
-                    latest = new TimeSeriesDeletedRangeSnapshot
+                    ranges.Add(new TimeSeriesDeletedRangeSnapshot
                     {
                         Exists = true,
                         ChangeVector = deletedRange.ChangeVector,
                         From = deletedRange.From,
                         To = deletedRange.To,
                         Etag = deletedRange.Etag
-                    };
+                    });
                 }
             }
 
-            return latest ?? new TimeSeriesDeletedRangeSnapshot
-            {
-                Exists = false
-            };
+            return ranges;
         }
+    }
+
+    private static string FormatTimeSeriesDeletedRanges(List<TimeSeriesDeletedRangeSnapshot> ranges)
+    {
+        if (ranges.Count == 0)
+            return "<none>";
+
+        return string.Join("; ", ranges
+            .OrderBy(x => x.From)
+            .ThenBy(x => x.To)
+            .ThenBy(x => x.Etag)
+            .Select(x => $"etag={x.Etag}, from='{x.From:O}', to='{x.To:O}', CV='{x.ChangeVector ?? "<null>"}'"));
     }
 
     public Task StoreFilteredRoundTripTicketAsync(LabNode node) =>
@@ -717,6 +746,9 @@ public sealed class DualClusterLab : IAsyncDisposable
         session.Advanced.Revisions.ForceRevisionCreationFor(RequiredFilteredRoundTripTicketId);
         await session.SaveChangesAsync();
     }
+
+    public Task RevertFilteredRoundTripDocumentToRevisionAsync(LabNode node, string revisionChangeVector) =>
+        Store(RequiredFilteredPassReceiveSide, node).Operations.SendAsync(new RevertRevisionsByIdOperation(RequiredFilteredRoundTripTicketId, revisionChangeVector));
 
     public Task DeleteFilteredRoundTripRevisionAsync(LabNode node, string revisionChangeVector) =>
         Store(RequiredFilteredPassReceiveSide, node).Maintenance.SendAsync(new DeleteRevisionsOperation(RequiredFilteredRoundTripTicketId, [revisionChangeVector]));
@@ -769,6 +801,34 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     public Task WaitForFilteredRoundTripDocumentNameAsync(LabNode node, TimeSpan? timeout = null) =>
         WaitForDocumentNameByIdAsync(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId, RequiredFilteredRoundTripItemName, timeout);
+
+    public async Task WaitForFilteredRoundTripDocumentNameOrConflictAsync(LabNode node, string expectedName, TimeSpan? timeout = null)
+    {
+        var side = RequiredFilteredPassReceiveSide;
+        var reached = await WaitForValueAsync(
+            () =>
+            {
+                if (GetConflicts(side, node, RequiredFilteredRoundTripTicketId).Count > 0)
+                    return true;
+
+                var current = GetDocumentById(side, node, RequiredFilteredRoundTripTicketId);
+                return current.Exists && string.Equals(current.Name, expectedName, StringComparison.Ordinal);
+            },
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var conflicts = GetConflicts(side, node, RequiredFilteredRoundTripTicketId);
+        var document = conflicts.Count == 0
+            ? GetDocumentById(side, node, RequiredFilteredRoundTripTicketId)
+            : new DocumentSnapshot { Exists = false };
+
+        Assert.True(
+            reached,
+            $"Expected document '{RequiredFilteredRoundTripTicketId}' with name '{expectedName}' or a conflict to reach {NodeTag(side, node)}. " +
+            $"documentExists={document.Exists}, documentName='{document.Name ?? "<null>"}', documentCV='{document.ChangeVector ?? "<null>"}', " +
+            $"conflicts='{FormatConflicts(conflicts)}'.");
+    }
 
     private async Task WaitForDocumentNameByIdAsync(ClusterSide side, LabNode node, string documentId, string expectedName, TimeSpan? timeout = null)
     {
@@ -912,6 +972,34 @@ public sealed class DualClusterLab : IAsyncDisposable
         Assert.True(reached, $"Expected counter '{counterName}' on '{RequiredFilteredRoundTripTicketId}' with value {expectedValue} to reach {NodeTag(side, node)}.");
     }
 
+    public Task WaitForFilteredRoundTripCounterAsync(LabNode node, string counterName, long expectedValue, TimeSpan? timeout = null) =>
+        WaitForFilteredRoundTripCounterAsync(RequiredFilteredPassReceiveSide, node, counterName, expectedValue, timeout);
+
+    public async Task WaitForFilteredRoundTripCounterOrConflictAsync(LabNode node, string counterName, long expectedValue, TimeSpan? timeout = null)
+    {
+        var side = RequiredFilteredPassReceiveSide;
+        var reached = await WaitForValueAsync(
+            () =>
+            {
+                if (GetConflicts(side, node, RequiredFilteredRoundTripTicketId).Count > 0)
+                    return true;
+
+                var current = GetCounter(side, node, RequiredFilteredRoundTripTicketId, counterName);
+                return current.Exists && current.Value == expectedValue;
+            },
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var conflicts = GetConflicts(side, node, RequiredFilteredRoundTripTicketId);
+        var counter = GetCounter(side, node, RequiredFilteredRoundTripTicketId, counterName);
+
+        Assert.True(
+            reached,
+            $"Expected counter '{counterName}' on '{RequiredFilteredRoundTripTicketId}' with value {expectedValue} or a conflict to reach {NodeTag(side, node)}. " +
+            $"counterExists={counter.Exists}, counterValue={counter.Value}, counterCV='{counter.ChangeVector ?? "<null>"}', conflicts='{FormatConflicts(conflicts)}'.");
+    }
+
     private async Task WaitForFilteredRoundTripAttachmentAsync(
         ClusterSide side,
         LabNode node,
@@ -937,6 +1025,39 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     public Task WaitForFilteredRoundTripAttachmentAsync(LabNode node, string attachmentName, string expectedHash, long expectedSize, TimeSpan? timeout = null) =>
         WaitForFilteredRoundTripAttachmentAsync(RequiredFilteredPassReceiveSide, node, attachmentName, expectedHash, expectedSize, timeout);
+
+    public async Task WaitForFilteredRoundTripAttachmentOrConflictAsync(
+        LabNode node,
+        string attachmentName,
+        string expectedHash,
+        long expectedSize,
+        TimeSpan? timeout = null)
+    {
+        var side = RequiredFilteredPassReceiveSide;
+        var reached = await WaitForValueAsync(
+            () =>
+            {
+                if (GetConflicts(side, node, RequiredFilteredRoundTripTicketId).Count > 0)
+                    return true;
+
+                var current = GetAttachment(side, node, RequiredFilteredRoundTripTicketId, attachmentName);
+                return current.Exists &&
+                       string.Equals(current.Hash, expectedHash, StringComparison.Ordinal) &&
+                       current.Size == expectedSize;
+            },
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var conflicts = GetConflicts(side, node, RequiredFilteredRoundTripTicketId);
+        var attachment = GetAttachment(side, node, RequiredFilteredRoundTripTicketId, attachmentName);
+
+        Assert.True(
+            reached,
+            $"Expected attachment '{attachmentName}' on '{RequiredFilteredRoundTripTicketId}' with hash '{expectedHash}' and size {expectedSize} or a conflict to reach {NodeTag(side, node)}. " +
+            $"attachmentExists={attachment.Exists}, attachmentHash='{attachment.Hash ?? "<null>"}', attachmentSize={attachment.Size}, " +
+            $"attachmentCV='{attachment.ChangeVector ?? "<null>"}', conflicts='{FormatConflicts(conflicts)}'.");
+    }
 
     private async Task WaitForFilteredRoundTripAttachmentTombstoneAsync(
         ClusterSide side,
@@ -987,6 +1108,38 @@ public sealed class DualClusterLab : IAsyncDisposable
 
         Assert.True(reached, $"Expected deleted time series range '{timeSeriesName}' on '{RequiredFilteredRoundTripTicketId}' to reach {NodeTag(side, node)}.");
     }
+
+    public Task WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(LabNode node, string timeSeriesName, TimeSpan? timeout = null) =>
+        WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(RequiredFilteredPassReceiveSide, node, timeSeriesName, timeout);
+
+    private async Task WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(
+        ClusterSide side,
+        LabNode node,
+        string timeSeriesName,
+        DateTime expectedFrom,
+        DateTime expectedTo,
+        TimeSpan? timeout = null)
+    {
+        var reached = await WaitForValueAsync(
+            () =>
+            {
+                var ranges = GetTimeSeriesDeletedRanges(side, node, RequiredFilteredRoundTripTicketId, timeSeriesName);
+                return ranges.Any(x => x.From <= expectedFrom && x.To >= expectedTo);
+            },
+            expectedVal: true,
+            timeout: (int)(timeout ?? DefaultReplicationWaitTimeout).TotalMilliseconds,
+            interval: 100);
+
+        var deletedRanges = GetTimeSeriesDeletedRanges(side, node, RequiredFilteredRoundTripTicketId, timeSeriesName);
+
+        Assert.True(
+            reached,
+            $"Expected deleted time series range '{timeSeriesName}' on '{RequiredFilteredRoundTripTicketId}' covering '{expectedFrom:O}'..'{expectedTo:O}' to reach {NodeTag(side, node)}. " +
+            $"actualRanges={FormatTimeSeriesDeletedRanges(deletedRanges)}.");
+    }
+
+    public Task WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(LabNode node, string timeSeriesName, DateTime expectedFrom, DateTime expectedTo, TimeSpan? timeout = null) =>
+        WaitForFilteredRoundTripTimeSeriesDeletedRangeAsync(RequiredFilteredPassReceiveSide, node, timeSeriesName, expectedFrom, expectedTo, timeout);
 
     public void ExpectPassedConflicts(int expectedCount = 2)
     {
