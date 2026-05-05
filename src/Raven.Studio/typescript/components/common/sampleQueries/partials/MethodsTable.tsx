@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import Card from "react-bootstrap/Card";
+import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
-import copyToClipboard from "common/copyToClipboard";
+import Row from "react-bootstrap/Row";
 import { Icon } from "components/common/Icon";
-import useBoolean from "components/hooks/useBoolean";
 import { StickyHeader } from "components/common/StickyHeader";
+import copyToClipboard from "common/copyToClipboard";
 import useDebouncedInput from "components/hooks/useDebouncedInput";
+import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
 
 interface MethodsTableProps {
     methodGroups: MethodGroup[];
@@ -21,40 +23,52 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
-            methods: group.methods.filter((method) => {
-                const term = debouncedSearch.toLowerCase();
-                return method.signature.toLowerCase().includes(term) || method.description.toLowerCase().includes(term);
-            }),
+            methods: group.methods.filter((method) =>
+                method.signature.toLowerCase().includes(debouncedSearch.toLowerCase())
+            ),
         }))
         .filter((group) => group.methods.length > 0);
 
     return (
-        <div className="vstack gap-3 px-3 py-1">
+        <div className="methods-table vstack gap-3 px-3 py-1">
             <StickyHeader className="panel-bg-1">
-                <Form.Control
-                    placeholder="Search methods"
-                    value={search}
-                    onChange={(e) => handleChange(e.target.value)}
-                />
+                <div className="hstack gap-2">
+                    <Icon icon="search" margin="m-0" />
+                    <Form.Control
+                        placeholder="Search by signature"
+                        value={search}
+                        onChange={(e) => handleChange(e.target.value)}
+                    />
+                </div>
             </StickyHeader>
             {filteredGroups.map((group) => (
-                <div key={group.category}>
-                    <h6 className="mb-2">{group.category}</h6>
-                    <table className="rounded table table-sm table-bordered mb-0" style={{ tableLayout: "fixed" }}>
-                        <thead className="panel-bg-2 border-1 border-color-light">
-                            <tr>
-                                <th style={{ width: "50%" }}>Methods signature</th>
-                                <th style={{ width: "50%" }}>Description</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {group.methods.map((method) => (
-                                <MethodRow key={method.signature} method={method} />
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                <MethodGroupCard key={group.category} group={group} />
             ))}
+        </div>
+    );
+}
+
+interface MethodGroupCardProps {
+    group: MethodGroup;
+}
+
+function MethodGroupCard({ group }: MethodGroupCardProps) {
+    return (
+        <div>
+            <h6 className="mb-2">{group.category}</h6>
+            <Card className="border border-color-light rounded overflow-hidden mb-0">
+                <Row className="mx-0 panel-bg-2 fw-semibold border-bottom border-color-light">
+                    <Col xs={6} className="py-2 px-3">
+                        Methods signature
+                    </Col>
+                    <Col xs={6} className="py-2 px-3 border-start border-color-light">
+                        Description
+                    </Col>
+                </Row>
+                {group.methods.map((method) => (
+                    <MethodRow key={method.signature} method={method} />
+                ))}
+            </Card>
         </div>
     );
 }
@@ -64,32 +78,26 @@ interface MethodRowProps {
 }
 
 function MethodRow({ method }: MethodRowProps) {
-    const { value: isHovered, setTrue, setFalse } = useBoolean(false);
-
     const handleCopy = () => {
         copyToClipboard.copy(method.signature, "Method signature copied to clipboard");
     };
 
     return (
-        <tr>
-            <td onMouseEnter={setTrue} onMouseLeave={setFalse} className="position-relative">
-                <code className="text-info" style={{ backgroundColor: "rgba(var(--bs-info-rgb), 0.1)" }}>
-                    {method.signature}
-                </code>
-                <span
-                    className="position-absolute top-0 end-0 px-2 py-1 rounded-1 cursor-pointer"
-                    style={{ opacity: isHovered ? 1 : 0, transition: "opacity 0.15s ease" }}
+        <Row className="mx-0 border-top border-color-light method-row">
+            <Col xs={6} className="py-2 px-3 position-relative">
+                <code>{method.signature}</code>
+                <button
+                    type="button"
+                    className="copy-btn position-absolute top-0 end-0 px-2 py-1 border-0 bg-transparent rounded-1 cursor-pointer"
+                    aria-label="Copy method signature to clipboard"
+                    onClick={handleCopy}
                 >
-                    <Icon icon="copy-to-clipboard" margin="m-0" onClick={handleCopy} />
-                </span>
-            </td>
-            <td>
-                {method.description} (
-                <code className="text-info" style={{ backgroundColor: "rgba(var(--bs-info-rgb), 0.1)" }}>
-                    {method.returnType}
-                </code>
-                )
-            </td>
-        </tr>
+                    <Icon icon="copy-to-clipboard" margin="m-0" />
+                </button>
+            </Col>
+            <Col xs={6} className="py-2 px-3 border-start border-color-light">
+                {method.description}
+            </Col>
+        </Row>
     );
 }

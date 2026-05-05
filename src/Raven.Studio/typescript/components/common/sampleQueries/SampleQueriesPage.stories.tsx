@@ -24,8 +24,11 @@ const sampleMethodGroups: MethodGroup[] = [
         methods: [
             {
                 signature: "load(documentIdToLoad)",
-                description: "Returns the document with the given ID.",
-                returnType: "object",
+                description: (
+                    <>
+                        Returns the document (<code>object</code>) with the given ID.
+                    </>
+                ),
             },
         ],
     },

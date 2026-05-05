@@ -1,0 +1,45 @@
+@use "Content/scss/sizes";
+@use "Content/scss/colors";
+
+.sample-queries-page {
+    .nav-item {
+        .nav-link {
+            color: inherit;
+            border-radius: sizes.$border-radius-sm;
+            padding: sizes.$gutter-xxxs sizes.$gutter-xxs;
+
+            &.active {
+                background-color: colors.$panel-bg-3-var;
+            }
+
+            &:hover {
+                opacity: 0.8;
+                background-image: none !important;
+            }
+
+            &:focus {
+                background-image: none !important;
+            }
+        }
+    }
+
+    .methods-table {
+        code {
+            color: colors.$info-var;
+            background-color: rgba(var(--bs-info-rgb), 0.1);
+            padding: 1px sizes.$gutter-xxxs;
+            border-radius: sizes.$border-radius-sm;
+        }
+
+        .method-row {
+            .copy-btn {
+                opacity: 0;
+                transition: opacity 0.15s ease;
+            }
+
+            &:hover .copy-btn {
+                opacity: 1;
+            }
+        }
+    }
+}

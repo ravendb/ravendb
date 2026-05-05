@@ -10,6 +10,7 @@ import { AboutViewHeading } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
 import { SampleScript, MethodGroup } from "./partials/sampleQueriesTypes";
+import "./SampleQueriesPage.scss";
 
 type ActiveTab = "scripts" | "methods";
 
@@ -44,9 +45,9 @@ export default function SampleQueriesPage({
     };
 
     return (
-        <div className="content-padding h-100 vstack gap-3">
+        <div className="content-padding h-100 vstack gap-3 sample-queries-page">
             <div className="flex-shrink-0 hstack gap-2 align-items-start">
-                <AboutViewHeading title={title} backUrl={backUrl} />
+                <AboutViewHeading marginBottom={4} title={title} backUrl={backUrl} />
                 <FlexGrow />
                 {aboutView}
             </div>
