@@ -1,11 +1,10 @@
-import React, { ReactNode, useRef, useState } from "react";
+import React, { ReactNode, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Tab from "react-bootstrap/Tab";
 import Nav from "react-bootstrap/Nav";
 import AceEditor from "components/common/ace/AceEditor";
 import SampleScriptsList from "./partials/SampleScriptsList";
 import MethodsTable from "./partials/MethodsTable";
-import ReactAce from "react-ace/lib/ace";
 import Card from "react-bootstrap/Card";
 import { AboutViewHeading } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -35,7 +34,6 @@ export default function SampleQueriesPage({
 }: SampleQueriesPageProps) {
     const [script, setScript] = useState(initialScript);
     const [activeTab, setActiveTab] = useState<ActiveTab>("scripts");
-    const aceRef = useRef<ReactAce>(null);
 
     const handleReset = () => {
         setScript(initialScript);
@@ -47,7 +45,7 @@ export default function SampleQueriesPage({
 
     return (
         <div className="content-padding h-100 vstack gap-3">
-            <div className="flex-shrink-0 hstack gap-2 mb-4 align-items-start">
+            <div className="flex-shrink-0 hstack gap-2 align-items-start">
                 <AboutViewHeading title={title} backUrl={backUrl} />
                 <FlexGrow />
                 {aboutView}
@@ -65,7 +63,7 @@ export default function SampleQueriesPage({
             </div>
             <div className="d-flex flex-row gap-3 flex-grow-1 overflow-hidden">
                 <div className="flex-grow-1 overflow-y-auto" style={{ minWidth: 0 }}>
-                    <AceEditor mode="rql" value={script} onChange={setScript} aceRef={aceRef} minHeight={300} />
+                    <AceEditor mode="rql" value={script} onChange={setScript} minHeight={300} />
                 </div>
 
                 <div className="vstack overflow-hidden flex-shrink-0" style={{ width: "480px" }}>

@@ -21,13 +21,16 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
-            methods: group.methods.filter((m) => m.signature.toLowerCase().includes(debouncedSearch.toLowerCase())),
+            methods: group.methods.filter((method) => {
+                const term = debouncedSearch.toLowerCase();
+                return method.signature.toLowerCase().includes(term) || method.description.toLowerCase().includes(term);
+            }),
         }))
         .filter((group) => group.methods.length > 0);
 
     return (
         <div className="vstack gap-3 px-3 py-1">
-            <StickyHeader>
+            <StickyHeader className="panel-bg-1">
                 <Form.Control
                     placeholder="Search methods"
                     value={search}
@@ -37,11 +40,11 @@ export default function MethodsTable({ methodGroups }: MethodsTableProps) {
             {filteredGroups.map((group) => (
                 <div key={group.category}>
                     <h6 className="mb-2">{group.category}</h6>
-                    <table className="rounded table table-sm table-bordered mb-0">
+                    <table className="rounded table table-sm table-bordered mb-0" style={{ tableLayout: "fixed" }}>
                         <thead className="panel-bg-2 border-1 border-color-light">
                             <tr>
-                                <th>Methods signature</th>
-                                <th>Description</th>
+                                <th style={{ width: "50%" }}>Methods signature</th>
+                                <th style={{ width: "50%" }}>Description</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -68,14 +71,9 @@ function MethodRow({ method }: MethodRowProps) {
     };
 
     return (
-        <tr onMouseEnter={setTrue} onMouseLeave={setFalse}>
-            <td className="position-relative">
-                <code
-                    className="text-info"
-                    style={{
-                        textDecoration: "underline",
-                    }}
-                >
+        <tr>
+            <td onMouseEnter={setTrue} onMouseLeave={setFalse} className="position-relative">
+                <code className="text-info" style={{ backgroundColor: "rgba(var(--bs-info-rgb), 0.1)" }}>
                     {method.signature}
                 </code>
                 <span
@@ -87,12 +85,7 @@ function MethodRow({ method }: MethodRowProps) {
             </td>
             <td>
                 {method.description} (
-                <code
-                    className="text-info"
-                    style={{
-                        textDecoration: "underline",
-                    }}
-                >
+                <code className="text-info" style={{ backgroundColor: "rgba(var(--bs-info-rgb), 0.1)" }}>
                     {method.returnType}
                 </code>
                 )
