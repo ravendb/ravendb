@@ -23,6 +23,7 @@ namespace Raven.Server.Integrations.PostgreSQL
     {
         protected readonly DocumentDatabase DocumentDatabase;
         private QueryOperationContext _queryOperationContext;
+        private List<Document> _samples;
         private readonly int? _limit;
         private bool _queryWasRun;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
@@ -56,8 +57,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             if (IsEmptyQuery)
                 return default;
 
-            var sample = await RunRqlQuery();
-            return await GenerateSchema(sample);
+            _samples = await RunRqlQuery();
+            return await GenerateSchema();
         }
 
         private async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
@@ -80,9 +81,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             return documentQueryResult.Results;
         }
 
-        protected virtual async Task<ICollection<PgColumn>> GenerateSchema(List<Document> samples)
+        protected virtual async Task<ICollection<PgColumn>> GenerateSchema()
         {
-            if (samples == null || samples.Count == 0)
+            if (_samples == null || _samples.Count == 0)
             {
                 var query = QueryMetadata.ParseQuery(QueryString, QueryType.Select);
 
@@ -90,15 +91,15 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var queryWithoutFiltering = query.ToString();
 
-                samples = await RunRqlQuery(queryWithoutFiltering);
+                _samples = await RunRqlQuery(queryWithoutFiltering);
 
-                if (samples == null || samples.Count == 0)
+                if (_samples == null || _samples.Count == 0)
                     return Array.Empty<PgColumn>();
             }
 
             var resultsFormat = GetDefaultResultsFormat();
 
-            if (samples[0].Id != null)
+            if (_samples[0].Id != null)
                 Columns[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = new PgColumn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, (short)Columns.Count, PgText.Default, resultsFormat);
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
@@ -106,7 +107,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             // If there's a null value in a particular column of the record, don't write null type to the schema.
             // Instead, iterate over results trying to find a record with the value filled in this column.
             // Keep 'unchecked type' columns names in the list below. 
-            var uncheckedTypePropertiesNames = samples[0].Data.GetPropertyNames().ToList();
+            var uncheckedTypePropertiesNames = _samples[0].Data.GetPropertyNames().ToList();
             
             // Skip metadata() column, so it will be added later to json() column
             uncheckedTypePropertiesNames.Remove(Constants.Documents.Metadata.Key);
@@ -117,9 +118,9 @@ namespace Raven.Server.Integrations.PostgreSQL
                 Columns.TryAdd(property, new PgColumn(property, (short)Columns.Count, PgJson.Default, resultsFormat));
             
             // Go through results - we'll try to find all properties types.
-            for (int sampleIndex = 0; sampleIndex < samples.Count && sampleIndex < 1000; sampleIndex++)
+            for (int sampleIndex = 0; sampleIndex < _samples.Count && sampleIndex < 1000; sampleIndex++)
             {
-                Document sample = samples[sampleIndex];
+                Document sample = _samples[sampleIndex];
                 
                 // Iterate over the columns which type hasn't been figured out yet
                 var uncheckedTypePropertiesNamesCopy = uncheckedTypePropertiesNames.ToArray();
@@ -220,7 +221,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return;
                 }
 
-                if (_limit == 0)
+                if (_limit == 0 || _samples == null || _samples.Count == 0)
                 {
                     await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
                     return;
@@ -329,6 +330,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             _queryOperationContext?.Dispose();
             _queryOperationContext = null;
+            _samples = null;
         }
         
         public override void Dispose()
