@@ -82,6 +82,8 @@ namespace Raven.Server.Documents.Replication
             public Action OnIncomingReplicationHandlerStart;
             public Action BeforeDisposingIncomingReplicationHandlers;
             public Func<Stream, Stream> WrapIncomingReplicationStream;
+            public Func<ExternalReplicationBase, bool?> ShouldOwnExternalReplicationTask;
+            public Func<PullReplicationAsSink, string, string[], string[]> SelectPullReplicationRemoteUrls;
         }
 
         public int GetNextReplicationStatsId() => Interlocked.Increment(ref _replicationStatsId);

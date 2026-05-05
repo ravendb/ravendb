@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     ChangeVector itemChangeVector = documentsContext.GetEmptyChangeVector();
 
                     var lastEtagFromDestinationChangeVector = ChangeVectorUtils.GetEtagById(_parent.LastAcceptedChangeVector, _parent._database.DbBase64Id);
-                    if (lastEtagFromDestinationChangeVector > _lastEtag)
+                    if (ShouldUseLastEtagFromDestinationChangeVector() && lastEtagFromDestinationChangeVector > _lastEtag)
                     {
                         if (Log.IsInfoEnabled)
                         {
@@ -544,6 +544,17 @@ namespace Raven.Server.Documents.Replication.Senders
             return true;
         }
 
+
+        // TODO: Temporary solution.
+        // FLTR-ordered items have local storage etags that are not represented
+        // by the destination regular DB CV. Jumping by destination DB CV can skip
+        // such items before we even inspect them. Until filtered order carries a
+        // safe progress watermark, filtered senders must not rely on this jump.
+        protected virtual bool ShouldUseLastEtagFromDestinationChangeVector()
+        {
+            return true;
+        }
+
         protected virtual bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
             switch (item)
@@ -599,7 +610,7 @@ namespace Raven.Server.Documents.Replication.Senders
             }
 
             // destination already has it
-            if (_parent._database.DocumentsStorage.GetConflictStatusForOrder(context ,item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
+            if (_parent._database.DocumentsStorage.GetConflictStatusForOrder(context, item.ChangeVector, _parent.LastAcceptedChangeVector) == ConflictStatus.AlreadyMerged)
             {
                 stats.RecordChangeVectorSkip();
                 skippedReplicationItemsInfo.Update(item);

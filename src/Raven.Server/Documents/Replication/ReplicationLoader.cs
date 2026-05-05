@@ -1013,6 +1013,10 @@ namespace Raven.Server.Documents.Replication
             if (ValidateConnectionString(connectionStrings, task, out _) == false)
                 return false;
 
+            var shouldOwnTask = ForTestingPurposes?.ShouldOwnExternalReplicationTask?.Invoke(task);
+            if (shouldOwnTask.HasValue)
+                return shouldOwnTask.Value;
+
             var taskStatus = GetExternalReplicationState(_server, Database.Name, task.TaskId);
             var whoseTaskIsIt = OngoingTasksUtils.WhoseTaskIsIt(Server, topology, task, taskStatus, Database.NotificationCenter);
             return whoseTaskIsIt == _server.NodeTag;
@@ -1553,6 +1557,8 @@ namespace Raven.Server.Documents.Replication
 
                     remoteDatabaseUrls = cmd.Result;
                 }
+
+                remoteDatabaseUrls = ForTestingPurposes?.SelectPullReplicationRemoteUrls?.Invoke(pullReplicationAsSink, database, remoteDatabaseUrls) ?? remoteDatabaseUrls;
 
                 // fetch tcp info for the hub nodes
                 using (var requestExecutor = RequestExecutor.CreateForShortTermUse(remoteDatabaseUrls,

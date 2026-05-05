@@ -214,6 +214,11 @@ namespace Raven.Server.ServerWide.Context
 
         public ChangeVector GetEmptyChangeVector() => GetChangeVector(null);
 
+        public ChangeVector GetChangeVector(string nodeTag, long etag, string dbId)
+        {
+            return GetChangeVector(ChangeVectorUtils.NewChangeVector(nodeTag, etag, dbId));
+        }
+
         public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion)
         {
             ChangeVector allocatedChangeVector;
@@ -234,12 +239,9 @@ namespace Raven.Server.ServerWide.Context
             return allocatedChangeVector;
         }
 
-        public ChangeVector GetChangeVector(string version, string order)
+        public ChangeVector GetChangeVector(ChangeVector versionChangeVector, ChangeVector orderChangeVector)
         {
             ChangeVector allocatedChangeVector;
-            var versionChangeVector = GetChangeVector(version, throwOnRecursion: true);
-            var orderChangeVector = GetChangeVector(order, throwOnRecursion: true);
-
             if (_numberOfAllocatedChangeVectors < _allocatedChangeVectors.Count)
             {
                 allocatedChangeVector = _allocatedChangeVectors[_numberOfAllocatedChangeVectors++];
@@ -255,6 +257,14 @@ namespace Raven.Server.ServerWide.Context
             }
 
             return allocatedChangeVector;
+        }
+
+        public ChangeVector GetChangeVector(string version, string order)
+        {
+            var versionChangeVector = GetChangeVector(version, throwOnRecursion: true);
+            var orderChangeVector = GetChangeVector(order, throwOnRecursion: true);
+
+            return GetChangeVector(versionChangeVector, orderChangeVector);
         }
     }
 }

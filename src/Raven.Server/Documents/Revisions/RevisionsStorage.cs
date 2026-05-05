@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Revisions
                 if (configuration.MinimumRevisionsToKeep == 0)
                     return false;
 
-                using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
+                using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
                 {
                     var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                     // True if we already versioned it with the a conflicted flag
@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Revisions
                 return false;
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idSlice))
-            using (Slice.From(context.Allocator, changeVector.Version, out Slice changeVectorSlice))
+            using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
             {
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var revisionExists = table.ReadByKey(changeVectorSlice, out var tvr);

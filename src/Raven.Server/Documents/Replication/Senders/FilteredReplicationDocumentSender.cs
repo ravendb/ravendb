@@ -34,9 +34,19 @@ namespace Raven.Server.Documents.Replication.Senders
             if (_shouldSkipSendingTombstones && ReplicationLoader.IsOfTypePreventDeletions(item))
                 return true;
 
-            return base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
+            var shouldSkip = base.ShouldSkip(context, item, stats, skippedReplicationItemsInfo);
+            if (shouldSkip == false)
+            {
+                var current = context.GetChangeVector(item.ChangeVector);
+                var database = _parent._database;
+                var fromFilteredReplicationMarker = context.GetChangeVector(ChangeVectorParser.FilteredTag, item.Etag, database.DbBase64Id);
 
-            
+                // The filtered marker is delivery order only. Keep the real document lineage in Version only.
+                item.ChangeVector = context.GetChangeVector(current.Version, fromFilteredReplicationMarker);
+            }
+
+            return shouldSkip;
+
             bool ValidatorSaysToSkip(AllowedPathsValidator validator)
             {
                 if (validator == null)

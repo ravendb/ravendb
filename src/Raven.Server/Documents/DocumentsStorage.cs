@@ -2700,8 +2700,8 @@ namespace Raven.Server.Documents
 
             var currentGlobalChangeVector = context.LastDatabaseChangeVector ?? GetDatabaseChangeVector(context);
 
-            var clone = context.GetChangeVector(changeVector);
-            clone = clone.StripSinkTags(currentGlobalChangeVector, context);
+            var clone = context.GetChangeVector(changeVector); // TODO: do we need that?
+            clone = clone.StripSinkTags(currentGlobalChangeVector, context); // TODO: do we need that?
 
             // this is raft created document, so it must contain only the RAFT element 
             if (flags.Contain(DocumentFlags.FromClusterTransaction))

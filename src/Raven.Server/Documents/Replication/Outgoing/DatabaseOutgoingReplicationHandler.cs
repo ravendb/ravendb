@@ -193,6 +193,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
                                     _parent.EnsureNotDeleted(dest.NodeTag);
                                 }
 
+                                ForTestingPurposes?.BeforeExecuteReplicationOnce?.Invoke(this);
                                 var didWork = documentSender.ExecuteReplicationOnce(_tcpConnectionOptions, scope, ref NextReplicateTicks);
                                 if (documentSender.MissingAttachmentsInLastBatch)
                                     continue;
@@ -422,6 +423,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         internal sealed class TestingStuff
         {
             public Action OnDocumentSenderFetchNewItem;
+            public Action<DatabaseOutgoingReplicationHandler> BeforeExecuteReplicationOnce;
 
             public Action<Dictionary<Slice, AttachmentReplicationItem>, SortedList<long, ReplicationBatchItem>> OnMissingAttachmentStream;
 

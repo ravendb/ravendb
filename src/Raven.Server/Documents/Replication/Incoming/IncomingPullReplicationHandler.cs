@@ -152,15 +152,26 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
             {
-                if (_isSink) 
-                    ReplaceKnownSinkEntries(context, ref item.ChangeVector);
+                var current = context.GetChangeVector(item.ChangeVector);
+                var order = current.Order.ToString();
+                var version = current.Version.ToString();
+
+                if (_isSink)
+                {
+                    ReplaceKnownSinkEntries(context, ref order);
+                    ReplaceKnownSinkEntries(context, ref version);
+                }
 
                 var changeVectorToMerge = item.ChangeVector;
+                if (_isHub)
+                {
+                    changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref order);
+                    ReplaceUnknownEntriesWithSinkTag(context, ref version);
+                }
 
-                if (_isHub) 
-                    changeVectorToMerge = ReplaceUnknownEntriesWithSinkTag(context, ref item.ChangeVector);
+                item.ChangeVector = context.GetChangeVector(version, order);
 
-                return context.GetChangeVector(changeVectorToMerge);
+                return context.GetChangeVector(changeVectorToMerge).Order;
             }
 
             protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
@@ -188,53 +199,53 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             internal static string ReplaceUnknownEntriesWithSinkTag(DocumentsOperationContext context, ref string changeVector)
             {
-                var globalDbIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
-                var incoming = changeVector.ToChangeVectorList();
+                if (string.IsNullOrEmpty(changeVector))
+                    return null;
+
+                var knownDatabaseIds = context.LastDatabaseChangeVector?.AsString().ToChangeVectorList()?.Select(x => x.DbId).ToList();
+                var incomingEntries = changeVector.ToChangeVectorList();
                 var knownEntries = new List<ChangeVectorEntry>();
-                var newIncoming = new List<ChangeVectorEntry>();
+                var rewrittenEntries = new List<ChangeVectorEntry>();
 
-                foreach (var entry in incoming)
+                foreach (var entry in incomingEntries)
                 {
-                    if (globalDbIds?.Contains(entry.DbId) == true)
+                    if (knownDatabaseIds?.Contains(entry.DbId) == true)
                     {
-                        newIncoming.Add(entry);
+                        // Known entry
+                        rewrittenEntries.Add(entry);
                         knownEntries.Add(entry);
-                    }
-                    else if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
-                    {
-                        // TRXN
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.TrxnInt
-                        });
-
                         continue;
                     }
-                    else
-                    {
-                        newIncoming.Add(new ChangeVectorEntry
-                        {
-                            DbId = entry.DbId,
-                            Etag = entry.Etag,
-                            NodeTag = ChangeVectorParser.SinkInt
-                        });
 
-                        context.DbIdsToIgnore ??= new HashSet<string>();
-                        context.DbIdsToIgnore.Add(entry.DbId);
+                    if (entry.DbId == context.DocumentDatabase.ClusterTransactionId)
+                    {
+                        // TRXN
+                        rewrittenEntries.Add(WithTag(entry, nodeTag: ChangeVectorParser.TrxnInt));
+                        continue;
                     }
+
+                    rewrittenEntries.Add(WithTag(entry, GetUnknownEntryTag(entry)));
+                    context.DbIdsToIgnore ??= [];
+                    context.DbIdsToIgnore.Add(entry.DbId);
                 }
 
-                changeVector = newIncoming.SerializeVector();
+                changeVector = rewrittenEntries.SerializeVector();
 
                 return knownEntries.Count > 0 ? 
                     knownEntries.SerializeVector() : 
                     null;
+
+                static ChangeVectorEntry WithTag(ChangeVectorEntry entry, int nodeTag) => entry with { NodeTag = nodeTag };
+                static int GetUnknownEntryTag(ChangeVectorEntry entry) => entry.NodeTag == ChangeVectorParser.FilteredInt
+                        ? ChangeVectorParser.FilteredInt
+                        : ChangeVectorParser.SinkInt;
             }
 
             private static void ReplaceKnownSinkEntries(DocumentsOperationContext context, ref string changeVector)
             {
+                if (string.IsNullOrEmpty(changeVector))
+                    return;
+
                 if (changeVector.Contains(ChangeVectorParser.SinkTag, StringComparison.OrdinalIgnoreCase) == false)
                     return;
 
