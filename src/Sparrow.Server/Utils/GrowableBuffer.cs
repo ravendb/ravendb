@@ -141,7 +141,7 @@ public unsafe struct GrowableBuffer<TGrowth> : IDisposable
     }
 
     private static void ThrowFailedToInitialize(long initialSize, long maxAllocationInBytes) =>
-        throw new InvalidOperationException($"GrowableBuffer cannot allocate the requested buffer: initialSize={initialSize} items would exceed maxAllocationInBytes={maxAllocationInBytes}. You might want to increase `Indexing.Corax.MaxMemoizationSizeInMb`.");
+        throw new InvalidOperationException($"GrowableBuffer cannot allocate the requested buffer: initialSize={initialSize} items would exceed the configured maximum allocation of {maxAllocationInBytes} bytes.");
 
     private void Grow()
     {

@@ -84,7 +84,9 @@ namespace Corax.Querying.Matches
                 QueryCountConfidence.Normal => Math.Min(_inner.Count / 2, maxItemsInBudget),
                 _ => 16,
             };
-            _buffer.Init(_ctx, initialSize, _indexSearcher.MaxMemoizationSizeInBytes);
+            
+            if (_buffer.TryInit(_ctx, initialSize, _indexSearcher.MaxMemoizationSizeInBytes) == false)
+                ThrowExceededMemoizationSize();
 
             while (true)
             {
