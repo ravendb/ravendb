@@ -25,23 +25,29 @@ interface SampleScriptCardProps {
 }
 
 function SampleScriptCard({ sample, onSelect }: SampleScriptCardProps) {
-    const loadButton = (
-        <Button
-            variant="link"
-            className="text-emphasis"
-            title="Load into editor"
-            onClick={() => onSelect(sample.script)}
-        >
-            <Icon icon="arrow-left" margin="me-1" />
-            Load
-        </Button>
-    );
-
     return (
         <div className="px-3 py-1">
             <div className="fw-semibold mb-1">{sample.title}</div>
             <div className="text-muted small mb-2">{sample.description}</div>
-            <Code code={sample.script} language="rql" isRunQueryHidden extraActions={loadButton} />
+            <Code
+                code={sample.script}
+                language="rql"
+                isRunQueryHidden
+                extraActions={<LoadButton onSelect={() => onSelect(sample.script)} />}
+            />
         </div>
+    );
+}
+
+interface LoadButtonProps {
+    onSelect: () => void;
+}
+
+function LoadButton({ onSelect }: LoadButtonProps) {
+    return (
+        <Button variant="link" className="text-emphasis" title="Load into editor" onClick={onSelect}>
+            <Icon icon="arrow-left" margin="me-1" />
+            Load
+        </Button>
     );
 }
