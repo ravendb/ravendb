@@ -5,7 +5,7 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import DocumentIdentities = require("components/pages/database/documents/identities/DocumentIdentities");
 import reactUtils = require("common/reactUtils");
 import AllRevisions = require("components/pages/database/documents/allRevisions/AllRevisions");
-import PatchSampleQueriesPage = require("components/pages/database/sampleQueries/PatchSampleQueriesPage");
+import PatchSampleQueriesPage = require("viewmodels/database/patch/PatchSampleQueriesPage");
 
 export = getDocumentsMenuItem;
 
