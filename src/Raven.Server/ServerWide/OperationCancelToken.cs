@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             if (_cancelAfter == Timeout.InfiniteTimeSpan)
-                throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
+                return; // no timeout set, nothing to delay
 
             if (_sw?.ElapsedMilliseconds < _minimumDelayTimeInMs)
                 return;
