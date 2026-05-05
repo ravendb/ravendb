@@ -952,7 +952,7 @@ namespace Raven.Server.Commercial
                 onProgress(progress);
 
                 var certDirectory = Path.GetDirectoryName(certPath);
-                Directory.CreateDirectory(certDirectory);
+                IOExtensions.CreateDirectory(certDirectory);
 
                 await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                 {
