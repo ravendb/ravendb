@@ -10,12 +10,8 @@ using Xunit;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_11786:RavenTestBase
+    public class RavenDB_11786(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public RavenDB_11786(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [RavenTheory(RavenTestCategory.Subscriptions | RavenTestCategory.Counters)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SubscriptionsWorksWithCounter(Options options)

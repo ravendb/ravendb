@@ -2097,7 +2097,18 @@ namespace Raven.Client.Util
             {
                 if (context.Node is NewExpression newExp)
                 {
-                    if (newExp.Members != null && newExp.Members.Count > 0)
+                    IReadOnlyList<MemberInfo> members = newExp.Members;
+                    
+                    // Try to infer members if not found directly. Useful for the record types, etc.
+                    if (members == null || members.Count == 0)
+                    {
+                        if (TryInferMembersFromConstructor(newExp, out var inferredMembers))
+                        {
+                            members = inferredMembers;
+                        }
+                    }
+                    
+                    if (members is { Count: > 0 })
                     {
                         context.PreventDefault();
                         var resultWriter = context.GetWriter();
@@ -2107,9 +2118,9 @@ namespace Raven.Client.Util
                             resultWriter.Write("({");
 
                             var posStart = resultWriter.Length;
-                            for (int itMember = 0; itMember < newExp.Members.Count; itMember++)
+                            for (int itMember = 0; itMember < members.Count; itMember++)
                             {
-                                var member = newExp.Members[itMember];
+                                var member = members[itMember];
 
                                 if (resultWriter.Length > posStart)
                                     resultWriter.Write(',');
@@ -2131,6 +2142,8 @@ namespace Raven.Client.Util
 
                             resultWriter.Write("})");
                         }
+
+                        return;
                     }
 
                     if (LinqMethodsSupport.IsCollection(newExp.Type) &&
@@ -2236,6 +2249,62 @@ namespace Raven.Client.Util
             private static void WriteStringLiteral(string str, JavascriptWriter writer)
             {
                 writer.Write(ToJsStringLiteral(str));
+            }
+            
+            private static bool TryInferMembersFromConstructor(NewExpression newExp, out List<MemberInfo> members)
+            {
+                members = null;
+
+                var ctor = newExp.Constructor;
+                if (ctor == null)
+                    return false;
+
+                var parameters = ctor.GetParameters();
+                if (parameters.Length == 0 || parameters.Length != newExp.Arguments.Count)
+                    return false;
+
+                var properties = newExp.Type.GetProperties(BindingFlags.Instance | BindingFlags.Public);
+                if (properties.Length == 0)
+                    return false;
+
+                var resolved = new List<MemberInfo>(parameters.Length);
+                var usedProperties = new HashSet<string>(StringComparer.Ordinal);
+
+                foreach (var parameter in parameters)
+                {
+                    PropertyInfo matchedProperty = null;
+
+                    foreach (var property in properties)
+                    {
+                        if (string.Equals(property.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) == false)
+                            continue;
+
+                        if (property.CanRead == false)
+                            continue;
+
+                        var propertyType = property.PropertyType;
+                        var parameterType = parameter.ParameterType;
+
+                        if (propertyType != parameterType &&
+                            propertyType.IsAssignableFrom(parameterType) == false &&
+                            parameterType.IsAssignableFrom(propertyType) == false)
+                            continue;
+
+                        if (usedProperties.Add(property.Name) == false)
+                            return false;
+
+                        matchedProperty = property;
+                        break;
+                    }
+
+                    if (matchedProperty == null)
+                        return false;
+
+                    resolved.Add(matchedProperty);
+                }
+
+                members = resolved;
+                return true;
             }
         }
 
