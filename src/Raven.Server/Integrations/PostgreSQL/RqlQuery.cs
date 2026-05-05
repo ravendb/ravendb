@@ -23,7 +23,6 @@ namespace Raven.Server.Integrations.PostgreSQL
     {
         protected readonly DocumentDatabase DocumentDatabase;
         private QueryOperationContext _queryOperationContext;
-        private List<Document> _result;
         private readonly int? _limit;
         private bool _queryWasRun;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
@@ -49,8 +48,6 @@ namespace Raven.Server.Integrations.PostgreSQL
         public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
             DocumentDatabase = documentDatabase;
-
-            _result = null;
             _limit = limit;
         }
 
@@ -59,11 +56,8 @@ namespace Raven.Server.Integrations.PostgreSQL
             if (IsEmptyQuery)
                 return default;
 
-            // Sample only a small number of documents for schema inference.
-            // The full result set is streamed during Execute().
-            _result = await RunRqlQuery();
-
-            return await GenerateSchema();
+            var sample = await RunRqlQuery();
+            return await GenerateSchema(sample);
         }
 
         private async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
@@ -86,11 +80,9 @@ namespace Raven.Server.Integrations.PostgreSQL
             return documentQueryResult.Results;
         }
 
-        protected virtual async Task<ICollection<PgColumn>> GenerateSchema()
+        protected virtual async Task<ICollection<PgColumn>> GenerateSchema(List<Document> samples)
         {
-            List<Document> samples;
-
-            if (_result == null || _result?.Count == 0)
+            if (samples == null || samples.Count == 0)
             {
                 var query = QueryMetadata.ParseQuery(QueryString, QueryType.Select);
 
@@ -98,16 +90,10 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var queryWithoutFiltering = query.ToString();
 
-                var results = await RunRqlQuery(queryWithoutFiltering);
+                samples = await RunRqlQuery(queryWithoutFiltering);
 
-                if (results == null || results.Count == 0)
+                if (samples == null || samples.Count == 0)
                     return Array.Empty<PgColumn>();
-
-                samples = results;
-            }
-            else
-            {
-                samples = _result;
             }
 
             var resultsFormat = GetDefaultResultsFormat();
@@ -234,14 +220,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return;
                 }
 
-                if (_result == null)
-                {
-                    if (IsNamedStatement)
-                        _result = await RunRqlQuery();
-                    else
-                        throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
-                }
-
                 if (_limit == 0)
                 {
                     await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
@@ -351,7 +329,6 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             _queryOperationContext?.Dispose();
             _queryOperationContext = null;
-            _result = null;
         }
         
         public override void Dispose()

@@ -16,10 +16,8 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             _replaces = replaces;
         }
 
-        protected override async Task<ICollection<PgColumn>> GenerateSchema()
+        protected override Task<ICollection<PgColumn>> GenerateSchema(List<Document> samples)
         {
-            await base.GenerateSchema();
-
             if (_replaces != null)
             {
                 foreach (var replace in _replaces.Values)
@@ -32,7 +30,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
                 }
             }
 
-            return Columns.Values;
+            return Task.FromResult<ICollection<PgColumn>>(Columns.Values);
         }
 
         protected override void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
