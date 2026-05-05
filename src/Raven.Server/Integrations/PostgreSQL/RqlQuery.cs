@@ -77,9 +77,11 @@ namespace Raven.Server.Integrations.PostgreSQL
             // if limit is 0, fetch one document for schema generation
             indexQuery.PageSize = _limit == 0 ? 1 : SchemaInferenceSampleSize;
 
+            using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown);
+
             _queryWasRun = true;
             var documentQueryResult =
-                await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
+                await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, cancelToken);
 
             return documentQueryResult.Results;
         }
