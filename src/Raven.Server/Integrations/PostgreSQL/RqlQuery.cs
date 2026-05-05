@@ -28,7 +28,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private bool _queryWasRun;
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<PgSession>("Postgres RqlQuery");
 
-        private const int SchemaInferenceSampleSize = 100;
+        private const int SchemaInferenceSampleSize = 1024;
 
         ~RqlQuery()
         {
