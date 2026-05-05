@@ -9,7 +9,6 @@ using Raven.Client;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Integrations.PostgreSQL.Messages;
-using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -100,7 +99,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public ValueTask DisposeAsync()
         {
-            ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(_row);
+            ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(_row, clearArray: true);
             return default;
         }
     }
