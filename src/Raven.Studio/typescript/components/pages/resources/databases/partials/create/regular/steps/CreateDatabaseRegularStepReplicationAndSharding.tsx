@@ -174,19 +174,33 @@ export default function CreateDatabaseRegularStepReplicationAndSharding() {
                         <Col sm="6">
                             <Collapse in={isReplicationFactorVisible}>
                                 <div>
-                                    <InputGroup>
-                                        <InputGroup.Text>Replication Factor</InputGroup.Text>
-                                        <FormInput
-                                            type="number"
-                                            control={control}
-                                            name="replicationAndShardingStep.replicationFactor"
-                                            className="replication-input"
-                                            min="1"
-                                            max={maxReplicationFactor}
-                                            readOnly={isSingleNodeOnly}
-                                            style={isSingleNodeOnly ? { pointerEvents: "none" } : undefined}
-                                        />
-                                    </InputGroup>
+                                    <ConditionalPopover
+                                        conditions={{
+                                            isActive: isSingleNodeOnly,
+                                            message: (
+                                                <span>
+                                                    Only 1 node is available. Add more nodes in the{" "}
+                                                    <a href={appUrl.forCluster()}>Manage cluster</a> view to enable
+                                                    replication.
+                                                </span>
+                                            ),
+                                        }}
+                                        popoverPlacement="top"
+                                        className="w-100"
+                                    >
+                                        <InputGroup>
+                                            <InputGroup.Text>Replication Factor</InputGroup.Text>
+                                            <FormInput
+                                                type="number"
+                                                control={control}
+                                                name="replicationAndShardingStep.replicationFactor"
+                                                className="replication-input"
+                                                min="1"
+                                                max={maxReplicationFactor}
+                                                disabled={isSingleNodeOnly}
+                                            />
+                                        </InputGroup>
+                                    </ConditionalPopover>
                                     {!isSingleNodeOnly && (
                                         <FormRange
                                             control={control}
