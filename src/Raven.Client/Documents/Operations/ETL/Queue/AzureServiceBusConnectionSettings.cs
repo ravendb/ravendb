@@ -11,6 +11,11 @@ public sealed class AzureServiceBusConnectionSettings
 
     public AzureServiceBusPasswordless Passwordless { get; set; }
 
+    /// <summary>
+    /// Verifies that exactly one authentication method is configured and that its required fields are populated.
+    /// Validation of the connection string itself is intentionally shallow (substring match for <c>sb://</c>) and is
+    /// deferred to the Azure Service Bus SDK, which produces the authoritative error at connect time.
+    /// </summary>
     public bool IsValidConnection()
     {
         if (IsOnlyOneConnectionProvided() == false)
@@ -108,21 +113,12 @@ public sealed class AzureServiceBusConnectionSettings
 
         if (EntraId != null)
         {
-            json[nameof(EntraId)] = new DynamicJsonValue
-            {
-                [nameof(EntraId.Namespace)] = EntraId.Namespace,
-                [nameof(EntraId.TenantId)] = EntraId.TenantId,
-                [nameof(EntraId.ClientId)] = EntraId.ClientId,
-                [nameof(EntraId.ClientSecret)] = EntraId.ClientSecret
-            };
+            json[nameof(EntraId)] = EntraId.ToJson();
         }
 
         if (Passwordless != null)
         {
-            json[nameof(Passwordless)] = new DynamicJsonValue
-            {
-                [nameof(Passwordless.Namespace)] = Passwordless.Namespace
-            };
+            json[nameof(Passwordless)] = Passwordless.ToJson();
         }
 
         return json;
@@ -139,20 +135,12 @@ public sealed class AzureServiceBusConnectionSettings
 
         if (EntraId != null)
         {
-            json[nameof(EntraId)] = new DynamicJsonValue
-            {
-                [nameof(EntraId.Namespace)] = EntraId.Namespace,
-                [nameof(EntraId.TenantId)] = EntraId.TenantId,
-                [nameof(EntraId.ClientId)] = EntraId.ClientId,
-            };
+            json[nameof(EntraId)] = EntraId.ToAuditJson();
         }
 
         if (Passwordless != null)
         {
-            json[nameof(Passwordless)] = new DynamicJsonValue
-            {
-                [nameof(Passwordless.Namespace)] = Passwordless.Namespace
-            };
+            json[nameof(Passwordless)] = Passwordless.ToJson();
         }
 
         return json;
@@ -176,6 +164,9 @@ public sealed class AzureServiceBusConnectionSettings
 
 public sealed class AzureServiceBusEntraId
 {
+    /// <summary>
+    /// Fully qualified Service Bus namespace, e.g. <c>mynamespace.servicebus.windows.net</c>.
+    /// </summary>
     public string Namespace { get; set; }
     public string TenantId { get; set; }
     public string ClientId { get; set; }
@@ -187,6 +178,27 @@ public sealed class AzureServiceBusEntraId
                string.IsNullOrWhiteSpace(TenantId) == false &&
                string.IsNullOrWhiteSpace(ClientId) == false &&
                string.IsNullOrWhiteSpace(ClientSecret) == false;
+    }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Namespace)] = Namespace,
+            [nameof(TenantId)] = TenantId,
+            [nameof(ClientId)] = ClientId,
+            [nameof(ClientSecret)] = ClientSecret
+        };
+    }
+
+    public DynamicJsonValue ToAuditJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Namespace)] = Namespace,
+            [nameof(TenantId)] = TenantId,
+            [nameof(ClientId)] = ClientId
+        };
     }
 
     private bool Equals(AzureServiceBusEntraId other)
@@ -208,11 +220,22 @@ public sealed class AzureServiceBusEntraId
 // this is used for machine authentication (Managed Identity)
 public sealed class AzureServiceBusPasswordless
 {
+    /// <summary>
+    /// Fully qualified Service Bus namespace, e.g. <c>mynamespace.servicebus.windows.net</c>.
+    /// </summary>
     public string Namespace { get; set; }
 
     public bool IsValid()
     {
         return string.IsNullOrWhiteSpace(Namespace) == false;
+    }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Namespace)] = Namespace
+        };
     }
 
     private bool Equals(AzureServiceBusPasswordless other)

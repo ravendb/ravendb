@@ -12,15 +12,13 @@ namespace Raven.Server.Documents.QueueSink;
 
 public class AzureServiceBusSinkConsumer : IQueueSinkConsumer
 {
-    private const int ChannelCapacity = 1024;
-
     private readonly ServiceBusClient _client;
     private readonly RavenLogger _logger;
     private readonly CancellationToken _token;
     private readonly List<Task> _receiveTasks = new();
 
     private readonly Channel<IMessage> _deliveries =
-        Channel.CreateBounded<IMessage>(new BoundedChannelOptions(ChannelCapacity)
+        Channel.CreateBounded<IMessage>(new BoundedChannelOptions(1024)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true

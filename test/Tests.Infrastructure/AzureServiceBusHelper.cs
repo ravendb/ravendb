@@ -20,6 +20,9 @@ public static class AzureServiceBusHelper
 
     private static bool CanConnectToAzureServiceBus(string connectionString)
     {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return false;
+
         try
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(MillisecondsToWaitForAzureServiceBus)))

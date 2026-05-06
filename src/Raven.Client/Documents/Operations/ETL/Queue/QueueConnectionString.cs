@@ -50,7 +50,7 @@ public sealed class QueueConnectionString : ConnectionString
                 }
                 break;
             case QueueBrokerType.AzureServiceBus:
-                if (AzureServiceBusConnectionSettings.IsValidConnection() == false)
+                if (AzureServiceBusConnectionSettings == null || AzureServiceBusConnectionSettings.IsValidConnection() == false)
                 {
                     errors.Add($"{nameof(AzureServiceBusConnectionSettings)} has no valid setting.");
                 }
