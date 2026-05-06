@@ -8,6 +8,8 @@ using Sparrow.Platform;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Voron;
+using Voron.Data.BTrees;
+using Voron.Impl;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -403,15 +405,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Voron)]
         public void StreamSizeTransition_SimulatesV24Upgrade()
         {
-            // This test simulates the v23→v24 upgrade scenario where a stream claims to be
-            // large (chunked storage), but after reading, we discover it's actually small.
-            // This can happen with v23 data that claimed to be large but isn't.
-            //
-            // Strategy:
-            // 1. Create actual large data and store it chunked
-            // 2. Read it back partially and re-add as a tiny stream
-            // 3. Verify it's now inline after re-adding
-            // 4. Verify data is still readable
+            // This test simulates the v23→v24 upgrade scenario where a large chunked stream
+            // becomes small enough to inline during compaction.
+            // In reality: large data was stored chunked in v23, but after compaction only
+            // the used portion remains (small), so it can be stored inline in v24.
 
             const int largeSize = 8192;  // Larger than inline limit
             const int tinySize = 128;    // Fits inline
@@ -428,41 +425,101 @@ namespace SlowTests.Issues
                 tx.Commit();
             }
 
-            // Step 2: Verify it was stored as chunked (because it's > inline limit)
+            // Step 2: Verify it was stored as chunked
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("Streams");
                 Assert.False(tree.IsInlineStream("stream/transition", out _, out _, out _),
-                    "Stream should be chunked (it's 8KB > inline limit)");
+                    "Stream should be chunked (8KB > inline limit)");
             }
 
-            // Step 3: Simulate v23→v24 upgrade: read small portion and re-add as tiny stream
-            // (In real compaction, only the used data would be copied, making it small)
+            // Step 3: Simulate compaction: delete large and re-add with only used portion
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.ReadTree("Streams");
-
-                // Delete large chunked stream
                 tree.Delete("stream/transition");
-
-                // Re-add with only the small portion (simulating compaction)
                 tree.AddStream("stream/transition", new MemoryStream(tinyData));
                 tx.Commit();
             }
 
-            // Step 4: Verify stream is now inline (actual size is 128 bytes)
+            // Step 4: Verify stream is now inline
             using (var tx = Env.ReadTransaction())
             {
                 var tree = tx.ReadTree("Streams");
                 Assert.True(tree.IsInlineStream("stream/transition", out _, out _, out _),
-                    "After re-add with small data, stream should be inline");
+                    "After compaction with small data, stream should be inline");
 
-                // Verify data is correct
                 using var stream = tree.ReadStream("stream/transition");
                 var buffer = new byte[tinySize];
                 var bytesRead = stream.Read(buffer, 0, tinySize);
                 Assert.Equal(tinySize, bytesRead);
                 Assert.Equal(tinyData, buffer);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Voron)]
+        public unsafe void InlineStreams_CrossTransactionAccessAfterRebind()
+        {
+            // Tests the cross-transaction refresh path for inline streams.
+            // Single LuceneVoronStream instance persists across transaction boundaries:
+            // - TX1: create instance and read
+            // - Close TX1 (cleanup handler runs: nulls _llt, calls UpdatePtr(null))
+            // - TX2: call UpdateCurrentTransaction to rebind to new transaction
+            // - TX2: read from same instance
+            // This simulates Lucene's per-thread reader cache outliving individual transactions.
+
+            var tinyData = new byte[128];
+            new Random(77).NextBytes(tinyData);
+
+            using (var tx = Env.WriteTransaction())
+            {
+                var tree = tx.CreateTree("Files");
+                tree.AddStream("tiny_file", new MemoryStream(tinyData));
+                tx.Commit();
+            }
+
+            // TX1: Create a single LuceneVoronStream instance
+            LuceneVoronStream cachedStream = null;
+
+            using (var tx = Env.ReadTransaction())
+            {
+                var tree = tx.ReadTree("Files");
+                byte* inlinePtr = null;
+                int inlineSize = 0;
+
+                if (tree.IsInlineStream("tiny_file", out inlinePtr, out inlineSize, out _))
+                {
+                    // IsInlineStream returns pointer to header. Skip past header and tag to get actual data.
+                    var header = (Tree.InlineStreamHeader*)inlinePtr;
+                    byte* dataPtr = inlinePtr + Tree.InlineStreamHeader.SizeOf + header->Info.TagSize;
+                    int dataSize = inlineSize - Tree.InlineStreamHeader.SizeOf - header->Info.TagSize;
+
+                    // Create the instance (holds reference to TX1's LowLevelTransaction)
+                    cachedStream = new LuceneVoronStream("tiny_file", "Files", dataPtr, dataSize, tx.LowLevelTransaction);
+
+                    // Read partway to verify it works in TX1
+                    byte[] readData = new byte[64];
+                    var bytesRead = cachedStream.Read(readData, 0, 64);
+                    Assert.Equal(64, bytesRead);
+                    Assert.Equal(tinyData.Take(64).ToArray(), readData);
+                }
+            } // TX1 closes here: cleanup handler fires, _inlineStream._ptr = null
+
+            // Verify we have the instance (it survived TX1 close)
+            Assert.NotNull(cachedStream);
+
+            // TX2: Rebind same instance to a new transaction
+            using (var tx = Env.ReadTransaction())
+            {
+                // Rebind the cached stream to TX2
+                cachedStream.UpdateCurrentTransaction(tx);
+
+                // Now read from the same instance in TX2 (pointer was refreshed)
+                var fullData = new byte[128];
+                cachedStream.Position = 0;  // Reset position
+                var bytesRead = cachedStream.Read(fullData, 0, 128);
+                Assert.Equal(128, bytesRead);
+                Assert.Equal(tinyData, fullData);
             }
         }
     }
@@ -545,62 +602,6 @@ namespace SlowTests.Issues
                 var bytesRead = stream.Read(readBack, 0, readBack.Length);
                 Assert.Equal(smallData.Length, bytesRead);
                 Assert.Equal(smallData, readBack);
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Voron)]
-        public unsafe void InlineStreams_CrossTransactionAccessAfterRebind()
-        {
-            // Tests the cross-transaction refresh path for inline streams.
-            // This exercises the scenario that LuceneVoronStream.UpdateCurrentTransaction handles:
-            // a single stream instance is created in one transaction, then after that transaction
-            // closes, the same instance is rebound to a different transaction and read again.
-            // This simulates Lucene's per-thread reader cache being reused across transactions.
-
-            var tinyData = new byte[128];
-            new Random(77).NextBytes(tinyData);
-
-            using (var tx = Env.WriteTransaction())
-            {
-                var tree = tx.CreateTree("Files");
-                tree.AddStream("tiny_file", new MemoryStream(tinyData));
-                tx.Commit();
-            }
-
-            // Create and partially read inline stream in Transaction 1
-            LuceneVoronStream cachedStream = null;
-            using (var tx = Env.ReadTransaction())
-            {
-                var tree = tx.ReadTree("Files");
-                byte* inlinePtr = null;
-                int inlineSize = 0;
-
-                // Get inline stream details
-                if (tree.IsInlineStream("tiny_file", out inlinePtr, out inlineSize, out _))
-                {
-                    // Create LuceneVoronStream instance (simulating Lucene's reader cache)
-                    cachedStream = new LuceneVoronStream("tiny_file", "Files", inlinePtr, inlineSize, tx.LowLevelTransaction);
-
-                    // Read partway through stream
-                    byte[] readData = new byte[64];
-                    var bytesRead = cachedStream.Read(readData, 0, 64);
-                    Assert.Equal(64, bytesRead);
-                }
-            }
-
-            // Reuse the cached stream instance in Transaction 2
-            Assert.NotNull(cachedStream);
-            using (var tx = Env.ReadTransaction())
-            {
-                // Rebind the cached stream to the new transaction
-                cachedStream.UpdateCurrentTransaction(tx);
-
-                // Read entire stream from fresh position to verify refresh worked
-                var fullData = new byte[128];
-                cachedStream.Position = 0;  // Reset position
-                var bytesRead = cachedStream.Read(fullData, 0, 128);
-                Assert.Equal(128, bytesRead);
-                Assert.Equal(tinyData, fullData);
             }
         }
     }
