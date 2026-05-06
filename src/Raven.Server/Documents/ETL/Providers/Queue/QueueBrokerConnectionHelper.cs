@@ -4,6 +4,7 @@ using System.IO;
 using Amazon;
 using Amazon.SQS;
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using Azure.Storage.Queues;
 using System.Security.Cryptography;
 using Confluent.Kafka;
@@ -11,7 +12,6 @@ using RabbitMQ.Client;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Server.Utils;
 using Sparrow.Server.Logging;
-using ClientConfig = Confluent.Kafka.ClientConfig;
 
 namespace Raven.Server.Documents.ETL.Providers.Queue;
 
@@ -166,5 +166,32 @@ public static class QueueBrokerConnectionHelper
         }
 
         return sqsClient;
+    }
+
+    public static ServiceBusClient CreateAzureServiceBusClient(AzureServiceBusConnectionSettings azureServiceBusConnectionSettings)
+    {
+        if (string.IsNullOrWhiteSpace(azureServiceBusConnectionSettings.ConnectionString) == false)
+        {
+            return new ServiceBusClient(azureServiceBusConnectionSettings.ConnectionString);
+        }
+
+        if (azureServiceBusConnectionSettings.EntraId != null)
+        {
+            return new ServiceBusClient(
+                azureServiceBusConnectionSettings.EntraId.Namespace,
+                new ClientSecretCredential(
+                    azureServiceBusConnectionSettings.EntraId.TenantId,
+                    azureServiceBusConnectionSettings.EntraId.ClientId,
+                    azureServiceBusConnectionSettings.EntraId.ClientSecret));
+        }
+
+        if (azureServiceBusConnectionSettings.Passwordless != null)
+        {
+            return new ServiceBusClient(
+                azureServiceBusConnectionSettings.Passwordless.Namespace,
+                new DefaultAzureCredential());
+        }
+
+        throw new InvalidOperationException("No valid Azure Service Bus connection settings provided.");
     }
 }

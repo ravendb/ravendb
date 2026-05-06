@@ -18,6 +18,8 @@ export default class TaskUtils {
                     return "AzureQueueStorageQueueEtl";
                 case "AmazonSqs":
                     return "AmazonSqsQueueEtl";
+                case "AzureServiceBus":
+                    throw new Error("Not yet supported");
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
@@ -34,6 +36,7 @@ export default class TaskUtils {
                     return "RabbitQueueSink";
                 case "AmazonSqs":
                 case "AzureQueueStorage":
+                case "AzureServiceBus":
                     throw new Error("Not yet supported");
                 case "None":
                     throw new Error("Expected non-null BrokerType");
@@ -55,6 +58,7 @@ export default class TaskUtils {
                 return "RabbitQueueSink";
             case "AzureQueueStorage":
             case "AmazonSqs":
+            case "AzureServiceBus":
                 throw new Error("Not yet supported");
             case "None":
                 return null;

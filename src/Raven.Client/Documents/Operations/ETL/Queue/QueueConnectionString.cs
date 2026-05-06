@@ -16,7 +16,9 @@ public sealed class QueueConnectionString : ConnectionString
     public AzureQueueStorageConnectionSettings AzureQueueStorageConnectionSettings { get; set; }
     
     public AmazonSqsConnectionSettings AmazonSqsConnectionSettings { get; set; }
-    
+
+    public AzureServiceBusConnectionSettings AzureServiceBusConnectionSettings { get; set; }
+
     public override ConnectionStringType Type => ConnectionStringType.Queue;
 
     protected override void ValidateImpl(List<string> errors)
@@ -47,6 +49,12 @@ public sealed class QueueConnectionString : ConnectionString
                     errors.Add($"{nameof(AmazonSqsConnectionSettings)} has no valid setting.");
                 }
                 break;
+            case QueueBrokerType.AzureServiceBus:
+                if (AzureServiceBusConnectionSettings.IsValidConnection() == false)
+                {
+                    errors.Add($"{nameof(AzureServiceBusConnectionSettings)} has no valid setting.");
+                }
+                break;
             default:
                 throw new NotSupportedException($"'{BrokerType}' broker is not supported");
         }
@@ -74,6 +82,9 @@ public sealed class QueueConnectionString : ConnectionString
             case QueueBrokerType.AmazonSqs:
                 url = AmazonSqsConnectionSettings.GetQueueUrl();
                 break;
+            case QueueBrokerType.AzureServiceBus:
+                url = AzureServiceBusConnectionSettings.GetServiceBusUrl();
+                break;
             default:
                 throw new NotSupportedException($"'{BrokerType}' broker is not supported");
         }
@@ -90,6 +101,7 @@ public sealed class QueueConnectionString : ConnectionString
         json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToJson();
         json[nameof(AzureQueueStorageConnectionSettings)] = AzureQueueStorageConnectionSettings?.ToJson();
         json[nameof(AmazonSqsConnectionSettings)] = AmazonSqsConnectionSettings?.ToJson();
+        json[nameof(AzureServiceBusConnectionSettings)] = AzureServiceBusConnectionSettings?.ToJson();
 
         return json;
     }
@@ -97,10 +109,11 @@ public sealed class QueueConnectionString : ConnectionString
     public override DynamicJsonValue ToAuditJson()
     {
         var json = base.ToAuditJson();
-        
+
         json[nameof(BrokerType)] = BrokerType;
         json[nameof(KafkaConnectionSettings)] = KafkaConnectionSettings?.ToAuditJson();
         json[nameof(RabbitMqConnectionSettings)] = RabbitMqConnectionSettings?.ToAuditJson();
+        json[nameof(AzureServiceBusConnectionSettings)] = AzureServiceBusConnectionSettings?.ToAuditJson();
 
         return json;
     }
@@ -153,6 +166,15 @@ public sealed class QueueConnectionString : ConnectionString
                         return false;
 
                     return AmazonSqsConnectionSettings.Equals(queueConnectionString.AmazonSqsConnectionSettings);
+
+                case QueueBrokerType.AzureServiceBus:
+                    if (AzureServiceBusConnectionSettings == null && queueConnectionString.AzureServiceBusConnectionSettings == null)
+                        return true;
+
+                    if (AzureServiceBusConnectionSettings == null || queueConnectionString.AzureServiceBusConnectionSettings == null)
+                        return false;
+
+                    return AzureServiceBusConnectionSettings.Equals(queueConnectionString.AzureServiceBusConnectionSettings);
 
                 default:
                     throw new NotSupportedException($"'{BrokerType}' broker is not supported");

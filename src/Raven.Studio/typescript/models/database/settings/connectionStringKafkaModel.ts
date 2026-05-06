@@ -164,6 +164,7 @@ class connectionStringKafkaModel extends connectionStringModel {
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         }, true, []);
     }
     
@@ -182,6 +183,7 @@ class connectionStringKafkaModel extends connectionStringModel {
             RabbitMqConnectionSettings: null,
             AzureQueueStorageConnectionSettings: null,
             AmazonSqsConnectionSettings: null,
+            AzureServiceBusConnectionSettings: null,
         };
     }
 

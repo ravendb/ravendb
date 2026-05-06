@@ -506,6 +506,7 @@ export class DatabasesStubs {
                     RabbitMqConnectionSettings: null,
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
                     Type: "Queue",
@@ -517,6 +518,7 @@ export class DatabasesStubs {
                     },
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
                     Type: "Queue",
@@ -530,6 +532,7 @@ export class DatabasesStubs {
                         Passwordless: null,
                     },
                     AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
                     Type: "Queue",
@@ -546,6 +549,7 @@ export class DatabasesStubs {
                         },
                         Passwordless: false,
                     },
+                    AzureServiceBusConnectionSettings: null,
                 },
             },
             AiConnectionStrings: {

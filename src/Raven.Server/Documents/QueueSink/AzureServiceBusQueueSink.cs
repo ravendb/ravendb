@@ -1,0 +1,38 @@
+using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Server.Documents.ETL.Providers.Queue;
+
+namespace Raven.Server.Documents.QueueSink;
+
+public sealed class AzureServiceBusQueueSink : QueueSinkProcess
+{
+    public AzureServiceBusQueueSink(QueueSinkConfiguration configuration, QueueSinkScript script,
+        DocumentDatabase database, string tag) : base(configuration, script, database, tag)
+    {
+    }
+
+    protected override IQueueSinkConsumer CreateConsumer()
+    {
+        var client = QueueBrokerConnectionHelper.CreateAzureServiceBusClient(Configuration.Connection.AzureServiceBusConnectionSettings);
+        var consumer = new AzureServiceBusSinkConsumer(client, Logger, CancellationToken);
+
+        foreach (var entry in Script.Queues)
+        {
+            if (AzureServiceBusSinkSource.TryParseSubscription(entry, out var topic, out var subscription))
+                consumer.SubscribeToSubscription(topic, subscription);
+            else
+                consumer.SubscribeToQueue(entry);
+        }
+
+        try
+        {
+            consumer.StartAsync().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            consumer.Dispose();
+            throw;
+        }
+
+        return consumer;
+    }
+}
