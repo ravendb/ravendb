@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int maxHits = 10 * pageSize;
 
             //    System.out.println("Q: " + query);
-            var topDocs = _searcher.Search(query, null, maxHits, _state);
+            using var topDocs = _searcher.Search(query, null, maxHits, _state);
 
             //    System.out.println("HITS: " + hits.length());
             var queue = new SuggestWordQueue(pageSize);

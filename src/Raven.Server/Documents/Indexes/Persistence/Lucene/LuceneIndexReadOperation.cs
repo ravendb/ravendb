@@ -599,7 +599,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (minPageSize <= 0)
             {
-                var result = _searcher.Search(documentQuery, null, 1, _state);
+                using var result = _searcher.Search(documentQuery, null, 1, _state);
                 return new TopDocs(result.TotalHits, result.MaxScore, ManagedScoreDocArray.Empty);
             }
 
@@ -861,7 +861,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (moreLikeThisQuery.BaseDocument == null)
             {
-                var td = _searcher.Search(moreLikeThisQuery.BaseDocumentQuery, 1, _state);
+                using var td = _searcher.Search(moreLikeThisQuery.BaseDocumentQuery, 1, _state);
 
                 // get the current Lucene docid for the given RavenDB doc ID
                 if (td.ScoreDocArray.Length == 0)
@@ -909,7 +909,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _searcher.Search(mltQuery, tsdc, _state);
-            var topDocs = tsdc.TopDocs();
+            using var topDocs = tsdc.TopDocs();
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
