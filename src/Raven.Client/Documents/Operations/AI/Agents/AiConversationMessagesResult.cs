@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.AI;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
 /// <summary>
 /// The result of fetching conversation messages.
 /// </summary>
-public class AiConversationMessagesResult
+public class AiConversationMessagesResult : IDynamicJson
 {
     /// <summary>
     /// The conversation document ID.
@@ -20,9 +21,14 @@ public class AiConversationMessagesResult
     public string Agent { get; set; }
 
     /// <summary>
-    /// The conversation parameters, normalized from the stored format.
+    /// The conversation parameters as a name -> value map, normalized from the stored format.
     /// </summary>
-    public Dictionary<string, AiConversationParameter> Parameters { get; set; }
+    /// <remarks>
+    /// Ignored by the auto-deserializer because values can be heterogeneous (primitives, arrays).
+    /// Populated manually in <c>GetConversationMessagesCommand.SetResponse</c>.
+    /// </remarks>
+    [JsonDeserializationIgnore]
+    public Dictionary<string, object> Parameters { get; set; }
 
     /// <summary>
     /// Cumulative token usage across all turns of this conversation.
@@ -47,13 +53,41 @@ public class AiConversationMessagesResult
     public bool HasMoreMessages { get; set; }
 
     /// <summary>
-    /// True if any message in the conversation contains attachments (images, files).
+    /// Names of all attachments (images, files) referenced across the returned messages, deduplicated.
+    /// Empty when the page contains no attachments.
     /// </summary>
-    public bool HasAttachments { get; set; }
+    public string[] AttachmentNames { get; set; }
 
     /// <summary>
     /// IDs of sub-agent conversations spawned during this conversation.
     /// Each can be queried separately via GetConversationMessages.
     /// </summary>
     public List<string> SubConversationIds { get; set; }
+
+    /// <summary>
+    /// Serializes this result to a JSON structure.
+    /// </summary>
+    public DynamicJsonValue ToJson()
+    {
+        DynamicJsonValue parameters = null;
+        if (Parameters != null)
+        {
+            parameters = new DynamicJsonValue();
+            foreach (var kv in Parameters)
+                parameters[kv.Key] = kv.Value;
+        }
+
+        return new DynamicJsonValue
+        {
+            [nameof(ConversationId)] = ConversationId,
+            [nameof(Agent)] = Agent,
+            [nameof(Parameters)] = parameters,
+            [nameof(TotalUsage)] = TotalUsage?.ToJson(),
+            [nameof(LastMessageAt)] = LastMessageAt,
+            [nameof(HasMoreMessages)] = HasMoreMessages,
+            [nameof(AttachmentNames)] = AttachmentNames != null ? new DynamicJsonArray(AttachmentNames) : null,
+            [nameof(SubConversationIds)] = SubConversationIds != null ? new DynamicJsonArray(SubConversationIds) : null,
+            [nameof(Messages)] = Messages != null ? new DynamicJsonArray(Messages) : null
+        };
+    }
 }

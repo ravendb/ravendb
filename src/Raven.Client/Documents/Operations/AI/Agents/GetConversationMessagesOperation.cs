@@ -122,12 +122,17 @@ public sealed class GetConversationMessagesOperation : IMaintenanceOperation<AiC
 
             Result = JsonDeserializationClient.AiConversationMessagesResult(response);
 
-            // LazyStringValue / BlittableJsonReaderArray point into the context's byte buffer which
-            // is returned to the pool after this method returns. Materialize to managed types now.
-            if (Result.Parameters != null)
+            // Parameters is parsed manually: the auto-deserializer doesn't support array values
+            // in Dictionary<string, object>. Materialize converts blittable types to managed ones,
+            // since the blittable buffer is freed when this method returns.
+            if (response.TryGet(nameof(AiConversationMessagesResult.Parameters), out BlittableJsonReaderObject parametersObj) && parametersObj != null)
             {
-                foreach (var param in Result.Parameters.Values)
-                    param.Value = Materialize(param.Value);
+                Result.Parameters = new Dictionary<string, object>(parametersObj.Count);
+                foreach (var key in parametersObj.GetPropertyNames())
+                {
+                    parametersObj.TryGetMember(key, out object value);
+                    Result.Parameters[key] = Materialize(value);
+                }
             }
         }
 
