@@ -41,7 +41,7 @@ namespace Voron.Data
         public override long Position
         {
             get => _position;
-            set => _position = (int)Math.Min(value, _length);
+            set => _position = (int)Math.Clamp(value, 0, _length);
         }
 
         public override int ReadByte()
@@ -53,6 +53,13 @@ namespace Voron.Data
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (buffer == null)
+                throw new ArgumentNullException(nameof(buffer));
+            if (offset < 0 || offset > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0 || offset + count > buffer.Length)
+                throw new ArgumentOutOfRangeException(nameof(count));
+
             var remaining = _length - _position;
             if (remaining <= 0)
                 return 0;

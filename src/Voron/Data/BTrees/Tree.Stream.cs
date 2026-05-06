@@ -53,6 +53,7 @@ namespace Voron.Data.BTrees
         /// <summary>
         /// Header for streams stored inline in the tree node.
         /// Layout: [RootObjectType (1 byte)][StreamInfo (16 bytes)][Tag (TagSize bytes)][Data (TotalSize bytes)]
+        /// Note: Unlike chunked streams (which store data first, then metadata), inline streams store metadata first, then data.
         /// </summary>
         [StructLayout(LayoutKind.Explicit, Size = SizeOf)]
         public struct InlineStreamHeader
@@ -250,7 +251,9 @@ namespace Voron.Data.BTrees
         private bool TryAddInlineStream(Slice key, Stream stream, Slice? tag)
         {
             var tagSize = tag?.Size ?? 0;
-            var maxInlineSize = _llt.DataPager.NodeMaxSize - Constants.Tree.NodeHeaderSize - key.Size - InlineStreamHeader.SizeOf - tagSize;
+            // maxInlineSize calculates space available for the value (header + tag + data).
+            // Key.Size is not subtracted because DirectAdd(key, len, ...) only accounts for value length.
+            var maxInlineSize = _llt.DataPager.NodeMaxSize - Constants.Tree.NodeHeaderSize - InlineStreamHeader.SizeOf - tagSize;
             if (maxInlineSize <= 0)
                 return false;
 
@@ -347,6 +350,11 @@ namespace Voron.Data.BTrees
             var nodeDataSize = node->DataSize;
 
             if (nodeDataSize < InlineStreamHeader.SizeOf)
+                return false;
+
+            // Defensive check: verify we have the Streams flag set 
+            // This prevents misidentification if another structure's first byte happens to match RootObjectType.InlineStream.
+            if ((State.Header.Flags & TreeFlags.Streams) == 0)
                 return false;
 
             if (((RootObjectType*)nodeData)[0] != RootObjectType.InlineStream)

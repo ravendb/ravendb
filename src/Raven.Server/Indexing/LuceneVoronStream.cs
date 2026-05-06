@@ -17,20 +17,19 @@ namespace Raven.Server.Indexing;
 /// </summary>
 public sealed unsafe class LuceneVoronStream
 {
-    public Stream Stream { get; }
-
     private readonly VoronStream _voronStream;     // non-null when chunk-based
     private readonly UnmanagedVoronStream _inlineStream;  // non-null when inline
     private readonly string _treeName;
     private readonly string _name;
     private LowLevelTransaction _llt;
+    private Stream _stream;
 
     /// <summary>Chunk-based stream constructor.</summary>
     public LuceneVoronStream(string name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
     {
         _name = name;
         _voronStream = new VoronStream(chunksDetails, llt);
-        Stream = _voronStream;
+        _stream = _voronStream;
         _llt = llt;
         RegisterTransactionCleanup();
     }
@@ -41,7 +40,7 @@ public sealed unsafe class LuceneVoronStream
         _name = name;
         _treeName = treeName;
         _inlineStream = new UnmanagedVoronStream(inlineDataPtr, inlineDataSize);
-        Stream = _inlineStream;
+        _stream = _inlineStream;
         _llt = llt;
         RegisterTransactionCleanup();
     }
@@ -49,28 +48,28 @@ public sealed unsafe class LuceneVoronStream
     public long Position
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Stream.Position;
+        get => _stream.Position;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        set => Stream.Position = value;
+        set => _stream.Position = value;
     }
 
     public long Length
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => Stream.Length;
+        get => _stream.Length;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int ReadByte() => Stream.ReadByte();
+    public int ReadByte() => _stream.ReadByte();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Read(byte[] buffer, int offset, int count) => Stream.Read(buffer, offset, count);
+    public int Read(byte[] buffer, int offset, int count) => _stream.Read(buffer, offset, count);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void ReadEntireBlock(byte[] buffer, int offset, int count) => Stream.ReadEntireBlock(buffer, offset, count);
+    public void ReadEntireBlock(byte[] buffer, int offset, int count) => _stream.ReadEntireBlock(buffer, offset, count);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public long Seek(long offset, SeekOrigin origin) => Stream.Seek(offset, origin);
+    public long Seek(long offset, SeekOrigin origin) => _stream.Seek(offset, origin);
 
     private void RegisterTransactionCleanup()
     {
