@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
@@ -12,7 +13,7 @@ public enum AiMessageRole
     Internal
 }
 
-public class AiToolCallResult
+public class AiToolCallResult : IDynamicJson
 {
     /// <summary>
     /// The tool call ID from the model.
@@ -39,9 +40,24 @@ public class AiToolCallResult
     /// Can be queried separately via GetConversationMessages.
     /// </summary>
     public string SubConversationId { get; set; }
+
+    /// <summary>
+    /// Serializes this tool-call result to a JSON structure.
+    /// </summary>
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Id)] = Id,
+            [nameof(Name)] = Name,
+            [nameof(Arguments)] = Arguments,
+            [nameof(Result)] = Result,
+            [nameof(SubConversationId)] = SubConversationId
+        };
+    }
 }
 
-public class AiConversationMessage
+public class AiConversationMessage : IDynamicJson
 {
     /// <summary>
     /// The role of the message sender.
@@ -80,4 +96,21 @@ public class AiConversationMessage
     /// For Internal role messages: the ID of the sub-conversation this message relates to.
     /// </summary>
     public string SubConversationId { get; set; }
+
+    /// <summary>
+    /// Serializes this message to a JSON structure.
+    /// </summary>
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Role)] = Role.ToString(),
+            [nameof(Content)] = Content,
+            [nameof(Attachments)] = Attachments != null ? new DynamicJsonArray(Attachments) : null,
+            [nameof(Timestamp)] = Timestamp,
+            [nameof(ToolCalls)] = ToolCalls != null ? new DynamicJsonArray(ToolCalls) : null,
+            [nameof(Usage)] = Usage?.ToJson(),
+            [nameof(SubConversationId)] = SubConversationId
+        };
+    }
 }
