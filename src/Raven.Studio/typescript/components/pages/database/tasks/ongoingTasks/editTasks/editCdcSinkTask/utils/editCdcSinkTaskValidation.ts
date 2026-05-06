@@ -5,11 +5,6 @@ type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
 type CdcTaskState = Extract<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState, "Enabled" | "Disabled">;
 
-export interface EditCdcSinkTaskValidationContext {
-    initialTaskName?: string;
-    usedTaskNames: string[];
-}
-
 const stringValueItemSchema = yup.object({
     value: yup.string(),
 });
@@ -58,7 +53,7 @@ const getCdcSinkEmbeddedTableSchema = (): yup.ObjectSchema<CdcSinkEmbeddedTableF
 
 // TODO improve validation
 const cdcSinkTableSchema = yup.object({
-    collectionName: yup.string(),
+    collectionName: yup.string().required(),
     columns: yup.array().of(cdcColumnMappingSchema),
     disabled: yup.boolean(),
     embeddedTables: yup.array().of(getCdcSinkEmbeddedTableSchema()),
@@ -66,33 +61,12 @@ const cdcSinkTableSchema = yup.object({
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
     primaryKeyColumns: yup.array().of(stringValueItemSchema),
-    sourceTableName: yup.string(),
+    sourceTableName: yup.string().required(),
     sourceTableSchema: yup.string().nullable(),
 });
 
 const editCdcSinkTaskSchema = yup.object({
-    name: yup
-        .string()
-        .nullable()
-        .required()
-        .test("unique-task-name", "Task name is already used", (value, ctx) => {
-            if (!value) {
-                return true;
-            }
-
-            const validationContext = ctx.options.context as EditCdcSinkTaskValidationContext;
-            const initialTaskName = validationContext?.initialTaskName?.toLowerCase();
-
-            return !validationContext?.usedTaskNames?.some((taskName) => {
-                const normalizedTaskName = taskName.toLowerCase();
-
-                if (normalizedTaskName === initialTaskName) {
-                    return false;
-                }
-
-                return normalizedTaskName === value.toLowerCase();
-            });
-        }),
+    name: yup.string().nullable().required(),
     state: yup.string<CdcTaskState>().required(),
     isSetResponsibleNode: yup.boolean(),
     responsibleNode: yup

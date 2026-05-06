@@ -7,6 +7,8 @@ export type RootTablePath = `tables.${number}`;
 export type LinkedTablePath = `tables.${number}.linkedTables.${number}`;
 export type EmbeddedTablePath = `tables.${number}.embeddedTables.${number}`;
 
+export type CdcSinkTablePath = RootTablePath | LinkedTablePath | EmbeddedTablePath;
+
 export function getRootTablePath(index: number) {
     const path = `tables.${index}` as const satisfies FormPath;
     return path;

@@ -18,6 +18,7 @@ import {
     EmbeddedTablePath,
     LinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import _ from "lodash";
 
 interface EditCdcSinkTaskTablesExplorerProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -112,31 +113,39 @@ interface TableItemsProps {
 }
 
 function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
-    const formTables = useMemo(
-        () => tablesFieldArray.fields.map((table, idx) => ({ table, formIdx: idx })),
-        [tablesFieldArray.fields]
-    );
+    const filteredGroupedTables = useMemo(() => {
+        const normalizedFilter = filter.trim().toLowerCase();
 
-    const filteredTables = useMemo(() => {
-        if (!filter) {
-            return formTables;
-        }
+        return Object.entries(_.groupBy(tablesFieldArray.fields, (table) => table.sourceTableSchema || "default"))
+            .map(([schema, tables]) => ({
+                schema,
+                tables: normalizedFilter
+                    ? tables.filter((table) => table.sourceTableName.toLowerCase().includes(normalizedFilter))
+                    : tables,
+            }))
+            .filter((group) => group.tables.length > 0);
+    }, [filter, tablesFieldArray.fields]);
 
-        return formTables.filter(({ table }) => table.sourceTableName?.toLowerCase().includes(filter.toLowerCase()));
-    }, [filter, formTables]);
-
-    if (formTables.length === 0) {
+    if (tablesFieldArray.fields.length === 0) {
         return <EmptySet compact>Use the Schema Explorer to discover existing tables or add new manually.</EmptySet>;
     }
 
-    if (filteredTables.length === 0) {
+    if (filteredGroupedTables.length === 0) {
         return <EmptySet compact>No tables match the filter.</EmptySet>;
     }
 
     return (
         <div className="vstack gap-1 overflow-y-auto flex-grow-0">
-            {filteredTables.map(({ table, formIdx }) => (
-                <RootTableItem key={table.id} formIdx={formIdx} />
+            {filteredGroupedTables.map(({ schema, tables }) => (
+                <div key={schema} className="vstack gap-1">
+                    <div className="text-center font-monospace small">{schema}</div>
+                    {tables.map((table) => (
+                        <RootTableItem
+                            key={table.id}
+                            formIdx={tablesFieldArray.fields.findIndex((t) => t.id === table.id)!}
+                        />
+                    ))}
+                </div>
             ))}
         </div>
     );
@@ -251,6 +260,7 @@ function LinkedTableItem({ path, isRootDisabled }: LinkedTableItemProps) {
                 <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
                     {label}
                 </span>
+                <Icon icon="link" margin="ms-1" className="font-size-14" />
             </Button>
         </div>
     );
@@ -300,6 +310,7 @@ function EmbeddedTableItem({ path, isRootDisabled }: EmbeddedTableItemProps) {
                 <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
                     {label}
                 </span>
+                <Icon icon="embed" margin="ms-1" className="font-size-14" />
             </Button>
             {hasChildren && isExpanded && (
                 <div

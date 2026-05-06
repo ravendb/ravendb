@@ -1,7 +1,11 @@
 import { EmptySet } from "components/common/EmptySet";
-import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import {
+    CdcActiveTable,
+    editCdcSinkTaskSelectors,
+    editCdcSinkTaskSlice,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import Accordion from "react-bootstrap/Accordion";
 import AccordionButton from "react-bootstrap/AccordionButton";
@@ -14,31 +18,53 @@ import {
     RootTablePath,
     LinkedTablePath,
     EmbeddedTablePath,
+    castToRootTablePath,
+    castToEmbeddedTablePath,
+    castToLinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import Breadcrumb from "react-bootstrap/Breadcrumb";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
 
 export default function EditCdcSinkTaskTableEditor() {
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     if (!activeTable) {
         return <EmptySet>Select a table to view its configuration details.</EmptySet>;
     }
 
-    const currentPath = activeTable.path;
+    return <ActiveTableEditor key={activeTable.path} activeTable={activeTable} />;
+}
+
+function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
+    const dispatch = useAppDispatch();
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const breadcrumbItems = useTableBreadcrumbs(activeTable.path);
+
+    const handleBreadcrumbClick = (item: BreadcrumbItem) => {
+        if (item.isActive) {
+            return;
+        }
+        dispatch(editCdcSinkTaskSlice.actions.activeTableSet(item));
+    };
 
     return (
-        <div className="cdc-table-editor" key={currentPath}>
-            <div className="hstack p-2 border-bottom border-secondary">
-                {/* <Breadcrumb className="mb-0">
-                    {breadcrumbs.map((part, idx) => (
-                        <Breadcrumb.Item key={idx} active={idx === breadcrumbs.length - 1}>
-                            {part.fieldName}
-                        </Breadcrumb.Item>
-                    ))}
-                </Breadcrumb> */}
+        <div className="cdc-table-editor">
+            <div className="hstack gap-2 p-2 border-bottom border-secondary">
+                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                    <Breadcrumb className="mb-0">
+                        {breadcrumbItems.map((item) => (
+                            <Breadcrumb.Item
+                                key={item.path}
+                                active={item.isActive}
+                                onClick={() => handleBreadcrumbClick(item)}
+                            >
+                                {item.label}
+                            </Breadcrumb.Item>
+                        ))}
+                    </Breadcrumb>
+                </div>
                 <div className="ms-auto hstack gap-2 align-items-center">
                     {activeTable.type === "root" && (
                         <FormSwitch control={control} name={`${activeTable.path}.disabled`}>
@@ -58,6 +84,50 @@ export default function EditCdcSinkTaskTableEditor() {
             </div>
         </div>
     );
+}
+
+type BreadcrumbItem = CdcActiveTable & {
+    isActive?: boolean;
+    label?: string;
+};
+
+function useTableBreadcrumbs(path: CdcActiveTable["path"]): BreadcrumbItem[] {
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+
+    const parts = path.split(".");
+    const breadcrumbItems: BreadcrumbItem[] = [];
+
+    for (let i = 0; i < parts.length; i += 2) {
+        const singleFieldWithNumber = `${parts[i]}.${parts[i + 1]}`;
+        const lastPath = breadcrumbItems[breadcrumbItems.length - 1]?.path;
+        const path = (
+            lastPath ? `${lastPath}.${singleFieldWithNumber}` : singleFieldWithNumber
+        ) as FieldPath<EditCdcSinkTaskFormData>;
+
+        breadcrumbItems.push(getActiveTableFieldName(parts[i], path));
+    }
+
+    const breadcrumbSourceTableNames = breadcrumbItems.map((item) => `${item.path}.sourceTableName` as const);
+    const sourceTableNames = useWatch({ control, name: breadcrumbSourceTableNames });
+
+    return breadcrumbItems.map((item, idx) => ({
+        ...item,
+        label: sourceTableNames[idx] || "Unassigned table",
+        isActive: idx === breadcrumbItems.length - 1,
+    }));
+}
+
+function getActiveTableFieldName(fieldName: string, path: FieldPath<EditCdcSinkTaskFormData>): CdcActiveTable {
+    switch (fieldName) {
+        case "tables":
+            return { type: "root", path: castToRootTablePath(path) };
+        case "linkedTables":
+            return { type: "linked", path: castToLinkedTablePath(path) };
+        case "embeddedTables":
+            return { type: "embedded", path: castToEmbeddedTablePath(path) };
+        default:
+            throw new Error(`Unknown CDC Sink table field name: ${fieldName}`);
+    }
 }
 
 function RootTableEditor({ path }: { path: RootTablePath }) {

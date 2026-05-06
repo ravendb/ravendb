@@ -1,19 +1,13 @@
 import "./EditCdcSinkTask.scss";
 import { AboutViewHeading } from "components/common/AboutView";
 import { useServices } from "components/hooks/useServices";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { FormProvider, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { LoadingView } from "components/common/LoadingView";
-import { useAsync, useAsyncCallback } from "react-async-hook";
-import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { useAsyncCallback } from "react-async-hook";
 import { LoadError } from "components/common/LoadError";
-import DatabaseUtils from "components/utils/DatabaseUtils";
-import {
-    EditCdcSinkTaskFormData,
-    EditCdcSinkTaskValidationContext,
-    editCdcSinkTaskResolver,
-} from "./utils/editCdcSinkTaskValidation";
+import { EditCdcSinkTaskFormData, editCdcSinkTaskResolver } from "./utils/editCdcSinkTaskValidation";
 import EditCdcSinkTaskBasicSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/basic/EditCdcSinkTaskBasicSection";
 import EditCdcSinkTaskDiscoverySection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoverySection";
 import EditCdcSinkTaskTablesSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesSection";
@@ -24,19 +18,27 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import router from "plugins/router";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
+import { useEffect } from "react";
+import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 
 interface QueryParams {
     taskId?: string;
 }
 
 export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<QueryParams>) {
+    const dispatch = useAppDispatch();
     const { tasksService } = useServices();
-    const db = useAppSelector(databaseSelectors.activeDatabase);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const localNodeTag = useAppSelector(clusterSelectors.localNodeTag);
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId, 10) : null;
     const isEditMode = taskId != null;
+
+    // Reset store on unmount
+    useEffect(() => {
+        return () => {
+            dispatch(editCdcSinkTaskActions.reset());
+        };
+    }, []);
 
     const asyncGetDefaultValues = useAsyncCallback(async () => {
         if (isEditMode) {
@@ -47,26 +49,9 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         }
     });
 
-    const asyncGetTaskNames = useAsync(async () => {
-        if (!db) {
-            return [];
-        }
-
-        const location = DatabaseUtils.getFirstLocation(db, localNodeTag);
-        const ongoingTasks = await tasksService.getOngoingTasks(databaseName, location);
-
-        return ongoingTasks.OngoingTasks.filter((x) => x.TaskType === "CdcSink").map((x) => x.TaskName);
-    }, [db, localNodeTag, databaseName]);
-
-    const validationContext: EditCdcSinkTaskValidationContext = {
-        initialTaskName: asyncGetDefaultValues.result?.name,
-        usedTaskNames: asyncGetTaskNames.result ?? [],
-    };
-
-    const editForm = useForm<EditCdcSinkTaskFormData, EditCdcSinkTaskValidationContext>({
+    const editForm = useForm<EditCdcSinkTaskFormData>({
         defaultValues: asyncGetDefaultValues.execute,
         resolver: editCdcSinkTaskResolver,
-        context: validationContext,
     });
 
     const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
@@ -97,11 +82,11 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
 
     console.log("kalczur errors", editForm.formState.errors);
 
-    if (asyncGetDefaultValues.loading || asyncGetTaskNames.loading) {
+    if (asyncGetDefaultValues.loading) {
         return <LoadingView />;
     }
 
-    if (asyncGetDefaultValues.error || asyncGetTaskNames.error) {
+    if (asyncGetDefaultValues.error) {
         return <LoadError error="Unable to load configuration" refresh={reloadEditForm} />;
     }
 

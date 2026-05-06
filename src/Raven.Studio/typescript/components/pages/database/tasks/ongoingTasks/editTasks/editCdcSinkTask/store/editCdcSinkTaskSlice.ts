@@ -8,9 +8,7 @@ import {
     RootTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 
-export type CdcTableType = "root" | "embedded" | "linked";
-
-export type FormTableInfo =
+export type CdcActiveTable =
     | {
           type: "root";
           path: RootTablePath;
@@ -26,7 +24,7 @@ export type FormTableInfo =
 
 interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
-    activeTable?: FormTableInfo;
+    activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
 }
 
@@ -43,7 +41,7 @@ export const editCdcSinkTaskSlice = createSlice({
         connectionStringSelected: (state, action: PayloadAction<SqlConnectionString>) => {
             state.selectedConnectionString = action.payload;
         },
-        activeTableSet: (state, action: PayloadAction<FormTableInfo>) => {
+        activeTableSet: (state, action: PayloadAction<CdcActiveTable>) => {
             state.activeTable = action.payload;
         },
         tableExpandedOneToggled: (state, action: PayloadAction<FieldPath<EditCdcSinkTaskFormData>>) => {
