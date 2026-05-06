@@ -244,12 +244,10 @@ namespace Raven.Server.Documents.Sharding
 
             exceptionAggregator.Execute(() => Replication?.Dispose());
 
+            // Mirror DocumentDatabase.Dispose: drain any TcpConnectionOptions still tracked here as a safety net.
             foreach (var connection in RunningTcpConnections)
             {
-                exceptionAggregator.Execute(() =>
-                {
-                    connection.Dispose();
-                });
+                exceptionAggregator.Execute(connection.Dispose);
             }
 
             exceptionAggregator.Execute(() => ShardExecutor?.Dispose());

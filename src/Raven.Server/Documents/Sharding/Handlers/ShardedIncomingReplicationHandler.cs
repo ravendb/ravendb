@@ -99,6 +99,12 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void InvokeOnFailed(Exception exception) => _parent.InvokeOnFailed(this, exception);
 
+        protected override void OnCancellation(Exception e)
+        {
+            // Always dispose so the per-shard outgoing handlers (and their TcpConnectionOptions) are cleaned up.
+            InvokeOnFailed(e);
+        }
+
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
         {
             blittableJsonReaderObject.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out _lastAcceptedChangeVectorDuringHeartbeat);

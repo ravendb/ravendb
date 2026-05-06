@@ -63,20 +63,41 @@ namespace Raven.Server.Documents.Sharding
 
             private void AddAndStartIncomingInstance(ShardedIncomingReplicationHandler newIncoming)
             {
-                var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
-                    (_, val) => val.IsDisposed ? newIncoming : val);
-
-                if (current == newIncoming)
+                // Synchronize with AbstractReplicationLoader.Dispose, which iterates _incoming under the write lock.
+                if (_locker.TryEnterReadLock(0) == false)
                 {
-                    newIncoming.Start();
-                }
-                else
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
-                    }
+                    // db is being disposed — don't orphan
                     newIncoming.Dispose();
+                    return;
+                }
+
+                try
+                {
+                    if (GetCancellationToken().IsCancellationRequested)
+                    {
+                        newIncoming.Dispose();
+                        return;
+                    }
+
+                    var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                        (_, val) => val.IsDisposed ? newIncoming : val);
+
+                    if (current == newIncoming)
+                    {
+                        newIncoming.Start();
+                    }
+                    else
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                        }
+                        newIncoming.Dispose();
+                    }
+                }
+                finally
+                {
+                    _locker.ExitReadLock();
                 }
             }
 

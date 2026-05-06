@@ -260,8 +260,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                     {
                         stats.Complete();
                     }
-                    
+
                     InvokeOnFailed(e);
+                }
+                else
+                {
+                    OnCancellation(e);
                 }
             }
         }
@@ -618,6 +622,11 @@ namespace Raven.Server.Documents.Replication.Incoming
         protected abstract void InvokeOnAttachmentStreamsReceived(int attachmentStreamCount);
 
         protected abstract void InvokeOnFailed(Exception exception);
+
+        protected virtual void OnCancellation(Exception e)
+        {
+            // by default, do nothing - the handler will be cleaned up by the replication loader during dispose
+        }
 
         protected abstract Task HandleBatchAsync(TOperationContext context, DataForReplicationCommand batch, long lastEtag);
 

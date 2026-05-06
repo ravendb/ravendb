@@ -45,6 +45,20 @@ namespace Raven.Server.Documents.Sharding.Handlers
             DestinationDatabaseName = node.Database;
         }
 
+        protected override void HandleReplicationErrors(Action replicationAction)
+        {
+            try
+            {
+                base.HandleReplicationErrors(replicationAction);
+            }
+            finally
+            {
+                // The parent awaits _firstChangeVector in GetInitialHandshakeResponseFromShardsAsync.
+                // If we exited via cancellation, OnFailed was skipped — set it here so the await unblocks.
+                _firstChangeVector.TrySetCanceled();
+            }
+        }
+
         protected override void Replicate()
         {
             ReplicationBatch batch = null;

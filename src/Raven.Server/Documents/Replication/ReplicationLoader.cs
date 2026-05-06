@@ -50,7 +50,6 @@ namespace Raven.Server.Documents.Replication
 
         private readonly Timer _reconnectAttemptTimer;
         private long _reconnectInProgress;
-        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
 
         public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
 
@@ -499,23 +498,49 @@ namespace Raven.Server.Documents.Replication
                 outgoingReplication.PathsToSend = DetailedReplicationHubAccess.Preferred(header.ReplicationHubAccess.AllowedHubToSinkPaths, header.ReplicationHubAccess.AllowedSinkToHubPaths);
             }
 
-            if (_outgoing.TryAdd(outgoingReplication) == false)
+            if (_locker.TryEnterReadLock(0) == false)
+            {
+                // db is being disposed
+                DisposeConnection(tcpConnectionOptions, outgoingReplication);
+                return;
+            }
+
+            try
+            {
+                if (GetCancellationToken().IsCancellationRequested || _outgoing.TryAdd(outgoingReplication) == false)
+                {
+                    DisposeConnection(tcpConnectionOptions, outgoingReplication);
+                    return;
+                }
+
+                outgoingReplication.Failed += OnOutgoingSendingFailed;
+                outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
+                outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
+
+                // tcp ownership - the tcp is passed as a scope of the replication so that it can be properly disposed.
+                // StartPullReplicationAsHub launches a long-running thread and returns — safe to hold the read lock across it.
+                outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions, tcpConnectionOptions.Stream, supportedVersions);
+                OutgoingReplicationAdded?.Invoke(outgoingReplication);
+            }
+            finally
+            {
+                _locker.ExitReadLock();
+            }
+        }
+
+        private static void DisposeConnection(TcpConnectionOptions tcpConnectionOptions, OutgoingPullReplicationHandlerAsHub outgoingReplication)
+        {
+            try
             {
                 using (tcpConnectionOptions)
                 using (outgoingReplication)
                 {
-
                 }
-                return;
             }
-
-            outgoingReplication.Failed += OnOutgoingSendingFailed;
-            outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
-            outgoingReplication.SuccessfulReplication += ResetReplicationFailuresInfo;
-
-            // tcp ownership - the tcp is passed as a scope of the replication so that it can be properly disposed.
-            outgoingReplication.StartPullReplicationAsHub(tcpConnectionOptions, tcpConnectionOptions.Stream, supportedVersions);
-            OutgoingReplicationAdded?.Invoke(outgoingReplication);
+            catch
+            {
+                // ignored
+            }
         }
 
         public void RunPullReplicationAsSink(
@@ -543,8 +568,31 @@ namespace Raven.Server.Documents.Replication
                 PoolOfThreads.PooledThread.ResetCurrentThreadName();
                 Thread.CurrentThread.Name = ThreadNames.GetNameToUse(ThreadNames.ForPullReplicationAsSink($"Pull Replication as Sink from {destination.Database} at {destination.Url}", destination.Database, destination.Url));
 
-                _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
-                IncomingReplicationAdded?.Invoke(newIncoming);
+                // Cooperate with ReplicationLoader.Dispose — see CreateIncomingInstance for the full rationale.
+                if (_locker.TryEnterReadLock(0) == false)
+                {
+                    newIncoming.Dispose();
+                    return;
+                }
+
+                try
+                {
+                    if (GetCancellationToken().IsCancellationRequested)
+                    {
+                        newIncoming.Dispose();
+                        return;
+                    }
+
+                    _incoming[newIncoming.ConnectionInfo.SourceDatabaseId] = newIncoming;
+                    IncomingReplicationAdded?.Invoke(newIncoming);
+                }
+                finally
+                {
+                    _locker.ExitReadLock();
+                }
+
+                // DoIncomingReplication runs the blocking receive loop on this thread — must be outside the
+                // read lock so Dispose can acquire the write lock when shutdown is triggered.
                 newIncoming.DoIncomingReplication();
 
                 void RetryPullReplication(IncomingReplicationHandler instance, Exception e)
@@ -577,23 +625,45 @@ namespace Raven.Server.Documents.Replication
             var newIncoming = CreateIncomingReplicationHandler(tcpConnectionOptions, buffer, pullReplicationParams);
             newIncoming.Failed += OnIncomingReceiveFailed;
 
-            // need to safeguard against two concurrent connection attempts
-            var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
-                (_, val) => val.IsDisposed ? newIncoming : val);
-
-            if (current == newIncoming)
+            // Cooperate with ReplicationLoader.Dispose() which takes the write lock and iterates _incoming.
+            // Without this guard a handler can race into _incoming after Dispose iterated and end up orphaned
+            if (_locker.TryEnterReadLock(0) == false)
             {
-                newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming);
-                ForceTryReconnectAll();
-            }
-            else
-            {
-                if (_logger.IsInfoEnabled)
-                {
-                    _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
-                }
+                // the db being disposed
                 newIncoming.Dispose();
+                return;
+            }
+
+            try
+            {
+                if (GetCancellationToken().IsCancellationRequested)
+                {
+                    newIncoming.Dispose();
+                    return;
+                }
+
+                // need to safeguard against two concurrent connection attempts
+                var current = _incoming.AddOrUpdate(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming,
+                    (_, val) => val.IsDisposed ? newIncoming : val);
+
+                if (current == newIncoming)
+                {
+                    newIncoming.Start();
+                    IncomingReplicationAdded?.Invoke(newIncoming);
+                    ForceTryReconnectAll();
+                }
+                else
+                {
+                    if (_logger.IsInfoEnabled)
+                    {
+                        _logger.Info("you can't add two identical connections.", new InvalidOperationException("you can't add two identical connections."));
+                    }
+                    newIncoming.Dispose();
+                }
+            }
+            finally
+            {
+                _locker.ExitReadLock();
             }
         }
 

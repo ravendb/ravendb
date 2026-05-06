@@ -35,7 +35,7 @@ namespace Raven.Server.Documents.Replication
         where TContextPool : JsonContextPoolBase<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
-        private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
+        protected readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
         private int _replicationStatsId;
         private readonly string _databaseName;
         public readonly TContextPool ContextPool;

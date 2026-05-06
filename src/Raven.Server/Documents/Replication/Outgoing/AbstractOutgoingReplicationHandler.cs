@@ -193,8 +193,24 @@ namespace Raven.Server.Documents.Replication.Outgoing
                     using (_interruptibleRead)
                     {
                         InitialHandshake();
+
+                        // Mirror RavenServer.DispatchDatabaseTcpConnection's check
+                        if (_cts.IsCancellationRequested)
+                        {
+                            _tcpConnectionOptions.Dispose();
+                            return;
+                        }
+
                         _tcpConnectionOptions.DocumentDatabase?.RunningTcpConnections.Add(_tcpConnectionOptions);
                         _tcpConnectionOptions.DatabaseContext?.RunningTcpConnections.Add(_tcpConnectionOptions);
+
+                        // Re-check: shutdown may have landed between the check above and the Add.
+                        if (_cts.IsCancellationRequested)
+                        {
+                            _tcpConnectionOptions.Dispose();
+                            return;
+                        }
+
                         Replicate();
                     }
                 }
@@ -830,39 +846,53 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (_disposed.Raise() == false)
                 return;
 
-            var timeout = _server.Engine.TcpConnectionTimeout;
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Disposing {GetType().FullName} ({FromToString}) [Timeout:{timeout}]");
-
-            OnBeforeDispose();
-
-            _cts.Cancel();
-
-            _tcpConnectionOptions.Dispose();
-            DisposeTcpClient();
-
-            _connectionDisposed.Set();
-
-            if (_longRunningSendingWork != null && _longRunningSendingWork != PoolOfThreads.LongRunningWork.Current)
-            {
-                while (_longRunningSendingWork.Join((int)timeout.TotalMilliseconds) == false)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
-                    DisposeTcpClient();
-                }
-            }
-
             try
             {
-                _cts.Dispose();
-            }
-            catch (ObjectDisposedException)
-            {
-                //was already disposed? we don't care, we are disposing
-            }
+                var timeout = _server.Engine.TcpConnectionTimeout;
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Disposing {GetType().FullName} ({FromToString}) [Timeout:{timeout}]");
 
-            _connectionDisposed.Dispose();
+                OnBeforeDispose();
+
+                _cts.Cancel();
+
+                DisposeTcpClient();
+
+                _connectionDisposed.Set();
+
+                if (_longRunningSendingWork != null && _longRunningSendingWork != PoolOfThreads.LongRunningWork.Current)
+                {
+                    while (_longRunningSendingWork.Join((int)timeout.TotalMilliseconds) == false)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info($"Waited {timeout} for timeout to occur, but still this thread is keep on running. Will wait another {timeout} ");
+                        DisposeTcpClient();
+                    }
+                }
+
+                try
+                {
+                    _cts.Dispose();
+                }
+                catch (ObjectDisposedException)
+                {
+                    //was already disposed? we don't care, we are disposing
+                }
+
+                _connectionDisposed.Dispose();
+            }
+            finally
+            {
+                // Idempotent — safe even if Dispose() above already ran.
+                try
+                {
+                    _tcpConnectionOptions?.Dispose();
+                }
+                catch
+                {
+                    // idempotent + defensive
+                }
+            }
         }
 
         private void DisposeTcpClient()
