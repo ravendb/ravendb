@@ -67,9 +67,10 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     {
         using (var store = GetDocumentStore())
         {
+            var usersQueueName = "users" + QueueNameSuffix;
             var config = SetupQueueEtlToAzureQueueStorageOnline(store,
-                @$"loadToUsers(this)", new[] { "users" },
-                new[] { new EtlQueue { Name = $"users" } });
+                @$"loadToUsers{QueueNameSuffix}(this)", new[] { "users" },
+                new[] { new EtlQueue { Name = usersQueueName } });
 
             using (var session = store.OpenSession())
             {
@@ -324,9 +325,10 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
     {
         using (var store = GetDocumentStore())
         {
+            var usersQueueName = "users" + QueueNameSuffix;
             var config = SetupQueueEtlToAzureQueueStorageOnline(store,
-                @$"loadToUsers(this)", new[] { "Users" },
-                new[] { new EtlQueue { Name = $"Users", DeleteProcessedDocuments = true } });
+                @$"loadToUsers{QueueNameSuffix}(this)", new[] { "Users" },
+                new[] { new EtlQueue { Name = usersQueueName, DeleteProcessedDocuments = true } });
 
             var etlDone = Etl.WaitForEtlToComplete(store);
 
@@ -338,7 +340,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
 
             await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-            QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, "users");
+            QueueClient queueClient = CreateAzureQueueStorageClient(AzureQueueStorageConnectionString, usersQueueName);
             var message = await queueClient.ReceiveMessageAsync();
             var user = JsonConvert.DeserializeObject<CloudEventUserData>(message.Value.MessageText).Data;
 
