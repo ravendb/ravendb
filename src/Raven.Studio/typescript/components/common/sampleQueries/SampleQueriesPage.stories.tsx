@@ -2,7 +2,6 @@ import React from "react";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import SampleQueriesPage from "./SampleQueriesPage";
-import { mockStore } from "test/mocks/store/MockStore";
 import { SampleScript, MethodGroup } from "./partials/sampleQueriesTypes";
 
 export default {
@@ -37,14 +36,15 @@ const sampleMethodGroups: MethodGroup[] = [
 export const Default: StoryObj = {
     name: "Sample Queries",
     render: () => {
-        mockStore.databases.withActiveDatabase_NonSharded_SingleNode();
-
         return (
             <SampleQueriesPage
                 title="Sample Queries"
+                icon="patch"
                 scripts={sampleScripts}
                 methodGroups={sampleMethodGroups}
-                backUrl="#"
+                onClose={() => {
+                    /* no-op */
+                }}
                 onUpdateScript={() => {
                     /* no-op */
                 }}

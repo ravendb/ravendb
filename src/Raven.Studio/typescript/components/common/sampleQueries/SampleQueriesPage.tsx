@@ -9,18 +9,20 @@ import Card from "react-bootstrap/Card";
 import { AboutViewHeading } from "components/common/AboutView";
 import { FlexGrow } from "components/common/FlexGrow";
 import { Icon } from "components/common/Icon";
-import { SampleScript, MethodGroup } from "./partials/sampleQueriesTypes";
+import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
 import "./SampleQueriesPage.scss";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
+import IconName from "../../../../typings/server/icons";
 
 type ActiveTab = "scripts" | "methods";
 
 interface SampleQueriesPageProps {
-    title: ReactNode;
+    title: string;
+    icon?: IconName;
     scripts: SampleScript[];
     methodGroups: MethodGroup[];
-    backUrl: string;
+    onClose: () => void;
     initialScript?: string;
     aboutView?: ReactNode;
     onUpdateScript: (script: string) => void;
@@ -28,9 +30,10 @@ interface SampleQueriesPageProps {
 
 export default function SampleQueriesPage({
     title,
+    icon,
     scripts,
     methodGroups,
-    backUrl,
+    onClose,
     initialScript = "",
     aboutView,
     onUpdateScript,
@@ -42,19 +45,22 @@ export default function SampleQueriesPage({
         setScript(initialScript);
     };
 
-    const handleSelectSample = (sampleScript: string) => {
-        setScript(sampleScript);
-    };
-
     return (
-        <div className="content-padding h-100 vstack gap-3 sample-queries-page">
-            <div className="flex-shrink-0 hstack gap-2 align-items-start">
-                <AboutViewHeading marginBottom={4} title={title} backUrl={backUrl} />
+        <div className="bs5 content-padding h-100 vstack gap-3 sample-queries-page">
+            <div className="hstack gap-2 align-items-center mb-4">
+                <Icon
+                    onClick={onClose}
+                    icon="arrow-thin-left"
+                    size="lg"
+                    margin="me-1"
+                    className="hover-filter link-muted cursor-pointer"
+                />
+                <AboutViewHeading marginBottom={0} title={title} icon={icon} />
                 <FlexGrow />
                 {aboutView}
             </div>
 
-            <div className="d-flex gap-2 mb-2">
+            <div className="d-flex gap-2 mb-3">
                 <Button variant="primary" onClick={() => onUpdateScript(script)}>
                     <Icon icon="save" />
                     Update script
@@ -65,12 +71,12 @@ export default function SampleQueriesPage({
                 </Button>
             </div>
             <Row className="d-flex flex-row flex-grow-1 overflow-hidden">
-                <Col xs={6} className="overflow-hidden">
+                <Col xs={6} className="d-flex flex-column overflow-hidden">
                     <AceEditor mode="rql" value={script} onChange={setScript} minHeight={300} />
                 </Col>
 
-                <Col xs={6} className="vstack overflow-hidden">
-                    <Card className="vstack panel-bg-1 border border-color-light border-1 rounded h-100 overflow-hidden">
+                <Col xs={6} className="d-flex flex-column overflow-hidden h-100">
+                    <Card className="vstack panel-bg-1 border border-color-light border-1 rounded flex-grow-1 overflow-hidden">
                         <Tab.Container
                             mountOnEnter
                             unmountOnExit
@@ -95,7 +101,7 @@ export default function SampleQueriesPage({
                             <div className="flex-grow-1 overflow-y-auto">
                                 <Tab.Content>
                                     <Tab.Pane eventKey="scripts">
-                                        <SampleScriptsList scripts={scripts} onSelect={handleSelectSample} />
+                                        <SampleScriptsList scripts={scripts} onSelect={setScript} />
                                     </Tab.Pane>
                                     <Tab.Pane eventKey="methods">
                                         <MethodsTable methodGroups={methodGroups} />

@@ -1,4 +1,4 @@
-<div class="flex-window patch content-margin" id="patchContainer">
+<div class="bs3 flex-window patch content-margin position-relative" id="patchContainer">
     <div class="flex-window-head">
         <div id="patch-target" >
             <div class="clearfix toolbar">
@@ -19,8 +19,7 @@
                 <div class="row">
                     <div class="col-sm-3 col-lg-2">
                         <h2 class="on-base-background">Patch</h2>
-                        <a href="#" class="syntax-help" data-bind="click: syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a>
-                        <a href="#" data-bind="click: navigateToSamples" class="syntax-help"><small>Samples <i class="icon-patch"></i></small></a>
+                        <a href="#" data-bind="click: openSamples" class="syntax-help"><small>Samples <i class="icon-patch"></i></small></a>
                     </div>
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
@@ -72,6 +71,7 @@
     </div>
     <div id="test-container" data-bind="template: { name: 'test-component' }, collapse: test.testMode()"></div>
 </div>
+<div data-bind="visible: showSamples, react: samplesView" class="patch-samples-overlay"></div>
 <div class="backdrop"></div>
 
 <script type="text/html" id="test-component">
