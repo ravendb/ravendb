@@ -290,7 +290,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                         {
                             Name = "simulate",
                             ConnectionStringName = "simulate",
-                            Queues = { new EtlQueue() { Name = "Orders" } },
+                            Queues = { new EtlQueue() { Name = "Orders" + QueueNameSuffix } },
                             BrokerType = QueueBrokerType.AzureQueueStorage,
                             Transforms =
                             {
@@ -308,7 +308,7 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
 
                     Assert.Equal(1, result.Summary.Count);
 
-                    Assert.Equal("Orders", result.Summary[0].QueueName);
+                    Assert.Equal("Orders" + QueueNameSuffix, result.Summary[0].QueueName);
                     Assert.Equal("orders/1-A", result.Summary[0].Messages[0].Attributes.Id);
                     Assert.Equal("com.github.users", result.Summary[0].Messages[0].Attributes.Type);
                     Assert.Equal("/registrations/direct-signup",
