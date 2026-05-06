@@ -2,95 +2,98 @@ import { EmptySet } from "components/common/EmptySet";
 import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppSelector } from "components/store";
-import { FieldArrayPath, FieldName, FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { FieldPath, useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import Accordion from "react-bootstrap/Accordion";
 import AccordionButton from "react-bootstrap/AccordionButton";
-import Breadcrumb from "react-bootstrap/Breadcrumb";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { FormAceEditor, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import { ReactNode } from "react";
+import {
+    RootTablePath,
+    LinkedTablePath,
+    EmbeddedTablePath,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
-type FormTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
-type FormEmbeddedTable = NonNullable<FormTable["embeddedTables"]>[number];
 
 export default function EditCdcSinkTaskTableEditor() {
-    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     if (!activeTable) {
         return <EmptySet>Select a table to view its configuration details.</EmptySet>;
     }
 
-    const currentPath = activeTable.current.path;
+    const currentPath = activeTable.path;
 
     return (
         <div className="cdc-table-editor" key={currentPath}>
             <div className="hstack p-2 border-bottom border-secondary">
-                <Breadcrumb className="mb-0">
-                    {activeTable.parents.map((parent, idx) => (
-                        <Breadcrumb.Item key={idx}>{parent.label}</Breadcrumb.Item>
+                {/* <Breadcrumb className="mb-0">
+                    {breadcrumbs.map((part, idx) => (
+                        <Breadcrumb.Item key={idx} active={idx === breadcrumbs.length - 1}>
+                            {part.fieldName}
+                        </Breadcrumb.Item>
                     ))}
-                    <Breadcrumb.Item active>{activeTable.current.label}</Breadcrumb.Item>
-                </Breadcrumb>
-                {activeTable.current.type === "root" && (
-                    <FormSwitch control={control} name={getFormFieldPath(`${currentPath}.disabled`)}>
-                        Disabled
-                    </FormSwitch>
-                )}
-                <Button variant="info" className="ms-auto">
-                    <Icon icon="rocket" />
-                    Test
-                </Button>
+                </Breadcrumb> */}
+                <div className="ms-auto hstack gap-2 align-items-center">
+                    {activeTable.type === "root" && (
+                        <FormSwitch control={control} name={`${activeTable.path}.disabled`}>
+                            Disabled
+                        </FormSwitch>
+                    )}
+                    <Button variant="info">
+                        <Icon icon="rocket" />
+                        Test
+                    </Button>
+                </div>
             </div>
             <div className="p-2">
-                {activeTable.current.type === "root" && <RootTableEditor />}
-                {activeTable.current.type === "linked" && <LinkedTableEditor />}
-                {activeTable.current.type === "embedded" && <EmbeddedTableEditor />}
+                {activeTable.type === "root" && <RootTableEditor path={activeTable.path} />}
+                {activeTable.type === "linked" && <LinkedTableEditor path={activeTable.path} />}
+                {activeTable.type === "embedded" && <EmbeddedTableEditor path={activeTable.path} />}
             </div>
         </div>
     );
 }
 
-function RootTableEditor() {
-    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
+function RootTableEditor({ path }: { path: RootTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const tablePath = activeTable.current.path;
-
-    const getRootFieldName = (field: keyof FormTable) => getFormFieldPath(`${tablePath}.${field}`);
-
-    const getColumnsFieldName = (idx: number, field: FieldName<NonNullable<FormTable["columns"]>[number]>) =>
-        getFormFieldPath(`${tablePath}.columns.${idx}.${field}`);
 
     const columnsFieldArray = useFieldArray({
         control,
-        name: getFormFieldArrayPath(`${tablePath}.columns`),
+        name: `${path}.columns`,
     });
-    const hasAdvancedValues = useHasRootAdvancedValues(tablePath);
+
+    const patch = useWatch({ control, name: `${path}.patch` });
+    const ignoreDeletes = useWatch({ control, name: `${path}.onDelete.ignoreDeletes` });
+    const deletePatch = useWatch({ control, name: `${path}.onDelete.patch` });
+
+    const hasAdvancedValues = Boolean(patch || ignoreDeletes || deletePatch);
 
     return (
         <div>
             <div className="grid">
                 <FormGroup className="g-col-4">
                     <FormLabel>Collection name</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("collectionName")} />
+                    <FormInput type="text" control={control} name={`${path}.collectionName`} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("sourceTableSchema")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableSchema`} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getRootFieldName("sourceTableName")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
             <StringValueListEditor
                 title="Primary key columns"
                 addButtonLabel="Add primary key column"
-                fieldArrayPath={`${tablePath}.primaryKeyColumns`}
+                path={`${path}.primaryKeyColumns`}
             />
             <div className="hstack justify-content-between mb-1">
                 <div>Field mapping</div>
@@ -114,12 +117,12 @@ function RootTableEditor() {
                 <div className="bg-body rounded-bottom p-1 vstack gap-1">
                     {columnsFieldArray.fields.map((field, idx) => (
                         <div key={field.id} className="field-mapping-row">
-                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "column")} />
+                            <FormInput type="text" control={control} name={`${path}.columns.${idx}.column`} />
                             <Icon icon="arrow-thin-right" margin="m-0" />
-                            <FormInput type="text" control={control} name={getColumnsFieldName(idx, "name")} />
+                            <FormInput type="text" control={control} name={`${path}.columns.${idx}.name`} />
                             <FormSelect
                                 control={control}
-                                name={getColumnsFieldName(idx, "type")}
+                                name={`${path}.columns.${idx}.type`}
                                 options={columnTypeOptions}
                             />
                             <Button
@@ -135,8 +138,8 @@ function RootTableEditor() {
                 </div>
             </div>
             <AdvancedSettings hasAdvancedValues={hasAdvancedValues}>
-                <PatchAdvancedField tablePath={tablePath} />
-                <OnDeleteAdvancedFields tablePath={tablePath} />
+                <PatchAdvancedField path={path} />
+                <OnDeleteFields path={path} />
             </AdvancedSettings>
         </div>
     );
@@ -154,108 +157,99 @@ const relationTypeOptions: SelectOption<CdcSinkRelationType>[] = [
     { value: "Value", label: "Value" },
 ];
 
-function LinkedTableEditor() {
-    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
+function LinkedTableEditor({ path }: { path: LinkedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-
-    const getLinkedFieldName = (field: keyof NonNullable<FormTable["linkedTables"]>[number]) =>
-        getFormFieldPath(`${activeTable.current.path}.${field}`);
 
     return (
         <div>
             <div className="grid mb-3">
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Property name</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("propertyName")} />
+                    <FormInput type="text" control={control} name={`${path}.propertyName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Linked collection</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("linkedCollectionName")} />
+                    <FormInput type="text" control={control} name={`${path}.linkedCollectionName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("sourceTableSchema")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableSchema`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getLinkedFieldName("sourceTableName")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
-            <StringValueListEditor
-                title="Join columns"
-                addButtonLabel="Add join column"
-                fieldArrayPath={`${activeTable.current.path}.joinColumns`}
-            />
+            <StringValueListEditor title="Join columns" addButtonLabel="Add join column" path={`${path}.joinColumns`} />
         </div>
     );
 }
 
-function EmbeddedTableEditor() {
-    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
+function EmbeddedTableEditor({ path }: { path: EmbeddedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const tablePath = activeTable.current.path;
 
-    const getEmbeddedFieldName = (field: keyof FormEmbeddedTable) => getFormFieldPath(`${tablePath}.${field}`);
-    const hasAdvancedValues = useHasEmbeddedAdvancedValues(tablePath);
+    const caseSensitiveKeys = useWatch({ control, name: `${path}.caseSensitiveKeys` });
+    const patch = useWatch({ control, name: `${path}.patch` });
+    const ignoreDeletes = useWatch({ control, name: `${path}.onDelete.ignoreDeletes` });
+    const deletePatch = useWatch({ control, name: `${path}.onDelete.patch` });
+
+    const hasAdvancedValues = Boolean(caseSensitiveKeys || patch || ignoreDeletes || deletePatch);
 
     return (
         <div>
             <div className="grid mb-3">
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Property name</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("propertyName")} />
+                    <FormInput type="text" control={control} name={`${path}.propertyName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Relation type</FormLabel>
-                    <FormSelect control={control} name={getEmbeddedFieldName("type")} options={relationTypeOptions} />
+                    <FormSelect control={control} name={`${path}.type`} options={relationTypeOptions} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("sourceTableSchema")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableSchema`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={getEmbeddedFieldName("sourceTableName")} />
+                    <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
             <StringValueListEditor
                 title="Primary key columns"
                 addButtonLabel="Add primary key column"
-                fieldArrayPath={`${tablePath}.primaryKeyColumns`}
+                path={`${path}.primaryKeyColumns`}
             />
-            <StringValueListEditor
-                title="Join columns"
-                addButtonLabel="Add join column"
-                fieldArrayPath={`${tablePath}.joinColumns`}
-            />
+            <StringValueListEditor title="Join columns" addButtonLabel="Add join column" path={`${path}.joinColumns`} />
             <AdvancedSettings hasAdvancedValues={hasAdvancedValues}>
                 <FormGroup>
-                    <FormSwitch control={control} name={getEmbeddedFieldName("caseSensitiveKeys")}>
+                    <FormSwitch control={control} name={`${path}.caseSensitiveKeys`}>
                         Case sensitive keys
                     </FormSwitch>
                 </FormGroup>
-                <PatchAdvancedField tablePath={tablePath} />
-                <OnDeleteAdvancedFields tablePath={tablePath} />
+                <PatchAdvancedField path={path} />
+                <OnDeleteFields path={path} />
             </AdvancedSettings>
         </div>
     );
 }
 
+type PrimaryKeyColumnsPath<T = FieldPath<EditCdcSinkTaskFormData>> = T extends `${string}primaryKeyColumns` ? T : never;
+type JoinColumnsPath<T = FieldPath<EditCdcSinkTaskFormData>> = T extends `${string}joinColumns` ? T : never;
+
 interface StringValueListEditorProps {
     title: string;
     addButtonLabel: string;
-    fieldArrayPath: string;
+    path: PrimaryKeyColumnsPath | JoinColumnsPath;
 }
 
-function StringValueListEditor({ title, addButtonLabel, fieldArrayPath }: StringValueListEditorProps) {
+function StringValueListEditor({ title, addButtonLabel, path }: StringValueListEditorProps) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
     const fieldArray = useFieldArray({
         control,
-        name: getFormFieldArrayPath(fieldArrayPath),
+        name: path,
     });
-
-    const getValueFieldName = (idx: number) => getFormFieldPath(`${fieldArrayPath}.${idx}.value`);
 
     return (
         <div className="mb-2">
@@ -269,7 +263,7 @@ function StringValueListEditor({ title, addButtonLabel, fieldArrayPath }: String
             <div className="vstack gap-1">
                 {fieldArray.fields.map((field, idx) => (
                     <div key={field.id} className="hstack gap-1">
-                        <FormInput type="text" control={control} name={getValueFieldName(idx)} />
+                        <FormInput type="text" control={control} name={`${path}.${idx}.value`} />
                         <Button variant="link" className="text-danger" size="sm" onClick={() => fieldArray.remove(idx)}>
                             <Icon icon="trash" margin="m-0" />
                         </Button>
@@ -302,15 +296,15 @@ function AdvancedSettings({ hasAdvancedValues, children }: AdvancedSettingsProps
     );
 }
 
-function OnDeleteAdvancedFields({ tablePath }: { tablePath: string }) {
+function OnDeleteFields({ path }: { path: RootTablePath | EmbeddedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
-    const isIgnoreDeletes = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`) });
+    const isIgnoreDeletes = useWatch({ control, name: `${path}.onDelete.ignoreDeletes` });
 
     return (
         <div>
             <FormGroup>
-                <FormSwitch control={control} name={getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`)}>
+                <FormSwitch control={control} name={`${path}.onDelete.ignoreDeletes`}>
                     Ignore deletes
                 </FormSwitch>
             </FormGroup>
@@ -318,7 +312,7 @@ function OnDeleteAdvancedFields({ tablePath }: { tablePath: string }) {
                 <FormLabel>Delete patch</FormLabel>
                 <FormAceEditor
                     control={control}
-                    name={getFormFieldPath(`${tablePath}.onDelete.patch`)}
+                    name={`${path}.onDelete.patch`}
                     mode="javascript"
                     disabled={Boolean(isIgnoreDeletes)}
                 />
@@ -327,40 +321,13 @@ function OnDeleteAdvancedFields({ tablePath }: { tablePath: string }) {
     );
 }
 
-function PatchAdvancedField({ tablePath }: { tablePath: string }) {
+function PatchAdvancedField({ path }: { path: RootTablePath | EmbeddedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
     return (
         <FormGroup marginClass="mb-0">
             <FormLabel>Patch</FormLabel>
-            <FormAceEditor control={control} name={getFormFieldPath(`${tablePath}.patch`)} mode="javascript" />
+            <FormAceEditor control={control} name={`${path}.patch`} mode="javascript" />
         </FormGroup>
     );
-}
-
-function useHasRootAdvancedValues(tablePath: string) {
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const patch = useWatch({ control, name: getFormFieldPath(`${tablePath}.patch`) });
-    const ignoreDeletes = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`) });
-    const deletePatch = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.patch`) });
-
-    return Boolean(patch || ignoreDeletes || deletePatch);
-}
-
-function useHasEmbeddedAdvancedValues(tablePath: string) {
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const caseSensitiveKeys = useWatch({ control, name: getFormFieldPath(`${tablePath}.caseSensitiveKeys`) });
-    const patch = useWatch({ control, name: getFormFieldPath(`${tablePath}.patch`) });
-    const ignoreDeletes = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`) });
-    const deletePatch = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.patch`) });
-
-    return Boolean(caseSensitiveKeys || patch || ignoreDeletes || deletePatch);
-}
-
-function getFormFieldPath(path: string): FieldPath<EditCdcSinkTaskFormData> {
-    return path as FieldPath<EditCdcSinkTaskFormData>;
-}
-
-function getFormFieldArrayPath(path: string): FieldArrayPath<EditCdcSinkTaskFormData> {
-    return path as FieldArrayPath<EditCdcSinkTaskFormData>;
 }

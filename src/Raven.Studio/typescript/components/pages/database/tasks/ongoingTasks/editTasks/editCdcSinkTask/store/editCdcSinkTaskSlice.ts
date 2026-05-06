@@ -1,21 +1,33 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
+import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
+import { FieldPath } from "react-hook-form/dist/types/path/eager";
+import {
+    EmbeddedTablePath,
+    LinkedTablePath,
+    RootTablePath,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 
-export interface FormTableInfo {
-    type: "root" | "linked" | "embedded";
-    path: string;
-    label: string;
-}
+export type CdcTableType = "root" | "embedded" | "linked";
 
-interface ActiveTable {
-    parents: FormTableInfo[];
-    current: FormTableInfo;
-}
+export type FormTableInfo =
+    | {
+          type: "root";
+          path: RootTablePath;
+      }
+    | {
+          type: "linked";
+          path: LinkedTablePath;
+      }
+    | {
+          type: "embedded";
+          path: EmbeddedTablePath;
+      };
 
 interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
-    activeTable?: ActiveTable;
-    expandedTables: Record<string, boolean>;
+    activeTable?: FormTableInfo;
+    expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
 }
 
 const initialState: EditCdcSinkTaskState = {
@@ -31,14 +43,17 @@ export const editCdcSinkTaskSlice = createSlice({
         connectionStringSelected: (state, action: PayloadAction<SqlConnectionString>) => {
             state.selectedConnectionString = action.payload;
         },
-        activeTableSet: (state, action: PayloadAction<ActiveTable>) => {
+        activeTableSet: (state, action: PayloadAction<FormTableInfo>) => {
             state.activeTable = action.payload;
         },
-        tableExpandedOneToggled: (state, action: PayloadAction<string>) => {
+        tableExpandedOneToggled: (state, action: PayloadAction<FieldPath<EditCdcSinkTaskFormData>>) => {
             const tableName = action.payload;
             state.expandedTables[tableName] = !state.expandedTables[tableName];
         },
-        tableExpandedSet: (state, action: PayloadAction<Record<string, boolean>>) => {
+        tableExpandedSet: (
+            state,
+            action: PayloadAction<Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>>
+        ) => {
             state.expandedTables = action.payload;
         },
         reset: () => initialState,

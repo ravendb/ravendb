@@ -4,20 +4,20 @@ import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import { useMemo, useState } from "react";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { UseFieldArrayReturn } from "react-hook-form";
+import { FieldPath, UseFieldArrayReturn, useFormContext, useWatch } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "components/store";
 import {
     editCdcSinkTaskActions,
     editCdcSinkTaskSelectors,
-    FormTableInfo,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import classNames from "classnames";
-
-type FormTablePath = string;
-type FormTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
-type FormEmbeddedTable = NonNullable<FormTable["embeddedTables"]>[number];
-type FormLinkedTable = NonNullable<FormTable["linkedTables"]>[number];
-type FormTableItem = FormTable | FormEmbeddedTable | FormLinkedTable;
+import {
+    getRootTablePath,
+    castToLinkedTablePath,
+    castToEmbeddedTablePath,
+    EmbeddedTablePath,
+    LinkedTablePath,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 
 interface EditCdcSinkTaskTablesExplorerProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -46,28 +46,20 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
 
         dispatch(
             editCdcSinkTaskActions.activeTableSet({
-                parents: [],
-                current: {
-                    path: getRootTablePath(tablesFieldArray.fields.length),
-                    type: "root",
-                    label: "Unassigned table",
-                },
+                type: "root",
+                path: getRootTablePath(tablesFieldArray.fields.length),
             })
         );
     };
 
-    const handleCollapseAll = () => {
-        const newExpandedState = Object.fromEntries(
-            getExpandableTablePaths(tablesFieldArray.fields).map((path) => [path, false])
-        );
-        dispatch(editCdcSinkTaskActions.tableExpandedSet(newExpandedState));
-    };
+    const handleExpandedSet = (isExpanded: boolean) => {
+        const expanded: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>> = {};
+        tablesFieldArray.fields.forEach((_, idx) => {
+            const path = getRootTablePath(idx);
+            expanded[path] = isExpanded;
+        });
 
-    const handleExpandAll = () => {
-        const newExpandedState = Object.fromEntries(
-            getExpandableTablePaths(tablesFieldArray.fields).map((path) => [path, true])
-        );
-        dispatch(editCdcSinkTaskActions.tableExpandedSet(newExpandedState));
+        dispatch(editCdcSinkTaskActions.tableExpandedSet(expanded));
     };
 
     return (
@@ -88,7 +80,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                     size="xs"
                     className="text-body"
                     title="Collapse all tables"
-                    onClick={handleCollapseAll}
+                    onClick={() => handleExpandedSet(false)}
                 >
                     <Icon icon="collapse-vertical" margin="m-0" />
                 </Button>
@@ -97,7 +89,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                     size="xs"
                     className="text-body"
                     title="Expand all tables"
-                    onClick={handleExpandAll}
+                    onClick={() => handleExpandedSet(true)}
                 >
                     <Icon icon="expand-vertical" margin="m-0" />
                 </Button>
@@ -120,7 +112,6 @@ interface TableItemsProps {
 }
 
 function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
-    console.log("kalczur tablesFieldArray", tablesFieldArray);
     const formTables = useMemo(
         () => tablesFieldArray.fields.map((table, idx) => ({ table, formIdx: idx })),
         [tablesFieldArray.fields]
@@ -145,52 +136,45 @@ function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
     return (
         <div className="vstack gap-1 overflow-y-auto flex-grow-0">
             {filteredTables.map(({ table, formIdx }) => (
-                <TableItem
-                    key={table.id}
-                    table={table}
-                    path={getRootTablePath(formIdx)}
-                    depth={0}
-                    type="root"
-                    isRootDisabled={table.disabled}
-                />
+                <RootTableItem key={table.id} formIdx={formIdx} />
             ))}
         </div>
     );
 }
 
-interface TableItemProps {
-    table: FormTableItem;
-    path: FormTablePath;
-    depth: number;
-    type: "root" | "linked" | "embedded";
-    parents?: FormTableInfo[];
-    isRootDisabled?: boolean;
+interface RootTableItemProps {
+    formIdx: number;
 }
 
-function TableItem({ table, path, depth = 0, type = "root", parents = [], isRootDisabled = false }: TableItemProps) {
+function RootTableItem({ formIdx }: RootTableItemProps) {
     const dispatch = useAppDispatch();
     const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
-    const hasChildren = hasChildTables(table);
-    const label = getTableLabel(table);
+    const path = getRootTablePath(formIdx);
+
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const isDisabled = useWatch({ control, name: `${path}.disabled` });
+    const linkedTables = useWatch({ control, name: `${path}.linkedTables` });
+    const embeddedTables = useWatch({ control, name: `${path}.embeddedTables` });
+    const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
+
+    const hasChildren = embeddedTables.length > 0 || linkedTables.length > 0;
+    const label = sourceTableName || "Unassigned table";
     const isExpanded = expandedTables[path];
 
-    const isActive = activeTable?.current.path === path;
-
-    const parentsWithCurrent: FormTableInfo[] = [...parents, { path, type, label }];
+    const isActive = activeTable?.path === path;
 
     const handleClick = () => {
-        dispatch(editCdcSinkTaskActions.activeTableSet({ parents, current: { path, type, label } }));
+        dispatch(editCdcSinkTaskActions.activeTableSet({ path, type: "root" }));
         dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
     };
 
-    // TODO test disabled
     return (
         <div className="vstack gap-1">
             <Button
                 variant={isActive ? "secondary" : "link"}
-                className={classNames("text-body text-start hstack", { disabled: isRootDisabled })}
+                className={classNames("text-body text-start hstack", { "opacity-50": isDisabled })}
                 onClick={handleClick}
                 title={label}
                 style={{ paddingInline: "2px" }}
@@ -204,34 +188,20 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [], isRoot
                 <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
                     {label}
                 </span>
-                {type === "linked" && <Icon icon="link" margin="ms-1" className="font-size-14" />}
-                {type === "embedded" && <Icon icon="embed" margin="ms-1" className="font-size-14" />}
             </Button>
             {hasChildren && isExpanded && (
                 <div
                     className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"
-                    style={{ marginLeft: (depth + 1) * 9 }}
+                    style={{ marginLeft: "9px" }}
                 >
-                    {getLinkedTables(table).map((linked, idx) => (
-                        <TableItem
-                            key={`${path}.linkedTables.${idx}`}
-                            type="linked"
-                            table={linked}
-                            depth={depth + 1}
-                            parents={parentsWithCurrent}
-                            path={`${path}.linkedTables.${idx}`}
-                            isRootDisabled={isRootDisabled}
-                        />
+                    {linkedTables.map((_, idx) => (
+                        <LinkedTableItem key={idx} path={`${path}.linkedTables.${idx}`} isRootDisabled={isDisabled} />
                     ))}
-                    {getEmbeddedTables(table).map((embedded, idx) => (
-                        <TableItem
-                            key={`${path}.embeddedTables.${idx}`}
-                            type="embedded"
-                            table={embedded}
-                            depth={depth + 1}
-                            parents={parentsWithCurrent}
+                    {embeddedTables.map((_, idx) => (
+                        <EmbeddedTableItem
+                            key={idx}
                             path={`${path}.embeddedTables.${idx}`}
-                            isRootDisabled={isRootDisabled}
+                            isRootDisabled={isDisabled}
                         />
                     ))}
                 </div>
@@ -240,40 +210,118 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [], isRoot
     );
 }
 
-function getRootTablePath(idx: number): FormTablePath {
-    return `tables.${idx}`;
+interface LinkedTableItemProps {
+    path: LinkedTablePath;
+    isRootDisabled: boolean;
 }
 
-function getExpandableTablePaths(tables: EditCdcSinkTaskFormData["tables"]): FormTablePath[] {
-    return (tables ?? []).flatMap((table, idx) => getExpandableTablePathsForTable(table, getRootTablePath(idx)));
-}
+function LinkedTableItem({ path, isRootDisabled }: LinkedTableItemProps) {
+    const dispatch = useAppDispatch();
+    const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
+    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
-function getExpandableTablePathsForTable(table: FormTableItem, path: FormTablePath): FormTablePath[] {
-    const childPaths = getEmbeddedTables(table).flatMap((embedded, idx) =>
-        getExpandableTablePathsForTable(embedded, `${path}.embeddedTables.${idx}`)
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
+
+    const label = sourceTableName || "Unassigned table";
+    const isExpanded = expandedTables[path];
+
+    const isActive = activeTable?.path === path;
+
+    const handleClick = () => {
+        dispatch(editCdcSinkTaskActions.activeTableSet({ path, type: "linked" }));
+        dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
+    };
+
+    return (
+        <div className="vstack gap-1">
+            <Button
+                variant={isActive ? "secondary" : "link"}
+                className={classNames("text-body text-start hstack", { "opacity-50": isRootDisabled })}
+                onClick={handleClick}
+                title={label}
+                style={{ paddingInline: "2px" }}
+            >
+                <Icon
+                    icon={isExpanded ? "chevron-down" : "chevron-right"}
+                    className="font-size-12 opacity-0"
+                    margin="m-0"
+                    style={{ paddingTop: "4px" }}
+                />
+                <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
+                    {label}
+                </span>
+            </Button>
+        </div>
     );
-
-    return hasChildTables(table) ? [path, ...childPaths] : childPaths;
 }
 
-function getTableLabel(table: FormTableItem) {
-    const unassignedLabel = "Unassigned table";
-
-    if (!table.sourceTableSchema) {
-        return table.sourceTableName || unassignedLabel;
-    }
-
-    return `${table.sourceTableSchema}.${table.sourceTableName || unassignedLabel}`;
+interface EmbeddedTableItemProps {
+    path: EmbeddedTablePath;
+    isRootDisabled: boolean;
 }
 
-function hasChildTables(table: FormTableItem) {
-    return getLinkedTables(table).length > 0 || getEmbeddedTables(table).length > 0;
-}
+function EmbeddedTableItem({ path, isRootDisabled }: EmbeddedTableItemProps) {
+    const dispatch = useAppDispatch();
+    const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
+    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
-function getLinkedTables(table: FormTableItem): FormLinkedTable[] {
-    return "linkedTables" in table ? (table.linkedTables ?? []) : [];
-}
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const embeddedTables = useWatch({ control, name: `${path}.embeddedTables` });
+    const linkedTables = useWatch({ control, name: `${path}.linkedTables` });
+    const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
 
-function getEmbeddedTables(table: FormTableItem): FormEmbeddedTable[] {
-    return "embeddedTables" in table ? (table.embeddedTables ?? []) : [];
+    const hasChildren = embeddedTables.length > 0 || linkedTables.length > 0;
+    const label = sourceTableName || "Unassigned table";
+    const isExpanded = expandedTables[path];
+
+    const isActive = activeTable?.path === path;
+
+    const handleClick = () => {
+        dispatch(editCdcSinkTaskActions.activeTableSet({ path, type: "embedded" }));
+        dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
+    };
+
+    return (
+        <div className="vstack gap-1">
+            <Button
+                variant={isActive ? "secondary" : "link"}
+                className={classNames("text-body text-start hstack", { "opacity-50": isRootDisabled })}
+                onClick={handleClick}
+                title={label}
+                style={{ paddingInline: "2px" }}
+            >
+                <Icon
+                    icon={isExpanded ? "chevron-down" : "chevron-right"}
+                    className={classNames("font-size-12", { "opacity-0": !hasChildren })}
+                    margin="m-0"
+                    style={{ paddingTop: "4px" }}
+                />
+                <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
+                    {label}
+                </span>
+            </Button>
+            {hasChildren && isExpanded && (
+                <div
+                    className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"
+                    style={{ marginLeft: "9px" }}
+                >
+                    {linkedTables.map((_, idx) => (
+                        <LinkedTableItem
+                            key={idx}
+                            path={castToLinkedTablePath(`${path}.linkedTables.${idx}`)}
+                            isRootDisabled={isRootDisabled}
+                        />
+                    ))}
+                    {embeddedTables.map((_, idx) => (
+                        <EmbeddedTableItem
+                            key={idx}
+                            path={castToEmbeddedTablePath(`${path}.embeddedTables.${idx}`)}
+                            isRootDisabled={isRootDisabled}
+                        />
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 }
