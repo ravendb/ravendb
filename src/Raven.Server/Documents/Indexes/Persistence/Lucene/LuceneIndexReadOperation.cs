@@ -651,9 +651,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in orderByFields)
             {
-                if (field.NullFirst.HasValue)
+                if (field.NullsOrdering != NullsOrderingType.Implicit)
                     throw new InvalidQueryException(
-                        "ORDER BY ... NULLS FIRST / NULLS LAST is not available for the Lucene indexing engine, only in the Corax indexing engine.",
+                        "ORDER BY ... NULLS FIRST / NULLS LAST is not available for the Lucene, only in the Corax search engine.",
                         query.Metadata.QueryText, query.QueryParameters);
 
                 if (field.OrderingType == OrderByFieldType.Random)

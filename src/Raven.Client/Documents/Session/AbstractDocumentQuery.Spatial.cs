@@ -79,97 +79,97 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude)
+        public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor);
+            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, double latitude, double longitude)
+        public void OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
         {
-            OrderByDistance(fieldName, latitude, longitude, 0);
+            OrderByDistance(fieldName, latitude, longitude, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor)
+        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName));
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(DynamicSpatialField field, string shapeWkt)
+        public void OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             AssertIsDynamicQuery(field, nameof(OrderByDistance));
 
-            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor);
+            OrderByDistance($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, string shapeWkt)
+        public void OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
         {
-            OrderByDistance(fieldName, shapeWkt, 0);
+            OrderByDistance(fieldName, shapeWkt, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
+        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt), roundFactorParameterName));
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude)
+        public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor);
+            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor, nulls);
         }
 
-        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
         {
-            OrderByDistanceDescending(fieldName, latitude, longitude, 0);
+            OrderByDistanceDescending(fieldName, latitude, longitude, 0, nulls);
         }
         /// <inheritdoc />
-        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor)
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName));
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt)
+        public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
 
             AssertIsDynamicQuery(field, nameof(OrderByDistanceDescending));
 
-            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor);
+            OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor, nulls);
         }
 
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
         {
-            OrderByDistanceDescending(fieldName, shapeWkt, 0);
+            OrderByDistanceDescending(fieldName, shapeWkt, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor)
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
         {
             string factorParamName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
 
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt), factorParamName));
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt), factorParamName, nulls));
         }
         
         private void AssertIsDynamicQuery(DynamicSpatialField dynamicField, string methodName)

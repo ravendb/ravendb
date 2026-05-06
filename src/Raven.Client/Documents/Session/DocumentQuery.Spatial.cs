@@ -84,170 +84,170 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistance(field, latitude, longitude);
+            OrderByDistance(field, latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistance(field(new DynamicSpatialFieldFactory<T>(Conventions)), latitude, longitude);
+            OrderByDistance(field(new DynamicSpatialFieldFactory<T>(Conventions)), latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistance(field, shapeWkt);
+            OrderByDistance(field, shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistance(field(new DynamicSpatialFieldFactory<T>(Conventions)), shapeWkt);
+            OrderByDistance(field(new DynamicSpatialFieldFactory<T>(Conventions)), shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistance(propertySelector.ToPropertyPath(Conventions), latitude, longitude);
+            OrderByDistance(propertySelector.ToPropertyPath(Conventions), latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistance(fieldName, latitude, longitude);
+            OrderByDistance(fieldName, latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistance(propertySelector.ToPropertyPath(Conventions), shapeWkt);
+            OrderByDistance(propertySelector.ToPropertyPath(Conventions), shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistance(fieldName, shapeWkt);
+            OrderByDistance(fieldName, shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(field, latitude, longitude);
+            OrderByDistanceDescending(field, latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(Conventions)), latitude, longitude);
+            OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(Conventions)), latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(field, shapeWkt);
+            OrderByDistanceDescending(field, shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(Conventions)), shapeWkt);
+            OrderByDistanceDescending(field(new DynamicSpatialFieldFactory<T>(Conventions)), shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), latitude, longitude);
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(fieldName, latitude, longitude);
+            OrderByDistanceDescending(fieldName, latitude, longitude, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), shapeWkt);
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(fieldName, shapeWkt);
+            OrderByDistanceDescending(fieldName, shapeWkt, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistance(propertySelector.ToPropertyPath(Conventions), latitude, longitude, roundFactor);
+            OrderByDistance(propertySelector.ToPropertyPath(Conventions), latitude, longitude, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistance(fieldName, latitude, longitude, roundFactor);
+            OrderByDistance(fieldName, latitude, longitude, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistance(propertySelector.ToPropertyPath(Conventions), shapeWkt, roundFactor);
+            OrderByDistance(propertySelector.ToPropertyPath(Conventions), shapeWkt, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistance(fieldName, shapeWkt, roundFactor);
+            OrderByDistance(fieldName, shapeWkt, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), latitude, longitude, roundFactor);
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), latitude, longitude, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(fieldName, latitude, longitude, roundFactor);
+            OrderByDistanceDescending(fieldName, latitude, longitude, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), shapeWkt, roundFactor);
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(Conventions), shapeWkt, roundFactor, nulls);
             return this;
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
-            OrderByDistanceDescending(fieldName, shapeWkt, roundFactor);
+            OrderByDistanceDescending(fieldName, shapeWkt, roundFactor, nulls);
             return this;
         }
     }

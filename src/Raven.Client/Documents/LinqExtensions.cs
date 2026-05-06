@@ -1026,23 +1026,22 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
-        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
-        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
-            return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
+            return source.OrderBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering, nulls);
         }
 
-        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy(string, OrderingType)"/>
-        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderBy(string, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> OrderBy<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering), Expression.Constant(nulls)));
             return (IOrderedQueryable<T>)queryable;
-
         }
 
         /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending{TValue}(Expression{Func{T, TValue}}, string)"/>
@@ -1066,21 +1065,21 @@ namespace Raven.Client.Documents
             return (IOrderedQueryable<T>)queryable;
         }
 
-        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
-        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending{TValue}(Expression{Func{T, TValue}}, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
-            return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
+            return source.OrderByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering, nulls);
         }
 
-        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending(string, OrderingType)"/>
-        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="IDocumentQueryBase{T, TSelf}.OrderByDescending(string, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> OrderByDescending<T>(this IQueryable<T> source, string path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering), Expression.Constant(nulls)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1108,20 +1107,21 @@ namespace Raven.Client.Documents
 
         /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
         /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
-        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>.</param>
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
-            return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
+            return source.ThenBy(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering, nulls);
         }
 
-        /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType)"/>
-        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="ThenBy{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> ThenBy<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering), Expression.Constant(nulls)));
             return (IOrderedQueryable<T>)queryable;
         }
 
@@ -1149,20 +1149,21 @@ namespace Raven.Client.Documents
 
         /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, string)"/>
         /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
-        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String)
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>.</param>
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, Expression<Func<T, object>> path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
-            return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering);
+            return source.ThenByDescending(path.ToPropertyPath(((IRavenQueryProvider)source.Provider).QueryGenerator.Conventions), ordering, nulls);
         }
 
-        /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType)"/>
-        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String)
+        /// <inheritdoc cref="ThenByDescending{T}(IOrderedQueryable{T}, Expression{Func{T, object}}, OrderingType, NullsOrdering)"/>
+        public static IOrderedQueryable<T> ThenByDescending<T>(this IOrderedQueryable<T> source, string path, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
         {
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 
             currentMethod = ConvertMethodIfNecessary(currentMethod, typeof(T));
             var expression = ConvertExpressionIfNecessary(source);
 
-            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering)));
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod, expression, Expression.Constant(path), Expression.Constant(ordering), Expression.Constant(nulls)));
             return (IOrderedQueryable<T>)queryable;
         }
 

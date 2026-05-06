@@ -812,9 +812,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering, NullsOrdering nulls)
         {
-            OrderBy(field, ordering);
+            OrderBy(field, ordering, nulls);
             return this;
         }
 
@@ -834,9 +834,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering, NullsOrdering nulls)
         {
-            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), ordering, nulls);
             return this;
         }
 
@@ -859,9 +859,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering, NullsOrdering nulls)
         {
-            OrderByDescending(field, ordering);
+            OrderByDescending(field, ordering, nulls);
             return this;
         }
 
@@ -881,9 +881,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering, NullsOrdering nulls)
         {
-            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), ordering, nulls);
             return this;
         }
 

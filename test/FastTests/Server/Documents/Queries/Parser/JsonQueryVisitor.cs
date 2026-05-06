@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Sparrow;
 
-namespace Raven.Server.Documents.Queries.AST
+namespace FastTests.Server.Documents.Queries.Parser
 {
     public sealed class JsonQueryVisitor : QueryVisitor
     {
@@ -51,7 +53,7 @@ namespace Raven.Server.Documents.Queries.AST
         {
             _writer.WritePropertyName("Select");
             WriteExpressionList(@select);
-            
+
             if (isDistinct)
             {
                 _writer.WritePropertyName("IsDistinct");
@@ -93,7 +95,7 @@ namespace Raven.Server.Documents.Queries.AST
             WriteExpressionList(load);
         }
 
-        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)> orderBy)
+        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, NullsOrderingType NullsOrdering)> orderBy)
         {
             _writer.WritePropertyName("OrderBy");
             _writer.WriteStartArray();
@@ -113,10 +115,10 @@ namespace Raven.Server.Documents.Queries.AST
                 _writer.WritePropertyName("Ascending");
                 _writer.WriteValue(field.Ascending);
 
-                if (field.NullFirst.HasValue)
+                if (field.NullsOrdering != NullsOrderingType.Implicit)
                 {
                     _writer.WritePropertyName("NullFirst");
-                    _writer.WriteValue(field.NullFirst.Value);
+                    _writer.WriteValue(field.NullsOrdering == NullsOrderingType.First);
                 }
 
                 _writer.WriteEndObject();
@@ -141,7 +143,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WritePropertyName("Where");
             base.VisitWhereClause(where);
         }
-        
+
         public override void VisitFilterClause(QueryExpression filter)
         {
             _writer.WritePropertyName("Filter");
@@ -153,7 +155,7 @@ namespace Raven.Server.Documents.Queries.AST
             _writer.WriteStartObject();
             _writer.WritePropertyName("Type");
             _writer.WriteValue(where.Operator.ToString());
-            
+
             _writer.WritePropertyName("Left");
             VisitExpression(where.Left);
 

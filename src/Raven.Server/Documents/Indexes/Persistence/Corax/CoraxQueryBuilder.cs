@@ -1326,8 +1326,13 @@ public static partial class CoraxQueryBuilder
 
         foreach (var field in orderByFields)
         {
-            
-            
+            var nullFirst = field.NullsOrdering switch
+            {
+                NullsOrderingType.First => true,
+                NullsOrderingType.Last => false,
+                _ => (bool?)null
+            };
+
             if (field.OrderingType == OrderByFieldType.Random)
             {
                 var seed = field.Arguments is { Length: > 0 } ?
@@ -1401,7 +1406,7 @@ public static partial class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, field.NullFirst);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullFirst);
                 continue;
             }
 
@@ -1418,17 +1423,17 @@ public static partial class CoraxQueryBuilder
                 case OrderByFieldType.Custom:
                     throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support Custom OrderBy.");
                 case OrderByFieldType.AlphaNumeric:
-                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty, field.NullFirst);
+                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty, nullFirst);
                     continue;
                 case OrderByFieldType.Long:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty, field.NullFirst);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty, nullFirst);
                     break;
                 case OrderByFieldType.Double:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty, field.NullFirst);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty, nullFirst);
                     break;
             }
 
-            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty, field.NullFirst);
+            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty, nullFirst);
         }
 
         return sortArray[0..sortIndex];

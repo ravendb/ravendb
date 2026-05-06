@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Queries.AST
             throw new NotSupportedException();
         }
 
-        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, bool? NullFirst)> orderBy)
+        public override void VisitOrderBy(List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, NullsOrderingType NullsOrdering)> orderBy)
         {
             throw new NotSupportedException();
         }

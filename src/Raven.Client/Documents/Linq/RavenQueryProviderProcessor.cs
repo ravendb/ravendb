@@ -1574,7 +1574,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterName);
 
-                    if (orderByOrderingTypeOrSorterName is string orderBySorterName)
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var orderByNulls);
+                        DocumentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName, (NullsOrdering)orderByNulls);
+                    }
+                    else if (orderByOrderingTypeOrSorterName is string orderBySorterName)
                         DocumentQuery.OrderBy((string)orderByPath, orderBySorterName);
                     else
                         DocumentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName);
@@ -1586,7 +1591,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterName);
 
-                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingSorterName)
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var orderByDescendingNulls);
+                        DocumentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName, (NullsOrdering)orderByDescendingNulls);
+                    }
+                    else if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingSorterName)
                         DocumentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingSorterName);
                     else
                         DocumentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName);

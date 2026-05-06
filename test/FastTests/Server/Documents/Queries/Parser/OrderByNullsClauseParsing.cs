@@ -31,8 +31,8 @@ namespace FastTests.Server.Documents.Queries.Parser
             var clause = Assert.Single(query.OrderBy);
             Assert.Equal(expectedType, clause.FieldType);
             Assert.Equal(expectedAscending, clause.Ascending);
-            Assert.True(clause.NullFirst.HasValue);
-            Assert.Equal(expectedNullFirst, clause.NullFirst.Value);
+            Assert.NotEqual(NullsOrderingType.Implicit, clause.NullsOrdering);
+            Assert.Equal(expectedNullFirst ? NullsOrderingType.First : NullsOrderingType.Last, clause.NullsOrdering);
             Assert.IsType<FieldExpression>(clause.Expression);
         }
         
@@ -47,7 +47,7 @@ namespace FastTests.Server.Documents.Queries.Parser
 
             Assert.NotNull(query.OrderBy);
             var clause = Assert.Single(query.OrderBy);
-            Assert.False(clause.NullFirst.HasValue);
+            Assert.Equal(NullsOrderingType.Implicit, clause.NullsOrdering);
         }
 
         [RavenFact(RavenTestCategory.Querying)]
@@ -59,15 +59,14 @@ namespace FastTests.Server.Documents.Queries.Parser
             Assert.Equal(3, query.OrderBy.Count);
 
             Assert.True(query.OrderBy[0].Ascending);
-            Assert.True(query.OrderBy[0].NullFirst);
+            Assert.Equal(NullsOrderingType.First, query.OrderBy[0].NullsOrdering);
 
             Assert.False(query.OrderBy[1].Ascending);
-            Assert.False(query.OrderBy[1].NullFirst.HasValue); // omitted clause -> null
+            Assert.Equal(NullsOrderingType.Implicit, query.OrderBy[1].NullsOrdering); // omitted clause -> Implicit
 
             Assert.Equal(OrderByFieldType.Double, query.OrderBy[2].FieldType);
             Assert.True(query.OrderBy[2].Ascending);
-            Assert.True(query.OrderBy[2].NullFirst.HasValue);
-            Assert.False(query.OrderBy[2].NullFirst.Value);
+            Assert.Equal(NullsOrderingType.Last, query.OrderBy[2].NullsOrdering);
         }
         
         [RavenFact(RavenTestCategory.Querying)]
@@ -78,10 +77,10 @@ namespace FastTests.Server.Documents.Queries.Parser
             Assert.Equal(2, query.OrderBy.Count);
 
             Assert.False(query.OrderBy[0].Ascending);
-            Assert.True(query.OrderBy[0].NullFirst);
+            Assert.Equal(NullsOrderingType.First, query.OrderBy[0].NullsOrdering);
 
             Assert.True(query.OrderBy[1].Ascending);
-            Assert.False(query.OrderBy[1].NullFirst);
+            Assert.Equal(NullsOrderingType.Last, query.OrderBy[1].NullsOrdering);
         }
         
         [RavenFact(RavenTestCategory.Querying)]
@@ -92,7 +91,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             var clause = Assert.Single(query.OrderBy);
             Assert.IsType<MethodExpression>(clause.Expression);
             Assert.Equal(OrderByFieldType.String, clause.FieldType);
-            Assert.False(clause.NullFirst);
+            Assert.Equal(NullsOrderingType.Last, clause.NullsOrdering);
         }
         
         [RavenTheory(RavenTestCategory.Querying)]
@@ -109,8 +108,8 @@ namespace FastTests.Server.Documents.Queries.Parser
             var method = Assert.IsType<MethodExpression>(clause.Expression);
             Assert.Equal("spatial.distance", method.Name.Value);
             Assert.Equal(expectedAscending, clause.Ascending);
-            Assert.True(clause.NullFirst.HasValue);
-            Assert.Equal(expectedNullFirst, clause.NullFirst.Value);
+            Assert.NotEqual(NullsOrderingType.Implicit, clause.NullsOrdering);
+            Assert.Equal(expectedNullFirst ? NullsOrderingType.First : NullsOrderingType.Last, clause.NullsOrdering);
         }
 
         [RavenFact(RavenTestCategory.Querying)]
@@ -122,25 +121,48 @@ namespace FastTests.Server.Documents.Queries.Parser
 
             Assert.IsType<MethodExpression>(query.OrderBy[0].Expression);
             Assert.True(query.OrderBy[0].Ascending);
-            Assert.False(query.OrderBy[0].NullFirst);
+            Assert.Equal(NullsOrderingType.Last, query.OrderBy[0].NullsOrdering);
 
             Assert.IsType<FieldExpression>(query.OrderBy[1].Expression);
             Assert.False(query.OrderBy[1].Ascending);
-            Assert.True(query.OrderBy[1].NullFirst);
+            Assert.Equal(NullsOrderingType.First, query.OrderBy[1].NullsOrdering);
         }
 
         [RavenTheory(RavenTestCategory.Querying)]
-        [InlineData("FROM Users ORDER BY Name NULLS FIRTS")]
-        [InlineData("FROM Users ORDER BY Name NULLS")]
-        [InlineData("FROM Users ORDER BY Name NULLS BLAH")]
-        public void InvalidNullsKeywordThrows(string q)
+        [InlineData("FROM Users ORDER BY Name NULLS FIRTS")]      // typo of FIRST
+        [InlineData("FROM Users ORDER BY Name NULLS LASTS")]      // typo of LAST
+        [InlineData("FROM Users ORDER BY Name NULLS FIR")]        // partial FIRST
+        [InlineData("FROM Users ORDER BY Name NULLS LAS")]        // partial LAST
+        [InlineData("FROM Users ORDER BY Name NULLS")]            // missing keyword
+        [InlineData("FROM Users ORDER BY Name NULLS BLAH")]       // random keyword
+        [InlineData("FROM Users ORDER BY Name NULLS 1")]          // numeric
+        [InlineData("FROM Users ORDER BY Name NULLS FIRSTLAST")]  // concatenated
+        [InlineData("FROM Users ORDER BY Name NULLS DEFAULT")]    // not a valid clause
+        [InlineData("FROM Users ORDER BY Name NULLS ASC")]        // direction keyword
+        public void InvalidNullsKeywordThrowsWithMeaningfulMessage(string q)
         {
-            Assert.Throws<QueryParser.ParseException>(() =>
+            var ex = Assert.Throws<QueryParser.ParseException>(() =>
             {
                 var parser = new QueryParser();
                 parser.Init(q);
                 parser.Parse();
             });
+
+            Assert.Contains("Expected FIRST or LAST after NULLS", ex.Message);
+        }
+
+        [RavenTheory(RavenTestCategory.Querying)]
+        [InlineData("FROM Users ORDER BY Name NULLS FIRST", NullsOrderingType.First)]
+        [InlineData("FROM Users ORDER BY Name NULLS LAST", NullsOrderingType.Last)]
+        [InlineData("FROM Users ORDER BY Name NULLS first", NullsOrderingType.First)]
+        [InlineData("FROM Users ORDER BY Name NULLS last", NullsOrderingType.Last)]
+        [InlineData("FROM Users ORDER BY Name NULLS FiRsT", NullsOrderingType.First)]
+        [InlineData("FROM Users ORDER BY Name NULLS lAsT", NullsOrderingType.Last)]
+        public void NullsKeywordMapsExactlyToFirstOrLast(string q, NullsOrderingType expected)
+        {
+            var query = Parse(q);
+            var clause = Assert.Single(query.OrderBy);
+            Assert.Equal(expected, clause.NullsOrdering);
         }
 
         private static Query Parse(string q)

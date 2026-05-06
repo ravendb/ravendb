@@ -636,9 +636,9 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
             return fields;
         }
 
-        private List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, bool? NullFirst)> OrderBy()
+        private List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, NullsOrderingType NullsOrdering)> OrderBy()
         {
-            var orderBy = new List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, bool? NullFirst)>();
+            var orderBy = new List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending, NullsOrderingType NullsOrdering)>();
             do
             {
                 if (Field(out var field) == false)
@@ -685,16 +685,18 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                         asc = false;
                 }
 
-                bool? nullFirst = null;
+                NullsOrderingType nullsOrdering = NullsOrderingType.Implicit;
                 if (Scanner.TryScan("NULLS"))
                 {
                     if (Scanner.TryScan(OrderByNullsOptions, out var nullsMatch) == false)
                         ThrowParseException("Expected FIRST or LAST after NULLS in ORDER BY clause");
 
-                    nullFirst = string.Equals(nullsMatch, "FIRST", StringComparison.OrdinalIgnoreCase);
+                    nullsOrdering = string.Equals(nullsMatch, "FIRST", StringComparison.OrdinalIgnoreCase)
+                        ? NullsOrderingType.First
+                        : NullsOrderingType.Last;
                 }
 
-                orderBy.Add((op, type, asc, nullFirst));
+                orderBy.Add((op, type, asc, nullsOrdering));
 
                 if (Scanner.TryScan(",") == false)
                     break;
