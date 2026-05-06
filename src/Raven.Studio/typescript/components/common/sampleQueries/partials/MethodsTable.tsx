@@ -2,12 +2,10 @@ import React, { useState } from "react";
 import Card from "react-bootstrap/Card";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import InputGroup from "react-bootstrap/InputGroup";
 import Row from "react-bootstrap/Row";
 import { Icon } from "components/common/Icon";
 import { StickyHeader } from "components/common/StickyHeader";
 import copyToClipboard from "common/copyToClipboard";
-import useDebouncedInput from "components/hooks/useDebouncedInput";
 import { MethodEntry, MethodGroup } from "./sampleQueriesTypes";
 
 interface MethodsTableProps {
@@ -15,34 +13,24 @@ interface MethodsTableProps {
 }
 
 export default function MethodsTable({ methodGroups }: MethodsTableProps) {
-    const [debouncedSearch, setDebouncedSearch] = useState("");
-    const { localValue: search, handleChange } = useDebouncedInput<string>({
-        value: "",
-        onDebouncedUpdate: (value) => setDebouncedSearch(value),
-    });
+    const [search, setSearch] = useState("");
 
     const filteredGroups = methodGroups
         .map((group) => ({
             ...group,
-            methods: group.methods.filter((method) =>
-                method.signature.toLowerCase().includes(debouncedSearch.toLowerCase())
-            ),
+            methods: group.methods.filter((method) => method.signature.toLowerCase().includes(search.toLowerCase())),
         }))
         .filter((group) => group.methods.length > 0);
 
     return (
         <div className="methods-table vstack gap-3 px-3 py-1">
             <StickyHeader className="panel-bg-1">
-                <InputGroup>
-                    <InputGroup.Text>
-                        <Icon icon="search" margin="m-0" />
-                    </InputGroup.Text>
-                    <Form.Control
-                        placeholder="Search by signature"
-                        value={search}
-                        onChange={(e) => handleChange(e.target.value)}
-                    />
-                </InputGroup>
+                <Form.Control
+                    type="search"
+                    placeholder="Search by signature"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
             </StickyHeader>
             {filteredGroups.map((group) => (
                 <MethodGroupCard key={group.category} group={group} />

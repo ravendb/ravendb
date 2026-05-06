@@ -24,7 +24,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import appUrl = require("common/appUrl");
+import PatchSamplesPanel = require("components/common/sampleQueries/PatchSamplesPanel");
 
 class patchList {
 
@@ -156,12 +156,12 @@ class patch extends shardViewModelBase {
 
     inSaveMode = ko.observable<boolean>();
 
-    samplesUrl = ko.pureComputed(() => appUrl.forPatchSamples(this.db));
+    showSamples = ko.observable<boolean>(false);
 
-    navigateToSamples() {
-        const script = this.patchDocument().query();
-        const hash = script ? savedPatchesStorage.storePlaygroundScript(this.db, script) : undefined;
-        this.navigate(appUrl.forPatchSamples(this.db, hash));
+    samplesView: ReactInKnockout<typeof PatchSamplesPanel.default>;
+
+    openSamples() {
+        this.showSamples(true);
     }
 
     spinners = {
@@ -196,6 +196,19 @@ class patch extends shardViewModelBase {
 
         this.bindToCurrentInstance("savePatch");
         this.initObservables();
+
+        this.samplesView = ko.pureComputed(() => ({
+            component: PatchSamplesPanel.default,
+            props: {
+                initialScript: this.patchDocument().query(),
+                isOpened: this.showSamples(),
+                onUpdateScript: (script: string) => {
+                    this.patchDocument().query(script);
+                    this.showSamples(false);
+                },
+                onClose: () => this.showSamples(false),
+            },
+        }));
     }
 
     private initValidation() {
@@ -228,17 +241,6 @@ class patch extends shardViewModelBase {
 
         if (queryParams?.script) {
             this.patchDocument().query(decodeURIComponent(queryParams.script));
-        }
-
-        if (recentPatchHash?.startsWith("recentpatch-")) {
-            const hashStr = recentPatchHash.slice("recentpatch-".length);
-            const hash = parseInt(hashStr, 10);
-            if (!isNaN(hash)) {
-                const script = savedPatchesStorage.getPlaygroundScript(this.db, hash);
-                if (script != null) {
-                    this.patchDocument().query(script);
-                }
-            }
         }
 
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));

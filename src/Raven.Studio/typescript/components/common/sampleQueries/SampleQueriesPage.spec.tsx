@@ -14,7 +14,7 @@ const selectors = {
     scriptDescription: "Removes a specific line item (product ID 'products/1') from all order documents.",
     methodsSignatureHeader: "Methods signature",
     descriptionHeader: "Description",
-    searchMethodsPlaceholder: "Search methods",
+    searchMethodsPlaceholder: "Search by signature",
     methodCategory: "Document operations",
     methodSignature: "load(documentIdToLoad)",
 };

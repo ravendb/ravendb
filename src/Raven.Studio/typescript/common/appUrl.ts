@@ -37,8 +37,7 @@ class appUrl {
         identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
         cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
-        sampleQueries: ko.pureComputed(() => appUrl.forPatchSamples(appUrl.currentDatabase())),
-        indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
+indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         newDoc: ko.pureComputed(() => appUrl.forNewDoc(appUrl.currentDatabase())),
         newCmpXchg: ko.pureComputed(() => appUrl.forEditCmpXchg(null, appUrl.currentDatabase())),
@@ -583,13 +582,7 @@ class appUrl {
         }
     }
 
-    static forPatchSamples(db: database | string, initialScriptHash?: number): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        const hashPart = initialScriptHash != null ? "&initialScriptHash=" + initialScriptHash : "";
-        return "#databases/patch-samples?" + databasePart + hashPart;
-    }
-
-    static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
+static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";

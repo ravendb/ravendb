@@ -2,6 +2,9 @@
 @use "Content/scss/colors";
 
 .sample-queries-page {
+    display: flex;
+    flex-direction: column;
+
     .nav-item {
         .nav-link {
             color: inherit;
@@ -41,5 +44,21 @@
                 opacity: 1;
             }
         }
+    }
+}
+
+.patch-samples-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1050;
+    background-color: colors.$panel-bg-1-var;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    .sample-queries-page {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
     }
 }

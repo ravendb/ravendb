@@ -5,7 +5,6 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 import DocumentIdentities = require("components/pages/database/documents/identities/DocumentIdentities");
 import reactUtils = require("common/reactUtils");
 import AllRevisions = require("components/pages/database/documents/allRevisions/AllRevisions");
-import PatchSampleQueriesPage = require("viewmodels/database/patch/PatchSampleQueriesPage");
 
 export = getDocumentsMenuItem;
 
@@ -55,18 +54,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.patch,
             requiredAccess: "DatabaseReadWrite"
         }),
-        new leafMenuItem({
-            route: "databases/patch-samples",
-            moduleId: reactUtils.bridgeToReact(PatchSampleQueriesPage.default, "shardedView"),
-            shardingMode: "allShards",
-            title: "Sample Queries",
-            nav: false,
-            css: "icon-patch",
-            dynamicHash: appUrls.sampleQueries,
-            requiredAccess: "DatabaseReadWrite",
-            itemRouteToHighlight: "databases/patch(/:recentPatchHash)",
-        }),
-        new leafMenuItem({
+new leafMenuItem({
             route: "databases/query/index(/:indexNameOrRecentQueryIndex)",
             moduleId: require("viewmodels/database/query/query"),
             shardingMode: "allShards",
