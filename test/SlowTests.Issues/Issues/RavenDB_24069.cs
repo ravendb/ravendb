@@ -435,6 +435,234 @@ public class RavenDB_24069 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Voron)]
+    public void BranchReSharesWithRootAfterRestartFollowingFallback()
+    {
+        string rootPath = NewDataPath(suffix: "root");
+        IOExtensions.DeleteDirectory(rootPath);
+
+        string branchPath = NewDataPath(suffix: "branch");
+        IOExtensions.DeleteDirectory(branchPath);
+
+        // ----- phase 1: drive a fallback (shared tx1, fail link, unshared tx2) -----
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+            rootOptions.MaxLogFileSize = 3 * 4096;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
+
+            StorageEnvironmentOptions branchOptions = null;
+            StorageEnvironment branch = null;
+            try
+            {
+                var createTask = Task.Run(() =>
+                {
+                    branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+                    branchOptions.ManualFlushing = true;
+                    branchOptions.ManualSyncing = true;
+                    branchOptions.RootJournal = root.Journal;
+                    branch = new StorageEnvironment(branchOptions);
+
+                    using var branchTx = branch.WriteTransaction();
+                    branchTx.CreateTree("branchTree").Add("tx1", "value1");
+                    branchTx.Commit();
+                });
+                createTask.ContinueWith(_ => mre.Set());
+                SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(createTask, mre, root);
+
+                // arm a one-shot hook so the next LinkFiles throws as if NTFS hit the limit
+                var bo = branchOptions;
+                bo.ForTestingPurposesOnly().BeforeLinkFiles = _ =>
+                {
+                    bo.ForTestingPurposesOnly().BeforeLinkFiles = null;
+                    throw new HardLinkLimitExceededException("simulated hard-link limit");
+                };
+
+                // force the root to roll over so the next branch commit triggers a fresh LinkFiles call
+                for (int i = 0; i < 4; i++)
+                {
+                    using var rootTx = root.WriteTransaction();
+                    rootTx.CreateTree("rootTree").Add($"r{i}", "v");
+                    rootTx.Commit();
+                }
+
+                var tx2Task = Task.Run(() =>
+                {
+                    try
+                    {
+                        using var branchTx = branch.WriteTransaction();
+                        branchTx.CreateTree("branchTree").Add("tx2", "value2");
+                        branchTx.Commit();
+                    }
+                    catch (HardLinkLimitExceededException)
+                    {
+                    }
+
+                    // retry after fallback - the first attempt's tx was rolled back when Commit threw,
+                    // so re-adding "tx2" here is a fresh insert, not a duplicate-key write
+                    using (var branchTx = branch.WriteTransaction())
+                    {
+                        branchTx.CreateTree("branchTree").Add("tx2", "value2");
+                        branchTx.Commit();
+                    }
+                });
+                tx2Task.ContinueWith(_ => mre.Set());
+                SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(tx2Task, mre, root);
+
+                Assert.Null(branchOptions.RootJournal);
+            }
+            finally
+            {
+                branch?.Dispose();
+                branchOptions?.Dispose();
+            }
+        }
+
+        // ----- phase 2: restart with no hook armed; the next branch commit must re-share -----
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
+
+            using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+            branchOptions.ManualFlushing = true;
+            branchOptions.ManualSyncing = true;
+            branchOptions.RootJournal = root.Journal;
+
+            using var branch = new StorageEnvironment(branchOptions);
+
+            // Now shrink MaxLogFileSize so the next root commits roll over quickly. The setter is
+            // read live from options on each commit, no need to recreate the env.
+            rootOptions.MaxLogFileSize = 3 * 4096;
+
+            for (int i = 0; i < 4; i++)
+            {
+                using var rootTx = root.WriteTransaction();
+                rootTx.CreateTree("rootTree").Add($"r2_{i}", "v");
+                rootTx.Commit();
+            }
+
+            var branchJournalsBefore = new HashSet<string>(Directory.GetFiles(Path.Combine(branchPath, "Journals"), "*.journal"));
+
+            var tx3Task = Task.Run(() =>
+            {
+                using var branchTx = branch.WriteTransaction();
+                branchTx.CreateTree("branchTree").Add("tx3", "value3");
+                branchTx.Commit();
+            });
+            tx3Task.ContinueWith(_ => mre.Set());
+            SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(tx3Task, mre, root);
+
+            // branch must remain shared after the post-restart commit
+            Assert.NotNull(branchOptions.RootJournal);
+
+            // a new journal must have appeared in the branch dir, hard-linked to one of root's journal files
+            // (the branch's local journal number is independent of root's, but a hard link is bit-identical
+            // because the two paths point to the same inode/file content)
+            var newBranchJournals = Directory.GetFiles(Path.Combine(branchPath, "Journals"), "*.journal")
+                .Where(p => branchJournalsBefore.Contains(p) == false)
+                .ToArray();
+
+            Assert.NotEmpty(newBranchJournals);
+
+            var rootJournalFiles = Directory.GetFiles(Path.Combine(rootPath, "Journals"), "*.journal");
+
+            foreach (var branchFile in newBranchJournals)
+            {
+                var branchBytes = ReadAllBytesShared(branchFile);
+                bool foundMatchingRoot = rootJournalFiles.Any(rootFile => branchBytes.SequenceEqual(ReadAllBytesShared(rootFile)));
+                Assert.True(foundMatchingRoot,
+                    $"new branch journal '{branchFile}' has no matching content in root - it was created unshared instead of hard-linked");
+            }
+
+            // sanity: every commit (shared and unshared) is still readable after restart
+            using (var branchTx = branch.ReadTransaction())
+            {
+                var tree = branchTx.ReadTree("branchTree");
+                Assert.Equal("value1", tree.Read("tx1").Reader.ToString());
+                Assert.Equal("value2", tree.Read("tx2").Reader.ToString());
+                Assert.Equal("value3", tree.Read("tx3").Reader.ToString());
+            }
+        }
+
+        // ----- phase 3: second restart - recovery must walk linked-old, unshared-middle, linked-new -----
+        // Branch dir layout at this point:
+        //   N...:        hard links to root's pre-fallback journals      (shared content)
+        //   ?:           branch's own unshared journal (the tx2 retry)   (branch-only content)
+        //   ?:           hard link to root's post-restart journal (tx3)  (shared content)
+        // This phase verifies that recovery transitions cleanly across BOTH boundaries
+        // (linked->unshared and unshared->linked) and a fresh commit lands above all of them.
+        {
+            using var rootOptions = StorageEnvironmentOptions.ForPathForTests(rootPath);
+            rootOptions.ManualFlushing = true;
+            rootOptions.ManualSyncing = true;
+
+            using var root = new StorageEnvironment(rootOptions);
+            using var _ = root.Journal.SharedJournalsScope();
+
+            var mre = new ManualResetEventSlim(false);
+            root.Journal.BranchJournalMerger = new SharedJournalTests.MyJournalMerger(mre);
+
+            using var branchOptions = StorageEnvironmentOptions.ForPathForTests(branchPath);
+            branchOptions.ManualFlushing = true;
+            branchOptions.ManualSyncing = true;
+            branchOptions.RootJournal = root.Journal;
+
+            using var branch = new StorageEnvironment(branchOptions);
+
+            using (var branchTx = branch.ReadTransaction())
+            {
+                var tree = branchTx.ReadTree("branchTree");
+                Assert.Equal("value1", tree.Read("tx1").Reader.ToString());
+                Assert.Equal("value2", tree.Read("tx2").Reader.ToString());
+                Assert.Equal("value3", tree.Read("tx3").Reader.ToString());
+            }
+
+            // a fresh commit after the second restart must still go through across the
+            // persisted shared/unshared/shared journal layout
+            var tx4Task = Task.Run(() =>
+            {
+                using var branchTx = branch.WriteTransaction();
+                branchTx.CreateTree("branchTree").Add("tx4", "value4");
+                branchTx.Commit();
+            });
+            tx4Task.ContinueWith(_ => mre.Set());
+            SharedJournalTests.WaitForTaskAndExecuteBranchTransactions(tx4Task, mre, root);
+
+            var numbers = EnumerateJournalNumbers(branchPath);
+            Assert.Equal(numbers.Length, numbers.Distinct().Count());
+
+            using (var branchTx = branch.ReadTransaction())
+            {
+                var tree = branchTx.ReadTree("branchTree");
+                Assert.Equal("value1", tree.Read("tx1").Reader.ToString());
+                Assert.Equal("value2", tree.Read("tx2").Reader.ToString());
+                Assert.Equal("value3", tree.Read("tx3").Reader.ToString());
+                Assert.Equal("value4", tree.Read("tx4").Reader.ToString());
+            }
+        }
+    }
+
+    private static byte[] ReadAllBytesShared(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var ms = new MemoryStream();
+        fs.CopyTo(ms);
+        return ms.ToArray();
+    }
+
     private static long[] EnumerateJournalNumbers(string basePath)
     {
         return Directory.GetFiles(Path.Combine(basePath, "Journals"), "*.journal")
