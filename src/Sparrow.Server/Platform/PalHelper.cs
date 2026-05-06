@@ -23,7 +23,8 @@ namespace Sparrow.Server.Platform
 
             public class Posix
             {
-                public const int ENOTSUP = 95;
+                public const int ENOTSUP_LINUX = 95;
+                public const int ENOTSUP_MACOS = 45;
                 public const int EMLINK = 31;
             }
         }
@@ -61,7 +62,11 @@ namespace Sparrow.Server.Platform
 
             if (PlatformDetails.RunningOnPosix)
             {
-                if (lastError is ErrorCodes.Posix.ENOTSUP)
+                int enotsup = PlatformDetails.RunningOnMacOsx
+                    ? ErrorCodes.Posix.ENOTSUP_MACOS
+                    : ErrorCodes.Posix.ENOTSUP_LINUX;
+
+                if (lastError == enotsup)
                     throw new NotSupportedException(txt);
             }
 
