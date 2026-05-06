@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using NuGet.Packaging;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
@@ -31,8 +32,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         private readonly List<AiConversationMessage> _results = new();
         private readonly Dictionary<string, (string Content, string SubConversationId)> _toolResponses = new(StringComparer.Ordinal);
         private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId)> _seenMessageKeys = new();
+        private readonly HashSet<string> _attachmentNames = new(StringComparer.Ordinal);
         private bool _hasMoreMessages;
-        private bool _hasAttachments;
 
         public Collector(DocumentsOperationContext context, DocumentsStorage storage, ConversationDocument conversation,
             int pageSize, AiConversationDetailLevel detailLevel, DateTime? before, DateTime? after)
@@ -48,7 +49,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         }
 
         public bool HasMoreMessages => _hasMoreMessages;
-        public bool HasAttachments => _hasAttachments;
+        public HashSet<string> AttachmentNames => _attachmentNames;
 
         public List<AiConversationMessage> GetResults()
         {
@@ -273,7 +274,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 return;
 
             if (converted.Attachments is { Count: > 0 })
-                _hasAttachments = true;
+                _attachmentNames.AddRange(converted.Attachments);
 
             _results.Add(converted);
         }

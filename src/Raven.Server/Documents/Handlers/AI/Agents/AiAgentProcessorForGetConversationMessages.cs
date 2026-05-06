@@ -1,11 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -45,148 +45,39 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
             collector.Collect();
 
+            var result = new AiConversationMessagesResult
+            {
+                ConversationId = conversationId,
+                Agent = conversation.Agent,
+                Parameters = GetParameters(conversation),
+                TotalUsage = conversation.TotalUsage,
+                LastMessageAt = conversation.LastMessageAt,
+                HasMoreMessages = collector.HasMoreMessages,
+                AttachmentNames = collector.AttachmentNames.ToArray(),
+                SubConversationIds = conversation.SubConversationIds.ToList(),
+                Messages = collector.GetResults()
+            };
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
             {
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.ConversationId));
-                writer.WriteString(conversationId);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.Agent));
-                writer.WriteString(conversation.Agent);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.Parameters));
-                var paramsJson = new DynamicJsonValue();
-                if (conversation.Parameters != null)
-                {
-                    foreach (var paramName in conversation.Parameters.GetPropertyNames())
-                    {
-                        conversation.Parameters.TryGetMember(paramName, out object value);
-                        paramsJson[paramName] = ConversationHandler.GetAiConversationParameter(paramName, value).ToJson();
-                    }
-                }
-                writer.WriteObject(context.ReadObject(paramsJson, "params"));
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.TotalUsage));
-                conversation.TotalUsage.Write(writer);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.LastMessageAt));
-                writer.WriteDateTime(conversation.LastMessageAt, isUtc: true);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.HasMoreMessages));
-                writer.WriteBool(collector.HasMoreMessages);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.HasAttachments));
-                writer.WriteBool(collector.HasAttachments);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.SubConversationIds));
-                writer.WriteStartArray();
-                bool firstSub = true;
-                foreach (string subId in conversation.SubConversationIds)
-                {
-                    if (firstSub == false)
-                        writer.WriteComma();
-                    firstSub = false;
-                    writer.WriteString(subId);
-                }
-                writer.WriteEndArray();
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(AiConversationMessagesResult.Messages));
-                WriteMessages(writer, collector.GetResults());
-
-                writer.WriteEndObject();
+                context.Write(writer, result.ToJson());
             }
         }
     }
 
-    private static void WriteMessages(AsyncBlittableJsonTextWriter writer, List<AiConversationMessage> messages)
+    private static Dictionary<string, object> GetParameters(ConversationDocument conversation)
     {
-        writer.WriteStartArray();
-        bool first = true;
-        foreach (AiConversationMessage msg in messages)
+        var parameters = new Dictionary<string, object>();
+        if (conversation.Parameters == null)
+            return parameters;
+
+        var keys = conversation.Parameters.GetPropertyNames();
+        foreach (var paramName in keys)
         {
-            if (first == false)
-                writer.WriteComma();
-            first = false;
-
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.Role));
-            writer.WriteString(msg.Role.ToString());
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.Content));
-            writer.WriteString(msg.Content);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.Attachments));
-            writer.WriteStartArray();
-            bool firstAtt = true;
-            foreach (string att in msg.Attachments ?? [])
-            {
-                if (firstAtt == false)
-                    writer.WriteComma();
-                firstAtt = false;
-                writer.WriteString(att);
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.Timestamp));
-            writer.WriteDateTime(msg.Timestamp, isUtc: true);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.ToolCalls));
-            writer.WriteStartArray();
-            bool firstTc = true;
-            foreach (AiToolCallResult tc in msg.ToolCalls ?? [])
-            {
-                if (firstTc == false)
-                    writer.WriteComma();
-                firstTc = false;
-
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(AiToolCallResult.Id));
-                writer.WriteString(tc.Id);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(AiToolCallResult.Name));
-                writer.WriteString(tc.Name);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(AiToolCallResult.Arguments));
-                writer.WriteString(tc.Arguments);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(AiToolCallResult.Result));
-                writer.WriteString(tc.Result);
-                writer.WriteComma();
-                writer.WritePropertyName(nameof(AiToolCallResult.SubConversationId));
-                writer.WriteString(tc.SubConversationId);
-                writer.WriteEndObject();
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.SubConversationId));
-            writer.WriteString(msg.SubConversationId);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(AiConversationMessage.Usage));
-            if (msg.Usage != null)
-                msg.Usage.Write(writer);
-            else
-                writer.WriteNull();
-
-            writer.WriteEndObject();
+            conversation.Parameters.TryGetMember(paramName, out object value);
+            parameters[paramName] = ConversationHandler.GetAiConversationParameter(paramName, value).Value;
         }
-        writer.WriteEndArray();
-    }
 
+        return parameters;
+    }
 }

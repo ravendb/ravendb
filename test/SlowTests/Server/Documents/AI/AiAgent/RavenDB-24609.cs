@@ -59,77 +59,40 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
         Assert.Equal(9, result.Parameters.Count);
 
         // String
-        Assert.Equal("hello",  result.Parameters["strParam"].Value);
-        Assert.True(result.Parameters["strParam"].SendToModel);
+        Assert.Equal("hello",  result.Parameters["strParam"]);
 
         // Number
-        Assert.Equal(3_000_000_000L, result.Parameters["numParam"].Value);
-        Assert.True(result.Parameters["numParam"].SendToModel);
-
-        Assert.Equal(0.5, result.Parameters["numParam2"].Value);
-        Assert.True(result.Parameters["numParam2"].SendToModel);
+        Assert.Equal(3_000_000_000L, result.Parameters["numParam"]);
+        Assert.Equal(0.5, result.Parameters["numParam2"]);
 
         // Boolean
-        Assert.Equal(true, result.Parameters["boolParam"].Value);
-        Assert.True(result.Parameters["boolParam"].SendToModel);
+        Assert.Equal(true, result.Parameters["boolParam"]);
 
         // ArrayOfString
-        var strArr = Assert.IsType<List<string>>(result.Parameters["strArr"].Value);
+        var strArr = Assert.IsType<List<string>>(result.Parameters["strArr"]);
         Assert.Equal(new[] { "a", "b", "c" }, strArr);
-        Assert.True(result.Parameters["strArr"].SendToModel);
 
         // ArrayOfNumber
-        var numArr = Assert.IsType<List<long>>(result.Parameters["numArr"].Value);
+        var numArr = Assert.IsType<List<long>>(result.Parameters["numArr"]);
         Assert.Equal(new[] { 1_000_000_000_000L, 2_000_000_000_000L, 5L }, numArr);
-        Assert.True(result.Parameters["numArr"].SendToModel);
 
         // ArrayOfNumber
-        var numArr2 = Assert.IsType<List<double>>(result.Parameters["numArr2"].Value);
+        var numArr2 = Assert.IsType<List<double>>(result.Parameters["numArr2"]);
         Assert.Equal(new[] { 0.5 }, numArr2);
-        Assert.True(result.Parameters["numArr2"].SendToModel);
 
         // ArrayOfBoolean
-        var boolArr = Assert.IsType<List<bool>>(result.Parameters["boolArr"].Value);
+        var boolArr = Assert.IsType<List<bool>>(result.Parameters["boolArr"]);
         Assert.Equal(new[] { true, false, true }, boolArr);
-        Assert.True(result.Parameters["boolArr"].SendToModel);
 
         // Null
-        Assert.Null(result.Parameters["nullParam"].Value);
-        Assert.True(result.Parameters["nullParam"].SendToModel);
-    }
-
-    [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task GetConversationMessages_ReturnsParameters_SendToModelFalsePreserved(Options options, GenAiConfiguration config)
-    {
-        using var store = GetDocumentStore(options);
-        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-        var agent = new AiAgentConfiguration(AgentName, config.ConnectionStringName, "You are a helpful assistant. Respond briefly.");
-        var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
-
-        var chat = store.AI.Conversation(
-            agentId,
-            "chats/params-sendtomodel",
-            new AiConversationCreationOptions()
-                .AddParameter("publicParam",   "visible", new AiConversationParameterOptions { SendToModel = true })
-                .AddParameter("internalParam", "hidden",  new AiConversationParameterOptions { SendToModel = false }));
-        chat.SetUserPrompt("Hello");
-        await chat.RunAsync<OutputSchema>();
-
-        var result = await store.AI.GetConversationMessagesAsync(
-            new GetConversationMessagesOptions { ConversationId = "chats/params-sendtomodel", PageSize = 50 });
-
-        Assert.NotNull(result.Parameters);
-        Assert.True(result.Parameters["publicParam"].SendToModel);
-        Assert.False(result.Parameters["internalParam"].SendToModel);
+        Assert.Null(result.Parameters["nullParam"]);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task GetConversationMessages_ReturnsParameters_OldFormatNormalized()
     {
         // Old storage format: raw value (no wrapper object), e.g. {"budgetNis": 3500}
-        // GetAiConversationParameter should normalize it to {Value: 3500, SendToModel: true}
+        // GetAiConversationParameter should normalize it to its raw Value
         using var store = GetDocumentStore();
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
@@ -173,11 +136,8 @@ public class RavenDB_24609(ITestOutputHelper output) : RavenTestBase(output)
         Assert.NotNull(result.Parameters);
         Assert.Equal(2, result.Parameters.Count);
 
-        Assert.Equal(3500L, result.Parameters["budgetNis"].Value);
-        Assert.True(result.Parameters["budgetNis"].SendToModel); // defaults to true for old format
-
-        Assert.Equal("north", result.Parameters["region"].Value);
-        Assert.True(result.Parameters["region"].SendToModel);
+        Assert.Equal(3500L, result.Parameters["budgetNis"]);
+        Assert.Equal("north", result.Parameters["region"]);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
