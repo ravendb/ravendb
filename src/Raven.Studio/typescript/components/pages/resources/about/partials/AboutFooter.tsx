@@ -45,7 +45,7 @@ export function AboutFooter() {
                     </a>
                 </div>
             </div>
-            <div className="small text-muted text-center">Copyright © 2009 - 2025 RavenDB. All rights reserved.</div>
+            <div className="small text-muted text-center">Copyright © 2009 - 2026 RavenDB. All rights reserved.</div>
         </div>
     );
 }
