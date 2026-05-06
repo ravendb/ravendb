@@ -19,15 +19,16 @@ type FormEmbeddedTable = NonNullable<FormTable["embeddedTables"]>[number];
 
 export default function EditCdcSinkTaskTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
     if (!activeTable) {
         return <EmptySet>Select a table to view its configuration details.</EmptySet>;
     }
 
-    const key = activeTable.current.path;
+    const currentPath = activeTable.current.path;
 
     return (
-        <div className="cdc-table-editor" key={key}>
+        <div className="cdc-table-editor" key={currentPath}>
             <div className="hstack p-2 border-bottom border-secondary">
                 <Breadcrumb className="mb-0">
                     {activeTable.parents.map((parent, idx) => (
@@ -35,6 +36,11 @@ export default function EditCdcSinkTaskTableEditor() {
                     ))}
                     <Breadcrumb.Item active>{activeTable.current.label}</Breadcrumb.Item>
                 </Breadcrumb>
+                {activeTable.current.type === "root" && (
+                    <FormSwitch control={control} name={getFormFieldPath(`${currentPath}.disabled`)}>
+                        Disabled
+                    </FormSwitch>
+                )}
                 <Button variant="info" className="ms-auto">
                     <Icon icon="rocket" />
                     Test
@@ -334,25 +340,21 @@ function PatchAdvancedField({ tablePath }: { tablePath: string }) {
 
 function useHasRootAdvancedValues(tablePath: string) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const disabled = useWatch({ control, name: getFormFieldPath(`${tablePath}.disabled`) });
     const patch = useWatch({ control, name: getFormFieldPath(`${tablePath}.patch`) });
     const ignoreDeletes = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`) });
     const deletePatch = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.patch`) });
 
-    return Boolean(disabled || patch || ignoreDeletes || deletePatch);
+    return Boolean(patch || ignoreDeletes || deletePatch);
 }
 
 function useHasEmbeddedAdvancedValues(tablePath: string) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const relationType = useWatch({ control, name: getFormFieldPath(`${tablePath}.type`) });
     const caseSensitiveKeys = useWatch({ control, name: getFormFieldPath(`${tablePath}.caseSensitiveKeys`) });
     const patch = useWatch({ control, name: getFormFieldPath(`${tablePath}.patch`) });
     const ignoreDeletes = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.ignoreDeletes`) });
     const deletePatch = useWatch({ control, name: getFormFieldPath(`${tablePath}.onDelete.patch`) });
 
-    return Boolean(
-        (relationType && relationType !== "Array") || caseSensitiveKeys || patch || ignoreDeletes || deletePatch
-    );
+    return Boolean(caseSensitiveKeys || patch || ignoreDeletes || deletePatch);
 }
 
 function getFormFieldPath(path: string): FieldPath<EditCdcSinkTaskFormData> {

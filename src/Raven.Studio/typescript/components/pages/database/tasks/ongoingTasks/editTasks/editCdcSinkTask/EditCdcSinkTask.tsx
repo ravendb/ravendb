@@ -14,9 +14,9 @@ import {
     EditCdcSinkTaskValidationContext,
     editCdcSinkTaskResolver,
 } from "./utils/editCdcSinkTaskValidation";
-import EditCdcSinkTaskBasicSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskBasicSection";
-import EditCdcSinkTaskExplorerSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskExplorerSection";
-import EditCdcSinkTaskTablesSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskTablesSection";
+import EditCdcSinkTaskBasicSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/basic/EditCdcSinkTaskBasicSection";
+import EditCdcSinkTaskDiscoverySection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoverySection";
+import EditCdcSinkTaskTablesSection from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesSection";
 import { editCdcSinkTaskUtils } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskUtils";
 import { tryHandleSubmit } from "components/utils/common";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
@@ -115,7 +115,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                         marginBottom={4}
                     />
                     <EditCdcSinkTaskBasicSection />
-                    <EditCdcSinkTaskExplorerSection tablesFieldArray={tablesFieldArray} />
+                    <EditCdcSinkTaskDiscoverySection tablesFieldArray={tablesFieldArray} />
                     <EditCdcSinkTaskTablesSection tablesFieldArray={tablesFieldArray} />
                 </div>
                 <div className="hstack justify-content-between gap-2 py-2 px-3 border-top border-secondary">

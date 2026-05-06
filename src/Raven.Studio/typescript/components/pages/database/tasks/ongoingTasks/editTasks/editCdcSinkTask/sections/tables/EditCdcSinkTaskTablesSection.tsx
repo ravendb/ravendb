@@ -3,8 +3,8 @@ import useBoolean from "components/hooks/useBoolean";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import Collapse from "react-bootstrap/esm/Collapse";
 import { UseFieldArrayReturn } from "react-hook-form";
-import EditCdcSinkTaskTablesExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/tables/EditCdcSinkTaskTablesExplorer";
-import EditCdcSinkTaskTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/tables/EditCdcSinkTaskTableEditor";
+import EditCdcSinkTaskTablesExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesExplorer";
+import EditCdcSinkTaskTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTableEditor";
 
 interface EditCdcSinkTaskTablesSectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;

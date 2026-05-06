@@ -145,7 +145,14 @@ function TableItems({ tablesFieldArray, filter }: TableItemsProps) {
     return (
         <div className="vstack gap-1 overflow-y-auto flex-grow-0">
             {filteredTables.map(({ table, formIdx }) => (
-                <TableItem key={table.id} table={table} path={getRootTablePath(formIdx)} depth={0} type="root" />
+                <TableItem
+                    key={table.id}
+                    table={table}
+                    path={getRootTablePath(formIdx)}
+                    depth={0}
+                    type="root"
+                    isRootDisabled={table.disabled}
+                />
             ))}
         </div>
     );
@@ -157,12 +164,12 @@ interface TableItemProps {
     depth: number;
     type: "root" | "linked" | "embedded";
     parents?: FormTableInfo[];
+    isRootDisabled?: boolean;
 }
 
-function TableItem({ table, path, depth = 0, type = "root", parents = [] }: TableItemProps) {
+function TableItem({ table, path, depth = 0, type = "root", parents = [], isRootDisabled = false }: TableItemProps) {
     const dispatch = useAppDispatch();
     const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
-
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     const hasChildren = hasChildTables(table);
@@ -178,11 +185,12 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [] }: Tabl
         dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
     };
 
+    // TODO test disabled
     return (
         <div className="vstack gap-1">
             <Button
                 variant={isActive ? "secondary" : "link"}
-                className="text-body text-start hstack"
+                className={classNames("text-body text-start hstack", { disabled: isRootDisabled })}
                 onClick={handleClick}
                 title={label}
                 style={{ paddingInline: "2px" }}
@@ -212,6 +220,7 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [] }: Tabl
                             depth={depth + 1}
                             parents={parentsWithCurrent}
                             path={`${path}.linkedTables.${idx}`}
+                            isRootDisabled={isRootDisabled}
                         />
                     ))}
                     {getEmbeddedTables(table).map((embedded, idx) => (
@@ -222,6 +231,7 @@ function TableItem({ table, path, depth = 0, type = "root", parents = [] }: Tabl
                             depth={depth + 1}
                             parents={parentsWithCurrent}
                             path={`${path}.embeddedTables.${idx}`}
+                            isRootDisabled={isRootDisabled}
                         />
                     ))}
                 </div>
@@ -247,11 +257,13 @@ function getExpandableTablePathsForTable(table: FormTableItem, path: FormTablePa
 }
 
 function getTableLabel(table: FormTableItem) {
+    const unassignedLabel = "Unassigned table";
+
     if (!table.sourceTableSchema) {
-        return table.sourceTableName || "Unassigned table";
+        return table.sourceTableName || unassignedLabel;
     }
 
-    return `${table.sourceTableSchema}.${table.sourceTableName || "Unassigned table"}`;
+    return `${table.sourceTableSchema}.${table.sourceTableName || unassignedLabel}`;
 }
 
 function hasChildTables(table: FormTableItem) {
