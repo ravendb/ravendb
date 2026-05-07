@@ -1799,7 +1799,8 @@ namespace Raven.Server.Documents.Indexes
                                 {
                                     if (_logger.IsWarnEnabled)
                                         _logger.Warn($"Index '{Name}' exceeded the file system hard-link limit and switched to unshared journal mode for this batch. " +
-                                                     $"The affected indexing batch will be retried. Subsequent journal rolls may attempt to share again and fall back the same way if the limit is still reached.", hlle);
+                                                     $"The affected indexing batch will be retried. Subsequent commits will continue using local journals " +
+                                                     $"until the index or the database is reloaded.", hlle);
                                 }
                                 catch (TimeoutException te)
                                 {
