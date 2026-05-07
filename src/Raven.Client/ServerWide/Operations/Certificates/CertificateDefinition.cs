@@ -71,6 +71,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         Client = 2,
         SsoServer = 3,
         SsoClient = 4,
+        WellKnownIssuer = 5,
     }
 
     public enum DatabaseAccess

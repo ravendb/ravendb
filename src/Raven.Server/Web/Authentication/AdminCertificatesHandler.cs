@@ -367,7 +367,7 @@ namespace Raven.Server.Web.Authentication
                     Permissions = certDef.Permissions,
                     SecurityClearance = certDef.SecurityClearance,
                     Password = certDef.Password,
-                    Usage = certDef.Usage,
+                    Usage = certDef.Usage ?? CertificateUsage.Client,
                 };
 
                 if (x509Certificate.HasPrivateKey)
@@ -825,7 +825,8 @@ namespace Raven.Server.Web.Authentication
                             Permissions = new Dictionary<string, DatabaseAccess>(),
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = clientCert.Thumbprint,
-                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
+                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
+                            Usage = CertificateUsage.Client
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
                     }
@@ -837,7 +838,8 @@ namespace Raven.Server.Web.Authentication
                             Permissions = new Dictionary<string, DatabaseAccess>(),
                             SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = clientCert.Thumbprint,
-                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash()
+                            PublicKeyPinningHash = clientCert.GetPublicKeyPinningHash(),
+                            Usage = CertificateUsage.WellKnownIssuer
                         };
                         certificate = ctx.ReadObject(wellKnownCertDef.ToJson(), "WellKnown/Certificate/Definition");
                     }

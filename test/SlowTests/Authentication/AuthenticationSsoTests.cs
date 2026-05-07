@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Tests.Infrastructure;
@@ -222,7 +223,7 @@ namespace SlowTests.Authentication
         }
 
         [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
-        public void SsoServerCertRenewal_UserEntriesStillWork()
+        public async Task SsoServerCertRenewal_UserEntriesStillWork()
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
@@ -235,56 +236,53 @@ namespace SlowTests.Authentication
             var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
             var ssoUserId = "renewed@example.com";
 
-            using (var adminStore = GetDocumentStore(new Options
+            Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+            Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
+
+            // Create a "renewed" SSO server cert using the same private key (different serial/thumbprint)
+            var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts);
+            var renewedPinningHash = renewedSsoServerCert.GetPublicKeyPinningHash();
+
+            Assert.Equal(ssoCerts.SsoServerPublicKeyPinningHash, renewedPinningHash);
+
+            var renewedSsoCerts = new SsoTestCertificates(
+                renewedSsoServerCert,
+                ssoCerts.SsoServerPrivateKey,
+                renewedPinningHash,
+                Convert.ToBase64String(renewedSsoServerCert.Export(X509ContentType.Cert)));
+
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(renewedSsoCerts, ssoUserId);
+
+            using (var ssoStore = new DocumentStore
+                   {
+                       Urls = new[] { Server.WebUrl },
+                       Database = dbName,
+                       Certificate = ssoUserCert,
+                       Conventions = new DocumentConventions
+                       {
+                           DisposeCertificate = false
+                       }
+                   }.Initialize())
             {
-                AdminCertificate = adminCert,
-                ClientCertificate = adminCert,
-                ModifyDatabaseName = _ => dbName
-            }))
-            {
-                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
-                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
-                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
-
-                // Create a "renewed" SSO server cert using the same private key (different serial/thumbprint)
-                var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts);
-                var renewedPinningHash = renewedSsoServerCert.GetPublicKeyPinningHash();
-
-                Assert.Equal(ssoCerts.SsoServerPublicKeyPinningHash, renewedPinningHash);
-
-                Certificates.RegisterSsoServerCert(certificates, renewedSsoServerCert, "Renewed SSO Server Certificate");
-
-                var renewedSsoCerts = new SsoTestCertificates(
-                    renewedSsoServerCert,
-                    ssoCerts.SsoServerPrivateKey,
-                    renewedPinningHash,
-                    Convert.ToBase64String(renewedSsoServerCert.Export(X509ContentType.Cert)));
-
-                var ssoUserCert = Certificates.CreateSsoUserCertificate(renewedSsoCerts, ssoUserId);
-
-                using (var ssoStore = new DocumentStore
+                var requestExecutor = ssoStore.GetRequestExecutor();
+                await requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(
+                    new ServerNode { Url = Server.WebUrl, Database = dbName })
                 {
-                    Urls = new[] { Server.WebUrl },
-                    Database = dbName,
-                    Certificate = ssoUserCert,
-                    Conventions = new DocumentConventions
-                    {
-                        DisposeCertificate = false,
-                        DisableTopologyUpdates = true
-                    }
-                }.Initialize())
-                {
-                    using (var session = ssoStore.OpenSession())
-                    {
-                        session.Store(new { Name = "Renewed" }, "test/1");
-                        session.SaveChanges();
-                    }
+                    TimeoutInMs = 15000,
+                    DebugTag = "sso-renewal-test"
+                });
 
-                    using (var session = ssoStore.OpenSession())
-                    {
-                        var doc = session.Load<dynamic>("test/1");
-                        Assert.NotNull(doc);
-                    }
+                using (var session = ssoStore.OpenSession())
+                {
+                    session.Store(new { Name = "Renewed" }, "test/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = ssoStore.OpenSession())
+                {
+                    var doc = session.Load<dynamic>("test/1");
+                    Assert.NotNull(doc);
                 }
             }
         }

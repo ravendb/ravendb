@@ -2150,7 +2150,8 @@ namespace Raven.Server
                 Thumbprint = certificate.Thumbprint,
                 PublicKeyPinningHash = pinningHash,
                 NotAfter = certificate.NotAfter,
-                NotBefore = certificate.NotBefore
+                NotBefore = certificate.NotBefore,
+                Usage = certWithSameHash.Usage
             };
 
             cert = ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint) ??
@@ -2204,12 +2205,21 @@ namespace Raven.Server
                 chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
                 chain.ChainPolicy.DisableCertificateDownloads = true;
                 chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+
+                // CustomRootTrust requires the chain to terminate at a self-signed certificate in CustomTrustStore,
+                // but the SSO server certificate may itself be CA-signed (e.g. issued by Let's Encrypt). In that case
+                // the chain builder does not stop at it — it continues upward through the CA's intermediates until it
+                // reaches the CA root, which is not in our CustomTrustStore, causing Build() to return false with
+                // UntrustedRoot. AllowUnknownCertificateAuthority suppresses that failure so Build() succeeds.
+                // IgnoreInvalidBasicConstraints and IgnoreWrongUsage cover the case where the SSO server
+                // certificate lacks the CA basic constraint or the certificate-signing key usage
+                // (e.g. in certificates issued by Let's Encrypt).
                 chain.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority
                                                       | X509VerificationFlags.IgnoreInvalidBasicConstraints
                                                       | X509VerificationFlags.IgnoreWrongUsage;
                 chain.ChainPolicy.CustomTrustStore.Add(ssoServerCert);
 
-                if (chain.Build(certificate) == false)
+                if (chain.Build(certificate) == false || chain.ChainElements.Count < 2)
                 {
                     if (Logger.IsInfoEnabled)
                     {
@@ -2283,7 +2293,7 @@ namespace Raven.Server
                             $"SSO user '{ssoUserId}' exists but is not bound to this SSO server - rejecting.");
 
                     authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
-                    return;
+                    continue;
                 }
 
                 // Found the SSO user entry - SSO-specific fields set here, permissions set by main flow

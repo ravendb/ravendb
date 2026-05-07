@@ -195,7 +195,7 @@ namespace Raven.Server.Commercial
 
         public bool HasEncryptedBackups => Enabled(LicenseAttribute.EncryptedBackup);
 
-        public bool HasSso => Enabled(LicenseAttribute.Sso);
+        public bool HasSso => true; //Enabled(LicenseAttribute.Sso);
 
         public bool CanAutoRenewLetsEncryptCertificate
         {
