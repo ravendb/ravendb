@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,11 +25,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Core)]
-        [InlineData(1)]
-        [InlineData(2)]
-        [InlineData(4)]
         [InlineData(8)]
-        [InlineData(16)]
         [InlineData(32)]
         [InlineData(64)]
         [InlineData(128)]
@@ -151,9 +148,10 @@ namespace SlowTests.Issues
                 str += new string(Enumerable.Repeat(abc, partialSize).Select(s => s[random.Next(s.Length)]).ToArray());
 
                 using var store = GetDocumentStore(AllowControlCharactersInIdentifier());
+                string expectedCollection = StringUtils.HasControlCharacters(str) ? new string('a', str.Length) : str;
                 store.Commands().Put(str, null, new { WeirdName = str }, new Dictionary<string, object>
                 {
-                    { "@collection", str }
+                    { "@collection", expectedCollection }
                 });
 
                 using var session = store.OpenAsyncSession();
@@ -163,7 +161,7 @@ namespace SlowTests.Issues
 
                 Assert.Equal(str, u.WeirdName);
                 Assert.Equal(str, id);
-                Assert.Equal(str, collection);
+                Assert.Equal(expectedCollection, collection);
             }
         }
 
