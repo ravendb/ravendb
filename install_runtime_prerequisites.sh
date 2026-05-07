@@ -80,6 +80,8 @@ elif [ "$UBUNTU_VERSION" = "22.04" ] ; then
     apt_install libicu70
 elif [ "$UBUNTU_VERSION" = "24.04" ] ; then
     apt_install libicu74
+elif [ "$UBUNTU_VERSION" = "26.04" ] ; then
+    apt_install libicu76
 fi
 
 if [ "$INSTALL_FAILURES" -gt 0 ]; then
