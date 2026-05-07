@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Corax.Utils;
 using Microsoft.AspNetCore.Http;
-using Nito.AsyncEx;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
@@ -247,7 +246,7 @@ namespace Raven.Server.Documents.Indexes
         private Lazy<Size?> _transactionSizeLimit;
         private bool _scratchSpaceLimitExceeded;
 
-        private readonly AsyncReaderWriterLock _currentlyRunningQueriesLock = new AsyncReaderWriterLock();
+        private readonly ReaderDrainLock _currentlyRunningQueriesLock = new ReaderDrainLock();
         private readonly AsyncLocal<bool> _isRunningQueriesWriteLockTaken = new AsyncLocal<bool>();
         private readonly MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private readonly MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
@@ -360,6 +359,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 using (DrainRunningQueries())
                     DisposeIndex();
+
+                _currentlyRunningQueriesLock.Dispose();
             });
         }
 
@@ -812,7 +813,7 @@ namespace Raven.Server.Documents.Indexes
             try
             {
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
-                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.WriterLock(cts.Token);
+                    currentlyRunningQueriesWriteLock = _currentlyRunningQueriesLock.EnterWrite(cts.Token);
 
                 _isRunningQueriesWriteLockTaken.Value = true;
             }
@@ -5451,18 +5452,8 @@ namespace Raven.Server.Documents.Indexes
 
             private static readonly TimeSpan ExtendedLockTimeout = TimeSpan.FromSeconds(30);
 
-            private static readonly CancellationToken CancelledToken;
-
-            static IndexQueryDoneRunning()
-            {
-                var cts = new CancellationTokenSource();
-                cts.Cancel();
-
-                CancelledToken = cts.Token;
-            }
-
             private readonly Index _parent;
-            private IDisposable _lock;
+            private bool _heldLock;
 
             public IndexQueryDoneRunning(Index parent)
             {
@@ -5475,13 +5466,14 @@ namespace Raven.Server.Documents.Indexes
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_lock != null)
+                if (_heldLock)
                     ThrowLockAlreadyTaken();
 
                 try
                 {
                     using (var cts = new CancellationTokenSource(timeout))
-                        _lock = _parent._currentlyRunningQueriesLock.ReaderLock(cts.Token);
+                        _parent._currentlyRunningQueriesLock.AcquireRead(cts.Token);
+                    _heldLock = true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -5489,19 +5481,33 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
 
-            public async ValueTask HoldLockAsync()
+            public ValueTask HoldLockAsync()
             {
+                if (_heldLock)
+                    ThrowLockAlreadyTaken();
+
+                // The common case must stay allocation-free and complete synchronously.
+                // Only fall back to the async slow path when a writer is pending.
+                if (_parent._currentlyRunningQueriesLock.TryAcquireRead())
+                {
+                    _heldLock = true;
+                    return ValueTask.CompletedTask;
+                }
+
                 var timeout = _parent._isReplacing
                     ? ExtendedLockTimeout
                     : DefaultLockTimeout;
 
-                if (_lock != null)
-                    ThrowLockAlreadyTaken();
+                return HoldLockSlowAsync(timeout);
+            }
 
+            private async ValueTask HoldLockSlowAsync(TimeSpan timeout)
+            {
                 try
                 {
                     using (var cts = new CancellationTokenSource(timeout))
-                        _lock = await _parent._currentlyRunningQueriesLock.ReaderLockAsync(cts.Token);
+                        await _parent._currentlyRunningQueriesLock.AcquireReadAsync(cts.Token).ConfigureAwait(false);
+                    _heldLock = true;
                 }
                 catch (OperationCanceledException)
                 {
@@ -5511,18 +5517,13 @@ namespace Raven.Server.Documents.Indexes
 
             public bool TryHoldLock()
             {
-                if (_lock != null)
+                if (_heldLock)
                     ThrowLockAlreadyTaken();
 
-                try
-                {
-                    _lock = _parent._currentlyRunningQueriesLock.ReaderLock(CancelledToken);
-                }
-                catch (OperationCanceledException)
-                {
+                if (_parent._currentlyRunningQueriesLock.TryAcquireRead() == false)
                     return false;
-                }
 
+                _heldLock = true;
                 return true;
             }
 
@@ -5542,14 +5543,26 @@ namespace Raven.Server.Documents.Indexes
 
             public void ReleaseLock()
             {
-                _lock?.Dispose();
-                _lock = null;
+                if (_heldLock == false)
+                    return;
+                _parent._currentlyRunningQueriesLock.ReleaseRead();
+                _heldLock = false;
             }
 
             public void Dispose()
             {
                 ReleaseLock();
+#if DEBUG
+                GC.SuppressFinalize(this);
+#endif
             }
+
+#if DEBUG
+            ~IndexQueryDoneRunning()
+            {
+                Debug.Assert(_heldLock == false, $"IndexQueryDoneRunning for '{_parent?.Name}' finalized without ReleaseLock - read leaked");
+            }
+#endif
         }
 
         internal sealed class ExitWriteLock : IDisposable

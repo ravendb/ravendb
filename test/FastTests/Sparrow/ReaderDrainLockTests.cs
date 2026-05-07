@@ -93,6 +93,11 @@ namespace FastTests.Sparrow
                 writerEntered.Set();
             });
 
+            // Wait until the writer has actually published the pending bit;
+            // otherwise a delayed Task schedule could make this test pass without
+            // proving that the writer is blocked by the active reader.
+            Assert.True(SpinWait.SpinUntil(l.HasWriterPendingForTesting, TimeSpan.FromSeconds(1)));
+
             // Writer should not enter while reader holds.
             Assert.False(writerEntered.Wait(TimeSpan.FromMilliseconds(150)));
 
@@ -151,14 +156,7 @@ namespace FastTests.Sparrow
             });
 
             writerPublishedPending.Wait();
-            // Spin briefly so EnterWrite has flipped the bit.
-            SpinWait.SpinUntil(() =>
-            {
-                if (l.TryEnterRead(out ReaderDrainLock.ReadHandle probe) == false)
-                    return true;
-                probe.Dispose();
-                return false;
-            }, TimeSpan.FromSeconds(1));
+            Assert.True(SpinWait.SpinUntil(l.HasWriterPendingForTesting, TimeSpan.FromSeconds(1)));
 
             using CancellationTokenSource readerToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
             Assert.Throws<OperationCanceledException>(() => l.EnterRead(readerToken.Token));
@@ -223,7 +221,7 @@ namespace FastTests.Sparrow
                 }
             });
 
-            Task.WaitAll(tasks);
+            Assert.True(Task.WaitAll(tasks, TimeSpan.FromSeconds(10)));
             Assert.Equal(0, violations);
         }
     }
