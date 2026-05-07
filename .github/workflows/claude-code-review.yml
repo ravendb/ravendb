@@ -41,7 +41,13 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          prompt: |-
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment
+
+            When the plugin finds issues and posts inline comments, also post a
+            top-level summary comment via `gh pr comment` with the issue count,
+            category breakdown (bugs / CLAUDE.md compliance), and overall verdict —
+            so reviewers see the high-level picture in the main PR thread.
           # Allowlist mirrors the code-review plugin's own allowed-tools plus
           # Read/Grep/Glob/Task/TodoWrite needed by its subagent orchestration.
           # No Bash escape, no WebFetch, no Edit/Write — code review is read-only.
