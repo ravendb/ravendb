@@ -266,7 +266,7 @@ public class RavenDB_24069 : RavenTestBase
         IOExtensions.DeleteDirectory(rootPath);
 
         string branchPath = NewDataPath(suffix: "branch");
-        IOExtensions.DeleteDirectory(rootPath);
+        IOExtensions.DeleteDirectory(branchPath);
 
         // ----- phase 1: run shared, force a successful link, then simulate hard-link limit -----
         {
