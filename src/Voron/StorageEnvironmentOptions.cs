@@ -811,7 +811,7 @@ namespace Voron
             {
                 var fileInfo = GetJournalFileInfo(journalNumber, journalInfo);
 
-                if (fileInfo.Length < InitialLogFileSize)
+                if (fileInfo.Length < InitialLogFileSize && RootJournal == null)
                 {
                     EnsureMinimumSize(fileInfo);
                 }
@@ -826,7 +826,7 @@ namespace Voron
                 if (ForceUsing32BitsPager || PlatformDetails.Is32Bits)
                     flags |= Pal.OpenFileFlags.DoNotMap;
                 return Pager.Create(this, filename, 0, flags, pageSize: Constants.Storage.JournalPageSize);
-                    }
+            }
 
             private FileInfo GetJournalFileInfo(long journalNumber, JournalInfo journalInfo)
             {
@@ -836,10 +836,10 @@ namespace Voron
                 if (fileInfo.Exists == false)
                     throw new InvalidJournalException(journalNumber, path.FullPath, journalInfo);
                 return fileInfo;
-                }
+            }
 
             private void EnsureMinimumSize(FileInfo fileInfo)
-                {
+            {
                 try
                 {
                     using (var stream = fileInfo.Open(FileMode.OpenOrCreate))
