@@ -269,35 +269,39 @@ namespace Raven.Client.Documents.Session
 
             if (HasExistingJavaScriptPatch(id) == false && TryBuildJsonPointer(path.Body, out var jsonPointer))
             {
-                switch (call.Method.Name)
+                var keyString = key?.ToString();
+                if (IsValidJsonPointerSegment(keyString))
                 {
-                    case nameof(JavaScriptDictionary<TKey, TValue>.Add):
+                    switch (call.Method.Name)
                     {
-                        if (ShouldUseJsonPatch(typeof(TValue), value))
+                        case nameof(JavaScriptDictionary<TKey, TValue>.Add):
                         {
-                            var escapedKey = EscapeJsonPointerSegment(key.ToString());
-                            var jpd = new JsonPatchDocument();
+                            if (ShouldUseJsonPatch(typeof(TValue), value))
+                            {
+                                var escapedKey = EscapeJsonPointerSegment(keyString);
+                                var jpd = new JsonPatchDocument();
 
-                            jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(value));
+                                jpd.Add($"{jsonPointer}/{escapedKey}", ConvertValueForJsonPatch(value));
+
+                                if (TryMergeJsonPatches(id, jpd) == false)
+                                    Defer(new JsonPatchCommandData(id, jpd));
+
+                                return;
+                            }
+
+                            break;
+                        }
+                        case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
+                        {
+                            var escapedKey = EscapeJsonPointerSegment(keyString);
+                            var jpd = new JsonPatchDocument();
+                            jpd.Remove($"{jsonPointer}/{escapedKey}");
 
                             if (TryMergeJsonPatches(id, jpd) == false)
                                 Defer(new JsonPatchCommandData(id, jpd));
 
                             return;
                         }
-
-                        break;
-                    }
-                    case nameof(JavaScriptDictionary<TKey, TValue>.Remove):
-                    {
-                        var escapedKey = EscapeJsonPointerSegment(key.ToString());
-                        var jpd = new JsonPatchDocument();
-                        jpd.Remove($"{jsonPointer}/{escapedKey}");
-
-                        if (TryMergeJsonPatches(id, jpd) == false)
-                            Defer(new JsonPatchCommandData(id, jpd));
-
-                        return;
                     }
                 }
             }
@@ -469,6 +473,13 @@ namespace Raven.Client.Documents.Session
         private static string EscapeJsonPointerSegment(string segment)
         {
             return segment.Replace("~", "~0").Replace("/", "~1");
+        }
+
+        private static bool IsValidJsonPointerSegment(string segment)
+        {
+            // Server-side JsonPatchCommand.Parse rejects whitespace-only path segments.
+            // Fall back to JavaScript for keys that would produce such segments.
+            return string.IsNullOrWhiteSpace(segment) == false;
         }
 
         private bool TryBuildJsonPointer(Expression body, out string jsonPointer)
