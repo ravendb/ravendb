@@ -250,7 +250,7 @@ namespace Raven.Server.Documents.TimeSeries
             else if (predecessorChangeVector != null)
             {
                 etag = _documentsStorage.GenerateNextEtag();
-                changeVector = ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, predecessorChangeVector, _documentDatabase, etag);
+                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, predecessorChangeVector, _documentDatabase, etag);
             }
             else
             {
@@ -311,12 +311,17 @@ namespace Raven.Server.Documents.TimeSeries
             using (var slicer = new TimeSeriesSliceHolder(context, documentId, name))
             {
                 var stats = Stats.GetStats(context, slicer);
-                if (stats == default ||
-                    stats.Count == 0 ||
-                    stats.End < from)
+
+                // InsertDeletedRange already persisted a deleted-range item. Even if there are no live segments to remove,
+                // replication still has to wake up and send that item.
+                if (stats == default || stats.Count == 0)
                 {
-                    // InsertDeletedRange already persisted a deleted-range item. Even if there are no live segments to remove,
-                    // replication still has to wake up and send that item.
+                    AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
+                    return null;
+                }
+
+                if (stats.End < from)
+                {
                     AddDeletedRangeItemChangeNotification(context, deletionRangeRequest, deletedRangeChangeVector, collectionName);
                     return null;
                 }

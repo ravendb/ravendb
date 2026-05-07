@@ -214,10 +214,8 @@ namespace Raven.Server.ServerWide.Context
 
         public ChangeVector GetEmptyChangeVector() => GetChangeVector(null);
 
-        public ChangeVector GetChangeVector(string nodeTag, long etag, string dbId)
-        {
-            return GetChangeVector(ChangeVectorUtils.NewChangeVector(nodeTag, etag, dbId));
-        }
+        public ChangeVector GetChangeVector(string nodeTag, long etag, string dbId) =>
+            GetChangeVector(ChangeVectorUtils.NewChangeVector(nodeTag, etag, dbId));
 
         public ChangeVector GetChangeVector(string changeVector, bool throwOnRecursion)
         {

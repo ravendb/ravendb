@@ -545,11 +545,9 @@ namespace Raven.Server.Documents.Replication.Senders
         }
 
 
-        // TODO: Temporary solution.
-        // FLTR-ordered items have local storage etags that are not represented
-        // by the destination regular DB CV. Jumping by destination DB CV can skip
-        // such items before we even inspect them. Until filtered order carries a
-        // safe progress watermark, filtered senders must not rely on this jump.
+        // Ordinary replication items are ordered by this database id, so the destination DB CV can
+        // safely move the scan start forward. Senders that can scan locally stored items ordered by
+        // another marker, for example FLTR, must opt out because this shortcut can skip those items.
         protected virtual bool ShouldUseLastEtagFromDestinationChangeVector()
         {
             return true;

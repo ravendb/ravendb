@@ -12,9 +12,10 @@ namespace Raven.Server.Documents.Replication.Senders
 
         protected override bool ShouldUseLastEtagFromDestinationChangeVector()
         {
-            // TODO: Temporary solution
-            // Filtered-pull items can have a local storage etag whose order is FLTR, not the local database id.
-            // Scanning by destination DB CV can skip those items before ordinary internal replication sends them.
+            // This is not related to failover. Filtered-pull items can be stored under a local storage etag,
+            // but their replication order is FLTR, not this database id. If internal replication jumps its
+            // scan start by the destination DB CV, it can skip those locally stored FLTR-ordered items before
+            // ShouldSkip gets a chance to compare the actual item order.
             return false;
         }
     }

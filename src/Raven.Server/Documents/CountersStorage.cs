@@ -410,15 +410,9 @@ namespace Raven.Server.Documents
 
                     var groupEtag = _documentsStorage.GenerateNextEtag();
 
-                    ChangeVector changeVector;
-                    if (existingChangeVector != null)
-                    {
-                        changeVector = ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, existingChangeVector, _documentDatabase, groupEtag);
-                    }
-                    else
-                    {
-                        changeVector = _documentsStorage.GetNewChangeVector(context, groupEtag);
-                    }
+                    ChangeVector changeVector = existingChangeVector != null
+                        ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, existingChangeVector, _documentDatabase, groupEtag)
+                        : _documentsStorage.GetNewChangeVector(context, groupEtag);
 
                     using (countersGroupKeyScope)
                     {

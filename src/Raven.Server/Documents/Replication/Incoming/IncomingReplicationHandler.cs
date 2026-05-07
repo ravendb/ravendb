@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Replication.Incoming
         {
             private readonly long _lastEtag;
             private readonly bool _isInternal;
-            private readonly DataForReplicationCommand _replicationInfo;
+            private protected readonly DataForReplicationCommand _replicationInfo;
 
             public MergedDocumentReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag, bool isInternal = false)
             {
@@ -371,8 +371,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                         var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
-                        var changeVectorVersion = incomingChangeVector.Version;
-                        var changeVectorForItemStorage = incomingChangeVector.IsSingle ? changeVectorVersion : incomingChangeVector; // TODO: Need to figure out what the implications are for Revisions: can we just start saving the full change vector this freely, or not?
 
                         context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
 
@@ -448,7 +446,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
                                 
                                 database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
-                                    changeVectorForItemStorage, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
+                                    incomingChangeVector, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
                                 break;
 
                             case CounterReplicationItem counter:
@@ -561,7 +559,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         document,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        changeVectorForItemStorage,
+                                        incomingChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }
@@ -574,7 +572,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                         document,
                                         doc.Flags,
                                         nonPersistentFlags,
-                                        changeVectorForItemStorage,
+                                        incomingChangeVector,
                                         doc.LastModifiedTicks);
                                     continue;
                                 }

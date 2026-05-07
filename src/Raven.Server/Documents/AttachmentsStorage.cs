@@ -169,7 +169,7 @@ namespace Raven.Server.Documents
                     Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
 
                     if (DeleteTombstoneIfNeeded(context, keySlice, out ChangeVector changeVector))
-                        changeVector = ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, changeVector, _documentDatabase, attachmentEtag);
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, changeVector, _documentDatabase, attachmentEtag);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, Slice cv)
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents
                         if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                             ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
 
-                        changeVector = ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, oldChangeVector, _documentDatabase, attachmentEtag);
+                        changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
                         Debug.Assert(changeVector != null);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
@@ -218,7 +218,7 @@ namespace Raven.Server.Documents
                                 if (expectedChangeVector != null && ChangeVector.CompareVersion(oldChangeVector, expectedChangeVector, context) != 0)
                                     ThrowConcurrentException(documentId, name, expectedChangeVector, oldChangeVector);
 
-                                changeVector = ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, oldChangeVector, _documentDatabase, attachmentEtag);
+                                changeVector = ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, oldChangeVector, _documentDatabase, attachmentEtag);
 
                                 if (fromSmuggler == false)
                                 {
@@ -312,7 +312,7 @@ namespace Raven.Server.Documents
             if (string.IsNullOrEmpty(changeVector))
             {
                 changeVector = hadTombstone
-                    ? ChangeVector.CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(context, tombstoneChangeVector, _documentDatabase, newEtag).AsString()
+                    ? ChangeVector.GetLocalCvFromPriorAndUpdateDbCv(context, tombstoneChangeVector, _documentDatabase, newEtag).AsString()
                     : _documentsStorage.GetNewChangeVector(context, newEtag);
             }
 

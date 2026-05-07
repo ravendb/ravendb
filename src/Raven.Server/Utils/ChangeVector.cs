@@ -204,11 +204,11 @@ public sealed class ChangeVector
         MergeWithDatabaseChangeVector(context, context.GetChangeVector(changeVector));
     }
 
-    internal static ChangeVector CreateForLocalChangeFromPredecessorAndUpdateDatabaseChangeVector(DocumentsOperationContext context, ChangeVector predecessorChangeVector, DocumentDatabase database, long etag)
+    internal static ChangeVector GetLocalCvFromPriorAndUpdateDbCv(DocumentsOperationContext context, ChangeVector priorChangeVector, DocumentDatabase database, long etag)
     {
-        ArgumentNullException.ThrowIfNull(predecessorChangeVector);
+        ArgumentNullException.ThrowIfNull(priorChangeVector);
 
-        var changeVector = MergeWithDatabaseChangeVector(context, predecessorChangeVector);
+        var changeVector = MergeWithDatabaseChangeVector(context, priorChangeVector);
         changeVector = changeVector.UpdateVersion(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
         changeVector = changeVector.UpdateOrder(database.ServerStore.NodeTag, database.DbBase64Id, etag, context);
         context.LastDatabaseChangeVector = changeVector.Order;
@@ -411,7 +411,6 @@ public sealed class ChangeVector
         return $"{_order._changeVector}{Separator}{_version._changeVector}";
     }
 }
-
 
 public enum ChangeVectorMode
 {
