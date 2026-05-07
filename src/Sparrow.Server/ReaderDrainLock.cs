@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sparrow.Server
 {
@@ -57,6 +58,13 @@ namespace Sparrow.Server
         // path; a writer resets it on entry and sets it on exit.
         private readonly ManualResetEventSlim _writerCleared = new ManualResetEventSlim(initialState: true, spinCount: 0);
 
+        // Async readers use a separate completion source so the synchronous
+        // path can keep ManualResetEventSlim and avoid async machinery. The
+        // completed instance means the uncontended async path does not allocate
+        // or schedule continuations; writers swap in a non-completed source
+        // only while the writer-pending bit is published.
+        private TaskCompletionSource<bool> _asyncWriterCleared = CreateCompletedTaskCompletionSource();
+
         // Serializes writers. Held from EnterWrite to WriteHandle.Dispose.
         private readonly object _writerGate = new object();
 
@@ -85,6 +93,21 @@ namespace Sparrow.Server
                 _writerCleared.Wait(token);
         }
 
+        private async ValueTask AcquireAsync(CancellationToken token)
+        {
+            while (TryAcquire() == false)
+            {
+                // We only get here after the same one-atomic-op reader fast
+                // path rejected us because a writer is pending. Await the
+                // async signal instead of blocking a request thread, then retry
+                // the normal acquire path because another writer may have won.
+                await Volatile.Read(ref _asyncWriterCleared).Task.WaitAsync(token).ConfigureAwait(false);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal bool HasWriterPendingForTesting() => (Volatile.Read(ref _state) & WriterPendingBit) != 0;
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryEnterRead(out ReadHandle handle)
         {
@@ -105,6 +128,16 @@ namespace Sparrow.Server
 
         // Holder-pattern API. Pair Acquire/TryAcquire with exactly one Release.
         public void AcquireRead(CancellationToken token) => Acquire(token);
+
+        public ValueTask AcquireReadAsync(CancellationToken token)
+        {
+            // Preserve the query hot path: if there is no writer pending this
+            // is the same TryAcquire fast path and returns a completed ValueTask.
+            if (TryAcquire())
+                return ValueTask.CompletedTask;
+
+            return AcquireAsync(token);
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryAcquireRead() => TryAcquire();
@@ -145,6 +178,7 @@ namespace Sparrow.Server
                 Monitor.Enter(_writerGate, ref gateHeld);
 
                 _drained.Reset();
+                ResetAsyncWriterCleared();
                 _writerCleared.Reset();
 
                 // Publish writer-pending and atomically observe the reader
@@ -173,6 +207,7 @@ namespace Sparrow.Server
                     // Roll back the writer-pending flag so readers can resume.
                     Interlocked.And(ref _state, ~WriterPendingBit);
                     _writerCleared.Set();
+                    SetAsyncWriterCleared();
                     _drained.Set();
                 }
                 if (gateHeld)
@@ -185,8 +220,33 @@ namespace Sparrow.Server
         {
             Interlocked.And(ref _state, ~WriterPendingBit);
             _writerCleared.Set();
+            SetAsyncWriterCleared();
             _drained.Set();
             Monitor.Exit(_writerGate);
+        }
+
+        private static TaskCompletionSource<bool> CreateTaskCompletionSource() =>
+            new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private static TaskCompletionSource<bool> CreateCompletedTaskCompletionSource()
+        {
+            var tcs = CreateTaskCompletionSource();
+            tcs.SetResult(true);
+            return tcs;
+        }
+
+        private void ResetAsyncWriterCleared()
+        {
+            var tcs = Volatile.Read(ref _asyncWriterCleared);
+            if (tcs.Task.IsCompleted == false)
+                return;
+
+            Interlocked.CompareExchange(ref _asyncWriterCleared, CreateTaskCompletionSource(), tcs);
+        }
+
+        private void SetAsyncWriterCleared()
+        {
+            Volatile.Read(ref _asyncWriterCleared).TrySetResult(true);
         }
 
         public void Dispose()
@@ -196,6 +256,7 @@ namespace Sparrow.Server
             _disposed = true;
             _drained.Dispose();
             _writerCleared.Dispose();
+            Volatile.Read(ref _asyncWriterCleared).TrySetCanceled();
         }
 
         // ref struct: cannot be stored in a field, captured, awaited, or boxed.
@@ -204,7 +265,10 @@ namespace Sparrow.Server
         {
             private ReaderDrainLock _parent;
 
-            internal ReadHandle(ReaderDrainLock parent) { _parent = parent; }
+            internal ReadHandle(ReaderDrainLock parent)
+            {
+                _parent = parent;
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Dispose()
@@ -221,7 +285,10 @@ namespace Sparrow.Server
         {
             private ReaderDrainLock _parent;
 
-            internal WriteHandle(ReaderDrainLock parent) { _parent = parent; }
+            internal WriteHandle(ReaderDrainLock parent)
+            {
+                _parent = parent;
+            }
 
             public void Dispose()
             {
