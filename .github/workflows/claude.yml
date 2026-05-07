@@ -71,7 +71,9 @@ jobs:
           # Tool allowlist: read access to PRs/issues, edit/write for code
           # suggestions, no Bash escape, no WebFetch (exfiltration), no
           # destructive gh subcommands like release/repo/api.
-          claude_args: '--max-turns 80 --allowedTools "Read,Grep,Glob,Task,TodoWrite,Edit,Write,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh search:*)"'
+          # Model is set via the RAVENDB_BOT_CODE_MODEL repository (or org)
+          # variable (e.g. claude-sonnet-4-6, claude-opus-4-7).
+          claude_args: '--max-turns 80 --model ${{ vars.RAVENDB_BOT_CODE_MODEL }} --allowedTools "Read,Grep,Glob,Task,TodoWrite,Edit,Write,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh search:*)"
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options

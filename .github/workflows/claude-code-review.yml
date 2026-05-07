@@ -96,6 +96,8 @@ jobs:
           # Allowlist mirrors the code-review plugin's own allowed-tools plus
           # Read/Grep/Glob/Task/TodoWrite needed by its subagent orchestration.
           # No Bash escape, no WebFetch, no Edit/Write — code review is read-only.
-          claude_args: '--max-turns 50 --allowedTools "Read,Grep,Glob,Task,TodoWrite,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          # Model is set via the RAVENDB_BOT_REVIEW_MODEL repository (or org)
+          # variable (e.g. claude-sonnet-4-6, claude-opus-4-7).
+          claude_args: '--max-turns 50 --model ${{ vars.RAVENDB_BOT_REVIEW_MODEL }} --allowedTools "Read,Grep,Glob,Task,TodoWrite,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
