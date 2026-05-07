@@ -6,7 +6,7 @@ on:
 
 jobs:
   claude-review:
-    if: github.event.requested_reviewer.login == 'ravendb-bot'
+    if: github.event.requested_reviewer.login == 'hugin-bot'
 
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
@@ -18,7 +18,7 @@ jobs:
     steps:
       # Mint a custom GitHub App token so the action skips Anthropic's OIDC
       # exchange (which 401s for some actor/event combinations) and so review
-      # comments are posted as ravendb-bot[bot] rather than claude[bot].
+      # comments are posted as hugin-bot[bot] rather than claude[bot].
       # See https://github.com/anthropics/claude-code-action/issues/1017
       - name: Generate GitHub App token
         id: app-token
@@ -40,7 +40,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app-token.outputs.token }}
           # Suppress the default "🤖 Generated with Claude Code" footer on
-          # comments and PR descriptions — ravendb-bot[bot] is sufficient
+          # comments and PR descriptions — hugin-bot[bot] is sufficient
           # attribution. See https://code.claude.com/docs/en/settings#attribution-settings
           settings: |
             {
@@ -91,7 +91,7 @@ jobs:
               high-level picture without scrolling through inline threads.
 
             Do NOT add any "Generated with Claude Code" footer or robot emoji
-            attribution. Comments authored by ravendb-bot[bot] are already
+            attribution. Comments authored by hugin-bot[bot] are already
             attributed sufficiently.
           # Allowlist mirrors the code-review plugin's own allowed-tools plus
           # Read/Grep/Glob/Task/TodoWrite needed by its subagent orchestration.
