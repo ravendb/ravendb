@@ -95,6 +95,7 @@ export default function EditCdcSinkTaskDiscoveredTable({
     );
 }
 
+// TODO get percentage width
 const tableColumnDefs: ColumnDef<rootSqlTable>[] = [
     columnCheckbox as ColumnDef<rootSqlTable>,
     {

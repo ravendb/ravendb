@@ -1,5 +1,7 @@
 import Button from "react-bootstrap/Button";
+import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 import { EmptySet } from "components/common/EmptySet";
 import { Icon } from "components/common/Icon";
 import { useMemo, useState } from "react";
@@ -19,6 +21,7 @@ import {
     LinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 import _ from "lodash";
+import { useEditCdcSinkTaskTableActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/useEditCdcSinkTaskTableActions";
 
 interface EditCdcSinkTaskTablesExplorerProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -157,6 +160,7 @@ interface RootTableItemProps {
 
 function RootTableItem({ formIdx }: RootTableItemProps) {
     const dispatch = useAppDispatch();
+    const tableActions = useEditCdcSinkTaskTableActions();
     const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
@@ -181,23 +185,55 @@ function RootTableItem({ formIdx }: RootTableItemProps) {
 
     return (
         <div className="vstack gap-1">
-            <Button
-                variant={isActive ? "secondary" : "link"}
-                className={classNames("text-body text-start hstack", { "opacity-50": isDisabled })}
-                onClick={handleClick}
-                title={label}
-                style={{ paddingInline: "2px" }}
-            >
-                <Icon
-                    icon={isExpanded ? "chevron-down" : "chevron-right"}
-                    className={classNames("font-size-12", { "opacity-0": !hasChildren })}
-                    margin="m-0"
-                    style={{ paddingTop: "4px" }}
-                />
-                <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
-                    {label}
-                </span>
-            </Button>
+            <div className="hstack">
+                <Button
+                    variant={isActive ? "secondary" : "link"}
+                    className={classNames("text-body text-start hstack flex-grow-1 overflow-hidden", {
+                        "opacity-50": isDisabled,
+                    })}
+                    onClick={handleClick}
+                    title={label}
+                    style={{ paddingInline: "2px", minWidth: 0 }}
+                >
+                    <Icon
+                        icon={isExpanded ? "chevron-down" : "chevron-right"}
+                        className={classNames("font-size-12", { "opacity-0": !hasChildren })}
+                        margin="m-0"
+                    />
+                    <span className="text-truncate" style={{ marginLeft: "2px" }}>
+                        {label}
+                    </span>
+                </Button>
+                <Dropdown>
+                    <Dropdown.Toggle
+                        as={CustomDropdownToggle}
+                        isCaretHidden
+                        variant="link"
+                        className="text-body p-1"
+                        title="Table actions"
+                        size="xs"
+                    >
+                        <Icon icon="more" margin="m-0" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
+                        <Dropdown.Item onClick={() => tableActions.addEmbeddedTable(path)}>
+                            <Icon icon="embed" /> Add new embedded table
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => tableActions.addLinkedTable(path)}>
+                            <Icon icon="link" /> Add new linked table
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => tableActions.toggleRootTableDisabled(path)}>
+                            <Icon icon={isDisabled ? "play" : "stop"} /> {isDisabled ? "Enable" : "Disable"}
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                            className="text-danger"
+                            onClick={() => tableActions.removeTable({ path, type: "root" })}
+                        >
+                            <Icon icon="trash" /> Remove
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </div>
             {hasChildren && isExpanded && (
                 <div
                     className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"
@@ -226,6 +262,7 @@ interface LinkedTableItemProps {
 
 function LinkedTableItem({ path, isRootDisabled }: LinkedTableItemProps) {
     const dispatch = useAppDispatch();
+    const tableActions = useEditCdcSinkTaskTableActions();
     const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
@@ -244,24 +281,50 @@ function LinkedTableItem({ path, isRootDisabled }: LinkedTableItemProps) {
 
     return (
         <div className="vstack gap-1">
-            <Button
-                variant={isActive ? "secondary" : "link"}
-                className={classNames("text-body text-start hstack", { "opacity-50": isRootDisabled })}
-                onClick={handleClick}
-                title={label}
-                style={{ paddingInline: "2px" }}
-            >
-                <Icon
-                    icon={isExpanded ? "chevron-down" : "chevron-right"}
-                    className="font-size-12 opacity-0"
-                    margin="m-0"
-                    style={{ paddingTop: "4px" }}
-                />
-                <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
-                    {label}
-                </span>
-                <Icon icon="link" margin="ms-1" className="font-size-14" />
-            </Button>
+            <div className="hstack">
+                <Button
+                    variant={isActive ? "secondary" : "link"}
+                    className={classNames("text-body text-start hstack flex-grow-1 overflow-hidden", {
+                        "opacity-50": isRootDisabled,
+                    })}
+                    onClick={handleClick}
+                    title={label}
+                    style={{ paddingInline: "2px", minWidth: 0 }}
+                >
+                    <Icon
+                        icon={isExpanded ? "chevron-down" : "chevron-right"}
+                        className="font-size-12 opacity-0"
+                        margin="m-0"
+                    />
+                    <span className="text-truncate" style={{ marginLeft: "2px" }}>
+                        {label}
+                    </span>
+                    <Icon icon="link" margin="ms-1" className="font-size-14" />
+                </Button>
+                <Dropdown>
+                    <Dropdown.Toggle
+                        as={CustomDropdownToggle}
+                        isCaretHidden
+                        variant="link"
+                        className="text-body p-1"
+                        title="Table actions"
+                        size="xs"
+                    >
+                        <Icon icon="more" margin="m-0" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
+                        <Dropdown.Item onClick={() => tableActions.changeLinkedToEmbedded(path)}>
+                            <Icon icon="embed" /> Change to embedded
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                            className="text-danger"
+                            onClick={() => tableActions.removeTable({ path, type: "linked" })}
+                        >
+                            <Icon icon="trash" /> Remove
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </div>
         </div>
     );
 }
@@ -273,6 +336,7 @@ interface EmbeddedTableItemProps {
 
 function EmbeddedTableItem({ path, isRootDisabled }: EmbeddedTableItemProps) {
     const dispatch = useAppDispatch();
+    const tableActions = useEditCdcSinkTaskTableActions();
     const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
@@ -294,24 +358,56 @@ function EmbeddedTableItem({ path, isRootDisabled }: EmbeddedTableItemProps) {
 
     return (
         <div className="vstack gap-1">
-            <Button
-                variant={isActive ? "secondary" : "link"}
-                className={classNames("text-body text-start hstack", { "opacity-50": isRootDisabled })}
-                onClick={handleClick}
-                title={label}
-                style={{ paddingInline: "2px" }}
-            >
-                <Icon
-                    icon={isExpanded ? "chevron-down" : "chevron-right"}
-                    className={classNames("font-size-12", { "opacity-0": !hasChildren })}
-                    margin="m-0"
-                    style={{ paddingTop: "4px" }}
-                />
-                <span className="text-truncate" style={{ maxWidth: "200px", marginLeft: "2px" }}>
-                    {label}
-                </span>
-                <Icon icon="embed" margin="ms-1" className="font-size-14" />
-            </Button>
+            <div className="hstack">
+                <Button
+                    variant={isActive ? "secondary" : "link"}
+                    className={classNames("text-body text-start hstack flex-grow-1 overflow-hidden", {
+                        "opacity-50": isRootDisabled,
+                    })}
+                    onClick={handleClick}
+                    title={label}
+                    style={{ paddingInline: "2px", minWidth: 0 }}
+                >
+                    <Icon
+                        icon={isExpanded ? "chevron-down" : "chevron-right"}
+                        className={classNames("font-size-12", { "opacity-0": !hasChildren })}
+                        margin="m-0"
+                    />
+                    <span className="text-truncate" style={{ marginLeft: "2px" }}>
+                        {label}
+                    </span>
+                    <Icon icon="embed" margin="ms-1" className="font-size-14" />
+                </Button>
+                <Dropdown>
+                    <Dropdown.Toggle
+                        as={CustomDropdownToggle}
+                        isCaretHidden
+                        variant="link"
+                        className="text-body p-1"
+                        title="Table actions"
+                        size="xs"
+                    >
+                        <Icon icon="more" margin="m-0" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
+                        <Dropdown.Item onClick={() => tableActions.addEmbeddedTable(path)}>
+                            <Icon icon="embed" /> Add new embedded table
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => tableActions.addLinkedTable(path)}>
+                            <Icon icon="link" /> Add new linked table
+                        </Dropdown.Item>
+                        <Dropdown.Item onClick={() => tableActions.changeEmbeddedToLinked(path)}>
+                            <Icon icon="link" /> Change to linked
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                            className="text-danger"
+                            onClick={() => tableActions.removeTable({ path, type: "embedded" })}
+                        >
+                            <Icon icon="trash" /> Remove
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
+            </div>
             {hasChildren && isExpanded && (
                 <div
                     className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"

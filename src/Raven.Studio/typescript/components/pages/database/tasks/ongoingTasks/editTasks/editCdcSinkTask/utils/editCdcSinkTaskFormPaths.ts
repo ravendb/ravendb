@@ -17,14 +17,14 @@ export function getRootTablePath(index: number) {
 // Casts are needed for deeply nested embedded paths.
 // FieldPath<EditCdcSinkTaskFormData> has only 3 levels of nesting.
 
-export function castToRootTablePath(path: FieldPath<EditCdcSinkTaskFormData>) {
+export function castToRootTablePath(path: string) {
     return path as RootTablePath satisfies FormPath;
 }
 
-export function castToLinkedTablePath(path: FieldPath<EditCdcSinkTaskFormData>) {
+export function castToLinkedTablePath(path: string) {
     return path as LinkedTablePath satisfies FormPath;
 }
 
-export function castToEmbeddedTablePath(path: FieldPath<EditCdcSinkTaskFormData>) {
+export function castToEmbeddedTablePath(path: string) {
     return path as EmbeddedTablePath satisfies FormPath;
 }

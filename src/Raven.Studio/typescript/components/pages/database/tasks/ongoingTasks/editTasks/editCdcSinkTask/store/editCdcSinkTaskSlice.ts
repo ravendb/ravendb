@@ -44,9 +44,26 @@ export const editCdcSinkTaskSlice = createSlice({
         activeTableSet: (state, action: PayloadAction<CdcActiveTable>) => {
             state.activeTable = action.payload;
         },
+        activeTableCleared: (state) => {
+            state.activeTable = null;
+        },
         tableExpandedOneToggled: (state, action: PayloadAction<FieldPath<EditCdcSinkTaskFormData>>) => {
             const tableName = action.payload;
             state.expandedTables[tableName] = !state.expandedTables[tableName];
+        },
+        tableExpandedOneSet: (
+            state,
+            action: PayloadAction<{ path: FieldPath<EditCdcSinkTaskFormData>; isExpanded: boolean }>
+        ) => {
+            state.expandedTables[action.payload.path] = action.payload.isExpanded;
+        },
+        tableExpandedRemoved: (state, action: PayloadAction<FieldPath<EditCdcSinkTaskFormData>>) => {
+            const path = action.payload;
+            Object.keys(state.expandedTables).forEach((expandedPath) => {
+                if (expandedPath === path || expandedPath.startsWith(`${path}.`)) {
+                    delete state.expandedTables[expandedPath as FieldPath<EditCdcSinkTaskFormData>];
+                }
+            });
         },
         tableExpandedSet: (
             state,

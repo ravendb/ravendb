@@ -23,6 +23,7 @@ import {
     castToLinkedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
 import Breadcrumb from "react-bootstrap/Breadcrumb";
+import { useEditCdcSinkTaskTableActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/useEditCdcSinkTaskTableActions";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
@@ -39,6 +40,7 @@ export default function EditCdcSinkTaskTableEditor() {
 
 function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     const dispatch = useAppDispatch();
+    const tableActions = useEditCdcSinkTaskTableActions();
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const breadcrumbItems = useTableBreadcrumbs(activeTable.path);
 
@@ -71,6 +73,24 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                             Disabled
                         </FormSwitch>
                     )}
+                    {activeTable.type === "linked" && (
+                        <Button
+                            variant="secondary"
+                            onClick={() => tableActions.changeLinkedToEmbedded(activeTable.path)}
+                        >
+                            <Icon icon="embed" />
+                            Change to embedded
+                        </Button>
+                    )}
+                    {activeTable.type === "embedded" && (
+                        <Button
+                            variant="secondary"
+                            onClick={() => tableActions.changeEmbeddedToLinked(activeTable.path)}
+                        >
+                            <Icon icon="link" />
+                            Change to linked
+                        </Button>
+                    )}
                     <Button variant="info">
                         <Icon icon="rocket" />
                         Test
@@ -100,9 +120,7 @@ function useTableBreadcrumbs(path: CdcActiveTable["path"]): BreadcrumbItem[] {
     for (let i = 0; i < parts.length; i += 2) {
         const singleFieldWithNumber = `${parts[i]}.${parts[i + 1]}`;
         const lastPath = breadcrumbItems[breadcrumbItems.length - 1]?.path;
-        const path = (
-            lastPath ? `${lastPath}.${singleFieldWithNumber}` : singleFieldWithNumber
-        ) as FieldPath<EditCdcSinkTaskFormData>;
+        const path = lastPath ? `${lastPath}.${singleFieldWithNumber}` : singleFieldWithNumber;
 
         breadcrumbItems.push(getActiveTableFieldName(parts[i], path));
     }
@@ -117,7 +135,7 @@ function useTableBreadcrumbs(path: CdcActiveTable["path"]): BreadcrumbItem[] {
     }));
 }
 
-function getActiveTableFieldName(fieldName: string, path: FieldPath<EditCdcSinkTaskFormData>): CdcActiveTable {
+function getActiveTableFieldName(fieldName: string, path: string): CdcActiveTable {
     switch (fieldName) {
         case "tables":
             return { type: "root", path: castToRootTablePath(path) };
