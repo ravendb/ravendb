@@ -57,19 +57,35 @@ jobs:
             Override the plugin's default top-level comment behavior. Always post
             exactly ONE top-level comment via `gh pr comment` with this structure:
 
+            **Verdict:** 🔴 N important · 🟡 N nit · 🟣 N pre-existing
+            (use 🟢 "no issues" if all zero)
+
             ## Change summary
             Brief description of what this PR changes — files touched, intent,
             anything noteworthy about the approach. 2-5 sentences.
 
             ## Review summary
-            - Total issues found and breakdown by category (bugs / CLAUDE.md
-              compliance / other)
-            - Overall verdict (e.g. "no issues", "minor concerns", "needs changes")
+            - Important findings worth blocking on (if any)
+            - Nits / minor concerns (cap at 5; mention rest as a count)
+            - Pre-existing issues spotted but not introduced by this PR (if any)
+
+            Severity calibration for THIS repo:
+            - **Important** = code that will break behavior, leak data, fail
+              under concurrency, or violate a CLAUDE.md rule that was clearly
+              applicable.
+            - **Nit** = naming, structure, missing comments, suggestions that
+              don't affect correctness.
+            - Anything CI already enforces (tabs in .cs files, missing
+              RavenFact / RavenTheory attribute, ServerRequestHandler
+              inheritance) is implicit and should NOT be flagged unless the
+              agent verified CI didn't catch it.
+            - Skip libs/, node_modules, generated files, and PERF-marked code
+              (per CLAUDE.md, do not modify PERF code).
 
             Post this single combined comment in BOTH cases:
             - When the plugin would otherwise post its canonical "No issues
-              found" message — replace it with the above structure (still
-              including the no-issues verdict).
+              found" message — replace it with the structure above (verdict
+              line + summary).
             - When the plugin posts inline issue comments — additionally post
               the above as the top-level summary so reviewers see the
               high-level picture without scrolling through inline threads.
