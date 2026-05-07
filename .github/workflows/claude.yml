@@ -53,6 +53,17 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app-token.outputs.token }}
 
+          # Suppress the default "🤖 Generated with Claude Code" footer on
+          # comments and PR descriptions — ravendb-bot[bot] is sufficient
+          # attribution. See https://code.claude.com/docs/en/settings#attribution-settings
+          settings: |
+            {
+              "attribution": {
+                "pr": "",
+                "commit": ""
+              }
+            }
+
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read

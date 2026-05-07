@@ -39,15 +39,44 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ steps.app-token.outputs.token }}
+          # Suppress the default "🤖 Generated with Claude Code" footer on
+          # comments and PR descriptions — ravendb-bot[bot] is sufficient
+          # attribution. See https://code.claude.com/docs/en/settings#attribution-settings
+          settings: |
+            {
+              "attribution": {
+                "pr": "",
+                "commit": ""
+              }
+            }
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: |-
             /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment
 
-            When the plugin finds issues and posts inline comments, also post a
-            top-level summary comment via `gh pr comment` with the issue count,
-            category breakdown (bugs / CLAUDE.md compliance), and overall verdict —
-            so reviewers see the high-level picture in the main PR thread.
+            Override the plugin's default top-level comment behavior. Always post
+            exactly ONE top-level comment via `gh pr comment` with this structure:
+
+            ## Change summary
+            Brief description of what this PR changes — files touched, intent,
+            anything noteworthy about the approach. 2-5 sentences.
+
+            ## Review summary
+            - Total issues found and breakdown by category (bugs / CLAUDE.md
+              compliance / other)
+            - Overall verdict (e.g. "no issues", "minor concerns", "needs changes")
+
+            Post this single combined comment in BOTH cases:
+            - When the plugin would otherwise post its canonical "No issues
+              found" message — replace it with the above structure (still
+              including the no-issues verdict).
+            - When the plugin posts inline issue comments — additionally post
+              the above as the top-level summary so reviewers see the
+              high-level picture without scrolling through inline threads.
+
+            Do NOT add any "Generated with Claude Code" footer or robot emoji
+            attribution. Comments authored by ravendb-bot[bot] are already
+            attributed sufficiently.
           # Allowlist mirrors the code-review plugin's own allowed-tools plus
           # Read/Grep/Glob/Task/TodoWrite needed by its subagent orchestration.
           # No Bash escape, no WebFetch, no Edit/Write — code review is read-only.
