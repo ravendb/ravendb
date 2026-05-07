@@ -92,12 +92,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        private static IEnumerable<char> GetChars()
-        {
-            return Enumerable.Range(1, 31)
-                .Select(i => (char)i)
-                .Concat(['a', '-', '\'', '\"', '\\', '\a', '\b', '\f', '\n', '\r', '\t', '\v']);
-        }
+        private static IEnumerable<char> GetChars() => ['a', '-', '\'', '\"', '\\', '\b', '\f', '\n', '\r', '\t'];
 
         private static IEnumerable<object[]> GetCharactersToTest()
         {
@@ -131,10 +126,6 @@ namespace SlowTests.Bugs
 
         private async Task TestWhenCollectionAndIdContainSpecialChars<T>(char c) where T : AbstractGenericIndexCreationTask<IndexResult>, new()
         {
-            //TODO RavenDB-15533
-            if (c == '\v' || c >= 14 && c <= 31)
-                return;
-
             var options = new Options
             {
                 ModifyDocumentStore = s => s.Conventions.FindCollectionName = type => "Test" + c + DocumentConventions.DefaultGetCollectionName(type)
