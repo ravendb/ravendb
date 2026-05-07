@@ -12,6 +12,7 @@ import classNames from "classnames";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useFormContext, useWatch } from "react-hook-form";
+import { useErrorMessage } from "components/common/Form";
 
 interface EditCdcSinkTaskLinkedTableItemProps {
     path: LinkedTablePath;
@@ -21,14 +22,13 @@ interface EditCdcSinkTaskLinkedTableItemProps {
 export function EditCdcSinkTaskLinkedTableItem({ path, isRootDisabled }: EditCdcSinkTaskLinkedTableItemProps) {
     const dispatch = useAppDispatch();
     const tableActions = useEditCdcSinkTaskTableActions();
-    const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const formError = useErrorMessage({ control, paths: [path] });
     const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
 
     const label = sourceTableName || "Unassigned table";
-    const isExpanded = expandedTables[path];
 
     const isActive = activeTable?.path === path;
 
@@ -49,15 +49,14 @@ export function EditCdcSinkTaskLinkedTableItem({ path, isRootDisabled }: EditCdc
                     title={label}
                     style={{ paddingInline: "2px", minWidth: 0 }}
                 >
-                    <Icon
-                        icon={isExpanded ? "chevron-down" : "chevron-right"}
-                        className="font-size-12 opacity-0"
-                        margin="m-0"
-                    />
+                    <Icon icon="chevron-right" className="font-size-12 opacity-0" margin="m-0" />
                     <span className="text-truncate" style={{ marginLeft: "2px" }}>
                         {label}
                     </span>
                     <Icon icon="link" margin="ms-1" className="font-size-14" />
+                    {formError.hasErrors && (
+                        <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />
+                    )}
                 </Button>
                 <Dropdown>
                     <Dropdown.Toggle

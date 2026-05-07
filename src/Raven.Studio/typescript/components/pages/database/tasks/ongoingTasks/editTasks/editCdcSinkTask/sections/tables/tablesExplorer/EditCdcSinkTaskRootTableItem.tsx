@@ -14,6 +14,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditCdcSinkTaskEmbeddedTableItem } from "./EditCdcSinkTaskEmbeddedTableItem";
 import { EditCdcSinkTaskLinkedTableItem } from "./EditCdcSinkTaskLinkedTableItem";
+import { useErrorMessage } from "components/common/Form";
 
 interface EditCdcSinkTaskRootTableItemProps {
     formIdx: number;
@@ -28,6 +29,7 @@ export function EditCdcSinkTaskRootTableItem({ formIdx }: EditCdcSinkTaskRootTab
     const path = getRootTablePath(formIdx);
 
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const formError = useErrorMessage({ control, paths: [path] });
     const isDisabled = useWatch({ control, name: `${path}.disabled` });
     const linkedTables = useWatch({ control, name: `${path}.linkedTables` });
     const embeddedTables = useWatch({ control, name: `${path}.embeddedTables` });
@@ -64,6 +66,9 @@ export function EditCdcSinkTaskRootTableItem({ formIdx }: EditCdcSinkTaskRootTab
                     <span className="text-truncate" style={{ marginLeft: "2px" }}>
                         {label}
                     </span>
+                    {formError.hasErrors && (
+                        <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />
+                    )}
                 </Button>
                 <Dropdown>
                     <Dropdown.Toggle

@@ -57,6 +57,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     });
 
     const editForm = useForm<EditCdcSinkTaskFormData>({
+        mode: "onTouched",
         defaultValues: asyncGetDefaultValues.execute,
         resolver: editCdcSinkTaskResolver,
     });

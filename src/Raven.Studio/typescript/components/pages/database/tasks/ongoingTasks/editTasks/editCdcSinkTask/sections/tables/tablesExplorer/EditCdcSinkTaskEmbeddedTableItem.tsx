@@ -17,6 +17,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditCdcSinkTaskLinkedTableItem } from "./EditCdcSinkTaskLinkedTableItem";
+import { useErrorMessage } from "components/common/Form";
 
 interface EditCdcSinkTaskEmbeddedTableItemProps {
     path: EmbeddedTablePath;
@@ -30,6 +31,7 @@ export function EditCdcSinkTaskEmbeddedTableItem({ path, isRootDisabled }: EditC
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const formError = useErrorMessage({ control, paths: [path] });
     const embeddedTables = useWatch({ control, name: `${path}.embeddedTables` });
     const linkedTables = useWatch({ control, name: `${path}.linkedTables` });
     const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
@@ -66,6 +68,9 @@ export function EditCdcSinkTaskEmbeddedTableItem({ path, isRootDisabled }: EditC
                         {label}
                     </span>
                     <Icon icon="embed" margin="ms-1" className="font-size-14" />
+                    {formError.hasErrors && (
+                        <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />
+                    )}
                 </Button>
                 <Dropdown>
                     <Dropdown.Toggle

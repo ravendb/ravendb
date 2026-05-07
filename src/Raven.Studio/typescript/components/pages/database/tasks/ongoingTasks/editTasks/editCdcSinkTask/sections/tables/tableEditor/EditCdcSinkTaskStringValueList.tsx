@@ -1,5 +1,5 @@
 import { EmptySet } from "components/common/EmptySet";
-import { FormInput } from "components/common/Form";
+import { FormErrorIcon, FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import Button from "react-bootstrap/Button";
@@ -29,7 +29,10 @@ export default function EditCdcSinkTaskStringValueList({
     return (
         <div className="mb-2">
             <div className="hstack justify-content-between mb-1">
-                <div>{title}</div>
+                <div className="hstack">
+                    {title}
+                    <FormErrorIcon control={control} paths={[path]} />
+                </div>
                 <Button variant="link" size="sm" onClick={() => fieldArray.append({ value: "" })}>
                     <Icon icon="plus" />
                     {addButtonLabel}

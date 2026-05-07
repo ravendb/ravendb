@@ -1,5 +1,5 @@
 import { EmptySet } from "components/common/EmptySet";
-import { FormInput, FormSelect } from "components/common/Form";
+import { FormErrorIcon, FormInput, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
 import {
@@ -15,16 +15,20 @@ type FieldMappingPath = RootTablePath | EmbeddedTablePath;
 
 export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappingPath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const columnsPath = `${path}.columns` as const;
 
     const columnsFieldArray = useFieldArray({
         control,
-        name: `${path}.columns`,
+        name: columnsPath,
     });
 
     return (
         <>
             <div className="hstack justify-content-between mb-1">
-                <div>Field mapping</div>
+                <div className="hstack">
+                    Field mapping
+                    <FormErrorIcon control={control} paths={[columnsPath]} />
+                </div>
                 <Button
                     variant="link"
                     size="sm"
