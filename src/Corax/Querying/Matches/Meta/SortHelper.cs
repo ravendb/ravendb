@@ -20,8 +20,6 @@ internal sealed unsafe class SortHelper
     private static int FindMatches(long* dst, long* left, int leftLength, long* right, int rightLength)
     {
         // assumptions:
-        // The left is <= than the right, since the left if up to 4K and we'll only get the right
-        // on > 4K elements.
         // 
         // We are called *multiple* times with the same right element, switching the left each time.
         //
@@ -36,7 +34,6 @@ internal sealed unsafe class SortHelper
         long* leftEndPtr = leftPtr + leftLength;
         long* rightEndPtr = rightPtr + rightLength;
 
-        Debug.Assert(leftLength <= rightLength);
         //We've to assert in good order, so lets check which array is "first" (lowest first item)
         var cmp = (*leftPtr & long.MaxValue) - (*rightPtr & long.MaxValue);
         switch (cmp)
