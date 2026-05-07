@@ -26,12 +26,16 @@ interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
     activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
+    isRawView: boolean;
+    rawViewContent: string;
 }
 
 const initialState: EditCdcSinkTaskState = {
     selectedConnectionString: null,
     activeTable: null,
     expandedTables: {},
+    isRawView: false,
+    rawViewContent: null,
 };
 
 export const editCdcSinkTaskSlice = createSlice({
@@ -71,6 +75,12 @@ export const editCdcSinkTaskSlice = createSlice({
         ) => {
             state.expandedTables = action.payload;
         },
+        rawViewToggled: (state) => {
+            state.isRawView = !state.isRawView;
+        },
+        rawViewContentSet: (state, action: PayloadAction<string>) => {
+            state.rawViewContent = action.payload;
+        },
         reset: () => initialState,
     },
 });
@@ -81,4 +91,6 @@ export const editCdcSinkTaskSelectors = {
     selectedConnectionString: (state: RootState) => state.editCdcSinkTask.selectedConnectionString,
     activeTable: (state: RootState) => state.editCdcSinkTask.activeTable,
     expandedTables: (state: RootState) => state.editCdcSinkTask.expandedTables,
+    isRawView: (state: RootState) => state.editCdcSinkTask.isRawView,
+    rawViewContent: (state: RootState) => state.editCdcSinkTask.rawViewContent,
 };

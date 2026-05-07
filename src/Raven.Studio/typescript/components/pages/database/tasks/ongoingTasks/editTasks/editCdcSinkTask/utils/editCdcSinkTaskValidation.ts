@@ -10,9 +10,9 @@ const stringValueItemSchema = yup.object({
 });
 
 const cdcColumnMappingSchema = yup.object({
-    column: yup.string(),
-    name: yup.string(),
-    type: yup.string<CdcColumnType>(),
+    column: yup.string().required(),
+    name: yup.string().required(),
+    type: yup.string<CdcColumnType>().required(),
 });
 
 const cdcSinkOnDeleteSchema = yup.object({
@@ -21,25 +21,25 @@ const cdcSinkOnDeleteSchema = yup.object({
 });
 
 const cdcSinkLinkedTableSchema = yup.object({
-    joinColumns: yup.array().of(stringValueItemSchema),
-    linkedCollectionName: yup.string(),
-    propertyName: yup.string(),
-    sourceTableName: yup.string(),
-    sourceTableSchema: yup.string().nullable(),
+    joinColumns: yup.array().of(stringValueItemSchema).min(1),
+    linkedCollectionName: yup.string().required(),
+    propertyName: yup.string().required(),
+    sourceTableName: yup.string().required(),
+    sourceTableSchema: yup.string().nullable().required(),
 });
 
 const cdcSinkEmbeddedTableBaseSchema = yup.object({
     caseSensitiveKeys: yup.boolean(),
-    columns: yup.array().of(cdcColumnMappingSchema),
-    joinColumns: yup.array().of(stringValueItemSchema),
+    columns: yup.array().of(cdcColumnMappingSchema).min(1),
+    joinColumns: yup.array().of(stringValueItemSchema).min(1),
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: yup.array().of(stringValueItemSchema),
-    propertyName: yup.string(),
-    sourceTableName: yup.string(),
-    sourceTableSchema: yup.string().nullable(),
-    type: yup.string<CdcSinkRelationType>(),
+    primaryKeyColumns: yup.array().of(stringValueItemSchema).min(1),
+    propertyName: yup.string().required(),
+    sourceTableName: yup.string().required(),
+    sourceTableSchema: yup.string().nullable().required(),
+    type: yup.string<CdcSinkRelationType>().required(),
 });
 
 type CdcSinkEmbeddedTableFormData = yup.InferType<typeof cdcSinkEmbeddedTableBaseSchema> & {
@@ -51,18 +51,17 @@ const getCdcSinkEmbeddedTableSchema = (): yup.ObjectSchema<CdcSinkEmbeddedTableF
         embeddedTables: yup.array().of(yup.lazy(getCdcSinkEmbeddedTableSchema)),
     });
 
-// TODO improve validation
 const cdcSinkTableSchema = yup.object({
     collectionName: yup.string().required(),
-    columns: yup.array().of(cdcColumnMappingSchema),
+    columns: yup.array().of(cdcColumnMappingSchema).min(1),
     disabled: yup.boolean(),
     embeddedTables: yup.array().of(getCdcSinkEmbeddedTableSchema()),
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: yup.array().of(stringValueItemSchema),
+    primaryKeyColumns: yup.array().of(stringValueItemSchema).min(1),
     sourceTableName: yup.string().required(),
-    sourceTableSchema: yup.string().nullable(),
+    sourceTableSchema: yup.string().nullable().required(),
 });
 
 const editCdcSinkTaskSchema = yup.object({
@@ -74,7 +73,7 @@ const editCdcSinkTaskSchema = yup.object({
         .nullable()
         .when("isSetResponsibleNode", {
             is: true,
-            then: (schema) => schema,
+            then: (schema) => schema.required(),
         }),
     isPinResponsibleNode: yup.boolean(),
     connectionStringName: yup.string().nullable().required(),

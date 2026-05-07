@@ -8,7 +8,13 @@ type EditCdcSinkTaskLinkedTable = NonNullable<EditCdcSinkTaskTable["linkedTables
 type EditCdcSinkTaskOnDelete = EditCdcSinkTaskTable["onDelete"];
 type StringValueItem = NonNullable<EditCdcSinkTaskTable["primaryKeyColumns"]>[number];
 
-function mapFromDto(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink): EditCdcSinkTaskFormData {
+function mapTaskFromDto(
+    dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink
+): EditCdcSinkTaskFormData {
+    return mapConfigFromDto(dto?.Configuration);
+}
+
+function mapConfigFromDto(dto: CdcSink.CdcSinkConfiguration): EditCdcSinkTaskFormData {
     if (!dto) {
         return {
             name: "",
@@ -24,19 +30,17 @@ function mapFromDto(dto: Raven.Client.Documents.Operations.OngoingTasks.OngoingT
         };
     }
 
-    const configuration = dto.Configuration;
-
     return {
-        name: configuration.Name,
-        state: configuration.Disabled ? "Disabled" : "Enabled",
-        isSetResponsibleNode: Boolean(configuration.MentorNode),
-        responsibleNode: configuration.MentorNode ?? "",
-        isPinResponsibleNode: configuration.PinToMentorNode ?? false,
-        connectionStringName: configuration.ConnectionStringName ?? "",
-        skipInitialLoad: configuration.SkipInitialLoad ?? false,
-        postgresPublicationName: configuration.Postgres?.PublicationName ?? "",
-        postgresSlotName: configuration.Postgres?.SlotName ?? "",
-        tables: (configuration.Tables ?? []).map(mapTableFromDto),
+        name: dto.Name,
+        state: dto.Disabled ? "Disabled" : "Enabled",
+        isSetResponsibleNode: Boolean(dto.MentorNode),
+        responsibleNode: dto.MentorNode ?? "",
+        isPinResponsibleNode: dto.PinToMentorNode ?? false,
+        connectionStringName: dto.ConnectionStringName ?? "",
+        skipInitialLoad: dto.SkipInitialLoad ?? false,
+        postgresPublicationName: dto.Postgres?.PublicationName ?? "",
+        postgresSlotName: dto.Postgres?.SlotName ?? "",
+        tables: (dto.Tables ?? []).map(mapTableFromDto),
     };
 }
 
@@ -185,6 +189,7 @@ function mapStringArrayToDto(values: StringValueItem[]): string[] {
 }
 
 export const editCdcSinkTaskUtils = {
-    mapFromDto,
+    mapTaskFromDto,
+    mapConfigFromDto,
     mapToDto,
 };

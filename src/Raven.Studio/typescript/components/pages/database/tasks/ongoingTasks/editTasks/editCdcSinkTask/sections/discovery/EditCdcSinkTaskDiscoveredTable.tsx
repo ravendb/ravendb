@@ -46,7 +46,11 @@ export default function EditCdcSinkTaskDiscoveredTable({
     }
 
     if (asyncFetchTables.status === "error") {
-        return <LoadError error="Unable to load discovered tables" refresh={asyncFetchTables.execute} />;
+        return (
+            <div className="mt-1">
+                <LoadError error="Unable to discover tables" refresh={asyncFetchTables.execute} />
+            </div>
+        );
     }
 
     const selectedRows = table.getSelectedRowModel().rows;

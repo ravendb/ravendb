@@ -19,7 +19,13 @@ import router from "plugins/router";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { useEffect } from "react";
-import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import {
+    editCdcSinkTaskActions,
+    editCdcSinkTaskSelectors,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import EditCdcSinkTaskRawView from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskRawView";
+import SizeGetter from "components/common/SizeGetter";
+import EditCdcSinkTaskRawViewSwitch from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskRawViewSwitch";
 
 interface QueryParams {
     taskId?: string;
@@ -29,6 +35,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     const dispatch = useAppDispatch();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId, 10) : null;
     const isEditMode = taskId != null;
@@ -43,9 +50,9 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     const asyncGetDefaultValues = useAsyncCallback(async () => {
         if (isEditMode) {
             const taskInfo = await tasksService.getCdcSinkTaskInfo(databaseName, taskId);
-            return editCdcSinkTaskUtils.mapFromDto(taskInfo);
+            return editCdcSinkTaskUtils.mapTaskFromDto(taskInfo);
         } else {
-            return editCdcSinkTaskUtils.mapFromDto(null);
+            return editCdcSinkTaskUtils.mapTaskFromDto(null);
         }
     });
 
@@ -80,8 +87,6 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         });
     };
 
-    console.log("kalczur errors", editForm.formState.errors);
-
     if (asyncGetDefaultValues.loading) {
         return <LoadingView />;
     }
@@ -93,15 +98,29 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     return (
         <FormProvider {...editForm}>
             <form onSubmit={editForm.handleSubmit(handleSubmit)} className="edit-cdc-sink-task vstack h-100 w-100">
-                <div className="p-3 flex-grow-1 overflow-y-auto">
-                    <AboutViewHeading
-                        title={isEditMode ? "Edit CDC Sink task" : "New CDC Sink task"}
-                        icon="sql-etl"
-                        marginBottom={4}
-                    />
-                    <EditCdcSinkTaskBasicSection />
-                    <EditCdcSinkTaskDiscoverySection tablesFieldArray={tablesFieldArray} />
-                    <EditCdcSinkTaskTablesSection tablesFieldArray={tablesFieldArray} />
+                <div className="p-3 flex-grow-1 overflow-y-auto vstack">
+                    <div className="hstack align-items-center justify-content-between">
+                        <AboutViewHeading
+                            title={isEditMode ? "Edit CDC Sink task" : "New CDC Sink task"}
+                            icon="sql-etl"
+                            marginBottom={4}
+                        />
+                        <EditCdcSinkTaskRawViewSwitch taskId={taskId} />
+                    </div>
+                    {isRawView ? (
+                        <div className="flex-grow-1">
+                            <SizeGetter
+                                isHeighRequired
+                                render={({ height }) => <EditCdcSinkTaskRawView heightPx={height} />}
+                            />
+                        </div>
+                    ) : (
+                        <>
+                            <EditCdcSinkTaskBasicSection />
+                            <EditCdcSinkTaskDiscoverySection tablesFieldArray={tablesFieldArray} />
+                            <EditCdcSinkTaskTablesSection tablesFieldArray={tablesFieldArray} />
+                        </>
+                    )}
                 </div>
                 <div className="hstack justify-content-between gap-2 py-2 px-3 border-top border-secondary">
                     <Button variant="outline-secondary" className="rounded-pill" onClick={cancel}>
