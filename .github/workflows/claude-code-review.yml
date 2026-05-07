@@ -9,7 +9,7 @@ jobs:
     if: |
       github.event.issue.pull_request != null &&
       contains(github.event.comment.body, '@hugin-review') &&
-      (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR')
+      (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')
 
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
