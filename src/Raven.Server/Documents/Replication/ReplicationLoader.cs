@@ -760,7 +760,26 @@ namespace Raven.Server.Documents.Replication
 
                 IncomingReplicationRemoved?.Invoke(incoming);
 
-                value.Dispose();
+                // RavenDB-26564: if the old handler is already disposed (e.g. from a previous failed attempt),
+                // skip re-invocation — DisposeOnce<SingleAttempt> would immediately re-throw the cached exception.
+                if (value.IsDisposed == false)
+                {
+                    try
+                    {
+                        value.Dispose();
+                    }
+                    catch (Exception e)
+                    {
+                        // RavenDB-26564: a half-open TCP connection can cause Dispose to throw when the
+                        // dispose path tries to flush buffered data to a dead socket. We must not let this
+                        // prevent the new connection from being accepted. The stale entry in _incoming will
+                        // be replaced by the subsequent AddOrUpdate in CreateIncomingInstance (which checks
+                        // IsDisposed on the existing value).
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Failed to dispose the existing incoming replication handler from {incoming.FromToString}. " +
+                                         $"Proceeding to accept the new connection.", e);
+                    }
+                }
             }
         }
 
