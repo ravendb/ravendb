@@ -1363,19 +1363,12 @@ namespace Voron
             if (ForTestingPurposes != null)
                 return ForTestingPurposes;
 
-            return ForTestingPurposes = new TestingStuff(this);
+            return ForTestingPurposes = new TestingStuff();
         }
 
         internal sealed class TestingStuff
         {
-            private readonly StorageEnvironmentOptions _parent;
-
             internal Action<long> BeforeLinkFiles;
-
-            public TestingStuff(StorageEnvironmentOptions parent)
-            {
-                _parent = parent;
-            }
         }
     }
 }

@@ -12,7 +12,6 @@ using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
-using Voron.Exceptions;
 using Voron.Impl.Journal;
 using Xunit;
 
