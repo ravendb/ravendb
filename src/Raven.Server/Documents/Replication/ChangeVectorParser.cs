@@ -42,6 +42,7 @@ namespace Raven.Server.Documents.Replication
             for (int i = end - 1; i >= start; i--)
             {
                 AssertValidNodeTagChar(changeVector[i]);
+                tag++;
                 tag *= 26;
                 tag += changeVector[i] - 'A';
             }

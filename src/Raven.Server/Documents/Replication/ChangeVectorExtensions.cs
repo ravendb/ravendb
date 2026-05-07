@@ -54,12 +54,17 @@ namespace Raven.Server.Documents.Replication
 
         public static void ToBase26(StringBuilder sb, int tag)
         {
-            do
+            while (true)
             {
                 var reminder = tag % 26;
                 sb.Append((char)('A' + reminder));
                 tag /= 26;
-            } while (tag != 0);
+
+                if (tag == 0)
+                    break;
+
+                tag--;
+            }
         }
 
         public static int FromBase26(string tag) => tag.ParseNodeTag();
