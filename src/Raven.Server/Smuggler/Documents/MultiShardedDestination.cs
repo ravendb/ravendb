@@ -315,7 +315,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (tombstone.Type != Tombstone.TombstoneType.Document)
                 {
                     // extract document Id from the key for Attachment, Counter and Revision tombstones 
-                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(tombstone.LowerId, out id, out _);
+                    RevisionTombstoneReplicationItem.TryExtractDocumentId(tombstone.LowerId, out id);
                 }
 
                 var shardNumber = DatabaseContext.GetShardNumberFor(_allocator, id ?? tombstone.LowerId);

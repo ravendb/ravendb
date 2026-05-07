@@ -655,10 +655,7 @@ namespace Raven.Server.Smuggler.Documents
                                     break;
 
                                 case Tombstone.TombstoneType.Revision:
-                                    using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, tombstone.LowerId, out var changeVectorSlice))
-                                    {
-                                        _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, tombstone.ChangeVector, tombstone.LastModified.Ticks, changeVectorSlice, fromReplication: false, tombstone.Flags);
-                                    }
+                                    _database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, key, tombstone.Collection, context.GetChangeVector(tombstone.ChangeVector), tombstone.LastModified.Ticks, tombstone.Flags);
                                     break;
 
                                 case Tombstone.TombstoneType.Counter:

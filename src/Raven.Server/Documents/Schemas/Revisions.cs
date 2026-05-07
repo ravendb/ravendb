@@ -40,8 +40,8 @@ namespace Raven.Server.Documents.Schemas
 
         public enum RevisionsTable
         {
-            /* ChangeVector is the table's key as it's unique and will avoid conflicts (by replication) */
-            ChangeVector = 0,
+            /* ChangeVectorHash is the table's key as it's unique and will avoid conflicts (by replication) */
+            ChangeVectorHash = 0,
             LowerId = 1,
             /* We are you using the record separator in order to avoid loading another documents that has the same ID prefix,
                 e.g. fitz(record-separator)01234567 and fitz0(record-separator)01234567, without the record separator we would have to load also fitz0 and filter it. */
@@ -58,13 +58,14 @@ namespace Raven.Server.Documents.Schemas
             Resolved = 10,
 
             SwappedLastModified = 11,
+            ChangeVector = 12
         }
 
         static Revisions()
         {
             using (StorageEnvironment.GetStaticContext(out var ctx))
             {
-                Slice.From(ctx, "RevisionsChangeVector", ByteStringType.Immutable, out var changeVectorSlice);
+                Slice.From(ctx, "RevisionsChangeVectorHash", ByteStringType.Immutable, out var changeVectorHashSlice);
                 Slice.From(ctx, "RevisionsIdAndEtag", ByteStringType.Immutable, out IdAndEtagSlice);
                 Slice.From(ctx, "DeleteRevisionEtag", ByteStringType.Immutable, out DeleteRevisionEtagSlice);
                 Slice.From(ctx, "AllRevisionsEtags", ByteStringType.Immutable, out AllRevisionsEtagsSlice);
@@ -75,11 +76,11 @@ namespace Raven.Server.Documents.Schemas
                 Slice.From(ctx, RevisionsTombstones, ByteStringType.Immutable, out RevisionsTombstonesSlice);
                 Slice.From(ctx, CollectionName.GetTablePrefix(CollectionTableType.Revisions), ByteStringType.Immutable, out RevisionsPrefix);
 
-                DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorSlice);
-                DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorSlice);
+                DefineIndexesForRevisionsSchema(RevisionsSchemaBase, changeVectorHashSlice);
+                DefineIndexesForRevisionsSchema(CompressedRevisionsSchemaBase, changeVectorHashSlice);
 
-                DefineIndexesForShardingRevisionsSchemaBase(ShardingRevisionsSchemaBase, changeVectorSlice);
-                DefineIndexesForShardingRevisionsSchemaBase(ShardingCompressedRevisionsSchemaBase, changeVectorSlice);
+                DefineIndexesForShardingRevisionsSchemaBase(ShardingRevisionsSchemaBase, changeVectorHashSlice);
+                DefineIndexesForShardingRevisionsSchemaBase(ShardingCompressedRevisionsSchemaBase, changeVectorHashSlice);
 
                 RevisionsSchemaBase.CompressValues(
                     RevisionsSchemaBase.FixedSizeIndexes[CollectionRevisionsEtagsSlice], compress: false);
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Schemas
         {
             revisionsSchema.DefineKey(new TableSchema.IndexDef
             {
-                StartIndex = (int)RevisionsTable.ChangeVector,
+                StartIndex = (int)RevisionsTable.ChangeVectorHash,
                 Count = 1,
                 Name = changeVectorSlice,
                 IsGlobal = true

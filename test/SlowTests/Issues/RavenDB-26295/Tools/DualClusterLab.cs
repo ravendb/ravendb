@@ -466,7 +466,8 @@ public sealed class DualClusterLab : IAsyncDisposable
 
                 using (revisionTombstone)
                 {
-                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(
+                    RevisionTombstoneReplicationItem.TryExtractDocumentIdAndRevisionKey(
+                        context,
                         revisionTombstone.Id,
                         out var tombstoneDocumentId,
                         out var keyChangeVector);

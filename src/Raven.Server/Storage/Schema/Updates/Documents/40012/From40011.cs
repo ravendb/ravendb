@@ -45,7 +45,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                         using (writeTable.Allocate(out TableValueBuilder write))
                         {
                             var flags = TableValueToFlags((int)RevisionsTable.Flags, ref read.Reader);
-                            write.Add(read.Reader.Read((int)RevisionsTable.ChangeVector, out int size), size);
+                            write.Add(read.Reader.Read((int)RevisionsTable.ChangeVectorHash, out int size), size);
                             write.Add(read.Reader.Read((int)RevisionsTable.LowerId, out size), size);
                             write.Add(read.Reader.Read((int)RevisionsTable.RecordSeparator, out size), size);
                             write.Add(read.Reader.Read((int)RevisionsTable.Etag, out size), size);

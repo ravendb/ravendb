@@ -174,10 +174,10 @@ namespace Raven.Server.Documents.Replication.Incoming
                 return context.GetChangeVector(changeVectorToMerge).Order;
             }
 
-            protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            protected override void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice revisionKeySlice, out Slice keySlice, List<IDisposable> toDispose)
             {
                 ReplaceKnownSinkEntries(context, ref changeVector);
-                base.HandleRevisionTombstone(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                base.HandleRevisionTombstone(context, docId, changeVector, out revisionKeySlice, out keySlice, toDispose);
             }
 
             public void HandleExpiredDocuments(DocumentsOperationContext ctx, ReplicationBatchItem item)

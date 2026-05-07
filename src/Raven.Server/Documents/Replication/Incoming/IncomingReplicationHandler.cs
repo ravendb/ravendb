@@ -323,16 +323,16 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual NonPersistentDocumentFlags GetNonPersistentDocumentFlags() => NonPersistentDocumentFlags.FromReplication;
 
-            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string changeVector, out Slice changeVectorSlice, out Slice keySlice, List<IDisposable> toDispose)
+            protected virtual void HandleRevisionTombstone(DocumentsOperationContext context, string docId, string revisionKey, out Slice revisionKeySlice, out Slice keySlice, List<IDisposable> toDispose)
             {
                 if (docId != null)
                 {
-                    RevisionsStorage.CreateRevisionTombstoneKeySlice(context, docId, changeVector, out changeVectorSlice, out keySlice, toDispose);
+                    RevisionsStorage.CreateRevisionTombstoneKeySlice(context, docId, revisionKey, out revisionKeySlice, out keySlice, toDispose);
                 }
                 else
                 {
-                    toDispose.Add(Slice.From(context.Allocator, changeVector, out keySlice));
-                    changeVectorSlice = keySlice;
+                    toDispose.Add(Slice.From(context.Allocator, revisionKey, out keySlice));
+                    revisionKeySlice = keySlice;
                 }
             }
 
@@ -369,7 +369,6 @@ namespace Raven.Server.Documents.Replication.Incoming
                         operationsCount++;
 
                         var changeVectorToMerge = PreProcessItem(context, item);
-
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
 
                         context.LastDatabaseChangeVector = ChangeVector.Merge(changeVectorToMerge, context.LastDatabaseChangeVector, context);
@@ -442,11 +441,11 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
 
-                                RevisionTombstoneReplicationItem.TryExtractDocumentIdAndChangeVectorFromKey(revisionTombstone.Id, out string id, out string revisionChangeVector);
-                                HandleRevisionTombstone(context, id, revisionChangeVector, out var changeVectorSlice, out var idKeySlice, toDispose);
+                                RevisionTombstoneReplicationItem.TryExtractDocumentIdAndRevisionKey(context, revisionTombstone.Id, out string id, out string revisionKey);
+                                HandleRevisionTombstone(context, id, revisionKey, out var revisionKeySlice, out var idKeySlice, toDispose);
                                 
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection,
-                                    incomingChangeVector, revisionTombstone.LastModifiedTicks, changeVectorSlice, fromReplication: true);
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, idKeySlice, revisionTombstone.Collection, revisionKey,
+                                    incomingChangeVector, revisionTombstone.LastModifiedTicks, revisionTombstone.Flags | DocumentFlags.FromReplication);
                                 break;
 
                             case CounterReplicationItem counter:

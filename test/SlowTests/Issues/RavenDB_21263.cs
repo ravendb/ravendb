@@ -31,10 +31,10 @@ namespace SlowTests.Issues
 
         private const string ExceptionMessage = "Revision change vector cannot exceed 1536 bytes";
 
-        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         [RavenData(true)]
         [RavenData(false)]
-        public async Task ImportRevisionsWithLargeChangeVectorShouldThrow(Options options, bool useOldVersion)
+        public async Task ImportRevisionsWithLargeChangeVectorShouldNotThrow(Options options, bool useOldVersion)
         {
             // Import always treats the database as a new database, so regardless of the actual version, 
             // it should throw an exception if a revision has a change vector larger than 512 bytes.
@@ -48,24 +48,19 @@ namespace SlowTests.Issues
                     zipStream.Flush();
                     ms.Position = 0;
 
-                    var exception = await Assert.ThrowsAsync<RavenException>(async () =>
-                    {
-                        var operation = await store.Smuggler.ForDatabase(store.Database)
-                            .ImportAsync(new DatabaseSmugglerImportOptions(), ms);
-                        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                    });
-
-                    Assert.Contains(ExceptionMessage, exception.Message);
+                    var operation = await store.Smuggler.ForDatabase(store.Database)
+                        .ImportAsync(new DatabaseSmugglerImportOptions(), ms);
+                    await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 }
 
-                await AssertSupportedFeaturesAsync(store, oldVersion: false);
+                await AssertEmptySupportedFeaturesAsync(store, fromSnapshot: false);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         [RavenData(true)]
         [RavenData(false)]
-        public async Task ImportFromOlderVersionShouldAddSupportedFeatures(Options options, bool supportedFeaturesExists)
+        public async Task ImportFromOlderVersionShouldNotAddSupportedFeatures(Options options, bool supportedFeaturesExists)
         {
             // Import always treats the database as a new database, so regardless of the version exists in the 'RAVENDBDUMPFILE', 
             // the database record should contain "SupportedFeatures: ["ThrowRevisionKeyTooBig"]"
@@ -79,11 +74,11 @@ namespace SlowTests.Issues
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 }
 
-                await AssertSupportedFeaturesAsync(store, oldVersion: false);
+                await AssertEmptySupportedFeaturesAsync(store, fromSnapshot: false);
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task RestoreFromBackupWithoutDatabaseVersionShouldNotThrow()
         {
             using (var store = GetDocumentStore())
@@ -115,14 +110,14 @@ namespace SlowTests.Issues
                         var stats = store2.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
                         Assert.Equal(8, stats.CountOfRevisionDocuments);
 
-                        await AssertSupportedFeaturesAsync(store2, oldVersion: true);
+                        await AssertEmptySupportedFeaturesAsync(store2, fromSnapshot: true);
                     }
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
-        public async Task RestoreFromBackupWithDatabaseVersionShouldThrow()
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
+        public async Task RestoreFromBackupWithDatabaseVersionShouldNotThrow()
         {
             using (var store = GetDocumentStore())
             {
@@ -144,22 +139,16 @@ namespace SlowTests.Issues
                     var databaseName = "test111";
                     var restoreConfig = new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = databaseName };
 
-                    // expect an exception to be thrown during the restore due to a large revision change vector
-                    var exception = await Assert.ThrowsAsync<RavenException>(async () =>
-                    {
-                        var restoreOperation = new RestoreBackupOperation(restoreConfig);
-                        var o = await store.Maintenance.Server.SendAsync(restoreOperation);
-                        await o.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
-                    });
-
-                    Assert.Contains(ExceptionMessage, exception.Message);
+                    var restoreOperation = new RestoreBackupOperation(restoreConfig);
+                    var o = await store.Maintenance.Server.SendAsync(restoreOperation);
+                    await o.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
                 }
 
-                await AssertSupportedFeaturesAsync(store, oldVersion: false);
+                await AssertEmptySupportedFeaturesAsync(store, fromSnapshot: false);
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task RestoreFromSnapshotShouldNotThrow()
         {
             // This should work regardless of the database version, because we're not iterating over documents
@@ -191,12 +180,12 @@ namespace SlowTests.Issues
                     var stats = store2.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
                     Assert.Equal(8, stats.CountOfRevisionDocuments);
 
-                    await AssertSupportedFeaturesAsync(store2, oldVersion: true);
+                    await AssertEmptySupportedFeaturesAsync(store2, fromSnapshot: true);
                 }
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.Revisions)]
         public async Task RestoreFromSnapshotShouldNotThrow_Cluster()
         {
             // This should work regardless of the database version, because we're not iterating over documents
@@ -252,7 +241,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication | RavenTestCategory.Revisions)]
         public async Task ReduceChangeVectorByAddingUnusedIDsShouldFixPutRevision()
         {
             using (var store = GetDocumentStore())
@@ -285,7 +274,7 @@ namespace SlowTests.Issues
                         var stats = store2.Maintenance.ForDatabase(databaseName).Send(new GetStatisticsOperation());
                         Assert.Equal(8, stats.CountOfRevisionDocuments);
 
-                        await AssertSupportedFeaturesAsync(store2, oldVersion: true);
+                        await AssertEmptySupportedFeaturesAsync(store2, fromSnapshot: true);
 
                         using (var store3 = GetDocumentStore())
                         {
@@ -295,17 +284,12 @@ namespace SlowTests.Issues
                             await SetupReplicationAsync(store2, store3);
                             await EnsureReplicatingAsync(store2, store3);
 
-                            // because store3 has a newer database version we should get exception (not from replication)
-                            var exception = await Assert.ThrowsAsync<RavenException>(async () =>
+                            // now revision change vectors are hashed so we shouldn't get any exception
+                            using (var session = store3.OpenAsyncSession())
                             {
-                                using (var session = store3.OpenAsyncSession())
-                                {
-                                    await session.StoreAsync(new Order(), "orders/5-A");
-                                    await session.SaveChangesAsync();
-                                }
-                            });
-
-                            Assert.Contains(ExceptionMessage, exception.Message);
+                                await session.StoreAsync(new Order(), "orders/5-A");
+                                await session.SaveChangesAsync();
+                            }
 
                             var unusedDatabaseIds = new HashSet<string>
                             {
@@ -348,14 +332,10 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task AssertSupportedFeaturesAsync(DocumentStore store, bool oldVersion)
+        private async Task AssertEmptySupportedFeaturesAsync(DocumentStore store, bool fromSnapshot)
         {
             var databaseRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-
-            if (oldVersion)
-                Assert.True(databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0);
-            else
-                Assert.True(databaseRecord.SupportedFeatures.Contains(Raven.Client.Constants.DatabaseRecord.SupportedFeatures.ThrowRevisionKeyTooBigFix));
+            Assert.True(databaseRecord.SupportedFeatures == null || databaseRecord.SupportedFeatures.Count == 0);
         }
 
         private static Stream GetDump(string name)

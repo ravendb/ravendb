@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Replication.ReplicationItems;
+using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -471,17 +472,20 @@ namespace Raven.Server.Documents
             }
         }
 
+
         private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector, AttachmentName attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
+            var revisionKey = RevisionsStorage.GetRevisionKey(context, changeVector);
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out Slice lowerName, out Slice namePtr))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out Slice lowerContentType, out Slice contentTypePtr))
             using (Slice.From(context.Allocator, attachment.Hash, out var hashSlice))
+            using (Slice.From(context.Allocator, revisionKey, out var revisionKeySlice))
             using (AttachmentKey.GetKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, hashSlice,
-                       lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
+                       lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, revisionKeySlice, out Slice keySlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
@@ -569,9 +573,10 @@ namespace Raven.Server.Documents
         public IEnumerable<Attachment> GetAttachmentsForDocument(DocumentsOperationContext context, AttachmentType type, LazyStringValue documentId, string changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            var revisionKey = type == AttachmentType.Revision ? RevisionsStorage.GetRevisionKey(context, changeVector) : changeVector;
             using (DocumentIdWorker.GetLower(context.Allocator, documentId, out var lowerDocumentIdSlice))
-            using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-            using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : changeVectorSlice, out Slice prefixSlice))
+            using (Slice.From(context.Allocator, revisionKey, out var revisionKeySlice))
+            using (AttachmentKey.GetPrefix(context, lowerDocumentIdSlice, type, type == AttachmentType.Document ? Slices.Empty : revisionKeySlice, out Slice prefixSlice))
             {
                 foreach (var sr in table.SeekByPrimaryKeyPrefix(prefixSlice, Slices.Empty, 0))
                 {
@@ -702,6 +707,8 @@ namespace Raven.Server.Documents
         private Attachment GetAttachmentDirect(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector,
             string hash = null, string contentType = null, bool usePartialKey = true)
         {
+            var revisionKey = type == AttachmentType.Revision ? RevisionsStorage.GetRevisionKey(context, changeVector) : changeVector;
+
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerId))
             using (DocumentIdWorker.GetLoweredIdSliceFromId(context, name, out Slice lowerName))
             {
@@ -709,16 +716,17 @@ namespace Raven.Server.Documents
                 ByteStringContext<ByteStringMemoryCache>.InternalScope scope;
                 if (usePartialKey)
                 {
-                    scope = AttachmentKey.GetPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, changeVector, out keySlice);
+                    scope = AttachmentKey.GetPartialKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, type, revisionKey, out keySlice);
                 }
                 else
                 {
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypePtr))
                     using (Slice.From(context.Allocator, hash, out Slice base64Hash))
+                    using (Slice.From(context.Allocator, revisionKey, out var revisionKeySlice))
                     {
                         scope = AttachmentKey.GetKey(context, lowerId.Content.Ptr, lowerId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                             lowerContentType.Content.Ptr,
-                            lowerContentType.Size, AttachmentType.Document, Slices.Empty, out keySlice);
+                            lowerContentType.Size, type, type == AttachmentType.Document ? Slices.Empty : revisionKeySlice, out keySlice);
                     }
                 }
 
@@ -1164,8 +1172,9 @@ namespace Raven.Server.Documents
 
         public void DeleteRevisionAttachments(DocumentsOperationContext context, Document revision, ChangeVector changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
-            using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
-            using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
+            var revisionKey = RevisionsStorage.GetRevisionKey(context, revision.ChangeVector);
+            using (Slice.From(context.Allocator, revisionKey, out Slice revisionKeySlice))
+            using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, revisionKeySlice, out Slice prefixSlice))
             {
                 DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags);
             }
@@ -1232,13 +1241,13 @@ namespace Raven.Server.Documents
         {
             /*
             // Document key: {lowerDocumentId|d|lowerName|hash|lowerContentType}
-            // Revision key: {lowerDocumentId|r|changeVector|lowerName|hash|lowerContentType}
+            // Revision key: {lowerDocumentId|r|changeVectorHash|lowerName|hash|lowerContentType}
             //
             // Document partial key: {lowerDocumentId|d|lowerName|}
-            // Revision partial key: {lowerDocumentId|r|changeVector|}
+            // Revision partial key: {lowerDocumentId|r|changeVectorHash|}
             //
             // Document prefix: {lowerDocumentId|d|}
-            // Revision prefix: {lowerDocumentId|r|changeVector|}
+            // Revision prefix: {lowerDocumentId|r|changeVectorHash|}
             */
 
             public enum KeyType
@@ -1298,7 +1307,7 @@ namespace Raven.Server.Documents
                         break;
                     case RevisionType:
                         attachmentNameIndex = endOfThirdPart + 1;
-                        sizeOfAttachmentName = FindNextSeparator(key, thirdPartIndex) - attachmentNameIndex;
+                        sizeOfAttachmentName = FindNextSeparator(key, attachmentNameIndex) - attachmentNameIndex;
                         type = AttachmentType.Revision;
                         break;
                     default:

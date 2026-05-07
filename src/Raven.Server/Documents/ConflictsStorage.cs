@@ -277,10 +277,9 @@ namespace Raven.Server.Documents
                     else if (conflicted.Flags.Contain(DocumentFlags.FromReplication) == false)
                     {
                         using (Slice.External(context.Allocator, conflicted.LowerId, out var key))
-                        using (RevisionTombstoneReplicationItem.TryExtractChangeVectorSliceFromKey(context.Allocator, conflicted.LowerId, out var changeVectorSlice))
                         {
                             var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, conflicted.ChangeVector, lastModifiedTicks, changeVectorSlice, fromReplication: false);
+                            _documentsStorage.RevisionsStorage.DeleteRevision(context, key, conflicted.Collection, context.GetChangeVector(conflicted.ChangeVector), lastModifiedTicks, conflicted.Flags | DocumentFlags.Conflicted);
                         }
                     }
                     _documentsStorage.EnsureLastEtagIsPersisted(context, conflicted.Etag);

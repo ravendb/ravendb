@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Voron.Data.Tables;
+using Raven.Server.Smuggler.Migration.ApiKey;
+using Raven.Server.Utils;
 using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Revisions;
 public partial class RevisionsStorage
@@ -50,7 +52,7 @@ public partial class RevisionsStorage
                 foreach (var cv in _cvs)
                 {
                     var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName,
-                        (table, _) => GetRevision(context, table, cv));
+                        (table, _) => GetRevision(context, cv));
                     deleted += result.Deleted;
                 }
             }
@@ -58,16 +60,9 @@ public partial class RevisionsStorage
             return deleted;
         }
 
-        private IEnumerable<Document> GetRevision(DocumentsOperationContext context, Table table, string cv)
+        private IEnumerable<Document> GetRevision(DocumentsOperationContext context, string cv)
         {
-            Document revision;
-            using (Slice.From(context.Allocator, cv, out var cvSlice))
-            {
-                if (table.ReadByKey(cvSlice, out TableValueReader tvr) == false)
-                    yield break;
-
-                revision = TableValueToRevision(context, ref tvr, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
-            }
+            var revision = context.DocumentDatabase.DocumentsStorage.RevisionsStorage.GetRevision(context, cv, DocumentFields.ChangeVector | DocumentFields.LowerId | DocumentFields.Id);
 
             if (revision.Id != _id)
                 throw new InvalidOperationException($"Revision with the cv \"{cv}\" doesn't belong to the doc \"{_id}\" but to the doc \"{revision.Id}\"");

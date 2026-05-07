@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using Raven.Client;
 using Raven.Server.Documents.Replication.Stats;
+using Raven.Server.Documents.Revisions;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -99,24 +101,30 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Id = context.AllocateStringValue(null, Id.Buffer + index + 1, Id.Size - index - 1);
         }
 
-        public static ByteStringContext.InternalScope TryExtractChangeVectorSliceFromKey(ByteStringContext allocator, LazyStringValue key, out Slice changeVectorSlice)
+        public static void TryExtractDocumentId(LazyStringValue key, out string docId)
         {
-            TryExtractDocumentIdAndChangeVectorFromKey(key, out _, out var changeVector);
-            return Slice.From(allocator, changeVector, out changeVectorSlice);
+            var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
+            docId = index == -1 ? null : key.Substring(0, index);
         }
 
-        public static void TryExtractDocumentIdAndChangeVectorFromKey(LazyStringValue key, out string docId, out string changeVector)
+        public static void TryExtractDocumentIdAndRevisionKey(DocumentsOperationContext context, LazyStringValue key, out string docId, out string revisionKey)
         {
             var index = key.IndexOf((char)SpecialChars.RecordSeparator, StringComparison.OrdinalIgnoreCase);
             if (index == -1)
             {
                 docId = null;
-                changeVector = key;
+                revisionKey = key;
             }
             else
             {
                 docId = key.Substring(0, index);
-                changeVector = key.Substring(index + 1);
+                revisionKey = key.Substring(index + 1);
+            }
+
+            // TODO: backward comp. the real hash should be less than 26 chars (less than the smallest change vector "A:1-<22chars>")
+            if (revisionKey.Length != 32)
+            {
+                revisionKey = RevisionsStorage.GetRevisionKey(context, revisionKey);
             }
         }
 
