@@ -70,5 +70,11 @@ jobs:
           # Model is set via the RAVENDB_BOT_REVIEW_MODEL repository (or org)
           # variable (e.g. claude-sonnet-4-6, claude-opus-4-7).
           claude_args: '--max-turns 50 --model ${{ vars.RAVENDB_BOT_REVIEW_MODEL }} --allowedTools "Read,Grep,Glob,Task,TodoWrite,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          # Set the RAVENDB_BOT_REVIEW_SHOW_FULL_OUTPUT repository (or org)
+          # variable to "true" to print Claude's full execution trace to
+          # the workflow log for debugging. Leave unset or set to "false"
+          # for normal runs — the trace can leak source snippets the
+          # agent read while reviewing.
+          show_full_output: ${{ vars.RAVENDB_BOT_REVIEW_SHOW_FULL_OUTPUT }}
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
