@@ -43,7 +43,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
 
         // Verify the filtered pass into node A does not advance node B in the database change vector.
         var nodeADbCvAfterPass = lab.GetDatabaseChangeVector(LabNode.A);
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered document pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered document pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document pass", nodeADbCvAfterPass, nodeADocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
 
         // Verify the filtered item can still move from node A to node C through ordinary internal replication.
@@ -67,7 +67,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
 
         // Verify node C also keeps node B lineage in document Version only after the internal hop.
         var nodeCDbCvAfterPass = lab.GetDatabaseChangeVector(LabNode.C);
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered document internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCDocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered document internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCDocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document after internal hop", nodeCDocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document after internal hop", nodeCDocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document after internal hop", nodeCDbCvAfterPass, nodeCDocument.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -164,7 +164,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.NotNull(nodeAConflict);
 
         // Verify the filtered pass into node A keeps conflict lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered conflict pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeAConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered conflict pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeAConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered conflict after pass", nodeAConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered conflict after pass", nodeAConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered conflict pass", nodeADbCvAfterPass, nodeAConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -187,7 +187,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.NotNull(nodeCConflict);
 
         // Verify node C also keeps node B lineage in conflict Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered conflict internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered conflict internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered conflict after internal hop", nodeCConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered conflict after internal hop", nodeCConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered conflict internal hop", nodeCDbCvAfterPass, nodeCConflict.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -286,7 +286,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeATombstoneExists={nodeATombstone.Exists}, nodeATombstoneCV='{nodeATombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps tombstone lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered document tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered document tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered document tombstone pass", nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -310,7 +310,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeCTombstoneExists={nodeCTombstone.Exists}, nodeCTombstoneCV='{nodeCTombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in tombstone Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered document tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered document tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered document tombstone internal hop", nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -424,7 +424,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualName='{nodeARevision.Name ?? "<null>"}', CV='{nodeARevision.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps revision lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered revision document pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeARevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered revision document pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeARevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision after pass", nodeARevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision after pass", nodeARevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision document pass", nodeADbCvAfterPass, nodeARevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -452,7 +452,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualName='{nodeCRevision.Name ?? "<null>"}', CV='{nodeCRevision.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in revision Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered revision document internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCRevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered revision document internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCRevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision after internal hop", nodeCRevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision after internal hop", nodeCRevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision document internal hop", nodeCDbCvAfterPass, nodeCRevision.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -568,7 +568,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.NotNull(nodeATombstone);
 
         // Verify the filtered pass into node A keeps revision tombstone lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered revision tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered revision tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered revision tombstone pass", nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -589,7 +589,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.NotNull(nodeCTombstone);
 
         // Verify node C also keeps node B lineage in revision tombstone Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered revision tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered revision tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered revision tombstone internal hop", nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -676,7 +676,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValue={nodeACounter.Value}, counterCV='{nodeACounter.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps counter lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered counter pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeACounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered counter pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeACounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter after pass", nodeACounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter after pass", nodeACounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered counter pass", nodeADbCvAfterPass, nodeACounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -700,7 +700,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValue={nodeCCounter.Value}, counterCV='{nodeCCounter.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in counter Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered counter internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered counter internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter after internal hop", nodeCCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter after internal hop", nodeCCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered counter internal hop", nodeCDbCvAfterPass, nodeCCounter.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -806,7 +806,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualSize={nodeAAttachment.Size}, CV='{nodeAAttachment.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps attachment lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered attachment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeAAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered attachment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeAAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment after pass", nodeAAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment after pass", nodeAAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment pass", nodeADbCvAfterPass, nodeAAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -834,7 +834,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualSize={nodeCAttachment.Size}, CV='{nodeCAttachment.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in attachment Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered attachment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered attachment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment after internal hop", nodeCAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment after internal hop", nodeCAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment internal hop", nodeCDbCvAfterPass, nodeCAttachment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -948,7 +948,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeATombstoneExists={nodeATombstone.Exists}, nodeATombstoneCV='{nodeATombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps attachment tombstone lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone after pass", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone pass", nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -974,7 +974,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeCTombstoneExists={nodeCTombstone.Exists}, nodeCTombstoneCV='{nodeCTombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in attachment tombstone Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone after internal hop", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop", nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1088,7 +1088,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeATombstoneExists={nodeATombstone.Exists}, nodeATombstoneCV='{nodeATombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps attachment tombstone lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone before revision revert", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone before revision revert", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone before revision revert", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone before revision revert", nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered attachment tombstone before revision revert", nodeADbCvAfterPass, nodeATombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1104,7 +1104,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeCTombstoneExists={nodeCTombstone.Exists}, nodeCTombstoneCV='{nodeCTombstone.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in attachment tombstone Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered attachment tombstone internal hop before revision revert", nodeCDbCvAfterPass, nodeCTombstone.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1122,7 +1122,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "attachment restored by revision revert", nodeAAttachmentAfterRevert.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "attachment restored by revision revert", nodeADbCvAfterRevert, nodeAAttachmentAfterRevert.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorCoversLocalItemOrder(filteredPassReceiveSide, LabNode.A, "attachment restored by revision revert", nodeADbCvAfterRevert, nodeAAttachmentAfterRevert.ChangeVector, lab.GetDatabaseIdFor(LabNode.A));
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "attachment restored by revision revert", nodeADbCvBeforeRevert, nodeADbCvAfterRevert, nodeAAttachmentAfterRevert.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastExactBeforeValue(filteredPassReceiveSide, LabNode.A, "attachment restored by revision revert", nodeADbCvBeforeRevert, nodeADbCvAfterRevert, nodeAAttachmentAfterRevert.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
 
         await lab.WaitForFilteredRoundTripAttachmentOrConflictAsync(LabNode.C, attachmentName, nodeAAttachmentAfterRevert.Hash, content.Length);
 
@@ -1204,7 +1204,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValueCount={nodeASegment.ValueCount}, segmentCV='{nodeASegment.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps time series segment lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered time series segment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered time series segment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered time series segment after pass", nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered time series segment after pass", nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered time series segment pass", nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1228,7 +1228,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValueCount={nodeCSegment.ValueCount}, segmentCV='{nodeCSegment.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in time series segment Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered time series segment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered time series segment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered time series segment after internal hop", nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered time series segment after internal hop", nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered time series segment internal hop", nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1331,7 +1331,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValueCount={nodeASegment.ValueCount}, segmentCV='{nodeASegment.ChangeVector ?? "<null>"}'.");
 
         // Verify the filtered pass into node A keeps updated time series segment lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered updated time series segment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered updated time series segment pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered updated time series segment after pass", nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered updated time series segment after pass", nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered updated time series segment pass", nodeADbCvAfterPass, nodeASegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1355,7 +1355,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"actualValueCount={nodeCSegment.ValueCount}, segmentCV='{nodeCSegment.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in updated time series segment Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered updated time series segment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered updated time series segment internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered updated time series segment after internal hop", nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered updated time series segment after internal hop", nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered updated time series segment internal hop", nodeCDbCvAfterPass, nodeCSegment.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1447,7 +1447,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         Assert.True(nodeADeletedRange.Exists, $"Expected deleted time series range '{timeSeriesName}' on '{lab.FilteredRoundTripTicketId}' to reach {NodeTag(filteredPassReceiveSide, LabNode.A)}.");
 
         // Verify the filtered pass into node A keeps deleted range lineage in Version only.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.A, "filtered deleted time series range pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeADeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.A, "filtered deleted time series range pass", nodeADbCvBeforePass, nodeADbCvAfterPass, nodeADeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered deleted time series range after pass", nodeADeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered deleted time series range after pass", nodeADeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.A, "filtered deleted time series range pass", nodeADbCvAfterPass, nodeADeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1467,7 +1467,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"nodeADeletedRangeCV='{nodeADeletedRange.ChangeVector ?? "<null>"}', nodeBDeletedRangeCV='{nodeBDeletedRange.ChangeVector ?? "<null>"}'.");
 
         // Verify node C also keeps node B lineage in deleted range Version only after the internal hop.
-        AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(filteredPassReceiveSide, LabNode.C, "filtered deleted time series range internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCDeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
+        AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(filteredPassReceiveSide, LabNode.C, "filtered deleted time series range internal hop", nodeCDbCvBeforePass, nodeCDbCvAfterPass, nodeCDeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered deleted time series range after internal hop", nodeCDeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered deleted time series range after internal hop", nodeCDeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "filtered deleted time series range internal hop", nodeCDbCvAfterPass, nodeCDeletedRange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1643,7 +1643,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"dbCV='{databaseChangeVector ?? "<null>"}', itemCV='{itemChangeVector ?? "<null>"}', originalIncomingCV='{originalIncomingChangeVector ?? "<null>"}'.");
     }
 
-    private static void AssertDatabaseChangeVectorDidNotAdvancePastBeforePass(
+    private static void AssertDatabaseChangeVectorDidNotAdvancePastAllowedTicketBeforeFilteredOutUser(
         ClusterSide filteredPassReceiveSide,
         LabNode node,
         string itemDescription,
@@ -1655,13 +1655,36 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
     {
         var beforePassEtag = GetEtag(databaseChangeVectorBeforePass, nodeBDatabaseId);
         var afterPassEtag = GetEtag(databaseChangeVectorAfterPass, nodeBDatabaseId);
+        var allowedTicketBeforeFilteredOutUserEtag = beforePassEtag + 1;
 
         Assert.True(
-            afterPassEtag <= beforePassEtag,
-            $"Expected {NodeTag(filteredPassReceiveSide, node)} DB CV after {itemDescription} not to advance {NodeTag(filteredPassReceiveSide, LabNode.B)} beyond the value seen before the filtered pass. " +
-            $"Expected after-pass etag <= before-pass etag, before-pass etag={beforePassEtag}, after-pass etag={afterPassEtag}. " +
-            $"This points to filtered delivery being merged as regular database progress. " +
+            afterPassEtag <= allowedTicketBeforeFilteredOutUserEtag,
+            $"Expected {NodeTag(filteredPassReceiveSide, node)} DB CV after {itemDescription} not to advance {NodeTag(filteredPassReceiveSide, LabNode.B)} beyond the allowed ticket stored before the filtered-out user. " +
+            $"Expected after-pass etag <= allowed ticket etag, before-pass etag={beforePassEtag}, allowed ticket etag={allowedTicketBeforeFilteredOutUserEtag}, after-pass etag={afterPassEtag}. " +
+            $"This points to filtered-out user or later filtered item lineage being merged as regular database progress. " +
             $"dbCVBefore='{databaseChangeVectorBeforePass ?? "<null>"}', dbCVAfter='{databaseChangeVectorAfterPass ?? "<null>"}', " +
+            $"itemCV='{itemChangeVector ?? "<null>"}', originalIncomingCV='{originalIncomingChangeVector ?? "<null>"}'.");
+    }
+
+    private static void AssertDatabaseChangeVectorDidNotAdvancePastExactBeforeValue(
+        ClusterSide filteredPassReceiveSide,
+        LabNode node,
+        string itemDescription,
+        string databaseChangeVectorBefore,
+        string databaseChangeVectorAfter,
+        string itemChangeVector,
+        string originalIncomingChangeVector,
+        string nodeBDatabaseId)
+    {
+        var beforeEtag = GetEtag(databaseChangeVectorBefore, nodeBDatabaseId);
+        var afterEtag = GetEtag(databaseChangeVectorAfter, nodeBDatabaseId);
+
+        Assert.True(
+            afterEtag <= beforeEtag,
+            $"Expected {NodeTag(filteredPassReceiveSide, node)} DB CV after {itemDescription} not to advance {NodeTag(filteredPassReceiveSide, LabNode.B)} beyond the value seen before the local change. " +
+            $"Expected after etag <= before etag, before etag={beforeEtag}, after etag={afterEtag}. " +
+            $"This points to filtered item lineage being merged as regular database progress during a local change. " +
+            $"dbCVBefore='{databaseChangeVectorBefore ?? "<null>"}', dbCVAfter='{databaseChangeVectorAfter ?? "<null>"}', " +
             $"itemCV='{itemChangeVector ?? "<null>"}', originalIncomingCV='{originalIncomingChangeVector ?? "<null>"}'.");
     }
 
