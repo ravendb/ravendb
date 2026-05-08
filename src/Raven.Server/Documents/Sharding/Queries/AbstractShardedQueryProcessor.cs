@@ -1038,8 +1038,8 @@ public abstract class AbstractShardedQueryProcessor<TCommand, TResult, TCombined
 
         if (query.Metadata.OrderBy?.Length > 0)
         {
-            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var nullIsSmallest, out var acceptMissing);
-            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, nullIsSmallest, acceptMissing);
+            DocumentsComparer.RetrieveConfigurationForDocumentsComparer(databaseContext, indexName, out var defaultNullsSortMode, out var acceptMissing);
+            return new DocumentsComparer(query.Metadata.OrderBy, extractFromData: queryType == QueryType.IndexEntries, query.Metadata.HasOrderByRandom, defaultNullsSortMode, acceptMissing);
         }
 
         if (queryType == QueryType.IndexEntries)

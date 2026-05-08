@@ -40,8 +40,6 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string OrderByName;
 
-        public bool GetNullIsSmallest(bool defaultValue) => NullsOrdering != NullsOrderingType.Implicit ? Ascending == (NullsOrdering == NullsOrderingType.First) : defaultValue;
-
         public struct Argument
         {
             public Argument(string nameOrValue, ValueTokenType type)

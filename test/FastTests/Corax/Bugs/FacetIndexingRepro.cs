@@ -196,7 +196,7 @@ public class FacetIndexingRepro : StorageTest
             {
                 var searcher = new IndexSearcher(rtx, fields);
                 var field = FieldMetadata.Build(fields.GetByFieldId(i).FieldName, default, i, default, default);
-                var sort = searcher.OrderBy(searcher.AllEntries(), new OrderMetadata(field, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false), nullIsSmallest: true);
+                var sort = searcher.OrderBy(searcher.AllEntries(), new OrderMetadata(field, true, MatchCompareFieldType.Sequence, fieldHasNoTerms: false), defaultNullsSortMode: NullsSortMode.NullsSmallest);
                 while (sort.Fill(matches) != 0)
                 {
                 }

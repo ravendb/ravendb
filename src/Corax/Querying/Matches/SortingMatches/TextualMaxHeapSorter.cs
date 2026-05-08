@@ -167,8 +167,8 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         int startNullLength = 0;
 
         var writeNullFirst = nullCount > 0
-                                    && (IsDescending && _nullIsSmallest == false // null last, but we're sorting descending 
-                                        || (IsDescending == false && _nullIsSmallest)); //ascending, null first
+                                    && ((IsDescending && _nullIsSmallest == false)
+                                        || (IsDescending == false && _nullIsSmallest));
         
         if (writeNullFirst)
         {

@@ -17,9 +17,7 @@ public readonly struct OrderMetadata
     public readonly SpatialUnits Units;
     public readonly int RandomSeed;
     public readonly bool FieldHasNoTerms;
-    public readonly bool? NullFirst;
-
-    public bool GetNullIsSmallest(bool defaultValue) => NullFirst.HasValue ? Ascending == NullFirst.Value : defaultValue;
+    public readonly NullsSortMode? NullsSortMode;
 
     public override string ToString()
     {
@@ -62,7 +60,7 @@ public readonly struct OrderMetadata
 
     }
 
-    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, bool fieldHasNoTerms, bool? nullFirst = null)
+    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, bool fieldHasNoTerms, NullsSortMode? nullsSortMode = null)
     {
         Unsafe.SkipInit(out HasBoost);
         Unsafe.SkipInit(out Point);
@@ -74,10 +72,10 @@ public readonly struct OrderMetadata
         Ascending = ascending;
         FieldType = fieldType;
         FieldHasNoTerms = fieldHasNoTerms;
-        NullFirst = nullFirst;
+        NullsSortMode = nullsSortMode;
     }
 
-    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units, bool fieldHasNoTerms, bool? nullFirst = null)
+    public OrderMetadata(in FieldMetadata field, bool ascending, MatchCompareFieldType fieldType, IPoint point, double round, SpatialUnits units, bool fieldHasNoTerms, NullsSortMode? nullsSortMode = null)
     {
         Unsafe.SkipInit(out HasBoost);
         Unsafe.SkipInit(out RandomSeed);
@@ -89,6 +87,6 @@ public readonly struct OrderMetadata
         Point = point;
         Units = units;
         FieldHasNoTerms = fieldHasNoTerms;
-        NullFirst = nullFirst;
+        NullsSortMode = nullsSortMode;
     }
 }

@@ -56,7 +56,7 @@ class configurationItem {
         "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
         "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",
         "Indexing.Corax.VectorSearch.VectorSearchScanningThreshold",
-        "Indexing.Querying.Corax.NullIsSmallest",
+        "Indexing.Querying.Corax.NullsSortMode",
 
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*

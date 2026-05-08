@@ -39,7 +39,7 @@ namespace FastTests.Corax
                 var concat = searcher.And(allEntries, match1);
 
                 var match = searcher.OrderBy(concat,
-                    new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false), nullIsSmallest: true);
+                    new OrderMetadata(searcher.FieldMetadataBuilder("Content", ContentId), false, MatchCompareFieldType.Integer, fieldHasNoTerms: false), defaultNullsSortMode: NullsSortMode.NullsSmallest);
 
                 List<string> sortedByCorax = new();
                 Span<long> ids = stackalloc long[2048];

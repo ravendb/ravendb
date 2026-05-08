@@ -16,15 +16,15 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 {
     private readonly OrderByField[] _orderByFields;
     private readonly bool _extractFromData;
-    private readonly bool _defaultNullIsSmallest;
+    private readonly NullsSortMode _defaultNullsSortMode;
     private readonly bool _acceptMissingValues;
     private readonly Random[] _randoms;
 
-    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData, bool hasOrderByRandom, bool defaultNullIsSmallest, bool acceptMissingValues)
+    public DocumentsComparer(OrderByField[] orderByFields, bool extractFromData, bool hasOrderByRandom, NullsSortMode defaultNullsSortMode, bool acceptMissingValues)
     {
         _orderByFields = orderByFields;
         _extractFromData = extractFromData;
-        _defaultNullIsSmallest = defaultNullIsSmallest;
+        _defaultNullsSortMode = defaultNullsSortMode;
         _acceptMissingValues = acceptMissingValues;
         _randoms = hasOrderByRandom == false
             ? null
@@ -68,7 +68,12 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
 
     private int CompareField(in OrderByField order, int index, BlittableJsonReaderObject x, BlittableJsonReaderObject y)
     {
-        var nullIsSmallest = order.GetNullIsSmallest(_defaultNullIsSmallest);
+        var nullIsSmallest = order.NullsOrdering switch
+        {
+            NullsOrderingType.First => order.Ascending,
+            NullsOrderingType.Last => order.Ascending == false,
+            _ => _defaultNullsSortMode == NullsSortMode.NullsSmallest
+        };
 
         switch (order.OrderingType)
         {
@@ -380,26 +385,26 @@ public sealed class DocumentsComparer : IComparer<BlittableJsonReaderObject>
         throw new InvalidOperationException($"Expected to get type: {expectedType} but got: {actualValue} of type: {actualValue.GetType()}");
     }
     
-    public static void RetrieveConfigurationForDocumentsComparer(ShardedDatabaseContext databaseContext, string indexName, out bool nullIsSmallest, out bool acceptMissing)
+    public static void RetrieveConfigurationForDocumentsComparer(ShardedDatabaseContext databaseContext, string indexName, out NullsSortMode defaultNullsSortMode, out bool acceptMissing)
     {
-        nullIsSmallest = true;
+        defaultNullsSortMode = NullsSortMode.NullsSmallest;
         acceptMissing = false;
 
         if (indexName == null)
             return;
-    
+
         var index = databaseContext.Indexes.GetIndex(indexName);
         if (index == null)
             return;
 
-        var searchEngine = index.Type.IsAuto() 
-            ? index.Configuration.AutoIndexingEngineType 
+        var searchEngine = index.Type.IsAuto()
+            ? index.Configuration.AutoIndexingEngineType
             : index.Configuration.StaticIndexingEngineType;
-    
+
         if (searchEngine == SearchEngineType.Lucene)
             return;
 
-        nullIsSmallest = index.Configuration.NullIsSmallest;
+        defaultNullsSortMode = index.Configuration.NullsSortMode;
         acceptMissing = true;
     }
 }

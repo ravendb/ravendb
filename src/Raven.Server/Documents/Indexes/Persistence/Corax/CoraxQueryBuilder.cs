@@ -217,7 +217,10 @@ public static partial class CoraxQueryBuilder
                     _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                var nullIsSmallest = sortBy.GetNullIsSmallest(builderParameters.Index.Configuration.NullIsSmallest);
+                var configIsSmallest = builderParameters.Index.Configuration.NullsSortMode == Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest;
+                var nullIsSmallest = sortBy.NullsSortMode is { } sortByMode
+                    ? sortByMode == global::Corax.Utils.NullsSortMode.NullsSmallest
+                    : configIsSmallest;
                 var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending, nullIsSmallest);
 
                 var indexVersion = builderParameters.Index.Definition.Version;
@@ -1326,11 +1329,13 @@ public static partial class CoraxQueryBuilder
 
         foreach (var field in orderByFields)
         {
-            var nullFirst = field.NullsOrdering switch
+            var nullsSortMode = (field.NullsOrdering, field.Ascending) switch
             {
-                NullsOrderingType.First => true,
-                NullsOrderingType.Last => false,
-                _ => (bool?)null
+                (NullsOrderingType.First, Ascending: true) => NullsSortMode.NullsSmallest,
+                (NullsOrderingType.First, Ascending: false) => NullsSortMode.NullsLargest,
+                (NullsOrderingType.Last, Ascending: true) => NullsSortMode.NullsLargest, 
+                (NullsOrderingType.Last, Ascending: false)=> NullsSortMode.NullsSmallest,
+                _ => (NullsSortMode?)null
             };
 
             if (field.OrderingType == OrderByFieldType.Random)
@@ -1406,7 +1411,7 @@ public static partial class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullFirst);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullsSortMode);
                 continue;
             }
 
@@ -1423,17 +1428,17 @@ public static partial class CoraxQueryBuilder
                 case OrderByFieldType.Custom:
                     throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support Custom OrderBy.");
                 case OrderByFieldType.AlphaNumeric:
-                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty, nullFirst);
+                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty, nullsSortMode);
                     continue;
                 case OrderByFieldType.Long:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty, nullFirst);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty, nullsSortMode);
                     break;
                 case OrderByFieldType.Double:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty, nullFirst);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty, nullsSortMode);
                     break;
             }
 
-            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty, nullFirst);
+            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty, nullsSortMode);
         }
 
         return sortArray[0..sortIndex];
@@ -1463,16 +1468,17 @@ public static partial class CoraxQueryBuilder
             orderMetadata = currentIdx == 0 ? [] : orderMetadata![..currentIdx];
         }
   
-        var configNullIsSmallest = builderParameters.Index.Configuration.NullIsSmallest;
+        var defaultNullsSortMode = builderParameters.Index.Configuration.NullsSortMode == Client.Documents.Indexes.NullsSortMode.NullsSmallest
+            ? NullsSortMode.NullsSmallest
+            : NullsSortMode.NullsLargest;
         switch (orderMetadata.Length)
         {
             case 0:
                 return match;
             case 1:
-                var firstClauseNullIsSmallest = orderMetadata[0].GetNullIsSmallest(configNullIsSmallest);
-                return indexSearcher.OrderBy(match, orderMetadata[0], firstClauseNullIsSmallest, take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata[0], defaultNullsSortMode, take, builderParameters.Token);
             default:
-                return indexSearcher.OrderBy(match, orderMetadata, configNullIsSmallest, take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata, defaultNullsSortMode, take, builderParameters.Token);
         }
     }
 }

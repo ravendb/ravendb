@@ -589,7 +589,9 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
     {
         options.ModifyDatabaseRecord += record =>
         {
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullIsSmallest)] = configNullIsSmallest.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = configNullIsSmallest
+                ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest.ToString()
+                : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest.ToString();
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
         using var store = GetDocumentStore(options);
@@ -605,6 +607,30 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
         var results = await session.Advanced.AsyncRawQuery<Document>(rql).ToListAsync();
 
         AssertStringNullsOrdering(results, isAscending: true, nullsFirst: queryNullsFirst);
+    }
+
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Configuration)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [true])]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Data = [false])]
+    public async Task LegacyNullFirstConfigKeyStillBindsToNewEnum(Options options, bool legacyNullFirst)
+    {
+        options.ModifyDatabaseRecord += record =>
+        {
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullFirstLegacy)] = legacyNullFirst.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
+        };
+        using var store = GetDocumentStore(options);
+        var index = new DocumentIndex();
+        await index.ExecuteAsync(store);
+        await Indexes.WaitForIndexingAsync(store);
+
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+        var indexInstance = database.IndexStore.GetIndex(index.IndexName);
+
+        var expected = legacyNullFirst
+            ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest
+            : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest;
+        Assert.Equal(expected, indexInstance.Configuration.NullsSortMode);
     }
 
     [RavenTheory(RavenTestCategory.Querying)]

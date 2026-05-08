@@ -22,7 +22,7 @@ public unsafe partial struct SortingMultiMatch<TInner>
     private readonly IndexSearcher _searcher;
     private TInner _inner;
     private readonly OrderMetadata[] _orderMetadata;
-    private readonly bool _defaultNullIsSmallest;
+    private readonly NullsSortMode _defaultNullsSortMode;
     private readonly delegate*<ref SortingMultiMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly IEntryComparer[] _nextComparers;
     private readonly int _take;
@@ -47,12 +47,12 @@ public unsafe partial struct SortingMultiMatch<TInner>
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
 
-    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, bool defaultNullIsSmallest, int take = -1, in CancellationToken token = default)
+    public SortingMultiMatch(IndexSearcher searcher, in TInner inner, OrderMetadata[] orderMetadata, NullsSortMode defaultNullsSortMode, int take = -1, in CancellationToken token = default)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
-        _defaultNullIsSmallest = defaultNullIsSmallest;
+        _defaultNullsSortMode = defaultNullsSortMode;
         _take = take;
         _token = token;
         _alreadyReadIdx = 0;
@@ -108,7 +108,8 @@ public unsafe partial struct SortingMultiMatch<TInner>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal readonly bool GetNullIsSmallestForClause(int comparerId) => _orderMetadata[comparerId].GetNullIsSmallest(_defaultNullIsSmallest);
+    internal readonly bool GetNullIsSmallestForClause(int comparerId) =>
+        (_orderMetadata[comparerId].NullsSortMode ?? _defaultNullsSortMode) == NullsSortMode.NullsSmallest;
 
     private static int Fill<TComparer1, TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, Span<long> matches)
         where TComparer1 : struct, IEntryComparer, IComparer<UnmanagedSpan> 

@@ -671,12 +671,28 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
         
-        [Description("Corax: when true, null values are treated as the smallest possible key (so they sort first in ascending order, last in descending order).")]
-        [DefaultValue(true)]
+        // Backward-compatibility
+        [Description("[OBSOLETE] Use: 'Indexing.Querying.Corax.NullsSortMode' instead.")]
+        [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
-        [ConfigurationEntry("Indexing.Querying.Corax.NullIsSmallest", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)] //backward
-        public bool NullIsSmallest { get; protected set; }
+        [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool? NullFirstLegacy
+        {
+            get => _nullFirstLegacy;
+            protected set
+            {
+                _nullFirstLegacy = value;
+                if (value.HasValue)
+                    NullsSortMode = value.Value ? NullsSortMode.NullsSmallest : NullsSortMode.NullsLargest;
+            }
+        }
+        private bool? _nullFirstLegacy;
+
+        [Description("Corax: when set to Smallest, null values are treated as the smallest possible key (so they sort first in ascending order, last in descending order).")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Querying.Corax.NullsSortMode", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public NullsSortMode NullsSortMode { get; protected set; } = NullsSortMode.NullsSmallest;
         
         protected override void ValidateProperty(PropertyInfo property)
         {
