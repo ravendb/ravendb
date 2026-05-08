@@ -6,7 +6,7 @@ import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoing
 import { FieldPath, UseFieldArrayReturn } from "react-hook-form";
 import { useAppDispatch } from "components/store";
 import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
-import { getRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import { getRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskTableItems } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tablesExplorer/EditCdcSinkTaskTableItems";
 
 interface EditCdcSinkTaskTablesExplorerProps {
@@ -91,7 +91,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
             />
-            <EditCdcSinkTaskTableItems tablesFieldArray={tablesFieldArray} filter={filter} />
+            <EditCdcSinkTaskTableItems filter={filter} />
         </div>
     );
 }

@@ -1,6 +1,6 @@
 import { FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
-import { EmbeddedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import { EmbeddedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import EditCdcSinkTaskAdvancedSettings from "./EditCdcSinkTaskAdvancedSettings";

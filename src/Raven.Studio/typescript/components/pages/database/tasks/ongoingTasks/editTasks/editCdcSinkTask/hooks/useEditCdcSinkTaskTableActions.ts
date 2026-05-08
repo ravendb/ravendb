@@ -9,7 +9,7 @@ import {
     RootTablePath,
     castToEmbeddedTablePath,
     castToLinkedTablePath,
-} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppDispatch } from "components/store";
 import { FieldPath, useFormContext } from "react-hook-form";
@@ -125,7 +125,7 @@ export function useEditCdcSinkTaskTableActions() {
     };
 
     const changeEmbeddedToLinked = async (path: EmbeddedTablePath) => {
-        const embeddedTable = getValues(path as FormPath) as EmbeddedTable;
+        const embeddedTable = getValues(path);
         const hasChildren = embeddedTable.embeddedTables?.length > 0 || embeddedTable.linkedTables?.length > 0;
 
         if (hasChildren) {

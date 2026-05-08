@@ -28,3 +28,41 @@ export function castToLinkedTablePath(path: string) {
 export function castToEmbeddedTablePath(path: string) {
     return path as EmbeddedTablePath satisfies FormPath;
 }
+
+export type FormRootTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
+export type FormEmbeddedTable = NonNullable<NonNullable<FormRootTable["embeddedTables"]>[number]>;
+export type FormLinkedTable = NonNullable<NonNullable<FormRootTable["linkedTables"]>[number]>;
+
+interface ExplorerRowSchema {
+    type: "schema";
+    path: string;
+    label: string;
+}
+
+export interface ExplorerRowRootTable {
+    type: "root";
+    path: RootTablePath;
+    table: FormRootTable;
+    hasChildren: boolean;
+    isExpanded: boolean;
+}
+
+export interface ExplorerRowLinkedTable {
+    type: "linked";
+    path: LinkedTablePath;
+    table: FormLinkedTable;
+    isRootDisabled: boolean;
+    depth: number;
+}
+
+export interface ExplorerRowEmbeddedTable {
+    type: "embedded";
+    path: EmbeddedTablePath;
+    table: FormEmbeddedTable;
+    hasChildren: boolean;
+    isExpanded: boolean;
+    isRootDisabled: boolean;
+    depth: number;
+}
+
+export type ExplorerRow = ExplorerRowSchema | ExplorerRowRootTable | ExplorerRowLinkedTable | ExplorerRowEmbeddedTable;

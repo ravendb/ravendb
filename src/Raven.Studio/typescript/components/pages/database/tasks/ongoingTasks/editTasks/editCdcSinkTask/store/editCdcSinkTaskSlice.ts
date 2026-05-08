@@ -6,7 +6,7 @@ import {
     EmbeddedTablePath,
     LinkedTablePath,
     RootTablePath,
-} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 
 export type CdcActiveTable =
     | {
@@ -90,6 +90,8 @@ export const editCdcSinkTaskActions = editCdcSinkTaskSlice.actions;
 export const editCdcSinkTaskSelectors = {
     selectedConnectionString: (state: RootState) => state.editCdcSinkTask.selectedConnectionString,
     activeTable: (state: RootState) => state.editCdcSinkTask.activeTable,
+    isActiveTable: (path: CdcActiveTable["path"]) => (state: RootState) =>
+        state.editCdcSinkTask.activeTable?.path === path,
     expandedTables: (state: RootState) => state.editCdcSinkTask.expandedTables,
     isRawView: (state: RootState) => state.editCdcSinkTask.isRawView,
     rawViewContent: (state: RootState) => state.editCdcSinkTask.rawViewContent,

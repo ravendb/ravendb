@@ -1,5 +1,5 @@
 import { FormGroup, FormInput, FormLabel } from "components/common/Form";
-import { RootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import { RootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useFormContext, useWatch } from "react-hook-form";
 import EditCdcSinkTaskAdvancedSettings from "./EditCdcSinkTaskAdvancedSettings";

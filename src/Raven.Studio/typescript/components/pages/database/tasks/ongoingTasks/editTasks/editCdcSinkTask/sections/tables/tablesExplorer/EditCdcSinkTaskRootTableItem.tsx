@@ -4,123 +4,99 @@ import {
     editCdcSinkTaskActions,
     editCdcSinkTaskSelectors,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
-import { getRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+import { ExplorerRowRootTable } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useEditCdcSinkTaskTableActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskTableActions";
 import { useAppDispatch, useAppSelector } from "components/store";
 import classNames from "classnames";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
-import { useFormContext, useWatch } from "react-hook-form";
-import { EditCdcSinkTaskEmbeddedTableItem } from "./EditCdcSinkTaskEmbeddedTableItem";
-import { EditCdcSinkTaskLinkedTableItem } from "./EditCdcSinkTaskLinkedTableItem";
+import { useFormContext } from "react-hook-form";
 import { useErrorMessage } from "components/common/Form";
+import { editCdcSinkTaskConstants } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskConstants";
 
-interface EditCdcSinkTaskRootTableItemProps {
-    formIdx: number;
-}
+const { expandButtonWidthPx } = editCdcSinkTaskConstants;
 
-export function EditCdcSinkTaskRootTableItem({ formIdx }: EditCdcSinkTaskRootTableItemProps) {
+export function EditCdcSinkTaskRootTableItem({ path, table, isExpanded, hasChildren }: ExplorerRowRootTable) {
     const dispatch = useAppDispatch();
     const tableActions = useEditCdcSinkTaskTableActions();
-    const expandedTables = useAppSelector(editCdcSinkTaskSelectors.expandedTables);
-    const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
-    const path = getRootTablePath(formIdx);
-
+    // TODO maybe pass this from parent and use memo
+    const isActive = useAppSelector(editCdcSinkTaskSelectors.isActiveTable(path));
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const formError = useErrorMessage({ control, paths: [path] });
-    const isDisabled = useWatch({ control, name: `${path}.disabled` });
-    const linkedTables = useWatch({ control, name: `${path}.linkedTables` });
-    const embeddedTables = useWatch({ control, name: `${path}.embeddedTables` });
-    const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
 
-    const hasChildren = embeddedTables.length > 0 || linkedTables.length > 0;
-    const label = sourceTableName || "Unassigned table";
-    const isExpanded = expandedTables[path];
-
-    const isActive = activeTable?.path === path;
+    const label = table.sourceTableName || "Unassigned table";
+    const isDisabled = table.disabled;
 
     const handleClick = () => {
-        dispatch(editCdcSinkTaskActions.activeTableSet({ path, type: "root" }));
-        dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
+        if (!isActive) {
+            dispatch(editCdcSinkTaskActions.activeTableSet({ path, type: "root" }));
+        }
+    };
+
+    const handleToggleExpanded = () => {
+        if (hasChildren) {
+            dispatch(editCdcSinkTaskActions.tableExpandedOneToggled(path));
+        }
     };
 
     return (
-        <div className="vstack gap-1">
-            <div className="hstack">
+        <div className="hstack">
+            {hasChildren && (
                 <Button
-                    variant={isActive ? "secondary" : "link"}
-                    className={classNames("text-body text-start hstack flex-grow-1 overflow-hidden", {
-                        "opacity-50": isDisabled,
-                    })}
-                    onClick={handleClick}
-                    title={label}
-                    style={{ paddingInline: "2px", minWidth: 0 }}
+                    variant="link"
+                    className="text-body p-0"
+                    onClick={handleToggleExpanded}
+                    title={isExpanded ? "Collapse table" : "Expand table"}
+                    style={{ width: expandButtonWidthPx, minWidth: expandButtonWidthPx }}
                 >
-                    <Icon
-                        icon={isExpanded ? "chevron-down" : "chevron-right"}
-                        className={classNames("font-size-12", { "opacity-0": !hasChildren })}
-                        margin="m-0"
-                    />
-                    <span className="text-truncate" style={{ marginLeft: "2px" }}>
-                        {label}
-                    </span>
-                    {formError.hasErrors && (
-                        <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />
-                    )}
+                    <Icon icon={isExpanded ? "chevron-down" : "chevron-right"} className="font-size-12" margin="m-0" />
                 </Button>
-                <Dropdown>
-                    <Dropdown.Toggle
-                        as={CustomDropdownToggle}
-                        isCaretHidden
-                        variant="link"
-                        className="text-body p-1"
-                        title="Table actions"
-                        size="xs"
-                    >
-                        <Icon icon="more" margin="m-0" />
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu renderOnMount popperConfig={{ strategy: "fixed" }}>
-                        <Dropdown.Item onClick={() => tableActions.addEmbeddedTable(path)}>
-                            <Icon icon="embed" /> Add new embedded table
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={() => tableActions.addLinkedTable(path)}>
-                            <Icon icon="link" /> Add new linked table
-                        </Dropdown.Item>
-                        <Dropdown.Item onClick={() => tableActions.toggleRootTableDisabled(path)}>
-                            <Icon icon={isDisabled ? "play" : "stop"} /> {isDisabled ? "Enable" : "Disable"}
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                            className="text-danger"
-                            onClick={() => tableActions.removeTable({ path, type: "root" })}
-                        >
-                            <Icon icon="trash" /> Remove
-                        </Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
-            </div>
-            {hasChildren && isExpanded && (
-                <div
-                    className="vstack gap-1 border-start border-secondary ps-1 flex-grow-0"
-                    style={{ marginLeft: "9px" }}
-                >
-                    {linkedTables.map((_, idx) => (
-                        <EditCdcSinkTaskLinkedTableItem
-                            key={idx}
-                            path={`${path}.linkedTables.${idx}`}
-                            isRootDisabled={isDisabled}
-                        />
-                    ))}
-                    {embeddedTables.map((_, idx) => (
-                        <EditCdcSinkTaskEmbeddedTableItem
-                            key={idx}
-                            path={`${path}.embeddedTables.${idx}`}
-                            isRootDisabled={isDisabled}
-                        />
-                    ))}
-                </div>
             )}
+            <Button
+                variant={isActive ? "secondary" : "link"}
+                className={classNames("text-body text-start hstack flex-grow-1 overflow-hidden", {
+                    "opacity-50": isDisabled,
+                })}
+                onClick={handleClick}
+                title={label}
+                style={{ paddingInline: "2px", minWidth: 0, marginLeft: hasChildren ? undefined : expandButtonWidthPx }}
+            >
+                <span className="text-truncate" style={{ marginLeft: "2px" }}>
+                    {label}
+                </span>
+                {formError.hasErrors && <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />}
+            </Button>
+            <Dropdown>
+                <Dropdown.Toggle
+                    as={CustomDropdownToggle}
+                    isCaretHidden
+                    variant="link"
+                    className="text-body p-1"
+                    title="Table actions"
+                    size="xs"
+                >
+                    <Icon icon="more" margin="m-0" />
+                </Dropdown.Toggle>
+                <Dropdown.Menu popperConfig={{ strategy: "fixed" }}>
+                    <Dropdown.Item onClick={() => tableActions.addEmbeddedTable(path)}>
+                        <Icon icon="embed" /> Add new embedded table
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => tableActions.addLinkedTable(path)}>
+                        <Icon icon="link" /> Add new linked table
+                    </Dropdown.Item>
+                    <Dropdown.Item onClick={() => tableActions.toggleRootTableDisabled(path)}>
+                        <Icon icon={isDisabled ? "play" : "stop"} /> {isDisabled ? "Enable" : "Disable"}
+                    </Dropdown.Item>
+                    <Dropdown.Item
+                        className="text-danger"
+                        onClick={() => tableActions.removeTable({ path, type: "root" })}
+                    >
+                        <Icon icon="trash" /> Remove
+                    </Dropdown.Item>
+                </Dropdown.Menu>
+            </Dropdown>
         </div>
     );
 }

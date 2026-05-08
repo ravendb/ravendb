@@ -2,7 +2,7 @@ import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
 import {
     EmbeddedTablePath,
     RootTablePath,
-} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useFormContext } from "react-hook-form";
 

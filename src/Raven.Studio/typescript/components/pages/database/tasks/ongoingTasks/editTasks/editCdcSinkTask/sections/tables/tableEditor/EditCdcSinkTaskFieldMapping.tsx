@@ -5,7 +5,7 @@ import { SelectOption } from "components/common/select/Select";
 import {
     RootTablePath,
     EmbeddedTablePath,
-} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskFormPaths";
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import Button from "react-bootstrap/Button";
 import { useFieldArray, useFormContext } from "react-hook-form";

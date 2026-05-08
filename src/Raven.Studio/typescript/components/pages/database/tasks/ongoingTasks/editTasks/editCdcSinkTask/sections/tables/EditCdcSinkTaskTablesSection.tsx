@@ -14,7 +14,7 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
     const { value: isPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
 
     return (
-        <div className="mt-3">
+        <div className="mt-3 vstack" style={{ minHeight: "100%" }}>
             <div className="hstack align-items-center">
                 <h3 className="m-0">Configured Tables</h3>
                 <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
@@ -29,10 +29,7 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
 
 function TablesPanel({ tablesFieldArray }: EditCdcSinkTaskTablesSectionProps) {
     return (
-        <div
-            className="mt-3 hstack align-items-start panel-bg-2 rounded-2 border border-secondary overflow-y-auto overflow-x-hidden"
-            style={{ height: 800 }}
-        >
+        <div className="mt-3 hstack align-items-start panel-bg-2 rounded-2 border border-secondary overflow-x-hidden flex-grow-1">
             <div className="rounded-2 overflow-y-auto h-100 p-2" style={{ minWidth: "300px", width: "300px" }}>
                 <EditCdcSinkTaskTablesExplorer tablesFieldArray={tablesFieldArray} />
             </div>
