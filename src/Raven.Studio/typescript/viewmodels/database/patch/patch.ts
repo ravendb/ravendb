@@ -24,7 +24,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import shardViewModelBase = require("viewmodels/shardViewModelBase");
-import PatchSamplesPanel = require("components/common/sampleQueries/PatchSamplesPanel");
+import PatchSamplesPanel = require("viewmodels/database/patch/PatchSamplesPanel");
 
 class patchList {
 

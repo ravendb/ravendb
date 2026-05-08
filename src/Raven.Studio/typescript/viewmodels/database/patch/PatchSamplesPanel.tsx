@@ -1,6 +1,7 @@
 import React, { useLayoutEffect } from "react";
-import SampleQueriesPage from "./SampleQueriesPage";
-import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
+import SampleQueriesPage from "components/common/sampleQueries/SampleQueriesPage";
+import { MethodGroup, SampleScript } from "components/common/sampleQueries/partials/sampleQueriesTypes";
+import PatchSamplesAboutView from "./PatchSamplesAboutView";
 
 export interface PatchSamplesPanelProps {
     initialScript: string;
@@ -35,6 +36,7 @@ export default function PatchSamplesPanel({
             onClose={onClose}
             initialScript={initialScript}
             onUpdateScript={onUpdateScript}
+            aboutView={<PatchSamplesAboutView />}
         />
     );
 }
