@@ -1,4 +1,9 @@
-﻿using System.Threading.Tasks;
+using System.Linq;
+using System.Threading.Tasks;
+using FastTests;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Subscriptions;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions.Documents.Subscriptions;
@@ -47,6 +52,26 @@ namespace SlowTests.Issues
                     modificationsValue = x.Items[0].Result.Counter;
                 }));
                 Assert.Equal(1L, modificationsValue);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Subscriptions)]
+        public async Task SubscriptionProjectionWithCtorDoesNotWrapInParentheses()
+        {
+            const string counter = "Modifications";
+
+            using (var store = GetDocumentStore())
+            {
+                string subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>
+                {
+                    Projection = x => new ProjectionResult(RavenQuery.Counter(x, counter), x.AddressId)
+                });
+
+                System.Collections.Generic.List<SubscriptionState> subs = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
+                string query = subs.First(s => s.SubscriptionName == subsId).Query;
+
+                Assert.Contains("select {", query);
+                Assert.DoesNotContain("select ({", query);
             }
         }
     }

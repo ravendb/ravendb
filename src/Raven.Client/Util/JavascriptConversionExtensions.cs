@@ -2085,13 +2085,14 @@ namespace Raven.Client.Util
             }
         }
 
-        internal sealed class NewSupport : JavascriptConversionExtension
+        internal sealed class NewSupport(bool wrapInParens) : JavascriptConversionExtension
         {
-            public static readonly NewSupport Instance = new NewSupport();
+            public static readonly NewSupport Instance = new(true);
 
-            private NewSupport()
-            {
-            }
+            /// <summary>
+            /// Used by the subscriptions projection pipeline (BodyOnly), where the script is appended after 'select ' and the wrapping parens would be redundant.
+            /// </summary>
+            public static readonly NewSupport BodyOnlyInstance = new(false);
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -2115,7 +2116,7 @@ namespace Raven.Client.Util
 
                         using (resultWriter.Operation(0))
                         {
-                            resultWriter.Write("({");
+                            resultWriter.Write(wrapInParens ? "({" : "{");
 
                             var posStart = resultWriter.Length;
                             for (int itMember = 0; itMember < members.Count; itMember++)
@@ -2140,7 +2141,7 @@ namespace Raven.Client.Util
                                 context.Visitor.Visit(newExp.Arguments[itMember]);
                             }
 
-                            resultWriter.Write("})");
+                            resultWriter.Write(wrapInParens ? "})":"}");
                         }
 
                         return;
