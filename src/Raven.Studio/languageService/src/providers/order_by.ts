@@ -6,8 +6,10 @@ export class AutocompleteOrderBy extends BaseAutocompleteProvider implements Aut
 
     async collectAsync(ctx: AutocompleteContext): Promise<autoCompleteWordList[]> {
         const { candidates } = ctx;
+        const completions: autoCompleteWordList[] = [];
+
         if (candidates.rules.has(RqlParser.RULE_orderByOrder)) {
-            return [{
+            completions.push({
                 value: "asc ",
                 caption: "asc",
                 meta: AUTOCOMPLETE_META.keyword,
@@ -17,20 +19,34 @@ export class AutocompleteOrderBy extends BaseAutocompleteProvider implements Aut
                 caption: "desc",
                 meta: AUTOCOMPLETE_META.keyword,
                 score: AUTOCOMPLETE_SCORING.keyword
-            }]
+            });
         }
-        
+
         if (candidates.rules.has(RqlParser.RULE_orderBySortingAs)) {
             const sortings = ["string", "alphanumeric", "long", "double"];
-            
-            return sortings.map(s => ({
-                caption: s, 
+
+            completions.push(...sortings.map(s => ({
+                caption: s,
                 value: s + " ",
                 meta: AUTOCOMPLETE_META.keyword,
                 score: AUTOCOMPLETE_SCORING.keyword
-            }));
+            })));
         }
-        
-        return [];
+
+        if (candidates.rules.has(RqlParser.RULE_orderByNulls)) {
+            completions.push({
+                value: "nulls first ",
+                caption: "nulls first",
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
+            }, {
+                value: "nulls last ",
+                caption: "nulls last",
+                meta: AUTOCOMPLETE_META.keyword,
+                score: AUTOCOMPLETE_SCORING.keyword
+            });
+        }
+
+        return completions;
     }
 }

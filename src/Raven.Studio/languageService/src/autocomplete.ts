@@ -44,7 +44,9 @@ export const ignoredTokens: number[] = [
     RqlParser.NOT,
     RqlParser.NULL,
     RqlParser.TRUE,
-    RqlParser.TIMESERIES_FUNCTION_DECLARATION
+    RqlParser.TIMESERIES_FUNCTION_DECLARATION,
+    RqlParser.NULLS_FIRST,
+    RqlParser.NULLS_LAST
 ];
 
 const noSeparatorRequiredFor = new Set<number>([
@@ -128,6 +130,7 @@ export class autoCompleteEngine {
             RqlParser.RULE_function,
             RqlParser.RULE_orderBySortingAs,
             RqlParser.RULE_orderByOrder,
+            RqlParser.RULE_orderByNulls,
             RqlParser.RULE_identifiersWithoutRootKeywords,
             RqlParser.RULE_identifiersAllNames,
             RqlParser.RULE_aiTaskMethod

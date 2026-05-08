@@ -925,11 +925,14 @@ ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib
             regex : whereFunctions,
             next: "whereFunction"
         }, {
+            token : "keyword.orderByOptions",
+            regex : /\b[nN][uU][lL][lL][sS]\s+(?:[fF][iI][rR][sS][tT]|[lL][aA][sS][tT])\b/
+        }, {
             token : function (token, state, stack) {
                 if (preBracketTokens.indexOf(token) !== -1) {
                     lastPreBracketTokenSeen = token;
                 }
-                
+
                 return keywordMapper(token);
             },
             regex : keywordRegex

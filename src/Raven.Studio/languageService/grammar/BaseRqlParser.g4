@@ -186,10 +186,10 @@ orderByStatement
    ;
 
 orderByItem
-   : value = literal order = orderBySorting? orderValueType = orderByOrder?
+   : value = literal order = orderBySorting? orderValueType = orderByOrder? nullsValue = orderByNulls?
    ;
    //Order sorting option keyword.
-   
+
 orderBySorting
    : AS sortingMode = orderBySortingAs
    ;
@@ -203,6 +203,11 @@ orderBySortingAs
 
 orderByOrder
    : SORTING
+   ;
+
+orderByNulls
+   : NULLS_FIRST
+   | NULLS_LAST
    ;
    //          SELECT STATEMENT            //
    
