@@ -2,6 +2,43 @@ import React, { useLayoutEffect } from "react";
 import SampleQueriesPage from "./SampleQueriesPage";
 import { MethodGroup, SampleScript } from "./partials/sampleQueriesTypes";
 
+export interface PatchSamplesPanelProps {
+    initialScript: string;
+    isOpened: boolean;
+    onUpdateScript: (script: string) => void;
+    onClose: () => void;
+}
+
+export default function PatchSamplesPanel({
+    initialScript,
+    isOpened,
+    onUpdateScript,
+    onClose,
+}: PatchSamplesPanelProps) {
+    useLayoutEffect(() => {
+        if (!isOpened) {
+            return;
+        }
+        // FIXME: hack to allow bs5 and bs3
+        const bs3Container = document.querySelector(".content-container.bs3");
+        if (bs3Container) {
+            bs3Container.classList.remove("bs3");
+        }
+    }, [isOpened]);
+
+    return (
+        <SampleQueriesPage
+            title="Patch scripts sample"
+            icon="info"
+            scripts={scripts}
+            methodGroups={methodGroups}
+            onClose={onClose}
+            initialScript={initialScript}
+            onUpdateScript={onUpdateScript}
+        />
+    );
+}
+
 const scripts: SampleScript[] = [
     {
         title: "Filter out an array item",
@@ -140,40 +177,3 @@ const methodGroups: MethodGroup[] = [
         ],
     },
 ];
-
-export interface PatchSamplesPanelProps {
-    initialScript: string;
-    isOpened: boolean;
-    onUpdateScript: (script: string) => void;
-    onClose: () => void;
-}
-
-export default function PatchSamplesPanel({
-    initialScript,
-    isOpened,
-    onUpdateScript,
-    onClose,
-}: PatchSamplesPanelProps) {
-    useLayoutEffect(() => {
-        if (!isOpened) {
-            return;
-        }
-        // FIXME: hack to allow bs5 and bs3
-        const bs3Container = document.querySelector(".content-container.bs3");
-        if (bs3Container) {
-            bs3Container.classList.remove("bs3");
-        }
-    }, [isOpened]);
-
-    return (
-        <SampleQueriesPage
-            title="Patch scripts sample"
-            icon="info"
-            scripts={scripts}
-            methodGroups={methodGroups}
-            onClose={onClose}
-            initialScript={initialScript}
-            onUpdateScript={onUpdateScript}
-        />
-    );
-}

@@ -231,17 +231,13 @@ class patch extends shardViewModelBase {
         });
     }
 
-    activate(recentPatchHash?: string, queryParams?: { script?: string }) {
+    activate(recentPatchHash?: string) {
         super.activate(recentPatchHash);
         this.updateHelpLink("QGGJR5");
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.db);
 
         this.loadLastQuery();
-
-        if (queryParams?.script) {
-            this.patchDocument().query(decodeURIComponent(queryParams.script));
-        }
 
         this.fetchStudioConfiguration().done((settings) => this.disableAutoIndexCreation(settings.disableAutoIndexCreation.getValue()));
 

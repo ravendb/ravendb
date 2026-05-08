@@ -37,7 +37,7 @@ class appUrl {
         identities: ko.pureComputed(() => appUrl.forIdentities(appUrl.currentDatabase())),
         cmpXchg: ko.pureComputed(() => appUrl.forCmpXchg(appUrl.currentDatabase())),
         patch: ko.pureComputed(() => appUrl.forPatch(appUrl.currentDatabase())),
-indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
+        indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase(), indexName, staleOnly, isImportOpen)),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         newDoc: ko.pureComputed(() => appUrl.forNewDoc(appUrl.currentDatabase())),
         newCmpXchg: ko.pureComputed(() => appUrl.forEditCmpXchg(null, appUrl.currentDatabase())),
@@ -571,10 +571,10 @@ indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => 
         return "#databases/documents/conflicts?" + databasePart + docIdUrlPart;
     }
 
-    static forPatch(db: database | string, hashOfRecentPatch?: number): string {
+    static forPatch(db: database, hashOfRecentPatch?: number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
 
-        if (hashOfRecentPatch != null) {
+        if (hashOfRecentPatch) {
             const patchPath = "recentpatch-" + hashOfRecentPatch;
             return "#databases/patch/" + encodeURIComponent(patchPath) + "?" + databasePart;
         } else {
@@ -582,7 +582,7 @@ indexes: (indexName: string = null, staleOnly = false, isImportOpen = false) => 
         }
     }
 
-static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
+    static forIndexes(db: database | string, indexName: string = null, staleOnly = false, isImportOpen = false): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const indexNamePart = indexName ? `&indexName=${indexName}` : "";
         const stalePart = staleOnly ? "&stale=true" : "";

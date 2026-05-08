@@ -54,7 +54,7 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.patch,
             requiredAccess: "DatabaseReadWrite"
         }),
-new leafMenuItem({
+        new leafMenuItem({
             route: "databases/query/index(/:indexNameOrRecentQueryIndex)",
             moduleId: require("viewmodels/database/query/query"),
             shardingMode: "allShards",

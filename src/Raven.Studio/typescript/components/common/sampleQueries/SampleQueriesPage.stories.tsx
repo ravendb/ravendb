@@ -9,6 +9,26 @@ export default {
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 
+export const Default: StoryObj = {
+    name: "Sample Queries",
+    render: () => {
+        return (
+            <SampleQueriesPage
+                title="Sample Queries"
+                icon="patch"
+                scripts={sampleScripts}
+                methodGroups={sampleMethodGroups}
+                onClose={() => {
+                    /* no-op */
+                }}
+                onUpdateScript={() => {
+                    /* no-op */
+                }}
+            />
+        );
+    },
+};
+
 const sampleScripts: SampleScript[] = [
     {
         title: "Filter out an array item",
@@ -32,23 +52,3 @@ const sampleMethodGroups: MethodGroup[] = [
         ],
     },
 ];
-
-export const Default: StoryObj = {
-    name: "Sample Queries",
-    render: () => {
-        return (
-            <SampleQueriesPage
-                title="Sample Queries"
-                icon="patch"
-                scripts={sampleScripts}
-                methodGroups={sampleMethodGroups}
-                onClose={() => {
-                    /* no-op */
-                }}
-                onUpdateScript={() => {
-                    /* no-op */
-                }}
-            />
-        );
-    },
-};
