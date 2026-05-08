@@ -1,5 +1,5 @@
 import "./Code.scss";
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import Prism from "prismjs";
 import { Icon } from "components/common/Icon";
 import classNames from "classnames";
@@ -50,7 +50,7 @@ interface CodeProps {
     wrappable?: boolean;
     isActionsHidden?: boolean;
     isRunQueryHidden?: boolean;
-    extraActions?: React.ReactNode;
+    extraActions?: ReactNode;
     sourceView?: "chatbot";
     isTitleHidden?: boolean;
 }

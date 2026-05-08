@@ -47,7 +47,7 @@ class savedPatchesStorage {
         return savedPatchesFromLocalStorage;
     }
 
-static onDatabaseDeleted(qualifer: string, name: string) {
+    static onDatabaseDeleted(qualifer: string, name: string) {
         const localStorageName = savedPatchesStorage.getLocalStorageKey(name);
         localStorage.removeItem(localStorageName);
     }

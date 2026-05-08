@@ -14,6 +14,7 @@ import "./SampleQueriesPage.scss";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import IconName from "../../../../typings/server/icons";
+import SizeGetter from "components/common/SizeGetter";
 
 type ActiveTab = "scripts" | "methods";
 
@@ -72,7 +73,12 @@ export default function SampleQueriesPage({
             </div>
             <Row className="d-flex flex-row flex-grow-1 overflow-hidden">
                 <Col xs={6} className="d-flex flex-column overflow-hidden">
-                    <AceEditor mode="rql" value={script} onChange={setScript} minHeight={300} />
+                    <SizeGetter
+                        isHeighRequired
+                        render={({ height }) => (
+                            <AceEditor mode="rql" value={script} onChange={setScript} height={`${height}px`} />
+                        )}
+                    />
                 </Col>
 
                 <Col xs={6} className="d-flex flex-column overflow-hidden h-100">
