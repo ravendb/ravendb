@@ -33,6 +33,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
+    private readonly bool? _enableFullDebug;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -145,10 +146,12 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector,
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
-        Func<string, Task> streamedChunksCallback)
+        Func<string, Task> streamedChunksCallback,
+        bool? enableFullDebug = null)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback)
     {
         _attachmentsCommands = attachmentsCommands;
+        _enableFullDebug = enableFullDebug;
     }
 
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
@@ -232,6 +235,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
             if (_parent._streamPropertyPath is not null)
                 url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
+
+            if (_parent._enableFullDebug.HasValue)
+                url += $"&enableFullDebug={(_parent._enableFullDebug.Value ? "true" : "false")}";
 
             var body = new ConversionRequestBody
             {

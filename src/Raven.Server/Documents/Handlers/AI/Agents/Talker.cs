@@ -23,19 +23,18 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
     public void Init()
     {
         document.EnsureInitialized();
-
         _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
         Client = handler.CreateClient();
         _tools = Client.GenerateTools(context, configuration, handler);
     }
 
-    public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments)
+    public HttpRequestMessage CreateCompletionRequest(List<AiAttachment> attachments, AiDebugTrace trace)
     {
         AiUsage = new();
-        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, _schema, promptCacheKey: document.Id);
+        return Client.CreateCompletionRequest(context, document.Messages, attachments, _tools, useTools: document.RemainingToolIterations-- > 0, streaming != null, _schema, promptCacheKey: document.Id, trace: trace);
     }
 
-    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, HttpRequestMessage request, CancellationToken token)
+    public async Task<AiResponse> RunAsync(IMemoryContextPool contextPool, HttpRequestMessage request, AiDebugTrace trace, CancellationToken token)
     {
         if (streaming is null)
         {
@@ -43,6 +42,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
                 context,
                 request,
                 AiUsage,
+                trace,
                 token
             );
         }
@@ -54,6 +54,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
             request,
             streaming,
             AiUsage,
+            trace,
             token
         );
     }

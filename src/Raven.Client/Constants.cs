@@ -602,6 +602,8 @@ namespace Raven.Client
                 public const string AiAgentConversationCollection = "@conversations";
 
                 public const string AiAgentConversationHistoryCollection = "@conversations-history";
+
+                public const string AiAgentConversationDebugCollection = "@conversations-debug";
             }
 
             internal sealed class Ai

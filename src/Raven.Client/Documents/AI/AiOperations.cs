@@ -145,6 +145,14 @@ public class AiOperations
     /// <param name="conversationId">The unique identifier for the conversation.</param>
     /// <param name="creationOptions">Options for creating the conversation.</param>
     /// <param name="changeVector">An optional change vector for concurrency control.</param>
-    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
-        new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
+    /// <param name="enableFullDebug">
+    /// Persistently overrides the per-conversation debug-tracing flag. true forces tracing on,
+    /// false forces it off, null (default) uses the value stored on the conversation document.
+    /// The value is written back to the conversation document and takes effect on all subsequent turns
+    /// until overridden again. When enabled, the full provider request/response for every model call
+    /// is persisted in the @conversations-debug collection.
+    /// Note: trace documents contain sensitive content such as prompts, tool arguments, and attachment payloads.
+    /// </param>
+    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null, bool? enableFullDebug = null) =>
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, enableFullDebug);
 }

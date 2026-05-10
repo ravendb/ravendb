@@ -161,7 +161,7 @@ public class ChatCompletionClient : IDisposable
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string streamPropertyPath, HttpRequestMessage request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
-        AiUsage usage, CancellationToken token)
+        AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var streamedPropertyBuffer = new JsonOperationContextBuffer<byte>(streamingContext);
@@ -211,6 +211,12 @@ public class ChatCompletionClient : IDisposable
             {
                 toolCallState.AddAndReset();
                 break;
+            }
+
+            if (trace != null)
+            {
+                trace.StreamEvents ??= [];
+                trace.StreamEvents.Add(sseEvent.Data.Clone(streamingContext));
             }
 
             if (sseEvent.Data.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
@@ -315,15 +321,18 @@ public class ChatCompletionClient : IDisposable
         }, "system/msg");
 
         var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
-        var r = await CompleteAsync(context, request, new AiUsage(), token);
+        var r = await CompleteAsync(context, request, new AiUsage(), trace: null, token);
         return (r.Result.ToString(), r.Message.ToString());
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var response = await SendRequestAsync(request, token);
         var responseContent = await GetResponseContentAsync(context, response, token);
+
+        if (trace != null)
+            trace.Response = responseContent.CloneOnTheSameContext();
 
         var responseParser = new AiResponseParser(this, response, responseContent);
         responseParser.EnsureSuccessfulResponse();
@@ -426,25 +435,39 @@ public class ChatCompletionClient : IDisposable
         bool useTools,
         bool streaming,
         string schema,
-        string promptCacheKey = null)
-     {
-
+        string promptCacheKey = null,
+        AiDebugTrace trace = null)
+    {
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
 
-        var content = new BlittableJsonContent(async stream =>
+        // When tracing is on, TeeStream tees the write to a capture buffer; caller owns both streams.
+        HttpContent content = new BlittableJsonContent(async stream =>
         {
-            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
+            var capture = trace != null ? RecyclableMemoryStreamFactory.GetRecyclableStream() : null;
+            try
             {
-                if (_forTestingPurposes?.ModifyPayload != null)
+                Stream target = capture != null ? new TeeStream(stream, capture) : stream;
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, target))
                 {
-                    _forTestingPurposes?.ModifyPayload.Invoke(writer);
-                    return;
+                    if (_forTestingPurposes?.ModifyPayload != null)
+                        _forTestingPurposes.ModifyPayload.Invoke(writer);
+                    else
+                        WriteCompletionRequestPayload(writer, ctx, messages.Where(IsValidMessage),
+                            attachments, tools, useTools, streaming, schema, promptCacheKey);
                 }
 
-                WriteCompletionRequestPayload(writer, ctx,
-                    messages.Where(IsValidMessage) // IEnumerable of valid messages
-                    , attachments, tools, useTools, streaming, schema, promptCacheKey);
+                if (capture != null)
+                {
+                    capture.Position = 0;
+                    trace.Request = ctx.Sync.ReadForMemory(capture, "ai-agent/request");
+                }
+            }
+            finally
+            {
+                if (capture != null)
+                    await capture.DisposeAsync().ConfigureAwait(false);
             }
         }, ConventionsToUse);
 

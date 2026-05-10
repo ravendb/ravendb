@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var agentId = RequestHandler.GetStringQueryString("agentId");
             var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
             var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
+            var enableFullDebugOverride = RequestHandler.GetBoolValueQueryString("enableFullDebug", required: false);
 
             AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
 
@@ -45,13 +46,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
             };
 
-            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, token);
+            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, token, enableFullDebugOverride);
         }
 
         protected async Task ExecuteInternalAsync(ConversationHandler handler, DocumentsOperationContext context, AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector,
-            bool streaming, OperationCancelToken token)
+            bool streaming, OperationCancelToken token, bool? enableFullDebugOverride = null)
         {
-            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery());
+            handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), enableFullDebugOverride);
             AiInternalConversationResult r;
 
             if (streaming)

@@ -38,6 +38,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public int RemainingToolIterations;
 
+    public bool EnableFullDebug;
+
     public HashSet<string> SubConversationIds = new (StringComparer.OrdinalIgnoreCase);
 
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, bool resetRemainingToolIterations, int maxModelIterationsPerCall)
@@ -223,7 +225,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public DynamicJsonValue ToJson()
     {
-        return new DynamicJsonValue
+        var json = new DynamicJsonValue
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
@@ -238,6 +240,11 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(RemainingToolIterations)] = RemainingToolIterations,
             [nameof(SubConversationIds)] = new DynamicJsonArray(SubConversationIds)
         };
+
+        if (EnableFullDebug)
+            json[nameof(EnableFullDebug)] = true;
+
+        return json;
     }
 
     public const string DateProperty = "date";
@@ -277,6 +284,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(RemainingToolIterations), out int remainingToolIterations) == false)
             remainingToolIterations = maxModelIterationsPerCall;
 
+        document.TryGet(nameof(EnableFullDebug), out bool enableFullDebug);
+
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
@@ -294,7 +303,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
             Expires = expires,
-            RemainingToolIterations = remainingToolIterations
+            RemainingToolIterations = remainingToolIterations,
+            EnableFullDebug = enableFullDebug
         };
 
         if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))
