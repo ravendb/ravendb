@@ -479,12 +479,24 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         AssertDatabaseChangeVectorCoversLocalItemOrder(filteredPassReceiveSide, LabNode.A, "revision after local revision", nodeADbCvAfterLocalChange, nodeARevisionAfterLocalChange.ChangeVector, lab.GetDatabaseIdFor(LabNode.A));
 
         await lab.WaitForFilteredRoundTripLatestRevisionNameAsync(LabNode.C, localRevisionName);
+        await lab.WaitForFilteredRoundTripLatestRevisionNameAsync(LabNode.B, localRevisionName);
 
         var nodeCRevisionAfterLocalChange = lab.GetFilteredRoundTripLatestRevision(LabNode.C);
         var nodeCDbCvAfterLocalChange = lab.GetDatabaseChangeVector(LabNode.C);
+        var nodeBRevisionsAfterLocalChangeReplicatedBack = lab.GetFilteredRoundTripRevisions(LabNode.B);
+        var nodeBRevisionCountFromClient = await lab.GetFilteredRoundTripRevisionCountFromClientAsync(LabNode.B);
+        var nodeBRevisionNamesFromClient = await lab.GetFilteredRoundTripRevisionNamesFromClientAsync(LabNode.B);
 
         AssertReplicatedItemKeptSourceChangeVector(filteredPassReceiveSide, "revision update from filtered revision", nodeCRevision.ChangeVector, nodeARevisionAfterLocalChange.ChangeVector, nodeCRevisionAfterLocalChange.ChangeVector);
         AssertLocalChangeIsCausalSuccessor(filteredPassReceiveSide, "revision update from filtered revision", nodeCRevision.ChangeVector, nodeARevisionAfterLocalChange.ChangeVector);
+        AssertClientRevisionHistoryContainsOnlyExpectedRevisions(
+            filteredPassReceiveSide,
+            LabNode.B,
+            "revision update replicated back to original node",
+            expectedRevisionNames: [localRevisionName, revisionName, initialName],
+            nodeBRevisionCountFromClient,
+            nodeBRevisionNamesFromClient,
+            nodeBRevisionsAfterLocalChangeReplicatedBack);
         AssertItemVersionPreservesPassedLineage(filteredPassReceiveSide, LabNode.C, "revision after local revision replicated from node A", nodeCRevisionAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertItemOrderDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "revision after local revision replicated from node A", nodeCRevisionAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
         AssertDatabaseChangeVectorDoesNotCarryPassedLineage(filteredPassReceiveSide, LabNode.C, "revision after local revision replicated from node A", nodeCDbCvAfterLocalChange, nodeCRevisionAfterLocalChange.ChangeVector, originalIncomingChangeVector, nodeBDatabaseId, nodeBEtagInPassedChangeCv);
@@ -1561,6 +1573,53 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
             $"filteredPredecessorVersion='{filteredPredecessorVersion ?? "<null>"}'.");
     }
 
+    private static void AssertClientRevisionHistoryContainsOnlyExpectedRevisions(
+        ClusterSide filteredPassReceiveSide,
+        LabNode node,
+        string itemDescription,
+        IReadOnlyList<string> expectedRevisionNames,
+        long actualRevisionCount,
+        List<string> actualRevisionNames,
+        List<RevisionSnapshot> storageRevisions)
+    {
+        var expectedRevisionNameCounts = FormatRevisionNameCounts(expectedRevisionNames);
+        var actualRevisionNameCounts = FormatRevisionNameCounts(actualRevisionNames);
+        var duplicateVersions = storageRevisions
+            .Where(x => x.Exists && string.IsNullOrEmpty(x.ChangeVector) == false)
+            .GroupBy(x => GetVersionChangeVector(x.ChangeVector))
+            .Where(x => x.Select(r => r.ChangeVector).Distinct(StringComparer.Ordinal).Count() > 1)
+            .ToList();
+
+        Assert.True(
+            actualRevisionCount == expectedRevisionNames.Count &&
+            actualRevisionNames.Count == expectedRevisionNames.Count &&
+            string.Equals(actualRevisionNameCounts, expectedRevisionNameCounts, StringComparison.Ordinal),
+            $"Expected client revision history after {itemDescription} on {NodeTag(filteredPassReceiveSide, node)} to contain only the logical revisions created by the test. " +
+            $"This is the client-visible consequence of the revisions schema blocker: the same logical revision can be stored again with a different Order CV, so session.Advanced.Revisions returns duplicate history entries. " +
+            $"expectedClientCount={expectedRevisionNames.Count}, actualClientCount={actualRevisionCount}, clientPageCount={actualRevisionNames.Count}, " +
+            $"expectedClientNames='{FormatRevisionNames(expectedRevisionNames)}', actualClientNames='{FormatRevisionNames(actualRevisionNames)}', " +
+            $"expectedClientNameCounts='{expectedRevisionNameCounts}', actualClientNameCounts='{actualRevisionNameCounts}', " +
+            $"duplicateStoredVersions='{FormatDuplicateRevisionVersions(duplicateVersions)}', storageRevisions='{FormatRevisions(storageRevisions)}'.");
+    }
+
+    private static string FormatDuplicateRevisionVersions(IEnumerable<IGrouping<string, RevisionSnapshot>> duplicateVersions) =>
+        string.Join("; ", duplicateVersions.Select(x => $"Version='{x.Key ?? "<null>"}', rawCVs=[{string.Join(", ", x.Select(r => $"'{r.ChangeVector}'"))}]"));
+
+    private static string FormatRevisionNames(IEnumerable<string> names) =>
+        string.Join(", ", names.Select(x => $"'{x ?? "<null>"}'"));
+
+    private static string FormatRevisionNameCounts(IEnumerable<string> names) =>
+        string.Join(", ", names
+            .Select(x => x ?? "<null>")
+            .GroupBy(x => x, StringComparer.Ordinal)
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .Select(x => $"'{x.Key}' x{x.Count()}"));
+
+    private static string FormatRevisions(List<RevisionSnapshot> revisions) =>
+        revisions.Count == 0
+            ? "<none>"
+            : string.Join("; ", revisions.Select(x => $"etag={x.Etag}, name='{x.Name ?? "<null>"}', CV='{x.ChangeVector ?? "<null>"}', Version='{GetVersionChangeVector(x.ChangeVector) ?? "<null>"}', Order='{GetOrderChangeVector(x.ChangeVector) ?? "<null>"}'"));
+
     private static void AssertItemVersionPreservesPassedLineage(
         ClusterSide filteredPassReceiveSide,
         LabNode node,
@@ -1707,12 +1766,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         if (string.IsNullOrEmpty(changeVector))
             return 0;
 
-        var separator = changeVector.IndexOf('|');
-        var orderChangeVector = separator < 0
-            ? changeVector
-            : changeVector.Substring(0, separator);
-
-        return GetEtag(orderChangeVector, databaseId);
+        return GetEtag(GetOrderChangeVector(changeVector), databaseId);
     }
 
     private static long GetVersionEtag(string changeVector, string databaseId)
@@ -1720,12 +1774,7 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         if (string.IsNullOrEmpty(changeVector))
             return 0;
 
-        var separator = changeVector.IndexOf('|');
-        var versionChangeVector = separator < 0
-            ? changeVector
-            : changeVector.Substring(separator + 1);
-
-        return GetEtag(versionChangeVector, databaseId);
+        return GetEtag(GetVersionChangeVector(changeVector), databaseId);
     }
 
     private static string GetVersionChangeVector(string changeVector)
@@ -1733,9 +1782,14 @@ public class FilteredPullDualClusterFirstAndSecondHopTests : FilteredPullDualClu
         if (string.IsNullOrEmpty(changeVector))
             return changeVector;
 
-        var separator = changeVector.IndexOf('|');
-        return separator < 0
-            ? changeVector
-            : changeVector.Substring(separator + 1);
+        return new ChangeVector(changeVector, NoChangeVectorContext.Instance).Version.AsString();
+    }
+
+    private static string GetOrderChangeVector(string changeVector)
+    {
+        if (string.IsNullOrEmpty(changeVector))
+            return changeVector;
+
+        return new ChangeVector(changeVector, NoChangeVectorContext.Instance).Order.AsString();
     }
 }

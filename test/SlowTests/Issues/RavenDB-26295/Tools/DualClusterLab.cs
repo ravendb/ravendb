@@ -248,6 +248,9 @@ public sealed class DualClusterLab : IAsyncDisposable
     public RevisionSnapshot GetFilteredRoundTripLatestRevision(LabNode node) =>
         GetLatestRevision(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId);
 
+    public List<RevisionSnapshot> GetFilteredRoundTripRevisions(LabNode node) =>
+        GetRevisions(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId);
+
     public List<RevisionTombstoneSnapshot> GetFilteredRoundTripRevisionTombstones(LabNode node) =>
         GetRevisionTombstones(RequiredFilteredPassReceiveSide, node, RequiredFilteredRoundTripTicketId);
 
@@ -354,7 +357,8 @@ public sealed class DualClusterLab : IAsyncDisposable
                     Exists = true,
                     Name = name,
                     ChangeVector = revision.ChangeVector,
-                    Count = revisionsResult.Count
+                    Count = revisionsResult.Count,
+                    Etag = revision.Etag
                 };
             }
             finally
@@ -386,7 +390,8 @@ public sealed class DualClusterLab : IAsyncDisposable
                         Exists = true,
                         Name = name,
                         ChangeVector = revision.ChangeVector,
-                        Count = revisionsResult.Count
+                        Count = revisionsResult.Count,
+                        Etag = revision.Etag
                     };
                 }
 
@@ -395,6 +400,40 @@ public sealed class DualClusterLab : IAsyncDisposable
                     Exists = false,
                     Count = revisionsResult.Count
                 };
+            }
+            finally
+            {
+                foreach (var revision in revisionsResult.Revisions)
+                    revision?.Dispose();
+            }
+        }
+    }
+
+    private List<RevisionSnapshot> GetRevisions(ClusterSide side, LabNode node, string documentId)
+    {
+        var database = Database(side, node);
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            var revisionsResult = database.DocumentsStorage.RevisionsStorage.GetRevisions(context, documentId, 0, int.MaxValue);
+            try
+            {
+                var result = new List<RevisionSnapshot>();
+                foreach (var revision in revisionsResult.Revisions)
+                {
+                    revision.Data.TryGet(nameof(Ticket.Name), out string name);
+
+                    result.Add(new RevisionSnapshot
+                    {
+                        Exists = true,
+                        Name = name,
+                        ChangeVector = revision.ChangeVector,
+                        Count = revisionsResult.Count,
+                        Etag = revision.Etag
+                    });
+                }
+
+                return result;
             }
             finally
             {
@@ -752,6 +791,19 @@ public sealed class DualClusterLab : IAsyncDisposable
 
     public Task DeleteFilteredRoundTripRevisionAsync(LabNode node, string revisionChangeVector) =>
         Store(RequiredFilteredPassReceiveSide, node).Maintenance.SendAsync(new DeleteRevisionsOperation(RequiredFilteredRoundTripTicketId, [revisionChangeVector]));
+
+    public async Task<long> GetFilteredRoundTripRevisionCountFromClientAsync(LabNode node)
+    {
+        using var session = Store(RequiredFilteredPassReceiveSide, node).OpenAsyncSession();
+        return await session.Advanced.Revisions.GetCountForAsync(RequiredFilteredRoundTripTicketId);
+    }
+
+    public async Task<List<string>> GetFilteredRoundTripRevisionNamesFromClientAsync(LabNode node)
+    {
+        using var session = Store(RequiredFilteredPassReceiveSide, node).OpenAsyncSession();
+        var revisions = await session.Advanced.Revisions.GetForAsync<Ticket>(RequiredFilteredRoundTripTicketId, start: 0, pageSize: 64);
+        return revisions.Select(ticket => ticket?.Name).ToList();
+    }
 
     public async Task DeleteFilteredRoundTripDocumentAsync(LabNode node)
     {

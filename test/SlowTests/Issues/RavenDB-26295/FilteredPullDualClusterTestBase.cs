@@ -89,6 +89,8 @@ public abstract class FilteredPullDualClusterTestBase : ReplicationTestBase
         public string ChangeVector { get; init; }
 
         public long Count { get; init; }
+
+        public long Etag { get; init; }
     }
 
     public sealed class RevisionTombstoneSnapshot
