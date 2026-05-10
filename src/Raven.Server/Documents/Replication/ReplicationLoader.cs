@@ -760,25 +760,18 @@ namespace Raven.Server.Documents.Replication
 
                 IncomingReplicationRemoved?.Invoke(incoming);
 
-                // RavenDB-26564: if the old handler is already disposed (e.g. from a previous failed attempt),
-                // skip re-invocation — DisposeOnce<SingleAttempt> would immediately re-throw the cached exception.
-                if (value.IsDisposed == false)
+                try
                 {
-                    try
-                    {
-                        value.Dispose();
-                    }
-                    catch (Exception e)
-                    {
-                        // RavenDB-26564: a half-open TCP connection can cause Dispose to throw when the
-                        // dispose path tries to flush buffered data to a dead socket. We must not let this
-                        // prevent the new connection from being accepted. The stale entry in _incoming will
-                        // be replaced by the subsequent AddOrUpdate in CreateIncomingInstance (which checks
-                        // IsDisposed on the existing value).
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Failed to dispose the existing incoming replication handler from {incoming.FromToString}. " +
-                                         $"Proceeding to accept the new connection.", e);
-                    }
+                    value.Dispose();
+                }
+                catch (Exception e)
+                {
+                    // RavenDB-26564: precautionary catch — the primary fix is in DisposeInternal
+                    // where _cts.Cancel() is now guarded. This ensures that even if Dispose fails
+                    // for an unexpected reason, the new connection is still accepted.
+                    if (_logger.IsOperationsEnabled)
+                        _logger.Operations($"Failed to dispose the existing incoming replication handler from {incoming.FromToString}. " +
+                                     $"Proceeding to accept the new connection.", e);
                 }
             }
         }
