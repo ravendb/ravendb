@@ -412,19 +412,26 @@ public class ControlCharacterTests : ClusterTestBase
             await session.SaveChangesAsync();
         }
 
-        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+        var result1 = await AssertWaitForNotNullAsync(async () =>
         {
-            var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id);
-            Assert.Equal(cmpxchg, result.Value);
-        }
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                return await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id);
+            }
+        });
+        Assert.Equal(cmpxchg, result1.Value);
 
+            
         await store.Operations.SendAsync(new PutCompareExchangeValueOperation<string>(id + 2, cmpxchg, 0));
 
-        using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+        var result2 = await AssertWaitForNotNullAsync(async () =>
         {
-            var result = await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id + 2);
-            Assert.Equal(cmpxchg, result.Value);
-        }
+            using (var session = store.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+            {
+                return await session.Advanced.ClusterTransaction.GetCompareExchangeValueAsync<string>(id + 2);
+            }
+        });
+        Assert.Equal(cmpxchg, result2.Value);
     }
 
     [RavenFact(RavenTestCategory.Core)]
