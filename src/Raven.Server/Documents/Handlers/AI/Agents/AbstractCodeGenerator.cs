@@ -118,7 +118,7 @@ public abstract class AbstractCodeGenerator
 
     protected string EscapeSingleQuoted(string s) => s.Replace("\\", "\\\\").Replace("'", "\\'");
 
-    protected static bool HasEscaping(string s) =>
+    protected virtual bool HasEscaping(string s) =>
         s.Contains('"') || s.Contains('\\') || s.Contains('\n') || s.Contains('\r');
 
     protected static string TryPrettyPrintJson(string s)
@@ -295,4 +295,27 @@ public abstract class AbstractCodeGenerator
     private static bool IsSimpleType(Type type) =>
         type.IsPrimitive || type.IsEnum ||
         type == typeof(string) || type == typeof(decimal) || type == typeof(Guid);
+
+    protected int GetStringQuotationFenceLength(string s)
+    {
+        var longestQuoteRun = 0;
+        var current = 0;
+
+        foreach (var c in s)
+        {
+            if (c == '"')
+            {
+                current++;
+                if (current > longestQuoteRun)
+                    longestQuoteRun = current;
+            }
+            else
+            {
+                current = 0;
+            }
+        }
+
+        var fenceLength = longestQuoteRun == 0 && HasEscaping(s) == false ? 1 : Math.Max(longestQuoteRun + 1, 3);
+        return fenceLength;
+    }
 }

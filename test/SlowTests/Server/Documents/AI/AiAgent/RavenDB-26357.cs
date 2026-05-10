@@ -31,6 +31,7 @@ public class RavenDB_26357 : RavenTestBase
     }
 
     // For manual testing
+    [RavenFact(RavenTestCategory.Ai, Skip = "Manual")]
     public async Task PrintOutputTest()
     {
         using var store = GetDocumentStore();
@@ -367,8 +368,9 @@ public class Program
                                     identifier='user-info-agent-1',
                                     name='user-info-agent-1',
                                     connection_string_name='OpenAi_ConnectionString',
-                                    system_prompt='Your role responsibility is to provide the user\'s name when requested.',
-                                    sample_object="""{
+                                    system_prompt="""Your role responsibility is to provide the user's name when requested.""",
+                                    sample_object="""
+                                    {
                                       "Answer": "Answer to the user question",
                                       "MoviesIds": [
                                         "The movies ids relevant to the query or response"
@@ -376,7 +378,8 @@ public class Program
                                       "MoviesNames": [
                                         "The movies names relevant to the query or response"
                                       ]
-                                    }""",
+                                    }
+                                    """,
                                     queries=[
                                         AiAgentToolQuery(
                                             name='GetUserName',
@@ -389,20 +392,24 @@ public class Program
                                         AiAgentToolAction(
                                             name='ChangeUserName',
                                             description='Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
-                                            parameters_sample_object="""{
+                                            parameters_sample_object="""
+                                            {
                                               "UserId": "Users/123456789",
                                               "NewUserName": "Jame's Smith",
                                               "OldUserName": "Jame's Parker"
-                                            }"""
+                                            }
+                                            """
                                         ),
                                         AiAgentToolAction(
                                             name='ChangeUserName2',
                                             description='Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
-                                            parameters_sample_object="""{
+                                            parameters_sample_object="""
+                                            {
                                               "UserId": "Users/123456789",
                                               "NewUserName": "Jame's Smith",
                                               "OldUserName": "Jame's Parker"
-                                            }"""
+                                            }
+                                            """
                                         )
                                     ],
                                     sub_agents=[
@@ -494,7 +501,8 @@ public class Program
                                         name: 'user-info-agent-1',
                                         connectionStringName: 'OpenAi_ConnectionString',
                                         systemPrompt: 'Your role responsibility is to provide the user\'s name when requested.',
-                                        sampleObject: `{
+                                        sampleObject: `
+                                        {
                                           "Answer": "Answer to the user question",
                                           "MoviesIds": [
                                             "The movies ids relevant to the query or response"
@@ -502,7 +510,8 @@ public class Program
                                           "MoviesNames": [
                                             "The movies names relevant to the query or response"
                                           ]
-                                        }`,
+                                        }
+                                        `,
                                         queries: [
                                             {
                                                 name: 'GetUserName',
@@ -515,20 +524,24 @@ public class Program
                                             {
                                                 name: 'ChangeUserName',
                                                 description: 'Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
-                                                parametersSampleObject: `{
+                                                parametersSampleObject: `
+                                                {
                                                   "UserId": "Users/123456789",
                                                   "NewUserName": "Jame's Smith",
                                                   "OldUserName": "Jame's Parker"
-                                                }`
+                                                }
+                                                `
                                             },
                                             {
                                                 name: 'ChangeUserName2',
                                                 description: 'Updates the name of the current user interacting with the AI agent. have to send also the old name for validation.',
-                                                parametersSampleObject: `{
+                                                parametersSampleObject: `
+                                                {
                                                   "UserId": "Users/123456789",
                                                   "NewUserName": "Jame's Smith",
                                                   "OldUserName": "Jame's Parker"
-                                                }`
+                                                }
+                                                `
                                             }
                                         ],
                                         subAgents: [

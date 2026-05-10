@@ -152,10 +152,9 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
     protected override string FormatString(string s, int indent)
     {
-        if (HasEscaping(s) == false)
-            return $"\"{s}\"";
-
         var pretty = TryPrettyPrintJson(s);
+        if (pretty == "{}")
+            return $"\"{pretty}\"";
         if (pretty.StartsWith("{"))
             pretty = Environment.NewLine + pretty;
         if (pretty.EndsWith("}"))
@@ -165,7 +164,9 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
             pretty.Split(Environment.NewLine)
                 .Select((line, i) => i == 0 ? line : Indent(indent) + line));
 
-        return $"\"\"\"{indented}\"\"\"";
+        var fenceLength = GetStringQuotationFenceLength(pretty);
+        var fence = new string('"', fenceLength);
+        return $"{fence}{indented}{fence}";
     }
 
     protected override void WriteRootPrefix(StringBuilder sb, object obj, string varName, int indent) =>

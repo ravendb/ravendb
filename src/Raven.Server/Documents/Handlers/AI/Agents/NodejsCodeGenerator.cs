@@ -104,6 +104,13 @@ public class NodejsCodeGenerator : AbstractCodeGenerator
             .Replace("`", "\\`")
             .Replace("${", "\\${");
 
+        if (escaped == "{}")
+            return $"`{escaped}`";
+        if (escaped.StartsWith("{"))
+            escaped = Environment.NewLine + escaped;
+        if (escaped.EndsWith("}"))
+            escaped += Environment.NewLine;
+
         var indented = string.Join(System.Environment.NewLine,
             escaped.Split(System.Environment.NewLine)
                    .Select((line, i) => i == 0 ? line : Indent(indent) + line));

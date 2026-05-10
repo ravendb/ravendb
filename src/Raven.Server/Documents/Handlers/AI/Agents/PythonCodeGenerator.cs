@@ -91,16 +91,25 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         _ => value.ToString()
     };
 
+    protected override bool HasEscaping(string s) => base.HasEscaping(s) || s.Contains("'");
+
     protected override string FormatString(string s, int indent)
     {
-        if (HasEscaping(s) == false)
-            return $"'{EscapeSingleQuoted(s)}'";
-
         var pretty = TryPrettyPrintJson(s);
+        if (pretty == "{}")
+            return $"'{pretty}'";
+        if (pretty.StartsWith("{"))
+            pretty = Environment.NewLine + pretty;
+        if (pretty.EndsWith("}"))
+            pretty += Environment.NewLine;
+
         var indented = string.Join(System.Environment.NewLine,
             pretty.Split(System.Environment.NewLine)
                   .Select((line, i) => i == 0 ? line : Indent(indent) + line));
-        return $"\"\"\"{indented}\"\"\"";
+
+        var fenceLength = GetStringQuotationFenceLength(pretty);
+        var fence = fenceLength == 1 ? "'" : new string('"', fenceLength);
+        return $"{fence}{indented}{fence}";
     }
 
     // Python uses constructor-call syntax — no braces, properties go directly inside "("
