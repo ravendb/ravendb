@@ -52,16 +52,14 @@ jobs:
                 "commit": ""
               }
             }
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          # Prompt body is sourced from the RAVENDB_BOT_REVIEW_PROMPT
-          # repository (or org) variable so reviewers can iterate on the
-          # instructions without editing the workflow. The slash command
-          # stays inline because the PR slug needs the github event
-          # context, and repo variable values aren't re-evaluated as
-          # expressions.
+          # The full review prompt body is sourced from the
+          # RAVENDB_BOT_REVIEW_PROMPT repository (or org) variable so
+          # reviewers can iterate on the instructions without editing
+          # the workflow. Only the PR slug is injected here — repo
+          # variable values aren't re-evaluated as ${{ ... }}
+          # expressions, and the slug needs the github event context.
           prompt: |-
-            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.issue.number }} --comment
+            Review pull request ${{ github.repository }}/pull/${{ github.event.issue.number }}.
 
             ${{ vars.RAVENDB_BOT_REVIEW_PROMPT }}
           # Allowlist mirrors the code-review plugin's own allowed-tools plus
