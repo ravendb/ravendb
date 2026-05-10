@@ -626,7 +626,7 @@ namespace Raven.Server.Documents.Replication
             newIncoming.Failed += OnIncomingReceiveFailed;
 
             // Cooperate with ReplicationLoader.Dispose() which takes the write lock and iterates _incoming.
-            // Without this guard a handler can race into _incoming after Dispose iterated and end up orphaned
+            // Without this guard a handler can race into _incoming after Dispose iterated and end up orphaned.
             if (_locker.TryEnterReadLock(0) == false)
             {
                 // the db being disposed
@@ -634,6 +634,7 @@ namespace Raven.Server.Documents.Replication
                 return;
             }
 
+            bool added = false;
             try
             {
                 if (GetCancellationToken().IsCancellationRequested)
@@ -650,7 +651,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     newIncoming.Start();
                     IncomingReplicationAdded?.Invoke(newIncoming);
-                    ForceTryReconnectAll();
+                    added = true;
                 }
                 else
                 {
@@ -665,6 +666,10 @@ namespace Raven.Server.Documents.Replication
             {
                 _locker.ExitReadLock();
             }
+
+            // Must be outside the read lock, because reconnect happens under lock
+            if (added)
+                ForceTryReconnectAll();
         }
 
         internal void AddAndStartOutgoingReplication(ReplicationNode node)
