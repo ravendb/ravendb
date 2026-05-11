@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.TransactionMerger
 
         public int NumberOfQueuedOperations => _operations.Count;
 
-        private string TransactionMergerThreadName => $"'{_resourceName}' TxMT";
+        internal string TransactionMergerThreadName => $"'{_resourceName}' TxMT";
 
         public void Start()
         {
@@ -185,6 +185,10 @@ namespace Raven.Server.Documents.TransactionMerger
 
                         MergeTransactionsOnce();
                     }
+                    return;
+                }
+                catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+                {
                     return;
                 }
                 catch (OperationCanceledException)

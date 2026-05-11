@@ -11,6 +11,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Server.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -156,6 +157,44 @@ from TestObjs as o where o.Prop = null update
                 Indexes.WaitForIndexing(store);
                 var patchCount = await session.Query<TestObj>().Where(o => o.Prop == "Changed").CountAsync();
                 Assert.Equal(docCount, patchCount);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Core)]
+        public async Task RavenDB_26107_TxMergerShouldExitWhenDatabaseShutdownIsCanceled()
+        {
+            using var store = GetDocumentStore(new Options
+            {
+                RunInMemory = false
+            });
+
+            var database = await GetDatabase(store.Database);
+            var txMergerThreadName = database.TxMerger.TransactionMergerThreadName;
+
+            Assert.True(WaitForValue(() => ThreadNames.FullThreadNames.Any(x => x.Value == txMergerThreadName), true),
+                $"TxMerger thread '{txMergerThreadName}' was not started.");
+
+            using var enteredDispose = new ManualResetEventSlim();
+            using var allowDisposeToContinue = new ManualResetEventSlim();
+            using var _ = database.ForTestingPurposesOnly().CallDuringDocumentDatabaseInternalDispose(() =>
+            {
+                enteredDispose.Set();
+                allowDisposeToContinue.Wait();
+            });
+
+            var disposeTask = Task.Run(database.Dispose);
+
+            try
+            {
+                Assert.True(enteredDispose.Wait(TimeSpan.FromSeconds(15)), "Database dispose did not start.");
+
+                Assert.False(WaitForValue(() => ThreadNames.FullThreadNames.Any(x => x.Value == txMergerThreadName), false),
+                    $"TxMerger thread '{txMergerThreadName}' did not exit after database shutdown was canceled.");
+            }
+            finally
+            {
+                allowDisposeToContinue.Set();
+                await disposeTask;
             }
         }
 
