@@ -20,6 +20,6 @@ internal sealed class ShardedQueriesHandlerProcessorForDelete : AbstractShardedO
 
     protected override (Func<JsonOperationContext, int, RavenCommand<OperationIdResult>> CommandFactory, OperationType Type) GetOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options)
     {
-        return ((c, shardNumber) => new DeleteByQueryOperation.DeleteByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, query, options, operationId), OperationType.UpdateByQuery);
+        return ((c, shardNumber) => new DeleteByQueryOperation.DeleteByQueryCommand<BlittableJsonReaderObject>(DocumentConventions.DefaultForServer, query, options, operationId), OperationType.DeleteByQuery);
     }
 }
