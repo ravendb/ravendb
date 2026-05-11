@@ -40,7 +40,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly Dictionary<string, HandleActionDelegate> _invocations = new();
     private readonly HashSet<string> _dispatchedToolIds = new();
 
-    public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? enableFullDebug = null)
+    public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector)
     {
         ValidationMethods.AssertNotNullOrEmpty(aiOperations, nameof(aiOperations));
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -51,9 +51,14 @@ internal class AiConversation : IAiConversationOperations
         _conversationId = conversationId;
         _options = options;
         _changeVector = changeVector;
+    }
+
+    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? enableFullDebug)
+        : this(aiOperations, agentId, conversationId, options, changeVector)
+    {
         _enableFullDebug = enableFullDebug;
     }
-    
+
     public void AddAttachment(string name, Stream stream, string contentType)
     {
         if (stream == null)

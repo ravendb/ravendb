@@ -46,11 +46,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Authentication = RequestHandler.HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection
             };
 
-            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, token, enableFullDebugOverride);
+            await ExecuteInternalAsync(handler, context, configuration, conversationId, body, changeVector, streaming, enableFullDebugOverride, token);
         }
 
         protected async Task ExecuteInternalAsync(ConversationHandler handler, DocumentsOperationContext context, AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector,
-            bool streaming, OperationCancelToken token, bool? enableFullDebugOverride = null)
+            bool streaming, bool? enableFullDebugOverride, OperationCancelToken token)
         {
             handler.Initialize(configuration, conversationId, body, changeVector, RequestHandler.GetRaftRequestIdFromQuery(), enableFullDebugOverride);
             AiInternalConversationResult r;

@@ -23,6 +23,7 @@ internal class Talker(ConversationHandler handler, JsonOperationContext context,
     public void Init()
     {
         document.EnsureInitialized();
+
         _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
         Client = handler.CreateClient();
         _tools = Client.GenerateTools(context, configuration, handler);

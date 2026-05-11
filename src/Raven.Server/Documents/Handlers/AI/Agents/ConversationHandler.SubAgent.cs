@@ -118,10 +118,16 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected virtual DynamicJsonValue CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
         {
-            var queryString = new StringBuilder("?")
+            var queryStringBuilder = new StringBuilder("?")
                 .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
-                .Append("&agentId=").Append(Uri.EscapeDataString(agent))
-                .ToString();
+                .Append("&agentId=").Append(Uri.EscapeDataString(agent));
+
+            // Parent-debug ON -> force sub-agent debug ON. Parent OFF/null -> leave the
+            // sub-agent's own stored value untouched (no query string appended).
+            if (_document.EnableFullDebug)
+                queryStringBuilder.Append("&enableFullDebug=true");
+
+            var queryString = queryStringBuilder.ToString();
 
             return new DynamicJsonValue
             {

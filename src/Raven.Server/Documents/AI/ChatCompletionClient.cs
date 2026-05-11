@@ -213,11 +213,7 @@ public class ChatCompletionClient : IDisposable
                 break;
             }
 
-            if (trace != null)
-            {
-                trace.StreamEvents ??= [];
-                trace.StreamEvents.Add(sseEvent.Data.Clone(streamingContext));
-            }
+            trace?.CaptureSseEvent(streamingContext, sseEvent.Data);
 
             if (sseEvent.Data.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
             {
@@ -331,8 +327,7 @@ public class ChatCompletionClient : IDisposable
         using var response = await SendRequestAsync(request, token);
         var responseContent = await GetResponseContentAsync(context, response, token);
 
-        if (trace != null)
-            trace.Response = responseContent.CloneOnTheSameContext();
+        trace?.CaptureResponse(responseContent);
 
         var responseParser = new AiResponseParser(this, response, responseContent);
         responseParser.EnsureSuccessfulResponse();
@@ -441,33 +436,33 @@ public class ChatCompletionClient : IDisposable
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
 
-        // When tracing is on, TeeStream tees the write to a capture buffer; caller owns both streams.
         HttpContent content = new BlittableJsonContent(async stream =>
         {
-            var capture = trace != null ? RecyclableMemoryStreamFactory.GetRecyclableStream() : null;
+            if (trace == null)
+            {
+                await WritePayloadAsync(stream).ConfigureAwait(false);
+                return;
+            }
+
+            var capture = RecyclableMemoryStreamFactory.GetRecyclableStream();
+            await using var target = new TeeStream(stream, capture);
             try
             {
-                Stream target = capture != null ? new TeeStream(stream, capture) : stream;
-
-                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, target))
-                {
-                    if (_forTestingPurposes?.ModifyPayload != null)
-                        _forTestingPurposes.ModifyPayload.Invoke(writer);
-                    else
-                        WriteCompletionRequestPayload(writer, ctx, messages.Where(IsValidMessage),
-                            attachments, tools, useTools, streaming, schema, promptCacheKey);
-                }
-
-                if (capture != null)
-                {
-                    capture.Position = 0;
-                    trace.Request = ctx.Sync.ReadForMemory(capture, "ai-agent/request");
-                }
+                await WritePayloadAsync(target).ConfigureAwait(false);
             }
             finally
             {
-                if (capture != null)
-                    await capture.DisposeAsync().ConfigureAwait(false);
+                trace.CaptureRequestBody(capture);
+            }
+
+            async Task WritePayloadAsync(Stream s)
+            {
+                await using var writer = new AsyncBlittableJsonTextWriter(ctx, s);
+                if (_forTestingPurposes?.ModifyPayload != null)
+                    _forTestingPurposes.ModifyPayload.Invoke(writer);
+                else
+                    WriteCompletionRequestPayload(writer, ctx, messages.Where(IsValidMessage),
+                        attachments, tools, useTools, streaming, schema, promptCacheKey);
             }
         }, ConventionsToUse);
 

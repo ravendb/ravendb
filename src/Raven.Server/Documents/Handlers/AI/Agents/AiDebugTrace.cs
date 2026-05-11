@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using Raven.Client;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -10,23 +12,41 @@ public sealed class AiDebugTrace
 {
     internal const string TraceSegment = "request-trace";
 
-    // Fallback TTL applied when the parent conversation has no expiration, so trace
-    // documents never accumulate indefinitely on servers without conversation expiry.
-    internal static readonly TimeSpan DefaultMaxExpiration = TimeSpan.FromDays(7);
+    public string RequestBody;
 
-    public BlittableJsonReaderObject Request;
     public BlittableJsonReaderObject Response;
     public List<BlittableJsonReaderObject> StreamEvents;
 
+    public void CaptureRequestBody(Stream captureStream)
+    {
+        if (captureStream == null)
+            return;
+
+        captureStream.Position = 0;
+        using var reader = new StreamReader(captureStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+        RequestBody = reader.ReadToEnd();
+    }
+
+    public void CaptureResponse(BlittableJsonReaderObject responseContent)
+    {
+        Response = responseContent.CloneOnTheSameContext();
+    }
+
+    public void CaptureSseEvent(JsonOperationContext context, BlittableJsonReaderObject sseEventData)
+    {
+        StreamEvents ??= [];
+        StreamEvents.Add(sseEventData.Clone(context));
+    }
+
     public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, ConversationDocument document, TimeSpan? expiration)
     {
-        var effectiveExpiration = expiration ?? DefaultMaxExpiration;
-
         var metadata = new DynamicJsonValue
         {
-            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationDebugCollection,
-            [Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(effectiveExpiration)
+            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationDebugCollection
         };
+
+        if (expiration.HasValue)
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
 
         var json = new DynamicJsonValue
         {
@@ -37,7 +57,7 @@ public sealed class AiDebugTrace
                 [nameof(ConversationDocument.Agent)] = document.Agent
             },
             ["MessagesCount"] = document.Messages?.Count ?? 0,
-            [nameof(Request)] = Request,
+            [nameof(RequestBody)] = RequestBody,
             [nameof(Response)] = Response,
             [nameof(StreamEvents)] = StreamEvents == null ? null : new DynamicJsonArray(StreamEvents)
         };

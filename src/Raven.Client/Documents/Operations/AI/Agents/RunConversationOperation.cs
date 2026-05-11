@@ -146,11 +146,25 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector,
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
-        Func<string, Task> streamedChunksCallback,
-        bool? enableFullDebug = null)
+        Func<string, Task> streamedChunksCallback)
         : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback)
     {
         _attachmentsCommands = attachmentsCommands;
+    }
+
+    internal RunConversationOperation(string agentId,
+        string conversationId,
+        IEnumerable<ContentPart> promptParts,
+        List<AiAgentActionResponse> actionResponses,
+        List<AiAgentArtificialActionResponse> artificialActions,
+        AiConversationCreationOptions options,
+        string changeVector,
+        List<ICommandData> attachmentsCommands,
+        string streamPropertyPath,
+        Func<string, Task> streamedChunksCallback,
+        bool? enableFullDebug)
+        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback)
+    {
         _enableFullDebug = enableFullDebug;
     }
 

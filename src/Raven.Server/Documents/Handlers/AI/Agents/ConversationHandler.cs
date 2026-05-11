@@ -395,7 +395,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         bool isFirstIteration = true;
-        List<AiDebugTrace> debugTraces = _document.EnableFullDebug ? [] : null;
+        var debugTraces = new AiDebugTraceCollector(_document.EnableFullDebug);
 
         try
         {
@@ -405,12 +405,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
 
-                AiDebugTrace trace = null;
-                if (debugTraces != null)
-                {
-                    trace = new AiDebugTrace();
-                    debugTraces.Add(trace);
-                }
+                var trace = debugTraces.CreateTrace();
 
                 using var request = talker.CreateCompletionRequest(attachments, trace);
                 r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
@@ -480,8 +475,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
         finally
         {
-            if (debugTraces is { Count: > 0 })
-                await TryPersistDebugTracesAsync(debugTraces);
+            await debugTraces.PersistAsync(_document, database);
         }
 
         foreach (ExceededTokenThresholdDetails pendingAlertDetails in pendingAlertsDetails)
@@ -497,23 +491,6 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             Usage = talker.AiUsage,
             ToolsIterations = toolsIterations,
         };
-    }
-
-    private async Task TryPersistDebugTracesAsync(List<AiDebugTrace> debugTraces)
-    {
-        try
-        {
-            var cmd = new PutConversationDebugCommand(debugTraces, _document, database);
-            await database.TxMerger.Enqueue(cmd);
-        }
-        catch (Exception e)
-        {
-            // Swallow only the secondary debug-trace persistence failure so the original
-            // provider/model exception (if any) is preserved and propagated to the caller.
-            var logger = database.Loggers.GetLogger<ConversationHandler>();
-            if (logger.IsDebugEnabled)
-                logger.Debug($"Failed to persist {debugTraces.Count} debug trace(s) for conversation '{_document.Id}' after a failed turn.", e);
-        }
     }
 
     private void AddMessageWithAttachmentsName(JsonOperationContext context, bool isFirstIteration)
