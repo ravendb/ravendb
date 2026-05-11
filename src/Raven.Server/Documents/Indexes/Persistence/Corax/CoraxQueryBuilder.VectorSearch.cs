@@ -15,6 +15,7 @@ using Raven.Server.Documents.Indexes.Persistence.Corax.QueryOptimizer;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Timings;
 using Sparrow;
 using Sparrow.Json;
 
@@ -411,28 +412,31 @@ public static partial class CoraxQueryBuilder
             
             ReadOnlyMemory<ReadOnlyMemory<byte>> embeddingValues;
 
-            switch (valueType)
+            using (builderParameters.QueryTimings?.For(nameof(QueryTimingsScope.Names.Embeddings), start: false)?.Start())
             {
-                case ValueTokenType.String:
-                    embeddingValues = embeddingsGenerator
-                        .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString());
-                    break;
-                case ValueTokenType.Parameter:
+                switch (valueType)
                 {
-                    if (value is not BlittableJsonReaderArray bjra)
-                        throw new InvalidQueryException($"Expected array as parameter of vector.search({fieldName}) method, got '{value.GetType().FullName}' type instead.");
-                
-                    var values = new string[bjra.Length];
+                    case ValueTokenType.String:
+                        embeddingValues = embeddingsGenerator
+                            .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, value.ToString());
+                        break;
+                    case ValueTokenType.Parameter:
+                    {
+                        if (value is not BlittableJsonReaderArray bjra)
+                            throw new InvalidQueryException($"Expected array as parameter of vector.search({fieldName}) method, got '{value.GetType().FullName}' type instead.");
 
-                    for (var i = 0; i < values.Length; i++)
-                        values[i] = bjra[i].ToString();
-                
-                    embeddingValues = embeddingsGenerator
-                        .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, values);
-                    break;
+                        var values = new string[bjra.Length];
+
+                        for (var i = 0; i < values.Length; i++)
+                            values[i] = bjra[i].ToString();
+
+                        embeddingValues = embeddingsGenerator
+                            .GetEmbeddingsForQuery(builderParameters.DocumentsContext, embeddingsTaskId, values);
+                        break;
+                    }
+                    default:
+                        throw new NotSupportedException($"Unexpected value type provided as parameter to vector.search({fieldName}) method. Got '{value.GetType().FullName}' type.");
                 }
-                default:
-                    throw new NotSupportedException($"Unexpected value type provided as parameter to vector.search({fieldName}) method. Got '{value.GetType().FullName}' type.");
             }
             
             var queryingVectorOption = new VectorOptions

@@ -628,7 +628,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 OrderMetadata[] orderByFields;
 
                 CoraxQueryBuilder.Parameters builderParameters;
-                using (queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
+                using (var coraxTimings = queryTimings?.For(nameof(QueryTimingsScope.Names.Corax), start: false)?.Start())
                 {
                     IDisposable releaseServerContext = null;
                     IDisposable closeServerTransaction = null;
@@ -643,7 +643,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
 
                         builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
-                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, deduplicationDisabled: false, indexReadOperation: this, token: token, queryTime: queryTime);
+                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, deduplicationDisabled: false, indexReadOperation: this, token: token, queryTime: queryTime, queryTimings: coraxTimings);
 
                         using (closeServerTransaction)
                         {
