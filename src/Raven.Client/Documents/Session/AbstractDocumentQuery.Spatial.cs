@@ -79,7 +79,13 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude)
+        {
+            OrderByDistance(field, latitude, longitude, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
@@ -90,20 +96,38 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistance(fieldName, latitude, longitude, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls)
         {
             OrderByDistance(fieldName, latitude, longitude, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistance(fieldName, latitude, longitude, roundFactor, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
             OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(DynamicSpatialField field, string shapeWkt)
+        {
+            OrderByDistance(field, shapeWkt, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
@@ -114,20 +138,38 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(string fieldName, string shapeWkt)
+        {
+            OrderByDistance(fieldName, shapeWkt, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls)
         {
             OrderByDistance(fieldName, shapeWkt, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor)
+        {
+            OrderByDistance(fieldName, shapeWkt, roundFactor, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
             OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(field, latitude, longitude, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
@@ -137,19 +179,39 @@ namespace Raven.Client.Documents.Session
             OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", latitude, longitude, field.RoundFactor, nulls);
         }
 
-        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default)
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(fieldName, latitude, longitude, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls)
         {
             OrderByDistanceDescending(fieldName, latitude, longitude, 0, nulls);
         }
+
         /// <inheritdoc />
-        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor)
+        {
+            OrderByDistanceDescending(fieldName, latitude, longitude, roundFactor, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls)
         {
             var roundFactorParameterName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
             OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude), roundFactorParameterName, nulls));
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt)
+        {
+            OrderByDistanceDescending(field, shapeWkt, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls)
         {
             if (field == null)
                 throw new ArgumentNullException(nameof(field));
@@ -159,13 +221,26 @@ namespace Raven.Client.Documents.Session
             OrderByDistanceDescending($"{field.ToField(EnsureValidFieldName)}", shapeWkt, field.RoundFactor, nulls);
         }
 
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default)
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
+        {
+            OrderByDistanceDescending(fieldName, shapeWkt, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls)
         {
             OrderByDistanceDescending(fieldName, shapeWkt, 0, nulls);
         }
 
         /// <inheritdoc />
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor)
+        {
+            OrderByDistanceDescending(fieldName, shapeWkt, roundFactor, NullsOrdering.Default);
+        }
+
+        /// <inheritdoc />
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls)
         {
             string factorParamName = roundFactor == 0 ? null : AddQueryParameter(roundFactor);
 

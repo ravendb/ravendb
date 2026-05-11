@@ -812,9 +812,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering, NullsOrdering nulls)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
-            OrderBy(field, ordering, nulls);
+            OrderBy(field, ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy(string field, NullsOrdering nulls, OrderingType ordering)
+        {
+            OrderBy(field, nulls, ordering);
             return this;
         }
 
@@ -827,6 +834,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls)
+        {
+            var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), nulls, OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
         {
             OrderBy(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
@@ -834,9 +849,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering, NullsOrdering nulls)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
         {
-            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), ordering, nulls);
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls, OrderingType ordering)
+        {
+            OrderBy(GetMemberQueryPathForOrderBy(propertySelector), nulls, ordering);
             return this;
         }
 
@@ -859,9 +881,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering, NullsOrdering nulls)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
-            OrderByDescending(field, ordering, nulls);
+            OrderByDescending(field, ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending(string field, NullsOrdering nulls, OrderingType ordering)
+        {
+            OrderByDescending(field, nulls, ordering);
             return this;
         }
 
@@ -874,6 +903,14 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls)
+        {
+            var rangeType = Conventions.GetRangeType(propertySelector.ReturnType);
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), nulls, OrderingUtil.GetOrderingFromRangeType(rangeType));
+            return this;
+        }
+
+        /// <inheritdoc />
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string sorterName)
         {
             OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), sorterName);
@@ -881,9 +918,16 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering, NullsOrdering nulls)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering)
         {
-            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), ordering, nulls);
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), ordering);
+            return this;
+        }
+
+        /// <inheritdoc />
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls, OrderingType ordering)
+        {
+            OrderByDescending(GetMemberQueryPathForOrderBy(propertySelector), nulls, ordering);
             return this;
         }
 

@@ -246,11 +246,15 @@ namespace Raven.Client.Documents.Session
         ///   The field is the name of the field to sort, defaulting to sorting by ascending.
         /// </summary>
         /// <param name = "field">The fields.</param>
-        void OrderBy(string field, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderBy(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderBy(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String);
 
         void OrderByDescending(string field, string sorterName);
 
-        void OrderByDescending(string field, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDescending(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderByDescending(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String);
 
         void OrderByScore();
 
@@ -312,29 +316,41 @@ namespace Raven.Client.Documents.Session
 
         void Spatial(string fieldName, SpatialCriteria criteria);
 
-        void OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(DynamicSpatialField field, double latitude, double longitude);
+        void OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls);
 
-        void OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(DynamicSpatialField field, string shapeWkt);
+        void OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls);
 
-        void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(string fieldName, double latitude, double longitude);
+        void OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls);
 
-        void OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor);
+        void OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
-        void OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(string fieldName, string shapeWkt);
+        void OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls);
 
-        void OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistance(string fieldName, string shapeWkt, double roundFactor);
+        void OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
+        void OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
+        void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor);
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(string fieldName, string shapeWkt);
+        void OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls);
 
-        void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls = NullsOrdering.Default);
+        void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor);
+        void OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls);
 
         MoreLikeThisScope MoreLikeThis();
 

@@ -78,8 +78,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Query<Document, DocumentIndex>();
         baseQuery = baseQuery.Where(x => x.Id != null);
         var ordered = isAscending
-            ? baseQuery.OrderBy(x => x.Name, OrderingType.String, nulls)
-            : baseQuery.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+            ? baseQuery.OrderBy(x => x.Name, nulls, OrderingType.String)
+            : baseQuery.OrderByDescending(x => x.Name, nulls, OrderingType.String);
 
         var queryResults = await ordered.ToListAsync();
         AssertStringNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -113,8 +113,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
                 : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .WhereExists(x => x.Id);
         query = isAscending
-            ? query.OrderBy(x => x.Name, OrderingType.String, nulls)
-            : query.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+            ? query.OrderBy(x => x.Name, nulls, OrderingType.String)
+            : query.OrderByDescending(x => x.Name, nulls, OrderingType.String);
 
         var queryResults = await query.ToListAsync();
         AssertStringNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -162,8 +162,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Query<Document, DocumentIndex>();
         baseQuery = baseQuery.Where(x => x.Id != null);
         var ordered = isAscending
-            ? baseQuery.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-            : baseQuery.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+            ? baseQuery.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+            : baseQuery.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
 
         var queryResults = await ordered.ToListAsync();
         AssertIntNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -189,8 +189,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
                 : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .WhereExists(x => x.Id);
         query = isAscending
-            ? query.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-            : query.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+            ? query.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+            : query.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
 
         var queryResults = await query.ToListAsync();
         AssertIntNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -239,8 +239,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Query<Document, DocumentIndex>();
         baseQuery = baseQuery.Where(x => x.Id != null);
         var ordered = isAscending
-            ? baseQuery.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-            : baseQuery.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+            ? baseQuery.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+            : baseQuery.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
 
         var queryResults = await ordered.ToListAsync();
         AssertDoubleNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -266,8 +266,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
                 : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .WhereExists(x => x.Id);
         query = isAscending
-            ? query.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-            : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+            ? query.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+            : query.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
 
         var queryResults = await query.ToListAsync();
         AssertDoubleNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -315,8 +315,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Query<Document, DocumentIndex>();
         baseQuery = baseQuery.Where(x => x.Id != null);
         var ordered = isAscending
-            ? baseQuery.OrderBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-            : baseQuery.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+            ? baseQuery.OrderBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+            : baseQuery.OrderByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
 
         var queryResults = await ordered.ToListAsync();
         AssertStringNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -342,8 +342,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
                 : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .WhereExists(x => x.Id);
         query = isAscending
-            ? query.OrderBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-            : query.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+            ? query.OrderBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+            : query.OrderByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
 
         var queryResults = await query.ToListAsync();
         AssertStringNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -451,8 +451,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             ? session.Query<Document>()
             : session.Query<Document, DocumentIndex>();
         var ordered = isAscending
-            ? baseQuery.OrderBy(x => x.Name, OrderingType.String, nulls)
-            : baseQuery.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+            ? baseQuery.OrderBy(x => x.Name, nulls, OrderingType.String)
+            : baseQuery.OrderByDescending(x => x.Name, nulls, OrderingType.String);
 
         var queryResults = await ordered.ToListAsync();
         AssertStringNullsOrdering(queryResults, isAscending, nullsFirst);
@@ -478,8 +478,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .Timings(out var timings);
         query = isAscending
-            ? query.OrderBy(x => x.Name, OrderingType.String, nulls)
-            : query.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+            ? query.OrderBy(x => x.Name, nulls, OrderingType.String)
+            : query.OrderByDescending(x => x.Name, nulls, OrderingType.String);
 
         var queryResults = await query.ToListAsync();
         AssertStreamingPlan(options, timings);
@@ -506,8 +506,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .Timings(out var timings);
         query = isAscending
-            ? query.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-            : query.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+            ? query.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+            : query.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
 
         var queryResults = await query.ToListAsync();
         AssertStreamingPlan(options, timings);
@@ -534,8 +534,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
             : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>())
             .Timings(out var timings);
         query = isAscending
-            ? query.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-            : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+            ? query.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+            : query.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
 
         var queryResults = await query.ToListAsync();
         AssertStreamingPlan(options, timings);

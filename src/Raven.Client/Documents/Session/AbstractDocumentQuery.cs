@@ -1226,7 +1226,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        public void OrderBy(string field, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderBy(string field, OrderingType ordering = OrderingType.String)
+        {
+            OrderBy(field, NullsOrdering.Default, ordering);
+        }
+
+        public void OrderBy(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String)
         {
             AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
@@ -1249,7 +1254,12 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        public void OrderByDescending(string field, OrderingType ordering = OrderingType.String, NullsOrdering nulls = NullsOrdering.Default)
+        public void OrderByDescending(string field, OrderingType ordering = OrderingType.String)
+        {
+            OrderByDescending(field, NullsOrdering.Default, ordering);
+        }
+
+        public void OrderByDescending(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String)
         {
             AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);

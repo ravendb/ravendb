@@ -78,16 +78,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             var primary = isAscending
-                ? baseQuery.OrderBy(x => x.Name, OrderingType.String, nulls)
-                : baseQuery.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+                ? baseQuery.OrderBy(x => x.Name, nulls, OrderingType.String)
+                : baseQuery.OrderByDescending(x => x.Name, nulls, OrderingType.String);
             ordered = primary.ThenBy(x => x.ToIgnore);
         }
         else
         {
             var primary = baseQuery.OrderBy(x => x.ToIgnore);
             ordered = isAscending
-                ? primary.ThenBy(x => x.Name, OrderingType.String, nulls)
-                : primary.ThenByDescending(x => x.Name, OrderingType.String, nulls);
+                ? primary.ThenBy(x => x.Name, nulls, OrderingType.String)
+                : primary.ThenByDescending(x => x.Name, nulls, OrderingType.String);
         }
 
         var queryResults = await ordered.ToListAsync();
@@ -125,16 +125,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             query = isAscending
-                ? query.OrderBy(x => x.Name, OrderingType.String, nulls)
-                : query.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+                ? query.OrderBy(x => x.Name, nulls, OrderingType.String)
+                : query.OrderByDescending(x => x.Name, nulls, OrderingType.String);
             query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
             query = query.OrderBy(x => x.ToIgnore);
             query = isAscending
-                ? query.OrderBy(x => x.Name, OrderingType.String, nulls)
-                : query.OrderByDescending(x => x.Name, OrderingType.String, nulls);
+                ? query.OrderBy(x => x.Name, nulls, OrderingType.String)
+                : query.OrderByDescending(x => x.Name, nulls, OrderingType.String);
         }
 
         var queryResults = await query.ToListAsync();
@@ -204,16 +204,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             var primary = isAscending
-                ? baseQuery.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-                : baseQuery.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+                ? baseQuery.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+                : baseQuery.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
             ordered = primary.ThenBy(x => x.ToIgnore);
         }
         else
         {
             var primary = baseQuery.OrderBy(x => x.ToIgnore);
             ordered = isAscending
-                ? primary.ThenBy(x => x.IntValue, OrderingType.Long, nulls)
-                : primary.ThenByDescending(x => x.IntValue, OrderingType.Long, nulls);
+                ? primary.ThenBy(x => x.IntValue, nulls, OrderingType.Long)
+                : primary.ThenByDescending(x => x.IntValue, nulls, OrderingType.Long);
         }
 
         var queryResults = await ordered.ToListAsync();
@@ -251,16 +251,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             query = isAscending
-                ? query.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-                : query.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+                ? query.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+                : query.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
             query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
             query = query.OrderBy(x => x.ToIgnore);
             query = isAscending
-                ? query.OrderBy(x => x.IntValue, OrderingType.Long, nulls)
-                : query.OrderByDescending(x => x.IntValue, OrderingType.Long, nulls);
+                ? query.OrderBy(x => x.IntValue, nulls, OrderingType.Long)
+                : query.OrderByDescending(x => x.IntValue, nulls, OrderingType.Long);
         }
 
         var queryResults = await query.ToListAsync();
@@ -330,16 +330,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             var primary = isAscending
-                ? baseQuery.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-                : baseQuery.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+                ? baseQuery.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+                : baseQuery.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
             ordered = primary.ThenBy(x => x.ToIgnore);
         }
         else
         {
             var primary = baseQuery.OrderBy(x => x.ToIgnore);
             ordered = isAscending
-                ? primary.ThenBy(x => x.DoubleValue, OrderingType.Double, nulls)
-                : primary.ThenByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+                ? primary.ThenBy(x => x.DoubleValue, nulls, OrderingType.Double)
+                : primary.ThenByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
         }
 
         var queryResults = await ordered.ToListAsync();
@@ -377,16 +377,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             query = isAscending
-                ? query.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-                : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+                ? query.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+                : query.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
             query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
             query = query.OrderBy(x => x.ToIgnore);
             query = isAscending
-                ? query.OrderBy(x => x.DoubleValue, OrderingType.Double, nulls)
-                : query.OrderByDescending(x => x.DoubleValue, OrderingType.Double, nulls);
+                ? query.OrderBy(x => x.DoubleValue, nulls, OrderingType.Double)
+                : query.OrderByDescending(x => x.DoubleValue, nulls, OrderingType.Double);
         }
 
         var queryResults = await query.ToListAsync();
@@ -456,16 +456,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             var primary = isAscending
-                ? baseQuery.OrderBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-                : baseQuery.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+                ? baseQuery.OrderBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+                : baseQuery.OrderByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
             ordered = primary.ThenBy(x => x.ToIgnore);
         }
         else
         {
             var primary = baseQuery.OrderBy(x => x.ToIgnore);
             ordered = isAscending
-                ? primary.ThenBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-                : primary.ThenByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+                ? primary.ThenBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+                : primary.ThenByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
         }
 
         var queryResults = await ordered.ToListAsync();
@@ -503,16 +503,16 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         if (fieldFirst)
         {
             query = isAscending
-                ? query.OrderBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-                : query.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+                ? query.OrderBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+                : query.OrderByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
             query = query.OrderBy(x => x.ToIgnore);
         }
         else
         {
             query = query.OrderBy(x => x.ToIgnore);
             query = isAscending
-                ? query.OrderBy(x => x.Name, OrderingType.AlphaNumeric, nulls)
-                : query.OrderByDescending(x => x.Name, OrderingType.AlphaNumeric, nulls);
+                ? query.OrderBy(x => x.Name, nulls, OrderingType.AlphaNumeric)
+                : query.OrderByDescending(x => x.Name, nulls, OrderingType.AlphaNumeric);
         }
 
         var queryResults = await query.ToListAsync();
@@ -651,8 +651,8 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
         baseQuery = baseQuery.Where(x => x.Id != null);
 
         var ordered = baseQuery
-            .OrderBy(x => x.Name, OrderingType.String, ToNullsOrdering(primaryNullsFirst))
-            .ThenBy(x => x.IntValue, OrderingType.Long, ToNullsOrdering(secondaryNullsFirst));
+            .OrderBy(x => x.Name, ToNullsOrdering(primaryNullsFirst), OrderingType.String)
+            .ThenBy(x => x.IntValue, ToNullsOrdering(secondaryNullsFirst), OrderingType.Long);
 
         var results = await ordered.ToListAsync();
         AssertMixedNullsOrdering(results, primaryNullsFirst, secondaryNullsFirst);
@@ -677,8 +677,8 @@ public class RavenDB_26236_MultiSorting(ITestOutputHelper output) : RavenTestBas
             : session.Advanced.AsyncDocumentQuery<Document, DocumentIndex>();
         query = query
             .WhereExists(x => x.Id)
-            .OrderBy(x => x.Name, OrderingType.String, ToNullsOrdering(primaryNullsFirst))
-            .OrderBy(x => x.IntValue, OrderingType.Long, ToNullsOrdering(secondaryNullsFirst));
+            .OrderBy(x => x.Name, ToNullsOrdering(primaryNullsFirst), OrderingType.String)
+            .OrderBy(x => x.IntValue, ToNullsOrdering(secondaryNullsFirst), OrderingType.Long);
 
         var results = await query.ToListAsync();
         AssertMixedNullsOrdering(results, primaryNullsFirst, secondaryNullsFirst);
