@@ -125,7 +125,7 @@ namespace StressTests.Rachis
                     await GenerateWaitingSubscriptions(cdeArray.GetArray(), store, i, workerTasks, cluster.Nodes, cts.Token);
                 }
 
-                _ = Task.Run(async () => await ContinuouslyGenerateDocs(DocsBatchSize, store, cts.Token), cts.Token);
+                var generateDocsTask = Task.Run(async () => await ContinuouslyGenerateDocs(DocsBatchSize, store, cts.Token), cts.Token);
 
                 var dbNodesCountToToggle = Math.Max(Math.Min(dBGroupSize - 1, dBGroupSize / 2 + 1), 1);
                 var nodesToToggle = store.GetRequestExecutor().TopologyNodes.Select(x => x.ClusterTag).Take(dbNodesCountToToggle).ToList();
@@ -153,6 +153,15 @@ namespace StressTests.Rachis
                 }
 
                 await Task.WhenAll(workerTasks);
+
+                cts.Cancel();
+                try
+                {
+                    await generateDocsTask;
+                }
+                catch (OperationCanceledException) when (cts.IsCancellationRequested)
+                {
+                }
             }
         }
 
