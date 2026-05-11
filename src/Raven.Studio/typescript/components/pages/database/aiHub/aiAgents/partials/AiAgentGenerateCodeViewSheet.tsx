@@ -1,3 +1,4 @@
+import "./AiAgentGenerateCodeViewSheet.scss";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
@@ -5,11 +6,11 @@ import { Icon } from "components/common/Icon";
 import { useAsync } from "react-async-hook";
 import { ViewSheet } from "components/common/splitView/ViewSheet";
 import { useState } from "react";
-import ClickableCard from "components/common/ClickableCard";
 import { LoadError } from "components/common/LoadError";
 import Code, { CodeLanguage } from "components/common/Code";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { AiAgentGenerateCodeLanguage } from "commands/database/aiAgents/generateCodeAiAgentCommand";
+import Nav from "react-bootstrap/Nav";
 import { LazyLoad } from "components/common/LazyLoad";
 
 interface AiAgentGenerateCodeViewSheetProps {
@@ -19,49 +20,54 @@ interface AiAgentGenerateCodeViewSheetProps {
 export default function AiAgentGenerateCodeViewSheet({ agentId }: AiAgentGenerateCodeViewSheetProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService } = useServices();
-    const [language, setLanguage] = useState<AiAgentGenerateCodeLanguage>();
+    const [language, setLanguage] = useState<AiAgentGenerateCodeLanguage>("c#");
 
     const asyncGenerateCode = useAsync(async () => {
-        if (!language) {
-            return null;
-        }
-
         const result = await aiAgentService.generateCode(databaseName, agentId, language);
         return result.GeneratedCode;
     }, [language]);
 
     return (
-        <ViewSheet className="h-100 validation-schema-view-sheet-panel">
+        <ViewSheet className="h-100 ai-agent-generate-code-view-sheet">
             <ViewSheet.Header>
                 <h3 className="mb-0">
                     <Icon icon="magic-wand" color="primary" />
                     AI Agent client code
                 </h3>
             </ViewSheet.Header>
-            <ViewSheet.Body className="p-2 vstack gap-2">
-                <span className="text-center text-uppercase">Select the language</span>
-                <ClickableCard
-                    icon="csharp"
-                    title="C#"
-                    onClick={() => setLanguage("c#")}
-                    isSelected={language === "c#"}
-                    className="panel-bg-2"
-                />
-                <ClickableCard
-                    // TODO add python icon
-                    icon="client"
-                    title="Python"
-                    onClick={() => setLanguage("python")}
-                    isSelected={language === "python"}
-                    className="panel-bg-2"
-                />
-                <ClickableCard
-                    icon="javascript"
-                    title="JavaScript"
-                    onClick={() => setLanguage("javascript")}
-                    isSelected={language === "javascript"}
-                    className="panel-bg-2"
-                />
+            <ViewSheet.Body className="px-0 vstack view-sheet-body">
+                <Nav justify variant="tabs" activeKey={language}>
+                    <Nav.Item>
+                        <Nav.Link
+                            active={language === "c#"}
+                            onClick={() => setLanguage("c#")}
+                            className="no-decor text-reset"
+                        >
+                            <Icon icon="csharp" />
+                            C#
+                        </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                        <Nav.Link
+                            active={language === "python"}
+                            onClick={() => setLanguage("python")}
+                            className="no-decor text-reset"
+                        >
+                            <Icon icon="python" />
+                            Python
+                        </Nav.Link>
+                    </Nav.Item>
+                    <Nav.Item>
+                        <Nav.Link
+                            active={language === "javascript"}
+                            onClick={() => setLanguage("javascript")}
+                            className="no-decor text-reset"
+                        >
+                            <Icon icon="javascript" />
+                            JavaScript
+                        </Nav.Link>
+                    </Nav.Item>
+                </Nav>
                 {asyncGenerateCode.loading && (
                     <LazyLoad active className="flex-grow-1">
                         <div className="h-100" />
@@ -71,7 +77,12 @@ export default function AiAgentGenerateCodeViewSheet({ agentId }: AiAgentGenerat
                     <LoadError error="Unable to generate code" refresh={asyncGenerateCode.execute} />
                 )}
                 {asyncGenerateCode.result && (
-                    <Code language={getCodeComponentLanguage(language)} code={asyncGenerateCode.result} />
+                    <Code
+                        language={getCodeComponentLanguage(language)}
+                        code={asyncGenerateCode.result}
+                        className="rounded-top-0 border border-top-0"
+                        isTitleHidden
+                    />
                 )}
             </ViewSheet.Body>
         </ViewSheet>

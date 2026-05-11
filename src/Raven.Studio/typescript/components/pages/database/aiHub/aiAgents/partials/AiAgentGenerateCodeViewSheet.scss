@@ -1,0 +1,8 @@
+.ai-agent-generate-code-view-sheet {
+    --bs-border-color: var(--border-color-light);
+
+    .view-sheet-body {
+        overflow-y: auto;
+        scrollbar-gutter: stable both-edges;
+    }
+}
