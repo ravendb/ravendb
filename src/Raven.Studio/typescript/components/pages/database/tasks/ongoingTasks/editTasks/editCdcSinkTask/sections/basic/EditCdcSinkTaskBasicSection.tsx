@@ -9,7 +9,7 @@ import EditConnectionStrings from "components/pages/database/settings/connection
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { sortBy } from "lodash";
-import { useAsync } from "react-async-hook";
+import { useAsync, useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Collapse from "react-bootstrap/esm/Collapse";
@@ -31,6 +31,17 @@ export default function EditCdcSinkTaskBasicSection() {
 
     const { control, setValue } = useFormContext<EditCdcSinkTaskFormData>();
     const formValues = useWatch({ control });
+
+    const asyncVerify = useAsyncCallback(async () => {
+        if (!formValues.connectionStringName) {
+            return;
+        }
+
+        await tasksService.verifyCdcSink(databaseName, {
+            ConnectionStringName: formValues.connectionStringName,
+            TableNames: null,
+        });
+    });
 
     const asyncGetConnectionStrings = useAsync(async () => {
         if (!databaseName) {
@@ -85,14 +96,25 @@ export default function EditCdcSinkTaskBasicSection() {
 
     return (
         <div>
-            <div className="hstack align-items-center">
-                <h3 className="m-0">Configure basic settings</h3>
-                <FormErrorIcon
-                    control={control}
-                    paths={["name", "connectionStringName", "responsibleNode"]}
-                    onError={() => setIsPanelOpen(true)}
-                />
-                <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
+            <div className="hstack justify-content-between">
+                <div className="hstack align-items-center">
+                    <h3 className="m-0">Configure basic settings</h3>
+                    <FormErrorIcon
+                        control={control}
+                        paths={["name", "connectionStringName", "responsibleNode"]}
+                        onError={() => setIsPanelOpen(true)}
+                    />
+                    <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
+                </div>
+                <ButtonWithSpinner
+                    onClick={asyncVerify.execute}
+                    isSpinning={asyncVerify.loading}
+                    icon="test"
+                    className="rounded-pill"
+                    variant="info"
+                >
+                    Verify source
+                </ButtonWithSpinner>
             </div>
             <div className="mb-1">
                 Specify the task name, enter a connection string, and verify the source connection.

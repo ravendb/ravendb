@@ -10,10 +10,11 @@ import { Icon } from "components/common/Icon";
 import { LoadError } from "components/common/LoadError";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import rootSqlTable from "models/database/tasks/sql/rootSqlTable";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { UseAsyncReturn } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import { UseFieldArrayReturn } from "react-hook-form";
@@ -21,17 +22,20 @@ import { UseFieldArrayReturn } from "react-hook-form";
 interface EditCdcSinkTaskDiscoveredTableProps {
     asyncFetchTables: UseAsyncReturn<rootSqlTable[], []>;
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
+    widthPx: number;
 }
 
 export default function EditCdcSinkTaskDiscoveredTable({
     asyncFetchTables,
     tablesFieldArray,
+    widthPx,
 }: EditCdcSinkTaskDiscoveredTableProps) {
+    const columns = useColumns(widthPx);
     const tablesData = useMemo(() => asyncFetchTables.result ?? [], [asyncFetchTables.result]);
 
     const table = useReactTable({
         data: tablesData,
-        columns: tableColumnDefs,
+        columns,
         getCoreRowModel: getCoreRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         getSortedRowModel: getSortedRowModel(),
@@ -69,10 +73,6 @@ export default function EditCdcSinkTaskDiscoveredTable({
             .filter((r) => r.original && !existingKeys.has(getTableKey(r.original.tableName, r.original.tableSchema)))
             .map((r) => mapSqlTableToFormData(r.original));
 
-        console.log("kalczur newTables", newTables);
-
-        asyncFetchTables.status;
-
         newTables.forEach((newTable) => tablesFieldArray.append(newTable, { shouldFocus: false }));
         table.setRowSelection({});
     };
@@ -99,31 +99,38 @@ export default function EditCdcSinkTaskDiscoveredTable({
     );
 }
 
-// TODO get percentage width
-const tableColumnDefs: ColumnDef<rootSqlTable>[] = [
-    columnCheckbox as ColumnDef<rootSqlTable>,
-    {
-        id: "TableName",
-        header: "Table name",
-        accessorFn: (x) => `${x.tableSchema}.${x.tableName}`,
-        cell: CellValueWrapper,
-        size: 300,
-    },
-    {
-        id: "PrimaryKeys",
-        header: "Primary keys",
-        accessorFn: (x) => x.getPrimaryKeyColumnNames().join(", "),
-        cell: CellValueWrapper,
-        size: 200,
-    },
-    {
-        id: "ColumnsCount",
-        header: "Columns count",
-        accessorFn: (x) => x.documentColumns().length,
-        cell: CellValueWrapper,
-        size: 120,
-    },
-];
+const useColumns = (widthPx: number): ColumnDef<rootSqlTable>[] => {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(widthPx - columnCheckbox.size);
+    const getSize = useCallback(virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
+
+    return useMemo<ColumnDef<rootSqlTable>[]>(
+        () => [
+            columnCheckbox as ColumnDef<rootSqlTable>,
+            {
+                id: "TableName",
+                header: "Table name",
+                accessorFn: (x) => `${x.tableSchema}.${x.tableName}`,
+                cell: CellValueWrapper,
+                size: getSize(50),
+            },
+            {
+                id: "PrimaryKeys",
+                header: "Primary keys",
+                accessorFn: (x) => x.getPrimaryKeyColumnNames().join(", "),
+                cell: CellValueWrapper,
+                size: getSize(30),
+            },
+            {
+                id: "ColumnsCount",
+                header: "Columns count",
+                accessorFn: (x) => x.documentColumns().length,
+                cell: CellValueWrapper,
+                size: getSize(20),
+            },
+        ],
+        [getSize]
+    );
+};
 
 type FormDataTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
 
@@ -147,18 +154,28 @@ function mapSqlTableToFormData(table: rootSqlTable): FormDataTable {
         }
     });
 
+    const linkedTables: NonNullable<FormDataTable["linkedTables"]> = table
+        .references()
+        .filter((x) => x.action() === "link")
+        .map((x) => {
+            const effectiveLinkTable = x.effectiveLinkTable();
+
+            return {
+                propertyName: x.name(),
+                linkedCollectionName:
+                    effectiveLinkTable instanceof rootSqlTable ? effectiveLinkTable.collectionName() : "",
+                sourceTableName: effectiveLinkTable.tableName,
+                sourceTableSchema: effectiveLinkTable.tableSchema,
+                joinColumns: x.joinColumns.map((value) => ({ value })),
+            };
+        });
+
     return {
         collectionName: table.collectionName(),
         columns: columns,
         disabled: false,
         embeddedTables: [],
-        linkedTables: table.getLinkedReferencesDto().map((x) => ({
-            joinColumns: x.JoinColumns.map((value) => ({ value })),
-            linkedCollectionName: x.Name,
-            propertyName: x.Name,
-            sourceTableName: x.SourceTableName,
-            sourceTableSchema: x.SourceTableSchema,
-        })),
+        linkedTables,
         onDelete: { ignoreDeletes: false, patch: "" },
         patch: "",
         primaryKeyColumns: primaryKeyColumns.map((value) => ({ value })),

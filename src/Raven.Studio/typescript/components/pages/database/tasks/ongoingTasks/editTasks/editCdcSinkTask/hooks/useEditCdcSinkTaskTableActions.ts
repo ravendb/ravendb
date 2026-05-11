@@ -52,7 +52,7 @@ export function useEditCdcSinkTaskTableActions() {
     const { getValues, setValue } = useFormContext<EditCdcSinkTaskFormData>();
 
     const setFieldValue = <TValue>(path: FormPath, value: TValue) => {
-        setValue(path, value);
+        setValue(path, value, { shouldDirty: true });
     };
 
     const getTableList = <TTable>(path: TableListPath) => (getValues(path as FormPath) as TTable[]) ?? [];

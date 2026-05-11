@@ -14,6 +14,7 @@ import assertUnreachable from "components/utils/assertUnreachable";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { Icon } from "components/common/Icon";
 import EditCdcSinkTaskDiscoveredTable from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoveredTable";
+import SizeGetter from "components/common/SizeGetter";
 
 interface EditCdcSinkTaskDiscoverySectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -69,9 +70,14 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
             </div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <div>
-                    <EditCdcSinkTaskDiscoveredTable
-                        asyncFetchTables={asyncFetchTables}
-                        tablesFieldArray={tablesFieldArray}
+                    <SizeGetter
+                        render={({ width }) => (
+                            <EditCdcSinkTaskDiscoveredTable
+                                asyncFetchTables={asyncFetchTables}
+                                tablesFieldArray={tablesFieldArray}
+                                widthPx={width}
+                            />
+                        )}
                     />
                 </div>
             </Collapse>
