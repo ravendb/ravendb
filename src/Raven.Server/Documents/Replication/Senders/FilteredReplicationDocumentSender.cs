@@ -1,13 +1,10 @@
-﻿using System;
 using System.IO;
-using System.Linq;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
-using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
@@ -15,6 +12,7 @@ namespace Raven.Server.Documents.Replication.Senders
     {
         private readonly AllowedPathsValidator _pathsToSend, _destinationAcceptablePaths;
         private readonly bool _shouldSkipSendingTombstones;
+        private readonly string _filteredReplicationMarkerDbId;
 
         public FilteredReplicationDocumentSender(Stream stream, OutgoingPullReplicationHandler parent, Logger log, string[] pathsToSend, string[] destinationAcceptablePaths) : base(stream, parent, log)
         {
@@ -28,10 +26,10 @@ namespace Raven.Server.Documents.Replication.Senders
                                            pull.OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
 
-            _replicationIdBase64 = new string(parent._database.DbBase64Id.Reverse().ToArray());
+            // FLTR is a replication delivery marker, not a real database identity. Derive a stable marker DbId
+            // from this database id so Order can carry FLTR without sharing the real lineage DbId kept in Version.
+            _filteredReplicationMarkerDbId = parent._database.DbId.DeriveReplicationMarkerDbId(ChangeVectorParser.FilteredTag);
         }
-
-        private string _replicationIdBase64;
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
@@ -45,7 +43,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (shouldSkip == false)
             {
                 var current = context.GetChangeVector(item.ChangeVector);
-                var fromFilteredReplicationMarker = context.GetChangeVector(ChangeVectorParser.SinkTag, item.Etag, _replicationIdBase64);
+                var fromFilteredReplicationMarker = context.GetChangeVector(ChangeVectorParser.FilteredTag, item.Etag, _filteredReplicationMarkerDbId);
 
                 // The filtered marker is delivery order only. Keep the real document lineage in Version only.
                 item.ChangeVector = context.GetChangeVector(current.Version, fromFilteredReplicationMarker);

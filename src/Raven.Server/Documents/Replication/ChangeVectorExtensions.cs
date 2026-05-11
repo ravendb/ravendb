@@ -1,13 +1,17 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Data.HashFunction.Blake2;
+using Sparrow.Server;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
     public static class ChangeVectorExtensions
     {
+        private const int ChangeVectorDbIdSizeInBytes = 16;
+
         /// <summary>
         /// Generate DbId that is then can be put in the ChangeVectorEntry DbId field
         /// </summary>
@@ -18,6 +22,31 @@ namespace Raven.Server.Documents.Replication
             Debug.Assert(res == 22);
 
             return dbIdAsString;
+        }
+
+        public static string DeriveReplicationMarkerDbId(this Guid dbId, string markerTag)
+        {
+            if (string.IsNullOrEmpty(markerTag))
+                throw new ArgumentException("Marker tag cannot be null or empty.", nameof(markerTag));
+
+            Span<byte> dbIdBytes = stackalloc byte[ChangeVectorDbIdSizeInBytes];
+            if (dbId.TryWriteBytes(dbIdBytes) == false)
+                throw new ArgumentException("Unable to write database id bytes.", nameof(dbId));
+
+            var markerBytes = Encoding.UTF8.GetBytes(markerTag);
+            var markerAndDbIdBytes = new byte[markerBytes.Length + 1 + dbIdBytes.Length];
+
+            markerBytes.CopyTo(markerAndDbIdBytes, 0);
+            markerAndDbIdBytes[markerBytes.Length] = 0;
+            dbIdBytes.CopyTo(markerAndDbIdBytes.AsSpan(markerBytes.Length + 1));
+
+            var hash = Blake2BFactory.Instance
+                .Create(new Blake2BConfig { HashSizeInBits = ChangeVectorDbIdSizeInBytes * 8 }) // Bytes to Bits
+                .ComputeHash(markerAndDbIdBytes)
+                .Hash;
+            Debug.Assert(hash.Length == ChangeVectorDbIdSizeInBytes);
+            
+            return Format.ToBase64Unpadded(hash);
         }
 
         public static string SerializeVector(this ChangeVectorEntry[] self)

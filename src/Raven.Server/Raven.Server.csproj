@@ -190,6 +190,7 @@
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Snappier" />
+    <PackageReference Include="System.Data.HashFunction.Blake2" />
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Linq.Async" />

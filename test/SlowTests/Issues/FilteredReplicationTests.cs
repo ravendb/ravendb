@@ -1114,8 +1114,8 @@ namespace SlowTests.Issues
                 var cv = s.Advanced.GetChangeVectorFor(common);
                 var r = await s.Advanced.Revisions.GetForAsync<Propagation>("common");
 
-                Assert.Equal(2, cv.ToChangeVectorList().Count);
-                Assert.Contains("SINK", cv);
+                AssertFilteredItemChangeVectorHasExpectedShape(cv);
+                Assert.DoesNotContain(ChangeVectorParser.SinkTag, cv);
                 Assert.Equal(0, r.Count);
             }
 
@@ -1124,8 +1124,8 @@ namespace SlowTests.Issues
                 var common = await s.LoadAsync<Propagation>("common");
                 var cv = s.Advanced.GetChangeVectorFor(common);
                 var r = await s.Advanced.Revisions.GetForAsync<Propagation>("common");
-                Assert.Equal(2, cv.ToChangeVectorList().Count);
-                Assert.DoesNotContain("SINK", cv);
+                AssertFilteredItemChangeVectorHasExpectedShape(cv);
+                Assert.DoesNotContain(ChangeVectorParser.SinkTag, cv);
                 Assert.Equal(0, r.Count);
             }
 
@@ -1375,8 +1375,8 @@ namespace SlowTests.Issues
             var doc = await s.LoadAsync<Propagation>(id);
             var cv = s.Advanced.GetChangeVectorFor(doc);
             var r = await s.Advanced.Revisions.GetForAsync<Propagation>(id);
-            Assert.Equal(2, cv.ToChangeVectorList().Count);
-            Assert.DoesNotContain("SINK", cv);
+            AssertFilteredItemChangeVectorHasExpectedShape(cv);
+            Assert.DoesNotContain(ChangeVectorParser.SinkTag, cv);
             Assert.Equal(0, r.Count);
         }
 
@@ -1386,9 +1386,36 @@ namespace SlowTests.Issues
             var cv = s.Advanced.GetChangeVectorFor(doc);
             var r = await s.Advanced.Revisions.GetForAsync<Propagation>(id);
 
-            Assert.Equal(2, cv.ToChangeVectorList().Count);
-            Assert.Contains("SINK", cv);
+            AssertFilteredItemChangeVectorHasExpectedShape(cv);
+            Assert.DoesNotContain(ChangeVectorParser.SinkTag, cv);
             Assert.Equal(0, r.Count);
+        }
+
+        private static void AssertFilteredItemChangeVectorHasExpectedShape(string changeVector)
+        {
+            var separator = changeVector.IndexOf('|');
+            Assert.True(separator > 0, $"Expected filtered item change vector to contain Order|Version separator. CV='{changeVector}'.");
+
+            var order = changeVector[..separator];
+            var version = changeVector[(separator + 1)..];
+            var orderEntries = order.ToChangeVectorList();
+            var versionEntries = version.ToChangeVectorList();
+
+            Assert.True(
+                orderEntries.Count(x => x.NodeTag == ChangeVectorParser.FilteredInt) == 1,
+                $"Expected Order to contain exactly one FLTR marker entry. Order='{order}', CV='{changeVector}'.");
+
+            Assert.True(
+                orderEntries.All(x => x.NodeTag != ChangeVectorParser.SinkInt),
+                $"Expected Order not to contain SINK marker entries. Order='{order}', CV='{changeVector}'.");
+
+            Assert.True(
+                versionEntries.Count == 2,
+                $"Expected Version to keep exactly two real lineage entries. Version='{version}', CV='{changeVector}'.");
+
+            Assert.True(
+                versionEntries.All(x => x.NodeTag != ChangeVectorParser.FilteredInt && x.NodeTag != ChangeVectorParser.SinkInt),
+                $"Expected Version lineage entries not to contain FLTR or SINK marker tags. Version='{version}', CV='{changeVector}'.");
         }
 
         [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Certificates | RavenTestCategory.BackupExportImport)]
@@ -1701,22 +1728,26 @@ namespace SlowTests.Issues
                 Assert.NotNull(user);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
 
                 user.Age = age;
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkDatabaseId));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
-}
+            }
 
             var ageVal = await WaitForValueAsync(async () =>
             {
@@ -1733,11 +1764,13 @@ namespace SlowTests.Issues
                 var user = await session.LoadAsync<User>(usersDocId1);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag), changeVector);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag), changeVector);
                 Assert.True(changeVector.Contains(sinkDatabaseId));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 var stats = await sink.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
             }
         }
@@ -1829,7 +1862,8 @@ namespace SlowTests.Issues
                 Assert.NotNull(user);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkClusterId));
 
                 await VerifyDatabaseChangeVector(hub);
@@ -1837,7 +1871,8 @@ namespace SlowTests.Issues
                 user.Age = age;
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkClusterId));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
@@ -1861,6 +1896,7 @@ namespace SlowTests.Issues
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.True(changeVector.Contains(ChangeVectorParser.RaftTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag), changeVector);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(sinkClusterId));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
@@ -1883,6 +1919,7 @@ namespace SlowTests.Issues
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(sinkClusterId));
             }
@@ -1970,20 +2007,24 @@ namespace SlowTests.Issues
                 Assert.NotNull(user);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag), changeVector);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
 
                 user.Age = age;
                 await session.SaveChangesAsync();
                 changeVector = session.Advanced.GetChangeVectorFor(user);
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag), changeVector);
                 Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
                 Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
             }
 
@@ -2002,11 +2043,13 @@ namespace SlowTests.Issues
                 var user = await session.LoadAsync<User>(usersDocId1);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
                 Assert.True(changeVector.Contains(sinkDatabaseId));
 
                 var stats = await hub.Maintenance.SendAsync(new GetStatisticsOperation());
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
             }
         }
@@ -2128,7 +2171,8 @@ namespace SlowTests.Issues
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
                 Assert.True(changeVector.Contains(ChangeVectorParser.TrxnTag));
                 Assert.True(changeVector.Contains(ChangeVectorParser.RaftTag));
-                Assert.True(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.True(changeVector.Contains(ChangeVectorParser.FilteredTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.True(changeVector.Contains(hubClusterId));
                 Assert.True(changeVector.Contains(sinkDatabaseId));
 
@@ -2150,6 +2194,7 @@ namespace SlowTests.Issues
             {
                 var stats = await store.Maintenance.SendAsync(new GetStatisticsOperation());
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.TrxnTag));
+                Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.FilteredTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(ChangeVectorParser.SinkTag));
                 Assert.False(stats.DatabaseChangeVector.Contains(hubClusterId));
             }
