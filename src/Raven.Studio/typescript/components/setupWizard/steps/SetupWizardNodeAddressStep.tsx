@@ -326,7 +326,6 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
             dnsName: securityOption === "ownCertificate" ? formData.dnsName : null,
             nodeUrl: handleNodeUrl(formData),
             httpPort: formData.httpPort == null ? (securityOption === "none" ? 8080 : 443) : formData.httpPort,
-            nodeTag: formData.isPassive ? null : formData.nodeTag,
             isEditing: false,
             isNewlyAdded: false,
         });
@@ -359,7 +358,7 @@ function NodeDetailsPanelHeader({ control, index, onRemove, editNodeForm }: Node
         }
     };
 
-    const isPassiveVisible = securityOption === "none" && method !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = method !== "createPackage" && nodes.length === 1;
 
     return (
         <RichPanelHeader>
@@ -597,7 +596,7 @@ function NodeDetailsPanelEdit({
     const { isExternalRequired } = useHostnameDetectionSideEffects({ editNodeForm, parentControl });
 
     const isDNSVisible = securityOption === "ownCertificate" && !isWildcardCertificate;
-    const isPassiveVisible = securityOption === "none" && setupMethod !== "createPackage" && nodes.length === 1;
+    const isPassiveVisible = setupMethod !== "createPackage" && nodes.length === 1;
 
     const canCustomizeExternalIpsAndPorts = securityOption === "letsEncrypt";
     const canCustomizeExternalTcpPorts = securityOption === "ownCertificate";

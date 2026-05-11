@@ -160,11 +160,14 @@ namespace Raven.Server.Commercial
         public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
             List<Exception> exceptions = new ();
-            
+
             if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)
             {
                 exceptions.Add(new InvalidOperationException($"{nameof(NodeSetupInfos)} must be set"));
             }
+            
+            if (LocalNodeTag is null && NodeSetupInfos is { Count: > 0 })
+                LocalNodeTag = NodeSetupInfos.Keys.First();
 
             foreach (var tag in NodeSetupInfos.Keys.Where(tag => SetupWizardUtils.IsValidNodeTag(tag) == false))
             {

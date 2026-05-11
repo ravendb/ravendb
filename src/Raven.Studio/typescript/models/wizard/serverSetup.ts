@@ -147,15 +147,16 @@ class serverSetup {
         });
         
         return {
-            AutoIndexingEngineType: null, 
-            DataDirectory: null, 
+            AutoIndexingEngineType: null,
+            DataDirectory: null,
             SetupCertificatePath: null,
-            LogsPath: null, 
+            LogsPath: null,
             License: null,
             StaticIndexingEngineType: null,
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
-            LocalNodeTag: !this.startNodeAsPassive() ? this.localNodeTag() : null,
-            Environment: !this.startNodeAsPassive() ? this.environment() : null,
+            LocalNodeTag: this.localNodeTag(),
+            Environment: this.environment(),
+            StartAsPassive: this.startNodeAsPassive(),
             ZipOnly: this.onlyCreateZipFile(),
             NodeSetupInfos: nodesInfo
         }
@@ -168,10 +169,10 @@ class serverSetup {
         });
 
         return {
-            AutoIndexingEngineType: null, 
-            DataDirectory: null, 
-            SetupCertificatePath: null, 
-            LogsPath: null, 
+            AutoIndexingEngineType: null,
+            DataDirectory: null,
+            SetupCertificatePath: null,
+            LogsPath: null,
             StaticIndexingEngineType: null,
             EnableExperimentalFeatures: this.useExperimentalFeatures(),
             Environment: this.environment(),
@@ -184,6 +185,7 @@ class serverSetup {
             Certificate: this.certificate().certificate(),
             Password: this.certificate().certificatePassword(),
             ClientCertNotAfter: this.certificate().expirationDateFormatted(),
+            StartAsPassive: false,
             ZipOnly: this.onlyCreateZipFile(),
             NodeSetupInfos: nodesInfo
         };
