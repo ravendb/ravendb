@@ -1650,7 +1650,7 @@ namespace SlowTests.Issues
 
             using (var session = sink.OpenAsyncSession())
             {
-                var user = new User { Name = "Grisha" };
+                var user = new User { Name = "Grisha", Age = 1};
                 await session.StoreAsync(user, usersDocId1);
                 await session.SaveChangesAsync();
 
@@ -1733,7 +1733,7 @@ namespace SlowTests.Issues
                 var user = await session.LoadAsync<User>(usersDocId1);
 
                 var changeVector = session.Advanced.GetChangeVectorFor(user);
-                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag));
+                Assert.False(changeVector.Contains(ChangeVectorParser.SinkTag), changeVector);
                 Assert.True(changeVector.Contains(sinkDatabaseId));
                 Assert.True(hubDatabaseIds.Any(id => changeVector.Contains(id)));
 

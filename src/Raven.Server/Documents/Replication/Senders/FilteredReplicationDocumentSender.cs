@@ -1,10 +1,13 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Linq;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
+using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.Replication.Senders
 {
@@ -24,7 +27,11 @@ namespace Raven.Server.Documents.Replication.Senders
                                            _parent is OutgoingPullReplicationHandler pull &&
                                            pull.OutgoingPullReplicationParams?.PreventDeletionsMode?.HasFlag(PreventDeletionsMode.PreventSinkToHubDeletions) == true &&
                                            _parent._database.ForTestingPurposes?.ForceSendTombstones != true;
+
+            _replicationIdBase64 = new string(parent._database.DbBase64Id.Reverse().ToArray());
         }
+
+        private string _replicationIdBase64;
 
         protected override bool ShouldSkip(DocumentsOperationContext context, ReplicationBatchItem item, OutgoingReplicationStatsScope stats, SkippedReplicationItemsInfo skippedReplicationItemsInfo)
         {
@@ -38,8 +45,7 @@ namespace Raven.Server.Documents.Replication.Senders
             if (shouldSkip == false)
             {
                 var current = context.GetChangeVector(item.ChangeVector);
-                var database = _parent._database;
-                var fromFilteredReplicationMarker = context.GetChangeVector(ChangeVectorParser.FilteredTag, item.Etag, database.DbBase64Id);
+                var fromFilteredReplicationMarker = context.GetChangeVector(ChangeVectorParser.SinkTag, item.Etag, _replicationIdBase64);
 
                 // The filtered marker is delivery order only. Keep the real document lineage in Version only.
                 item.ChangeVector = context.GetChangeVector(current.Version, fromFilteredReplicationMarker);

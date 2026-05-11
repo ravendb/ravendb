@@ -744,7 +744,7 @@ namespace Raven.Server.Documents
                 {
                     var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
                     tombstoneTable.Delete(tvh.Reader.Id);
-                    return changeVector;
+                    return changeVector.StripTrxnTags(context);
                 }
             }
 
