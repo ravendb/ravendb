@@ -658,18 +658,16 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Disposing IncomingReplicationHandler ({FromToString})");
 
-                // RavenDB-26564: _cts.Cancel() fires registered cancellation callbacks synchronously.
-                // ParseToMemoryAsync registers stream.Dispose via token.Register(stream.Dispose).
-                // If the connection is half-open, the callback tries to flush buffered data to a dead
-                // socket, which blocks then throws SocketException. CancellationTokenSource wraps this
-                // in AggregateException. We must catch it so the cleanup below can run — otherwise we
-                // leak the TCP socket, temp files, and leave the background thread stuck.
                 try
                 {
                     _cts.Cancel();
                 }
-                catch (Exception)
+                catch (AggregateException)
                 {
+                    // _cts.Cancel() fires registered cancellation callbacks synchronously.
+                    // Some callbacks (e.g. stream.Dispose registered via token.Register in ParseToMemoryAsync) may throw
+                    // We must catch it so the rest of the cleanup can proceed.
+                    // CancellationTokenSource.Cancel() wraps all callback exceptions in AggregateException, it is the only exception type it throws
                 }
 
                 try
