@@ -23,9 +23,13 @@ export default function AiAgentGenerateCodeViewSheet({ agentId }: AiAgentGenerat
     const [language, setLanguage] = useState<AiAgentGenerateCodeLanguage>("c#");
 
     const asyncGenerateCode = useAsync(async () => {
+        if (!databaseName) {
+            return;
+        }
+
         const result = await aiAgentService.generateCode(databaseName, agentId, language);
         return result.GeneratedCode;
-    }, [language]);
+    }, [language, agentId, databaseName]);
 
     return (
         <ViewSheet className="h-100 ai-agent-generate-code-view-sheet">
