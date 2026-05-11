@@ -43,18 +43,14 @@ export default function EditCdcSinkTaskDiscoveredTable({
 
     if (asyncFetchTables.status === "not-requested") {
         return (
-            <div className="panel-bg-1 p-2 rounded border border-secondary hstack justify-content-center mt-1">
+            <div className="panel-bg-1 p-2 rounded border border-secondary hstack justify-content-center">
                 <EmptySet compact>No tables have been discovered yet</EmptySet>
             </div>
         );
     }
 
     if (asyncFetchTables.status === "error") {
-        return (
-            <div className="mt-1">
-                <LoadError error="Unable to discover tables" refresh={asyncFetchTables.execute} />
-            </div>
-        );
+        return <LoadError error="Unable to discover tables" refresh={asyncFetchTables.execute} />;
     }
 
     const selectedRows = table.getSelectedRowModel().rows;
@@ -79,7 +75,7 @@ export default function EditCdcSinkTaskDiscoveredTable({
 
     return (
         <div className="position-relative">
-            <VirtualTable table={table} heightInPx={300} isLoading={asyncFetchTables.loading} className="mt-2" />
+            <VirtualTable table={table} heightInPx={300} isLoading={asyncFetchTables.loading} />
             {selectedCount > 0 && (
                 <div
                     className="position-absolute hstack gap-1 rounded-pill border border-secondary panel-bg-2 px-2"
