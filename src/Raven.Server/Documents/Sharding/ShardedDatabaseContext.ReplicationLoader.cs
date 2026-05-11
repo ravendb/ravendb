@@ -148,14 +148,11 @@ namespace Raven.Server.Documents.Sharding
                 }
             }
 
-            public void InvokeOnFailed(ShardedIncomingReplicationHandler handler, Exception e)
+            internal void CleanAndDisposeConnection(ShardedIncomingReplicationHandler handler)
             {
                 using (handler)
                 {
                     _incoming.TryRemove(handler.ConnectionInfo.SourceDatabaseId, out _);
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Sharded incoming replication handler has thrown an unhandled exception. ({handler.FromToString})", e);
                 }
             }
         }

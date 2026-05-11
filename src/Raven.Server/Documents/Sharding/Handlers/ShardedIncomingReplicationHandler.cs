@@ -97,12 +97,21 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
         protected override void EnsureNotDeleted() => _parent.EnsureNotDeleted(_parent.Server.NodeTag);
 
-        protected override void InvokeOnFailed(Exception exception) => _parent.InvokeOnFailed(this, exception);
+        protected override void InvokeOnFailed(Exception exception)
+        {
+            _parent.CleanAndDisposeConnection(this);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Sharded incoming replication handler has thrown an unhandled exception. ({FromToString})", exception);
+        }
 
         protected override void OnCancellation(Exception e)
         {
             // Always dispose so the per-shard outgoing handlers (and their TcpConnectionOptions) are cleaned up.
-            InvokeOnFailed(e);
+            _parent.CleanAndDisposeConnection(this);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Sharded incoming replication handler has been cancelled. ({FromToString})");
         }
 
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
