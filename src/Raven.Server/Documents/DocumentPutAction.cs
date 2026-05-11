@@ -142,7 +142,7 @@ namespace Raven.Server.Documents
                 if (knownNewId == false)
                 {
                     // delete a tombstone if it exists, if it known that it is a new ID, no need, so we can skip it
-                    oldChangeVector = DeleteTombstoneIfNeeded(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
+                    oldChangeVector = DeleteTombstoneAndGetPredecessor(context, collectionName, lowerId.Content.Ptr, lowerId.Size);
 
                     table.ReadByKey(lowerId, out oldValue);
                 }
@@ -712,7 +712,7 @@ namespace Raven.Server.Documents
             };
         }
 
-        private ChangeVector DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
+        private ChangeVector DeleteTombstoneAndGetPredecessor(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             if (tombstoneTable.NumberOfEntries == 0)
@@ -720,7 +720,13 @@ namespace Raven.Server.Documents
 
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                return DeleteTombstone(context, tombstoneTable, id);
+                var tombstoneChangeVector = DeleteTombstoneAndGetChangeVector(context, tombstoneTable, id);
+                if (tombstoneChangeVector == null)
+                    return null;
+
+                // A local recreate should be causally after the tombstone, so keep the tombstone lineage.
+                // TRXN is only the old cluster transaction's atomic guard marker; a cluster-tx PUT supplies its own explicit CV.
+                return tombstoneChangeVector.StripTrxnTags(context);
             }
         }
 
@@ -730,10 +736,10 @@ namespace Raven.Server.Documents
             if (tombstoneTable.NumberOfEntries == 0)
                 return;
 
-            DeleteTombstone(context, tombstoneTable, id);
+            DeleteTombstoneAndGetChangeVector(context, tombstoneTable, id);
         }
 
-        private static ChangeVector DeleteTombstone(DocumentsOperationContext context, Table tombstoneTable, Slice id)
+        private static ChangeVector DeleteTombstoneAndGetChangeVector(DocumentsOperationContext context, Table tombstoneTable, Slice id)
         {
             foreach (var (tombstoneKey, tvh) in tombstoneTable.SeekByPrimaryKeyPrefix(id, Slices.Empty, 0))
             {
@@ -744,7 +750,7 @@ namespace Raven.Server.Documents
                 {
                     var changeVector = TableValueToChangeVector(context, (int)Tombstones.TombstoneTable.ChangeVector, ref tvh.Reader);
                     tombstoneTable.Delete(tvh.Reader.Id);
-                    return changeVector.StripTrxnTags(context);
+                    return changeVector;
                 }
             }
 

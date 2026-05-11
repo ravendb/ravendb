@@ -125,16 +125,28 @@ namespace Raven.Server.Documents.Replication.Incoming
             return new MergedUpdateDatabaseChangeVectorForHubCommand(changeVector, lastDocumentEtag, ConnectionInfo, trigger, _incomingPullReplicationParams);
         }
 
+        protected override bool ShouldMergeHeartbeatChangeVector() => ShouldMergePullHeartbeatChangeVector(_incomingPullReplicationParams.Mode);
+
+        private static bool ShouldMergePullHeartbeatChangeVector(PullReplicationMode mode)
+        {
+            // Incoming pull params describe this TCP connection direction, not the raw pull definition flags.
+            return mode switch
+            {
+                PullReplicationMode.HubToSink => true,
+                PullReplicationMode.SinkToHub => false,
+                PullReplicationMode.None => throw new InvalidOperationException("Incoming pull replication heartbeat cannot run with replication mode 'None'."),
+                _ => throw new InvalidOperationException($"Incoming pull replication heartbeat cannot run with unexpected replication mode '{mode}'.")
+            };
+        }
+
         internal sealed class MergedDocumentForPullReplicationCommand : MergedDocumentReplicationCommand
         {
-            private readonly bool _isHub;
             private readonly bool _isSink;
             private readonly PreventDeletionsMode? _preventDeletionsMode;
 
             public MergedDocumentForPullReplicationCommand(DataForReplicationCommand replicationInfo, long lastEtag,
                 ReplicationLoader.PullReplicationParams pullReplicationParams) : base(replicationInfo, lastEtag)
             {
-                _isHub = pullReplicationParams.Mode == PullReplicationMode.SinkToHub;
                 _isSink = pullReplicationParams.Mode == PullReplicationMode.HubToSink;
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
@@ -184,7 +196,7 @@ namespace Raven.Server.Documents.Replication.Incoming
             }
             protected override bool TryUpdateChangeVector(DocumentsOperationContext context)
             {
-                if (_pullReplicationParams.Mode == PullReplicationMode.SinkToHub)
+                if (ShouldMergePullHeartbeatChangeVector(_pullReplicationParams.Mode) == false)
                     return false;
 
                 return base.TryUpdateChangeVector(context);
