@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Session.Tokens
         private readonly bool _descending;
         private readonly string _sorterName;
         private readonly OrderingType _ordering;
-        private readonly NullsOrdering _nulls;
+        private readonly NullsOrdering _nullsOrdering;
         private readonly bool _isMethodField;
 
         private OrderByToken(string fieldName, bool descending, string sorterName, bool isMethodField = false)
@@ -20,12 +20,12 @@ namespace Raven.Client.Documents.Session.Tokens
             _isMethodField = isMethodField;
         }
 
-        private OrderByToken(string fieldName, bool descending, OrderingType ordering, NullsOrdering nulls = NullsOrdering.Default, bool isMethodField = false)
+        private OrderByToken(string fieldName, bool descending, OrderingType ordering, NullsOrdering nullsOrdering = NullsOrdering.Default, bool isMethodField = false)
         {
             _fieldName = fieldName;
             _descending = descending;
             _ordering = ordering;
-            _nulls = nulls;
+            _nullsOrdering = nullsOrdering;
             _isMethodField = isMethodField;
         }
 
@@ -128,7 +128,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (_descending) // we only add this if we have to, ASC is the default and reads nicer
                 writer.Append(" desc");
 
-            switch (_nulls)
+            switch (_nullsOrdering)
             {
                 case NullsOrdering.First:
                     writer.Append(" nulls first");
@@ -152,7 +152,7 @@ namespace Raven.Client.Documents.Session.Tokens
             if (_sorterName != null)
                 return new OrderByToken(aliasedName, _descending, _sorterName);
 
-            return new OrderByToken(aliasedName, _descending, _ordering, _nulls);
+            return new OrderByToken(aliasedName, _descending, _ordering, _nullsOrdering);
         }
     }
 }
