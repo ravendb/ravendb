@@ -1,7 +1,9 @@
 import { EmptySet } from "components/common/EmptySet";
+import ExpandableList from "components/common/ExpandableList";
 import { FormErrorIcon, FormGroup, FormInput, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
+import useBoolean from "components/hooks/useBoolean";
 import {
     RootTablePath,
     EmbeddedTablePath,
@@ -15,6 +17,8 @@ type FieldMappingPath = RootTablePath | EmbeddedTablePath;
 
 export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappingPath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const { value: isExpanded, setTrue: expand, setValue: setIsExpanded } = useBoolean(false);
+
     const columnsPath = `${path}.columns` as const;
 
     const columnsFieldArray = useFieldArray({
@@ -32,7 +36,10 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                 <Button
                     variant="link"
                     size="sm"
-                    onClick={() => columnsFieldArray.append({ column: "", name: "", type: "Default" })}
+                    onClick={() => {
+                        columnsFieldArray.append({ column: "", name: "", type: "Default" });
+                        expand();
+                    }}
                 >
                     <Icon icon="plus" />
                     Add field mapping
@@ -51,32 +58,45 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                         <div>Type</div>
                         <div></div>
                     </div>
-                    <div className="bg-body rounded-bottom p-1 vstack gap-1">
-                        {columnsFieldArray.fields.map((field, idx) => (
-                            <div key={field.id} className="field-mapping-row">
-                                <FormGroup marginClass="m-0">
-                                    <FormInput type="text" control={control} name={`${path}.columns.${idx}.column`} />
-                                </FormGroup>
-                                <Icon icon="arrow-thin-right" margin="m-0" />
-                                <FormGroup marginClass="m-0">
-                                    <FormInput type="text" control={control} name={`${path}.columns.${idx}.name`} />
-                                </FormGroup>
-                                <FormSelect
-                                    control={control}
-                                    name={`${path}.columns.${idx}.type`}
-                                    options={columnTypeOptions}
-                                />
-                                <Button
-                                    variant="link"
-                                    className="text-danger"
-                                    size="sm"
-                                    onClick={() => columnsFieldArray.remove(idx)}
-                                >
-                                    <Icon icon="trash" margin="m-0" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
+                    <ExpandableList
+                        className="bg-body rounded-bottom p-1"
+                        contentClassName="vstack gap-1"
+                        itemsCount={columnsFieldArray.fields.length}
+                        collapsedItemsCount={6}
+                        isExpanded={isExpanded}
+                        setIsExpanded={setIsExpanded}
+                    >
+                        {({ visibleCount }) =>
+                            columnsFieldArray.fields.slice(0, visibleCount).map((field, idx) => (
+                                <div key={field.id} className="field-mapping-row">
+                                    <FormGroup marginClass="m-0">
+                                        <FormInput
+                                            type="text"
+                                            control={control}
+                                            name={`${path}.columns.${idx}.column`}
+                                        />
+                                    </FormGroup>
+                                    <Icon icon="arrow-thin-right" margin="m-0" />
+                                    <FormGroup marginClass="m-0">
+                                        <FormInput type="text" control={control} name={`${path}.columns.${idx}.name`} />
+                                    </FormGroup>
+                                    <FormSelect
+                                        control={control}
+                                        name={`${path}.columns.${idx}.type`}
+                                        options={columnTypeOptions}
+                                    />
+                                    <Button
+                                        variant="link"
+                                        className="text-danger"
+                                        size="sm"
+                                        onClick={() => columnsFieldArray.remove(idx)}
+                                    >
+                                        <Icon icon="trash" margin="m-0" />
+                                    </Button>
+                                </div>
+                            ))
+                        }
+                    </ExpandableList>
                 </div>
             )}
         </>

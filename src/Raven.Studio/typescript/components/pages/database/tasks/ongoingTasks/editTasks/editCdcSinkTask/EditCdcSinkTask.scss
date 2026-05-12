@@ -2,8 +2,21 @@
 
 .edit-cdc-sink-task {
     .field-mapping-row {
+        $column-sizes: (
+            "source": 2fr,
+            "arrow": 16.8px,
+            "target": 2fr,
+            "type": 1fr,
+            "delete": 34.4px,
+        );
+
         display: grid;
-        grid-template-columns: 2fr 16.8px 2fr 1fr 34.4px;
+        grid-template-columns:
+            map-get($column-sizes, "source")
+            map-get($column-sizes, "arrow")
+            map-get($column-sizes, "target")
+            map-get($column-sizes, "type")
+            map-get($column-sizes, "delete");
         gap: sizes.$gutter-xxs;
         align-items: center;
 
