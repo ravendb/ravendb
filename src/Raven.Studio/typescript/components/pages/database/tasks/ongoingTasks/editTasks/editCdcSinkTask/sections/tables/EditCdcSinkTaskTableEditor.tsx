@@ -78,6 +78,7 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                         <Button
                             variant="secondary"
                             onClick={() => tableActions.changeLinkedToEmbedded(activeTable.path)}
+                            disabled={isRootTableDisabled}
                         >
                             <Icon icon="embed" />
                             Change to embedded
@@ -87,12 +88,13 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                         <Button
                             variant="secondary"
                             onClick={() => tableActions.changeEmbeddedToLinked(activeTable.path)}
+                            disabled={isRootTableDisabled}
                         >
                             <Icon icon="link" />
                             Change to linked
                         </Button>
                     )}
-                    <Button variant="info">
+                    <Button variant="info" disabled={isRootTableDisabled}>
                         <Icon icon="rocket" />
                         Test
                     </Button>
