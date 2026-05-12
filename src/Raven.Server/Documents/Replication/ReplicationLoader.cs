@@ -537,9 +537,9 @@ namespace Raven.Server.Documents.Replication
                 {
                 }
             }
-            catch
+            catch (ObjectDisposedException)
             {
-                // ignored
+                // expected on idempotent re-dispose
             }
         }
 

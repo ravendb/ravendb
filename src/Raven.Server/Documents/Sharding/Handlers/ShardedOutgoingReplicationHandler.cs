@@ -54,8 +54,10 @@ namespace Raven.Server.Documents.Sharding.Handlers
             finally
             {
                 // The parent awaits _firstChangeVector in GetInitialHandshakeResponseFromShardsAsync.
-                // If we exited via cancellation, OnFailed was skipped — set it here so the await unblocks.
-                _firstChangeVector.TrySetCanceled();
+                // If we exited before the TCS was completed (cancellation or early exit), cancel it
+                // so the await unblocks. Guard against cancelling an already-completed TCS.
+                if (_firstChangeVector.Task.IsCompleted == false)
+                    _firstChangeVector.TrySetCanceled();
             }
         }
 

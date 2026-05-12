@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             _parent.CleanAndDisposeConnection(this);
 
             if (Logger.IsInfoEnabled)
-                Logger.Info($"Sharded incoming replication handler has been cancelled. ({FromToString})");
+                Logger.Info($"Sharded incoming replication handler has been cancelled. ({FromToString})", e);
         }
 
         protected override void HandleHeartbeatMessage(TransactionOperationContext jsonOperationContext, BlittableJsonReaderObject blittableJsonReaderObject)
