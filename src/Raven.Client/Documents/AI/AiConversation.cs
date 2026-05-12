@@ -28,6 +28,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly List<AiAgentArtificialActionResponse> _artificialActions = [];
     private readonly List<ContentPart> _promptParts = [];
     private string _changeVector;
+    private readonly string _nodeTag;
     private readonly List<ICommandData> _attachmentsCommands = new();
     private StringBuilder _jsonBuffer;
     private StringWriter _jsonWriter;
@@ -39,7 +40,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly Dictionary<string, HandleActionDelegate> _invocations = new();
     private readonly HashSet<string> _dispatchedToolIds = new();
 
-    public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector)
+    public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, string nodeTag = null)
     {
         ValidationMethods.AssertNotNullOrEmpty(aiOperations, nameof(aiOperations));
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -50,6 +51,7 @@ internal class AiConversation : IAiConversationOperations
         _conversationId = conversationId;
         _options = options;
         _changeVector = changeVector;
+        _nodeTag = nodeTag;
     }
     
     public void AddAttachment(string name, Stream stream, string contentType)
@@ -299,7 +301,7 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _nodeTag);
 
         try
         {

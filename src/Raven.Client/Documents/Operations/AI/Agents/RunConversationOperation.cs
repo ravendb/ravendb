@@ -33,6 +33,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
+    private readonly string _nodeTag;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -109,6 +110,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
     /// <param name="streamPropertyPath">The JSON path of the property to stream back to the client.</param>
     /// <param name="streamedChunksCallback">The callback function invoked when a new chunk of streamed data arrives.</param>
+    /// <param name="nodeTag">Optional cluster node tag to route this command to. When null, the command uses the regular topology selection.</param>
     public RunConversationOperation(string agentId,
         string conversationId,
         IEnumerable<ContentPart> promptParts,
@@ -117,7 +119,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         AiConversationCreationOptions options,
         string changeVector,
         string streamPropertyPath,
-        Func<string, Task> streamedChunksCallback)
+        Func<string, Task> streamedChunksCallback,
+        string nodeTag = null)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
@@ -134,6 +137,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
         _streamPropertyPath = streamPropertyPath;
         _streamedChunksCallback = streamedChunksCallback;
+        _nodeTag = nodeTag;
     }
 
     public RunConversationOperation(string agentId,
@@ -145,8 +149,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         string changeVector,
         List<ICommandData> attachmentsCommands,
         string streamPropertyPath,
-        Func<string, Task> streamedChunksCallback)
-        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback)
+        Func<string, Task> streamedChunksCallback,
+        string nodeTag = null)
+        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, streamPropertyPath, streamedChunksCallback, nodeTag)
     {
         _attachmentsCommands = attachmentsCommands;
     }
@@ -173,7 +178,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     /// </summary>
     public virtual RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new RunConversationOperationCommand(this, conventions);
+        return new RunConversationOperationCommand(this, conventions)
+        {
+            SelectedNodeTag = _nodeTag
+        };
     }
 
     internal class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>, IRaftCommand

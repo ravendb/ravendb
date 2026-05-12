@@ -145,6 +145,7 @@ public class AiOperations
     /// <param name="conversationId">The unique identifier for the conversation.</param>
     /// <param name="creationOptions">Options for creating the conversation.</param>
     /// <param name="changeVector">An optional change vector for concurrency control.</param>
-    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
-        new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
+    /// <param name="nodeTag">An optional cluster node tag to route every request for this conversation to a specific node (Responsible/Mentor node).</param>
+    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null, string nodeTag = null) =>
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, nodeTag);
 }
