@@ -322,7 +322,8 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
     public virtual void Dispose()
     {
-        _isDisposed.Raise();
+        if (_isDisposed.Raise() == false)
+            return;
 
         try
         {
