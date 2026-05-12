@@ -662,12 +662,14 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     _cts.Cancel();
                 }
-                catch (AggregateException)
+                catch (AggregateException e)
                 {
                     // _cts.Cancel() fires registered cancellation callbacks synchronously.
                     // Some callbacks (e.g. stream.Dispose registered via token.Register in ParseToMemoryAsync) may throw
                     // We must catch it so the rest of the cleanup can proceed.
                     // CancellationTokenSource.Cancel() wraps all callback exceptions in AggregateException, it is the only exception type it throws
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{nameof(AggregateException)} during _cts.Cancel() while disposing of {nameof(IncomingReplicationHandler)} ({FromToString})", e);
                 }
 
                 try
