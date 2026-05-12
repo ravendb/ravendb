@@ -234,7 +234,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_WithAttachment_PersistsRequestWithAttachmentPayload(Options options, GenAiConfiguration config)
+    public async Task EnableFullDebug_WithAttachment_PersistsAttachmentNames(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -257,8 +257,12 @@ public class AiAgentDebugTracing : RavenTestBase
         var tracesList = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
         Assert.True(tracesList.Count == 1);
 
-        // The request payload must be present — it carries the base64-encoded image inline.
-        Assert.NotNull(tracesList.First().RequestBody);
+        var first = tracesList.First();
+        Assert.NotNull(first.RequestBody);
+
+        // Attachment names are persisted as a separate field on the trace doc.
+        Assert.NotNull(first.AttachmentNames);
+        Assert.Contains("heart.png", first.AttachmentNames);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -493,54 +497,108 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_PropagatesToSubAgent(Options options, GenAiConfiguration config)
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { null })]
+    public async Task EnableFullDebug_PropagatesToSubAgent(Options options, GenAiConfiguration config, bool? enableFullDebug)
     {
-        using var store = GetDocumentStore(options);
-        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+        using var store = await CreateStoreWithSubAgentArithmetic(options, config);
 
-        var subAgent = new AiAgentConfiguration("debug-sub-agent", config.ConnectionStringName,
-            "You answer arithmetic questions. Return a short numeric answer.")
+        const string conversationId = "chats/propagation-test";
+
+        // Null case: we need the parent doc to already have EnableFullDebug=true persisted so the
+        // null override actually has something to preserve. Drive a non-arithmetic warm-up turn
+        // that won't invoke the sub-agent, then the real turn below uses the null override.
+        if (enableFullDebug == null)
         {
-            SampleObject = "{\"Answer\":\"42\"}"
-        };
-        var subAgentResult = await store.AI.CreateAgentAsync(subAgent, OutputSchema.Instance);
+            var warmup = store.AI.Conversation(_parentAgentIdentifier, conversationId,
+                creationOptions: null, enableFullDebug: true);
+            warmup.SetUserPrompt("Just say hi. Do not call any tools.");
+            await warmup.RunAsync<OutputSchema>(CancellationToken.None);
 
-        var parentAgent = new AiAgentConfiguration("debug-parent-agent", config.ConnectionStringName,
-            "Delegate any arithmetic question to the math sub-agent and return its answer.")
-        {
-            SampleObject = "{\"Answer\":\"answer here\"}",
-            SubAgents =
-            [
-                new AiAgentToolSubAgent
-                {
-                    Identifier = subAgentResult.Identifier,
-                    Description = "Use to answer arithmetic questions."
-                }
-            ]
-        };
-        var parentResult = await store.AI.CreateAgentAsync(parentAgent, OutputSchema.Instance);
+            // Reliability gate: if a future system-prompt change causes the parent to eagerly invoke
+            // the sub-agent on a greeting, this assertion fires with a clear message — and the
+            // real turn below would no longer be the first arithmetic prompt in the conversation.
+            using var s = store.OpenAsyncSession();
+            var warmupDoc = await s.LoadAsync<ConversationDocShape>(conversationId);
+            Assert.NotNull(warmupDoc);
+            Assert.True(warmupDoc.EnableFullDebug, "warm-up should persist EnableFullDebug=true");
+            Assert.Empty(warmupDoc.SubConversationIds);
+        }
 
-        var chat = store.AI.Conversation(parentResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+        var chat = store.AI.Conversation(_parentAgentIdentifier, conversationId,
+            creationOptions: null, changeVector: null, enableFullDebug: enableFullDebug);
         chat.SetUserPrompt("What is 2+2?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
         Assert.Equal(AiConversationResult.Done, r.Status);
 
-        // Traces should exist for the parent conversation AND for at least one sub-agent conversation.
-        var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
-        Assert.True(stats.Collections.TryGetValue(Constants.Documents.Collections.AiAgentConversationDebugCollection, out long count));
-        Assert.True(count >= 2, $"Expected at least 2 trace documents (parent + sub-agent), got {count}");
+        var snap = await LoadDebugSnapshot(store, conversationId);
+        Assert.NotNull(snap.SubId);
+
+        // true OR null-after-true-warmup -> tracing on; false -> tracing off.
+        var expectTracing = enableFullDebug != false;
+        Assert.Equal(expectTracing, snap.ParentPersisted);
+        Assert.Equal(expectTracing, snap.SubPersisted);
+
+        if (expectTracing)
+        {
+            // Lower bounds derived from the protocol, not LLM behavior:
+            //   * sub-agent: 1 LLM call (no further tools defined on it).
+            //   * parent: 2 LLM calls per arithmetic turn — one to receive the tool dispatch, one to
+            //     finalize the answer after the sub-agent returned. The null case adds 1 more from
+            //     the warm-up turn ("just say hi" -> single LLM call, no tool dispatch).
+            // A real LLM may occasionally do an extra reflection / re-dispatch round, so we use
+            // lower bounds rather than equality.
+            var minParentTraces = enableFullDebug == null ? 3 : 2;
+            Assert.True(snap.ParentTraces >= minParentTraces,
+                $"expected >= {minParentTraces} parent trace docs, got {snap.ParentTraces}");
+            Assert.True(snap.SubAgentTraces >= 1,
+                $"expected >= 1 sub-agent trace doc, got {snap.SubAgentTraces}");
+        }
+        else
+        {
+            Assert.Equal(0, snap.ParentTraces);
+            Assert.Equal(0, snap.SubAgentTraces);
+
+            // No trace collection should exist at all when neither parent nor sub-agent tracing is on.
+            var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
+            Assert.False(stats.Collections.ContainsKey(Constants.Documents.Collections.AiAgentConversationDebugCollection));
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
+    public async Task EnableFullDebug_MultipleAttachments_PersistsAllNamesInOrder(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var agent = new AiAgentConfiguration("debug-test-agent", config.ConnectionStringName,
+            "You are a helpful assistant. Describe images concisely.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}"
+        };
+        var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/",
+            creationOptions: null, enableFullDebug: true);
+
+        chat.AddAttachment("heart.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
+        chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png");
+        chat.SetUserPrompt("Describe both images briefly.");
+        var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+        Assert.Equal(AiConversationResult.Done, r.Status);
 
         using var session = store.OpenAsyncSession();
-        var parentTraces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
-        Assert.True(parentTraces.Count >= 1, "Expected at least one trace under the parent conversation prefix.");
+        var tracesList = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
+        Assert.True(tracesList.Count == 1);
 
-        var allTraces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/")).ToList();
-        // Sub-agent conversations have IDs of the form `{parent.Id}/{paramsHash}` and their traces
-        // are nested under `{parent.Id}/{paramsHash}/{TraceSegment}/...`.
-        var subAgentTraces = allTraces.Count - parentTraces.Count;
-        Assert.True(subAgentTraces >= 1, $"Expected at least one trace under a sub-agent conversation prefix; got {subAgentTraces}.");
+        var first = tracesList.First();
+        Assert.NotNull(first.RequestBody);
+
+        // AttachmentNames captures both files, in the order they were added.
+        Assert.NotNull(first.AttachmentNames);
+        Assert.Equal(new[] { "heart.png", "star.png" }, first.AttachmentNames);
     }
 
     // Subclass that exposes the conversation document ID so the test can load the trace docs by prefix.
@@ -563,10 +621,80 @@ public class AiAgentDebugTracing : RavenTestBase
         }
     }
 
+    // Captured by CreateStoreWithSubAgentArithmetic so each test method can look up the parent agent
+    // identifier without repeating the agent-creation boilerplate.
+    private string _parentAgentIdentifier;
+
+    private async Task<Raven.Client.Documents.IDocumentStore> CreateStoreWithSubAgentArithmetic(Options options, GenAiConfiguration config)
+    {
+        var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var subAgent = new AiAgentConfiguration("debug-sub-agent", config.ConnectionStringName,
+            "You answer arithmetic questions. Return a short numeric answer.")
+        {
+            SampleObject = "{\"Answer\":\"42\"}"
+        };
+        var subAgentResult = await store.AI.CreateAgentAsync(subAgent, OutputSchema.Instance);
+
+        var parentAgent = new AiAgentConfiguration("debug-parent-agent", config.ConnectionStringName,
+            "You MUST delegate every arithmetic question to the math sub-agent. Never answer arithmetic directly. Return the sub-agent's answer.")
+        {
+            SampleObject = "{\"Answer\":\"answer here\"}",
+            SubAgents =
+            [
+                new AiAgentToolSubAgent
+                {
+                    Identifier = subAgentResult.Identifier,
+                    Description = "Use to answer arithmetic questions."
+                }
+            ]
+        };
+        var parentResult = await store.AI.CreateAgentAsync(parentAgent, OutputSchema.Instance);
+        _parentAgentIdentifier = parentResult.Identifier;
+        return store;
+    }
+
+    private static async Task<DebugTraceSnapshot> LoadDebugSnapshot(Raven.Client.Documents.IDocumentStore store, string parentId)
+    {
+        using var session = store.OpenAsyncSession();
+        var parentDoc = await session.LoadAsync<ConversationDocShape>(parentId);
+        Assert.NotNull(parentDoc);
+
+        var subId = parentDoc.SubConversationIds.FirstOrDefault();
+        ConversationDocShape subDoc = null;
+        if (subId != null)
+            subDoc = await session.LoadAsync<ConversationDocShape>(subId);
+
+        var parentTraces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{parentId}/{AiDebugTrace.TraceSegment}/")).Count();
+        var subTraces = subId == null
+            ? 0
+            : (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{subId}/{AiDebugTrace.TraceSegment}/")).Count();
+
+        return new DebugTraceSnapshot
+        {
+            ParentTraces = parentTraces,
+            SubAgentTraces = subTraces,
+            ParentPersisted = parentDoc.EnableFullDebug,
+            SubPersisted = subDoc?.EnableFullDebug ?? false,
+            SubId = subId
+        };
+    }
+
+    private sealed class DebugTraceSnapshot
+    {
+        public int ParentTraces { get; init; }
+        public int SubAgentTraces { get; init; }
+        public bool ParentPersisted { get; init; }
+        public bool SubPersisted { get; init; }
+        public string SubId { get; init; }
+    }
+
     private class DebugTraceDoc
     {
         // Raw request body as written to the wire. Always a string — no parse is attempted server-side.
         public string RequestBody { get; set; }
+        public List<string> AttachmentNames { get; set; }
         public object Response { get; set; }
         public object StreamEvents { get; set; }
     }
@@ -574,5 +702,6 @@ public class AiAgentDebugTracing : RavenTestBase
     private class ConversationDocShape
     {
         public bool EnableFullDebug { get; set; }
+        public HashSet<string> SubConversationIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 }

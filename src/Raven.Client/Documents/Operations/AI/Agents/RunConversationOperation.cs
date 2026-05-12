@@ -251,7 +251,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
 
             if (_parent._enableFullDebug.HasValue)
-                url += $"&enableFullDebug={(_parent._enableFullDebug.Value ? "true" : "false")}";
+                url += $"&enableFullDebug={_parent._enableFullDebug.Value}";
 
             var body = new ConversionRequestBody
             {

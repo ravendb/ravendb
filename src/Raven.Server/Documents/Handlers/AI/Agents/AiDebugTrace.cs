@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using Raven.Client;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -14,17 +13,29 @@ public sealed class AiDebugTrace
 
     public string RequestBody;
 
+    // Names of the attachments sent on this LLM call. Captured separately because
+    // the names are not reliably present in the outgoing request JSON on the first
+    // call (the "[Attachments: ...]" marker message is only added after the first turn).
+    public List<string> AttachmentNames;
+
     public BlittableJsonReaderObject Response;
     public List<BlittableJsonReaderObject> StreamEvents;
 
-    public void CaptureRequestBody(Stream captureStream)
+    public void CaptureRequestBody(string request)
     {
-        if (captureStream == null)
+        RequestBody = request;
+    }
+
+    public void CaptureAttachments(IEnumerable<AiAttachment> attachments)
+    {
+        if (attachments == null)
             return;
 
-        captureStream.Position = 0;
-        using var reader = new StreamReader(captureStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: false, leaveOpen: true);
-        RequestBody = reader.ReadToEnd();
+        foreach (var a in attachments)
+        {
+            AttachmentNames ??= [];
+            AttachmentNames.Add(a.Name);
+        }
     }
 
     public void CaptureResponse(BlittableJsonReaderObject responseContent)
@@ -57,6 +68,7 @@ public sealed class AiDebugTrace
                 [nameof(ConversationDocument.Agent)] = document.Agent
             },
             ["MessagesCount"] = document.Messages?.Count ?? 0,
+            [nameof(AttachmentNames)] = AttachmentNames == null ? null : new DynamicJsonArray(AttachmentNames),
             [nameof(RequestBody)] = RequestBody,
             [nameof(Response)] = Response,
             [nameof(StreamEvents)] = StreamEvents == null ? null : new DynamicJsonArray(StreamEvents)

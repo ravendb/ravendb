@@ -777,10 +777,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     protected virtual async Task<string> TryPersistAsync(JsonOperationContext context, List<BlittableJsonReaderObject> historyDocs)
     {
         var changeVectorLsv = context.GetLazyString(_document.ChangeVector);
-
         var cmd = new PutConversationCommand(_document, historyDocs, changeVectorLsv, _configuration, database)
         {
-            Attachments = _request.AttachmentCommands,
+            Attachments = _request.AttachmentCommands
         };
         await database.TxMerger.Enqueue(cmd);
         _document.ChangeVector = cmd.PutResult.ChangeVector;

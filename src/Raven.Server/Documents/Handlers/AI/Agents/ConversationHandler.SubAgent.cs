@@ -122,10 +122,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
                 .Append("&agentId=").Append(Uri.EscapeDataString(agent));
 
-            // Parent-debug ON -> force sub-agent debug ON. Parent OFF/null -> leave the
-            // sub-agent's own stored value untouched (no query string appended).
-            if (_document.EnableFullDebug)
-                queryStringBuilder.Append("&enableFullDebug=true");
+            // Always propagate the parent's current debug state to the sub-agent so the child
+            // doesn't keep `EnableFullDebug=true` sticky once the parent flips it off.
+            queryStringBuilder.Append($"&enableFullDebug={_document.EnableFullDebug}");
 
             var queryString = queryStringBuilder.ToString();
 

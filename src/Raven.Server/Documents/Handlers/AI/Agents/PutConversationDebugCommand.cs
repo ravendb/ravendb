@@ -21,14 +21,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             var sep = _database.IdentityPartsSeparator;
+            var idPrefix = $"{_conversation.Id}{sep}{AiDebugTrace.TraceSegment}{sep}";
             foreach (var trace in _traces)
             {
-                var id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(
-                    $"{_conversation.Id}{sep}{AiDebugTrace.TraceSegment}{sep}",
-                    _database.DocumentsStorage.GenerateNextEtag(), out _);
-
                 var doc = trace.ToBlittable(context, _conversation, _conversation.Expires);
-                _database.DocumentsStorage.Put(context, id, expectedChangeVector: null, doc,
+                _database.DocumentsStorage.Put(context, idPrefix, expectedChangeVector: null, doc,
                     nonPersistentFlags: NonPersistentDocumentFlags.SkipSchemaValidation);
             }
 

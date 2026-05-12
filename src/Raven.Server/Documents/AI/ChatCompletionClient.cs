@@ -436,6 +436,8 @@ public class ChatCompletionClient : IDisposable
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
 
+        trace?.CaptureAttachments(attachments);
+
         HttpContent content = new BlittableJsonContent(async stream =>
         {
             if (trace == null)
@@ -444,15 +446,14 @@ public class ChatCompletionClient : IDisposable
                 return;
             }
 
-            var capture = RecyclableMemoryStreamFactory.GetRecyclableStream();
-            await using var target = new TeeStream(stream, capture);
+            await using var target = new TeeStream(stream);
             try
             {
                 await WritePayloadAsync(target).ConfigureAwait(false);
             }
             finally
             {
-                trace.CaptureRequestBody(capture);
+                trace.CaptureRequestBody(target.Result());
             }
 
             async Task WritePayloadAsync(Stream s)
