@@ -590,8 +590,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
         options.ModifyDatabaseRecord += record =>
         {
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = configNullIsSmallest
-                ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest.ToString()
-                : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest.ToString();
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
         using var store = GetDocumentStore(options);
@@ -628,8 +628,8 @@ public class RavenDB_26236(ITestOutputHelper output) : RavenTestBase(output)
         var indexInstance = database.IndexStore.GetIndex(index.IndexName);
 
         var expected = legacyNullFirst
-            ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest
-            : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest;
+            ? NullsSortMode.NullsSmallest
+            : NullsSortMode.NullsLargest;
         Assert.Equal(expected, indexInstance.Configuration.NullsSortMode);
     }
 

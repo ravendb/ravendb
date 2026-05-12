@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using Corax.Utils;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -386,8 +387,8 @@ public class RavenDB_26091_MultiSorting(ITestOutputHelper output) : RavenTestBas
         options.ModifyDatabaseRecord += record =>
         {
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = nullFirst
-                ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest.ToString()
-                : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest.ToString();
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
 

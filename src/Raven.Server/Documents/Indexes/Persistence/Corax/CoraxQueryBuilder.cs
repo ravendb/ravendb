@@ -217,9 +217,9 @@ public static partial class CoraxQueryBuilder
                     _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                var configIsSmallest = builderParameters.Index.Configuration.NullsSortMode == Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest;
+                var configIsSmallest = builderParameters.Index.Configuration.NullsSortMode is NullsSortMode.NullsSmallest;
                 var nullIsSmallest = sortBy.NullsSortMode is { } sortByMode
-                    ? sortByMode == global::Corax.Utils.NullsSortMode.NullsSmallest
+                    ? sortByMode == NullsSortMode.NullsSmallest
                     : configIsSmallest;
                 var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending, nullIsSmallest);
 
@@ -1467,10 +1467,8 @@ public static partial class CoraxQueryBuilder
 
             orderMetadata = currentIdx == 0 ? [] : orderMetadata![..currentIdx];
         }
-  
-        var defaultNullsSortMode = builderParameters.Index.Configuration.NullsSortMode == Client.Documents.Indexes.NullsSortMode.NullsSmallest
-            ? NullsSortMode.NullsSmallest
-            : NullsSortMode.NullsLargest;
+
+        var defaultNullsSortMode = builderParameters.Index.Configuration.NullsSortMode;
         switch (orderMetadata.Length)
         {
             case 0:

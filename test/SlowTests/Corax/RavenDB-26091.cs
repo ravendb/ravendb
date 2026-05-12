@@ -660,8 +660,8 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     {
         options.ModifyDatabaseRecord += record =>
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = nullFirst
-                ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest.ToString()
-                : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest.ToString();
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
 
         using var store = GetDocumentStore(options);
         using var session = store.OpenAsyncSession();
@@ -782,8 +782,8 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
         options.ModifyDatabaseRecord += record =>
         {
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = nullFirst
-                ? Raven.Client.Documents.Indexes.NullsSortMode.NullsSmallest.ToString()
-                : Raven.Client.Documents.Indexes.NullsSortMode.NullsLargest.ToString();
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
 
