@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Studio
 {
@@ -43,6 +44,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Studio
             await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
             {
                 writer.WriteOperationIdAndNodeTag(context, operationId, ServerStore.NodeTag);
+            }
+
+            if (LoggingSource.AuditLog.IsInfoEnabled)
+            {
+                var target = excludeIds.Count == 0
+                    ? $"Documents in collection '{collectionName}'"
+                    : $"Documents in collection '{collectionName}' (excluding {excludeIds.Count} ids)";
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "DELETE", target);
             }
 
             ScheduleDeleteCollection(context, returnToContextPool, collectionName, excludeIds, operationId);
