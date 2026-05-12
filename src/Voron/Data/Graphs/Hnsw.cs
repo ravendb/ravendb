@@ -108,6 +108,20 @@ public unsafe partial class Hnsw
 
         public int CreatedNodes => _newNodes.Count;
 
+        /// <summary>
+        /// Pre-size the underlying <see cref="_nodes"/> NativeList so that no
+        /// AllocateNodeIndex call during the build can trigger a Grow → Release of
+        /// the old storage. Needed by the parallel placement runner when worker
+        /// threads hold <c>ref Node</c> values into <see cref="_nodes"/> across
+        /// LLT-side dispatch — without this, a Grow would invalidate those refs.
+        /// </summary>
+        public void EnsureNodesCapacity(int totalCapacity)
+        {
+            if (_nodes.Capacity >= totalCapacity)
+                return;
+            _nodes.EnsureCapacityFor(Llt.Allocator, totalCapacity - _nodes.Count);
+        }
+
         public int GetCreatedNodeIndex(int index) => _newNodes[index];
 
         public Options Options;
