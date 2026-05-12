@@ -419,7 +419,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void Dispose()
         {
-            _cts.Cancel();
+            _cts.SafeCancel(_logger, $"{nameof(ClusterMaintenanceWorker)} '{_name}'");
             _tcp.Dispose();
 
             try

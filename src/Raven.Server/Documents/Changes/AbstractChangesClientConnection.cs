@@ -323,7 +323,15 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
     public virtual void Dispose()
     {
         _isDisposed.Raise();
-        _cts.Cancel();
+
+        try
+        {
+            _cts.Cancel();
+        }
+        catch (AggregateException)
+        {
+        }
+
         _sendQueue.Enqueue(new SendQueueItem
         {
             AllowSkip = false,

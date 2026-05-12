@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Sharding
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Disposing {nameof(ShardedDatabaseContext)} of {DatabaseName}.");
 
-            _databaseShutdown.SafeCancel(_logger, $"{nameof(System.AggregateException)} during _databaseShutdown.Cancel() while disposing the {nameof(ShardedDatabaseContext)}: {DatabaseName}");
+            _databaseShutdown.SafeCancel(_logger, $"{nameof(ShardedDatabaseContext)}: {DatabaseName}");
 
             var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(ShardedDatabaseContext)} {DatabaseName}");
 

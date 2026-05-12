@@ -875,7 +875,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void Dispose()
         {
-            _cts.Cancel();
+            _cts.SafeCancel(_observerLogger.Logger, $"{nameof(ClusterObserver)} on node {_nodeTag}");
 
             try
             {

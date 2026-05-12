@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Sparrow.Logging;
 
@@ -11,16 +12,16 @@ internal static class CancellationTokenSourceExtensions
     /// CancellationTokenSource.Cancel() wraps all callback exceptions in AggregateException — it is the only exception type it throws.
     /// Catching it allows the caller's cleanup to proceed regardless of broken-connection errors in callbacks.
     /// </summary>
-    public static void SafeCancel(this CancellationTokenSource cts, Logger logger, string errorMessage)
+    public static void SafeCancel(this CancellationTokenSource cts, Logger logger, string component)
     {
         try
         {
             cts.Cancel();
         }
-        catch (System.AggregateException e)
+        catch (AggregateException e)
         {
             if (logger.IsInfoEnabled)
-                logger.Info(errorMessage, e);
+                logger.Info($"Failed to cancel {nameof(CancellationTokenSource)} while disposing of {component}", e);
         }
     }
 }

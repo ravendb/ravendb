@@ -931,7 +931,7 @@ namespace Raven.Server.Documents
         {
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
-            _databaseShutdown.SafeCancel(_logger, $"{nameof(AggregateException)} during _databaseShutdown.Cancel() while disposing the {nameof(DocumentDatabase)}: {Name}");
+            _databaseShutdown.SafeCancel(_logger, $"{nameof(DocumentDatabase)}: {Name}");
 
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 

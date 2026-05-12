@@ -658,7 +658,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Disposing IncomingReplicationHandler ({FromToString})");
 
-                _cts.SafeCancel(Logger, $"{nameof(AggregateException)} during _cts.Cancel() while disposing of {nameof(IncomingReplicationHandler)} ({FromToString})");
+                _cts.SafeCancel(Logger, $"{nameof(IncomingReplicationHandler)} ({FromToString})");
 
                 try
                 {
