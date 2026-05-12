@@ -931,19 +931,7 @@ namespace Raven.Server.Documents
         {
             ForTestingPurposes?.DisposeLog?.Invoke(Name, "Starting dispose");
 
-            try
-            {
-                _databaseShutdown.Cancel();
-            }
-            catch (AggregateException e)
-            {
-                // _databaseShutdown.Cancel() fires registered cancellation callbacks synchronously.
-                // Some callbacks (e.g. stream.Dispose registered via token.Register in ParseToMemoryAsync) may throw
-                // We must catch it so the rest of the cleanup can proceed.
-                // CancellationTokenSource.Cancel() wraps all callback exceptions in AggregateException, it is the only exception type it throws
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"{nameof(AggregateException)} during _databaseShutdown.Cancel() while disposing the {nameof(DocumentDatabase)}: {Name}", e);
-            }
+            _databaseShutdown.SafeCancel(_logger, $"{nameof(AggregateException)} during _databaseShutdown.Cancel() while disposing the {nameof(DocumentDatabase)}: {Name}");
 
             _serverStore.Server.ServerCertificateChanged -= OnCertificateChange;
 
