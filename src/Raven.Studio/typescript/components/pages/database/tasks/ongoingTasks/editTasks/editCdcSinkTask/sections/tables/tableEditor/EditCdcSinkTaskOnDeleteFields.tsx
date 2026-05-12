@@ -24,7 +24,8 @@ export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTabl
                     control={control}
                     name={`${path}.onDelete.patch`}
                     mode="javascript"
-                    disabled={Boolean(isIgnoreDeletes)}
+                    disabled={isIgnoreDeletes}
+                    height="150px"
                 />
             </FormGroup>
         </div>

@@ -12,7 +12,7 @@ export default function EditCdcSinkTaskPatchAdvancedField({ path }: { path: Root
     return (
         <FormGroup marginClass="mb-0">
             <FormLabel>Patch</FormLabel>
-            <FormAceEditor control={control} name={`${path}.patch`} mode="javascript" />
+            <FormAceEditor control={control} name={`${path}.patch`} mode="javascript" height="150px" />
         </FormGroup>
     );
 }

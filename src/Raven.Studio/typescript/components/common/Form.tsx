@@ -504,7 +504,7 @@ export function FormAceEditor<
             onChange={onChange}
             value={value}
             validationErrorMessage={error?.message}
-            readOnly={formState.isSubmitting || disabled}
+            disabled={formState.isSubmitting || disabled}
             {...rest}
         />
     );

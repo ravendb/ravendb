@@ -1,5 +1,5 @@
 import { EmptySet } from "components/common/EmptySet";
-import { FormErrorIcon, FormInput, FormSelect } from "components/common/Form";
+import { FormErrorIcon, FormGroup, FormInput, FormSelect } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { SelectOption } from "components/common/select/Select";
 import {
@@ -54,9 +54,13 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                     <div className="bg-body rounded-bottom p-1 vstack gap-1">
                         {columnsFieldArray.fields.map((field, idx) => (
                             <div key={field.id} className="field-mapping-row">
-                                <FormInput type="text" control={control} name={`${path}.columns.${idx}.column`} />
+                                <FormGroup marginClass="m-0">
+                                    <FormInput type="text" control={control} name={`${path}.columns.${idx}.column`} />
+                                </FormGroup>
                                 <Icon icon="arrow-thin-right" margin="m-0" />
-                                <FormInput type="text" control={control} name={`${path}.columns.${idx}.name`} />
+                                <FormGroup marginClass="m-0">
+                                    <FormInput type="text" control={control} name={`${path}.columns.${idx}.name`} />
+                                </FormGroup>
                                 <FormSelect
                                     control={control}
                                     name={`${path}.columns.${idx}.type`}
