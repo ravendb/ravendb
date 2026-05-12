@@ -721,6 +721,10 @@ $filtering-input-bg: $toggle-bg !default;
     height: 100%;
 }
 
+.min-height-0 {
+    min-height: 0;
+}
+
 .input-group {
     .react-select__control {
         border-top-right-radius: 0;

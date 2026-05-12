@@ -53,7 +53,7 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     };
 
     return (
-        <div className="cdc-table-editor h-100 vstack">
+        <div className="cdc-table-editor h-100 vstack min-height-0">
             <div className="hstack gap-2 p-2 border-bottom border-secondary flex-wrap">
                 <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
                     <Breadcrumb className="mb-0">
@@ -98,7 +98,11 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                     </Button>
                 </div>
             </div>
-            <div className={classNames("p-2 flex-grow-1 overflow-y-auto", { "form-disabled": isRootTableDisabled })}>
+            <div
+                className={classNames("p-2 flex-grow-1 overflow-y-auto min-height-0", {
+                    "form-disabled": isRootTableDisabled,
+                })}
+            >
                 {activeTable.type === "root" && <EditCdcSinkTaskRootTableEditor path={activeTable.path} />}
                 {activeTable.type === "linked" && <EditCdcSinkTaskLinkedTableEditor path={activeTable.path} />}
                 {activeTable.type === "embedded" && <EditCdcSinkTaskEmbeddedTableEditor path={activeTable.path} />}

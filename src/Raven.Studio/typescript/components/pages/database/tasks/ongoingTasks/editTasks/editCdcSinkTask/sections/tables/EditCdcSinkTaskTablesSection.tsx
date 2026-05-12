@@ -5,6 +5,9 @@ import Collapse from "react-bootstrap/esm/Collapse";
 import { UseFieldArrayReturn } from "react-hook-form";
 import EditCdcSinkTaskTablesExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesExplorer";
 import EditCdcSinkTaskTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTableEditor";
+import useResizableWidth from "components/hooks/useResizableWidth";
+import ColumnResize from "components/common/ColumnResize";
+import classNames from "classnames";
 
 interface EditCdcSinkTaskTablesSectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -28,15 +31,25 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
 }
 
 function TablesPanel({ tablesFieldArray }: EditCdcSinkTaskTablesSectionProps) {
+    const resizable = useResizableWidth({
+        initialWidth: 300,
+        minWidth: 300,
+        maxWidth: 500,
+        placement: "right",
+    });
+
     return (
-        <div className="mt-3 hstack align-items-start panel-bg-2 rounded-2 border border-secondary overflow-x-hidden flex-grow-1">
-            <div className="rounded-2 overflow-y-auto h-100 p-2" style={{ minWidth: "300px", width: "300px" }}>
-                <EditCdcSinkTaskTablesExplorer tablesFieldArray={tablesFieldArray} />
-            </div>
+        <div className="mt-3 hstack align-items-stretch panel-bg-2 rounded-2 border border-secondary flex-grow-1 min-height-0">
             <div
-                className="border-start border-secondary panel-bg-1 rounded-end-2 flex-grow-1"
-                style={{ minHeight: "100%" }}
+                className={classNames("rounded-2 h-100 p-2 position-relative", {
+                    "is-dragging": resizable.isDragging,
+                })}
+                style={{ width: resizable.width }}
             >
+                <EditCdcSinkTaskTablesExplorer tablesFieldArray={tablesFieldArray} />
+                <ColumnResize handleMouseDown={resizable.handleMouseDown} placement="right" />
+            </div>
+            <div className="border-start border-secondary panel-bg-1 rounded-end-2 flex-grow-1 overflow-hidden min-height-0">
                 <EditCdcSinkTaskTableEditor />
             </div>
         </div>
