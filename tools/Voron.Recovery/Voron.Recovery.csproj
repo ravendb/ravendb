@@ -3,7 +3,7 @@
 		<Description>Voron Recovery Tool</Description>
 		<Authors>RavenDB</Authors>
 		<TargetFramework>net10.0</TargetFramework>
-		<RuntimeFrameworkVersion>10.0.6</RuntimeFrameworkVersion>
+		<RuntimeFrameworkVersion>10.0.8</RuntimeFrameworkVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<AssemblyName>Voron.Recovery</AssemblyName>
 		<OutputType>Exe</OutputType>
