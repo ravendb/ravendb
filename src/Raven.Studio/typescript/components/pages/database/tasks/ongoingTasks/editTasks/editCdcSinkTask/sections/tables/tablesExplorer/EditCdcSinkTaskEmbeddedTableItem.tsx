@@ -1,4 +1,4 @@
-import { CustomDropdownToggle } from "components/common/Dropdown";
+import { CustomDropdownToggle, DropdownPortalMenu, DropdownWithPortalMenu } from "components/common/Dropdown";
 import { Icon } from "components/common/Icon";
 import {
     editCdcSinkTaskActions,
@@ -73,7 +73,7 @@ export function EditCdcSinkTaskEmbeddedTableItem({
                 <Icon icon="embed" margin="ms-1" className="font-size-14" />
                 {formError.hasErrors && <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />}
             </Button>
-            <Dropdown>
+            <DropdownWithPortalMenu>
                 <Dropdown.Toggle
                     as={CustomDropdownToggle}
                     isCaretHidden
@@ -84,7 +84,7 @@ export function EditCdcSinkTaskEmbeddedTableItem({
                 >
                     <Icon icon="more" margin="m-0" />
                 </Dropdown.Toggle>
-                <Dropdown.Menu popperConfig={{ strategy: "fixed" }}>
+                <DropdownPortalMenu>
                     <Dropdown.Item onClick={() => tableActions.addEmbeddedTable(path)}>
                         <Icon icon="embed" /> Add new embedded table
                     </Dropdown.Item>
@@ -100,8 +100,8 @@ export function EditCdcSinkTaskEmbeddedTableItem({
                     >
                         <Icon icon="trash" /> Remove
                     </Dropdown.Item>
-                </Dropdown.Menu>
-            </Dropdown>
+                </DropdownPortalMenu>
+            </DropdownWithPortalMenu>
         </div>
     );
 }

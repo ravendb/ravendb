@@ -97,7 +97,7 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
     }
 
     return (
-        <div ref={parentRef} className="overflow-y-auto flex-grow-1" style={{ minHeight: 0 }}>
+        <div ref={parentRef} className="overflow-y-auto flex-grow-1 min-height-0">
             <div
                 className="position-sticky top-0 z-1"
                 style={{ height: explorerRowHeightPx, marginBottom: -explorerRowHeightPx }}

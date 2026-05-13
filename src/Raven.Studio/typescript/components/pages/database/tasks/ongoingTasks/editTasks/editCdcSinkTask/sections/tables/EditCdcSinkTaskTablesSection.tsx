@@ -33,7 +33,7 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
 function TablesPanel({ tablesFieldArray }: EditCdcSinkTaskTablesSectionProps) {
     const resizable = useResizableWidth({
         initialWidth: 300,
-        minWidth: 300,
+        minWidth: 190,
         maxWidth: 500,
         placement: "right",
     });
