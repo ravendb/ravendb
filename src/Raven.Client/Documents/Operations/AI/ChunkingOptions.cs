@@ -24,6 +24,13 @@ public class ChunkingOptions : IDynamicJson
     /// </summary>
     public int OverlapTokens { get; set; } = 0;
 
+    /// <summary>
+    /// Optional constant text prepended to every produced chunk before it is sent to the embedding model.
+    /// Useful for adding broader document context (e.g. title) to isolated chunks.
+    /// The prefix's tokens count against <see cref="MaxTokensPerChunk"/> - the effective chunking budget is reduced accordingly.
+    /// </summary>
+    public string ContextPrefix { get; set; }
+
     internal static readonly HashSet<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
 
     /// <summary>
@@ -33,23 +40,30 @@ public class ChunkingOptions : IDynamicJson
     {
         return new DynamicJsonValue
         {
-            [nameof(ChunkingMethod)] = ChunkingMethod, 
+            [nameof(ChunkingMethod)] = ChunkingMethod,
             [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk,
-            [nameof(OverlapTokens)] = OverlapTokens
+            [nameof(OverlapTokens)] = OverlapTokens,
+            [nameof(ContextPrefix)] = ContextPrefix
         };
     }
 
     internal void Validate(string source, List<string> errors)
     {
+        if (ContextPrefix != null && string.IsNullOrWhiteSpace(ContextPrefix))
+            errors.Add($"'{source}': {nameof(ContextPrefix)} cannot be empty or whitespace-only. Either provide a non-empty value or omit it.");
+
+        if (ChunkingMethod == ChunkingMethod.NoChunk)
+            return;
+
         if (MaxTokensPerChunk <= 0)
             errors.Add($"'{source}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");
-        
+
         if (OverlapTokens < 0)
             errors.Add($"'{source}': {nameof(OverlapTokens)} value cannot be negative.");
-        
+
         if (OverlapTokens > MaxTokensPerChunk)
             errors.Add($"'{source}': {nameof(OverlapTokens)} cannot be greater than {nameof(MaxTokensPerChunk)}.");
-        
+
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
             errors.Add($"'{source}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
@@ -68,9 +82,10 @@ public class ChunkingOptions : IDynamicJson
 
     private bool Equals(ChunkingOptions other)
     {
-        return ChunkingMethod == other.ChunkingMethod && 
-               MaxTokensPerChunk == other.MaxTokensPerChunk && 
-               OverlapTokens == other.OverlapTokens;
+        return ChunkingMethod == other.ChunkingMethod &&
+               MaxTokensPerChunk == other.MaxTokensPerChunk &&
+               OverlapTokens == other.OverlapTokens &&
+               string.Equals(ContextPrefix, other.ContextPrefix, StringComparison.Ordinal);
     }
 
     public override bool Equals(object obj)
@@ -83,7 +98,7 @@ public class ChunkingOptions : IDynamicJson
 
     public override int GetHashCode()
     {
-        return HashCode.Combine((int)ChunkingMethod, MaxTokensPerChunk, OverlapTokens);
+        return HashCode.Combine((int)ChunkingMethod, MaxTokensPerChunk, OverlapTokens, ContextPrefix is null ? 0 : StringComparer.Ordinal.GetHashCode(ContextPrefix));
     }
 }
 
@@ -115,5 +130,9 @@ public enum ChunkingMethod
     /// <summary>
     /// Strip HTML markup and split resulting text using a sensible strategy.
     /// </summary>
-    HtmlStrip
+    HtmlStrip,
+    /// <summary>
+    /// Do not chunk the input. Used to apply a context prefix to a value without splitting it (e.g. via <c>text.withContext</c>).
+    /// </summary>
+    NoChunk
 }

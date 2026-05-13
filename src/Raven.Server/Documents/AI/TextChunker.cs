@@ -13,60 +13,64 @@ public static class TextChunker
 {
     public static List<string> Chunk(string textualValue, ChunkingOptions chunkingOptions)
     {
-        switch (chunkingOptions.ChunkingMethod)
-        {
-            case ChunkingMethod.PlainTextSplit:
-                return ChunkPlainText(textualValue, chunkingOptions.MaxTokensPerChunk);
-            case ChunkingMethod.PlainTextSplitLines:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextLines(textualValue, chunkingOptions.MaxTokensPerChunk);
-            case ChunkingMethod.HtmlStrip:
-                return ChunkPlainText(StripHtml(textualValue), chunkingOptions.MaxTokensPerChunk);
-            case ChunkingMethod.MarkDownSplitLines:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkDownLines(textualValue, chunkingOptions.MaxTokensPerChunk);
+        var prefix = chunkingOptions.ContextPrefix;
 
-            case ChunkingMethod.PlainTextSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
-            case ChunkingMethod.MarkDownSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
-            default:
-                throw new ArgumentOutOfRangeException(chunkingOptions.ChunkingMethod.ToString());
-        }
+        if (chunkingOptions.ChunkingMethod == ChunkingMethod.NoChunk)
+            return ApplyPrefixWithoutChunking(textualValue, prefix);
+
+        int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, prefix);
+
+        List<string> chunks = chunkingOptions.ChunkingMethod switch
+        {
+            ChunkingMethod.PlainTextSplit => ChunkPlainText(textualValue, effectiveMaxTokens),
+            ChunkingMethod.PlainTextSplitLines => Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextLines(textualValue, effectiveMaxTokens),
+            ChunkingMethod.HtmlStrip => ChunkPlainText(StripHtml(textualValue), effectiveMaxTokens),
+            ChunkingMethod.MarkDownSplitLines => Microsoft.SemanticKernel.Text.TextChunker.SplitMarkDownLines(textualValue, effectiveMaxTokens),
+            ChunkingMethod.PlainTextSplitParagraphs => Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs([textualValue], effectiveMaxTokens, chunkingOptions.OverlapTokens),
+            ChunkingMethod.MarkDownSplitParagraphs => Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs([textualValue], effectiveMaxTokens, chunkingOptions.OverlapTokens),
+            _ => throw new ArgumentOutOfRangeException(chunkingOptions.ChunkingMethod.ToString())
+        };
+
+        return ApplyPrefix(chunks, prefix);
     }
-    
-    public static List<string> Chunk(List<string> textualValues, ChunkingOptions chunkingOptions)
-    {
-        switch (chunkingOptions.ChunkingMethod)
-        {
-            case ChunkingMethod.PlainTextSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
-            case ChunkingMethod.MarkDownSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
-        }
 
-        List<string> results = [];
-        foreach (string textualValue in textualValues)
+    private static int GetEffectiveMaxTokens(int maxTokensPerChunk, string prefix)
+    {
+        if (prefix is null)
+            return maxTokensPerChunk;
+
+        int prefixTokens = Tokenizer.CountTokens(prefix);
+        int effectiveMaxTokensPerChunk = maxTokensPerChunk - prefixTokens;
+        if (effectiveMaxTokensPerChunk <= 0)
+            throw new InvalidOperationException(
+                $"{nameof(ChunkingOptions.ContextPrefix)} is too long ({prefixTokens} tokens) for {nameof(ChunkingOptions.MaxTokensPerChunk)}={maxTokensPerChunk}. Increase {nameof(ChunkingOptions.MaxTokensPerChunk)} or shorten the {nameof(ChunkingOptions.ContextPrefix)}.");
+
+        return effectiveMaxTokensPerChunk;
+    }
+
+    private static List<string> ApplyPrefix(List<string> chunks, string prefix)
+    {
+        if (prefix is null)
+            return chunks;
+
+        List<string> results = new(chunks.Count);
+        foreach (var chunk in chunks)
         {
-            switch (chunkingOptions.ChunkingMethod)
-            {
-                case ChunkingMethod.PlainTextSplit:
-                    results.AddRange(ChunkPlainText(textualValue, chunkingOptions.MaxTokensPerChunk));
-                    break;
-                case ChunkingMethod.PlainTextSplitLines:
-                    results.AddRange(Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextLines(textualValue, chunkingOptions.MaxTokensPerChunk));
-                    break;
-                case ChunkingMethod.HtmlStrip:
-                    results.AddRange( ChunkPlainText(StripHtml(textualValue), chunkingOptions.MaxTokensPerChunk));
-                    break;
-                case ChunkingMethod.MarkDownSplitLines:
-                    results.AddRange( Microsoft.SemanticKernel.Text.TextChunker.SplitMarkDownLines(textualValue, chunkingOptions.MaxTokensPerChunk));
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(chunkingOptions.ChunkingMethod.ToString());
-            }
+            if (string.IsNullOrWhiteSpace(chunk))
+                continue;
+            results.Add(prefix + chunk);
         }
         return results;
     }
-    
+
+    private static List<string> ApplyPrefixWithoutChunking(string textualValue, string prefix)
+    {
+        if (string.IsNullOrWhiteSpace(textualValue))
+            return [];
+
+        return prefix is null ? [textualValue] : [prefix + textualValue];
+    }
+
     internal static string StripHtml(string input)
     {
         if (string.IsNullOrEmpty(input))
@@ -74,12 +78,12 @@ public static class TextChunker
 
         var htmlDoc = new HtmlDocument();
         htmlDoc.LoadHtml(input);
-        
+
         var sb = new StringBuilder();
         ExtractPlainTextFromHtml(htmlDoc.DocumentNode, sb);
-        
+
         var plainText = sb.ToString();
-        
+
         return plainText;
     }
 
@@ -125,7 +129,7 @@ public static class TextChunker
             pos = Tokenizer.GetIndexByTokenCount(LimitTextSize(text, maxTokensPerChunk), maxTokensPerChunk, out normalizedText, out tokenCount,
                 considerNormalization: false, considerPreTokenization: false);
             results.Add(new(text[..pos].Span));
-        } 
+        }
 
         return results;
     }
@@ -135,7 +139,7 @@ public static class TextChunker
         ReadOnlySpan<char> span = text.Span;
         if (span.Length <= maxTokens * 6)
             return span;
-        // the issue is that CountTokens() use the whole string, but if we have a value that is ~500Kb in size, 
+        // the issue is that CountTokens() use the whole string, but if we have a value that is ~500Kb in size,
         // and 2048 tokens, we'll spend huge amounts of time just splitting the whole string, since CountTokens()
         // has to work on the entire input we give it - therefor, we "guesstimate" the max size and pass that
         // to the CountTokens() function - most embeddings use 3 - 4 chars per token, so by using 6, we ensure that the
