@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.ServerWide.Context;
@@ -20,11 +21,11 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly PipeWriter _pipeWriter;
         private readonly MessageBuilder _builder;
         private readonly Dictionary<string, PgColumn> _columns;
-        private readonly DocumentDatabase _documentDatabase;
         private readonly short? _idIndex;
         private readonly short _jsonIndex;
         private readonly ReadOnlyMemory<byte>?[] _row;
         private readonly Action<string, BlittableJsonReaderObject.PropertyDetails, object, ReadOnlyMemory<byte>?[]> _handleSpecialColumns;
+        private readonly DocumentsOperationContext _context;
 
         public bool SupportStatistics => false;
         public int Count { get; private set; }
@@ -34,13 +35,13 @@ namespace Raven.Server.Integrations.PostgreSQL
             MessageBuilder builder,
             Dictionary<string, PgColumn> columns,
             Action<string, BlittableJsonReaderObject.PropertyDetails, object, ReadOnlyMemory<byte>?[]> handleSpecialColumns,
-            DocumentDatabase documentDatabase)
+            DocumentsOperationContext context)
         {
             _pipeWriter = pipeWriter;
             _builder = builder;
             _columns = columns;
             _handleSpecialColumns = handleSpecialColumns;
-            _documentDatabase = documentDatabase;
+            _context = context;
             _row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(columns.Count);
 
             if (columns.TryGetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out var idCol))
@@ -89,12 +90,8 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
             {
-                using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var modified = ctx.ReadObject(jsonResult, "renew");
-                    _row[_jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
-                }
+                using var modified = _context.ReadObject(jsonResult, "renew");
+                _row[_jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
             }
 
             await _pipeWriter.WriteAsync(_builder.DataRow(_row[.._columns.Count]), token);
