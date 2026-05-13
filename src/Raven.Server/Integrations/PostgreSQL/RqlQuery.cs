@@ -69,8 +69,13 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             var indexQuery = new IndexQueryServerSide(forcedQueryToRun ?? QueryString, queryParameters);
 
-            // if limit is 0, fetch one document for schema generation
-            indexQuery.PageSize = _limit == 0 ? 1 : SchemaInferenceSampleSize;
+            // if limit is 0, fetch one document for schema generation; otherwise cap to the query limit
+            indexQuery.PageSize = _limit switch
+            {
+                0 => 1,
+                > 0 => Math.Min(_limit.Value, SchemaInferenceSampleSize),
+                _ => SchemaInferenceSampleSize
+            };
 
             using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown);
 
