@@ -282,6 +282,7 @@ embeddingsGenerationSampleTextHighlighted = transformationScriptSyntax.highlight
 
 static readonly embeddingsGenerationSampleText =
 `embeddings.generate({
+    Name: this.Name,
     Note: text.split(this.Note, 2048, this.Title),
     Description: text.splitLines(this.Description, 2048),
     Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128, this.Title),
@@ -302,7 +303,6 @@ static readonly embeddingsGenerationSampleHtml =
 `embeddings.generate({
     HtmlContent: html.strip(this.HtmlContent, 2048, this.Title)
 });`
-    
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     
