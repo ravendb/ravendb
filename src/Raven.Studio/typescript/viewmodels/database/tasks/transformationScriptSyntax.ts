@@ -281,26 +281,26 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
 embeddingsGenerationSampleTextHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleText);
 
 static readonly embeddingsGenerationSampleText =
-`embeddings.generate({ 
-    Name: this.Name,
-    Note: text.split(this.Note, 2048),
+`embeddings.generate({
+    Note: text.split(this.Note, 2048, this.Title),
     Description: text.splitLines(this.Description, 2048),
-    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128)
+    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128, this.Title),
+    Title: text.withContext(this.Title, 'Document title: ')
 });`;
 
 embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleMarkdown);
 
 static readonly embeddingsGenerationSampleMarkdown =
-`embeddings.generate({ 
-    MarkdownDescription: markdown.splitLines(this.MarkdownDescription, 2048),
-    MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024, 64)
+`embeddings.generate({
+    MarkdownDescription: markdown.splitLines(this.MarkdownDescription, 2048, this.Title),
+    MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024, 64, this.Title)
 });`
 
 embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleHtml);
 
 static readonly embeddingsGenerationSampleHtml =
-`embeddings.generate({ 
-    HtmlContent: html.strip(this.HtmlContent, 2048)
+`embeddings.generate({
+    HtmlContent: html.strip(this.HtmlContent, 2048, this.Title)
 });`
     
     
