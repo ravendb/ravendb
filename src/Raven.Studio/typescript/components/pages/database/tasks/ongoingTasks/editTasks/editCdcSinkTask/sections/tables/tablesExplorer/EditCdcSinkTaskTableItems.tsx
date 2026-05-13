@@ -120,7 +120,7 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
                                 height: `${virtualRow.size}px`,
                                 transform: `translateY(${virtualRow.start}px)`,
                             }}
-                            className="virtual-item"
+                            className="virtual-item explorer-row-item"
                         >
                             <ExplorerRowItem row={row} />
                         </div>

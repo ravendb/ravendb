@@ -1,6 +1,20 @@
 @use "Content/scss/sizes";
+@use "Content/scss/bs5variables";
 
 .edit-cdc-sink-task {
+    .explorer-row-item {
+        .dropdown {
+            opacity: 0;
+            transition: bs5variables.$transition-fade;
+        }
+
+        &:hover {
+            .dropdown {
+                opacity: 1;
+            }
+        }
+    }
+
     .field-mapping-row {
         $column-sizes: (
             "source": 2fr,
