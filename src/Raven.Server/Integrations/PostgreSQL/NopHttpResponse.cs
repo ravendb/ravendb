@@ -20,7 +20,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
         public override HttpContext HttpContext => throw new NotSupportedException();
         public override int StatusCode { get; set; }
-        public override IHeaderDictionary Headers => throw new NotSupportedException();
+        public override IHeaderDictionary Headers => new HeaderDictionary();
         public override Stream Body { get; set; } = Stream.Null;
         public override long? ContentLength { get; set; }
         public override string ContentType { get; set; }
