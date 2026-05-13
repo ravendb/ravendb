@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.ETL.SQL;
+using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -73,6 +75,58 @@ public class CdcSinkHandler : DatabaseRequestHandler
                 context.Write(writer, result.ToJson());
             }
         }
+    }
+
+    [RavenAction("/databases/*/admin/cdc-sink/schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+    public async Task PostSchema()
+    {
+        using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        {
+            var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkSchemaRequest");
+            var request = JsonDeserializationServer.CdcSinkSchemaRequest(bodyJson);
+
+            var connection = ResolveConnection(request);
+
+            CdcSinkSchemaDiscovery discovery;
+            try
+            {
+                discovery = CdcSinkSchemaDiscovery.For(connection.FactoryName);
+            }
+            catch (InvalidOperationException e)
+            {
+                throw new InvalidOperationException($"Cannot discover CDC schema: {e.Message}", e);
+            }
+
+            var schema = await discovery.DiscoverAsync(connection.ConnectionString, request.Schemas, Database.DatabaseShutdown);
+
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                context.Write(writer, schema.ToJson());
+            }
+        }
+    }
+
+    /// <summary>
+    /// Inline <see cref="CdcSinkSchemaRequest.Connection"/> takes precedence — Studio's Task
+    /// Creation view sends raw credentials because the connection-string named record may
+    /// not exist in <c>databaseRecord.SqlConnectionStrings</c> yet. Falls back to the named
+    /// lookup for post-save callers.
+    /// </summary>
+    private SqlConnectionString ResolveConnection(CdcSinkSchemaRequest request)
+    {
+        if (request.Connection != null && string.IsNullOrEmpty(request.Connection.FactoryName) == false && string.IsNullOrEmpty(request.Connection.ConnectionString) == false)
+            return request.Connection;
+
+        if (string.IsNullOrEmpty(request.ConnectionStringName))
+            throw new InvalidOperationException(
+                $"Provide either '{nameof(CdcSinkSchemaRequest.Connection)}' (inline {nameof(SqlConnectionString.FactoryName)} + {nameof(SqlConnectionString.ConnectionString)}) " +
+                $"or '{nameof(CdcSinkSchemaRequest.ConnectionStringName)}'.");
+
+        var databaseRecord = Database.ReadDatabaseRecord();
+        if (databaseRecord.SqlConnectionStrings.TryGetValue(request.ConnectionStringName, out var named) == false)
+            throw new InvalidOperationException($"SQL connection string '{request.ConnectionStringName}' was not found in the database configuration.");
+
+        return named;
     }
 
     [RavenAction("/databases/*/cdc-sink/performance", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -169,4 +223,24 @@ public class CdcSinkVerifyRequest
 {
     public string ConnectionStringName { get; set; }
     public List<string> TableNames { get; set; }
+}
+
+public class CdcSinkSchemaRequest
+{
+    /// <summary>
+    /// Inline credentials. Required path for Studio's Task Creation view, where the user
+    /// is editing the connection but hasn't saved it to <c>databaseRecord.SqlConnectionStrings</c> yet.
+    /// </summary>
+    public SqlConnectionString Connection { get; set; }
+
+    /// <summary>
+    /// Optional fallback for post-save callers. Ignored when <see cref="Connection"/> is populated.
+    /// </summary>
+    public string ConnectionStringName { get; set; }
+
+    /// <summary>
+    /// Provider-specific schema filter. Currently only consumed by PostgreSQL (defaults to
+    /// <c>["public"]</c> when null/empty).
+    /// </summary>
+    public string[] Schemas { get; set; }
 }

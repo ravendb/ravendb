@@ -155,6 +155,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest> CdcSinkVerifyRequest = GenerateJsonDeserializationRoutine<Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest>();
 
+        public static readonly Func<BlittableJsonReaderObject, Raven.Server.Documents.CdcSink.Handlers.CdcSinkSchemaRequest> CdcSinkSchemaRequest = GenerateJsonDeserializationRoutine<Raven.Server.Documents.CdcSink.Handlers.CdcSinkSchemaRequest>();
+
         public static readonly Func<BlittableJsonReaderObject, TestEmbeddingsGenerationScript> TestEmbeddingsGenerationScript = GenerateJsonDeserializationRoutine<TestEmbeddingsGenerationScript>();
 
         public static readonly Func<BlittableJsonReaderObject, TestGenAiScript> TestGenAiScript = GenerateJsonDeserializationRoutine<TestGenAiScript>();
