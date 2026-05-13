@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink.Test;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -26,7 +28,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
             var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "TestCdcSinkMappingRequest");
-            var request = JsonDeserializationServer.TestCdcSinkMappingRequest(bodyJson);
+            var request = JsonDeserializationClient.TestCdcSinkMappingRequest(bodyJson);
 
             var result = await ExecuteTestMappingAsync(context, request);
 
@@ -202,7 +204,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
             var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkSchemaRequest");
-            var request = JsonDeserializationServer.CdcSinkSchemaRequest(bodyJson);
+            var request = JsonDeserializationClient.CdcSinkSchemaRequest(bodyJson);
 
             var connection = ResolveConnection(request);
 
@@ -342,25 +344,5 @@ public class CdcSinkVerifyRequest
 {
     public string ConnectionStringName { get; set; }
     public List<string> TableNames { get; set; }
-}
-
-public class CdcSinkSchemaRequest
-{
-    /// <summary>
-    /// Inline credentials. Required path for Studio's Task Creation view, where the user
-    /// is editing the connection but hasn't saved it to <c>databaseRecord.SqlConnectionStrings</c> yet.
-    /// </summary>
-    public SqlConnectionString Connection { get; set; }
-
-    /// <summary>
-    /// Optional fallback for post-save callers. Ignored when <see cref="Connection"/> is populated.
-    /// </summary>
-    public string ConnectionStringName { get; set; }
-
-    /// <summary>
-    /// Provider-specific schema filter. Currently only consumed by PostgreSQL (defaults to
-    /// <c>["public"]</c> when null/empty).
-    /// </summary>
-    public string[] Schemas { get; set; }
 }
 
