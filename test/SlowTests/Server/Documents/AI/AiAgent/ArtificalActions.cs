@@ -36,11 +36,11 @@ public class ArtificalActions(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
         chat.AddArtificialActionWithResponse("GetUserAllergies", "Gluten, Lactose");
-        chat.SetUserPrompt("Should I get some cheese?");
+        chat.SetUserPrompt("Should I get regular cheese?");
         var r = await chat.RunAsync<ModelAnswer>(CancellationToken.None);
 
         Assert.Equal(AiConversationResult.Done, r.Status);
-        Assert.False(r.Answer.Recommend);
+        Assert.False(r.Answer.Recommend, r.Answer.Reason);
     }
 
     private record ModelAnswer(bool Recommend, string Reason);
