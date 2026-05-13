@@ -147,6 +147,13 @@ export interface OngoingTaskQueueSinkSharedInfo extends OngoingTaskSharedInfo {
 export interface OngoingTaskCdcSinkSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     factoryName: string;
+    configuration: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration;
+    lastBatchTime?: string;
+    lastCheckpoint: string;
+    secondsSinceLastBatch?: number;
+    lastActivityTime?: string;
+    secondsSinceLastActivity?: number;
+    healthIssue: string;
 }
 
 export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSharedInfo {

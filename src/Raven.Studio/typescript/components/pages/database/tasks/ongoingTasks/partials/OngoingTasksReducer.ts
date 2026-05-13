@@ -406,6 +406,13 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 ...commonProps,
                 connectionStringName: incoming.ConnectionStringName,
                 factoryName: incoming.FactoryName,
+                configuration: incoming.Configuration,
+                lastBatchTime: incoming.LastBatchTime,
+                lastCheckpoint: incoming.LastCheckpoint,
+                secondsSinceLastBatch: incoming.SecondsSinceLastBatch,
+                lastActivityTime: incoming.LastActivityTime,
+                secondsSinceLastActivity: incoming.SecondsSinceLastActivity,
+                healthIssue: incoming.HealthIssue,
             };
             return result;
         }
