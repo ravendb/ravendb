@@ -24,6 +24,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly short? _idIndex;
         private readonly short _jsonIndex;
         private readonly ReadOnlyMemory<byte>?[] _row;
+        private readonly Action<string, BlittableJsonReaderObject.PropertyDetails, object, ReadOnlyMemory<byte>?[]> _handleSpecialColumns;
 
         public bool SupportStatistics => false;
         public int Count { get; private set; }
@@ -32,11 +33,13 @@ namespace Raven.Server.Integrations.PostgreSQL
             PipeWriter pipeWriter,
             MessageBuilder builder,
             Dictionary<string, PgColumn> columns,
+            Action<string, BlittableJsonReaderObject.PropertyDetails, object, ReadOnlyMemory<byte>?[]> handleSpecialColumns,
             DocumentDatabase documentDatabase)
         {
             _pipeWriter = pipeWriter;
             _builder = builder;
             _columns = columns;
+            _handleSpecialColumns = handleSpecialColumns;
             _documentDatabase = documentDatabase;
             _row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(columns.Count);
 
@@ -79,6 +82,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 jsonResult.GetPropertyByIndex(index, ref prop);
 
                 _row[pgColumn.ColumnIndex] = RqlQuery.GetValueByType(prop, prop.Value, pgColumn);
+                _handleSpecialColumns.Invoke(columnName, prop, prop.Value, _row);
 
                 jsonResult.Modifications.Remove(columnName);
             }

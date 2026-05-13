@@ -35,7 +35,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
             return Columns.Values;
         }
 
-        protected override void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
+        protected override void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ReadOnlyMemory<byte>?[] row)
         {
             if (_replaces == null) 
                 return;
@@ -71,7 +71,7 @@ namespace Raven.Server.Integrations.PostgreSQL.PowerBI
 
                 row[replaceColumn.ColumnIndex] = replaceValueBytes;
 
-                HandleSpecialColumnsIfNeeded(replace.DstColumnName, property, replacedValue, ref row);
+                HandleSpecialColumnsIfNeeded(replace.DstColumnName, property, replacedValue, row);
             }
         }
     }
