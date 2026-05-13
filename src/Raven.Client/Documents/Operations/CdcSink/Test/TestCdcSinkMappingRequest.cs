@@ -37,6 +37,8 @@ public class TestCdcSinkMappingRequest : IDynamicJson
     /// <summary>
     /// Number of rows to fetch and mutate. Only meaningful with <see cref="TestCdcSinkRowSelector.First"/>;
     /// must be 1 when <see cref="RowSelector"/> is <c>ByPrimaryKey</c>. Defaults to 1.
+    /// Capped at 5,000 server-side — the endpoint is a preview helper, not a bulk-fetch path;
+    /// streaming larger samples is a planned follow-up.
     /// </summary>
     public int MaxRows { get; set; } = 1;
 

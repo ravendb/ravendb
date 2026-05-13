@@ -138,5 +138,56 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.False(row.WouldDelete);
             Assert.True(row.IgnoreDeletes);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_MaxRowsAboveCap_RejectedWithStructuredError()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-cap",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = int.MaxValue,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains(nameof(TestCdcSinkMappingRequest.MaxRows), error);
+            Assert.Contains("between 1 and 5,000", error);
+        }
     }
 }

@@ -22,6 +22,14 @@ namespace Raven.Server.Documents.CdcSink.Handlers;
 
 public class CdcSinkHandler : DatabaseRequestHandler
 {
+    /// <summary>
+    /// Hard cap on the number of rows the test-mapping endpoint will fetch + materialise + run
+    /// scripts against in a single request. A previewing tool (Studio's "Test" button) only
+    /// needs a handful; larger samples will eventually need a streaming response — see the
+    /// §Risks block in the original plan for the streaming follow-up.
+    /// </summary>
+    internal const int MaxAllowedTestRows = 5000;
+
     [RavenAction("/databases/*/admin/cdc-sink/test", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostScriptTest()
     {
@@ -53,9 +61,9 @@ public class CdcSinkHandler : DatabaseRequestHandler
             result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.SourceTableName)}' is required.");
             return result;
         }
-        if (request.MaxRows < 1)
+        if (request.MaxRows < 1 || request.MaxRows > MaxAllowedTestRows)
         {
-            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be >= 1.");
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be between 1 and {MaxAllowedTestRows:N0}.");
             return result;
         }
         if (request.RowSelector == TestCdcSinkRowSelector.ByPrimaryKey && request.MaxRows > 1)
