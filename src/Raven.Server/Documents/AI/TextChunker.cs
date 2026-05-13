@@ -18,6 +18,8 @@ public static class TextChunker
     {
         var prefix = chunkingOptions.ContextPrefix;
 
+        prefix = prefix?.TrimEnd();
+
         if (chunkingOptions.NoChunking)
             return ApplyPrefixWithoutChunking(textualValue, prefix);
 
@@ -65,7 +67,7 @@ public static class TextChunker
         {
             if (string.IsNullOrWhiteSpace(chunk))
                 continue;
-            results.Add(prefix + chunk);
+            results.Add($"{prefix} {chunk}");
         }
         return results;
     }
@@ -75,7 +77,7 @@ public static class TextChunker
         if (string.IsNullOrWhiteSpace(textualValue))
             return [];
 
-        return prefix is null ? [textualValue] : [prefix + textualValue];
+        return prefix is null ? [textualValue] : [$"{prefix} {textualValue}"];
     }
 
     internal static string StripHtml(string input)

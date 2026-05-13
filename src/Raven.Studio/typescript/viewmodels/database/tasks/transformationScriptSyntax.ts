@@ -286,7 +286,7 @@ static readonly embeddingsGenerationSampleText =
     Note: text.split(this.Note, 2048, this.Title),
     Description: text.splitLines(this.Description, 2048),
     Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128, this.Title),
-    Title: text.withContext(this.Title, 'Document title: ')
+    Title: text.withContext(this.Title, 'Document title:')
 });`;
 
 embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleMarkdown);
