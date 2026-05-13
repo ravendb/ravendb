@@ -78,7 +78,7 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
             new AiConversationCreationOptions()
                 .AddParameter("username", "ayende"));
 
-        chat.SetUserPrompt("What is my name?");
+        chat.SetUserPrompt("What is my full name?");
         var result = await chat.RunAsync<Reply>();
         Assert.Contains("Oren", result.Answer.Answer);
         Assert.Contains("Eini", result.Answer.Answer);
