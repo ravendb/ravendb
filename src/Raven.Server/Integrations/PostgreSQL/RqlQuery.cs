@@ -236,7 +236,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 if (_limit.HasValue)
                     indexQuery.PageSize = _limit.Value;
 
-                await using var streamWriter = new PgStreamDocumentQueryResultWriter(writer, builder, Columns, DocumentDatabase);
+                await using var streamWriter = new PgStreamDocumentQueryResultWriter(writer, builder, Columns, HandleSpecialColumnsIfNeeded, DocumentDatabase);
 
                 using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown, token);
                 await DocumentDatabase.QueryRunner.ExecuteStreamQuery(indexQuery, _queryOperationContext, NopHttpResponse.Instance, streamWriter, cancelToken);
@@ -250,7 +250,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             
         }
 
-        protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
+        protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ReadOnlyMemory<byte>?[] row)
         {
         }
 
