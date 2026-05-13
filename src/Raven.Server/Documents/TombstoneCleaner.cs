@@ -411,14 +411,14 @@ namespace Raven.Server.Documents
                 {
                     return type switch
                     {
-                        ITombstoneAware.TombstoneType.Documents => collection.IsNullOrEmpty()
+                        ITombstoneAware.TombstoneType.Documents => string.IsNullOrEmpty(collection)
                             ? documentDatabase.DocumentsStorage.GetTombstonesFrom(context, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count()
                             : documentDatabase.DocumentsStorage.GetTombstonesFrom(context, collection, tombstoneInfo.Etag + 1, 0, long.MaxValue).Count(),
-                        ITombstoneAware.TombstoneType.Counters => collection.IsNullOrEmpty()
+                        ITombstoneAware.TombstoneType.Counters => string.IsNullOrEmpty(collection)
                             ? documentDatabase.DocumentsStorage.CountersStorage.GetCounterTombstonesFrom(context, tombstoneInfo.Etag + 1).Count()
                             : documentDatabase.DocumentsStorage.CountersStorage.GetCounterWithCollectionTombstonesFrom(context, collection, tombstoneInfo.Etag + 1)
                                 .Count(),
-                        ITombstoneAware.TombstoneType.TimeSeries => collection.IsNullOrEmpty()
+                        ITombstoneAware.TombstoneType.TimeSeries => string.IsNullOrEmpty(collection)
                             ? documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, tombstoneInfo.Etag + 1).Count()
                             : documentDatabase.DocumentsStorage.TimeSeriesStorage.GetDeletedRangesFrom(context, collection, tombstoneInfo.Etag + 1).Count(), 
                         _ => throw new ArgumentOutOfRangeException(nameof(type), $"Unsupported tombstone type: {type}"),
