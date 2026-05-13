@@ -9,7 +9,6 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { useFormContext, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
-import { FormSwitch } from "components/common/Form";
 import Breadcrumb from "react-bootstrap/Breadcrumb";
 import { useEditCdcSinkTaskTableActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskTableActions";
 import EditCdcSinkTaskRootTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskRootTableEditor";
@@ -55,7 +54,7 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     return (
         <div className="cdc-table-editor h-100 vstack min-height-0">
             <div className="hstack gap-2 p-2 border-bottom border-secondary flex-wrap">
-                <div className="flex-grow-1 overflow-hidden" style={{ minWidth: 0 }}>
+                <div className="flex-grow-1 overflow-hidden min-width-0">
                     <Breadcrumb className="mb-0">
                         {breadcrumbItems.map((item) => (
                             <Breadcrumb.Item
@@ -69,11 +68,6 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                     </Breadcrumb>
                 </div>
                 <div className="ms-auto hstack gap-2 align-items-center">
-                    {activeTable.type === "root" && (
-                        <FormSwitch control={control} name={`${activeTable.path}.disabled`}>
-                            Disabled
-                        </FormSwitch>
-                    )}
                     {activeTable.type === "linked" && (
                         <Button
                             variant="secondary"
