@@ -73,7 +73,7 @@ export function EditCdcSinkTaskRootTableItem({ path, table, isExpanded, hasChild
                     as={CustomDropdownToggle}
                     isCaretHidden
                     variant="link"
-                    className="text-body p-1"
+                    className="text-body px-1"
                     title="Table actions"
                     size="xs"
                 >

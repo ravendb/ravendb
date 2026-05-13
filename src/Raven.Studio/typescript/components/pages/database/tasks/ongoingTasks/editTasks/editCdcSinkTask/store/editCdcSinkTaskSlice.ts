@@ -7,6 +7,7 @@ import {
     LinkedTablePath,
     RootTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
+import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 export type CdcActiveTable =
     | {
@@ -26,14 +27,30 @@ interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
     activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
+    isFieldMappingExpandedByDefault: boolean;
     isRawView: boolean;
     rawViewContent: string;
+}
+
+export const editCdcSinkTaskStorageKeys = {
+    isFieldMappingExpandedByDefault: storageKeyProvider.storageKeyFor(
+        "editCdcSinkTask.isFieldMappingExpandedByDefault"
+    ),
+};
+
+function getStoredBoolean(key: string, defaultValue: boolean): boolean {
+    const value = localStorage.getItem(key);
+    return value == null ? defaultValue : value === "true";
 }
 
 const initialState: EditCdcSinkTaskState = {
     selectedConnectionString: null,
     activeTable: null,
     expandedTables: {},
+    isFieldMappingExpandedByDefault: getStoredBoolean(
+        editCdcSinkTaskStorageKeys.isFieldMappingExpandedByDefault,
+        false
+    ),
     isRawView: false,
     rawViewContent: null,
 };
@@ -75,6 +92,9 @@ export const editCdcSinkTaskSlice = createSlice({
         ) => {
             state.expandedTables = action.payload;
         },
+        fieldMappingExpandedByDefaultSet: (state, action: PayloadAction<boolean>) => {
+            state.isFieldMappingExpandedByDefault = action.payload;
+        },
         rawViewToggled: (state) => {
             state.isRawView = !state.isRawView;
         },
@@ -93,6 +113,7 @@ export const editCdcSinkTaskSelectors = {
     isActiveTable: (path: CdcActiveTable["path"]) => (state: RootState) =>
         state.editCdcSinkTask.activeTable?.path === path,
     expandedTables: (state: RootState) => state.editCdcSinkTask.expandedTables,
+    isFieldMappingExpandedByDefault: (state: RootState) => state.editCdcSinkTask.isFieldMappingExpandedByDefault,
     isRawView: (state: RootState) => state.editCdcSinkTask.isRawView,
     rawViewContent: (state: RootState) => state.editCdcSinkTask.rawViewContent,
 };

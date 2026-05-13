@@ -1,13 +1,19 @@
 import Button from "react-bootstrap/Button";
+import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
 import { useState } from "react";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { FieldPath, UseFieldArrayReturn } from "react-hook-form";
-import { useAppDispatch } from "components/store";
-import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import { useAppDispatch, useAppSelector } from "components/store";
+import {
+    editCdcSinkTaskActions,
+    editCdcSinkTaskSelectors,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { getRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskTableItems } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tablesExplorer/EditCdcSinkTaskTableItems";
+import { Switch } from "components/common/Checkbox";
+import { CustomDropdownToggle } from "components/common/Dropdown";
 
 interface EditCdcSinkTaskTablesExplorerProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -15,6 +21,7 @@ interface EditCdcSinkTaskTablesExplorerProps {
 
 export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: EditCdcSinkTaskTablesExplorerProps) {
     const dispatch = useAppDispatch();
+    const isFieldMappingExpandedByDefault = useAppSelector(editCdcSinkTaskSelectors.isFieldMappingExpandedByDefault);
     const [filter, setFilter] = useState("");
 
     const handleAddRootTable = () => {
@@ -83,6 +90,33 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                 >
                     <Icon icon="expand-vertical" margin="m-0" />
                 </Button>
+                <Dropdown>
+                    <Dropdown.Toggle
+                        as={CustomDropdownToggle}
+                        isCaretHidden
+                        variant="link"
+                        className="text-body"
+                        title="Table settings"
+                        size="xs"
+                    >
+                        <Icon icon="settings" margin="m-0" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                        <Dropdown.ItemText className="text-nowrap">
+                            <Switch
+                                color="primary"
+                                selected={isFieldMappingExpandedByDefault}
+                                toggleSelection={(e) =>
+                                    dispatch(
+                                        editCdcSinkTaskActions.fieldMappingExpandedByDefaultSet(e.currentTarget.checked)
+                                    )
+                                }
+                            >
+                                Expand field mapping
+                            </Switch>
+                        </Dropdown.ItemText>
+                    </Dropdown.Menu>
+                </Dropdown>
             </div>
             <Form.Control
                 type="text"

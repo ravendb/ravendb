@@ -29,6 +29,7 @@ import { chatbotSlice } from "./shell/chatbot/store/chatbotSlice";
 import { chatbotMiddleware } from "./shell/chatbot/store/chatbotMiddleware";
 import { documentSchemaSlice } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import { editCdcSinkTaskSlice } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import { editCdcSinkTaskMiddleware } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -71,7 +72,8 @@ export function createStoreConfiguration() {
                 .prepend(databaseMiddleware.middleware)
                 .prepend(adminLogsMiddleware.middleware)
                 .prepend(chatAiAgentUpdateUrlMiddleware.middleware)
-                .prepend(chatbotMiddleware.middleware),
+                .prepend(chatbotMiddleware.middleware)
+                .prepend(editCdcSinkTaskMiddleware.middleware),
     });
 }
 

@@ -8,7 +8,9 @@ import {
     RootTablePath,
     EmbeddedTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
+import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
+import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { useFieldArray, useFormContext } from "react-hook-form";
 
@@ -17,7 +19,8 @@ type FieldMappingPath = RootTablePath | EmbeddedTablePath;
 
 export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappingPath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const { value: isExpanded, setTrue: expand, setValue: setIsExpanded } = useBoolean(false);
+    const isFieldMappingExpandedByDefault = useAppSelector(editCdcSinkTaskSelectors.isFieldMappingExpandedByDefault);
+    const { value: isExpanded, setTrue: expand, setValue: setIsExpanded } = useBoolean(isFieldMappingExpandedByDefault);
 
     const columnsPath = `${path}.columns` as const;
 
