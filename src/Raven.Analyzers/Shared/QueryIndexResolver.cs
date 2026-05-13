@@ -93,7 +93,7 @@ namespace Raven.Analyzers.Shared
             return sourceType;
         }
 
-        internal static string? TryGetIndexNameLiteral(InvocationExpressionSyntax invocation)
+        private static string? TryGetIndexNameLiteral(InvocationExpressionSyntax invocation)
         {
             SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
             if (args.Count == 0)

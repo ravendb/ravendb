@@ -160,8 +160,8 @@ namespace Raven.Analyzers.Shared
         internal static ExpressionSyntax? TryGetLambdaBody(ExpressionSyntax? expr) =>
             expr switch
             {
-                SimpleLambdaExpressionSyntax simple when simple.Body is ExpressionSyntax e => e,
-                ParenthesizedLambdaExpressionSyntax paren when paren.Body is ExpressionSyntax e => e,
+                SimpleLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
+                ParenthesizedLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
                 _ => null,
             };
     }
