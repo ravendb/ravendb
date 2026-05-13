@@ -708,5 +708,117 @@ namespace Raven.Server.SqlMigration
 
             return GetSelectAllQueryForTable(collection.SourceTableSchema, collection.SourceTableName);
         }
+
+        public async Task<MigratorRowFetchResult> FetchRowsAsync(
+            string tableSchema,
+            string tableName,
+            IReadOnlyList<string> primaryKeyColumns,
+            RowFetchMode mode,
+            IReadOnlyList<string> primaryKeyValues,
+            int maxRows,
+            CancellationToken ct)
+        {
+            if (maxRows < 1)
+                throw new ArgumentOutOfRangeException(nameof(maxRows), $"{nameof(maxRows)} must be >= 1.");
+
+            if (mode == RowFetchMode.ByPrimaryKey)
+            {
+                if (primaryKeyColumns == null || primaryKeyColumns.Count == 0)
+                    throw new ArgumentException("Cannot fetch by primary key when the target table has no primary key columns configured.", nameof(primaryKeyColumns));
+                if (primaryKeyValues == null || primaryKeyValues.Count != primaryKeyColumns.Count)
+                    throw new ArgumentException($"Expected {primaryKeyColumns.Count} primary-key value(s), got {primaryKeyValues?.Count ?? 0}.", nameof(primaryKeyValues));
+            }
+
+            // ByPrimaryKey: Postgres/MySQL/SQL Server reject text vs int comparisons in WHERE clauses,
+            // so the PK values must be parsed into typed objects before binding. The migrator's
+            // existing ValueAsObject already does the parse keyed on ColumnType.Number; reuse it
+            // by reading the source schema (one-time per request — interactive endpoint, no hot path).
+            SqlTableSchema typedTableSchema = null;
+            if (mode == RowFetchMode.ByPrimaryKey)
+            {
+                var schema = FindSchema();
+                typedTableSchema = schema.GetTable(tableSchema, tableName)
+                    ?? throw new InvalidOperationException($"Table '{tableSchema}.{tableName}' was not found in the source database.");
+            }
+
+            await using var connection = OpenConnection();
+            await using var cmd = connection.CreateCommand();
+
+            switch (mode)
+            {
+                case RowFetchMode.First:
+                    cmd.CommandText = BuildSelectFirstRowsQuery(tableSchema, tableName, primaryKeyColumns, maxRows);
+                    break;
+
+                case RowFetchMode.ByPrimaryKey:
+                    cmd.CommandText = BuildSelectByPrimaryKeyQuery(tableSchema, tableName, primaryKeyColumns, primaryKeyValues, typedTableSchema, cmd);
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown row-fetch mode.");
+            }
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+
+            var columnNames = new string[reader.FieldCount];
+            for (int i = 0; i < reader.FieldCount; i++)
+                columnNames[i] = reader.GetName(i);
+
+            var rows = new List<object[]>();
+            while (await reader.ReadAsync(ct))
+            {
+                var values = new object[reader.FieldCount];
+                reader.GetValues(values);
+                for (int i = 0; i < values.Length; i++)
+                {
+                    if (values[i] == DBNull.Value)
+                        values[i] = null;
+                }
+                rows.Add(values);
+            }
+
+            return new MigratorRowFetchResult { ColumnNames = columnNames, Rows = rows };
+        }
+
+        private string BuildSelectFirstRowsQuery(string tableSchema, string tableName, IReadOnlyList<string> orderByColumns, int maxRows)
+        {
+            // LimitRowsNumber wraps the inner query in a subquery (SELECT TOP N * FROM (inner)).
+            // SQL Server rejects ORDER BY inside an un-TOP'd subquery, so ORDER BY has to live
+            // at the same level as the row-limit. Build the dialect-aware shape via BuildLimitedSelectQuery.
+            var orderBy = orderByColumns != null && orderByColumns.Count > 0
+                ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumn))
+                : "";
+            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), orderBy, maxRows);
+        }
+
+        /// <summary>
+        /// Build a <c>SELECT TOP N / LIMIT N</c> query with the ORDER BY at the same level as the
+        /// row cap so the ordering survives. Default uses ANSI <c>... ORDER BY ... LIMIT n</c>
+        /// (Postgres / MySQL); SQL Server overrides with <c>SELECT TOP n ... ORDER BY ...</c>
+        /// and Oracle with <c>... FETCH NEXT n ROWS ONLY</c>.
+        /// </summary>
+        protected virtual string BuildLimitedSelectQuery(string quotedTable, string orderByClause, int maxRows)
+        {
+            return $"select * from {quotedTable}{orderByClause} limit {maxRows}";
+        }
+
+        private string BuildSelectByPrimaryKeyQuery(
+            string tableSchema, string tableName,
+            IReadOnlyList<string> pkColumns, IReadOnlyList<string> pkValues,
+            SqlTableSchema typedTableSchema,
+            DbCommand cmd)
+        {
+            var pkValueArray = pkValues.ToArray();
+            var whereClause = string.Join(" and ", pkColumns.Select((column, idx) =>
+            {
+                var parameter = cmd.CreateParameter();
+                parameter.ParameterName = $"p{idx}";
+                parameter.Value = ValueAsObject(typedTableSchema, column, pkValueArray, idx) ?? DBNull.Value;
+                cmd.Parameters.Add(parameter);
+                return $"{QuoteColumn(column)} = @p{idx}";
+            }));
+
+            return $"select * from {QuoteTable(tableSchema, tableName)} where {whereClause}";
+        }
     }
 }

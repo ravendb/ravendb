@@ -3,14 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
+using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.CdcSink.Handlers;
 
@@ -21,16 +25,131 @@ public class CdcSinkHandler : DatabaseRequestHandler
     {
         using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         {
-            var dbDoc = await context.ReadForMemoryAsync(RequestBodyStream(), "TestCdcSinkScript");
-            var testScript = JsonDeserializationServer.TestCdcSinkScript(dbDoc);
+            var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "TestCdcSinkMappingRequest");
+            var request = JsonDeserializationServer.TestCdcSinkMappingRequest(bodyJson);
 
-            var result = CdcSinkProcess.TestScript(testScript, context, Database);
+            var result = await ExecuteTestMappingAsync(context, request);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, result.ToJson());
             }
         }
+    }
+
+    private async Task<TestCdcSinkMappingResult> ExecuteTestMappingAsync(DocumentsOperationContext context, TestCdcSinkMappingRequest request)
+    {
+        var result = new TestCdcSinkMappingResult();
+
+        if (request.Configuration == null)
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.Configuration)}' is required.");
+            return result;
+        }
+        if (string.IsNullOrEmpty(request.SourceTableName))
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.SourceTableName)}' is required.");
+            return result;
+        }
+        if (request.MaxRows < 1)
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be >= 1.");
+            return result;
+        }
+        if (request.RowSelector == TestCdcSinkRowSelector.ByPrimaryKey && request.MaxRows > 1)
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be 1 when '{nameof(TestCdcSinkMappingRequest.RowSelector)}' is '{nameof(TestCdcSinkRowSelector.ByPrimaryKey)}'.");
+            return result;
+        }
+        if (request.RowSelector == TestCdcSinkRowSelector.ByPrimaryKey && (request.PrimaryKeyValues == null || request.PrimaryKeyValues.Length == 0))
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.PrimaryKeyValues)}' is required when '{nameof(TestCdcSinkMappingRequest.RowSelector)}' is '{nameof(TestCdcSinkRowSelector.ByPrimaryKey)}'.");
+            return result;
+        }
+
+        SqlConnectionString connection;
+        try
+        {
+            connection = ResolveTestConnection(request);
+        }
+        catch (InvalidOperationException e)
+        {
+            result.Errors.Add(e.Message);
+            return result;
+        }
+
+        var targetSchema = request.SourceTableSchema ?? string.Empty;
+        var targetTable = request.Configuration.Tables?.FirstOrDefault(t =>
+            string.Equals(t.SourceTableSchema ?? string.Empty, targetSchema, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(t.SourceTableName, request.SourceTableName, StringComparison.OrdinalIgnoreCase));
+        if (targetTable == null)
+        {
+            result.Errors.Add($"Configuration has no table matching '{targetSchema}.{request.SourceTableName}'.");
+            return result;
+        }
+
+        IDatabaseDriver driver;
+        try
+        {
+            driver = DatabaseDriverDispatcher.CreateDriver(connection.FactoryName, connection.ConnectionString);
+        }
+        catch (InvalidOperationException e)
+        {
+            result.Errors.Add(e.Message);
+            return result;
+        }
+
+        MigratorRowFetchResult fetched;
+        try
+        {
+            fetched = await driver.FetchRowsAsync(
+                tableSchema: targetTable.SourceTableSchema,
+                tableName: targetTable.SourceTableName,
+                primaryKeyColumns: targetTable.PrimaryKeyColumns,
+                mode: request.RowSelector == TestCdcSinkRowSelector.First ? RowFetchMode.First : RowFetchMode.ByPrimaryKey,
+                primaryKeyValues: request.PrimaryKeyValues,
+                maxRows: request.MaxRows,
+                ct: Database.DatabaseShutdown);
+        }
+        catch (Exception e)
+        {
+            result.Errors.Add($"Failed to fetch rows from source: {e.Message}");
+            return result;
+        }
+
+        if (fetched.Rows.Count == 0)
+        {
+            result.Errors.Add(request.RowSelector == TestCdcSinkRowSelector.ByPrimaryKey
+                ? "No row found in the source table for the supplied primary-key values."
+                : "Source table is empty.");
+            return result;
+        }
+
+        return CdcSinkTestRunner.Run(
+            Database, context, request.Configuration, targetTable,
+            fetched.ColumnNames, fetched.Rows, request.Operation);
+    }
+
+    private SqlConnectionString ResolveTestConnection(TestCdcSinkMappingRequest request)
+    {
+        if (request.Connection != null
+            && string.IsNullOrEmpty(request.Connection.FactoryName) == false
+            && string.IsNullOrEmpty(request.Connection.ConnectionString) == false)
+        {
+            return request.Connection;
+        }
+
+        var name = request.Configuration?.ConnectionStringName;
+        if (string.IsNullOrEmpty(name))
+            throw new InvalidOperationException(
+                $"Provide either '{nameof(TestCdcSinkMappingRequest.Connection)}' (inline {nameof(SqlConnectionString.FactoryName)} + {nameof(SqlConnectionString.ConnectionString)}) " +
+                $"or '{nameof(CdcSinkConfiguration.ConnectionStringName)}' on the configuration.");
+
+        var databaseRecord = Database.ReadDatabaseRecord();
+        if (databaseRecord.SqlConnectionStrings.TryGetValue(name, out var named) == false)
+            throw new InvalidOperationException($"SQL connection string '{name}' was not found in the database configuration.");
+
+        return named;
     }
 
     [RavenAction("/databases/*/admin/cdc-sink/verify", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -244,3 +363,4 @@ public class CdcSinkSchemaRequest
     /// </summary>
     public string[] Schemas { get; set; }
 }
+

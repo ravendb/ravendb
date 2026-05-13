@@ -29,6 +29,7 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -255,6 +256,8 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, UpdateQueueSinkOperationResult> UpdateQueueSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateQueueSinkOperationResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, AddCdcSinkOperationResult> AddCdcSinkOperationResult = GenerateJsonDeserializationRoutine<AddCdcSinkOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, TestCdcSinkMappingResult> TestCdcSinkMappingResult = GenerateJsonDeserializationRoutine<TestCdcSinkMappingResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, UpdateCdcSinkOperationResult> UpdateCdcSinkOperationResult = GenerateJsonDeserializationRoutine<UpdateCdcSinkOperationResult>();
 

@@ -58,7 +58,6 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.CdcSink.Handlers;
-using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -151,7 +150,7 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, TestQueueSinkScript> TestQueueSinkScript = GenerateJsonDeserializationRoutine<TestQueueSinkScript>();
 
-        public static readonly Func<BlittableJsonReaderObject, TestCdcSinkScript> TestCdcSinkScript = GenerateJsonDeserializationRoutine<TestCdcSinkScript>();
+        public static readonly Func<BlittableJsonReaderObject, Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingRequest> TestCdcSinkMappingRequest = GenerateJsonDeserializationRoutine<Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingRequest>();
 
         public static readonly Func<BlittableJsonReaderObject, Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest> CdcSinkVerifyRequest = GenerateJsonDeserializationRoutine<Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest>();
 
