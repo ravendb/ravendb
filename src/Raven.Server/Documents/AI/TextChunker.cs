@@ -18,7 +18,7 @@ public static class TextChunker
     {
         var prefix = chunkingOptions.ContextPrefix;
 
-        if (chunkingOptions.ChunkingMethod == ChunkingMethod.NoChunk)
+        if (chunkingOptions.NoChunking)
             return ApplyPrefixWithoutChunking(textualValue, prefix);
 
         int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens, prefix);

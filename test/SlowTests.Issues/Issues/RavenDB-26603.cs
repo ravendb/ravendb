@@ -41,23 +41,6 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
     }
 
     [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
-    public void NoChunkWithContextPrefixProducesSinglePrefixedValue()
-    {
-        const string value = "Some short value";
-        const string prefix = "Title: ";
-
-        var chunks = Raven.Server.Documents.AI.TextChunker.Chunk(value, new ChunkingOptions
-        {
-            ChunkingMethod = ChunkingMethod.NoChunk,
-            ContextPrefix = prefix,
-            MaxTokensPerChunk = int.MaxValue
-        });
-
-        Assert.Single(chunks);
-        Assert.Equal(prefix + value, chunks[0]);
-    }
-
-    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
     public void ContextPrefixLargerThanMaxTokensShouldThrow()
     {
         const string prefix = "this prefix has a number of tokens that should not fit within the budget";

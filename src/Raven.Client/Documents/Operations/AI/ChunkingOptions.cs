@@ -31,6 +31,14 @@ public class ChunkingOptions : IDynamicJson
     /// </summary>
     public string ContextPrefix { get; set; }
 
+    /// <summary>
+    /// Internal-only marker indicating this instance was produced by <c>text.withContext</c>:
+    /// the value is emitted unchunked with <see cref="ContextPrefix"/> prepended, and
+    /// <see cref="MaxTokensPerChunk"/> / <see cref="OverlapTokens"/> are ignored.
+    /// Never set by user-constructed config and not serialized.
+    /// </summary>
+    internal bool NoChunking { get; set; }
+
     internal static readonly HashSet<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
 
     /// <summary>
@@ -52,7 +60,8 @@ public class ChunkingOptions : IDynamicJson
         if (ContextPrefix != null && string.IsNullOrWhiteSpace(ContextPrefix))
             errors.Add($"'{source}': {nameof(ContextPrefix)} cannot be empty or whitespace-only. Either provide a non-empty value or omit it.");
 
-        if (ChunkingMethod == ChunkingMethod.NoChunk)
+        // NoChunking is set only by text.withContext (script handler) and bypasses the chunking budget rules.
+        if (NoChunking)
             return;
 
         if (MaxTokensPerChunk <= 0)
@@ -85,7 +94,8 @@ public class ChunkingOptions : IDynamicJson
         return ChunkingMethod == other.ChunkingMethod &&
                MaxTokensPerChunk == other.MaxTokensPerChunk &&
                OverlapTokens == other.OverlapTokens &&
-               string.Equals(ContextPrefix, other.ContextPrefix, StringComparison.Ordinal);
+               string.Equals(ContextPrefix, other.ContextPrefix, StringComparison.Ordinal) &&
+               NoChunking == other.NoChunking;
     }
 
     public override bool Equals(object obj)
@@ -98,7 +108,7 @@ public class ChunkingOptions : IDynamicJson
 
     public override int GetHashCode()
     {
-        return HashCode.Combine((int)ChunkingMethod, MaxTokensPerChunk, OverlapTokens, ContextPrefix is null ? 0 : StringComparer.Ordinal.GetHashCode(ContextPrefix));
+        return HashCode.Combine((int)ChunkingMethod, MaxTokensPerChunk, OverlapTokens, ContextPrefix is null ? 0 : StringComparer.Ordinal.GetHashCode(ContextPrefix), NoChunking);
     }
 }
 
@@ -130,9 +140,5 @@ public enum ChunkingMethod
     /// <summary>
     /// Strip HTML markup and split resulting text using a sensible strategy.
     /// </summary>
-    HtmlStrip,
-    /// <summary>
-    /// Do not chunk the input. Used to apply a context prefix to a value without splitting it (e.g. via <c>text.withContext</c>).
-    /// </summary>
-    NoChunk
+    HtmlStrip
 }

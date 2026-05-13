@@ -343,8 +343,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         ChunkingOptions chunkingOptions = new()
         {
-            ChunkingMethod = ChunkingMethod.NoChunk,
-            MaxTokensPerChunk = int.MaxValue,
+            NoChunking = true,
             ContextPrefix = prefix
         };
 
