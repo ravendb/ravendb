@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using HtmlAgilityPack;
@@ -11,6 +12,8 @@ namespace Raven.Server.Documents.AI;
 
 public static class TextChunker
 {
+    private static readonly ConcurrentDictionary<string, int> PrefixTokenCounts = new(StringComparer.Ordinal);
+    
     public static List<string> Chunk(string textualValue, ChunkingOptions chunkingOptions)
     {
         var prefix = chunkingOptions.ContextPrefix;
@@ -39,7 +42,7 @@ public static class TextChunker
         if (prefix is null)
             return maxTokensPerChunk;
 
-        int prefixTokens = Tokenizer.CountTokens(prefix);
+        int prefixTokens = PrefixTokenCounts.GetOrAdd(prefix, static p => Tokenizer.CountTokens(p));
         int effectiveMaxTokensPerChunk = maxTokensPerChunk - prefixTokens;
         if (effectiveMaxTokensPerChunk <= 0)
             throw new InvalidOperationException(
