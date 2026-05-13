@@ -180,5 +180,57 @@ class User { public string Id { get; set; } }
             // Async load .Value is Task<T> — must be awaited.
             Assert.Contains("var manager = await lazyManager.Value;", fixed_code);
         }
+
+        [Fact]
+        public async Task NameCollision_Generates_SuffixedName()
+        {
+            // lazyUser is already declared in the method; the fix must produce lazyUser2 to avoid collision
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        var lazyUser = 42;
+        var user = session.Load<User>(userId);
+        var order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            // lazyUser is taken → must use lazyUser2
+            Assert.Contains("lazyUser2", fixed_code);
+            Assert.DoesNotContain("var lazyUser =", fixed_code.Replace("var lazyUser = 42;", ""));
+            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+            Assert.Contains("var user = lazyUser2.Value;", fixed_code);
+        }
+
+        [Fact]
+        public async Task Comment_On_Batchable_Statement_Is_Preserved()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        // load the user
+        var user = session.Load<User>(userId);
+        var order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            Assert.Contains("// load the user", fixed_code);
+            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+        }
     }
 }

@@ -114,5 +114,57 @@ class Document { public string Id { get; set; } }
 
             Assert.Contains("var session = batch.OpenAsyncSession(options)", fixed_code);
         }
+
+        [Fact]
+        public async Task Run_WithNoParameter_FixBails()
+        {
+            // Diagnostic fires (store called inside Run lambda) but the fix cannot supply a batch
+            // receiver because the lambda has no parameter, so no code action is registered.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            Action deferred = () => store.OpenSession();
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            // ApplyFixAsync throws when no code action is registered (the fix bails on a nested lambda)
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+        }
+
+        [Fact]
+        public async Task OpenSession_InNestedLambda_FixBails()
+        {
+            // store.OpenSession() inside a nested lambda may outlive the batch; the fix refuses to
+            // rewrite it so the user can decide whether batch.OpenSession() is appropriate.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(SubscriptionWorker<Document> worker, IDocumentStore store)
+    {
+        worker.Run(batch =>
+        {
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                var session = store.OpenSession();
+            });
+        });
+    }
+}
+
+class Document { public string Id { get; set; } }
+";
+
+            await Assert.ThrowsAsync<System.InvalidOperationException>(
+                () => RavenCodeFixTest.ApplyFixAsync<SubscriptionOpenSessionAnalyzer, SubscriptionOpenSessionCodeFixProvider>(source));
+        }
     }
 }

@@ -18,7 +18,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryIndexFieldAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            ImmutableArray.Create(DiagnosticDescriptors.QueryFieldNotIndexed);
+            [DiagnosticDescriptors.QueryFieldNotIndexed];
 
         public override void Initialize(AnalysisContext context)
         {
@@ -29,6 +29,8 @@ namespace Raven.Analyzers.Queries
             {
                 var indexByName = new ConcurrentDictionary<string, INamedTypeSymbol>(
                     System.StringComparer.Ordinal);
+                var fieldSetCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
+                    SymbolEqualityComparer.Default);
 
                 startCtx.RegisterSymbolAction(symCtx =>
                 {
@@ -53,14 +55,15 @@ namespace Raven.Analyzers.Queries
                 }, SymbolKind.NamedType);
 
                 startCtx.RegisterSyntaxNodeAction(
-                    ctx => AnalyzeInvocation(ctx, indexByName),
+                    ctx => AnalyzeInvocation(ctx, indexByName, fieldSetCache),
                     SyntaxKind.InvocationExpression);
             });
         }
 
         private static void AnalyzeInvocation(
             SyntaxNodeAnalysisContext context,
-            ConcurrentDictionary<string, INamedTypeSymbol> indexByName)
+            ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> fieldSetCache)
         {
             var queryInvocation = (InvocationExpressionSyntax)context.Node;
 
@@ -71,7 +74,8 @@ namespace Raven.Analyzers.Queries
             if (indexClass == null)
                 return;
 
-            IndexFieldSet fieldSet = IndexFieldExtractor.Extract(indexClass, context.SemanticModel.Compilation);
+            IndexFieldSet fieldSet = fieldSetCache.GetOrAdd(indexClass,
+                ic => IndexFieldExtractor.Extract(ic, context.SemanticModel.Compilation));
             if (fieldSet.Status == IndexFieldInspection.BailCannotAnalyze)
                 return;
 
@@ -157,8 +161,8 @@ namespace Raven.Analyzers.Queries
         private static ExpressionSyntax? GetLambdaBodyExpression(ExpressionSyntax expr) =>
             expr switch
             {
-                SimpleLambdaExpressionSyntax simple when simple.Body is ExpressionSyntax e => e,
-                ParenthesizedLambdaExpressionSyntax paren when paren.Body is ExpressionSyntax e => e,
+                SimpleLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
+                ParenthesizedLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
                 _ => null
             };
     }

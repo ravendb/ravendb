@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -24,7 +23,7 @@ namespace Raven.Analyzers.Queries
     public sealed class QueryProjectionFieldAnalyzer : DiagnosticAnalyzer
     {
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-            ImmutableArray.Create(DiagnosticDescriptors.QueryProjectionFieldNotRetrievable);
+            [DiagnosticDescriptors.QueryProjectionFieldNotRetrievable];
 
         public override void Initialize(AnalysisContext context)
         {
@@ -35,6 +34,10 @@ namespace Raven.Analyzers.Queries
             {
                 var indexByName = new ConcurrentDictionary<string, INamedTypeSymbol>(
                     System.StringComparer.Ordinal);
+                var storedFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet>(
+                    SymbolEqualityComparer.Default);
+                var mapFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
+                    SymbolEqualityComparer.Default);
 
                 startCtx.RegisterSymbolAction(symCtx =>
                 {
@@ -58,14 +61,16 @@ namespace Raven.Analyzers.Queries
                 }, SymbolKind.NamedType);
 
                 startCtx.RegisterSyntaxNodeAction(
-                    ctx => AnalyzeInvocation(ctx, indexByName),
+                    ctx => AnalyzeInvocation(ctx, indexByName, storedFieldCache, mapFieldCache),
                     SyntaxKind.InvocationExpression);
             });
         }
 
         private static void AnalyzeInvocation(
             SyntaxNodeAnalysisContext context,
-            ConcurrentDictionary<string, INamedTypeSymbol> indexByName)
+            ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
+            ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache)
         {
             var invocation = (InvocationExpressionSyntax)context.Node;
 
@@ -97,8 +102,9 @@ namespace Raven.Analyzers.Queries
             if (sourceType == null)
                 return;
 
-            // Extract stored fields from the index (bail if analysis not possible)
-            IndexStoredFieldSet storedSet = IndexStoredFieldExtractor.Extract(indexClass, context.SemanticModel.Compilation);
+            // Extract stored fields from the index (bail if analysis not possible); cached per compilation
+            IndexStoredFieldSet storedSet = storedFieldCache.GetOrAdd(indexClass,
+                ic => IndexStoredFieldExtractor.Extract(ic, context.SemanticModel.Compilation));
             if (storedSet.Status == StoredFieldsStatus.BailCannotAnalyze)
                 return;
 
@@ -106,8 +112,8 @@ namespace Raven.Analyzers.Queries
             ImmutableHashSet<string> storedFields;
             if (storedSet.Status == StoredFieldsStatus.AllStored)
             {
-                IndexFieldSet mapFields = IndexFieldExtractor.ExtractMapFieldsIgnoringStoreAll(
-                    indexClass, context.SemanticModel.Compilation);
+                IndexFieldSet mapFields = mapFieldCache.GetOrAdd(indexClass,
+                    ic => IndexFieldExtractor.ExtractMapFieldsIgnoringStoreAll(ic, context.SemanticModel.Compilation));
                 if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
                     return;
                 storedFields = mapFields.Fields;
@@ -221,6 +227,10 @@ namespace Raven.Analyzers.Queries
 
             ITypeSymbol? typeArgSymbol = context.SemanticModel.GetTypeInfo(typeArgs[0]).Type;
             if (typeArgSymbol is not INamedTypeSymbol projectionType)
+                return;
+
+            // Unresolved type argument — skip to avoid spurious diagnostics for every member
+            if (projectionType.TypeKind == TypeKind.Error)
                 return;
 
             ImmutableHashSet<string> projectionMembers = SourceMemberExtractor.GetPublicMembers(projectionType);

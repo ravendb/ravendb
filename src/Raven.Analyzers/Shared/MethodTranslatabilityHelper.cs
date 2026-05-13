@@ -19,6 +19,12 @@ namespace Raven.Analyzers.Shared
             if (method.MethodKind == MethodKind.DelegateInvoke)
                 return false;
 
+            // Extension methods are typically LINQ-style chainable helpers; excluding them
+            // reduces false positives on user-defined utility chains while still catching
+            // plain instance/static method calls that RavenDB cannot translate.
+            if (method.IsExtensionMethod)
+                return false;
+
             // Only flag methods whose containing type has at least one source location,
             // meaning the type is defined in the user's own code, not in a referenced assembly.
             foreach (Location location in method.ContainingType.Locations)
