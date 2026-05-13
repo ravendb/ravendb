@@ -11,9 +11,10 @@ import { useFormContext } from "react-hook-form";
 
 interface EditCdcSinkTaskRawViewSwitchProps {
     taskId: number;
+    isDisabled: boolean;
 }
 
-export default function EditCdcSinkTaskRawViewSwitch({ taskId }: EditCdcSinkTaskRawViewSwitchProps) {
+export default function EditCdcSinkTaskRawViewSwitch({ taskId, isDisabled }: EditCdcSinkTaskRawViewSwitchProps) {
     const dispatch = useAppDispatch();
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
     const rawViewContent = useAppSelector(editCdcSinkTaskSelectors.rawViewContent);
@@ -44,7 +45,7 @@ export default function EditCdcSinkTaskRawViewSwitch({ taskId }: EditCdcSinkTask
     };
 
     return (
-        <Switch selected={isRawView} toggleSelection={handleToggleRawView} color="primary">
+        <Switch selected={isRawView} toggleSelection={handleToggleRawView} color="primary" disabled={isDisabled}>
             Raw config
         </Switch>
     );

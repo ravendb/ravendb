@@ -26,6 +26,9 @@ import {
 import EditCdcSinkTaskRawView from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskRawView";
 import SizeGetter from "components/common/SizeGetter";
 import EditCdcSinkTaskRawViewSwitch from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskRawViewSwitch";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import EditCdcSinkTaskInfoHub from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskInfoHub";
+import classNames from "classnames";
 
 interface QueryParams {
     taskId?: string;
@@ -36,6 +39,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isRawView = useAppSelector(editCdcSinkTaskSelectors.isRawView);
+    const hasCdcSink = useAppSelector(licenseSelectors.statusValue("HasCdcSink"));
 
     const taskId = queryParams?.taskId ? parseInt(queryParams.taskId, 10) : null;
     const isEditMode = taskId != null;
@@ -100,13 +104,16 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
         <FormProvider {...editForm}>
             <form onSubmit={editForm.handleSubmit(handleSubmit)} className="edit-cdc-sink-task vstack h-100 w-100">
                 <div className="p-3 flex-grow-1 overflow-y-auto vstack">
-                    <div className="hstack align-items-center justify-content-between">
+                    <div className="hstack align-items-center flex-wrap gap-2">
                         <AboutViewHeading
                             title={isEditMode ? "Edit CDC Sink task" : "New CDC Sink task"}
+                            licenseBadgeText={hasCdcSink ? null : "Enterprise"}
                             icon="sql-etl"
                             marginBottom={4}
+                            className="me-auto"
                         />
-                        <EditCdcSinkTaskRawViewSwitch taskId={taskId} />
+                        <EditCdcSinkTaskRawViewSwitch taskId={taskId} isDisabled={!hasCdcSink} />
+                        <EditCdcSinkTaskInfoHub />
                     </div>
                     {isRawView ? (
                         <div className="flex-grow-1">
@@ -116,11 +123,11 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                             />
                         </div>
                     ) : (
-                        <>
+                        <div className={classNames("vstack h-100", { "form-disabled": !hasCdcSink })}>
                             <EditCdcSinkTaskBasicSection />
                             <EditCdcSinkTaskDiscoverySection tablesFieldArray={tablesFieldArray} />
                             <EditCdcSinkTaskTablesSection tablesFieldArray={tablesFieldArray} />
-                        </>
+                        </div>
                     )}
                 </div>
                 <div className="hstack justify-content-between gap-2 py-2 px-3 border-top border-secondary">
@@ -131,7 +138,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
                         type="submit"
                         variant="primary"
                         className="rounded-pill"
-                        disabled={!editForm.formState.isDirty}
+                        disabled={!editForm.formState.isDirty || !hasCdcSink}
                     >
                         <Icon icon="save" />
                         Save task configuration
