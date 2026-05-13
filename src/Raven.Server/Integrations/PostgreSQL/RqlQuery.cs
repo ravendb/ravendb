@@ -221,11 +221,13 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return;
                 }
 
-                if (_limit == 0 || _samples == null || _samples.Count == 0)
+                if (_limit == 0 || (_samples != null && _samples.Count == 0))
                 {
                     await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
                     return;
                 }
+
+                // _samples == null means resources were released after a previous Execute (named statement re-execution) — proceed normally
 
                 _queryOperationContext ??= QueryOperationContext.Allocate(DocumentDatabase);
 
