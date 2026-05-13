@@ -778,7 +778,7 @@ namespace Raven.Server.Utils
                 // Stripping the keychain context by exporting to raw public bytes (CER) and re-importing
                 // prevents the AppleCrypto crash during CopyWithPrivateKey.
                 byte[] rawPublicBytes = certificate.Export(X509ContentType.Cert);
-                safeCertificate = new X509Certificate2(rawPublicBytes);
+                safeCertificate = CertificateLoaderUtil.CreateCertificateFromAny(rawPublicBytes);
             }
 
             // Combine the main certificate and the private key safely for both RSA and ECDSA.
