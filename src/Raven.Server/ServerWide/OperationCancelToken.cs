@@ -16,6 +16,8 @@ namespace Raven.Server.ServerWide
         public readonly CancellationToken Token;
         private readonly long _minimumDelayTimeInMs;
 
+        public bool HasTimeout => _cancelAfter != Timeout.InfiniteTimeSpan;
+
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token)
         {
             ValidateCancelAfter(cancelAfter);
@@ -73,7 +75,7 @@ namespace Raven.Server.ServerWide
                 return;
 
             if (_cancelAfter == Timeout.InfiniteTimeSpan)
-                return; // no timeout set, nothing to delay
+                throw new InvalidOperationException("Cannot delay cancellation without timeout set.");
 
             if (_sw?.ElapsedMilliseconds < _minimumDelayTimeInMs)
                 return;
