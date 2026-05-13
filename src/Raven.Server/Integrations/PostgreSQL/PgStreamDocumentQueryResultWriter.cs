@@ -62,6 +62,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             var jsonResult = result.Data;
 
+            // ArrayPool.Rent may return an array larger than _columns.Count; clear only the used portion.
             Array.Clear(_row, 0, _columns.Count);
 
             if (_idIndex != null && result.Id != null)
