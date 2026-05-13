@@ -36,6 +36,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
         {
             Environment = StudioConfiguration.StudioEnvironment.Testing,
             ZipOnly = false,
+            LocalNodeTag = "A",
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
                 ["A"] = new() { Port = port, TcpPort = tcpPort, Addresses = new List<string> { "127.0.0.1" } },
@@ -120,6 +121,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
         {
             Environment = StudioConfiguration.StudioEnvironment.Testing,
             ZipOnly = false,
+            LocalNodeTag = "A",
             NodeSetupInfos = new Dictionary<string,NodeInfo>()
             {
                 ["A"] = new() { Port = portA, TcpPort = tcpPortA, Addresses = new List<string> { "127.0.0.1" } },
