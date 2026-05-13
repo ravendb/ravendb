@@ -618,9 +618,10 @@ function NodeDetailsPanelEdit({
                                 <PopoverWithHoverWrapper
                                     message={
                                         <SetupWizardInfoPopover
-                                            description="When enabled, the node starts in passive mode and does not join a cluster. 
-                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations. 
-                                                It can also be used to isolate the node for testing or debugging."
+                                            description="When enabled, the node starts in passive mode and does not join a cluster.
+                                                This is useful when the node is meant for monitoring, initialization, or handling setup tasks without participating in cluster operations.
+                                                It can also be used to isolate the node for testing or debugging.
+                                                The node will leave passive state when a cluster operation is performed on it, such as creating a database or adding it to a cluster."
                                             ravenLinkHash="2WV7N1"
                                         />
                                     }
