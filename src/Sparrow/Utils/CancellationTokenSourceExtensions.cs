@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using Sparrow.Logging;
 
-namespace Raven.Server.Utils;
+namespace Sparrow.Utils;
 
 internal static class CancellationTokenSourceExtensions
 {
