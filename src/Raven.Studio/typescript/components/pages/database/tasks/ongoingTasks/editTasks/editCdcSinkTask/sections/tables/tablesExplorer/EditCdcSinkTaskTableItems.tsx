@@ -32,7 +32,7 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const allTables = useWatch({ control, name: "tables" }) ?? [];
 
-    const virtualTables = useMemo(() => {
+    const filteredTables = useMemo(() => {
         const normalizedFilter = filter.trim().toLowerCase();
 
         const filteredGroupedTables = Object.entries(
@@ -67,7 +67,7 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
                         rows,
                         parentPath: rootPath,
                         table,
-                        isRootDisabled: !!table?.disabled,
+                        isRootDisabled: Boolean(table?.disabled),
                         depth: 1,
                         expandedTables,
                     });
@@ -79,26 +79,34 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
     }, [filter, expandedTables, allTables]);
 
     const virtualizer = useVirtualizer({
-        count: virtualTables.length,
+        count: filteredTables.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => explorerRowHeightPx,
-        getItemKey: (index) => virtualTables[index].path,
+        getItemKey: (index) => filteredTables[index].path,
         overscan: 4,
     });
+    const virtualRows = virtualizer.getVirtualItems();
+    const activeSchemaLabel = getActiveSchemaLabel(filteredTables, virtualizer.scrollOffset ?? 0);
 
     if (allTables.length === 0) {
         return <EmptySet compact>Use the Schema Explorer to discover existing tables or add new manually.</EmptySet>;
     }
 
-    if (virtualTables.length === 0) {
+    if (filteredTables.length === 0) {
         return <EmptySet compact>No tables match the filter.</EmptySet>;
     }
 
     return (
         <div ref={parentRef} className="overflow-y-auto flex-grow-1" style={{ minHeight: 0 }}>
+            <div
+                className="position-sticky top-0 z-1"
+                style={{ height: explorerRowHeightPx, marginBottom: -explorerRowHeightPx }}
+            >
+                <SchemaRow label={activeSchemaLabel} />
+            </div>
             <div style={{ height: `${virtualizer.getTotalSize()}px`, position: "relative" }}>
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                    const row = virtualTables[virtualRow.index];
+                {virtualRows.map((virtualRow) => {
+                    const row = filteredTables[virtualRow.index];
 
                     return (
                         <div
@@ -127,11 +135,7 @@ function ExplorerRowItem({ row }: { row: ExplorerRow }) {
     const rowType = row.type;
     switch (rowType) {
         case "schema":
-            return (
-                <div className="text-center font-monospace small" style={{ height: explorerRowHeightPx }}>
-                    {row.label}
-                </div>
-            );
+            return <SchemaRow label={row.label} />;
         case "root":
             return <EditCdcSinkTaskRootTableItem {...row} />;
         case "linked":
@@ -141,6 +145,28 @@ function ExplorerRowItem({ row }: { row: ExplorerRow }) {
         default:
             assertUnreachable(rowType);
     }
+}
+
+function SchemaRow({ label }: { label: string }) {
+    return (
+        <div className="text-center font-monospace small panel-bg-2" style={{ height: explorerRowHeightPx }}>
+            {label}
+        </div>
+    );
+}
+
+function getActiveSchemaLabel(rows: ExplorerRow[], scrollOffset: number): string {
+    const firstVisibleIndex = Math.min(rows.length - 1, Math.floor(scrollOffset / explorerRowHeightPx));
+
+    for (let index = firstVisibleIndex; index >= 0; index--) {
+        const row = rows[index];
+
+        if (row.type === "schema") {
+            return row.label;
+        }
+    }
+
+    return "";
 }
 
 interface AddChildRowsArgs {
