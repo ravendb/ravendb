@@ -238,10 +238,6 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 await using var streamWriter = new PgStreamDocumentQueryResultWriter(writer, builder, Columns, DocumentDatabase);
 
-                // close any transaction left open from schema sampling in Init() / RunRqlQuery()
-                // before ExecuteStreamQuery opens its own read transaction on the same context.
-                _queryOperationContext.CloseTransaction();
-
                 using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown, token);
                 await DocumentDatabase.QueryRunner.ExecuteStreamQuery(indexQuery, _queryOperationContext, NopHttpResponse.Instance, streamWriter, cancelToken);
 
