@@ -12,8 +12,10 @@ using Npgsql.Replication;
 using Npgsql.Replication.PgOutput;
 using Npgsql.Replication.PgOutput.Messages;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration.NpgSQL;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.CdcSink;
@@ -587,7 +589,7 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
             // (Re)build the column mapping from the current RelationMessage contents.
             var realId = relationId;
 
-            var typeCategories = BuildTypeCategoriesFromRelation(relation);
+            var typeCategories = PostgresColumnTypeMapping.BuildTypeCategoriesFromRelation(relation, _vectorOid);
 
             var columnNames = new string[relation.Columns.Count];
             for (int i = 0; i < relation.Columns.Count; i++)
@@ -618,63 +620,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         }
 
         return (proc, values);
-    }
-
-    /// <summary>
-    /// Build type category array from the RelationMessage's column OIDs.
-    /// PostgreSQL OIDs are well-known and documented.
-    /// </summary>
-    private PostgresTypeCategory[] BuildTypeCategoriesFromRelation(RelationMessage relation)
-    {
-        var categories = new PostgresTypeCategory[relation.Columns.Count];
-        for (int i = 0; i < relation.Columns.Count; i++)
-        {
-            categories[i] = OidToCategory(relation.Columns[i].DataTypeId);
-        }
-        return categories;
-    }
-
-    private PostgresTypeCategory OidToCategory(uint oid)
-    {
-        return oid switch
-        {
-            21 or 23 or 26 => PostgresTypeCategory.Integer,    // int2, int4, oid
-            20 => PostgresTypeCategory.BigInt,                  // int8
-            700 => PostgresTypeCategory.Float,                  // float4
-            701 => PostgresTypeCategory.Double,                 // float8
-            1700 => PostgresTypeCategory.Numeric,               // numeric/decimal
-            16 => PostgresTypeCategory.Boolean,                 // bool
-            1082 => PostgresTypeCategory.DateOnly,              // date
-            1114 or 1184 => PostgresTypeCategory.DateTime,      // timestamp, timestamptz
-            2950 => PostgresTypeCategory.Uuid,                  // uuid
-            17 => PostgresTypeCategory.Bytea,                   // bytea
-            114 or 3802 => PostgresTypeCategory.Json,           // json, jsonb
-            // Array types — Postgres has a dedicated OID for each base type's array form.
-            // pgoutput delivers these as text literals like "{tag1,tag2,tag3}".
-            1000 or 1001 or 1005 or 1007 or 1009 or 1015 or 1016
-                or 1021 or 1022 or 1028 or 1231 or 2951 or 199 or 3807
-                => PostgresTypeCategory.TextArray,              // bool[], bytea[], int2[], int4[], text[], varchar[], int8[], float4[], float8[], oid[], numeric[], uuid[], json[], jsonb[]
-            _ when oid == _vectorOid => PostgresTypeCategory.Vector,
-            _ => PostgresTypeCategory.Other,
-        };
-    }
-
-    private enum PostgresTypeCategory
-    {
-        Other,
-        Integer,
-        BigInt,
-        Float,
-        Double,
-        Numeric,
-        Boolean,
-        DateOnly,
-        DateTime,
-        Uuid,
-        Bytea,
-        Json,
-        TextArray,
-        Vector
     }
 
     private string QuoteTableList(List<CdcSinkConfiguration.TableInfo> tables)
@@ -748,7 +693,10 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
         if (_columnTypesCache.TryGetValue(tableInfo.FullName, out var columnTypes) == false)
         {
             var conn = (NpgsqlConnection)cmd.Connection;
-            columnTypes = await GetColumnTypes(conn, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+            var allColumns = await NpgSqlSchemaQueries.FetchTableColumnsAsync(conn, tableInfo.Schema, tableInfo.TableName, ct);
+            columnTypes = new Dictionary<string, string>(allColumns.Count);
+            foreach (var column in allColumns)
+                columnTypes[column.Name] = column.DataType;
             _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
 
@@ -788,25 +736,6 @@ public class PostgresCdcSinkProcess : CdcSinkProcess
 
             _ => rawValue,
         };
-    }
-
-    private static async Task<Dictionary<string, string>> GetColumnTypes(
-        NpgsqlConnection conn, string schema, string tableName, List<string> columns, CancellationToken ct)
-    {
-        var types = new Dictionary<string, string>();
-        var sql = @"SELECT column_name, data_type FROM information_schema.columns
-                    WHERE table_schema = @schema AND table_name = @table AND column_name = ANY(@columns)";
-
-        await using var cmd = new NpgsqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("schema", schema);
-        cmd.Parameters.AddWithValue("table", tableName);
-        cmd.Parameters.AddWithValue("columns", columns.ToArray());
-
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-            types[reader.GetString(0)] = reader.GetString(1).ToLowerInvariant();
-
-        return types;
     }
 
     private static object ConvertStringToType(string value, string normalizedType)

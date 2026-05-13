@@ -1,4 +1,8 @@
+using System.Collections.Generic;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
+using MySqlConnector;
 
 namespace Raven.Server.SqlMigration.MySQL
 {
@@ -32,6 +36,39 @@ namespace Raven.Server.SqlMigration.MySQL
             schemaParameter.ParameterName = "schema";
             schemaParameter.Value = connection.Database;
             cmd.Parameters.Add(schemaParameter);
+        }
+
+        /// <summary>
+        /// Returns every column of a single table in ordinal-position order. MySQL fills
+        /// <see cref="SqlColumnInfo.DetailedType"/> from COLUMN_TYPE (e.g. <c>"tinyint(1) unsigned"</c>)
+        /// so binlog setup can distinguish boolean shapes. Binlog row events don't carry column
+        /// names, so the CDC streaming path uses this list to map positional binlog values to
+        /// named columns.
+        /// </summary>
+        public static async Task<List<SqlColumnInfo>> FetchTableColumnsAsync(
+            MySqlConnection connection, string schema, string tableName, CancellationToken ct)
+        {
+            var columns = new List<SqlColumnInfo>();
+
+            await using var cmd = connection.CreateCommand();
+            cmd.CommandText = @"
+                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS
+                WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
+                ORDER BY ORDINAL_POSITION";
+            cmd.Parameters.AddWithValue("@schema", schema);
+            cmd.Parameters.AddWithValue("@table", tableName);
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                var dataType = reader.GetString(1).ToLowerInvariant();
+                var detailedType = reader.GetString(2).ToLowerInvariant();
+                columns.Add(new SqlColumnInfo(name, dataType, detailedType));
+            }
+
+            return columns;
         }
     }
 }

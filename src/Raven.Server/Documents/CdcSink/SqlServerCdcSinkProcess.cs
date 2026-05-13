@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 using Microsoft.SqlServer.Types;
 using Raven.Client.Documents.Operations.CdcSink;
 using DbProviderFactories = Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL.RelationalWriters.DbProviderFactories;
+using Raven.Server.Documents.CdcSink.Schema;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration.MsSQL;
 using Microsoft.Data.SqlClient;
 using Raven.Server.NotificationCenter.Notifications;
 
@@ -474,41 +476,14 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
         {
             // Find all capture instances for this table, ordered oldest first.
             // We drain the oldest before switching to newer ones.
-            var instances = new List<string>();
-            await using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    SELECT capture_instance
-                    FROM cdc.change_tables
-                    WHERE source_object_id = OBJECT_ID(@fullTableName)
-                    ORDER BY create_date ASC";
-
-                AddParameter(cmd, "@fullTableName", $"{tableInfo.Schema}.{tableInfo.TableName}");
-                await using var reader = await cmd.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct))
-                    instances.Add(reader.GetString(0));
-            }
+            var instances = await SqlServerCdcCatalogQueries.FetchCaptureInstancesAsync(conn, tableInfo.Schema, tableInfo.TableName, ct);
 
             var captureInstance = instances.Count > 0 ? instances[0] : $"{tableInfo.Schema}_{tableInfo.TableName}";
             var hasNewerInstance = instances.Count > 1;
 
             // Fetch the captured column names so we can build an explicit SELECT
             // and read by ordinal instead of calling GetName()/skipping __$ at runtime
-            var columns = new List<string>();
-            await using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = @"
-                    SELECT cc.column_name
-                    FROM cdc.captured_columns cc
-                    JOIN cdc.change_tables ct ON cc.object_id = ct.object_id
-                    WHERE ct.capture_instance = @capture
-                    ORDER BY cc.column_ordinal";
-
-                AddParameter(cmd, "@capture", captureInstance);
-                await using var reader = await cmd.ExecuteReaderAsync(ct);
-                while (await reader.ReadAsync(ct))
-                    columns.Add(reader.GetString(0));
-            }
+            var columns = await SqlServerCdcCatalogQueries.FetchCapturedColumnsAsync(conn, captureInstance, ct);
 
             if (columns.Count == 0)
                 throw new InvalidOperationException(
@@ -637,7 +612,10 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     {
         if (_columnTypesCache.TryGetValue(tableInfo.FullName, out var columnTypes) == false)
         {
-            columnTypes = await GetColumnTypes(cmd.Connection, tableInfo.Schema, tableInfo.TableName, pkColumns, ct);
+            var allColumns = await MsSqlSchemaQueries.FetchTableColumnsAsync(cmd.Connection, tableInfo.Schema, tableInfo.TableName, ct);
+            columnTypes = new Dictionary<string, string>(allColumns.Count, StringComparer.OrdinalIgnoreCase);
+            foreach (var column in allColumns)
+                columnTypes[column.Name] = column.DataType;
             _columnTypesCache[tableInfo.FullName] = columnTypes;
         }
 
@@ -671,36 +649,6 @@ public class SqlServerCdcSinkProcess : CdcSinkProcess
     }
 
 
-
-    private static async Task<Dictionary<string, string>> GetColumnTypes(
-        DbConnection conn, string schema, string tableName, List<string> columns, CancellationToken ct)
-    {
-        var types = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = @"
-            SELECT COLUMN_NAME, DATA_TYPE
-            FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table";
-
-        AddParameter(cmd, "@schema", schema);
-        AddParameter(cmd, "@table", tableName);
-
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        while (await reader.ReadAsync(ct))
-        {
-            var colName = reader.GetString(0);
-            for (int i = 0; i < columns.Count; i++)
-            {
-                if (string.Equals(colName, columns[i], StringComparison.OrdinalIgnoreCase))
-                {
-                    types[colName] = reader.GetString(1).ToLowerInvariant();
-                    break;
-                }
-            }
-        }
-
-        return types;
-    }
 
     private static object ConvertStringToType(string value, string normalizedType)
     {

@@ -1,9 +1,19 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Npgsql;
 
 namespace Raven.Server.SqlMigration.NpgSQL
 {
     internal sealed class NpgSqlSchemaQueries : SqlSchemaQueries
     {
+        private const string SelectTableColumnsQuery =
+            @"SELECT column_name, data_type FROM information_schema.columns
+              WHERE table_schema = @schema AND table_name = @table
+              ORDER BY ordinal_position";
+
+
         private const string SelectColumnsTemplate =
             "SELECT C.TABLE_SCHEMA, C.TABLE_NAME, C.COLUMN_NAME, C.DATA_TYPE" +
             " FROM INFORMATION_SCHEMA.COLUMNS C JOIN INFORMATION_SCHEMA.TABLES T " +
@@ -35,5 +45,32 @@ namespace Raven.Server.SqlMigration.NpgSQL
             "SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, CONSTRAINT_NAME" +
             " FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
             "ORDER BY ORDINAL_POSITION";
+
+        /// <summary>
+        /// Returns every column of a single table in ordinal-position order.
+        /// Shared between the CDC streaming path (BindKeysetParameters caches it per table
+        /// and projects to a PK-name → data_type dict) and the future schema-discovery endpoint.
+        /// Postgres has no equivalent of MySQL's COLUMN_TYPE, so <see cref="SqlColumnInfo.DetailedType"/>
+        /// is set to the same value as <see cref="SqlColumnInfo.DataType"/>.
+        /// </summary>
+        public static async Task<List<SqlColumnInfo>> FetchTableColumnsAsync(
+            NpgsqlConnection connection, string schema, string tableName, CancellationToken ct)
+        {
+            var columns = new List<SqlColumnInfo>();
+
+            await using var cmd = new NpgsqlCommand(SelectTableColumnsQuery, connection);
+            cmd.Parameters.AddWithValue("schema", schema);
+            cmd.Parameters.AddWithValue("table", tableName);
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var name = reader.GetString(0);
+                var dataType = reader.GetString(1).ToLowerInvariant();
+                columns.Add(new SqlColumnInfo(name, dataType, dataType));
+            }
+
+            return columns;
+        }
     }
 }
