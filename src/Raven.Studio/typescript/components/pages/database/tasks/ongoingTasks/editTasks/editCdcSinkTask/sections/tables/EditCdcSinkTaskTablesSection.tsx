@@ -17,7 +17,7 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
     const { value: isPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
 
     return (
-        <div className="mt-3 vstack pb-3" style={{ minHeight: "100%" }}>
+        <div className="mt-3 vstack pb-3" style={{ minHeight: tablesFieldArray.fields.length > 0 ? "100%" : "300px" }}>
             <div className="hstack align-items-center">
                 <h3 className="m-0">Configured Tables</h3>
                 <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
