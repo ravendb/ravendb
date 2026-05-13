@@ -3,7 +3,7 @@
     <Description>Voron - Low level storage engine</Description>
     <Authors>RavenDB</Authors>
     <TargetFramework>net10.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.6</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>10.0.8</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Voron</AssemblyName>
     <PackageId>Voron</PackageId>
