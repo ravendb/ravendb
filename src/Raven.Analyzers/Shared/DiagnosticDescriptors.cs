@@ -5,7 +5,7 @@ namespace Raven.Analyzers.Shared
     internal static class DiagnosticDescriptors
     {
         private const string Category = "Usage";
-        private const string HelpLinkBase = "https://ravendb.net/docs/analyzers/";
+        private const string HelpLinkBase = "https://docs.ravendb.net/docs/client-api/csharp-code-analyzers/";
 
         /// <summary>
         /// Descriptor for <see cref="DiagnosticIds.QueryFilteringAfterProjection"/>.
