@@ -59,6 +59,14 @@ namespace Raven.Analyzers
             nameof(Queryable.GroupBy),
             "Search",
             "ProjectInto",
+            "Filter",
+            "Spatial",
+            "VectorSearch",
+            "OrderByDistance",
+            "OrderByDistanceDescending",
+            "MoreLikeThis",
+            "GroupByArrayValues",
+            "GroupByArrayContent",
         ];
 
         /// <summary>
@@ -131,10 +139,8 @@ namespace Raven.Analyzers
         public const string OpenAsyncSessionMethodName = "OpenAsyncSession";
         public const string IDocumentStoreName = "IDocumentStore";
 
-        /// <summary>
-        /// Matched with Contains() to cover both AbstractSubscriptionWorker and SubscriptionWorker.
-        /// </summary>
         public const string SubscriptionWorkerTypeName = "SubscriptionWorker";
+        public const string AbstractSubscriptionWorkerTypeName = "AbstractSubscriptionWorker";
 
         // ── Session lazy batching ──────────────────────────────────────────────────
         public const string LoadMethodName = "Load";

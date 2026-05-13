@@ -14,18 +14,9 @@ namespace Raven.Analyzers.Indexes
         BailCannotAnalyze
     }
 
-    internal readonly struct IndexFieldSet
+    internal record struct IndexFieldSet(IndexFieldInspection Status, ImmutableHashSet<string> Fields)
     {
-        public IndexFieldInspection Status { get; }
-        public ImmutableHashSet<string> Fields { get; }
-
-        public IndexFieldSet(IndexFieldInspection status, ImmutableHashSet<string> fields)
-        {
-            Status = status;
-            Fields = fields;
-        }
-
-        public static readonly IndexFieldSet Bail = new IndexFieldSet(IndexFieldInspection.BailCannotAnalyze, ImmutableHashSet<string>.Empty);
+        public static readonly IndexFieldSet Bail = new(IndexFieldInspection.BailCannotAnalyze, ImmutableHashSet<string>.Empty);
     }
 
     /// <summary>

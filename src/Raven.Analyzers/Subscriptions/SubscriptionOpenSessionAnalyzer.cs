@@ -134,7 +134,9 @@ namespace Raven.Analyzers.Subscriptions
             ITypeSymbol? current = type;
             while (current != null)
             {
-                if (current.Name.Contains(KnownTypes.SubscriptionWorkerTypeName))
+                string name = current.Name;
+                if (name == KnownTypes.SubscriptionWorkerTypeName ||
+                    name == KnownTypes.AbstractSubscriptionWorkerTypeName)
                     return true;
 
                 current = current.BaseType;

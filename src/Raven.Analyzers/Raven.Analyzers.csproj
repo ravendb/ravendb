@@ -26,4 +26,10 @@
       that need Workspaces live in the sibling Raven.Analyzers.CodeFixes project.
     -->
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Enables RS2008 release tracking: every rule ID must appear in Shipped or Unshipped. -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
 </Project>

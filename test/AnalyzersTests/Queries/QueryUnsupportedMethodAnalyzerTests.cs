@@ -243,5 +243,82 @@ class Order { public string Status { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        // ── Filter (added to QueryChainLambdaMethods) ─────────────────────────
+
+        [Fact]
+        public async Task UserMethod_In_Filter_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Queries;
+class MyPredicates { public static bool IsImportant(string status) => status == ""Important""; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order>()
+            .Filter(o => MyPredicates.IsImportant(o.Status));
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.QueryUnsupportedMethodCall, d.Id);
+            Assert.Contains("IsImportant", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task BclMethod_In_Filter_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Queries;
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        // string.IsNullOrEmpty is BCL (referenced assembly) — should not be flagged
+        var q = session.Query<Order>()
+            .Filter(o => !string.IsNullOrEmpty(o.Status));
+    }
+}
+
+class Order { public string Status { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task UserMethod_Outside_Lambda_In_OrderByDistance_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+using Raven.Client.Documents.Queries;
+class GeoHelper { public static double GetLat() => 52.0; public static double GetLng() => 21.0; }
+
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        // GeoHelper calls are NOT inside the field-selector lambda — should not be flagged
+        var q = session.Query<Place>()
+            .OrderByDistance(p => p.Location, GeoHelper.GetLat(), GeoHelper.GetLng());
+    }
+}
+
+class Place { public string Location { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryUnsupportedMethodAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
     }
 }
