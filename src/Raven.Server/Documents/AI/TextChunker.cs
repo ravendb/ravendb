@@ -21,7 +21,7 @@ public static class TextChunker
         if (chunkingOptions.ChunkingMethod == ChunkingMethod.NoChunk)
             return ApplyPrefixWithoutChunking(textualValue, prefix);
 
-        int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, prefix);
+        int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens, prefix);
 
         List<string> chunks = chunkingOptions.ChunkingMethod switch
         {
@@ -37,7 +37,7 @@ public static class TextChunker
         return ApplyPrefix(chunks, prefix);
     }
 
-    private static int GetEffectiveMaxTokens(int maxTokensPerChunk, string prefix)
+    private static int GetEffectiveMaxTokens(int maxTokensPerChunk, int overlapTokens, string prefix)
     {
         if (prefix is null)
             return maxTokensPerChunk;
@@ -47,6 +47,10 @@ public static class TextChunker
         if (effectiveMaxTokensPerChunk <= 0)
             throw new InvalidOperationException(
                 $"{nameof(ChunkingOptions.ContextPrefix)} is too long ({prefixTokens} tokens) for {nameof(ChunkingOptions.MaxTokensPerChunk)}={maxTokensPerChunk}. Increase {nameof(ChunkingOptions.MaxTokensPerChunk)} or shorten the {nameof(ChunkingOptions.ContextPrefix)}.");
+
+        if (overlapTokens >= effectiveMaxTokensPerChunk)
+            throw new InvalidOperationException(
+                $"{nameof(ChunkingOptions.OverlapTokens)}={overlapTokens} is greater than or equal to the effective {nameof(ChunkingOptions.MaxTokensPerChunk)} ({effectiveMaxTokensPerChunk}) after subtracting {prefixTokens} tokens for {nameof(ChunkingOptions.ContextPrefix)} from {nameof(ChunkingOptions.MaxTokensPerChunk)}={maxTokensPerChunk}. Reduce {nameof(ChunkingOptions.OverlapTokens)} or shorten the {nameof(ChunkingOptions.ContextPrefix)}.");
 
         return effectiveMaxTokensPerChunk;
     }

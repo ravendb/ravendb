@@ -74,6 +74,27 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
         Assert.Contains("ContextPrefix is too long", ex.Message);
     }
 
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    public void OverlapLargerThanEffectiveMaxTokensShouldThrow()
+    {
+        // MaxTokensPerChunk=10, OverlapTokens=8 is valid by itself (8 <= 10).
+        // The prefix consumes enough of the budget that the effective max falls below OverlapTokens.
+        const string prefix = "context prefix is here";
+
+        var ex = Assert.Throws<InvalidOperationException>(() =>
+            Raven.Server.Documents.AI.TextChunker.Chunk("first paragraph.\n\nsecond paragraph.",
+                new ChunkingOptions
+                {
+                    ChunkingMethod = ChunkingMethod.PlainTextSplitParagraphs,
+                    MaxTokensPerChunk = 10,
+                    OverlapTokens = 8,
+                    ContextPrefix = prefix
+                }));
+
+        Assert.Contains("OverlapTokens", ex.Message);
+        Assert.Contains("effective", ex.Message);
+    }
+
     [RavenFact(RavenTestCategory.Ai)]
     public void WhitespaceOnlyContextPrefixShouldFailValidation()
     {
