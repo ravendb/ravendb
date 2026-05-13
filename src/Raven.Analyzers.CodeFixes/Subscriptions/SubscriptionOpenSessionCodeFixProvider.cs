@@ -80,9 +80,12 @@ namespace Raven.Analyzers.CodeFixes.Subscriptions
                                ParenthesizedLambdaExpressionSyntax)
                 {
                     if (IsRunLambda(current))
-                    {
                         return ExtractFirstParameterName(current);
-                    }
+
+                    // The OpenSession call is inside a nested (non-Run) lambda.
+                    // Rewriting it to batch.OpenSession() could be incorrect if the lambda
+                    // outlives the subscription batch, so bail rather than produce a wrong fix.
+                    return null;
                 }
 
                 current = current.Parent;

@@ -177,7 +177,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
 
             // Build a map of statement index to new statement
             Dictionary<int, LocalDeclarationStatementSyntax> replacements = [];
-            List<(string lazyName, string originalName, string methodName)> renamings = [];
+            List<(string lazyName, string originalName, string methodName, SyntaxTriviaList originalTrivia)> renamings = [];
 
             // Transform each batchable statement
             for (int i = 0; i < batchableCalls.Count; i++)
@@ -191,90 +191,14 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                 string originalName = declarator.Identifier.Text;
                 string lazyName = GenerateLazyName(originalName, reservedNames);
 
-                // Build the new lazy invocation
-                ExpressionSyntax newInitializer;
+                ExpressionSyntax? newInitializer;
                 if (isLoad || methodName.Contains("Load", StringComparison.Ordinal))
-                {
-                    // session.Advanced.Lazily
-                    var lazilyExpr = SyntaxFactory.MemberAccessExpression(
-                        SyntaxKind.SimpleMemberAccessExpression,
-                        SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            sessionReceiver,
-                            SyntaxFactory.IdentifierName("Advanced")),
-                        SyntaxFactory.IdentifierName("Lazily"));
-
-                    // IDocumentSession.Advanced.Lazily.Load<T>(id)            -> Lazy<T>
-                    // IAsyncDocumentSession.Advanced.Lazily.LoadAsync<T>(id)  -> Lazy<Task<T>>
-                    string lazyLoadMethodName =
-                        methodName == KnownTypes.LoadAsyncMethodName ? KnownTypes.LoadAsyncMethodName : KnownTypes.LoadMethodName;
-
-                    // Extract type arguments from original invocation
-                    if (stmt.Declaration.Variables[0].Initializer?.Value is AwaitExpressionSyntax awaitExpr)
-                    {
-                        if (awaitExpr.Expression is InvocationExpressionSyntax origInv &&
-                            origInv.Expression is MemberAccessExpressionSyntax origMem)
-                        {
-                            SimpleNameSyntax loadMethod = BuildLoadMethodName(origMem.Name, lazyLoadMethodName);
-
-                            newInitializer = SyntaxFactory.InvocationExpression(
-                                SyntaxFactory.MemberAccessExpression(
-                                    SyntaxKind.SimpleMemberAccessExpression,
-                                    lazilyExpr,
-                                    loadMethod),
-                                origInv.ArgumentList);
-                        }
-                        else
-                        {
-                            return document; // bail rather than apply a partial fix
-                        }
-                    }
-                    else if (stmt.Declaration.Variables[0].Initializer?.Value is InvocationExpressionSyntax origInv2 &&
-                             origInv2.Expression is MemberAccessExpressionSyntax origMem2)
-                    {
-                        SimpleNameSyntax loadMethod = BuildLoadMethodName(origMem2.Name, lazyLoadMethodName);
-
-                        newInitializer = SyntaxFactory.InvocationExpression(
-                            SyntaxFactory.MemberAccessExpression(
-                                SyntaxKind.SimpleMemberAccessExpression,
-                                lazilyExpr,
-                                loadMethod),
-                            origInv2.ArgumentList);
-                    }
-                    else
-                    {
-                        return document; // bail rather than apply a partial fix
-                    }
-                }
+                    newInitializer = BuildLazyLoadInitializer(stmt, sessionReceiver, methodName);
                 else
-                {
-                    // Query materializing method -> Lazily()
-                    if (stmt.Declaration.Variables[0].Initializer?.Value is AwaitExpressionSyntax awaitExpr2)
-                    {
-                        if (awaitExpr2.Expression is InvocationExpressionSyntax origInv &&
-                            origInv.Expression is MemberAccessExpressionSyntax origMem)
-                        {
-                            newInitializer = SyntaxFactory.InvocationExpression(
-                                origMem.WithName(SyntaxFactory.IdentifierName("Lazily")),
-                                SyntaxFactory.ArgumentList());
-                        }
-                        else
-                        {
-                            return document; // bail rather than apply a partial fix
-                        }
-                    }
-                    else if (stmt.Declaration.Variables[0].Initializer?.Value is InvocationExpressionSyntax origInv3 &&
-                             origInv3.Expression is MemberAccessExpressionSyntax origMem3)
-                    {
-                        newInitializer = SyntaxFactory.InvocationExpression(
-                            origMem3.WithName(SyntaxFactory.IdentifierName("Lazily")),
-                            SyntaxFactory.ArgumentList());
-                    }
-                    else
-                    {
-                        return document; // bail rather than apply a partial fix
-                    }
-                }
+                    newInitializer = BuildLazyQueryInitializer(stmt);
+
+                if (newInitializer == null)
+                    return document; // bail rather than apply a partial fix
 
                 // Create new local declaration with lazy name
                 VariableDeclaratorSyntax newDeclarator = declarator
@@ -285,7 +209,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     .WithDeclaration(stmt.Declaration.WithVariables(
                         SyntaxFactory.SingletonSeparatedList(newDeclarator)));
 
-                renamings.Add((lazyName, originalName, methodName));
+                renamings.Add((lazyName, originalName, methodName, stmt.GetLeadingTrivia()));
                 replacements[batchableIndices[i]] = newStmt;
             }
 
@@ -310,48 +234,17 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     SyntaxFactory.AwaitExpression(executeExpr))
                 : SyntaxFactory.ExpressionStatement(executeExpr);
 
-            // Copy indentation from an existing statement
-            SyntaxTriviaList leadingTrivia = block.Statements[0].GetLeadingTrivia();
-            executeStmt = executeStmt.WithLeadingTrivia(leadingTrivia);
+            // Use the indentation of the first batchable statement for the execute call
+            executeStmt = executeStmt.WithLeadingTrivia(renamings[0].originalTrivia);
 
-            // Build Value extraction statements
+            // Build Value extraction statements; each extraction inherits the trivia of its source statement
             List<StatementSyntax> extractionStatements = [executeStmt];
-            foreach (var (lazyName, originalName, methodName) in renamings)
+            foreach (var (lazyName, originalName, methodName, originalTrivia) in renamings)
             {
-                // Determine the method to call on .Value
-                string valueMethod;
-                if (methodName.Contains("Load", StringComparison.Ordinal))
-                {
-                    valueMethod = "";
-                }
-                else if (methodName.StartsWith("ToList", StringComparison.Ordinal))
-                {
-                    valueMethod = "ToList";
-                }
-                else if (methodName.StartsWith("ToArray", StringComparison.Ordinal))
-                {
-                    valueMethod = "ToArray";
-                }
-                else if (methodName.StartsWith("First", StringComparison.Ordinal))
-                {
-                    valueMethod = "First";
-                }
-                else if (methodName.StartsWith("FirstOrDefault", StringComparison.Ordinal))
-                {
-                    valueMethod = "FirstOrDefault";
-                }
-                else if (methodName.StartsWith("Single", StringComparison.Ordinal))
-                {
-                    valueMethod = "Single";
-                }
-                else if (methodName.StartsWith("SingleOrDefault", StringComparison.Ordinal))
-                {
-                    valueMethod = "SingleOrDefault";
-                }
-                else
-                {
-                    valueMethod = "";
-                }
+                // Determine the materializer to call on .Value (Load has none; query methods keep theirs)
+                string valueMethod = methodName.StartsWith("ToList", StringComparison.Ordinal) ? "ToList"
+                    : methodName.StartsWith("ToArray", StringComparison.Ordinal) ? "ToArray"
+                    : "";
 
                 // Build: var x = lazyX.Value [.Method()];
                 // For async loads, Lazily.LoadAsync returns Lazy<Task<T>> so we must await
@@ -386,8 +279,7 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         SyntaxFactory.IdentifierName("var"),
                         SyntaxFactory.SingletonSeparatedList(extractVarDecl)));
 
-                // Add proper indentation
-                extractStmt = extractStmt.WithLeadingTrivia(leadingTrivia);
+                extractStmt = extractStmt.WithLeadingTrivia(originalTrivia);
 
                 extractionStatements.Add(extractStmt);
             }
@@ -427,6 +319,79 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     genName.TypeArgumentList);
             }
             return SyntaxFactory.IdentifierName(lazyLoadMethodName);
+        }
+
+        private static ExpressionSyntax? BuildLazyLoadInitializer(
+            LocalDeclarationStatementSyntax stmt,
+            ExpressionSyntax sessionReceiver,
+            string methodName)
+        {
+            ExpressionSyntax lazilyExpr = SyntaxFactory.MemberAccessExpression(
+                SyntaxKind.SimpleMemberAccessExpression,
+                SyntaxFactory.MemberAccessExpression(
+                    SyntaxKind.SimpleMemberAccessExpression,
+                    sessionReceiver,
+                    SyntaxFactory.IdentifierName("Advanced")),
+                SyntaxFactory.IdentifierName("Lazily"));
+
+            string lazyLoadMethodName = methodName == KnownTypes.LoadAsyncMethodName
+                ? KnownTypes.LoadAsyncMethodName
+                : KnownTypes.LoadMethodName;
+
+            ExpressionSyntax? initValue = stmt.Declaration.Variables[0].Initializer?.Value;
+
+            if (initValue is AwaitExpressionSyntax awaitExpr)
+            {
+                if (awaitExpr.Expression is not InvocationExpressionSyntax origInv ||
+                    origInv.Expression is not MemberAccessExpressionSyntax origMem)
+                    return null;
+
+                return SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        lazilyExpr,
+                        BuildLoadMethodName(origMem.Name, lazyLoadMethodName)),
+                    origInv.ArgumentList);
+            }
+
+            if (initValue is InvocationExpressionSyntax origInv2 &&
+                origInv2.Expression is MemberAccessExpressionSyntax origMem2)
+            {
+                return SyntaxFactory.InvocationExpression(
+                    SyntaxFactory.MemberAccessExpression(
+                        SyntaxKind.SimpleMemberAccessExpression,
+                        lazilyExpr,
+                        BuildLoadMethodName(origMem2.Name, lazyLoadMethodName)),
+                    origInv2.ArgumentList);
+            }
+
+            return null;
+        }
+
+        private static ExpressionSyntax? BuildLazyQueryInitializer(LocalDeclarationStatementSyntax stmt)
+        {
+            ExpressionSyntax? initValue = stmt.Declaration.Variables[0].Initializer?.Value;
+
+            if (initValue is AwaitExpressionSyntax awaitExpr)
+            {
+                if (awaitExpr.Expression is not InvocationExpressionSyntax origInv ||
+                    origInv.Expression is not MemberAccessExpressionSyntax origMem)
+                    return null;
+
+                return SyntaxFactory.InvocationExpression(
+                    origMem.WithName(SyntaxFactory.IdentifierName("Lazily")),
+                    SyntaxFactory.ArgumentList());
+            }
+
+            if (initValue is InvocationExpressionSyntax origInv2 &&
+                origInv2.Expression is MemberAccessExpressionSyntax origMem2)
+            {
+                return SyntaxFactory.InvocationExpression(
+                    origMem2.WithName(SyntaxFactory.IdentifierName("Lazily")),
+                    SyntaxFactory.ArgumentList());
+            }
+
+            return null;
         }
 
         private static ExpressionSyntax? ExtractSessionReceiverFromQueryChain(ExpressionSyntax expression)

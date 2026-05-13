@@ -206,6 +206,6 @@ namespace Raven.Analyzers.Shared
             defaultSeverity: DiagnosticSeverity.Info,
             isEnabledByDefault: true,
             description: "Fan-out indexes produce multiple index entries per source document by iterating over a nested collection. The RavenDB server fires a runtime warning (WarnIndexOutputsPerDocument) for the same reason. Verify the collection is intentionally fanned out and that its cardinality is acceptable.",
-            helpLinkUri: "https://issues.hibernatingrhinos.com/issues/RavenDB-26449");
+            helpLinkUri: HelpLinkBase + DiagnosticIds.IndexFanOut);
     }
 }

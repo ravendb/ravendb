@@ -698,5 +698,34 @@ class Test
 
             Assert.Empty(diagnostics);
         }
+
+        [Fact]
+        public async Task InternalProjectionRecord_FieldOnSourceDoc_No_Diagnostic()
+        {
+            // Regression: SourceMemberExtractor must include internal members of source-compiled types.
+            // Without the fix, all members of 'internal class Dto' with internal properties would be
+            // invisible to the extractor, producing a false-positive diagnostic for each field.
+            const string source = CommonUsings + OrderClass + @"
+internal class Dto { internal string Name { get; set; } internal string Status { get; set; } }
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        Map = orders => from o in orders select new { o.Name, o.Status };
+    }
+}
+class Test
+{
+    void Run(IDocumentSession session)
+    {
+        var q = session.Query<Order, OrderIndex>().ProjectInto<Dto>();
+    }
+}";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<QueryProjectionFieldAnalyzer>(source);
+
+            // Name and Status are on the source document (Order) — retrievable under Default behavior
+            Assert.Empty(diagnostics);
+        }
     }
 }
