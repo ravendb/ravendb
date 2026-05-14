@@ -108,5 +108,28 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Single(publicOnly.Tables);
             Assert.Equal("unrelated", publicOnly.Tables[0].SourceTableName);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_ConnectionFailure_ReturnsErrorsInsteadOf500()
+        {
+            using var store = GetDocumentStore();
+
+            // Point at a host that won't resolve. The driver will throw inside DiscoverAsync;
+            // the handler must catch it and return a structured response with Errors populated.
+            var connection = new SqlConnectionString
+            {
+                FactoryName = "Npgsql",
+                ConnectionString = "Host=cdc-test-no-such-host.invalid;Database=postgres;User Id=postgres;Password=x;Timeout=2;Command Timeout=2",
+            };
+
+            var result = await store.Maintenance.SendAsync(new GetCdcSinkSchemaOperation(connection));
+
+            Assert.NotNull(result);
+            Assert.Empty(result.Tables);
+            var error = Assert.Single(result.Errors);
+            // Generic operator-friendly message; must NOT echo the raw driver text (no host name in the response).
+            Assert.Contains("Schema discovery against the source database failed", error);
+            Assert.DoesNotContain("cdc-test-no-such-host", error);
+        }
     }
 }

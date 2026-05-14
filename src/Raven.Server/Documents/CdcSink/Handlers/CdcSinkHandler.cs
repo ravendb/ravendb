@@ -17,6 +17,7 @@ using Raven.Server.SqlMigration;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink.Handlers;
 
@@ -29,6 +30,9 @@ public class CdcSinkHandler : DatabaseRequestHandler
     /// §Risks block in the original plan for the streaming follow-up.
     /// </summary>
     internal const int MaxAllowedTestRows = 5000;
+
+    private RavenLogger Logger => _logger ??= Database.Loggers.GetLogger(typeof(CdcSinkHandler));
+    private RavenLogger _logger;
 
     [RavenAction("/databases/*/admin/cdc-sink/test", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostScriptTest()
@@ -214,24 +218,45 @@ public class CdcSinkHandler : DatabaseRequestHandler
             var bodyJson = await context.ReadForMemoryAsync(RequestBodyStream(), "CdcSinkSchemaRequest");
             var request = JsonDeserializationClient.CdcSinkSchemaRequest(bodyJson);
 
-            var connection = ResolveConnection(request);
-
-            CdcSinkSchemaDiscovery discovery;
-            try
-            {
-                discovery = CdcSinkSchemaDiscovery.For(connection.FactoryName);
-            }
-            catch (InvalidOperationException e)
-            {
-                throw new InvalidOperationException($"Cannot discover CDC schema: {e.Message}", e);
-            }
-
-            var schema = await discovery.DiscoverAsync(connection.ConnectionString, request.Schemas, Database.DatabaseShutdown);
+            var result = await ExecuteSchemaDiscoveryAsync(request);
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                context.Write(writer, schema.ToJson());
+                context.Write(writer, result.ToJson());
             }
+        }
+    }
+
+    private async Task<CdcSinkSourceSchema> ExecuteSchemaDiscoveryAsync(CdcSinkSchemaRequest request)
+    {
+        var result = new CdcSinkSourceSchema();
+
+        SqlConnectionString connection;
+        CdcSinkSchemaDiscovery discovery;
+        try
+        {
+            connection = ResolveConnection(request);
+            discovery = CdcSinkSchemaDiscovery.For(connection.FactoryName);
+        }
+        catch (InvalidOperationException e)
+        {
+            result.Errors.Add(e.Message);
+            return result;
+        }
+
+        try
+        {
+            return await discovery.DiscoverAsync(connection.ConnectionString, request.Schemas, Database.DatabaseShutdown);
+        }
+        catch (Exception e)
+        {
+            // The driver's exception message can include host/port/internal codes that we don't
+            // want to echo verbatim. Surface a generic note and log the full exception for diagnostics.
+            result.Errors.Add("Schema discovery against the source database failed. " +
+                              "Check the connection string and that the source server is reachable.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("CDC schema discovery failed", e);
+            return result;
         }
     }
 

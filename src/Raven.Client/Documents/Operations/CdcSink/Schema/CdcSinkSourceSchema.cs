@@ -20,12 +20,20 @@ public class CdcSinkSourceSchema : IDynamicJson
 
     public List<CdcSinkSourceTable> Tables { get; set; } = new();
 
+    /// <summary>
+    /// Whole-request failures (validation, missing connection-string, source DB unreachable).
+    /// Per-table issues live on the individual <see cref="CdcSinkSourceTable.UnsupportedReason"/>
+    /// / column-level <see cref="CdcSinkSourceColumn.UnsupportedReason"/> fields instead.
+    /// </summary>
+    public List<string> Errors { get; set; } = new();
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(CatalogName)] = CatalogName,
             [nameof(Tables)] = new DynamicJsonArray(Tables.Select(t => t.ToJson())),
+            [nameof(Errors)] = new DynamicJsonArray(Errors),
         };
     }
 }
