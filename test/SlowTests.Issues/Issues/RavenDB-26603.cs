@@ -128,7 +128,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
         var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
-            script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 20, 'Doc: ') });");
+            script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 20).withContextPrefix('Doc:') });");
 
         Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
         var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
@@ -204,7 +204,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
         var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
-            script: "embeddings.generate({ Paragraphs: text.splitParagraphs(this.Name, 20, 4, 'P: ') });");
+            script: "embeddings.generate({ Paragraphs: text.splitParagraphs(this.Name, 20, 4).withContextPrefix('P: ') });");
 
         Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
         var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
@@ -215,6 +215,93 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
             new EmbeddingsGenerationTaskIdentifier(configuration.Identifier),
             new AiConnectionStringIdentifier(connectionString.Identifier),
             "Paragraphs", expectedChunks, dto.Id);
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    public async Task ObjectWideContextPrefixOnEmbeddingsGenerate()
+    {
+        const string body =
+            "Vector search retrieves documents based on semantic similarity rather than exact keyword matches. " +
+            "Each document is represented by an embedding vector produced by a language model. " +
+            "Queries are converted into vectors using the same model and compared via cosine similarity or dot product.";
+        const string prefix = "Title:";
+
+        var expectedChunks = Raven.Server.Documents.AI.TextChunker.Chunk(body, new ChunkingOptions
+        {
+            ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
+            MaxTokensPerChunk = 20,
+            ContextPrefix = prefix
+        }).ToArray();
+
+        Assert.NotEmpty(expectedChunks);
+        Assert.All(expectedChunks, c => Assert.StartsWith(prefix, c));
+
+        var dto = new Dto { Name = body };
+
+        using var store = GetDocumentStore();
+        using (var session = store.OpenSession())
+        {
+            session.Store(dto);
+            session.SaveChanges();
+        }
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
+            script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 20) }).withContextPrefix('Title:');");
+
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+
+        AssertEmbeddingsForPath(store,
+            new EmbeddingsGenerationTaskIdentifier(configuration.Identifier),
+            new AiConnectionStringIdentifier(connectionString.Identifier),
+            "ChunkedName", expectedChunks, dto.Id);
+    }
+
+    [RavenMultiplatformFact(RavenTestCategory.Ai, RavenArchitecture.AllX64)]
+    public async Task ObjectWideContextPrefixDoesNotOverridePerPropertyPrefix()
+    {
+        const string body =
+            "Embeddings translate text into dense numeric vectors that capture semantic meaning. " +
+            "Two passages with related concepts will land close together in vector space even when they share no exact words.";
+        const string perPropertyPrefix = "Body:";
+        const string objectWidePrefix = "Title:";
+
+        var expectedChunks = Raven.Server.Documents.AI.TextChunker.Chunk(body, new ChunkingOptions
+        {
+            ChunkingMethod = ChunkingMethod.PlainTextSplitLines,
+            MaxTokensPerChunk = 20,
+            ContextPrefix = perPropertyPrefix
+        }).ToArray();
+
+        Assert.NotEmpty(expectedChunks);
+        Assert.All(expectedChunks, c => Assert.StartsWith(perPropertyPrefix, c));
+        Assert.All(expectedChunks, c => Assert.False(c.StartsWith(objectWidePrefix)));
+
+        var dto = new Dto { Name = body };
+
+        using var store = GetDocumentStore();
+        using (var session = store.OpenSession())
+        {
+            session.Store(dto);
+            session.SaveChanges();
+        }
+
+        var aiTaskDone = Etl.WaitForEtlToComplete(store);
+        var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
+            script: "embeddings.generate({ ChunkedName: text.splitLines(this.Name, 20).withContextPrefix('Body: ') }).withContextPrefix('Title: ');");
+
+        Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+
+        AssertEmbeddingsForPath(store,
+            new EmbeddingsGenerationTaskIdentifier(configuration.Identifier),
+            new AiConnectionStringIdentifier(connectionString.Identifier),
+            "ChunkedName", expectedChunks, dto.Id);
     }
 
     private class Dto

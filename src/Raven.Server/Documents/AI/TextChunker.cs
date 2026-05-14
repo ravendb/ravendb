@@ -150,7 +150,7 @@ public static class TextChunker
             return span;
         // the issue is that CountTokens() use the whole string, but if we have a value that is ~500Kb in size,
         // and 2048 tokens, we'll spend huge amounts of time just splitting the whole string, since CountTokens()
-        // has to work on the entire input we give it - therefor, we "guesstimate" the max size and pass that
+        // has to work on the entire input we give it - therefore, we "guesstimate" the max size and pass that
         // to the CountTokens() function - most embeddings use 3 - 4 chars per token, so by using 6, we ensure that the
         // text we send will be longer than the max tokens
         return span[..(maxTokens * 6)];
