@@ -64,7 +64,6 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         textObject.SetClfFunc("split", SplitPlainText);
         textObject.SetClfFunc("splitLines",  SplitPlainTextLines);
         textObject.SetClfFunc("splitParagraphs", SplitPlainTextParagraphs);
-        textObject.SetClfFunc("withContext", WithContext);
         DocumentScript.ScriptEngine.SetValue("text", textObject);
 
         ObjectInstance markdownObject = new JsObject(DocumentScript.ScriptEngine);
@@ -75,6 +74,12 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         ObjectInstance htmlObject = new JsObject(DocumentScript.ScriptEngine);
         htmlObject.SetClfFunc("strip", StripHtml);
         DocumentScript.ScriptEngine.SetValue("html", htmlObject);
+
+        var stringPrototype = (ObjectInstance)DocumentScript.ScriptEngine.Evaluate("String.prototype");
+        stringPrototype.SetClfFunc("withContextPrefix", StringOrArrayWithContextPrefix);
+
+        var arrayPrototype = (ObjectInstance)DocumentScript.ScriptEngine.Evaluate("Array.prototype");
+        arrayPrototype.SetClfFunc("withContextPrefix", StringOrArrayWithContextPrefix);
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -320,42 +325,39 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip, supportsOverlap: false);
     }
 
-    private JsValue WithContext(JsValue self, JsValue[] args)
+    private JsValue StringOrArrayWithContextPrefix(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.withContext(value | [value], contextPrefix)";
+        const string methodSignature = "<string | [string]>.withContextPrefix(contextPrefix)";
 
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
 
-        if (args[0].IsNull() || args[0].IsUndefined())
-            return JsValue.Undefined;
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
 
-        if (args[0].IsString() == false && args[0].IsArray() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string or a string array");
+        if (self.IsString() == false && self.IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} must be called on a string or a string array");
 
-        if (args[1].IsString() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a string");
-
-        var prefix = args[1].AsString();
+        var prefix = args[0].AsString();
 
         if (string.IsNullOrWhiteSpace(prefix))
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument (contextPrefix) cannot be empty or whitespace-only");
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument (contextPrefix) cannot be empty or whitespace-only");
 
-        ChunkingOptions chunkingOptions = new()
+        var chunkingOptions = new ChunkingOptions
         {
             NoChunking = true,
             ContextPrefix = prefix
         };
 
-        var result = new PropertyChunkingResult(((JsObject)self).Engine);
+        var result = new PropertyChunkingResult(DocumentScript.ScriptEngine);
 
-        if (args[0].IsString())
+        if (self.IsString())
         {
-            result.Value.Add((args[0].AsString(), chunkingOptions));
+            result.Value.Add((self.AsString(), chunkingOptions));
             return result;
         }
 
-        foreach (var line in args[0].AsArray())
+        foreach (var line in self.AsArray())
         {
             if (line.IsNull() || line.IsUndefined())
                 continue;

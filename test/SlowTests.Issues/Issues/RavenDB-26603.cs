@@ -157,7 +157,7 @@ public class RavenDB_26603(ITestOutputHelper output) : EmbeddingsGenerationTestB
 
         var aiTaskDone = Etl.WaitForEtlToComplete(store);
         var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
-            script: "embeddings.generate({ Field: text.withContext(this.Name, 'Title: ') });");
+            script: "embeddings.generate({ Field: this.Name.withContextPrefix('Title: ') });");
 
         Assert.True(await aiTaskDone.WaitAsync(DefaultEtlTimeout));
         var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
