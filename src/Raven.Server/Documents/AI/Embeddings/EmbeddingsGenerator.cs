@@ -27,6 +27,7 @@ using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 
@@ -76,8 +77,10 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         public readonly TaskCompletionSource TaskCompletionSource = new(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
-    private class AiWorker
+    private class AiWorker : ILowMemoryHandler
     {
+        private const int PrefixTokenCountsCacheSize = 128;
+
         private readonly DocumentsStorage _documentsStorage;
         public readonly EmbeddingsGenerationConfiguration Configuration;
         private readonly AiConnectionString _connectionString;
@@ -86,6 +89,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         private readonly AsyncManualResetEvent _hasWork = new();
         private readonly ConcurrentQueue<GenerateEmbeddings> _work = new();
         private readonly ConcurrentDictionary<string, GenerateEmbeddings> _inFlightCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly SizeLimitedConcurrentDictionary<string, int> _prefixTokenCounts = new(PrefixTokenCountsCacheSize, StringComparer.Ordinal);
         private readonly Task[] _tasks;
         private readonly EmbeddingsGenerator _parent;
         private readonly CancellationTokenSource _shutdown;
@@ -111,6 +115,17 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             _tasks = new Task[maxConcurrentBatches + 1];
             Array.Fill(_tasks, Task.CompletedTask);
             _tasks[^1] = shutdownTask.Task;
+
+            LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
+        }
+
+        public void LowMemory(LowMemorySeverity lowMemorySeverity)
+        {
+            _prefixTokenCounts.Clear();
+        }
+
+        public void LowMemoryOver()
+        {
         }
         
          public PutDocumentEmbeddings GenerateEmbeddingAsync(DocumentsOperationContext documentsContext,
@@ -129,7 +144,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                  {
                      List<string> pending = [];
                      List<ReadOnlyMemory<byte>> cachedEmbeddingsBuffers = [];
-                     foreach (var chunkedValue in TextChunker.Chunk(value, chunking))
+                     foreach (var chunkedValue in TextChunker.Chunk(value, chunking, _prefixTokenCounts))
                      {
                          if (string.IsNullOrWhiteSpace(chunkedValue))
                              continue; // this can happen if we have just spaces, or if we have an HTML with just <img/>, etc.
@@ -174,7 +189,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             List<string> pending = null;
             // we explicitly do *not* care about the order of vectors compared to the text, including with chunking or 
             // with multiple values. Logically, we send text, and get a set of vectors back, in some arbitrary order
-            foreach (var text in TextChunker.Chunk(value, Configuration.ChunkingOptionsForQuerying))
+            foreach (var text in TextChunker.Chunk(value, Configuration.ChunkingOptionsForQuerying, _prefixTokenCounts))
             {
                 if (TryGetFromCache(documentsContext, text, Configuration.EmbeddingsCacheForQueryingExpiration, ref expirationRefresh,
                         out ReadOnlyMemory<byte> cached))

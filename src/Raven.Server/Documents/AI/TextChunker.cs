@@ -12,9 +12,7 @@ namespace Raven.Server.Documents.AI;
 
 public static class TextChunker
 {
-    private static readonly SizeLimitedConcurrentDictionary<string, int> PrefixTokenCounts = new(8 * 1024, StringComparer.Ordinal);
-    
-    public static List<string> Chunk(string textualValue, ChunkingOptions chunkingOptions)
+    public static List<string> Chunk(string textualValue, ChunkingOptions chunkingOptions, SizeLimitedConcurrentDictionary<string, int> cache = null)
     {
         var prefix = chunkingOptions.ContextPrefix;
 
@@ -23,7 +21,7 @@ public static class TextChunker
         if (chunkingOptions.NoChunking)
             return ApplyPrefixWithoutChunking(textualValue, prefix);
 
-        int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens, prefix);
+        int effectiveMaxTokens = GetEffectiveMaxTokens(chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens, prefix, cache);
 
         List<string> chunks = chunkingOptions.ChunkingMethod switch
         {
@@ -39,15 +37,20 @@ public static class TextChunker
         return ApplyPrefix(chunks, prefix);
     }
 
-    private static int GetEffectiveMaxTokens(int maxTokensPerChunk, int overlapTokens, string prefix)
+    private static int GetEffectiveMaxTokens(int maxTokensPerChunk, int overlapTokens, string prefix, SizeLimitedConcurrentDictionary<string, int> cache)
     {
         if (prefix is null)
             return maxTokensPerChunk;
 
-        if (PrefixTokenCounts.TryGetValue(prefix, out var prefixTokens) == false)
+        int prefixTokens;
+        if (cache is null)
         {
             prefixTokens = Tokenizer.CountTokens(prefix);
-            PrefixTokenCounts.Set(prefix, prefixTokens);
+        }
+        else if (cache.TryGetValue(prefix, out prefixTokens) == false)
+        {
+            prefixTokens = Tokenizer.CountTokens(prefix);
+            cache.Set(prefix, prefixTokens);
         }
 
         int effectiveMaxTokensPerChunk = maxTokensPerChunk - prefixTokens;

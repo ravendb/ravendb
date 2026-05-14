@@ -49,6 +49,12 @@ namespace Raven.Server.Utils
             return _dic.TryRemove(key, out value);
         }
 
+        public void Clear()
+        {
+            _dic.Clear();
+            _queue.Clear();
+        }
+
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
             return _dic.GetEnumerator();
