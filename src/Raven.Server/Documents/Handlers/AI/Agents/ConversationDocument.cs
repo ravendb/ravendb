@@ -265,7 +265,7 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         LastMessageAt = currentDate;
     }
 
-    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, int maxModelIterationsPerCall)
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document, int maxModelIterationsPerCall, bool cloneMessages = true)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
             throw new ArgumentException($"Missing Agent in '{id}' conversation document");
@@ -300,7 +300,7 @@ public partial class ConversationDocument([NotNull] string agent, BlittableJsonR
         var conversation = new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
-            Messages = new MessagesList(messages),
+            Messages = new MessagesList(messages, cloneArray: cloneMessages),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,

@@ -457,7 +457,7 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         using (context.OpenReadTransaction())
         {
             var doc = database.DocumentsStorage.Get(context, conversationId);
-            var conversation = ConversationDocument.ToDocument(conversationId, doc.Data, 16);
+            var conversation = ConversationDocument.ToDocument(conversationId, doc.Data, 16, cloneMessages: false);
 
             for (int i = 0; i < conversation.Messages.Count; i++)
             {
