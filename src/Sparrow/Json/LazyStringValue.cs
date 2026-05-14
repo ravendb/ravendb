@@ -184,13 +184,11 @@ namespace Sparrow.Json
         
         private static byte[] GetLazyStringTempComparisonBuffer(int charCount)
         {
-            if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < charCount * 5)
-            {
-                var sizeInBytes = Encodings.Utf8.GetMaxByteCount(charCount);
-
-                if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < charCount)
-                    _lazyStringTempComparisonBuffer = new byte[Bits.NextAllocationSize(sizeInBytes)];
-            }
+            // Inlined from Encodings.Utf8.GetMaxByteCount(charCount) to avoid virtual dispatch indirection.
+            var sizeInBytes = (charCount + 1) * 3;
+            Debug.Assert(sizeInBytes >= Encodings.Utf8.GetMaxByteCount(charCount));
+            if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < sizeInBytes)
+                _lazyStringTempComparisonBuffer = new byte[Bits.NextAllocationSize(sizeInBytes)];
             return _lazyStringTempComparisonBuffer;
         }
 
@@ -263,13 +261,11 @@ namespace Sparrow.Json
             if (_string != null)
                 return string.Compare(_string, other, StringComparison.Ordinal);
 
-            var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);
-
             var buffer = GetLazyStringTempComparisonBuffer(other.Length);
             fixed (char* pOther = other)
             fixed (byte* pBuffer = buffer)
             {
-                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
+                var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, buffer.Length);
                 return Compare(pBuffer, tmpSize);
             }
         }
