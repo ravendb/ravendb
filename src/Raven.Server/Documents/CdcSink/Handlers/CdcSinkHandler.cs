@@ -127,7 +127,13 @@ public class CdcSinkHandler : DatabaseRequestHandler
         }
         catch (Exception e)
         {
-            result.Errors.Add($"Failed to fetch rows from source: {e.Message}");
+            // Driver exception messages often contain host/port/internal codes — log the full
+            // detail for diagnostics but surface only a generic note to the response body,
+            // matching what /schema does on its DiscoverAsync failure path.
+            result.Errors.Add("Failed to fetch rows from the source database. " +
+                              "Check the connection string and that the source table exists.");
+            if (Logger.IsInfoEnabled)
+                Logger.Info("CDC test-mapping row fetch failed", e);
             return result;
         }
 

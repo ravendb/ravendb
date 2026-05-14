@@ -189,5 +189,53 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Contains(nameof(TestCdcSinkMappingRequest.MaxRows), error);
             Assert.Contains("between 1 and 5,000", error);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_RowFetchConnectionFailure_ReturnsGenericErrorWithoutDriverDetails()
+        {
+            using var store = GetDocumentStore();
+
+            // Point at a host that won't resolve so FetchRowsAsync throws inside the handler.
+            // The driver's raw exception text contains the host and internal Npgsql codes; the
+            // response body must echo NEITHER and instead surface the generic operator message.
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-fetch-failure",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = "Host=cdc-test-no-such-host.invalid;Database=postgres;User Id=postgres;Password=x;Timeout=2;Command Timeout=2",
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("Failed to fetch rows from the source database", error);
+            Assert.DoesNotContain("cdc-test-no-such-host", error);
+        }
     }
 }
