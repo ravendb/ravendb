@@ -7,18 +7,33 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 public partial class ConversationDocument
 {
     /// <summary>
-    /// Wraps conversation messages with lazy materialization. When constructed from a
-    /// BlittableJsonReaderArray (via ToDocument), provides zero-copy read access.
-    /// On first mutation (Add, RemoveRange, Clear), materializes to an internal list.
+    /// Wraps conversation messages with copy-on-write semantics. Two construction modes:
+    /// <list type="bullet">
+    /// <item><description><b>Owned</b> (<c>cloneArray = true</c>, default): clones the source array upfront so the instance
+    /// is independent of the parent document's lifetime. Required for write flows where the source
+    /// read transaction closes before mutations happen.</description></item>
+    /// <item><description><b>Borrowed</b> (<c>cloneArray = false</c>): keeps the source array reference — true zero-copy.
+    /// The caller must keep the parent document alive for as long as this instance is used.
+    /// Suitable for read-only flows that hold the source transaction open throughout.</description></item>
+    /// </list>
+    /// On first mutation (Add, RemoveRange, Clear), individual messages are cloned onto the source
+    /// context and switched to an internal list.
     /// </summary>
     public sealed class MessagesList : IList<BlittableJsonReaderObject>
     {
         private BlittableJsonReaderArray _messagesArray;
         private List<BlittableJsonReaderObject> _messagesList;
+        private readonly bool _ownsArray;
 
         internal MessagesList() { }
 
-        internal MessagesList(BlittableJsonReaderArray array) => _messagesArray = array.Clone(); // Clone (at the same context) to allow disposing this array disposing its elements
+        internal MessagesList(BlittableJsonReaderArray array, bool cloneArray = true)
+        {
+            // Owned mode clones at the same context so the source document can be disposed safely.
+            // Borrowed mode keeps the reference verbatim — caller is responsible for lifetime.
+            _messagesArray = cloneArray ? array.Clone() : array;
+            _ownsArray = cloneArray;
+        }
 
         public int Count => _messagesList?.Count ?? _messagesArray?.Length ?? 0;
 
@@ -42,7 +57,8 @@ public partial class ConversationDocument
 
         public void Clear()
         {
-            _messagesArray?.Dispose();
+            if (_ownsArray)
+                _messagesArray?.Dispose();
             _messagesArray = null;
             _messagesList = [];
         }
@@ -131,7 +147,8 @@ public partial class ConversationDocument
             }
 
             _messagesList = list;
-            _messagesArray?.Dispose();
+            if (_ownsArray)
+                _messagesArray?.Dispose();
             _messagesArray = null;
             return list;
         }

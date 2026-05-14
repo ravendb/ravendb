@@ -31,7 +31,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
         private readonly List<AiConversationMessage> _results = new();
         private readonly Dictionary<string, (string Content, string SubConversationId)> _toolResponses = new(StringComparer.Ordinal);
-        private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId)> _seenMessageKeys = new();
+        private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId, int Hash)> _seenMessageKeys = new();
         private readonly HashSet<string> _attachmentNames = new(StringComparer.Ordinal);
         private bool _hasMoreMessages;
 
@@ -110,7 +110,8 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
                 return;
 
             // Intentionally not catching — corrupted history docs should surface a clear error.
-            var historyConversation = ConversationDocument.ToDocument(historyDocId, rawDoc.Data, maxModelIterationsPerCall: 0);
+            // cloneMessages: false — same borrowing rationale as the main doc: read-only within the open txn.
+            var historyConversation = ConversationDocument.ToDocument(historyDocId, rawDoc.Data, maxModelIterationsPerCall: 0, cloneMessages: false);
 
             if (historyConversation.Messages.Count == 0)
                 return;
@@ -233,12 +234,19 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return true;
         }
 
-        private static (long TimestampTicks, string Role, string ToolCallId) CreateDeduplicationKey(BlittableJsonReaderObject msg)
+        private static (long TimestampTicks, string Role, string ToolCallId, int Hash) CreateDeduplicationKey(BlittableJsonReaderObject msg)
         {
+            // (TimestampTicks, Role, ToolCallId) alone is not enough: ToolCallId is null on user/assistant/system
+            // messages, and in old conversations created before the monotonic-timestamp fix several messages can
+            // share the same date tick. We add a hash of the serialized message as a strong discriminator —
+            // BlittableJsonReaderObject.ToString() produces deterministic JSON, so the same logical message
+            // (present in both the current doc and a history snapshot) hashes identically and still dedups,
+            // while distinct messages that happen to share (ticks, role) no longer collide.
             msg.TryGet(ConversationDocument.DateProperty, out DateTime timestamp);
             msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
             msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId);
-            return (timestamp.Ticks, role, toolCallId);
+            int hash = msg.ToString().GetHashCode();
+            return (timestamp.Ticks, role, toolCallId, hash);
         }
 
         private void TryProcessMessage(ConversationDocument.MessagesList messages, ref int index)
