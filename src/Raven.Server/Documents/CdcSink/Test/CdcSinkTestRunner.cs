@@ -89,7 +89,11 @@ namespace Raven.Server.Documents.CdcSink.Test
                     runner.DebugOutput ??= new List<string>();
                 }
 
-                using (context.OpenWriteTransaction())
+                // Read transaction is sufficient — the runner mints synthetic Blittables via
+                // context.ReadObject + runner.Translate but never writes them back to storage.
+                // No call to OpenWriteTransaction means we don't contend with concurrent writers
+                // on the same database for what is effectively a preview / dry-run.
+                using (context.OpenReadTransaction())
                 {
                     foreach (var values in rows)
                     {
