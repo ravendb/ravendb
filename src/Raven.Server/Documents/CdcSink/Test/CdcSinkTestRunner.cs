@@ -67,11 +67,13 @@ namespace Raven.Server.Documents.CdcSink.Test
             var wouldDelete = isDelete && ignoreDeletes == false;
 
             // For embedded/linked tables we'd need to simulate the parent doc state; for MVP we only
-            // support root-table tests and surface the limitation so Studio can show a hint.
+            // support root-table tests and surface the limitation so Studio can show a hint. It's
+            // advisory rather than a hard error — the root-table results below are still valid —
+            // so route it through Warnings, not Errors.
             if (targetTable.LinkedTables is { Count: > 0 } || targetTable.EmbeddedTables is { Count: > 0 })
             {
-                result.Errors.Add("Note: linked and embedded tables are configured on this table but are not exercised in test mode. " +
-                                  "Only the root row mapping (and its patch / OnDelete patch) runs.");
+                result.Warnings.Add("Linked and embedded tables configured on this table are not exercised in test mode. " +
+                                    "Only the root row mapping (and its patch / OnDelete patch) runs.");
             }
 
             var patchRequest = docProcessor.CombinedPatchRequest;

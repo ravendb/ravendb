@@ -14,7 +14,20 @@ public class TestCdcSinkMappingResult : IDynamicJson
 {
     public List<TestCdcSinkRowResult> Results { get; set; } = new();
 
+    /// <summary>
+    /// Hard failures that prevent the test from producing results — validation, connection
+    /// resolution, source-table row fetch, etc. A populated <see cref="Errors"/> usually means
+    /// <see cref="Results"/> is empty.
+    /// </summary>
     public List<string> Errors { get; set; } = new();
+
+    /// <summary>
+    /// Advisory notes that don't prevent the test from running — for example, "linked /
+    /// embedded tables on this table are not exercised in test mode (root mapping only)".
+    /// Studio can surface them in a different colour from <see cref="Errors"/> so the user
+    /// knows the results in <see cref="Results"/> are still valid.
+    /// </summary>
+    public List<string> Warnings { get; set; } = new();
 
     public DynamicJsonValue ToJson()
     {
@@ -22,6 +35,7 @@ public class TestCdcSinkMappingResult : IDynamicJson
         {
             [nameof(Results)] = new DynamicJsonArray(Results.Select(r => r.ToJson())),
             [nameof(Errors)] = new DynamicJsonArray(Errors),
+            [nameof(Warnings)] = new DynamicJsonArray(Warnings),
         };
     }
 }

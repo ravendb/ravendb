@@ -239,5 +239,43 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.False(row.WouldDelete);
             Assert.True(row.IgnoreDeletes);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task LinkedOrEmbeddedTables_SurfacesAdvisoryInWarningsNotErrors()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200), dept_id INT);
+                INSERT INTO lecturers (id, name, email, dept_id) VALUES (1, 'Alice', 'alice@example.com', 7);");
+
+            var (db, ctx, _) = await SetupAsync();
+            var table = BuildLecturersTableConfig();
+            // BuildLecturersTableConfig only configures id/name/email; the linked table's join
+            // column must also be in Columns so SetSourceColumnNames accepts the layout.
+            table.Columns.Add(new CdcColumnMapping { Column = "dept_id", Name = "DeptId" });
+            table.LinkedTables = new List<CdcSinkLinkedTableConfig>
+            {
+                new()
+                {
+                    SourceTableSchema = "public",
+                    SourceTableName = "departments",
+                    PropertyName = "Department",
+                    JoinColumns = new List<string> { "dept_id" },
+                    LinkedCollectionName = "Departments",
+                },
+            };
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            // Results still populated — the root mapping ran fine.
+            Assert.Empty(result.Errors);
+            Assert.Single(result.Results);
+
+            // The "linked/embedded not exercised" note is advisory and must land in Warnings, not Errors.
+            var warning = Assert.Single(result.Warnings);
+            Assert.Contains("Linked and embedded tables", warning);
+        }
     }
 }
