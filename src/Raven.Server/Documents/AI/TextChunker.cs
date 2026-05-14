@@ -1,10 +1,10 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using HtmlAgilityPack;
 using Microsoft.ML.Tokenizers;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Server.Utils;
 
 #pragma warning disable SKEXP0050
 
@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.AI;
 
 public static class TextChunker
 {
-    private static readonly ConcurrentDictionary<string, int> PrefixTokenCounts = new(StringComparer.Ordinal);
+    private static readonly SizeLimitedConcurrentDictionary<string, int> PrefixTokenCounts = new(8 * 1024, StringComparer.Ordinal);
     
     public static List<string> Chunk(string textualValue, ChunkingOptions chunkingOptions)
     {
@@ -44,7 +44,12 @@ public static class TextChunker
         if (prefix is null)
             return maxTokensPerChunk;
 
-        int prefixTokens = PrefixTokenCounts.GetOrAdd(prefix, static p => Tokenizer.CountTokens(p));
+        if (PrefixTokenCounts.TryGetValue(prefix, out var prefixTokens) == false)
+        {
+            prefixTokens = Tokenizer.CountTokens(prefix);
+            PrefixTokenCounts.Set(prefix, prefixTokens);
+        }
+
         int effectiveMaxTokensPerChunk = maxTokensPerChunk - prefixTokens;
         if (effectiveMaxTokensPerChunk <= 0)
             throw new InvalidOperationException(
