@@ -205,10 +205,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
                         _tcpConnectionOptions.DatabaseContext?.RunningTcpConnections.Add(_tcpConnectionOptions);
 
                         // Re-check: shutdown may have landed between the check above and the Add.
-                        // This narrows but does NOT eliminate the race - cancellation can still land
-                        // after this check returns. The RunningTcpConnections drain in
-                        // DocumentDatabase.Dispose / ShardedDatabaseContext.Dispose is the real
-                        // safety net for that residual window.
                         if (_cts.IsCancellationRequested)
                         {
                             _tcpConnectionOptions.Dispose();
@@ -892,9 +888,9 @@ namespace Raven.Server.Documents.Replication.Outgoing
                 {
                     _tcpConnectionOptions?.Dispose();
                 }
-                catch (ObjectDisposedException)
+                catch
                 {
-                    // expected on idempotent re-dispose - matches the sibling _cts.Dispose() block above
+                    // idempotent + defensive
                 }
             }
         }
