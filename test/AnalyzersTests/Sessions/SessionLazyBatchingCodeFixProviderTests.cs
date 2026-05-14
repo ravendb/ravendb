@@ -288,5 +288,68 @@ class Order { public string Id { get; set; } }
 
             Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
         }
+
+        [Fact]
+        public async Task Playground_Shape_Multi_Comment_Block_And_Trailing_Comments_Not_Duplicated()
+        {
+            // Mirrors the exact shape of RVN012_SessionLazyBatching.BadExample in the playground:
+            // three stacked single-line comments before stmt1, trailing same-line comments on each Load.
+            // The trailing comments consume the EOL into `;`'s trailing trivia, leaving stmt2's
+            // leading trivia as pure whitespace (no EOL), which previously caused a second formatting
+            // bug: the second extraction was jammed onto the same line as the first.
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        // warning RVN012: 'Load' is an eager session operation. This method contains
+        //   multiple independent session operations; use session.Advanced.Lazily or
+        //   query.Lazily() to batch them into a single server round-trip.
+        var user  = session.Load<User>(userId);   // round-trip 1
+        var order = session.Load<Order>(orderId); // round-trip 2
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            // Each comment line must appear exactly once in the output.
+            string[] comments =
+            [
+                "// warning RVN012: 'Load' is an eager session operation. This method contains",
+                "//   multiple independent session operations; use session.Advanced.Lazily or",
+                "//   query.Lazily() to batch them into a single server round-trip.",
+                "// round-trip 1",
+                "// round-trip 2",
+            ];
+            foreach (string comment in comments)
+            {
+                int count = 0;
+                int pos = 0;
+                while (true)
+                {
+                    int idx = fixed_code.IndexOf(comment, pos, System.StringComparison.Ordinal);
+                    if (idx < 0) break;
+                    count++;
+                    pos = idx + 1;
+                }
+                Assert.True(count == 1, $"Expected comment to appear exactly once but found {count}: {comment}");
+            }
+
+            // No comment must appear after the execute statement (the synthesised section is comment-free).
+            int executePos = fixed_code.IndexOf("ExecuteAllPendingLazyOperations", System.StringComparison.Ordinal);
+            Assert.True(executePos >= 0, "ExecuteAllPendingLazyOperations not found in fixed output");
+            string afterExecute = fixed_code.Substring(executePos);
+            Assert.DoesNotContain("//", afterExecute);
+
+            // Extractions must be on separate lines — not jammed onto one line.
+            Assert.DoesNotContain("Value;        var", fixed_code);
+            Assert.DoesNotContain("Value;    var", fixed_code);
+
+            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+        }
     }
 }
