@@ -751,7 +751,7 @@ namespace Raven.Server.SqlMigration
                     break;
 
                 case RowFetchMode.ByPrimaryKey:
-                    cmd.CommandText = BuildSelectByPrimaryKeyQuery(tableSchema, tableName, primaryKeyColumns, primaryKeyValues, typedTableSchema, cmd);
+                    cmd.CommandText = BuildSelectByPrimaryKeyQuery(tableSchema, tableName, primaryKeyColumns, primaryKeyValues, typedTableSchema, cmd, maxRows);
                     break;
 
                 default:
@@ -787,26 +787,31 @@ namespace Raven.Server.SqlMigration
             // at the same level as the row-limit. Build the dialect-aware shape via BuildLimitedSelectQuery.
             var orderBy = orderByColumns != null && orderByColumns.Count > 0
                 ? " order by " + string.Join(", ", orderByColumns.Select(QuoteColumn))
-                : "";
-            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), orderBy, maxRows);
+                : string.Empty;
+            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause: string.Empty, orderBy, maxRows);
         }
 
         /// <summary>
         /// Build a <c>SELECT TOP N / LIMIT N</c> query with the ORDER BY at the same level as the
-        /// row cap so the ordering survives. Default uses ANSI <c>... ORDER BY ... LIMIT n</c>
-        /// (Postgres / MySQL); SQL Server overrides with <c>SELECT TOP n ... ORDER BY ...</c>
-        /// and Oracle with <c>... FETCH NEXT n ROWS ONLY</c>.
+        /// row cap so the ordering survives. The optional <paramref name="whereClause"/> is the
+        /// raw <c>pk1 = @p0 AND ...</c> body (no leading <c>where</c>) — passed as a parameter so
+        /// <c>ByPrimaryKey</c> mode also gets the row limit applied, in case the configured PK
+        /// column list doesn't actually enforce uniqueness on the source. Default uses ANSI
+        /// <c>... ORDER BY ... LIMIT n</c> (Postgres / MySQL); SQL Server overrides with
+        /// <c>SELECT TOP n ... ORDER BY ...</c> and Oracle with <c>... FETCH NEXT n ROWS ONLY</c>.
         /// </summary>
-        protected virtual string BuildLimitedSelectQuery(string quotedTable, string orderByClause, int maxRows)
+        protected virtual string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
         {
-            return $"select * from {quotedTable}{orderByClause} limit {maxRows}";
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select * from {quotedTable}{where}{orderByClause} limit {maxRows}";
         }
 
         private string BuildSelectByPrimaryKeyQuery(
             string tableSchema, string tableName,
             IReadOnlyList<string> pkColumns, IReadOnlyList<string> pkValues,
             SqlTableSchema typedTableSchema,
-            DbCommand cmd)
+            DbCommand cmd,
+            int maxRows)
         {
             var pkValueArray = pkValues.ToArray();
             var whereClause = string.Join(" and ", pkColumns.Select((column, idx) =>
@@ -818,7 +823,12 @@ namespace Raven.Server.SqlMigration
                 return $"{QuoteColumn(column)} = @p{idx}";
             }));
 
-            return $"select * from {QuoteTable(tableSchema, tableName)} where {whereClause}";
+            // Apply the dialect-aware row cap even though the handler only accepts maxRows=1 for
+            // ByPrimaryKey today — the configured pk columns may not actually enforce uniqueness
+            // on the source (mis-configured CDC task, or a source table without a true PK), in
+            // which case the WHERE alone could still match multiple rows. The server-side cap
+            // must hold regardless of source metadata quality.
+            return BuildLimitedSelectQuery(QuoteTable(tableSchema, tableName), whereClause, orderByClause: string.Empty, maxRows);
         }
     }
 }

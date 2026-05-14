@@ -73,9 +73,10 @@ namespace Raven.Server.SqlMigration.MsSQL
             return inputQuery;
         }
 
-        protected override string BuildLimitedSelectQuery(string quotedTable, string orderByClause, int maxRows)
+        protected override string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
         {
-            return $"select top {maxRows} * from {quotedTable}{orderByClause}";
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select top {maxRows} * from {quotedTable}{where}{orderByClause}";
         }
 
         protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)

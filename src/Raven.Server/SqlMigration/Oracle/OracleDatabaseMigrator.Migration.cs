@@ -128,9 +128,10 @@ namespace Raven.Server.SqlMigration.Oracle
             return inputQuery;
         }
 
-        protected override string BuildLimitedSelectQuery(string quotedTable, string orderByClause, int maxRows)
+        protected override string BuildLimitedSelectQuery(string quotedTable, string whereClause, string orderByClause, int maxRows)
         {
-            return $"select * from {quotedTable}{orderByClause} fetch next {maxRows} rows only";
+            var where = string.IsNullOrEmpty(whereClause) ? string.Empty : $" where {whereClause}";
+            return $"select * from {quotedTable}{where}{orderByClause} fetch next {maxRows} rows only";
         }
 
         protected override string GetSelectAllQueryForTable(string tableSchema, string tableName)

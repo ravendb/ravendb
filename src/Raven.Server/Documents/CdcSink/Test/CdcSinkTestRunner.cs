@@ -92,7 +92,22 @@ namespace Raven.Server.Documents.CdcSink.Test
             {
                 if (hasUserScript)
                 {
-                    returnRun = database.Scripts.GetScriptRunner(patchRequest, readOnly: false, out runner);
+                    try
+                    {
+                        returnRun = database.Scripts.GetScriptRunner(patchRequest, readOnly: false, out runner);
+                    }
+                    catch (Exception e)
+                    {
+                        // Jint surfaces compile-time errors from the user's Patch / OnDelete.Patch
+                        // script as exceptions out of GetScriptRunner. Without this catch they
+                        // would bubble out of the handler as HTTP 500; route them into the
+                        // structured Errors collection so Studio can show the diagnostic the
+                        // same way other validation failures are reported. The user owns the
+                        // input here, so the raw Jint message (line / column info) is the
+                        // actionable detail.
+                        result.Errors.Add($"Patch script failed to compile: {e.Message}");
+                        return result;
+                    }
                     runner.DebugMode = true;
                     runner.DebugOutput ??= new List<string>();
                 }

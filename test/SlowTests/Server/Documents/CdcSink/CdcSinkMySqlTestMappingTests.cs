@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.CdcSink
 
             using var store = GetDocumentStore();
             var db = await GetDatabase(store.Database);
-            db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+            using var ctxScope = db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
 
             var table = new CdcSinkTableConfig
             {

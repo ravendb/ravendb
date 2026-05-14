@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -10,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure;
 using Xunit;
+using DisposableAction = Raven.Client.Util.DisposableAction;
 
 namespace SlowTests.Server.Documents.CdcSink
 {
@@ -25,12 +27,17 @@ namespace SlowTests.Server.Documents.CdcSink
             ExecuteSqlQuery(MigrationProvider.NpgSQL, connectionString, sql);
         }
 
-        private async Task<(DocumentDatabase Db, DocumentsOperationContext Ctx, Raven.Client.Documents.IDocumentStore Store)> SetupAsync()
+        private async Task<(DocumentDatabase Db, DocumentsOperationContext Ctx, Raven.Client.Documents.IDocumentStore Store, IDisposable Scope)> SetupAsync()
         {
             var store = GetDocumentStore();
             var db = await GetDatabase(store.Database);
-            db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
-            return (db, ctx, store);
+            var ctxScope = db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+            // Wrap the context allocation + store in a single IDisposable so each test can do
+            // `using var _ = scope;` and release both at the end of the method. Without this,
+            // ContextPool.AllocateOperationContext's disposable was discarded (leaking pooled
+            // contexts across slow-test runs) and the store stayed alive until fixture teardown.
+            var scope = new DisposableAction(() => { ctxScope.Dispose(); store.Dispose(); });
+            return (db, ctx, store, scope);
         }
 
         private static CdcSinkTableConfig BuildLecturersTableConfig()
@@ -78,7 +85,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
 
@@ -110,7 +117,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 INSERT INTO lecturers (id, name, email) VALUES (2, 'B', 'b@x');
                 INSERT INTO lecturers (id, name, email) VALUES (4, 'D', 'd@x');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
 
@@ -130,7 +137,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             table.Patch = "this.Greeting = 'hello ' + $row.name;";
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
@@ -152,7 +159,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (42, 'Forty-Two', 'fortytwo@example.com');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
 
@@ -176,7 +183,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 INSERT INTO lecturers (id, name, email) VALUES (4, 'D', 'd@x');
                 INSERT INTO lecturers (id, name, email) VALUES (5, 'E', 'e@x');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             // Patch: emit a unique output() per row, then on row 3 throw before setting Marker.
             // Row 3 must fail; rows 1/2/4/5 must succeed AND must each carry their own marker
@@ -231,7 +238,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             table.OnDelete = new CdcSinkOnDeleteConfig
             {
@@ -258,7 +265,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             table.OnDelete = new CdcSinkOnDeleteConfig { IgnoreDeletes = true };
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
@@ -280,7 +287,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200), dept_id INT);
                 INSERT INTO lecturers (id, name, email, dept_id) VALUES (1, 'Alice', 'alice@example.com', 7);");
 
-            var (db, ctx, _) = await SetupAsync();
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
             var table = BuildLecturersTableConfig();
             // BuildLecturersTableConfig only configures id/name/email; the linked table's join
             // column must also be in Columns so SetSourceColumnNames accepts the layout.
@@ -308,6 +315,39 @@ namespace SlowTests.Server.Documents.CdcSink
             // The "linked/embedded not exercised" note is advisory and must land in Warnings, not Errors.
             var warning = Assert.Single(result.Warnings);
             Assert.Contains("Linked and embedded tables", warning);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task FetchRowsAsync_ByPrimaryKey_AppliesServerSideMaxRows()
+        {
+            // BuildSelectByPrimaryKeyQuery used to emit `SELECT * FROM <table> WHERE pk1=@p0 AND ...`
+            // with no `LIMIT N`. The handler validates MaxRows=1 for ByPrimaryKey, but that gates
+            // only the request shape — the SQL itself wasn't limited. If the CDC config has
+            // pk_columns pointing at a non-unique column (mis-config, or a source table without
+            // enforced PK uniqueness), the row-fetch could return every match. Server-side cap
+            // must enforce maxRows regardless of source metadata quality.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            // Note: the table has a true PK on `id`, but the test calls FetchRowsAsync using
+            // `group_id` as the "primaryKeyColumns" argument (simulating a misconfig). Three
+            // rows match group_id=100; the migrator must still return only `maxRows` of them.
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE things (id SERIAL PRIMARY KEY, group_id INT NOT NULL, label VARCHAR(50));
+                INSERT INTO things (id, group_id, label) VALUES (1, 100, 'A');
+                INSERT INTO things (id, group_id, label) VALUES (2, 100, 'B');
+                INSERT INTO things (id, group_id, label) VALUES (3, 100, 'C');");
+
+            var driver = DatabaseDriverDispatcher.CreateDriver(MigrationProvider.NpgSQL, connectionString);
+            var fetched = await driver.FetchRowsAsync(
+                tableSchema: "public",
+                tableName: "things",
+                primaryKeyColumns: new List<string> { "group_id" },
+                mode: RowFetchMode.ByPrimaryKey,
+                primaryKeyValues: new[] { "100" },
+                maxRows: 1,
+                ct: default);
+
+            Assert.Single(fetched.Rows);
         }
     }
 }
