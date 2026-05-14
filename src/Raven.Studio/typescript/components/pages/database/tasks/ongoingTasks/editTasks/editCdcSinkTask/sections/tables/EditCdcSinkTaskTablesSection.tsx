@@ -2,25 +2,28 @@ import CollapseButton from "components/common/CollapseButton";
 import useBoolean from "components/hooks/useBoolean";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import Collapse from "react-bootstrap/esm/Collapse";
-import { UseFieldArrayReturn } from "react-hook-form";
+import { UseFieldArrayReturn, useFormContext } from "react-hook-form";
 import EditCdcSinkTaskTablesExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesExplorer";
 import EditCdcSinkTaskTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTableEditor";
 import useResizableWidth from "components/hooks/useResizableWidth";
 import ColumnResize from "components/common/ColumnResize";
 import classNames from "classnames";
+import { FormErrorIcon } from "components/common/Form";
 
 interface EditCdcSinkTaskTablesSectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
 }
 
 export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditCdcSinkTaskTablesSectionProps) {
-    const { value: isPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
+    const { value: isPanelOpen, toggle: togglePanel, setTrue: openPanel } = useBoolean(true);
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
 
     return (
         <div className="mt-3 vstack pb-3" style={{ minHeight: tablesFieldArray.fields.length > 0 ? "100%" : "300px" }}>
             <div className="hstack align-items-center">
                 <h3 className="m-0">Configured Tables</h3>
-                <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
+                <FormErrorIcon control={control} paths={["tables"]} onError={openPanel} />
+                <CollapseButton isExpanded={isPanelOpen} toggle={togglePanel} />
             </div>
             <div className="mb-1">Customize the source tables or add new ones.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>

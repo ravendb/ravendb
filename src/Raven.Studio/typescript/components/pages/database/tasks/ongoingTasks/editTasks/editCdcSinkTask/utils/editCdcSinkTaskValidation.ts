@@ -6,7 +6,7 @@ type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRela
 type CdcTaskState = Extract<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState, "Enabled" | "Disabled">;
 
 const stringValueItemSchema = yup.object({
-    value: yup.string(),
+    value: yup.string().required(),
 });
 
 const cdcColumnMappingSchema = yup.object({
@@ -15,13 +15,43 @@ const cdcColumnMappingSchema = yup.object({
     type: yup.string<CdcColumnType>().required(),
 });
 
+type StringValueItem = yup.InferType<typeof stringValueItemSchema>;
+type CdcColumnMapping = yup.InferType<typeof cdcColumnMappingSchema>;
+
+const hasUniqueValues = <TItem>(items: TItem[], getValue: (item: TItem) => string) => {
+    const values = (items ?? [])
+        .map(getValue)
+        .filter(Boolean)
+        .map((x) => x.trim());
+
+    return new Set(values).size === values.length;
+};
+
+const stringValueListSchema = (uniqueMessage: string) =>
+    yup
+        .array()
+        .of(stringValueItemSchema)
+        .min(1)
+        .test("unique-values", uniqueMessage, (items) => hasUniqueValues(items, (item: StringValueItem) => item.value));
+
+const cdcColumnMappingsSchema = yup
+    .array()
+    .of(cdcColumnMappingSchema)
+    .min(1)
+    .test("unique-source-columns", "Source columns must be unique", (items) =>
+        hasUniqueValues(items, (item: CdcColumnMapping) => item.column)
+    )
+    .test("unique-target-columns", "Target columns must be unique", (items) =>
+        hasUniqueValues(items, (item: CdcColumnMapping) => item.name)
+    );
+
 const cdcSinkOnDeleteSchema = yup.object({
     ignoreDeletes: yup.boolean(),
     patch: yup.string().nullable(),
 });
 
 const cdcSinkLinkedTableSchema = yup.object({
-    joinColumns: yup.array().of(stringValueItemSchema).min(1),
+    joinColumns: stringValueListSchema("Join columns must be unique"),
     linkedCollectionName: yup.string().required(),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
@@ -30,12 +60,12 @@ const cdcSinkLinkedTableSchema = yup.object({
 
 const cdcSinkEmbeddedTableBaseSchema = yup.object({
     caseSensitiveKeys: yup.boolean(),
-    columns: yup.array().of(cdcColumnMappingSchema).min(1),
-    joinColumns: yup.array().of(stringValueItemSchema).min(1),
+    columns: cdcColumnMappingsSchema,
+    joinColumns: stringValueListSchema("Join columns must be unique"),
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: yup.array().of(stringValueItemSchema).min(1),
+    primaryKeyColumns: stringValueListSchema("Primary key columns must be unique"),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
     sourceTableSchema: yup.string().nullable().required(),
@@ -53,13 +83,13 @@ const getCdcSinkEmbeddedTableSchema = (): yup.ObjectSchema<CdcSinkEmbeddedTableF
 
 const cdcSinkTableSchema = yup.object({
     collectionName: yup.string().required(),
-    columns: yup.array().of(cdcColumnMappingSchema).min(1),
+    columns: cdcColumnMappingsSchema,
     disabled: yup.boolean(),
     embeddedTables: yup.array().of(getCdcSinkEmbeddedTableSchema()),
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: yup.array().of(stringValueItemSchema).min(1),
+    primaryKeyColumns: stringValueListSchema("Primary key columns must be unique"),
     sourceTableName: yup.string().required(),
     sourceTableSchema: yup.string().nullable().required(),
 });
@@ -80,7 +110,13 @@ const editCdcSinkTaskSchema = yup.object({
     skipInitialLoad: yup.boolean(),
     postgresPublicationName: yup.string().nullable(),
     postgresSlotName: yup.string().nullable(),
-    tables: yup.array().of(cdcSinkTableSchema).min(1),
+    tables: yup
+        .array()
+        .of(cdcSinkTableSchema)
+        .min(1)
+        .test("unique-collection-names", "Collection names must be unique", (items) =>
+            hasUniqueValues(items, (item) => item.collectionName)
+        ),
 });
 
 export const editCdcSinkTaskResolver = yupResolver(editCdcSinkTaskSchema);

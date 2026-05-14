@@ -996,7 +996,11 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
     let error: FieldError = undefined;
 
     for (const path of paths) {
-        error = _.get(formState.errors, path);
+        const fieldError = _.get(formState.errors, path);
+
+        // For array fields, react-hook-form nests the error under "root"
+        error = fieldError?.message ? fieldError : fieldError?.root;
+
         if (error) {
             break;
         }
