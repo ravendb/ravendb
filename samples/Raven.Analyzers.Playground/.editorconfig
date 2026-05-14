@@ -1,0 +1,20 @@
+root = true
+
+[*.cs]
+# Bump all RVN rules from Info (shipped default) to Warning so squiggles
+# are unmistakable in the IDE. This scope is the playground folder only —
+# real consumers see Info severity as shipped.
+dotnet_diagnostic.RVN001.severity = warning
+dotnet_diagnostic.RVN002.severity = warning
+dotnet_diagnostic.RVN003.severity = warning
+dotnet_diagnostic.RVN004.severity = warning
+dotnet_diagnostic.RVN005.severity = warning
+dotnet_diagnostic.RVN006.severity = warning
+dotnet_diagnostic.RVN007.severity = warning
+dotnet_diagnostic.RVN008.severity = warning
+dotnet_diagnostic.RVN009.severity = warning
+dotnet_diagnostic.RVN010.severity = warning
+dotnet_diagnostic.RVN011.severity = warning
+dotnet_diagnostic.RVN012.severity = warning
+dotnet_diagnostic.RVN013.severity = warning
+dotnet_diagnostic.RVN014.severity = warning
