@@ -19,6 +19,9 @@ import useEditCdcSinkTaskBreadcrumbs, {
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskBreadcrumbs";
 import { castToRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import classNames from "classnames";
+import { useViewSheet } from "components/common/splitView/ViewSheet";
+import EditCdcSinkTaskTestPanel from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskTestPanel";
+import { useEffect } from "react";
 
 export default function EditCdcSinkTaskTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
@@ -33,16 +36,34 @@ export default function EditCdcSinkTaskTableEditor() {
 function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     const dispatch = useAppDispatch();
     const tableActions = useEditCdcSinkTaskTableActions();
-    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const editForm = useFormContext<EditCdcSinkTaskFormData>();
     const breadcrumbItems = useEditCdcSinkTaskBreadcrumbs(activeTable.path);
 
     const pathParts = activeTable.path.split(".");
     const rootTablePath = castToRootTablePath(`${pathParts[0]}.${pathParts[1]}`);
 
     const isRootTableDisabled = useWatch({
-        control,
+        control: editForm.control,
         name: `${rootTablePath}.disabled`,
     });
+
+    const viewSheet = useViewSheet();
+
+    const handleOpenRootTableTest = () => {
+        viewSheet.open({
+            component: <EditCdcSinkTaskTestPanel editForm={editForm} path={rootTablePath} />,
+            isPinned: true,
+            initialWidth: 375,
+            minWidth: 300,
+        });
+    };
+
+    // If test is open, automatically switch panel with current root table
+    useEffect(() => {
+        if (viewSheet.isOpen && activeTable.type === "root") {
+            handleOpenRootTableTest();
+        }
+    }, [viewSheet.isOpen, activeTable.type, rootTablePath]);
 
     const handleBreadcrumbClick = (item: EditCdcSinkTaskBreadcrumbItem) => {
         if (item.isActive) {
@@ -88,10 +109,12 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                             Change to linked
                         </Button>
                     )}
-                    <Button variant="info" disabled={isRootTableDisabled}>
-                        <Icon icon="rocket" />
-                        Test
-                    </Button>
+                    {activeTable.type === "root" && (
+                        <Button variant="info" disabled={isRootTableDisabled} onClick={handleOpenRootTableTest}>
+                            <Icon icon="rocket" />
+                            Test
+                        </Button>
+                    )}
                 </div>
             </div>
             <div

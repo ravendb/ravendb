@@ -30,6 +30,7 @@ interface EditCdcSinkTaskState {
     isFieldMappingExpandedByDefault: boolean;
     isRawView: boolean;
     rawViewContent: string;
+    taskId: number;
 }
 
 export const editCdcSinkTaskStorageKeys = {
@@ -53,12 +54,16 @@ const initialState: EditCdcSinkTaskState = {
     ),
     isRawView: false,
     rawViewContent: null,
+    taskId: null,
 };
 
 export const editCdcSinkTaskSlice = createSlice({
     name: "editCdcSinkTask",
     initialState,
     reducers: {
+        taskIdSet: (state, action: PayloadAction<number>) => {
+            state.taskId = action.payload;
+        },
         connectionStringSelected: (state, action: PayloadAction<SqlConnectionString>) => {
             state.selectedConnectionString = action.payload;
         },
@@ -108,6 +113,7 @@ export const editCdcSinkTaskSlice = createSlice({
 export const editCdcSinkTaskActions = editCdcSinkTaskSlice.actions;
 
 export const editCdcSinkTaskSelectors = {
+    taskId: (state: RootState) => state.editCdcSinkTask.taskId,
     selectedConnectionString: (state: RootState) => state.editCdcSinkTask.selectedConnectionString,
     activeTable: (state: RootState) => state.editCdcSinkTask.activeTable,
     isActiveTable: (path: CdcActiveTable["path"]) => (state: RootState) =>

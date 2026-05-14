@@ -53,6 +53,7 @@ export default function EditCdcSinkTask({ queryParams }: ReactQueryParamsProps<Q
 
     const asyncGetDefaultValues = useAsyncCallback(async () => {
         if (isEditMode) {
+            dispatch(editCdcSinkTaskActions.taskIdSet(taskId));
             const taskInfo = await tasksService.getCdcSinkTaskInfo(databaseName, taskId);
             return editCdcSinkTaskUtils.mapTaskFromDto(taskInfo);
         } else {

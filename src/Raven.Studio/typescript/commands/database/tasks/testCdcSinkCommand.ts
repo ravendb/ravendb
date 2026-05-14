@@ -1,21 +1,19 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-
-type TestCdcSinkScript = Raven.Server.Documents.CdcSink.Test.TestCdcSinkScript;
-type TestCdcSinkScriptResult = Raven.Server.Documents.CdcSink.Test.TestCdcSinkScriptResult;
+import Test = Raven.Client.Documents.Operations.CdcSink.Test;
 
 class testCdcSinkCommand extends commandBase {
     constructor(
         private db: string,
-        private payload: TestCdcSinkScript
+        private payload: Test.TestCdcSinkMappingRequest
     ) {
         super();
     }
 
-    execute(): JQueryPromise<TestCdcSinkScriptResult> {
+    execute(): JQueryPromise<Test.TestCdcSinkMappingResult> {
         const url = endpoints.databases.cdcSink.adminCdcSinkTest;
 
-        return this.post<TestCdcSinkScriptResult>(url, JSON.stringify(this.payload), this.db).fail(
+        return this.post<Test.TestCdcSinkMappingResult>(url, JSON.stringify(this.payload), this.db).fail(
             (response: JQueryXHR) => {
                 this.reportError(`Failed to test CDC Sink`, response.responseText, response.statusText);
             }
