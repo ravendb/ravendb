@@ -7,6 +7,7 @@
 // access .Value or call session.Advanced.Eagerly.ExecuteAllPendingLazyOperations() to batch.
 // Code fix available: Alt+Enter / Ctrl+. on the squiggle applies the fix automatically.
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 
@@ -21,6 +22,16 @@ public static class RVN012_SessionLazyBatching
         //   query.Lazily() to batch them into a single server round-trip.
         var user  = session.Load<RVN012_User>(userId);   // round-trip 1
         var order = session.Load<RVN012_Order>(orderId); // round-trip 2
+    }
+    
+    public static async Task BadExample(IAsyncDocumentSession session, string userId, string orderId)
+    {
+        // warning RVN012: 'Load' is an eager session operation. This method contains
+        //   multiple independent session operations; use session.Advanced.Lazily or
+        //   query.Lazily() to batch them into a single server round-trip.
+        
+        var user  = await session.LoadAsync<RVN012_User>(userId);   // round-trip 1
+        var order = await session.LoadAsync<RVN012_Order>(orderId); // round-trip 2
     }
 
     public static void GoodExample(IDocumentSession session, string userId, string orderId)

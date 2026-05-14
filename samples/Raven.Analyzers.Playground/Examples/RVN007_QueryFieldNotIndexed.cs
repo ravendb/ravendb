@@ -8,8 +8,11 @@
 //
 // Fix: add Price to the index Map, or remove the Price filter from this query.
 using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Linq;
 
 namespace Raven.Analyzers.Playground.Examples;
 
@@ -29,6 +32,14 @@ public static class RVN007_QueryFieldNotIndexed
         // warning RVN007: Field 'Price' is referenced in Where but is not indexed by 'RVN007_OrderByNameIndex'
         var q = session.Query<RVN007_Order, RVN007_OrderByNameIndex>()
             .Where(o => o.Price > 100m);
+    }
+
+    public static async Task BadExample(IAsyncDocumentSession session)
+    {
+        // warning RVN007: Field 'Price' is referenced in Where but is not indexed by 'RVN007_OrderByNameIndex'
+        var list = await session.Query<RVN007_Order, RVN007_OrderByNameIndex>()
+            .Where(o => o.Price > 100m)
+            .ToListAsync();   // also trips RVN013 (unbounded) — intentional
     }
 
     public static void GoodExample(IDocumentSession session)

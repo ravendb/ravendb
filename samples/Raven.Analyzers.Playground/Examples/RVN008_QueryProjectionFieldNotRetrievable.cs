@@ -10,6 +10,7 @@
 // Fix: either store the field in the index (Store(x => x.Score, FieldStorage.Yes)), remove
 // "Score" from the DTO, or switch to ProjectionBehavior.Default to allow document fallback.
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
@@ -38,6 +39,18 @@ public static class RVN008_QueryProjectionFieldNotRetrievable
         var q = session.Query<RVN008_Order, RVN008_OrderNameIndex>()
             .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
             .ProjectInto<RVN008_OrderDto>();
+    }
+
+    public static async Task BadExample(IAsyncDocumentSession session)
+    {
+        // warning RVN008: Field 'Score' in projection is not retrievable from index
+        //   'RVN008_OrderNameIndex' (not stored) and is not a member of source document
+        //   'RVN008_Order'. The projected value will be missing at runtime under
+        //   ProjectionBehavior.FromIndex.
+        var list = await session.Query<RVN008_Order, RVN008_OrderNameIndex>()
+            .Customize(x => x.Projection(ProjectionBehavior.FromIndex))
+            .ProjectInto<RVN008_OrderDto>()
+            .ToListAsync();   // also trips RVN013 (unbounded) — intentional
     }
 }
 

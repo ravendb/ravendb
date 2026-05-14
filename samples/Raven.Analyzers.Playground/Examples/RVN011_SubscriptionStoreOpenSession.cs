@@ -6,7 +6,7 @@
 //
 // Fix: replace store.OpenSession() with batch.OpenSession().
 // Code fix available: Alt+Enter / Ctrl+. on the squiggle applies the fix automatically.
-using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Subscriptions;
 
@@ -31,6 +31,19 @@ public class RVN011_SubscriptionService
             foreach (var item in batch.Items)
                 session.Store(new RVN011_ProcessedOrder { SourceId = item.Result.Id });
             session.SaveChanges();
+        });
+    }
+
+    public async Task BadSubscriptionAsync(SubscriptionWorker<RVN011_Order> worker)
+    {
+        await worker.Run(async batch =>
+        {
+            // warning RVN011: 'OpenAsyncSession' is called on an IDocumentStore inside a
+            //   subscription Run lambda. Use batch.OpenAsyncSession() instead.
+            using var session = _store.OpenAsyncSession();
+            foreach (var item in batch.Items)
+                await session.StoreAsync(new RVN011_ProcessedOrder { SourceId = item.Result.Id });
+            await session.SaveChangesAsync();
         });
     }
 
