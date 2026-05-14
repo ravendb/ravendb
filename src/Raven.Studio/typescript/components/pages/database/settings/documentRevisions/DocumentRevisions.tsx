@@ -17,6 +17,7 @@ import { documentRevisionsSelectors } from "./store/documentRevisionsSliceSelect
 import { useAppDispatch, useAppSelector } from "components/store";
 import { LoadError } from "components/common/LoadError";
 import DocumentRevisionsConfigPanel from "./DocumentRevisionsConfigPanel";
+import ConversationsRevisionsConfigPanel from "./ConversationsRevisionsConfigPanel";
 import useBoolean from "components/hooks/useBoolean";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useAsyncCallback } from "react-async-hook";
@@ -60,6 +61,7 @@ export default function DocumentRevisions() {
     const defaultDocumentsConfig = useAppSelector(documentRevisionsSelectors.defaultDocumentsConfig);
     const defaultConflictsConfig = useAppSelector(documentRevisionsSelectors.defaultConflictsConfig);
     const collectionConfigs = useAppSelector(documentRevisionsSelectors.collectionConfigs);
+    const conversationsConfig = useAppSelector(documentRevisionsSelectors.conversationsConfig);
     const isAnyModified = useAppSelector(documentRevisionsSelectors.isAnyModified);
 
     const canSetupDefaultRevisionsConfiguration = useAppSelector(
@@ -114,7 +116,10 @@ export default function DocumentRevisions() {
         const promises = [
             databasesService.saveRevisionsConfiguration(databaseName, {
                 Default: mapToDto(defaultDocumentsConfig),
-                Collections: Object.fromEntries(collectionConfigs.map((x) => [x.Name, mapToDto(x)])),
+                Collections: {
+                    ...Object.fromEntries(collectionConfigs.map((x) => [x.Name, mapToDto(x)])),
+                    ...(conversationsConfig ? { "@conversations": mapToDto(conversationsConfig) } : {}),
+                },
             }),
             databasesService.saveRevisionsForConflictsConfiguration(databaseName, mapToDto(defaultConflictsConfig)),
         ];
@@ -227,6 +232,50 @@ export default function DocumentRevisions() {
                             </StickyHeader>
                         )}
 
+                        <div className="mt-5">
+                            <HrHeader
+                                right={
+                                    hasDatabaseAdminAccess && !conversationsConfig ? (
+                                        <Button
+                                            variant="info"
+                                            size="sm"
+                                            className="rounded-pill"
+                                            title="Create a revision configuration for AI conversation snapshots"
+                                            onClick={() =>
+                                                onEditRevision({
+                                                    taskType: "new",
+                                                    configType: "conversations",
+                                                    onConfirm: (config) =>
+                                                        dispatch(documentRevisionsActions.configAdded(config)),
+                                                })
+                                            }
+                                        >
+                                            <Icon icon="plus" />
+                                            Add new
+                                        </Button>
+                                    ) : null
+                                }
+                            >
+                                <Icon icon="ai" />
+                                AI Conversations
+                            </HrHeader>
+                            {conversationsConfig ? (
+                                <ConversationsRevisionsConfigPanel
+                                    config={conversationsConfig}
+                                    onEdit={() =>
+                                        onEditRevision({
+                                            taskType: "edit",
+                                            configType: "conversations",
+                                            config: conversationsConfig,
+                                            onConfirm: (config) =>
+                                                dispatch(documentRevisionsActions.configEdited(config)),
+                                        })
+                                    }
+                                />
+                            ) : (
+                                <EmptySet>No ai conversation specific configuration has been defined</EmptySet>
+                            )}
+                        </div>
                         <div className="mt-5">
                             <HrHeader
                                 right={
