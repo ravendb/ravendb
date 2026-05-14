@@ -234,8 +234,9 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                     SyntaxFactory.AwaitExpression(executeExpr))
                 : SyntaxFactory.ExpressionStatement(executeExpr);
 
-            // Use the indentation of the first batchable statement for the execute call
-            executeStmt = executeStmt.WithLeadingTrivia(renamings[0].originalTrivia);
+            // Use the indentation of the first batchable statement for the execute call,
+            // but strip any comments — those stay with the renamed lazy declaration.
+            executeStmt = executeStmt.WithLeadingTrivia(GetIndentationTrivia(renamings[0].originalTrivia));
 
             // Build Value extraction statements; each extraction inherits the trivia of its source statement
             List<StatementSyntax> extractionStatements = [executeStmt];
@@ -279,7 +280,8 @@ namespace Raven.Analyzers.CodeFixes.Sessions
                         SyntaxFactory.IdentifierName("var"),
                         SyntaxFactory.SingletonSeparatedList(extractVarDecl)));
 
-                extractStmt = extractStmt.WithLeadingTrivia(originalTrivia);
+                // Strip comments; they stay with the renamed lazy declaration, not the extraction.
+                extractStmt = extractStmt.WithLeadingTrivia(GetIndentationTrivia(originalTrivia));
 
                 extractionStatements.Add(extractStmt);
             }
@@ -306,6 +308,34 @@ namespace Raven.Analyzers.CodeFixes.Sessions
             SyntaxNode newRoot = root.ReplaceNode(block, newBlock);
 
             return document.WithSyntaxRoot(newRoot);
+        }
+
+        // Returns only the newline-and-indentation tail of the trivia list, dropping comments.
+        // Used when applying trivia to synthesised statements so that user-written comments
+        // stay anchored to the statement they annotated (the renamed lazy declaration),
+        // and do not appear on the Execute call or the .Value extraction lines.
+        private static SyntaxTriviaList GetIndentationTrivia(SyntaxTriviaList trivia)
+        {
+            int lastEol = -1;
+            for (int i = trivia.Count - 1; i >= 0; i--)
+            {
+                if (trivia[i].IsKind(SyntaxKind.EndOfLineTrivia))
+                {
+                    lastEol = i;
+                    break;
+                }
+            }
+
+            if (lastEol < 0)
+                return trivia;
+
+            List<SyntaxTrivia> result = [trivia[lastEol]];
+            for (int i = lastEol + 1; i < trivia.Count; i++)
+            {
+                if (trivia[i].IsKind(SyntaxKind.WhitespaceTrivia))
+                    result.Add(trivia[i]);
+            }
+            return SyntaxFactory.TriviaList(result);
         }
 
         // Preserve any type arguments from the original Load[Async] call when constructing
