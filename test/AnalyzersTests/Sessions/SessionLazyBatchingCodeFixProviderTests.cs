@@ -229,7 +229,63 @@ class Order { public string Id { get; set; } }
 
             string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
 
-            Assert.Contains("// load the user", fixed_code);
+            // Comment must appear exactly once — on the renamed lazy declaration, not copied
+            // onto the synthesised Execute call or the .Value extraction statement.
+            int commentCount = 0;
+            int searchFrom = 0;
+            while (true)
+            {
+                int idx = fixed_code.IndexOf("// load the user", searchFrom, System.StringComparison.Ordinal);
+                if (idx < 0)
+                    break;
+                commentCount++;
+                searchFrom = idx + 1;
+            }
+            Assert.Equal(1, commentCount);
+
+            // Comment must sit before the Lazily.Load call, not before the Execute or Value lines.
+            int commentPos = fixed_code.IndexOf("// load the user", System.StringComparison.Ordinal);
+            int lazyLoadPos = fixed_code.IndexOf("Lazily.Load<User>", System.StringComparison.Ordinal);
+            int executePos  = fixed_code.IndexOf("ExecuteAllPendingLazyOperations", System.StringComparison.Ordinal);
+            Assert.True(commentPos < lazyLoadPos, "Comment should precede the Lazily.Load line");
+            Assert.True(lazyLoadPos < executePos,  "Lazily.Load should precede the Execute call");
+
+            Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
+        }
+
+        [Fact]
+        public async Task Comment_On_Second_Batchable_Statement_Is_Not_Duplicated()
+        {
+            const string source = CommonUsings + @"
+class Test
+{
+    void Run(IDocumentSession session, string userId, string orderId)
+    {
+        var user = session.Load<User>(userId);
+        // load the order
+        var order = session.Load<Order>(orderId);
+    }
+}
+
+class User { public string Id { get; set; } }
+class Order { public string Id { get; set; } }
+";
+
+            string fixed_code = await RavenCodeFixTest.ApplyFixAsync<SessionLazyBatchingAnalyzer, SessionLazyBatchingCodeFixProvider>(source);
+
+            // Comment must appear exactly once — on the renamed lazy declaration for the second Load.
+            int commentCount = 0;
+            int searchFrom = 0;
+            while (true)
+            {
+                int idx = fixed_code.IndexOf("// load the order", searchFrom, System.StringComparison.Ordinal);
+                if (idx < 0)
+                    break;
+                commentCount++;
+                searchFrom = idx + 1;
+            }
+            Assert.Equal(1, commentCount);
+
             Assert.Contains("session.Advanced.Eagerly.ExecuteAllPendingLazyOperations()", fixed_code);
         }
     }
