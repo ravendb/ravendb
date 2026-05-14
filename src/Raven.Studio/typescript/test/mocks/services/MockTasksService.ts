@@ -66,6 +66,10 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getSubscriptionTaskInfo, dto, TasksStubs.getSubscription());
     }
 
+    withGetCdcSinkTaskInfo(dto?: MockedValue<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskInfo, dto, TasksStubs.getCdcSink());
+    }
+
     withGetSubscriptionConnectionDetails(
         dto?: MockedValue<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionsDetails>
     ) {
@@ -102,6 +106,19 @@ export default class MockTasksService extends AutoMockService<TasksService> {
             dto,
             SharedStubs.nodeConnectionTestSuccessResult()
         );
+    }
+
+    withVerifyCdcSink(dto?: Raven.Server.Documents.CdcSink.CdcSinkVerificationResult) {
+        return this.mockResolvedValue(this.mocks.verifyCdcSink, dto, {
+            Success: true,
+            HasPermissionToSetup: true,
+            Errors: [],
+            Warnings: [],
+        });
+    }
+
+    withFetchSqlDatabaseSchema(dto?: MockedValue<Raven.Server.SqlMigration.Schema.DatabaseSchema>) {
+        return this.mockResolvedValue(this.mocks.fetchSqlDatabaseSchema, dto, TasksStubs.sqlDatabaseSchema());
     }
 
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {

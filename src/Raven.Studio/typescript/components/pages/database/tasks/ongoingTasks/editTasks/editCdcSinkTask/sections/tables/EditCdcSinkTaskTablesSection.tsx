@@ -1,7 +1,7 @@
 import CollapseButton from "components/common/CollapseButton";
 import useBoolean from "components/hooks/useBoolean";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import Collapse from "react-bootstrap/esm/Collapse";
+import Collapse from "react-bootstrap/Collapse";
 import { UseFieldArrayReturn, useFormContext } from "react-hook-form";
 import EditCdcSinkTaskTablesExplorer from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTablesExplorer";
 import EditCdcSinkTaskTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/EditCdcSinkTaskTableEditor";

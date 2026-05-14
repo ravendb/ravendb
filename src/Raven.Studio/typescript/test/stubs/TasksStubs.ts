@@ -18,6 +18,7 @@ import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoi
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
+import OngoingTaskCdcSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskCdcSink;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
@@ -49,6 +50,7 @@ export class TasksStubs {
                 TasksStubs.getAmazonSqsEtl(),
                 TasksStubs.getKafkaSink(),
                 TasksStubs.getRabbitSink(),
+                TasksStubs.getCdcSink(),
                 TasksStubs.getReplicationSink(),
                 TasksStubs.getReplicationHub(),
                 TasksStubs.getExternalReplicationListItem(),
@@ -596,6 +598,146 @@ export class TasksStubs {
             BrokerType: "RabbitMq",
             PinToMentorNode: false,
             Configuration: null,
+        };
+    }
+
+    static getCdcSink(): OngoingTaskCdcSink {
+        return {
+            TaskName: "CdcSinkTask",
+            TaskId: 583,
+            TaskType: "CdcSink",
+            TaskConnectionStatus: "Active",
+            TaskState: "Enabled",
+            Error: null,
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            MentorNode: null,
+            PinToMentorNode: false,
+            ConnectionStringName: "sql-name",
+            FactoryName: "System.Data.SqlClient",
+            HealthIssue: null,
+            LastCheckpoint: null,
+            Configuration: {
+                TaskId: 583,
+                Name: "CdcSinkTask",
+                Disabled: false,
+                ConnectionStringName: "sql-name",
+                MentorNode: null,
+                PinToMentorNode: false,
+                Postgres: null,
+                SkipInitialLoad: false,
+                Tables: [
+                    {
+                        SourceTableName: "orders",
+                        SourceTableSchema: "dbo",
+                        CollectionName: "Orders",
+                        Disabled: false,
+                        PrimaryKeyColumns: ["Id"],
+                        Columns: [
+                            {
+                                Column: "Id",
+                                Name: "Id",
+                                Type: "Default",
+                            },
+                            {
+                                Column: "Company",
+                                Name: "Company",
+                                Type: "Default",
+                            },
+                        ],
+                        EmbeddedTables: [
+                            {
+                                SourceTableName: "order_lines",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Lines",
+                                Type: "Array",
+                                PrimaryKeyColumns: ["Id"],
+                                JoinColumns: ["OrderId"],
+                                CaseSensitiveKeys: false,
+                                Columns: [
+                                    {
+                                        Column: "Product",
+                                        Name: "Product",
+                                        Type: "Default",
+                                    },
+                                ],
+                                EmbeddedTables: [],
+                                LinkedTables: [],
+                                OnDelete: {
+                                    IgnoreDeletes: false,
+                                    Patch: null,
+                                },
+                                Patch: null,
+                            },
+                        ],
+                        LinkedTables: [
+                            {
+                                SourceTableName: "companies",
+                                SourceTableSchema: "dbo",
+                                PropertyName: "Company",
+                                LinkedCollectionName: "Companies",
+                                JoinColumns: ["CompanyId"],
+                            },
+                        ],
+                        OnDelete: {
+                            IgnoreDeletes: false,
+                            Patch: null,
+                        },
+                        Patch: null,
+                    },
+                ],
+            },
+        };
+    }
+
+    static sqlDatabaseSchema(): Raven.Server.SqlMigration.Schema.DatabaseSchema {
+        return {
+            CatalogName: "Northwind",
+            Tables: [
+                {
+                    Schema: "dbo",
+                    TableName: "orders",
+                    DefaultQuery: "SELECT * FROM dbo.orders",
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            Type: "String",
+                        },
+                        {
+                            Name: "CompanyId",
+                            Type: "String",
+                        },
+                        {
+                            Name: "OrderedAt",
+                            Type: "String",
+                        },
+                    ],
+                    References: [
+                        {
+                            Schema: "dbo",
+                            Table: "companies",
+                            Columns: ["CompanyId"],
+                        },
+                    ],
+                },
+                {
+                    Schema: "dbo",
+                    TableName: "companies",
+                    DefaultQuery: "SELECT * FROM dbo.companies",
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            Type: "String",
+                        },
+                        {
+                            Name: "Name",
+                            Type: "String",
+                        },
+                    ],
+                    References: [],
+                },
+            ],
         };
     }
 

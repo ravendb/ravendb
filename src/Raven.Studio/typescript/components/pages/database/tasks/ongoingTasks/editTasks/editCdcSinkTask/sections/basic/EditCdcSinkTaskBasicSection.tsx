@@ -12,7 +12,7 @@ import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import InputGroup from "react-bootstrap/InputGroup";
-import Collapse from "react-bootstrap/esm/Collapse";
+import Collapse from "react-bootstrap/Collapse";
 import { FormErrorIcon, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
 import { useEffect, useMemo } from "react";

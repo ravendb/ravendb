@@ -5,7 +5,7 @@ import { useServices } from "components/hooks/useServices";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
-import Collapse from "react-bootstrap/esm/Collapse";
+import Collapse from "react-bootstrap/Collapse";
 import { UseFieldArrayReturn } from "react-hook-form";
 import sqlMigration from "models/database/tasks/sql/sqlMigration";
 import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
