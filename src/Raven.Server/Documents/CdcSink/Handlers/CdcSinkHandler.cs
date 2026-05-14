@@ -93,14 +93,29 @@ public class CdcSinkHandler : DatabaseRequestHandler
         }
 
         var targetSchema = request.SourceTableSchema ?? string.Empty;
-        var targetTable = request.Configuration.Tables?.FirstOrDefault(t =>
-            string.Equals(t.SourceTableSchema ?? string.Empty, targetSchema, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(t.SourceTableName, request.SourceTableName, StringComparison.OrdinalIgnoreCase));
-        if (targetTable == null)
+        var matches = request.Configuration.Tables?
+            .Where(t =>
+                string.Equals(t.SourceTableSchema ?? string.Empty, targetSchema, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(t.SourceTableName, request.SourceTableName, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (matches == null || matches.Count == 0)
         {
             result.Errors.Add($"Configuration has no table matching '{targetSchema}.{request.SourceTableName}'.");
             return result;
         }
+
+        if (matches.Count > 1)
+        {
+            // Two same-name-different-case entries in the config (e.g. "Customers" and "customers").
+            // FirstOrDefault would silently pick one; surface the ambiguity instead so Studio can
+            // flag the duplicate before the user saves the CDC task.
+            result.Errors.Add($"Configuration has {matches.Count} tables matching '{targetSchema}.{request.SourceTableName}' " +
+                              "(case-insensitive). Remove the duplicates from Tables[] before testing.");
+            return result;
+        }
+
+        var targetTable = matches[0];
 
         IDatabaseDriver driver;
         try

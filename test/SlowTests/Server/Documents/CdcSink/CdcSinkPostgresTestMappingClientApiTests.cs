@@ -237,5 +237,63 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Contains("Failed to fetch rows from the source database", error);
             Assert.DoesNotContain("cdc-test-no-such-host", error);
         }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_DuplicateTableInConfig_SurfacesAmbiguityError()
+        {
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            // Two table entries that differ only by case match the same selector (case-insensitive).
+            // Without the duplicate-detection guard, FirstOrDefault would silently pick one and run.
+            // The guard fails fast with a structured Errors entry.
+            CdcSinkTableConfig MakeTable(string sourceName, string collectionName) => new()
+            {
+                CollectionName = collectionName,
+                SourceTableSchema = "public",
+                SourceTableName = sourceName,
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-dup",
+                    Tables = new List<CdcSinkTableConfig>
+                    {
+                        MakeTable("lecturers", "Lecturers"),
+                        MakeTable("Lecturers", "LecturersUpper"),
+                    },
+                },
+                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("2 tables matching", error);
+            Assert.Contains("case-insensitive", error);
+        }
     }
 }
