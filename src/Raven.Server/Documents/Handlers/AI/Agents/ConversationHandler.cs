@@ -565,7 +565,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     }
 
     /// <summary>
-    /// Truncates up to <paramref name="n"/> messages from the beginning of the conversation,
+    /// Removes up to <paramref name="n"/> messages from the beginning of the conversation in place,
     /// while always preserving the system prompt at index 0.
     ///
     /// If an assistant message containing <c>tool_calls</c> is removed, all matching
@@ -574,15 +574,16 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     /// This cleanup is required because OpenAI chat APIs reject orphaned tool messages:
     /// a <c>role = "tool"</c> message must always have a corresponding preceding assistant
     /// message containing the matching <c>tool_calls</c> entry.
-    ///
-    /// Returns the total number of removed messages, including removed tool result messages.
     /// </summary>
     private static void TrimMessages(
         List<BlittableJsonReaderObject> messages,
         int n)
     {
-        if (messages == null || messages.Count == 0 || n <= 0 || n >= messages.Count-1)
+        if (messages == null || messages.Count <= 1 || n <= 0)
             return;
+
+        // Never remove the system prompt at index 0
+        n = Math.Min(n, messages.Count - 1);
 
         // Skip system prompt
         var slice = messages.Skip(1).Take(n).ToList();
@@ -602,14 +603,14 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             truncatedCount++;
 
             // Check if assistant message contains tool_calls
-            if (message.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls) == false ||
+            if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) == false ||
                 toolCalls == null ||
                 toolCalls.Length == 0)
                 continue;
 
             foreach (BlittableJsonReaderObject toolCall in toolCalls)
             {
-                if (toolCall.TryGet("id", out string id) &&
+                if (toolCall.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id) &&
                     string.IsNullOrWhiteSpace(id) == false)
                 {
                     toolCallIds.Add(id);
@@ -627,11 +628,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
                 var candidate = messages[i];
 
-                if (candidate.TryGet("role", out string role) == false ||
-                    role != "tool")
+                if (candidate.TryGet(ChatCompletionClient.Constants.ResponseFields.Role, out string role) == false ||
+                    role != ChatCompletionClient.Constants.RequestFields.RoleToolValue)
                     continue;
 
-                if (candidate.TryGet("tool_call_id", out string toolCallId) == false)
+                if (candidate.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId) == false)
                     continue;
 
                 if (toolCallIds.Remove(toolCallId) == false)

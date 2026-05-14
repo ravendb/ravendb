@@ -48,6 +48,18 @@ public class RavenDB_24407 : RavenTestBase
 
         [JsonProperty("content")]
         public JToken Content { get; set; }
+
+        [JsonProperty("tool_calls")]
+        public List<ToolCall> ToolCalls { get; set; }
+
+        [JsonProperty("tool_call_id")]
+        public string ToolCallId { get; set; }
+    }
+
+    private class ToolCall
+    {
+        [JsonProperty("id")]
+        public string Id { get; set; }
     }
 
     private class Drink
@@ -249,6 +261,7 @@ public class RavenDB_24407 : RavenTestBase
         chatDoc = await GetChat(store, chat.Id);
         Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        AssertNoOrphanToolMessages(chatDoc);
 
         if (withHistory)
         {
@@ -266,7 +279,7 @@ public class RavenDB_24407 : RavenTestBase
 
         // resume - still with summarization
 
-        chat.SetUserPrompt("is it supper alcoholic?");
+        chat.SetUserPrompt("is it super alcoholic?");
         r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
 
         Assert.NotNull(r.Answer);
@@ -274,6 +287,7 @@ public class RavenDB_24407 : RavenTestBase
         chatDoc = await GetChat(store, chat.Id);
         Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        AssertNoOrphanToolMessages(chatDoc);
 
         // resume
         agent.ChatTrimming = null;
@@ -414,6 +428,40 @@ public class RavenDB_24407 : RavenTestBase
             var msg = await dumpFactory(); // build dump only on failure
             Assert.Fail($"Expected last history message role 'tool' but was '{lastMsgRole}'.\n{msg}");
         }
+    }
+
+    // Validates that the conversation is structurally valid for OpenAI:
+    // every role="tool" message must reference a preceding assistant tool_calls entry,
+    // and no assistant tool_call may be left unanswered.
+    private static void AssertNoOrphanToolMessages(Chat chatDoc)
+    {
+        var outstanding = new HashSet<string>();
+
+        for (int i = 0; i < chatDoc.Messages.Count; i++)
+        {
+            var m = chatDoc.Messages[i];
+
+            if (m.Role == "tool")
+            {
+                Assert.False(string.IsNullOrEmpty(m.ToolCallId),
+                    $"Tool message at index {i} has no tool_call_id. Dump:\n{Dump(chatDoc)}");
+                Assert.True(outstanding.Remove(m.ToolCallId),
+                    $"Orphan tool response at index {i}: tool_call_id '{m.ToolCallId}' has no preceding assistant tool_calls entry. Dump:\n{Dump(chatDoc)}");
+                continue;
+            }
+
+            if (m.ToolCalls == null)
+                continue;
+
+            foreach (var tc in m.ToolCalls)
+            {
+                if (string.IsNullOrEmpty(tc.Id) == false)
+                    outstanding.Add(tc.Id);
+            }
+        }
+
+        Assert.True(outstanding.Count == 0,
+            $"Orphan assistant tool_calls left unanswered: [{string.Join(", ", outstanding)}]. Dump:\n{Dump(chatDoc)}");
     }
 
     private static string Dump(Chat c)
