@@ -20,8 +20,6 @@ const { expandButtonWidthPx } = editCdcSinkTaskConstants;
 export function EditCdcSinkTaskRootTableItem({ path, table, isExpanded, hasChildren }: ExplorerRowRootTable) {
     const dispatch = useAppDispatch();
     const tableActions = useEditCdcSinkTaskTableActions();
-
-    // TODO maybe pass this from parent and use memo
     const isActive = useAppSelector(editCdcSinkTaskSelectors.isActiveTable(path));
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const formError = useErrorMessage({ control, paths: [path] });
