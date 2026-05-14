@@ -40,7 +40,9 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
 
             // Intentionally not catching exceptions here — if the document is not a valid conversation
             // (wrong format, missing fields, corrupted), we want to surface a clear error to the caller.
-            var conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0);
+            // cloneMessages: false — read-only flow, the read transaction stays open through the response write,
+            // so we borrow the source array reference instead of paying for a full-array clone.
+            var conversation = ConversationDocument.ToDocument(conversationId, document.Data, maxModelIterationsPerCall: 0, cloneMessages: false);
 
             var collector = new Collector(context, RequestHandler.Database.DocumentsStorage, conversation, pageSize, detailLevel, before, after);
             collector.Collect();
