@@ -399,6 +399,68 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Contains("not found", error);
         }
 
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_ConfigWithEmptySchema_MatchesProviderDefault()
+        {
+            // A saved CDC config may leave SourceTableSchema null/empty for runtime reasons:
+            // the CDC runtime resolves it to the provider default (Postgres="public", SQL
+            // Server="dbo", MySQL=database name). Studio's schema discovery endpoint, however,
+            // returns case-preserving names with the explicit schema ("public"), so the user's
+            // /admin/cdc-sink/test request supplies "public" even though the saved config has
+            // empty schema. Before the fix, the handler's match expression compared
+            // (t.SourceTableSchema ?? "") to (request.SourceTableSchema ?? "") and failed when
+            // either side was empty.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            // Note: SourceTableSchema deliberately left null on both the table config AND below
+            // is mirrored by ConfigurationName in CdcSinkConfiguration so the runtime would
+            // fall back to provider-default. The fix must accept "public" from the request.
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = null,
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-default-schema",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Lecturers/1", row.DocumentId);
+            Assert.Contains("\"Name\":\"Alice\"", row.Document);
+        }
+
         [RavenFact(RavenTestCategory.Sinks)]
         public async Task ClientOperation_UnsupportedProvider_RejectedBeforeAnySqlIsRun()
         {

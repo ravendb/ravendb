@@ -709,7 +709,7 @@ namespace Raven.Server.SqlMigration
             return GetSelectAllQueryForTable(collection.SourceTableSchema, collection.SourceTableName);
         }
 
-        public async Task<MigratorRowFetchResult> FetchRowsAsync(
+        public virtual async Task<MigratorRowFetchResult> FetchRowsAsync(
             string tableSchema,
             string tableName,
             IReadOnlyList<string> primaryKeyColumns,

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using MySqlConnector;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 
 namespace Raven.Server.Documents.CdcSink.Schema
@@ -42,6 +43,27 @@ namespace Raven.Server.Documents.CdcSink.Schema
             return factoryName is "Npgsql"
                 or "System.Data.SqlClient" or "Microsoft.Data.SqlClient"
                 or "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory";
+        }
+
+        /// <summary>
+        /// Returns the schema name the CDC runtime substitutes when a <see cref="CdcSinkTableConfig.SourceTableSchema"/>
+        /// is empty: <c>"public"</c> on Postgres, <c>"dbo"</c> on SQL Server, the connection's
+        /// database name on MySQL. The CDC handlers must use this when resolving a saved
+        /// configuration's tables, so the test endpoint matches what the runtime would do —
+        /// Studio's schema-discovery output always carries explicit schema names, but a saved
+        /// task may have left them empty to rely on the runtime default. Each per-provider
+        /// <c>CdcSinkProcess</c> already passes the same value down to <c>CdcSinkDocumentProcessor</c>.
+        /// </summary>
+        public static string ResolveDefaultSchema(string factoryName, string connectionString)
+        {
+            return factoryName switch
+            {
+                "Npgsql" => "public",
+                "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => "dbo",
+                "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory"
+                    => new MySqlConnectionStringBuilder(connectionString).Database ?? "mysql",
+                _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
+            };
         }
 
         internal static string UnsupportedProviderMessage(string factoryName) =>

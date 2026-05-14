@@ -61,7 +61,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 table.SourceTableSchema, table.SourceTableName, table.PrimaryKeyColumns,
                 RowFetchMode.First, primaryKeyValues: null, maxRows: 2, db.DatabaseShutdown);
 
-            var result = CdcSinkTestRunner.Run(db, ctx, config, table, fetched.ColumnNames, fetched.Rows, TestCdcSinkOperation.Upsert);
+            var result = CdcSinkTestRunner.Run(db, ctx, config, table, fetched.ColumnNames, fetched.Rows, TestCdcSinkOperation.Upsert, defaultSchema: table.SourceTableSchema);
 
             Assert.Empty(result.Errors);
             Assert.Equal(2, result.Results.Count);

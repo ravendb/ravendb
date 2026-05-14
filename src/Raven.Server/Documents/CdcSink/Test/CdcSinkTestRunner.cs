@@ -33,7 +33,8 @@ namespace Raven.Server.Documents.CdcSink.Test
             CdcSinkTableConfig targetTable,
             string[] sourceColumnNames,
             List<object[]> rows,
-            TestCdcSinkOperation operation)
+            TestCdcSinkOperation operation,
+            string defaultSchema)
         {
             var result = new TestCdcSinkMappingResult();
 
@@ -48,8 +49,8 @@ namespace Raven.Server.Documents.CdcSink.Test
                 return result;
             }
 
-            var docProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema: "");
-            var tableSchema = targetTable.SourceTableSchema ?? string.Empty;
+            var docProcessor = new CdcSinkDocumentProcessor(configuration, defaultSchema);
+            var tableSchema = string.IsNullOrEmpty(targetTable.SourceTableSchema) ? defaultSchema : targetTable.SourceTableSchema;
             var processor = docProcessor.GetProcessor(tableSchema, targetTable.SourceTableName);
             if (processor == null)
             {

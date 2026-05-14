@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.CdcSink
                 selector == TestCdcSinkRowSelector.First ? RowFetchMode.First : RowFetchMode.ByPrimaryKey,
                 pkValues, maxRows, db.DatabaseShutdown);
 
-            return CdcSinkTestRunner.Run(db, ctx, config, table, fetched.ColumnNames, fetched.Rows, op);
+            return CdcSinkTestRunner.Run(db, ctx, config, table, fetched.ColumnNames, fetched.Rows, op, defaultSchema: "public");
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]

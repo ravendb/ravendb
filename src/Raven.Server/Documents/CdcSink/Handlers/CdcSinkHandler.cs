@@ -108,10 +108,20 @@ public class CdcSinkHandler : DatabaseRequestHandler
             return result;
         }
 
-        var targetSchema = request.SourceTableSchema ?? string.Empty;
+        // CDC runtime substitutes a provider-default schema ("public" / "dbo" / DB name) when a
+        // saved config left SourceTableSchema empty. Studio's /admin/cdc-sink/schema response
+        // always carries explicit schemas, so the request side may pass "public" against a config
+        // that left the field empty — or vice versa. Resolve the default once and apply it to
+        // both sides of the comparison + the runner so the test endpoint mirrors what the
+        // runtime would do.
+        var defaultSchema = CdcSinkSchemaDiscovery.ResolveDefaultSchema(connection.FactoryName, connection.ConnectionString);
+        var targetSchema = string.IsNullOrEmpty(request.SourceTableSchema) ? defaultSchema : request.SourceTableSchema;
         var matches = request.Configuration.Tables?
             .Where(t =>
-                string.Equals(t.SourceTableSchema ?? string.Empty, targetSchema, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    string.IsNullOrEmpty(t.SourceTableSchema) ? defaultSchema : t.SourceTableSchema,
+                    targetSchema,
+                    StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(t.SourceTableName, request.SourceTableName, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
@@ -148,7 +158,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
         try
         {
             fetched = await driver.FetchRowsAsync(
-                tableSchema: targetTable.SourceTableSchema,
+                tableSchema: string.IsNullOrEmpty(targetTable.SourceTableSchema) ? defaultSchema : targetTable.SourceTableSchema,
                 tableName: targetTable.SourceTableName,
                 primaryKeyColumns: targetTable.PrimaryKeyColumns,
                 mode: request.RowSelector == TestCdcSinkRowSelector.First ? RowFetchMode.First : RowFetchMode.ByPrimaryKey,
@@ -178,7 +188,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
 
         return CdcSinkTestRunner.Run(
             Database, context, request.Configuration, targetTable,
-            fetched.ColumnNames, fetched.Rows, request.Operation);
+            fetched.ColumnNames, fetched.Rows, request.Operation, defaultSchema);
     }
 
     private SqlConnectionString ResolveTestConnection(TestCdcSinkMappingRequest request)
