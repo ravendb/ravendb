@@ -39,7 +39,11 @@ After editing analyzer source code, rebuild only the analyzer project to pick up
 dotnet build src/Raven.Analyzers -c Release
 ```
 
-The IDE reloads the analyzer DLL automatically when the project is rebuilt.
+**Note:** Roslyn's language-service worker process caches analyzer DLLs in memory.
+A plain rebuild does not always flush that cache, so code-fix changes may appear
+not to take effect even after the project is rebuilt. If the fix still shows stale
+behaviour, restart the Roslyn worker: in Rider use
+`File > Invalidate Caches…` then restart; in Visual Studio simply restart the IDE.
 
 ## Measure overhead
 
