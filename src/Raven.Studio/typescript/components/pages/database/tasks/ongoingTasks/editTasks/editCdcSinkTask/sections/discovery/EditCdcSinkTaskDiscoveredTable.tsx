@@ -144,7 +144,7 @@ function mapSqlTableToFormData(table: rootSqlTable): FormDataTable {
         if (!column) {
             columns.unshift({
                 column: pk,
-                name: pk,
+                name: _.upperFirst(_.camelCase(pk)),
                 type: "Default",
             });
         }
@@ -174,7 +174,7 @@ function mapSqlTableToFormData(table: rootSqlTable): FormDataTable {
         linkedTables,
         onDelete: { ignoreDeletes: false, patch: "" },
         patch: "",
-        primaryKeyColumns: primaryKeyColumns.map((value) => ({ value })),
+        primaryKeyColumns: primaryKeyColumns.map((x) => ({ value: x })),
         sourceTableName: table.tableName,
         sourceTableSchema: table.tableSchema,
     } satisfies FormDataTable;
