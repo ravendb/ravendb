@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -33,8 +34,7 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
                  // Create a conversation/chat with the agent
                  var conversation = documentStore.AI.Conversation(
                      agentId: "{{obj.Identifier}}",
-                     conversationId: "Conversations/",
-                     {{GenerateConversationParameters(obj)}}
+                     conversationId: "Conversations/"{{GenerateConversationParameters(obj)}}
                  );
 
                  {{GenerateHandleCalls(obj)}}
@@ -50,12 +50,22 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
     private static string GenerateConversationParameters(AiAgentConfiguration obj)
     {
+        // The comma separates conversationId from the options object.
+        // It is emitted here (not in the template) so that when there are no parameters
+        // the method call does not end with a trailing comma before the closing ')'.
         var sb = new StringBuilder();
+        sb.Append(",");
+        sb.AppendLine();
         if (obj.Parameters is { Count: > 0 })
         {
-            sb.AppendLine("new AiConversationCreationOptions()");
+            sb.AppendLine("    new AiConversationCreationOptions()");
             foreach (var param in obj.Parameters)
                 sb.AppendLine($"        .AddParameter(\"{param.Name}\", \"your-{param.Name}-here\")  // {param.Description}");
+        }
+        else
+        {
+            // AiConversationCreationOptions is required even when no custom parameters are needed.
+            sb.Append("    new AiConversationCreationOptions()");
         }
         return sb.ToString();
     }
@@ -78,7 +88,8 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
         foreach (var action in actions)
         {
-            var argsClassName = $"{action.Name}Args";
+            var safeActionName = ToValidCSharpIdentifier(action.Name);
+            var argsClassName = $"{safeActionName}Args";
             var argsClassDef = GenerateClassDefinition(argsClassName, action.ParametersSampleObject, action.ParametersSchema);
             if (argsClassDef != null)
             {
@@ -118,7 +129,12 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
             sb.AppendLine($"class {className}");
             sb.AppendLine("{");
             foreach (var prop in props)
-                sb.AppendLine($"    public {GetCSharpType(prop.Value)} {prop.Name} {{ get; set; }}");
+            {
+                var safeName = ToValidCSharpIdentifier(prop.Name);
+                if (safeName != prop.Name)
+                    sb.AppendLine($"    [System.Text.Json.Serialization.JsonPropertyName(\"{prop.Name}\")]");
+                sb.AppendLine($"    public {GetCSharpType(prop.Value)} {safeName} {{ get; set; }}");
+            }
             sb.Append("}");
             return sb.ToString();
         }
@@ -155,16 +171,25 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
         var pretty = TryPrettyPrintJson(s);
         if (pretty == "{}")
             return $"\"{pretty}\"";
-        if (pretty.StartsWith("{"))
-            pretty = Environment.NewLine + pretty;
-        if (pretty.EndsWith("}"))
-            pretty += Environment.NewLine;
 
-        var indented = string.Join(Environment.NewLine,
-            pretty.Split(Environment.NewLine)
+        // Normalize to \n for consistent cross-platform splitting.
+        pretty = pretty.Replace("\r\n", "\n").Replace("\r", "\n");
+
+        bool isMultiline = pretty.Contains('\n');
+
+        // C# 11 multiline raw strings require the opening """ to be immediately followed
+        // by a newline (no content on the opening line). Ensure this by prepending \n
+        // whenever the content is either a JSON object or spans multiple lines.
+        if (pretty.StartsWith("{") || isMultiline)
+            pretty = "\n" + pretty;
+        if (pretty.EndsWith("}") || isMultiline)
+            pretty += "\n";
+
+        var indented = string.Join("\n",
+            pretty.Split('\n')
                 .Select((line, i) => i == 0 ? line : Indent(indent) + line));
 
-        var fenceLength = GetStringQuotationFenceLength(pretty);
+        var fenceLength = GetStringQuotationFenceLength(indented);
         var fence = new string('"', fenceLength);
         return $"{fence}{indented}{fence}";
     }
@@ -210,4 +235,37 @@ public class CSharpCodeGenerator : AbstractCodeGenerator
 
     protected override void WriteEnumerableEnd(StringBuilder sb, string name, int indent, bool isLast) =>
         sb.AppendLine($"{Indent(indent)}}}{(isLast ? "" : ",")}");
+
+    // Replace every character that is not [a-zA-Z0-9_] with '_', and prefix '@' when
+    // the result clashes with a C# keyword.
+    private static string ToValidCSharpIdentifier(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "_";
+
+        var sb = new StringBuilder();
+        for (int i = 0; i < name.Length; i++)
+        {
+            char c = name[i];
+            bool valid = i == 0 ? (char.IsLetter(c) || c == '_') : (char.IsLetterOrDigit(c) || c == '_');
+            sb.Append(valid ? c : '_');
+        }
+
+        // If first char was a digit it was replaced with '_', so no digit-prefix check needed.
+        var result = sb.ToString();
+        return CSharpKeywords.Contains(result) ? "@" + result : result;
+    }
+
+    private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
+    {
+        "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked",
+        "class", "const", "continue", "decimal", "default", "delegate", "do", "double", "else",
+        "enum", "event", "explicit", "extern", "false", "finally", "fixed", "float", "for",
+        "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock",
+        "long", "namespace", "new", "null", "object", "operator", "out", "override", "params",
+        "private", "protected", "public", "readonly", "ref", "return", "sbyte", "sealed", "short",
+        "sizeof", "stackalloc", "static", "string", "struct", "switch", "this", "throw", "true",
+        "try", "typeof", "uint", "ulong", "unchecked", "unsafe", "ushort", "using", "virtual",
+        "void", "volatile", "while"
+    };
 }

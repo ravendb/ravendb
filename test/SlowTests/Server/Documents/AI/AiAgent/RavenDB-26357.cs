@@ -658,6 +658,210 @@ public class Program
         Assert.Contains("Agent 'non-existent-agent' doesn't exist", ex.Message);
     }
 
+    // ---- Triple-quote fence tests ----
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CSharp_TripleQuoteInSystemPrompt_ProducesLongerFenceAndCompiles()
+    {
+        // A system prompt that literally contains """ is a correctness edge-case: the generated
+        // C# raw-string literal must use a fence longer than the longest run of " in the content.
+        const string agentId = "triple-quote-csharp-agent";
+        var agent = new AiAgentConfiguration(agentId, "SomeConn",
+            "You must always wrap your answer in \"\"\"triple\"\"\" quotes.")
+        {
+            // SampleObject is required so the generator emits the AgentResponse class
+            // (without it RunAsync<AgentResponse> references an undefined type).
+            SampleObject = """{"answer": "text"}"""
+        };
+
+        using var store = GetDocumentStore();
+        await store.AI.CreateAgentAsync(agent);
+
+        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
+        var code = result.GeneratedCode;
+
+        // The system prompt contains """ (3 quotes), so the fence must be """" (4 quotes).
+        Assert.Contains("\"\"\"\"", code);
+
+        // The raw triple-quotes from the prompt must appear unescaped inside the longer fence.
+        Assert.Contains("\"\"\"triple\"\"\"", code);
+
+        // The generated code must still compile.
+        var wrappedCode = WrapInMainMethod(code);
+        AssertCompilesWithRoslyn(wrappedCode);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task Python_TripleQuoteInSystemPrompt_IsEscaped()
+    {
+        // A system prompt containing """ must have the triple-quotes escaped as \"\"\" so the
+        // triple-double-quote fence is never accidentally closed.
+        const string agentId = "triple-quote-python-agent";
+        var agent = new AiAgentConfiguration(agentId, "SomeConn",
+            "You must always wrap your answer in \"\"\"triple\"\"\" quotes.")
+        {
+            SampleObject = """{"answer": "text"}"""
+        };
+
+        using var store = GetDocumentStore();
+        await store.AI.CreateAgentAsync(agent);
+
+        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "python"));
+        var code = result.GeneratedCode;
+
+        // Each """ from the prompt should be escaped to \"\"\" in the Python source.
+        Assert.Contains("\\\"\\\"\\\"triple\\\"\\\"\\\"", code);
+
+        // No raw, unescaped """ should appear *inside* the system_prompt value
+        // (the fence markers themselves are fine; they don't contain the word "triple").
+        Assert.DoesNotContain("\"\"\"triple", code);
+    }
+
+    // ---- Identifier sanitization tests ----
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CSharp_ActionNameWithSpecialChars_SanitizesToValidIdentifierAndCompiles()
+    {
+        // An action name such as "do-the-thing" contains a hyphen, which is not a valid C# identifier
+        // character. The generator must replace it with '_' for the generated class name, while
+        // keeping the original name in the Handle(...) string literal.
+        const string agentId = "special-chars-csharp-agent";
+        var agent = new AiAgentConfiguration(agentId, "SomeConn", "Some prompt.")
+        {
+            // SampleObject is required so the generator emits the AgentResponse class.
+            SampleObject = """{"answer": "text"}""",
+            Actions =
+            [
+                new AiAgentToolAction("do-the-thing", "Does the thing.")
+                {
+                    ParametersSampleObject = """{"input": "value"}"""
+                }
+            ]
+        };
+
+        using var store = GetDocumentStore();
+        await store.AI.CreateAgentAsync(agent);
+
+        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
+        var code = result.GeneratedCode;
+
+        // Class name must be a valid identifier — hyphen replaced with underscore.
+        Assert.Contains("class do_the_thingArgs", code);
+
+        // The Handle call must still reference the original action name as a string literal.
+        Assert.Contains("\"do-the-thing\"", code);
+
+        // The whole file must compile.
+        AssertCompilesWithRoslyn(WrapInMainMethod(code));
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task Python_ActionNameWithSpecialChars_SanitizesToValidIdentifier()
+    {
+        // An action name such as "do-the-thing" must produce a valid Python function name.
+        const string agentId = "special-chars-python-agent";
+        var agent = new AiAgentConfiguration(agentId, "SomeConn", "Some prompt.")
+        {
+            SampleObject = """{"answer": "text"}""",
+            Actions =
+            [
+                new AiAgentToolAction("do-the-thing", "Does the thing.")
+            ]
+        };
+
+        using var store = GetDocumentStore();
+        await store.AI.CreateAgentAsync(agent);
+
+        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "python"));
+        var code = result.GeneratedCode;
+
+        // Handler function must be a valid Python identifier — hyphen replaced with underscore.
+        Assert.Contains("def handle_do_the_thing(params)", code);
+
+        // The chat.handle call must still use the original action name.
+        Assert.Contains("chat.handle('do-the-thing',", code);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CSharp_JsonPropertyWithInvalidName_EmitsJsonPropertyNameAttributeAndCompiles()
+    {
+        // JSON property names such as "my-key" (hyphen) or "class" (C# keyword) are not valid
+        // C# identifiers. The generator must emit a [JsonPropertyName] attribute and sanitize
+        // the property name so the generated class compiles cleanly.
+        const string agentId = "invalid-json-prop-csharp-agent";
+        var agent = new AiAgentConfiguration(agentId, "SomeConn", "Some prompt.")
+        {
+            SampleObject = """{"my-key": "hello", "class": "keyword-clash"}"""
+        };
+
+        using var store = GetDocumentStore();
+        await store.AI.CreateAgentAsync(agent);
+
+        var result = await store.Maintenance.SendAsync(new GenerateCodeAiAgentsOperation(agentId, "c#"));
+        var code = result.GeneratedCode;
+
+        // Hyphenated key: attribute preserves original name, property uses sanitized identifier.
+        Assert.Contains("[System.Text.Json.Serialization.JsonPropertyName(\"my-key\")]", code);
+        Assert.Contains("public string my_key { get; set; }", code);
+
+        // Keyword clash: attribute preserves "class", property uses @class.
+        Assert.Contains("[System.Text.Json.Serialization.JsonPropertyName(\"class\")]", code);
+        Assert.Contains("public string @class { get; set; }", code);
+
+        // The whole file must compile.
+        AssertCompilesWithRoslyn(WrapInMainMethod(code));
+    }
+
+    // ---- Shared compilation helpers ----
+
+    private static string WrapInMainMethod(string generatedCode)
+    {
+        var wrapped = generatedCode.Replace(
+            "using Raven.Client.Documents.Operations.AI.Agents;",
+            """
+            using Raven.Client.Documents.Operations.AI.Agents;
+            public class Program
+            {
+                public static async Task Main()
+                {
+            """);
+        wrapped += """
+
+            }
+        }
+        """;
+        return ExtractClassesFromMain(wrapped);
+    }
+
+    private static void AssertCompilesWithRoslyn(string code)
+    {
+        var syntaxTree = CSharpSyntaxTree.ParseText(code);
+
+        var references = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => a.IsDynamic == false && string.IsNullOrEmpty(a.Location) == false)
+            .Select(a => MetadataReference.CreateFromFile(a.Location))
+            .Cast<MetadataReference>()
+            .ToList();
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName: "GeneratedAgentTestAssembly",
+            syntaxTrees: [syntaxTree],
+            references: references,
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
+        );
+
+        using var ms = new MemoryStream();
+        var emitResult = compilation.Emit(ms);
+
+        if (emitResult.Success == false)
+        {
+            var errors = emitResult.Diagnostics
+                .Where(d => d.Severity == DiagnosticSeverity.Error)
+                .Select(d => d.ToString());
+            Assert.Fail($"Generated code failed to compile:\n{string.Join("\n", errors)}\n\nGenerated source:\n{code}");
+        }
+    }
+
     private static async Task<string> CreateAgent(IDocumentStore store, string connectionStringName, bool useSchema = false)
     {
         string changeUserNameSampleObject = JsonConvert.SerializeObject(ChangeUserNameSampleRequest.Instance);

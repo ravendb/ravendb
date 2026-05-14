@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -64,7 +65,7 @@ public class PythonCodeGenerator : AbstractCodeGenerator
         var sb = new StringBuilder();
         foreach (var action in obj.Actions ?? [])
         {
-            var handlerName = $"handle_{ToSnakeCase(action.Name)}";
+            var handlerName = $"handle_{ToValidPythonIdentifier(ToSnakeCase(action.Name))}";
 
             sb.AppendLine($$"""
                                 # Define a handler for the '{{action.Name}}' action tool
@@ -108,8 +109,13 @@ public class PythonCodeGenerator : AbstractCodeGenerator
                   .Select((line, i) => i == 0 ? line : Indent(indent) + line));
 
         var fenceLength = GetStringQuotationFenceLength(pretty);
-        var fence = fenceLength == 1 ? "'" : new string('"', fenceLength);
-        return $"{fence}{indented}{fence}";
+        if (fenceLength == 1)
+            return $"'{EscapeSingleQuoted(indented)}'";
+
+        // Python only supports """ as the triple-quote fence (not """" or longer).
+        // Escape any embedded """ in the content so the fence is never accidentally closed.
+        var escaped = indented.Replace("\"\"\"", "\\\"\\\"\\\"");
+        return $"\"\"\"{escaped}\"\"\"";
     }
 
     // Python uses constructor-call syntax — no braces, properties go directly inside "("
@@ -175,4 +181,31 @@ public class PythonCodeGenerator : AbstractCodeGenerator
             sb.Append(char.IsUpper(c) ? $"_{char.ToLower(c)}" : c.ToString());
         return sb.ToString();
     }
+
+    // Replace every character that is not [a-zA-Z0-9_] with '_', prefix '_' when the
+    // result starts with a digit, and suffix '_' when the result clashes with a Python keyword.
+    private static string ToValidPythonIdentifier(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "_";
+
+        var sb = new StringBuilder();
+        foreach (char c in name)
+            sb.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+
+        var result = sb.ToString();
+
+        if (char.IsDigit(result[0]))
+            result = "_" + result;
+
+        return PythonKeywords.Contains(result) ? result + "_" : result;
+    }
+
+    private static readonly HashSet<string> PythonKeywords = new(StringComparer.Ordinal)
+    {
+        "False", "None", "True", "and", "as", "assert", "async", "await", "break", "class",
+        "continue", "def", "del", "elif", "else", "except", "finally", "for", "from", "global",
+        "if", "import", "in", "is", "lambda", "nonlocal", "not", "or", "pass", "raise",
+        "return", "try", "while", "with", "yield"
+    };
 }

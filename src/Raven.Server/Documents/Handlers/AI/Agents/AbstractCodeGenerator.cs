@@ -214,6 +214,8 @@ public abstract class AbstractCodeGenerator
 
     protected static List<string> TryGetJsonKeys(string json)
     {
+        if (string.IsNullOrWhiteSpace(json))
+            return new List<string>();
         try
         {
             var doc = System.Text.Json.JsonDocument.Parse(json);
@@ -226,11 +228,15 @@ public abstract class AbstractCodeGenerator
 
     private IEnumerable<MemberInfo> GetReadableMembers(Type type)
     {
+        // OrderBy(MetadataToken) gives declaration order within each metadata table
+        // and is guaranteed to be stable across builds, unlike the default reflection order.
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(p => p.CanRead)
+            .OrderBy(p => p.MetadataToken)
             .Cast<MemberInfo>();
 
         var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance)
+            .OrderBy(f => f.MetadataToken)
             .Cast<MemberInfo>();
 
         return properties.Concat(fields);
