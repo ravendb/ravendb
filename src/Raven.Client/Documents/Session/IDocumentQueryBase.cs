@@ -602,16 +602,22 @@ If you really want to do in memory filtering on the data returned from the query
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.SortQueryResults.OrderByFieldValue"/>
         TSelf OrderBy(string field, string sorterName);
 
+        TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
+        
         /// <summary>
         ///     Orders the query results by the specified field in ascending order.
         /// </summary>
         /// <param name="field">Name of the field to order the query results by.</param>
         /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
-        TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>. Per-query null placement is supported only by the Corax search engine.</param>
+        TSelf OrderBy(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String);
 
         /// <inheritdoc cref="OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector);
 
+        /// <inheritdoc cref="OrderBy{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
+        TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls);
+        
         /// <summary>
         ///     Orders the query results using custom server-side sorter by the specified field in ascending order.
         /// </summary>
@@ -623,8 +629,11 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Orders the query results by the specified field in ascending order.
         /// </summary>
         /// <param name="propertySelector">Path to the field to order the query results by.</param>
-        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
+        /// <param name="ordering">Ordering type.</param>
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>. Per-query null placement is supported only by the Corax search engine.</param>
         TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering);
+
+        TSelf OrderBy<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls, OrderingType ordering);
 
         /// <summary>
         ///     Orders the query results by specified fields in ascending order.
@@ -645,10 +654,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="field">Name of the field to order the query results by.</param>
         /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
-        TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>. Per-query null placement is supported only by the Corax search engine.</param>
+        TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);       
+        TSelf OrderByDescending(string field, NullsOrdering nulls, OrderingType ordering = OrderingType.String);
 
         /// <inheritdoc cref="OrderByDescending{TValue}(Expression{Func{T, TValue}}, OrderingType)"/>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector);
+        TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls);
 
         /// <summary>
         ///     Orders the query results using server-side custom sorter by the specified field in descending order.
@@ -661,8 +673,10 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Orders the query results by the specified field in descending order.
         /// </summary>
         /// <param name="propertySelector">Path to the field to order the query results by.</param>
-        /// <param name="ordering">Ordering type. Default: OrderingType.String.</param>
+        /// <param name="ordering">Ordering type.</param>
+        /// <param name="nulls">Placement of null values. Default: <see cref="NullsOrdering.Default"/>. Per-query null placement is supported only by the Corax search engine.</param>
         TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, OrderingType ordering);
+        TSelf OrderByDescending<TValue>(Expression<Func<T, TValue>> propertySelector, NullsOrdering nulls, OrderingType ordering);
 
         /// <summary>
         ///     Orders the query results by specified fields in descending order.
@@ -722,6 +736,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(DynamicSpatialField field, double latitude, double longitude);
+        TSelf OrderByDistance(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from a given geographical coordinates in ascending order.
@@ -731,6 +746,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
+        TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
@@ -739,6 +755,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(DynamicSpatialField field, string shapeWkt);
+        TSelf OrderByDistance(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
@@ -747,9 +764,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
+        TSelf OrderByDistance(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistance(Expression{Func{T, object}}, double, double, double)"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from given geographical coordinates in ascending order.
@@ -760,9 +779,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistance(string, double, double, double)"/>
         TSelf OrderByDistance(string fieldName, double latitude, double longitude);
+        TSelf OrderByDistance(string fieldName, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from given geographical coordinates in ascending order.
@@ -773,9 +794,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor);
+        TSelf OrderByDistance(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistance(Expression{Func{T, object}}, string, double)"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt);
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
@@ -785,9 +808,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
+        TSelf OrderByDistance(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistance(string, string, double)"/>
         TSelf OrderByDistance(string fieldName, string shapeWkt);
+        TSelf OrderByDistance(string fieldName, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in ascending order.
@@ -797,6 +822,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistance(string fieldName, string shapeWkt, double roundFactor);
+        TSelf OrderByDistance(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls );
 
         /// <summary>
         ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
@@ -806,6 +832,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude);
+        TSelf OrderByDistanceDescending(DynamicSpatialField field, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
@@ -815,9 +842,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="longitude">Longitude of coordinates to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude);
+        TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, double latitude, double longitude, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistanceDescending(Func{DynamicSpatialFieldFactory{T}, DynamicSpatialField}, string)"/>
         TSelf OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt);
+        TSelf OrderByDistanceDescending(DynamicSpatialField field, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
@@ -826,9 +855,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="shapeWkt">String representing the WKT shape to calculate the distance from.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt);
+        TSelf OrderByDistanceDescending(Func<DynamicSpatialFieldFactory<T>, DynamicSpatialField> field, string shapeWkt, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistanceDescending(Expression{Func{T, object}}, double, double, double)"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude);
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from a given geographical coordinates in descending order.
@@ -839,9 +870,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor);
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistanceDescending(string, double, double, double)"></inheritdoc>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+        TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from given geographical coordinates in descending order.
@@ -852,9 +885,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from coordinates is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor);
+        TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistanceDescending(Expression{Func{T, object}}, string, double)"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt);
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
@@ -864,9 +899,11 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor);
+        TSelf OrderByDistanceDescending(Expression<Func<T, object>> propertySelector, string shapeWkt, double roundFactor, NullsOrdering nulls);
 
         /// <inheritdoc cref="OrderByDistanceDescending(string, string, double)"/>
         TSelf OrderByDistanceDescending(string fieldName, string shapeWkt);
+        TSelf OrderByDistanceDescending(string fieldName, string shapeWkt, NullsOrdering nulls);
 
         /// <summary>
         ///     Sorts the spatial query results by distance from the center of given WKT shape in descending order.
@@ -876,5 +913,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="roundFactor">Distance interval in kilometers. The distance from WKT shape is rounded up to the nearest interval.</param>
         /// <inheritdoc cref="DocumentationUrls.Session.Querying.HowToMakeASpatialQuery"/>
         TSelf OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor);
+        TSelf OrderByDistanceDescending(string fieldName, string shapeWkt, double roundFactor, NullsOrdering nulls);
     }
 }

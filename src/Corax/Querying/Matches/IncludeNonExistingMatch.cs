@@ -12,14 +12,14 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
     private readonly bool _forward;
-    private readonly bool _nullFirsts;
+    private readonly bool _nullIsSmallest;
     private bool _hasLeftNonExisting;
     private bool _innerEnd = false;
     private PostingList.Iterator _postingListIterator;
-    public IncludeNonExistingMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward, bool nullFirsts)
+    public IncludeNonExistingMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward, bool nullIsSmallest)
     {
         _forward = forward;
-        _nullFirsts = nullFirsts;
+        _nullIsSmallest = nullIsSmallest;
         _inner = inner;
         
         _hasLeftNonExisting = searcher.TryGetPostingListForNonExisting(in field, out var postingListId);
@@ -44,7 +44,7 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Fill(Span<long> matches)
     {
-        bool nullsFirst = _forward ? _nullFirsts : !_nullFirsts;
+        bool nullsFirst = _forward ? _nullIsSmallest : !_nullIsSmallest;
         
         return nullsFirst 
             ? NullFirstStreaming(matches) 

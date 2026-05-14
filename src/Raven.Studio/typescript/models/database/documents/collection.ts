@@ -51,6 +51,10 @@ class collection {
         return this.name === collection.revisionsBinCollectionName;
     }
 
+    get isSystem() {
+        return this.name.startsWith('@');
+    }
+
     get collectionNameForQuery() {
         return this.isAllDocuments ? "@all_docs" : this.name;
     }

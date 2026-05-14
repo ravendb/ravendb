@@ -203,6 +203,7 @@ namespace Raven.Client.Documents.Subscriptions
                         JavascriptConversionExtensions.CounterSupport.Instance,
                         JavascriptConversionExtensions.CompareExchangeSupport.Instance,
                         new JavascriptConversionExtensions.LoadSupport(),
+                        JavascriptConversionExtensions.NewSupport.BodyOnlyInstance,
                         JavascriptConversionExtensions.MemberInit.Instance
                     ));
 

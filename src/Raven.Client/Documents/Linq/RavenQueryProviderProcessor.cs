@@ -1572,24 +1572,38 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingTypeOrSorterNameOrNulls);
 
-                    if (orderByOrderingTypeOrSorterName is string orderBySorterName)
+                    // 4-arg overloads: LinqExtensions.OrderBy(IQueryable<T>, path, NullsOrdering nulls, OrderingType ordering) — see LinqExtensions.cs
+                    // Argument layout: [0] source, [1] path, [2] nulls, [3] ordering
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var orderByOrdering);
+                        DocumentQuery.OrderBy((string)orderByPath, (NullsOrdering)orderByOrderingTypeOrSorterNameOrNulls, (OrderingType)orderByOrdering);
+                    }
+                    else if (orderByOrderingTypeOrSorterNameOrNulls is string orderBySorterName)
                         DocumentQuery.OrderBy((string)orderByPath, orderBySorterName);
                     else
-                        DocumentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterName);
+                        DocumentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingTypeOrSorterNameOrNulls);
                     break;
                 case nameof(LinqExtensions.OrderByDescending):
                 case nameof(LinqExtensions.ThenByDescending):
                     VisitExpression(expression.Arguments[0]);
 
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingTypeOrSorterNameOrNulls);
 
-                    if (orderByDescendingOrderingTypeOrSorterName is string orderByDescendingSorterName)
+                    // 4-arg overloads: LinqExtensions.OrderByDescending(IQueryable<T>, path, NullsOrdering nulls, OrderingType ordering) — see LinqExtensions.cs
+                    // Argument layout: [0] source, [1] path, [2] nulls, [3] ordering
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var orderByDescendingOrdering);
+                        DocumentQuery.OrderByDescending((string)orderByDescendingPath, (NullsOrdering)orderByDescendingOrderingTypeOrSorterNameOrNulls, (OrderingType)orderByDescendingOrdering);
+                    }
+                    else if (orderByDescendingOrderingTypeOrSorterNameOrNulls is string orderByDescendingSorterName)
                         DocumentQuery.OrderByDescending((string)orderByDescendingPath, orderByDescendingSorterName);
                     else
-                        DocumentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterName);
+                        DocumentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingTypeOrSorterNameOrNulls);
 
                     break;
                 case nameof(LinqExtensions.MoreLikeThis):

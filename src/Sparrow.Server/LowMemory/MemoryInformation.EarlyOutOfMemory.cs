@@ -82,49 +82,11 @@ public static partial class MemoryInformation
         long totalPageFile = (long)memoryStatus.ullTotalPageFile;
         long availPageFile = (long)(memoryStatus.ullTotalPageFile - memoryStatus.ullAvailPageFile);
 
+        long availableMemoryForProcessingInBytes = memoryStatusUllAvailPhys;
         if (Win32MemoryMethods.IsProcessInJob(ProcessHandle, IntPtr.Zero, out var isInJob) && isInJob)
         {
-            Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits = default;
-            if (Win32MemoryMethods.QueryInformationJobObject(IntPtr.Zero,
-                    Win32MemoryMethods.JOBOBJECTINFOCLASS.ExtendedLimitInformation, (void*)&limits,
-                    sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
-                    out int limitsOutputSize) == false ||
-                limitsOutputSize != sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION))
-            {
-                if (_reportedQueryJobObjectFailure == false && Logger.IsDebugEnabled)
-                {
-                    _reportedQueryJobObjectFailure = true;
-                    Logger.Debug(
-                        $"Failure when trying to query job object information info from Windows, error code is: {Marshal.GetLastWin32Error()}. Output size: {limitsOutputSize} instead of {sizeof(Win32MemoryMethods.JOBOBJECT_EXTENDED_LIMIT_INFORMATION)}!");
-                }
-            }
-            else
-            {
-                long maxSize = long.MaxValue;
-                if (limits.BasicLimitInformation.MaximumWorkingSetSize != UIntPtr.Zero)
-                {
-                    maxSize = (long)limits.BasicLimitInformation.MaximumWorkingSetSize;
-                }
-
-                if (limits.ProcessMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-
-                if (limits.JobMemoryLimit != UIntPtr.Zero)
-                {
-                    maxSize = Math.Min(maxSize, (long)limits.ProcessMemoryLimit);
-                }
-
-                if (maxSize != long.MaxValue)
-                {
-                    (long workingSetInBytes, long _, long? _) = GetProcessMemoryInfoForWindows();
-                    var availableMemoryForProcessingInBytes = Math.Max(maxSize - workingSetInBytes, 0);
-                    availPageFile = Math.Max(maxSize - workingSetInBytes, 0);
-                    totalPageFile = maxSize;
-                    memoryStatusUllAvailPhys = Math.Min(availableMemoryForProcessingInBytes, memoryStatusUllAvailPhys);
-                }
-            }
+            (long workingSet, long _, long? _) = GetProcessMemoryInfoForWindows();
+            TryApplyJobObjectMemoryLimits(workingSet, ref memoryStatusUllAvailPhys, ref totalPageFile, ref availPageFile, ref availableMemoryForProcessingInBytes);
         }
 
         return new LightWeightMemoryInfoResult

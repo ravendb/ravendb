@@ -14,11 +14,16 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 
 public abstract class AzureQueueStorageEtlTestBase : QueueEtlTestBase
 {
+    private readonly HashSet<string> _definedQueues = new(StringComparer.OrdinalIgnoreCase);
+
     protected AzureQueueStorageEtlTestBase(ITestOutputHelper output) : base(output)
     {
+        QueueNameSuffix = Guid.NewGuid().ToString("N");
     }
 
-    protected string OrdersQueueName => "orders";
+    protected string QueueNameSuffix { get; }
+
+    protected string OrdersQueueName => "orders" + QueueNameSuffix;
 
     protected readonly string[] DefaultCollections = { "orders" };
 
@@ -35,10 +40,10 @@ var orderData = {
 
 for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
-    orderData.TotalCost += line.Cost*line.Quantity;    
+    orderData.TotalCost += line.Cost*line.Quantity;
 }
-loadToOrders" + @"(orderData, {
-                                                            Id: id(this),                                                            
+loadToOrders" + QueueNameSuffix + @"(orderData, {
+                                                            Id: id(this),
                                                             Type: 'com.github.users',
                                                             Source: '/registrations/direct-signup'
                                                      });
@@ -69,7 +74,14 @@ output('test output')";
             BrokerType = QueueBrokerType.AzureQueueStorage,
             SkipAutomaticQueueDeclaration = skipAutomaticQueueDeclaration
         };
-        
+
+        var queueNames = queues?.Select(x => x.Name).ToArray() ?? transformation.GetCollectionsFromScript();
+        if (queueNames != null)
+        {
+            foreach (var queue in queueNames)
+                _definedQueues.Add(queue.ToLower());
+        }
+
         Etl.AddEtl(store, config,
             new QueueConnectionString
             {
@@ -111,12 +123,21 @@ output('test output')";
     
     private void CleanupQueues()
     {
-        QueueServiceClient client = new(AzureQueueStorageConnectionString);
-        var queues = client.GetQueues();
+        if (_definedQueues.Count == 0 || string.IsNullOrEmpty(AzureQueueStorageConnectionString))
+            return;
 
-        foreach (var queue in queues)
+        QueueServiceClient client = new(AzureQueueStorageConnectionString);
+
+        foreach (var queueName in _definedQueues)
         {
-            client.DeleteQueue(queue.Name);
+            try
+            {
+                client.DeleteQueueAsync(queueName).GetAwaiter().GetResult();
+            }
+            catch (Azure.RequestFailedException ex) when (ex.ErrorCode == "QueueNotFound")
+            {
+                // queue may have never been created (e.g. configuration error tests) - ignore
+            }
         }
     }
 

@@ -66,6 +66,13 @@ interface changeVectorItem {
     shortFormat: string;
 }
 
+interface changeVectorEntryItem {
+    tag: string;
+    etag: string;
+    dbId: string;
+    original: string;
+}
+
 interface IndexErrorPerDocument {
     Document: string;
     Error: string;

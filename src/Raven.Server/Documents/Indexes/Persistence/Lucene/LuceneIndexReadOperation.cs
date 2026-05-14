@@ -10,7 +10,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Lucene.Net.Search.Vectorhighlight;
 using Lucene.Net.Store;
-using Raven.Client;
+using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Explanation;
@@ -41,6 +41,7 @@ using Sparrow.Logging;
 using Spatial4n.Shapes;
 using Voron.Impl;
 using IndexFieldType = Raven.Server.Documents.Indexes.Debugging.IndexFieldType;
+using Constants = Raven.Client.Constants;
 using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -160,92 +161,97 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     using (luceneScope?.Start())
                         search = ExecuteQuery(luceneQuery, (int)query.Start, (int)docsToGet, sort);
 
-                    totalResults.Value = search.TotalHits;
-
-                    // We need to filter out search results that had already been seen in previous batches.
-                    scope.RecordAlreadyPagedItemsInPreviousPage(search, token);
-
-                    for (; position < search.ScoreDocs.Length && pageSize > 0; position++)
+                    using (search)
                     {
-                        token.ThrowIfCancellationRequested();
+                        totalResults.Value = search.TotalHits;
 
-                        var scoreDoc = search.ScoreDocs[position];
+                        // We need to filter out search results that had already been seen in previous batches.
+                        scope.RecordAlreadyPagedItemsInPreviousPage(search, token);
 
-                        // Retrieve the actual index entry from the Lucene index. 
-                        global::Lucene.Net.Documents.Document document;
-                        using (luceneScope?.Start())
-                            document = _searcher.Doc(scoreDoc.Doc, _state);
+                        var reader = search.ScoreDocArray.GetReader(start: (int)position);
 
-                        var retrieverInput = new RetrieverInput(document, scoreDoc, _state);
-                        if (retriever.TryGetKeyLucene(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
+                        while (pageSize > 0 && position < search.ScoreDocArray.Length && reader.Read(out int doc, out float score))
                         {
-                            // If either there is no valid projection or we have already seen this document before, we are skipping. 
-                            skippedResults.Value++;
-                            continue;
-                        }
-                        // We apply a document scan script if required.                       
-                        var filterResult = queryFilter?.Apply(ref retrieverInput, key);
-                        if (filterResult is not null and not FilterResult.Accepted)
-                        {
-                            if (filterResult is FilterResult.Skipped)
-                                continue;
-                            if (filterResult is FilterResult.LimitReached)
-                                break;
-                        }
+                            token.ThrowIfCancellationRequested();
 
-                        // We are going to return the documents to the caller in a streaming fashion.
-                        bool markedAsSkipped = false;
-                        var r = retriever.Get(ref retrieverInput, token);
+                            position++;
 
-                        var parameters = new CreateQueryResultParameters(query, luceneQuery, scoreDoc, document, documentsContext, scope, highlightingScope,
-                            explanationsScope, explanationOptions, isDistinctCount);
+                            // Retrieve the actual index entry from the Lucene index. 
+                            global::Lucene.Net.Documents.Document document;
+                            using (luceneScope?.Start())
+                                document = _searcher.Doc(doc, _state);
 
-                        if (r.Document != null)
-                        {
-                            var qr = CreateQueryResult(r.Document, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
-
-                            if (qr.Result == null)
-                                continue;
-
-                            yield return qr;
-                        }
-                        else if (r.List != null)
-                        {
-                            int numberOfProjectedResults = 0;
-                            foreach (Document item in r.List)
+                            var retrieverInput = new RetrieverInput(document, (doc, score), _state);
+                            if (retriever.TryGetKeyLucene(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                             {
-                                var qr = CreateQueryResult(item, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
+                                // If either there is no valid projection or we have already seen this document before, we are skipping. 
+                                skippedResults.Value++;
+                                continue;
+                            }
+                            // We apply a document scan script if required.                       
+                            var filterResult = queryFilter?.Apply(ref retrieverInput, key);
+                            if (filterResult is not null and not FilterResult.Accepted)
+                            {
+                                if (filterResult is FilterResult.Skipped)
+                                    continue;
+                                if (filterResult is FilterResult.LimitReached)
+                                    break;
+                            }
+
+                            // We are going to return the documents to the caller in a streaming fashion.
+                            bool markedAsSkipped = false;
+                            var r = retriever.Get(ref retrieverInput, token);
+
+                            var parameters = new CreateQueryResultParameters(query, luceneQuery, (doc, score), document, documentsContext, scope, highlightingScope,
+                                explanationsScope, explanationOptions, isDistinctCount);
+
+                            if (r.Document != null)
+                            {
+                                var qr = CreateQueryResult(r.Document, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
 
                                 if (qr.Result == null)
                                     continue;
 
                                 yield return qr;
-                                numberOfProjectedResults++;
                             }
-
-                            if (numberOfProjectedResults > 1)
+                            else if (r.List != null)
                             {
-                                totalResults.Value += numberOfProjectedResults - 1;
+                                int numberOfProjectedResults = 0;
+                                foreach (Document item in r.List)
+                                {
+                                    var qr = CreateQueryResult(item, parameters, ref markedAsSkipped, skippedResults, ref returnedResults);
+
+                                    if (qr.Result == null)
+                                        continue;
+
+                                    yield return qr;
+                                    numberOfProjectedResults++;
+                                }
+
+                                if (numberOfProjectedResults > 1)
+                                {
+                                    totalResults.Value += numberOfProjectedResults - 1;
+                                }
                             }
-                        }
-                        else
-                        {
-                            skippedResults.Value++;
+                            else
+                            {
+                                skippedResults.Value++;
+                            }
+
+                            if (returnedResults == pageSize)
+                                yield break;
                         }
 
-                        if (returnedResults == pageSize)
-                            yield break;
+                        if (search.TotalHits == search.ScoreDocArray.Length)
+                            break;
+
+                        if (returnedResults >= pageSize || scannedDocuments.Value >= query.FilterLimit)
+                            break;
+
+                        Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
+
+                        docsToGet += LuceneGetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                     }
-
-                    if (search.TotalHits == search.ScoreDocs.Length)
-                        break;
-
-                    if (returnedResults >= pageSize || scannedDocuments.Value >= query.FilterLimit)
-                        break;
-
-                    Debug.Assert(_maxNumberOfOutputsPerDocument > 0);
-
-                    docsToGet += LuceneGetPageSize(_searcher, (long)(pageSize - returnedResults) * _maxNumberOfOutputsPerDocument);
                 }
 
                 if (isDistinctCount)
@@ -284,7 +290,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (parameters.Query.Metadata.HasHighlightings)
                 {
                     using (parameters.HighlightingScope?.Start())
-                        highlightings = GetHighlighterResults(parameters.Query, _searcher, parameters.ScoreDoc, doc, parameters.LuceneDocument, parameters.DocumentsContext);
+                        highlightings = GetHighlighterResults(parameters.Query, _searcher, parameters.ScoreDoc.Doc, doc, parameters.LuceneDocument, parameters.DocumentsContext);
                 }
 
                 // If we have been asked for explanations, we get them. 
@@ -298,7 +304,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         if (explanationOptions == null)
                             explanationOptions = parameters.Query.Metadata.Explanation.GetOptions(parameters.DocumentsContext, parameters.Query.QueryParameters);
 
-                        explanation = GetQueryExplanations(explanationOptions, parameters.LuceneQuery, _searcher, parameters.ScoreDoc, doc, parameters.LuceneDocument);
+                        explanation = GetQueryExplanations(explanationOptions, parameters.LuceneQuery, _searcher, parameters.ScoreDoc.Doc, doc, parameters.LuceneDocument);
                     }
                 }
 
@@ -309,7 +315,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return default;
         }
 
-        private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
+        private ExplanationResult GetQueryExplanations(ExplanationOptions options, Query luceneQuery, IndexSearcher searcher, int doc, Document document, global::Lucene.Net.Documents.Document luceneDocument)
         {
             string key;
             var hasGroupKey = options != null && string.IsNullOrWhiteSpace(options.GroupKey) == false;
@@ -334,11 +340,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new ExplanationResult
             {
                 Key = key,
-                Explanation = searcher.Explain(luceneQuery, scoreDoc.Doc, _state)
+                Explanation = searcher.Explain(luceneQuery, doc, _state)
             };
         }
 
-        private Dictionary<string, Dictionary<string, string[]>> GetHighlighterResults(IndexQueryServerSide query, IndexSearcher searcher, ScoreDoc scoreDoc, Document document, global::Lucene.Net.Documents.Document luceneDocument, JsonOperationContext context)
+        private Dictionary<string, Dictionary<string, string[]>> GetHighlighterResults(IndexQueryServerSide query, IndexSearcher searcher, int doc, Document document, global::Lucene.Net.Documents.Document luceneDocument, JsonOperationContext context)
         {
             Debug.Assert(_highlighter != null);
             Debug.Assert(_highlighterQuery != null);
@@ -354,7 +360,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 var fragments = _highlighter.GetBestFragments(
                     _highlighterQuery,
                     searcher.IndexReader,
-                    scoreDoc.Doc,
+                    doc,
                     indexFieldName,
                     highlighting.FragmentLength,
                     highlighting.FragmentCount,
@@ -451,8 +457,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
                 var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
-                var currentBaseQueryMatches = search.ScoreDocs.Length;
-                var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs, _state);
+                var currentBaseQueryMatches = search.ScoreDocArray.Length;
+                var intersectionCollector = new IntersectionCollector(_searcher, search, _state);
+                long totalHits = search.TotalHits;
+                search.Dispose();
 
                 int intersectMatches;
                 do
@@ -463,10 +471,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         // We get here because out first attempt didn't get enough docs (after INTERSECTION was calculated)
                         pageSizeBestGuess = pageSizeBestGuess * 2;
 
-                        search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
-                        previousBaseQueryMatches = currentBaseQueryMatches;
-                        currentBaseQueryMatches = search.ScoreDocs.Length;
-                        intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs, _state);
+                        using (search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort))
+                        {
+                            previousBaseQueryMatches = currentBaseQueryMatches;
+                            currentBaseQueryMatches = search.ScoreDocArray.Length;
+                            intersectionCollector = new IntersectionCollector(_searcher, search, _state);
+                            totalHits = search.TotalHits;
+                        }
                     }
 
                     for (var i = 1; i < subQueries.Length; i++)
@@ -477,15 +488,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
                     intersectMatches = currentIntersectResults.Count;
                     skippedResultsInCurrentLoop = pageSizeBestGuess - intersectMatches;
-                } while (intersectMatches < pageSize                      //stop if we've got enough results to satisfy the pageSize
-                    && currentBaseQueryMatches < search.TotalHits           //stop if increasing the page size wouldn't make any difference
+                } while (intersectMatches < pageSize                        //stop if we've got enough results to satisfy the pageSize
+                    && currentBaseQueryMatches < totalHits                  //stop if increasing the page size wouldn't make any difference
                     && previousBaseQueryMatches < currentBaseQueryMatches); //stop if increasing the page size didn't result in any more "base query" results
 
                 var intersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
                 //It's hard to know what to do here, the TotalHits from the base search isn't really the TotalSize,
                 //because it's before the INTERSECTION has been applied, so only some of those results make it out.
                 //Trying to give an accurate answer is going to be too costly, so we aren't going to try.
-                totalResults.Value = search.TotalHits;
+                totalResults.Value = totalHits;
                 skippedResults.Value = skippedResultsInCurrentLoop;
 
                 //Using the final set of results in the intersectionCollector
@@ -495,7 +506,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var indexResult = intersectResults[i];
                     var document = _searcher.Doc(indexResult.LuceneId, _state);
 
-                    var retrieverInput = new RetrieverInput(document, new ScoreDoc(indexResult.LuceneId, indexResult.Score), _state);
+                    var retrieverInput = new RetrieverInput(document, (indexResult.LuceneId, indexResult.Score), _state);
                     if (retriever.TryGetKeyLucene(ref retrieverInput, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                     {
                         skippedResults.Value++;
@@ -565,18 +576,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (pageSize == int.MaxValue || pageSize >= _searcher.MaxDoc) // we want all docs, no sorting required
                 {
-                    using (var gatherAllCollector = new GatherAllCollector(Math.Min(pageSize, _searcher.MaxDoc)))
-                    {
-                        _searcher.Search(documentQuery, gatherAllCollector, _state);
-                        return gatherAllCollector.ToTopDocs();
-                    }
+                    var gatherAllCollector = new GatherAllCollector();
+                    _searcher.Search(documentQuery, gatherAllCollector, _state);
+                    return gatherAllCollector.ToTopDocs();
                 }
 
-                using (var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start)))
-                {
-                    _searcher.Search(documentQuery, noSortingCollector, _state);
-                    return noSortingCollector.ToTopDocs();
-                }
+                var noSortingCollector = new NonSortingCollector(Math.Abs(pageSize + start));
+                _searcher.Search(documentQuery, noSortingCollector, _state);
+                return noSortingCollector.ToTopDocs();
             }
 
             var minPageSize = LuceneGetPageSize(_searcher, (long)pageSize + start);
@@ -586,7 +593,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _searcher.SetDefaultFieldSortScoring(true, false);
                 try
                 {
-                    return _searcher.Search(documentQuery, null, minPageSize, sort, _state);
+                    return _searcher.Search(documentQuery, null, minPageSize, sort, fillFields: false, _state);
                 }
                 finally
                 {
@@ -596,9 +603,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (minPageSize <= 0)
             {
-                var result = _searcher.Search(documentQuery, null, 1, _state);
-                return new TopDocs(result.TotalHits, Array.Empty<ScoreDoc>(), result.MaxScore);
+                using var result = _searcher.Search(documentQuery, null, 1, _state);
+                return new TopDocs(result.TotalHits, result.MaxScore, ManagedScoreDocArray.Empty);
             }
+
             return _searcher.Search(documentQuery, null, minPageSize, _state);
         }
 
@@ -642,6 +650,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in orderByFields)
             {
+                if (field.NullsOrdering != NullsOrderingType.Implicit)
+                    throw new InvalidQueryException(
+                        "ORDER BY ... NULLS FIRST / NULLS LAST is not supported by the Lucene search engine, only by Corax search engine.",
+                        query.Metadata.QueryText, query.QueryParameters);
+
                 if (field.OrderingType == OrderByFieldType.Random)
                 {
                     string value = null;
@@ -857,13 +870,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (moreLikeThisQuery.BaseDocument == null)
             {
-                var td = _searcher.Search(moreLikeThisQuery.BaseDocumentQuery, 1, _state);
+                using var td = _searcher.Search(moreLikeThisQuery.BaseDocumentQuery, 1, _state);
 
                 // get the current Lucene docid for the given RavenDB doc ID
-                if (td.ScoreDocs.Length == 0)
+                if (td.ScoreDocArray.Length == 0)
                     throw new InvalidOperationException($"Given filtering expression '{query.Query}' did not yield any documents that could be used as a base of comparison");
 
-                baseDocId = td.ScoreDocs[0].Doc;
+                baseDocId = td.ScoreDocArray[0].Doc;
             }
 
             if (stopWords != null)
@@ -905,27 +918,28 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             _searcher.Search(mltQuery, tsdc, _state);
-            var hits = tsdc.TopDocs().ScoreDocs;
+            using var topDocs = tsdc.TopDocs();
 
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            for (int i = 0; i < hits.Length; i++)
+            var reader = topDocs.ScoreDocArray.GetReader(0);
+
+            while (reader.Read(out int doc, out float score))
             {
-                var hit = hits[i];
                 token.ThrowIfCancellationRequested();
 
-                if (hit.Doc == baseDocId)
+                if (doc == baseDocId)
                     continue;
 
-                var doc = _searcher.Doc(hit.Doc, _state);
-                var id = doc.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? doc.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
+                var document = _searcher.Doc(doc, _state);
+                var id = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName, _state);
                 if (id == null)
                     continue;
 
                 if (ids.Add(id) == false)
                     continue;
 
-                var retrieverInput = new RetrieverInput(doc, hit, _state);
+                var retrieverInput = new RetrieverInput(document, (doc, score), _state);
                 var result = retriever.Get(ref retrieverInput, token);
                 if (result.Document != null)
                 {
@@ -957,18 +971,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, QueryBuilderFactories);
             using (GetSort(query, _index, getSpatialField, documentsContext, out var sort))
+            using (var search = ExecuteQuery(luceneQuery, (int)query.Start, docsToGet, sort))
             {
-                var search = ExecuteQuery(luceneQuery, (int)query.Start, docsToGet, sort);
                 var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, ignoreLimit, _state);
 
                 totalResults.Value = search.TotalHits;
 
-                for (var index = position; index < search.ScoreDocs.Length; index++)
+                var reader = search.ScoreDocArray.GetReader(start: (int)position);
+
+                while (reader.Read(out int doc, out float score))
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var scoreDoc = search.ScoreDocs[index];
-                    var document = termsDocs[scoreDoc.Doc];
+                    var document = termsDocs[doc];
 
                     yield return document;
                 }
@@ -1020,7 +1035,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             public readonly IndexQueryServerSide Query;
             public readonly Query LuceneQuery;
-            public readonly ScoreDoc ScoreDoc;
+            public readonly (int Doc, float Score) ScoreDoc;
             public readonly global::Lucene.Net.Documents.Document LuceneDocument;
             public readonly DocumentsOperationContext DocumentsContext;
             public readonly LuceneIndexQueryingScope QueryingScope;
@@ -1029,7 +1044,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public readonly ExplanationOptions ExplanationOptions;
             public readonly bool IsDistinctCount;
 
-            public CreateQueryResultParameters(IndexQueryServerSide query, Query luceneQuery, ScoreDoc scoreDoc,
+            public CreateQueryResultParameters(IndexQueryServerSide query, Query luceneQuery, (int Doc, float Score) scoreDoc,
                 global::Lucene.Net.Documents.Document luceneDocument, DocumentsOperationContext documentsContext,
                 LuceneIndexQueryingScope queryingScope, QueryTimingsScope highlightingScope, QueryTimingsScope explanationsScope, ExplanationOptions explanationOptions,
                 bool isDistinctCount)

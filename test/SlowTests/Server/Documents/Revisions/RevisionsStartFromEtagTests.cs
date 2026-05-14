@@ -77,7 +77,7 @@ namespace SlowTests.Server.Documents.Revisions
                                 EtagBarriers = new Dictionary<string, long> { [db.Name] = etagBarrier },
                                 NodeTags = new Dictionary<string, string> { [db.Name] = db.ServerStore.NodeTag }
                             }
-                        }, token);
+                        }, maxOpsPerSecond: null, token);
                 }
 
                 using (var session = store.OpenAsyncSession(new Raven.Client.Documents.Session.SessionOptions { NoCaching = true }))
@@ -753,7 +753,7 @@ namespace SlowTests.Server.Documents.Revisions
                 using (var token = new OperationCancelToken(db.Configuration.Databases.OperationTimeout.AsTimeSpan, db.DatabaseShutdown, CancellationToken.None))
                 {
                     result = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(
-                        _ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false }, token);
+                        _ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false }, maxOpsPerSecond: null, token);
                 }
 
                 Assert.Equal(1, result.ScannedDocuments);
@@ -806,7 +806,7 @@ namespace SlowTests.Server.Documents.Revisions
                             IncludeForceCreated = false,
                             Collections = new[] { "Companies" }
                         },
-                        token);
+                        maxOpsPerSecond: null, token);
                 }
 
                 Assert.True(firstResult.RemovedRevisions > 0, "First run should have trimmed Companies revisions");
@@ -842,7 +842,7 @@ namespace SlowTests.Server.Documents.Revisions
                                 NodeTags = new Dictionary<string, string>(firstResult.NodeTags)
                             }
                         },
-                        token);
+                        maxOpsPerSecond: null, token);
                 }
 
                 // The resumed run must have trimmed Users and Orders
@@ -1058,7 +1058,7 @@ namespace SlowTests.Server.Documents.Revisions
                     firstResult = (EnforceConfigurationResult)await db.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(
                         _ => { },
                         new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false },
-                        token);
+                        maxOpsPerSecond: null, token);
                 }
 
                 Assert.True(firstResult.NodeTags.ContainsKey(store.Database), "NodeTags should contain an entry for the database");
@@ -1079,7 +1079,7 @@ namespace SlowTests.Server.Documents.Revisions
                                 NodeTags = new Dictionary<string, string>(firstResult.NodeTags)
                             }
                         },
-                        token);
+                        maxOpsPerSecond: null, token);
                 }
 
                 // Resume with wrong NodeTags — should throw InvalidOperationException
@@ -1098,7 +1098,7 @@ namespace SlowTests.Server.Documents.Revisions
                                 NodeTags = new Dictionary<string, string> { [store.Database] = "Z" } // fake node tag
                             }
                         },
-                        token);
+                        maxOpsPerSecond: null, token);
                 });
 
                 Assert.Contains("node 'Z'", ex.Message);

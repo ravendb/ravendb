@@ -42,7 +42,7 @@ const initialState: ConflictResolutionState = {
     loadStatus: "idle",
     isDirty: false,
     config: {
-        isResolveToLatest: false,
+        isResolveToLatest: true,
         collectionConfigs: collectionConfigsAdapter.getInitialState(),
     },
 };

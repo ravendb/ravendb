@@ -9,7 +9,8 @@ namespace Raven.Server.ServerWide.Maintenance
 {
     public sealed class ObserverLogger
     {
-        private readonly RavenLogger _logger;
+        public readonly RavenLogger Logger;
+
         private readonly BlockingCollection<ClusterObserverLogEntry> _decisionsLog;
         private readonly Dictionary<string, long> _lastLogs;
 
@@ -17,7 +18,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public ObserverLogger(string nodeTag)
         {
-            _logger = RavenLogManager.Instance.GetLoggerForCluster<ObserverLogger>(LoggingComponent.NodeTag(nodeTag));
+            Logger = RavenLogManager.Instance.GetLoggerForCluster<ObserverLogger>(LoggingComponent.NodeTag(nodeTag));
             _lastLogs = new Dictionary<string, long>();
             _decisionsLog = new BlockingCollection<ClusterObserverLogEntry>();
         }
@@ -56,11 +57,11 @@ namespace Raven.Server.ServerWide.Maintenance
         /// <param name="e">An optional exception associated with the decision.</param>
         public void AddToDecisionLog(string database, string updateReason, long iteration, Exception e = null)
         {
-            if (_logger.IsDebugEnabled)
+            if (Logger.IsDebugEnabled)
             {
                 var prefix = string.IsNullOrWhiteSpace(database) ? string.Empty : $"Database '{database}' : ";
                 var decisionPrefix = e == null ? "Decision: " : string.Empty;
-                _logger.Debug($"{prefix}{decisionPrefix}{updateReason}", e);
+                Logger.Debug($"{prefix}{decisionPrefix}{updateReason}", e);
             }
 
             if (e != null)

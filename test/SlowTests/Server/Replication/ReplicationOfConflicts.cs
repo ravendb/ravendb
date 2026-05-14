@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Http;
 using Raven.Server.Documents;
@@ -388,7 +389,7 @@ namespace SlowTests.Server.Replication
 
                 var db1 = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "foo/bar");
                 var token = new OperationCancelToken(TimeSpan.FromSeconds(60), CancellationToken.None, CancellationToken.None);
-                await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress: null, token);
+                await db1.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress: null, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = true }, maxOpsPerSecond: null, token);
 
                 await EnsureReplicatingAsync(store1, store2);
                 await EnsureReplicatingAsync(store2, store3);

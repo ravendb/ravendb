@@ -4,6 +4,8 @@ import { BaseRqlParser } from "./generated/BaseRqlParser";
 const keywordsRemap = new Map<number, string>();
 keywordsRemap.set(BaseRqlParser.GROUP_BY, "group by");
 keywordsRemap.set(BaseRqlParser.ORDER_BY, "order by");
+keywordsRemap.set(BaseRqlParser.NULLS_FIRST, "nulls first");
+keywordsRemap.set(BaseRqlParser.NULLS_LAST, "nulls last");
 
 export class RavenVocabularyImpl implements Vocabulary {
     

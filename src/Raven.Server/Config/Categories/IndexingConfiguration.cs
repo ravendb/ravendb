@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
+using Corax.Utils;
 using Microsoft.Extensions.Configuration;
 using Raven.Client;
 using Raven.Client.Documents.DataArchival;
@@ -673,11 +674,28 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery { get; protected set; }
         
-        [Description("Corax: Null values appear first when sorting in ascending order.")]
-        [DefaultValue(true)]
+        // Backward-compatibility
+        [Description("[OBSOLETE] Use: 'Indexing.Querying.Corax.NullsSortMode' instead.")]
+        [DefaultValue(null)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Querying.Corax.NullFirst", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public bool NullFirst { get; protected set; }
+        public bool? NullFirstLegacy
+        {
+            get => _nullFirstLegacy;
+            protected set
+            {
+                _nullFirstLegacy = value;
+                if (value.HasValue)
+                    NullsSortMode = value.Value ? NullsSortMode.NullsSmallest : NullsSortMode.NullsLargest;
+            }
+        }
+        private bool? _nullFirstLegacy;
+
+        [Description("Corax: when set to Smallest, null values are treated as the smallest possible key (so they sort first in ascending order, last in descending order).")]
+        [DefaultValue(DefaultValueSetInConstructor)]
+        [IndexUpdateType(IndexUpdateType.Refresh)]
+        [ConfigurationEntry("Indexing.Querying.Corax.NullsSortMode", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public NullsSortMode NullsSortMode { get; protected set; } = NullsSortMode.NullsSmallest;
         
         [Description("EXPERT: Disable shared journals between indexes.")]
         [DefaultValue(false)]

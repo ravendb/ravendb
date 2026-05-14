@@ -659,7 +659,9 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     public async Task AlphanumericalNullPagingTest(Options options, bool nullFirst)
     {
         options.ModifyDatabaseRecord += record =>
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullFirst)] = nullFirst.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = nullFirst
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
 
         using var store = GetDocumentStore(options);
         using var session = store.OpenAsyncSession();
@@ -779,7 +781,9 @@ public class RavenDB_26091(ITestOutputHelper output) : RavenTestBase(output)
     {
         options.ModifyDatabaseRecord += record =>
         {
-            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullFirst)] = nullFirst.ToString();
+            record.Settings[RavenConfiguration.GetKey(x => x.Indexing.NullsSortMode)] = nullFirst
+                ? nameof(NullsSortMode.NullsSmallest)
+                : nameof(NullsSortMode.NullsLargest);
             record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = "Corax";
         };
 

@@ -47,6 +47,8 @@ internal sealed class
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var errorJson = JsonConvert.SerializeObject(new { Message = ex.Message, Error = ex.ToString() });
+
                 await using (var writer =
                              new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                 {
@@ -54,7 +56,7 @@ internal sealed class
                         new DynamicJsonValue
                         {
                             [nameof(NodeConnectionTestResult.Success)] = false,
-                            [nameof(NodeConnectionTestResult.Error)] = ex.ToString()
+                            [nameof(NodeConnectionTestResult.Error)] = errorJson
                         });
                 }
             }

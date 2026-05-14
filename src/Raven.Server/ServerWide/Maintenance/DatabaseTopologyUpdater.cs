@@ -666,24 +666,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
+            // Collect all lag indicators instead of returning on the first one.
+            // PromotablesStatus is a single value; the aggregate demotion message below carries all reasons.
+            var lagReasons = new List<string>();
+            var promotionStatus = DatabasePromotionStatus.Ok;
+
             var timeDiff = mentorCurrClusterStats.LastSuccessfulUpdateDateTime - mentorPrevClusterStats.LastSuccessfulUpdateDateTime > 3 * _supervisorSamplePeriod;
 
             if (lastSentEtag < mentorsEtag || timeDiff)
             {
-                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because the mentor hasn't sent all of the documents yet." + Environment.NewLine +
-                          $"Last sent Etag: {lastSentEtag:#,#;;0}" + Environment.NewLine +
-                          $"Mentor's Etag: {mentorsEtag:#,#;;0}";
-
-                _logger.Log($"Mentor {mentorNode} hasn't sent all of the documents yet to {promotable} (time diff: {timeDiff}, sent etag: {lastSentEtag:#,#;;0}/{mentorsEtag:#,#;;0})", state.ObserverIteration, database: dbName);
-
-                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
-                    msg.Equals(demotionReason) == false)
-                {
-                    topology.DemotionReasons[promotable] = msg;
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
-                    return (false, msg);
-                }
-                return (false, null);
+                lagReasons.Add($"The mentor hasn't sent all of the documents yet (Last sent Etag: {lastSentEtag:#,#;;0}, Mentor's Etag: {mentorsEtag:#,#;;0}, mentor cluster-stats time diff exceeded: {timeDiff})");
+                promotionStatus = DatabasePromotionStatus.ChangeVectorNotMerged;
             }
 
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Stav, DevelopmentHelper.Severity.Normal, "Check if we're getting the proper compare exchange for shard databases");
@@ -693,20 +686,8 @@ namespace Raven.Server.ServerWide.Maintenance
             var promotableLastCompareExchangeIndex = promotableDbStats.LastCompareExchangeIndex;
             if (leaderLastCompareExchangeIndex > promotableLastCompareExchangeIndex)
             {
-                var msg = $"The database '{dbName}' on {promotable} not ready to be promoted, because not all of the compare exchanges have been sent yet." + Environment.NewLine +
-                          $"Last Compare Exchange Raft Index: {promotableLastCompareExchangeIndex}" + Environment.NewLine +
-                          $"Leader's Compare Exchange Raft Index: {leaderLastCompareExchangeIndex}";
-
-                _logger.Log($"Node {promotable} hasn't been promoted because it's raft index isn't updated yet", state.ObserverIteration, database: dbName);
-
-                if (topology.DemotionReasons.TryGetValue(promotable, out var demotionReason) == false ||
-                    msg.Equals(demotionReason) == false)
-                {
-                    topology.DemotionReasons[promotable] = msg;
-                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.RaftIndexNotUpToDate;
-                    return (false, msg);
-                }
-                return (false, null);
+                lagReasons.Add($"Not all of the compare exchanges have been sent yet (Last Compare Exchange Raft Index: {promotableLastCompareExchangeIndex}, Leader's: {leaderLastCompareExchangeIndex})");
+                promotionStatus = DatabasePromotionStatus.RaftIndexNotUpToDate;
             }
 
             var databaseEtag = -1L;
@@ -724,7 +705,13 @@ namespace Raven.Server.ServerWide.Maintenance
                 mentorCurrDbStats.LastIndexStats,
                 out var reason);
 
-            if (indexesCaughtUp)
+            if (indexesCaughtUp == false)
+            {
+                lagReasons.Add($"The indexes are not up-to-date ({reason})");
+                promotionStatus = DatabasePromotionStatus.IndexNotUpToDate;
+            }
+
+            if (lagReasons.Count == 0)
             {
                 _logger.Log($"We try to promote the database '{dbName}' on {promotable} to be a full member", state.ObserverIteration, database: dbName);
 
@@ -734,15 +721,17 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (true, $"Node {promotable} is up-to-date so promoting it to be member");
             }
 
-            _logger.Log($"The database '{dbName}' on {promotable} is not ready to be promoted, because {reason}{Environment.NewLine}", state.ObserverIteration, database: dbName);
+            var aggregateMsg = $"The database '{dbName}' on {promotable} is not ready to be promoted:" + Environment.NewLine +
+                               string.Join(Environment.NewLine, lagReasons);
 
-            if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                || currentStatus != DatabasePromotionStatus.IndexNotUpToDate)
+            _logger.Log(aggregateMsg, state.ObserverIteration, database: dbName);
+
+            if (topology.DemotionReasons.TryGetValue(promotable, out var existingDemotionReason) == false ||
+                aggregateMsg.Equals(existingDemotionReason) == false)
             {
-                var msg = $"Node {promotable} not ready to be a member, because the indexes are not up-to-date";
-                topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
-                topology.DemotionReasons[promotable] = msg;
-                return (false, msg);
+                topology.DemotionReasons[promotable] = aggregateMsg;
+                topology.PromotablesStatus[promotable] = promotionStatus;
+                return (false, aggregateMsg);
             }
             return (false, null);
         }

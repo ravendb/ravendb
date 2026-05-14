@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
@@ -77,6 +77,8 @@ namespace Raven.Client.Documents.Operations.Replication
         {
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
+                pullReplication.AllowedHubToSinkPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(pullReplication.AllowedHubToSinkPaths, pullReplication.Name ?? pullReplication.HubName);
+                pullReplication.AllowedSinkToHubPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(pullReplication.AllowedSinkToHubPaths, pullReplication.Name ?? pullReplication.HubName);
                 DynamicJsonValue replication = pullReplication.ToJson();
                 
                 // Aligned with ServerStore.UpdatePullReplicationAsSink to not introduce breaking changes

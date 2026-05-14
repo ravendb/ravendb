@@ -6,6 +6,7 @@ using Corax.Querying;
 using Corax.Querying.Matches;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
+using Raven.Server.Documents.Queries.Timings;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -40,12 +41,14 @@ public partial class CoraxQueryBuilder
         public StreamingOptimization StreamingDisabled;
         public readonly bool IsVectorSingleClause;
         public readonly QueryTimeScope QueryTime;
+        public readonly QueryTimingsScope QueryTimings;
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, QueryTimeScope queryTime = null, QueryTimingsScope queryTimings = null, CancellationToken token = default)
         {
             QueryTime = queryTime;
+            QueryTimings = queryTimings;
             IndexSearcher = searcher;
             ServerContext = serverContext;
             Query = query;

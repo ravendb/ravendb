@@ -96,23 +96,23 @@ namespace Raven.Server.Documents.Indexes
             return _vectorFieldsDimensions.TryGetValue(fieldName, out dimensions);
         }
 
-        internal bool TryReadEmbeddingsGenerationTaskIdentifier(string fieldName, out string taskName)
+        internal bool TryReadEmbeddingsGenerationTaskIdentifier(string fieldName, out string taskIdentifier)
         {
-            return _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out taskName);
+            return _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out taskIdentifier);
         }
 
         internal void SetEmbeddingsGenerationTaskIdentifier(string fieldName, string taskIdentifier)
         {
-            var isStoredOnDisk = _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out var diskStoredSourceEtlTaskName);
+            var isStoredOnDisk = _embeddingsGenerationTaskIdentifiers.TryGetValue(fieldName, out var diskStoredTaskIdentifier);
 
-            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredSourceEtlTaskName != taskIdentifier, $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, stored task was {diskStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
+            PortableExceptions.ThrowIf<InvalidOperationException>(isStoredOnDisk && diskStoredTaskIdentifier != taskIdentifier, $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, stored task was {diskStoredTaskIdentifier} and current one is {taskIdentifier}.");
 
             var isStoredInRuntime = false;
             if (_embeddingsGenerationTaskIdentifiersToWrite != null)
             {
-                isStoredInRuntime = _embeddingsGenerationTaskIdentifiersToWrite.TryGetValue(fieldName, out var runtimeStoredSourceEtlTaskName);
-                PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && runtimeStoredSourceEtlTaskName != taskIdentifier,
-                    $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, previous task was {runtimeStoredSourceEtlTaskName} and current one is {taskIdentifier}.");
+                isStoredInRuntime = _embeddingsGenerationTaskIdentifiersToWrite.TryGetValue(fieldName, out var runtimeStoredTaskIdentifier);
+                PortableExceptions.ThrowIf<InvalidOperationException>(isStoredInRuntime && runtimeStoredTaskIdentifier != taskIdentifier,
+                    $"We are expecting that field {fieldName} has the same Embeddings Generation task as it was before. However, previous task was {runtimeStoredTaskIdentifier} and current one is {taskIdentifier}.");
             }
             
             if (isStoredOnDisk || isStoredInRuntime)
@@ -222,11 +222,11 @@ namespace Raven.Server.Documents.Indexes
 
                 if (_embeddingsGenerationTaskIdentifiersToWrite != null)
                 {
-                    var vectorSourceEtlTaskName = new Dictionary<string, string>(_embeddingsGenerationTaskIdentifiers);
-                    foreach (var fieldAiTaskName in _embeddingsGenerationTaskIdentifiersToWrite)
-                        vectorSourceEtlTaskName.Add(fieldAiTaskName.Key, fieldAiTaskName.Value);
-                    
-                    _embeddingsGenerationTaskIdentifiers = vectorSourceEtlTaskName;
+                    var embeddingsGenerationTaskIdentifiers = new Dictionary<string, string>(_embeddingsGenerationTaskIdentifiers);
+                    foreach (var fieldTaskIdentifier in _embeddingsGenerationTaskIdentifiersToWrite)
+                        embeddingsGenerationTaskIdentifiers.Add(fieldTaskIdentifier.Key, fieldTaskIdentifier.Value);
+
+                    _embeddingsGenerationTaskIdentifiers = embeddingsGenerationTaskIdentifiers;
                     _embeddingsGenerationTaskIdentifiersToWrite = null;
                 }
             };

@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Queries.AST
         public List<(QueryExpression Expression, StringSegment? Alias)> Select;
         public List<(QueryExpression Expression, StringSegment? Alias)> Load;
         public List<QueryExpression> Include;
-        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
+        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, NullsOrderingType NullsOrdering)> OrderBy;
         public List<(QueryExpression Expression, StringSegment? Alias)> GroupBy;
 
         public Dictionary<string, DeclaredFunction> DeclaredFunctions;
@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression Limit;
         public ValueExpression FilterLimit;
 
-        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> CachedOrderBy;
+        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending, NullsOrderingType NullsOrdering)> CachedOrderBy;
         
         public HashSet<StringSegment> Parameters = new HashSet<StringSegment>();
 

@@ -43,7 +43,7 @@ public class GrowableBufferTests(ITestOutputHelper output) : NoDisposalNoOutputN
         {
             growableBuffer.AddUsage(read);
         }
-        
+
         Assert.Equal(size, growableBuffer.Results.Length);
         var results = growableBuffer.Results;
         for (var i = 0; i < size; ++i)
@@ -59,5 +59,47 @@ public class GrowableBufferTests(ITestOutputHelper output) : NoDisposalNoOutputN
 
             return i;
         }
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitWithNoHintFallsBackToGrowthStrategyDefaultProgressive()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<long, Progressive<long>>();
+
+        Assert.True(buffer.TryInit(bsc, initialSize: 0));
+
+        // Progressive.GetInitialSize(0) yields 4 KB (4 * Constants.Size.Kilobyte).
+        Assert.Equal(4 * Sparrow.Global.Constants.Size.Kilobyte, buffer.AllocatedSizeInBytes);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitFailsWhenHintExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<long, Progressive<long>>();
+
+        Assert.False(buffer.TryInit(bsc, initialSize: 1000, maxAllocationInBytes: 512));
+        Assert.False(buffer.IsInitialized);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void TryInitFailsWhenStrategyDefaultExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<long, Progressive<long>>();
+
+        Assert.False(buffer.TryInit(bsc, initialSize: 0, maxAllocationInBytes: 64));
+        Assert.False(buffer.IsInitialized);
+    }
+
+    [RavenFact(RavenTestCategory.Corax)]
+    public void InitThrowsWhenHintExceedsBudget()
+    {
+        using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
+        using var buffer = new GrowableBuffer<long, Progressive<long>>();
+
+        Assert.Throws<InvalidOperationException>(() => buffer.Init(bsc, initialSize: 1000, maxAllocationInBytes: 512));
+        Assert.False(buffer.IsInitialized);
     }
 }

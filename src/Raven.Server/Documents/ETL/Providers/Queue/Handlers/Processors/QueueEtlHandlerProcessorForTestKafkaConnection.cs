@@ -92,13 +92,15 @@ namespace Raven.Server.Documents.ETL.Providers.Queue.Handlers.Processors
                     if (logDetails is not null)
                         error += $"{Environment.NewLine}LOGS:{Environment.NewLine}{logDetails}";
 
+                    var errorJson = JsonConvert.SerializeObject(new { Message = ex.Message, Error = error });
+
                     await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
                     {
                         context.Write(writer,
                             new DynamicJsonValue
                             {
                                 [nameof(NodeConnectionTestResult.Success)] = false,
-                                [nameof(NodeConnectionTestResult.Error)] = error
+                                [nameof(NodeConnectionTestResult.Error)] = errorJson
                             });
                     }
                 }

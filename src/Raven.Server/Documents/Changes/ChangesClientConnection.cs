@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Changes
         private bool _aggressiveChanges;
 
         public ChangesClientConnection(WebSocket webSocket, DocumentDatabase database, bool throttleConnection, bool fromStudio)
-            : base(webSocket, database.DocumentsStorage.ContextPool, database.DatabaseShutdown, throttleConnection, fromStudio)
+            : base(webSocket, database.DocumentsStorage.ContextPool, database.Loggers.GetLogger<ChangesClientConnection>(), database.DatabaseShutdown, throttleConnection, fromStudio)
         {
         }
 

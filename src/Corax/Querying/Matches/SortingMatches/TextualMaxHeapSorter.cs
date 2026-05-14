@@ -29,7 +29,7 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     private ByteStringContext _allocator;
     public bool IsDescending;
     public TSecondaryComparer SecondaryComparer;
-    internal bool _nullFirst;
+    internal bool _nullIsSmallest;
 
 
     /// <summary>
@@ -40,9 +40,9 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
     private delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> _compare;
 
     public void Init(Span<int> documents, Span<ByteString> terms, ByteStringContext allocator, bool descending,
-        delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> compare, TSecondaryComparer secondaryCmp, bool nullFirst)
+        delegate*<ref TextualMaxHeapSorter<TSecondaryComparer>, ReadOnlySpan<byte>, int, ReadOnlySpan<byte>, int, int> compare, TSecondaryComparer secondaryCmp, bool nullIsSmallest)
     {
-        _nullFirst = nullFirst;
+        _nullIsSmallest = nullIsSmallest;
         IsDescending = descending;
         _allocator = allocator;
         _documents = documents;
@@ -167,8 +167,8 @@ internal unsafe ref struct TextualMaxHeapSorter<TSecondaryComparer> where TSecon
         int startNullLength = 0;
 
         var writeNullFirst = nullCount > 0
-                                    && (IsDescending && _nullFirst == false // null last, but we're sorting descending 
-                                        || (IsDescending == false && _nullFirst)); //ascending, null first
+                                    && ((IsDescending && _nullIsSmallest == false)
+                                        || (IsDescending == false && _nullIsSmallest));
         
         if (writeNullFirst)
         {

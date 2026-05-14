@@ -19,7 +19,9 @@ export function AboutFooter() {
                     <Icon icon="linkedin" margin="m-0" />
                 </a>
             </div>
-            <div className="small text-muted text-center">Copyright © 2009 - 2025 RavenDB. All rights reserved.</div>
+            <div className="small text-muted text-center">
+                Copyright © 2009 - {new Date().getFullYear()} RavenDB. All rights reserved.
+            </div>
         </div>
     );
 }

@@ -97,6 +97,9 @@ namespace Raven.Server.ServerWide.Commands
 
         public DynamicJsonValue PrepareForStorage()
         {
+            AllowedHubToSinkPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(AllowedHubToSinkPaths, Name);
+            AllowedSinkToHubPaths = PullReplicationPathFilterUtils.NormalizeAndValidate(AllowedSinkToHubPaths, Name);
+
             return new DynamicJsonValue
             {
                 [nameof(Name)] = Name,

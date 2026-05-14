@@ -87,7 +87,7 @@ const specialWhereFunctions: Pick<autoCompleteWordList, "value" | "caption">[] =
 const alreadyHandledTokenTypes: number[] = [
     RqlParser.MATH,
     RqlParser.BETWEEN,
-    RqlParser.IN, 
+    RqlParser.IN,
     RqlParser.ALL,
     RqlParser.EQUAL,
     RqlParser.METADATA,
@@ -100,8 +100,10 @@ const alreadyHandledTokenTypes: number[] = [
     RqlParser.UPDATE,
     RqlParser.JS_SELECT,
     RqlParser.JS_FUNCTION_DECLARATION,
+    RqlParser.NULLS_FIRST,
+    RqlParser.NULLS_LAST,
     ...rootKeywords
-] 
+]
 
 export class AutocompleteKeywords extends BaseAutocompleteProvider implements AutocompleteProvider {
     

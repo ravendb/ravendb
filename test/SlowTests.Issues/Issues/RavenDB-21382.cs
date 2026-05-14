@@ -63,7 +63,7 @@ namespace SlowTests.Issues
             }
 
             using (var token = new OperationCancelToken(database.Configuration.Databases.OperationTimeout.AsTimeSpan, database.DatabaseShutdown, CancellationToken.None))
-                await database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, false, token: token);
+                await database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(_ => { }, new EnforceRevisionsConfigurationOperation.Parameters { IncludeForceCreated = false }, maxOpsPerSecond: null, token);
 
         }
     }

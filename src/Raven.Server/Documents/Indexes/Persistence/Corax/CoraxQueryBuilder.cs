@@ -217,13 +217,17 @@ public static partial class CoraxQueryBuilder
                     _ => throw new ArgumentOutOfRangeException("Already checked the FieldType, but was: " + sortBy.FieldType)
                 };
 
-                var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending, builderParameters.Index.Configuration.NullFirst);
+                var configIsSmallest = builderParameters.Index.Configuration.NullsSortMode is NullsSortMode.NullsSmallest;
+                var nullIsSmallest = sortBy.NullsSortMode is { } sortByMode
+                    ? sortByMode == NullsSortMode.NullsSmallest
+                    : configIsSmallest;
+                var queryWithNullMatches = indexSearcher.IncludeNullMatch(in sortBy.Field, betweenQuery, sortBy.Ascending, nullIsSmallest);
 
                 var indexVersion = builderParameters.Index.Definition.Version;
 
                 if (IndexDefinitionBaseServerSide.IndexVersion.IsNonExistingPostingListSupported(indexVersion))
                 {
-                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending, builderParameters.Index.Configuration.NullFirst);
+                    var queryWithNullAndNonExistingMatches = indexSearcher.IncludeNonExistingMatch(in sortBy.Field, queryWithNullMatches, sortBy.Ascending, nullIsSmallest);
                     coraxQuery = queryWithNullAndNonExistingMatches;
                 }
 
@@ -793,7 +797,7 @@ public static partial class CoraxQueryBuilder
     {
         PortableExceptions.ThrowIf<ArgumentException>(expression.Arguments.Count != 2, $"Method `when` requires exactly 2 arguments, but got {expression.Arguments.Count}");
 
-        var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery((BinaryExpression)expression.Arguments[0], builderParameters.QueryParameters);
+        var constantExpressionResult = QueryBuilderHelper.EvaluateConstantExpressionForWhenQuery(expression.Arguments[0], builderParameters.Metadata.Query, builderParameters.Metadata, builderParameters.QueryParameters);
         if (constantExpressionResult == false)
             return new CoraxWhenQuery();
             
@@ -1325,8 +1329,15 @@ public static partial class CoraxQueryBuilder
 
         foreach (var field in orderByFields)
         {
-            
-            
+            var nullsSortMode = (field.NullsOrdering, field.Ascending) switch
+            {
+                (NullsOrderingType.First, Ascending: true) => NullsSortMode.NullsSmallest,
+                (NullsOrderingType.First, Ascending: false) => NullsSortMode.NullsLargest,
+                (NullsOrderingType.Last, Ascending: true) => NullsSortMode.NullsLargest, 
+                (NullsOrderingType.Last, Ascending: false)=> NullsSortMode.NullsSmallest,
+                _ => (NullsSortMode?)null
+            };
+
             if (field.OrderingType == OrderByFieldType.Random)
             {
                 var seed = field.Arguments is { Length: > 0 } ?
@@ -1400,7 +1411,7 @@ public static partial class CoraxQueryBuilder
                 sortArray[sortIndex++] = new OrderMetadata(fieldMetadata, field.Ascending, MatchCompareFieldType.Spatial, point, roundTo,
                     spatialField.Units is SpatialUnits.Kilometers
                         ? global::Corax.Utils.Spatial.SpatialUnits.Kilometers
-                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty);
+                        : global::Corax.Utils.Spatial.SpatialUnits.Miles, fieldIsEmpty, nullsSortMode);
                 continue;
             }
 
@@ -1417,17 +1428,17 @@ public static partial class CoraxQueryBuilder
                 case OrderByFieldType.Custom:
                     throw new NotSupportedInCoraxException($"{nameof(Corax)} doesn't support Custom OrderBy.");
                 case OrderByFieldType.AlphaNumeric:
-                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty);
+                    sortArray[sortIndex++] = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Alphanumeric, fieldIsEmpty, nullsSortMode);
                     continue;
                 case OrderByFieldType.Long:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Integer, fieldIsEmpty, nullsSortMode);
                     break;
                 case OrderByFieldType.Double:
-                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty);
+                    temporaryOrder = new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Floating, fieldIsEmpty, nullsSortMode);
                     break;
             }
 
-            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty);
+            sortArray[sortIndex++] = temporaryOrder ?? new OrderMetadata(metadataField, field.Ascending, MatchCompareFieldType.Sequence, fieldIsEmpty, nullsSortMode);
         }
 
         return sortArray[0..sortIndex];
@@ -1456,15 +1467,16 @@ public static partial class CoraxQueryBuilder
 
             orderMetadata = currentIdx == 0 ? [] : orderMetadata![..currentIdx];
         }
-  
+
+        var defaultNullsSortMode = builderParameters.Index.Configuration.NullsSortMode;
         switch (orderMetadata.Length)
         {
             case 0:
                 return match;
             case 1:
-                return indexSearcher.OrderBy(match, orderMetadata[0], builderParameters.Index.Configuration.NullFirst, take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata[0], defaultNullsSortMode, take, builderParameters.Token);
             default:
-                return indexSearcher.OrderBy(match, orderMetadata, builderParameters.Index.Configuration.NullFirst, take, builderParameters.Token);
+                return indexSearcher.OrderBy(match, orderMetadata, defaultNullsSortMode, take, builderParameters.Token);
         }
     }
 }

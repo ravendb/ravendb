@@ -427,11 +427,11 @@ function execute(doc, args){
                     var order = Query.OrderBy[i];
                     if (order.Expression is MethodExpression me)
                     {
-                        OrderBy[i] = ExtractOrderByFromMethod(me, fromAlias, order.FieldType, order.Ascending, parameters);
+                        OrderBy[i] = ExtractOrderByFromMethod(me, fromAlias, order.FieldType, order.Ascending, parameters, order.NullsOrdering);
                     }
                     else if (order.Expression is FieldExpression fe)
                     {
-                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe, parameters), order.FieldType, order.Ascending);
+                        OrderBy[i] = new OrderByField(GetIndexFieldName(fe, parameters), order.FieldType, order.Ascending, nullsOrdering: order.NullsOrdering);
                     }
                     else
                     {
@@ -1129,7 +1129,7 @@ function execute(doc, args){
             throw new InvalidQueryException(sb.ToString(), QueryText, parameters);
         }
 
-        private OrderByField ExtractOrderByFromMethod(MethodExpression me, string fromAlias, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters)
+        private OrderByField ExtractOrderByFromMethod(MethodExpression me, string fromAlias, OrderByFieldType orderingType, bool asc, BlittableJsonReaderObject parameters, NullsOrderingType nullsOrdering = NullsOrderingType.Implicit)
         {
             if (me.Name.Equals("id", StringComparison.OrdinalIgnoreCase))
             {
@@ -1140,7 +1140,7 @@ function execute(doc, args){
                 {
                     case OrderByFieldType.AlphaNumeric:
                     case OrderByFieldType.String:
-                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id);
+                        return new OrderByField(new QueryFieldName(Constants.Documents.Indexing.Fields.DocumentIdFieldName, false), orderingType, asc, MethodType.Id, nullsOrdering: nullsOrdering);
 
                     default:
                         throw new InvalidQueryException("Invalid ORDER BY 'id()' call, this field can only be sorted as a string or alphanumeric value, but got " + orderingType, QueryText, parameters);
@@ -1168,7 +1168,8 @@ function execute(doc, args){
                     new[]
                     {
                         new OrderByField.Argument(token.Token.Value, ValueTokenType.String)
-                    });
+                    },
+                    nullsOrdering);
             }
 
             if (me.Name.Equals("random", StringComparison.OrdinalIgnoreCase))
@@ -1176,7 +1177,7 @@ function execute(doc, args){
                 HasOrderByRandom = true;
 
                 if (me.Arguments == null || me.Arguments.Count == 0)
-                    return new OrderByField(null, OrderByFieldType.Random, asc);
+                    return new OrderByField(null, OrderByFieldType.Random, asc, nullsOrdering: nullsOrdering);
 
                 if (me.Arguments.Count > 1)
                     throw new InvalidQueryException("Invalid ORDER BY 'random()' call, expected zero to one arguments, got " + me.Arguments.Count,
@@ -1195,13 +1196,14 @@ function execute(doc, args){
                     new[]
                     {
                         new OrderByField.Argument(token.Token.Value, ValueTokenType.String)
-                    });
+                    },
+                    nullsOrdering);
             }
 
             if (me.Name.Equals("score", StringComparison.OrdinalIgnoreCase))
             {
                 if (me.Arguments == null || me.Arguments.Count == 0)
-                    return new OrderByField(null, OrderByFieldType.Score, asc);
+                    return new OrderByField(null, OrderByFieldType.Score, asc, nullsOrdering: nullsOrdering);
 
                 throw new InvalidQueryException("Invalid ORDER BY 'score()' call, expected zero arguments, got " + me.Arguments.Count, QueryText,
                     parameters);
@@ -1289,7 +1291,8 @@ function execute(doc, args){
                     OrderByFieldType.Distance,
                     asc,
                     methodType,
-                    arguments);
+                    arguments,
+                    nullsOrdering);
             }
 
             if (IsGroupBy)
@@ -1297,7 +1300,7 @@ function execute(doc, args){
                 if (me.Name.Equals("count", StringComparison.OrdinalIgnoreCase))
                 {
                     if (me.Arguments == null || me.Arguments.Count == 0)
-                        return new OrderByField(QueryFieldName.Count, OrderByFieldType.Long, asc)
+                        return new OrderByField(QueryFieldName.Count, OrderByFieldType.Long, asc, nullsOrdering: nullsOrdering)
                         {
                             AggregationOperation = AggregationOperation.Count
                         };
@@ -1323,7 +1326,7 @@ function execute(doc, args){
                         orderingType = OrderByFieldType.Double;
                     }
 
-                    return new OrderByField(new QueryFieldName(sumFieldToken.FieldValue, sumFieldToken.IsQuoted), orderingType, asc)
+                    return new OrderByField(new QueryFieldName(sumFieldToken.FieldValue, sumFieldToken.IsQuoted), orderingType, asc, nullsOrdering: nullsOrdering)
                     {
                         AggregationOperation = AggregationOperation.Sum
                     };

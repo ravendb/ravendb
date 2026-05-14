@@ -103,7 +103,7 @@ unsafe partial struct SortingMatch<TInner>
             heapSize = heapSize < 0 ? batchResults.Length : heapSize;
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[(batchTermIds.Length)..];
             using var _ = llt.Allocator.Allocate(heapSize, out Span<float> terms);
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending == false, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending == false, match.NullIsSmallest);
             
             
             for (int i = 0; i < batchTermIds.Length; i++)
@@ -251,7 +251,7 @@ unsafe partial struct SortingMatch<TInner>
             where TComparer : struct, IComparer<long>
         {
             Debug.Assert(buffer.Length < (1 << 15), "buffer.Length < (1<<15)");
-            var nullValue = match._nullFirst
+            var nullValue = match.NullIsSmallest
                 ? 0
                 : -1 >>> 16;
             for (int i = 0; i < buffer.Length; i++)
@@ -366,14 +366,14 @@ unsafe partial struct SortingMatch<TInner>
                 return;
             }
             
-            var missingValue = match._nullFirst ? long.MinValue : long.MaxValue;
+            var missingValue = match.NullIsSmallest ? long.MinValue : long.MaxValue;
             _lookup.GetFor(batchResults, batchTermIds, missingValue);
             match._cancellationToken.ThrowIfCancellationRequested();
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             using var _ = llt.Allocator.Allocate(heapSize, out Span<long> terms);
-            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending, match._nullFirst);
+            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending, match.NullIsSmallest);
 
             for (var i = 0; i < batchResults.Length; ++i)
                 sorter.Insert(i, batchTermIds[i]);
@@ -401,14 +401,14 @@ unsafe partial struct SortingMatch<TInner>
                 return;
             }
 
-            var missingValue = match._nullFirst ? double.MinValue : double.MaxValue;
+            var missingValue = match.NullIsSmallest ? double.MinValue : double.MaxValue;
             _lookup.GetFor(batchResults, batchTermIds, BitConverter.DoubleToInt64Bits(missingValue));
             match._cancellationToken.ThrowIfCancellationRequested();
             var heapSize = Math.Min(match._take, batchResults.Length);
             heapSize = heapSize <= 0 ? batchResults.Length : heapSize;
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             using var _ = llt.Allocator.Allocate(heapSize, out Span<double> terms);
-            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending, match._nullFirst);
+            var sorter = HeapSorterBuilder.BuildSingleNumericalSorter(indexes.Slice(0, heapSize), terms, descending, match.NullIsSmallest);
 
             for (var i = 0; i < batchResults.Length; ++i)
                 sorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
@@ -480,7 +480,7 @@ unsafe partial struct SortingMatch<TInner>
 
             using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
 
-            var heap = HeapSorterBuilder.BuildSingleAlphanumericalSorter(documents, terms, _allocator, descending, match._nullFirst);
+            var heap = HeapSorterBuilder.BuildSingleAlphanumericalSorter(documents, terms, _allocator, descending, match.NullIsSmallest);
             ContextBoundNativeList<int> nullIndexes = default;
             
             for (int i = 0; i < batchTermIds.Length; i++)
@@ -542,14 +542,14 @@ unsafe partial struct SortingMatch<TInner>
             using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
 
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match.NullIsSmallest);
             
             for (int i = 0; i < batchResults.Length; i++)
             {
                 SpatialResult distance; 
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
-                    distance = new SpatialResult() { Distance = match._nullFirst ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
+                    distance = new SpatialResult() { Distance = match.NullIsSmallest ? double.MinValue : double.MaxValue, Latitude = Double.NaN, Longitude = Double.NaN };
                 }
                 else
                 {

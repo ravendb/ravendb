@@ -19,7 +19,7 @@ namespace SlowTests.Server.Documents.Attachments.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task Can_Copy_Remote_Attachment_In_Patch()
         {
             using var store = GetDocumentStore();

@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.IO.Pipelines;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -15,7 +13,6 @@ using Raven.Server.Integrations.PostgreSQL.Messages;
 using Raven.Server.Integrations.PostgreSQL.Types;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -28,10 +25,12 @@ namespace Raven.Server.Integrations.PostgreSQL
     {
         protected readonly DocumentDatabase DocumentDatabase;
         private QueryOperationContext _queryOperationContext;
-        private List<Document> _result;
+        private List<Document> _samples;
         private readonly int? _limit;
         private bool _queryWasRun;
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<RqlQuery>();
+
+        private const int SchemaInferenceSampleSize = 1024;
 
         ~RqlQuery()
         {
@@ -52,8 +51,6 @@ namespace Raven.Server.Integrations.PostgreSQL
         public RqlQuery(string queryString, int[] parametersDataTypes, DocumentDatabase documentDatabase, int? limit = null) : base(queryString, parametersDataTypes)
         {
             DocumentDatabase = documentDatabase;
-
-            _result = null;
             _limit = limit;
         }
 
@@ -62,12 +59,11 @@ namespace Raven.Server.Integrations.PostgreSQL
             if (IsEmptyQuery)
                 return default;
 
-            _result = await RunRqlQuery();
-
+            _samples = await RunRqlQuery();
             return await GenerateSchema();
         }
 
-        public async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
+        private async Task<List<Document>> RunRqlQuery(string forcedQueryToRun = null)
         {
             _queryOperationContext ??= QueryOperationContext.Allocate(DocumentDatabase);
             var parameters = DynamicJsonValue.Convert(Parameters);
@@ -75,24 +71,26 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             var indexQuery = new IndexQueryServerSide(forcedQueryToRun ?? QueryString, queryParameters);
 
-            // If limit is 0, fetch one document for the schema generation
-            if (_limit != null)
+            // if limit is 0, fetch one document for schema generation; otherwise cap to the query limit
+            indexQuery.PageSize = _limit switch
             {
-                indexQuery.PageSize = _limit.Value == 0 ? 1 : _limit.Value;
-            }
+                0 => 1,
+                > 0 => Math.Min(_limit.Value, SchemaInferenceSampleSize),
+                _ => SchemaInferenceSampleSize
+            };
+
+            using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown);
 
             _queryWasRun = true;
             var documentQueryResult =
-                await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, OperationCancelToken.None);
+                await DocumentDatabase.QueryRunner.ExecuteQuery(indexQuery, _queryOperationContext, null, cancelToken);
 
             return documentQueryResult.Results;
         }
 
         protected virtual async Task<ICollection<PgColumn>> GenerateSchema()
         {
-            List<Document> samples;
-
-            if (_result == null || _result?.Count == 0)
+            if (_samples == null || _samples.Count == 0)
             {
                 var query = QueryMetadata.ParseQuery(QueryString, QueryType.Select);
 
@@ -100,21 +98,15 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 var queryWithoutFiltering = query.ToString();
 
-                var results = await RunRqlQuery(queryWithoutFiltering);
+                _samples = await RunRqlQuery(queryWithoutFiltering);
 
-                if (results == null || results.Count == 0)
+                if (_samples == null || _samples.Count == 0)
                     return Array.Empty<PgColumn>();
-
-                samples = results;
-            }
-            else
-            {
-                samples = _result;
             }
 
             var resultsFormat = GetDefaultResultsFormat();
 
-            if (samples[0].Id != null)
+            if (_samples[0].Id != null)
                 Columns[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = new PgColumn(Constants.Documents.Indexing.Fields.DocumentIdFieldName, (short)Columns.Count, PgText.Default, resultsFormat);
 
             BlittableJsonReaderObject.PropertyDetails prop = default;
@@ -122,7 +114,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             // If there's a null value in a particular column of the record, don't write null type to the schema.
             // Instead, iterate over results trying to find a record with the value filled in this column.
             // Keep 'unchecked type' columns names in the list below. 
-            var uncheckedTypePropertiesNames = samples[0].Data.GetPropertyNames().ToList();
+            var uncheckedTypePropertiesNames = _samples[0].Data.GetPropertyNames().ToList();
 
             // Skip metadata() column, so it will be added later to json() column
             uncheckedTypePropertiesNames.Remove(Constants.Documents.Metadata.Key);
@@ -133,9 +125,9 @@ namespace Raven.Server.Integrations.PostgreSQL
                 Columns.TryAdd(property, new PgColumn(property, (short)Columns.Count, PgJson.Default, resultsFormat));
 
             // Go through results - we'll try to find all properties types.
-            for (int sampleIndex = 0; sampleIndex < samples.Count && sampleIndex < 1000; sampleIndex++)
+            for (int sampleIndex = 0; sampleIndex < _samples.Count && sampleIndex < 1000; sampleIndex++)
             {
-                Document sample = samples[sampleIndex];
+                Document sample = _samples[sampleIndex];
 
                 // Iterate over the columns which type hasn't been figured out yet
                 var uncheckedTypePropertiesNamesCopy = uncheckedTypePropertiesNames.ToArray();
@@ -236,102 +228,42 @@ namespace Raven.Server.Integrations.PostgreSQL
                     return;
                 }
 
-                if (_result == null)
-                {
-                    if (IsNamedStatement)
-                        _result = await RunRqlQuery();
-                    else
-                        throw new InvalidOperationException("RqlQuery.Execute was called when _results = null");
-                }
-
-                if (_limit == 0 || _result == null || _result.Count == 0)
+                if (_limit == 0 || (_samples != null && _samples.Count == 0))
                 {
                     await writer.WriteAsync(builder.CommandComplete($"SELECT 0"), token);
                     return;
                 }
 
-                BlittableJsonReaderObject.PropertyDetails prop = default;
-                var row = ArrayPool<ReadOnlyMemory<byte>?>.Shared.Rent(Columns.Count);
+                // _samples == null means resources were released after a previous Execute (named statement re-execution) — proceed normally
 
-                try
-                {
-                    short? idIndex = null;
-                    if (Columns.TryGetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, out var col))
-                    {
-                        idIndex = col.ColumnIndex;
-                    }
+                _queryOperationContext ??= QueryOperationContext.Allocate(DocumentDatabase);
 
-                    var jsonIndex = Columns[Constants.Documents.Querying.Fields.PowerBIJsonFieldName].ColumnIndex;
+                var parameters = DynamicJsonValue.Convert(Parameters);
+                var queryParameters = _queryOperationContext.Documents.ReadObject(parameters, "query/parameters");
+                var indexQuery = new IndexQueryServerSide(QueryString, queryParameters);
 
-                    foreach (var result in _result)
-                    {
-                        var jsonResult = result.Data;
+                if (_limit.HasValue)
+                    indexQuery.PageSize = _limit.Value;
 
-                        Array.Clear(row, 0, row.Length);
+                await using var streamWriter = new PgStreamDocumentQueryResultWriter(writer, builder, Columns, HandleSpecialColumnsIfNeeded, _queryOperationContext.Documents);
 
-                        if (idIndex != null && result.Id != null)
-                        {
-                            row[idIndex.Value] = Encoding.UTF8.GetBytes(result.Id.ToString());
+                using var cancelToken = new OperationCancelToken(DocumentDatabase.DatabaseShutdown, token);
+                await DocumentDatabase.QueryRunner.ExecuteStreamQuery(indexQuery, _queryOperationContext, NopHttpResponse.Instance, streamWriter, cancelToken);
+
+                await writer.WriteAsync(builder.CommandComplete($"SELECT {streamWriter.Count}"), token);
                         }
-
-                        jsonResult.Modifications = new DynamicJsonValue(jsonResult);
-
-                        if (jsonResult.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject _))
-                        {
-                            // remove @metadata
-                            jsonResult.Modifications.Remove(Constants.Documents.Metadata.Key);
-                        }
-
-                        foreach (var (columnName, pgColumn) in Columns)
-                        {
-                            var index = jsonResult.GetPropertyIndex(columnName);
-                            if (index == -1)
-                                continue;
-
-                            jsonResult.GetPropertyByIndex(index, ref prop);
-
-                            var value = GetValueByType(prop, prop.Value, pgColumn);
-
-                            row[pgColumn.ColumnIndex] = value;
-
-                            HandleSpecialColumnsIfNeeded(columnName, prop, prop.Value, ref row);
-
-                            jsonResult.Modifications.Remove(columnName);
-                        }
-
-
-                        if (jsonResult.Modifications.Removals.Count != jsonResult.Count)
-                        {
-                            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                            using (context.OpenReadTransaction())
-                            {
-                                var modified = context.ReadObject(jsonResult, "renew");
-                                row[jsonIndex] = Encoding.UTF8.GetBytes(modified.ToString());
-                            }
-                        }
-
-                        await writer.WriteAsync(builder.DataRow(row[..Columns.Count]), token);
-                    }
-                }
                 finally
                 {
-                    ArrayPool<ReadOnlyMemory<byte>?>.Shared.Return(row);
-                }
-
-                await writer.WriteAsync(builder.CommandComplete($"SELECT {_result.Count}"), token);
-            }
-            finally
-            {
                 ReleaseQueryResources();
             }
 
         }
 
-        protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ref ReadOnlyMemory<byte>?[] row)
+        protected virtual void HandleSpecialColumnsIfNeeded(string columnName, BlittableJsonReaderObject.PropertyDetails property, object value, ReadOnlyMemory<byte>?[] row)
         {
         }
 
-        protected ReadOnlyMemory<byte>? GetValueByType(BlittableJsonReaderObject.PropertyDetails propertyDetails, object value, PgColumn pgColumn)
+        internal static ReadOnlyMemory<byte>? GetValueByType(BlittableJsonReaderObject.PropertyDetails propertyDetails, object value, PgColumn pgColumn)
         {
             switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask, pgColumn.PgType.Oid)
             {
@@ -403,7 +335,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         {
             _queryOperationContext?.Dispose();
             _queryOperationContext = null;
-            _result = null;
+            _samples = null;
         }
 
         public override void Dispose()

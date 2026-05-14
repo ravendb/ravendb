@@ -224,6 +224,14 @@ ORDER_BY
    : O R D E R ' ' B Y
    ;
 
+NULLS_FIRST
+   : N U L L S ' ' F I R S T
+   ;
+
+NULLS_LAST
+   : N U L L S ' ' L A S T
+   ;
+
 OFFSET
    : O F F S E T
    ;
