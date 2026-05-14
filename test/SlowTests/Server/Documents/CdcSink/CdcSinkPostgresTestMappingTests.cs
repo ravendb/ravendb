@@ -172,23 +172,55 @@ namespace SlowTests.Server.Documents.CdcSink
                 CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
                 INSERT INTO lecturers (id, name, email) VALUES (1, 'A', 'a@x');
                 INSERT INTO lecturers (id, name, email) VALUES (2, 'B', 'b@x');
-                INSERT INTO lecturers (id, name, email) VALUES (3, 'C', 'c@x');");
+                INSERT INTO lecturers (id, name, email) VALUES (3, 'C', 'c@x');
+                INSERT INTO lecturers (id, name, email) VALUES (4, 'D', 'd@x');
+                INSERT INTO lecturers (id, name, email) VALUES (5, 'E', 'e@x');");
 
             var (db, ctx, _) = await SetupAsync();
             var table = BuildLecturersTableConfig();
-            // Throw on the row with id == 2; the other two should still succeed.
-            table.Patch = "if ($row.id === 2) throw 'boom'; this.PatchedBy = 'test';";
+            // Patch: emit a unique output() per row, then on row 3 throw before setting Marker.
+            // Row 3 must fail; rows 1/2/4/5 must succeed AND must each carry their own marker
+            // in Document AND each row's DebugOutput must contain only its own output() string
+            // (no leftover noise from neighbouring rows).
+            table.Patch = """
+                output('row-' + $row.id);
+                if ($row.id === 3) throw 'boom';
+                this.Marker = 'row-' + $row.id;
+                """;
             var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
 
             var result = await RunAsync(db, ctx, connectionString, config, table,
-                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 3);
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 5);
 
             Assert.Empty(result.Errors);
-            Assert.Equal(3, result.Results.Count);
+            Assert.Equal(5, result.Results.Count);
+
+            // Per-row error isolation: only row 3 fails.
             Assert.Null(result.Results[0].Error);
-            Assert.NotNull(result.Results[1].Error);
-            Assert.Contains("boom", result.Results[1].Error);
-            Assert.Null(result.Results[2].Error);
+            Assert.Null(result.Results[1].Error);
+            Assert.NotNull(result.Results[2].Error);
+            Assert.Contains("boom", result.Results[2].Error);
+            Assert.Null(result.Results[3].Error);
+            Assert.Null(result.Results[4].Error);
+
+            // Post-patch Document carries this row's marker (verifies the patch actually ran
+            // and the response holds the post-patch state, not the pre-patch mapping).
+            Assert.Contains("\"Marker\":\"row-1\"", result.Results[0].Document);
+            Assert.Contains("\"Marker\":\"row-2\"", result.Results[1].Document);
+            Assert.Contains("\"Marker\":\"row-4\"", result.Results[3].Document);
+            Assert.Contains("\"Marker\":\"row-5\"", result.Results[4].Document);
+            // Row 3 threw before setting Marker — Document stays at the pre-patch mapping.
+            Assert.DoesNotContain("\"Marker\"", result.Results[2].Document);
+
+            // DebugOutput per row: each row sees only its own output() call. The runner clears
+            // runner.DebugOutput between rows; verify no cross-contamination.
+            for (var i = 0; i < result.Results.Count; i++)
+            {
+                var rowResult = result.Results[i];
+                Assert.NotNull(rowResult.DebugOutput);
+                Assert.Single(rowResult.DebugOutput);
+                Assert.Equal($"row-{i + 1}", rowResult.DebugOutput[0]);
+            }
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]

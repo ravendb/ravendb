@@ -13,11 +13,11 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using System.Text.RegularExpressions;
 using Raven.Server.SqlMigration;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.CdcSink.Handlers;
 
@@ -31,8 +31,14 @@ public class CdcSinkHandler : DatabaseRequestHandler
     /// </summary>
     internal const int MaxAllowedTestRows = 5000;
 
-    private RavenLogger Logger => _logger ??= Database.Loggers.GetLogger(typeof(CdcSinkHandler));
-    private RavenLogger _logger;
+    /// <summary>
+    /// CdcSinkSchemaRequest.Schemas is interpolated into Postgres' <c>INFORMATION_SCHEMA</c>
+    /// filter (<c>... WHERE T.TABLE_SCHEMA IN ('a','b')</c> in NpgSqlSchemaQueries). The migrator
+    /// codebase has carried this since before this branch, but the new admin endpoint widens
+    /// the entry point. Reject anything outside the standard SQL identifier shape so a typo
+    /// or malicious input can't break out of the quoted list.
+    /// </summary>
+    private static readonly Regex SchemaNamePattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
     [RavenAction("/databases/*/admin/cdc-sink/test", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostScriptTest()
@@ -166,26 +172,11 @@ public class CdcSinkHandler : DatabaseRequestHandler
     }
 
     private SqlConnectionString ResolveTestConnection(TestCdcSinkMappingRequest request)
-    {
-        if (request.Connection != null
-            && string.IsNullOrEmpty(request.Connection.FactoryName) == false
-            && string.IsNullOrEmpty(request.Connection.ConnectionString) == false)
-        {
-            return request.Connection;
-        }
-
-        var name = request.Configuration?.ConnectionStringName;
-        if (string.IsNullOrEmpty(name))
-            throw new InvalidOperationException(
-                $"Provide either '{nameof(TestCdcSinkMappingRequest.Connection)}' (inline {nameof(SqlConnectionString.FactoryName)} + {nameof(SqlConnectionString.ConnectionString)}) " +
-                $"or '{nameof(CdcSinkConfiguration.ConnectionStringName)}' on the configuration.");
-
-        var databaseRecord = Database.ReadDatabaseRecord();
-        if (databaseRecord.SqlConnectionStrings.TryGetValue(name, out var named) == false)
-            throw new InvalidOperationException($"SQL connection string '{name}' was not found in the database configuration.");
-
-        return named;
-    }
+        => ResolveSqlConnection(
+            request.Connection,
+            request.Configuration?.ConnectionStringName,
+            inlineFieldName: nameof(TestCdcSinkMappingRequest.Connection),
+            namedFieldName: nameof(CdcSinkConfiguration.ConnectionStringName));
 
     [RavenAction("/databases/*/admin/cdc-sink/verify", "POST", AuthorizationStatus.DatabaseAdmin)]
     public async Task PostVerifySource()
@@ -252,6 +243,18 @@ public class CdcSinkHandler : DatabaseRequestHandler
     {
         var result = new CdcSinkSourceSchema();
 
+        if (request.Schemas != null)
+        {
+            foreach (var schemaName in request.Schemas)
+            {
+                if (string.IsNullOrEmpty(schemaName) || SchemaNamePattern.IsMatch(schemaName) == false)
+                {
+                    result.Errors.Add($"Schema name '{schemaName}' contains invalid characters. Use letters, digits, and underscores only.");
+                    return result;
+                }
+            }
+        }
+
         SqlConnectionString connection;
         CdcSinkSchemaDiscovery discovery;
         try
@@ -288,18 +291,40 @@ public class CdcSinkHandler : DatabaseRequestHandler
     /// lookup for post-save callers.
     /// </summary>
     private SqlConnectionString ResolveConnection(CdcSinkSchemaRequest request)
-    {
-        if (request.Connection != null && string.IsNullOrEmpty(request.Connection.FactoryName) == false && string.IsNullOrEmpty(request.Connection.ConnectionString) == false)
-            return request.Connection;
+        => ResolveSqlConnection(
+            request.Connection,
+            request.ConnectionStringName,
+            inlineFieldName: nameof(CdcSinkSchemaRequest.Connection),
+            namedFieldName: nameof(CdcSinkSchemaRequest.ConnectionStringName));
 
-        if (string.IsNullOrEmpty(request.ConnectionStringName))
+    /// <summary>
+    /// Common inline-vs-named connection-string resolver for the CDC admin endpoints.
+    /// Inline <paramref name="inline"/> (a fully-populated <see cref="SqlConnectionString"/>)
+    /// wins when present; otherwise <paramref name="connectionStringName"/> is looked up in
+    /// <c>databaseRecord.SqlConnectionStrings</c>. The two field-name parameters only affect
+    /// the error-message text — each endpoint shows the property name its own request DTO uses.
+    /// </summary>
+    private SqlConnectionString ResolveSqlConnection(
+        SqlConnectionString inline,
+        string connectionStringName,
+        string inlineFieldName,
+        string namedFieldName)
+    {
+        if (inline != null
+            && string.IsNullOrEmpty(inline.FactoryName) == false
+            && string.IsNullOrEmpty(inline.ConnectionString) == false)
+        {
+            return inline;
+        }
+
+        if (string.IsNullOrEmpty(connectionStringName))
             throw new InvalidOperationException(
-                $"Provide either '{nameof(CdcSinkSchemaRequest.Connection)}' (inline {nameof(SqlConnectionString.FactoryName)} + {nameof(SqlConnectionString.ConnectionString)}) " +
-                $"or '{nameof(CdcSinkSchemaRequest.ConnectionStringName)}'.");
+                $"Provide either '{inlineFieldName}' (inline {nameof(SqlConnectionString.FactoryName)} + {nameof(SqlConnectionString.ConnectionString)}) " +
+                $"or '{namedFieldName}'.");
 
         var databaseRecord = Database.ReadDatabaseRecord();
-        if (databaseRecord.SqlConnectionStrings.TryGetValue(request.ConnectionStringName, out var named) == false)
-            throw new InvalidOperationException($"SQL connection string '{request.ConnectionStringName}' was not found in the database configuration.");
+        if (databaseRecord.SqlConnectionStrings.TryGetValue(connectionStringName, out var named) == false)
+            throw new InvalidOperationException($"SQL connection string '{connectionStringName}' was not found in the database configuration.");
 
         return named;
     }

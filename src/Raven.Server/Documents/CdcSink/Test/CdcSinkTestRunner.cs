@@ -19,6 +19,11 @@ namespace Raven.Server.Documents.CdcSink.Test
     /// One JS run per row so a script that throws on row N still leaves rows 0..N-1 and
     /// N+1..end populated in the response.
     /// </summary>
+    /// <remarks>
+    /// Public so the SlowTests project (which has no <c>InternalsVisibleTo</c> grant from
+    /// <c>Raven.Server</c>) can call <see cref="Run"/> directly. Production usage is limited
+    /// to <c>CdcSinkHandler.PostScriptTest</c>; treat this as a server-internal surface.
+    /// </remarks>
     public static class CdcSinkTestRunner
     {
         public static TestCdcSinkMappingResult Run(

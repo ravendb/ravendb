@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Test;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure;
 using Xunit;
@@ -60,7 +61,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     Name = "client-api-test",
                     Tables = new List<CdcSinkTableConfig> { table },
                 },
-                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                Connection = new SqlConnectionString
                 {
                     FactoryName = "Npgsql",
                     ConnectionString = connectionString,
@@ -119,7 +120,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     Name = "client-api-delete",
                     Tables = new List<CdcSinkTableConfig> { table },
                 },
-                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                Connection = new SqlConnectionString
                 {
                     FactoryName = "Npgsql",
                     ConnectionString = connectionString,
@@ -170,7 +171,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     Name = "client-api-cap",
                     Tables = new List<CdcSinkTableConfig> { table },
                 },
-                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                Connection = new SqlConnectionString
                 {
                     FactoryName = "Npgsql",
                     ConnectionString = connectionString,
@@ -218,7 +219,7 @@ namespace SlowTests.Server.Documents.CdcSink
                     Name = "client-api-fetch-failure",
                     Tables = new List<CdcSinkTableConfig> { table },
                 },
-                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                Connection = new SqlConnectionString
                 {
                     FactoryName = "Npgsql",
                     ConnectionString = "Host=cdc-test-no-such-host.invalid;Database=postgres;User Id=postgres;Password=x;Timeout=2;Command Timeout=2",
@@ -276,7 +277,7 @@ namespace SlowTests.Server.Documents.CdcSink
                         MakeTable("Lecturers", "LecturersUpper"),
                     },
                 },
-                Connection = new Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString
+                Connection = new SqlConnectionString
                 {
                     FactoryName = "Npgsql",
                     ConnectionString = connectionString,
@@ -294,6 +295,108 @@ namespace SlowTests.Server.Documents.CdcSink
             var error = Assert.Single(result.Errors);
             Assert.Contains("2 tables matching", error);
             Assert.Contains("case-insensitive", error);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task InlineConnectionWinsOverNamedConnectionString()
+        {
+            // Documents the inline-vs-named precedence in CdcSinkHandler.ResolveSqlConnection:
+            // when both are provided, the inline credentials take precedence (matches the comment
+            // on CdcSinkSchemaRequest.Connection). Studio's Task Creation view relies on this so
+            // the user can test against credentials they haven't saved yet.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-precedence",
+                    // Bogus name; if the resolver fell back to the named lookup it would fail.
+                    // The inline Connection below must win.
+                    ConnectionStringName = "does-not-exist-on-this-database",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Lecturers/1", row.DocumentId);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task NamedConnectionNotFound_ReturnsStructuredError()
+        {
+            // No inline Connection + a ConnectionStringName that doesn't exist in
+            // databaseRecord.SqlConnectionStrings -> resolver throws InvalidOperationException
+            // which the handler catches and surfaces as a structured Errors entry (not a 500).
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-missing-name",
+                    ConnectionStringName = "does-not-exist-on-this-database",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                // Connection deliberately null.
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("does-not-exist-on-this-database", error);
+            Assert.Contains("not found", error);
         }
     }
 }
