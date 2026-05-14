@@ -5,6 +5,8 @@
 // Fix: compute the value before the query, inline the logic, or call ToList() first to
 // evaluate client-side.
 using System.Linq;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Linq;
 
@@ -25,6 +27,16 @@ public static class RVN010_QueryUnsupportedMethodCall
         var q = session.Query<RVN010_Order>()
             .Where(o => RVN010_Filters.IsActiveOrder(o.Status))
             .Take(20);
+    }
+
+    public static async Task BadExample(IAsyncDocumentSession session)
+    {
+        // warning RVN010: Method 'IsActiveOrder' is user-defined and may not translate
+        //   to server-side query semantics.
+        var list = await session.Query<RVN010_Order>()
+            .Where(o => RVN010_Filters.IsActiveOrder(o.Status))
+            .Take(20)
+            .ToListAsync();
     }
 
     public static void GoodExample(IDocumentSession session)
