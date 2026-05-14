@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Sparrow;
 using Sparrow.Server;
@@ -247,7 +246,6 @@ namespace Voron.Data.BTrees
             writer.Write(stream);
         }
 
-        [SkipLocalsInit]
         private bool TryAddInlineStream(Slice key, Stream stream, Slice? tag)
         {
             var tagSize = tag?.Size ?? 0;
@@ -257,13 +255,14 @@ namespace Voron.Data.BTrees
             if (maxInlineSize <= 0)
                 return false;
 
-
             var nodeMaxSize = _llt.DataPager.NodeMaxSize;
-            Span<byte> buffer = stackalloc byte[nodeMaxSize];
+
+            var buffer = _llt.Transaction.StreamBuffer;
+            var localBuffer = buffer.AsSpan().Slice(0, nodeMaxSize);
             var totalRead = 0;
             while (totalRead < nodeMaxSize)
             {
-                var read = stream.Read(buffer.Slice(totalRead));
+                var read = stream.Read(localBuffer.Slice(totalRead));
                 if (read == 0)
                     break;
                 totalRead += read;
@@ -294,10 +293,7 @@ namespace Voron.Data.BTrees
                     dest += tagSize;
                 }
 
-                fixed (byte* src = buffer)
-                {
-                    Memory.Copy(dest, src, totalRead);
-                }
+                Memory.Copy(dest, buffer.Pointer, totalRead);
             }
 
             return true;

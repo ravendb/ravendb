@@ -24,7 +24,11 @@ namespace Raven.Server.Indexing
         public sealed class DirectoryFiles
         {
             public Dictionary<string, Tree.ChunkDetails[]> ChunksByName = new Dictionary<string, Tree.ChunkDetails[]>(StringComparer.OrdinalIgnoreCase);
+
+            public Dictionary<string, InlineFileLocation> InlinesByName = new Dictionary<string, InlineFileLocation>(StringComparer.OrdinalIgnoreCase);
         }
+        
+        public readonly record struct InlineFileLocation(long PageNumber, int DataOffsetInPage, int DataSize);
 
         public Dictionary<string, DirectoryFiles> DirectoriesByName = new Dictionary<string, DirectoryFiles>(StringComparer.OrdinalIgnoreCase);
         public Dictionary<string, CollectionEtags> Collections = new Dictionary<string, CollectionEtags>(StringComparer.OrdinalIgnoreCase);

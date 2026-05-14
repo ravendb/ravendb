@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.Client.Extensions.Streams;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -46,7 +45,14 @@ namespace Raven.Server.Indexing
                     {
                         if (files.ChunksByName.TryGetValue(name, out var details))
                         {
-                           return new LuceneVoronStream(name, details, transaction.LowLevelTransaction);
+                            return new LuceneVoronStream(name, details, transaction.LowLevelTransaction);
+                        }
+
+                        if (files.InlinesByName.TryGetValue(name, out var inline))
+                        {
+                            var llt = transaction.LowLevelTransaction;
+                            var dataPtr = llt.GetPage(inline.PageNumber).Pointer + inline.DataOffsetInPage;
+                            return new LuceneVoronStream(name, treeName, dataPtr, inline.DataSize, llt);
                         }
                     }
                 }
