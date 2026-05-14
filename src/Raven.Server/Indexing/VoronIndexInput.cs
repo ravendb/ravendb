@@ -6,6 +6,7 @@ using System.Threading;
 using Lucene.Net.Store;
 using Voron;
 using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
@@ -50,6 +51,9 @@ namespace Raven.Server.Indexing
 
                         if (files.InlinesByName.TryGetValue(name, out var inline))
                         {
+                            if (inline.DataOffsetInPage <= 0 || inline.DataOffsetInPage + inline.DataSize > Constants.Storage.PageSize)
+                                ThrowInvalidInlineStreamLocation(name, inline);
+
                             var llt = transaction.LowLevelTransaction;
                             var dataPtr = llt.GetPage(inline.PageNumber).Pointer + inline.DataOffsetInPage;
                             return new LuceneVoronStream(name, treeName, dataPtr, inline.DataSize, llt);
@@ -238,6 +242,13 @@ namespace Raven.Server.Indexing
         private void ThrowInvalidSeekPosition(long pos)
         {
             throw new InvalidOperationException($"Cannot set stream position to {pos} because the length of '{_name}' stream is {_stream.Length}");
+        }
+
+        [DoesNotReturn]
+        private static void ThrowInvalidInlineStreamLocation(string name, IndexTransactionCache.InlineFileLocation inline)
+        {
+            throw new InvalidOperationException(
+                $"Cached inline stream location for '{name}' is out of page bounds: PageNumber={inline.PageNumber}, DataOffsetInPage={inline.DataOffsetInPage}, DataSize={inline.DataSize}");
         }
     }
 }
