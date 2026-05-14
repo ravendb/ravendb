@@ -98,6 +98,16 @@ public class CdcSinkHandler : DatabaseRequestHandler
             return result;
         }
 
+        // DatabaseDriverDispatcher accepts a wider provider set than the CDC sink (it is shared
+        // with the SQL Migration feature, which supports Oracle). Mirror the gate that the schema
+        // and verify endpoints already apply so the test endpoint can't silently preview against a
+        // provider the rest of the CDC sink would reject.
+        if (CdcSinkSchemaDiscovery.IsSupportedFactoryName(connection.FactoryName) == false)
+        {
+            result.Errors.Add(CdcSinkSchemaDiscovery.UnsupportedProviderMessage(connection.FactoryName));
+            return result;
+        }
+
         var targetSchema = request.SourceTableSchema ?? string.Empty;
         var matches = request.Configuration.Tables?
             .Where(t =>

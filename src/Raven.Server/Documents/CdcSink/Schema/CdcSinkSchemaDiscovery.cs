@@ -27,11 +27,26 @@ namespace Raven.Server.Documents.CdcSink.Schema
                 "Npgsql" => new PostgresCdcSinkSchemaDiscovery(),
                 "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => new SqlServerCdcSinkSchemaDiscovery(),
                 "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new MySqlCdcSinkSchemaDiscovery(),
-                _ => throw new InvalidOperationException(
-                    $"CDC schema discovery is not supported for provider '{factoryName}'. " +
-                    "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server), " +
-                    "MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB)."),
+                _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
             };
         }
+
+        /// <summary>
+        /// True if the CDC sink subsystem (verify / schema / test / runtime) supports the given
+        /// ADO.NET factory name. <see cref="DatabaseDriverDispatcher.GetProviderFromFactoryName"/>
+        /// accepts a wider set (including Oracle) because the SQL Migration feature supports it,
+        /// but CDC does not — so the CDC admin endpoints must gate on this narrower list.
+        /// </summary>
+        public static bool IsSupportedFactoryName(string factoryName)
+        {
+            return factoryName is "Npgsql"
+                or "System.Data.SqlClient" or "Microsoft.Data.SqlClient"
+                or "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory";
+        }
+
+        internal static string UnsupportedProviderMessage(string factoryName) =>
+            $"CDC sink does not support provider '{factoryName}'. " +
+            "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server), " +
+            "MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB).";
     }
 }

@@ -398,5 +398,55 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Contains("does-not-exist-on-this-database", error);
             Assert.Contains("not found", error);
         }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ClientOperation_UnsupportedProvider_RejectedBeforeAnySqlIsRun()
+        {
+            // DatabaseDriverDispatcher accepts Oracle (SQL Migration supports it), but the CDC
+            // sink does not. The /verify and /schema endpoints already gate on the narrower
+            // CDC-supported provider list; ensure /test does the same so an admin can't preview
+            // a CDC config the rest of the subsystem will refuse to run. Driver isn't actually
+            // loaded — the early gate fires before any SQL connection is attempted, so no
+            // Oracle infrastructure is required for this test.
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Customers",
+                SourceTableSchema = "dbo",
+                SourceTableName = "customers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-unsupported-provider",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Oracle.ManagedDataAccess.Client",
+                    ConnectionString = "Data Source=irrelevant;User Id=x;Password=y;",
+                },
+                SourceTableSchema = "dbo",
+                SourceTableName = "customers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("Oracle.ManagedDataAccess.Client", error);
+            Assert.Contains("does not support provider", error);
+        }
     }
 }
