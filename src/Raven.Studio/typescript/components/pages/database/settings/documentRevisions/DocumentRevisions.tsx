@@ -286,12 +286,13 @@ export default function DocumentRevisions() {
                                                 message: "Your license does not allow you to set up default policy.",
                                             }}
                                         >
-                                            <div id="add-default-config-button">
+                                            <div>
                                                 <Button
                                                     variant="info"
                                                     size="sm"
                                                     className="rounded-pill"
                                                     title="Create a default revision configuration for all (non-conflicting) documents"
+                                                    data-testid="add-default-config-button"
                                                     onClick={() =>
                                                         onEditRevision({
                                                             taskType: "new",
