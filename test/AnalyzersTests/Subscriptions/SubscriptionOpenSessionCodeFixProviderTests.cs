@@ -116,10 +116,11 @@ class Document { public string Id { get; set; } }
         }
 
         [Fact]
-        public async Task Run_WithNoParameter_FixBails()
+        public async Task OpenSession_InDeferredAction_FixBails()
         {
-            // Diagnostic fires (store called inside Run lambda) but the fix cannot supply a batch
-            // receiver because the lambda has no parameter, so no code action is registered.
+            // Diagnostic fires (store.OpenSession() is inside the Run lambda) but the fix refuses to
+            // rewrite it: the call is inside a deferred Action nested within the batch lambda, so the
+            // session may outlive the batch. No code action is registered.
             const string source = CommonUsings + @"
 class Test
 {

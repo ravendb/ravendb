@@ -12,8 +12,7 @@
     <!--
       This project is not packaged on its own. Raven.Analyzers.dll and
       Raven.Analyzers.CodeFixes.dll are embedded inside RavenDB.Client.nupkg
-      under analyzers/dotnet/cs/. See src/Raven.Client/Raven.Client.csproj
-      and analyzer-strategy.md.
+      under analyzers/dotnet/cs/. See src/Raven.Client/Raven.Client.csproj.
     -->
   </PropertyGroup>
 
