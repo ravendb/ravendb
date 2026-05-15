@@ -157,7 +157,7 @@
     Using a <Target> instead of <ProjectReference> avoids NETSDK1005 TFM-resolution
     failures: Raven.Analyzers targets netstandard2.0 and cannot satisfy Raven.Client's
     net8.0/net10.0/netstandard2.1 TFMs in the asset resolution step.
-    See analyzer-strategy.md for the embedded-distribution rationale.
+    Embedding in RavenDB.Client.nupkg avoids a separate package install step for consumers.
   -->
   <ItemGroup>
     <None Include="..\Raven.Analyzers\bin\$(Configuration)\netstandard2.0\Raven.Analyzers.dll"
