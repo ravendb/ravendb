@@ -1,4 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
+import { RecursiveRequired } from "components/utils/common";
+import { Resolver } from "react-hook-form/dist/types/resolvers";
 import * as yup from "yup";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
@@ -119,5 +121,5 @@ const editCdcSinkTaskSchema = yup.object({
         ),
 });
 
-export const editCdcSinkTaskResolver = yupResolver(editCdcSinkTaskSchema);
-export type EditCdcSinkTaskFormData = yup.InferType<typeof editCdcSinkTaskSchema>;
+export type EditCdcSinkTaskFormData = RecursiveRequired<yup.InferType<typeof editCdcSinkTaskSchema>>;
+export const editCdcSinkTaskResolver = yupResolver(editCdcSinkTaskSchema) as Resolver<EditCdcSinkTaskFormData>;

@@ -29,10 +29,10 @@ export function castToEmbeddedTablePath(path: string) {
     return path as EmbeddedTablePath satisfies FormPath;
 }
 
-export type FormRootTable = Required<EditCdcSinkTaskFormData["tables"][number]>;
-export type FormRootTableColumn = Required<EditCdcSinkTaskFormData["tables"][number]["columns"][number]>;
-export type FormEmbeddedTable = Required<FormRootTable["embeddedTables"][number]>;
-export type FormLinkedTable = Required<FormRootTable["linkedTables"][number]>;
+export type FormRootTable = EditCdcSinkTaskFormData["tables"][number];
+export type FormRootTableColumn = EditCdcSinkTaskFormData["tables"][number]["columns"][number];
+export type FormEmbeddedTable = FormRootTable["embeddedTables"][number];
+export type FormLinkedTable = FormRootTable["linkedTables"][number];
 
 interface ExplorerRowSchema {
     type: "schema";

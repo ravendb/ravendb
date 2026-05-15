@@ -5,6 +5,9 @@ import {
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import {
     EmbeddedTablePath,
+    FormEmbeddedTable,
+    FormLinkedTable,
+    FormRootTable,
     LinkedTablePath,
     RootTablePath,
     castToEmbeddedTablePath,
@@ -12,15 +15,12 @@ import {
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppDispatch } from "components/store";
-import { FieldPath, useFormContext } from "react-hook-form";
+import { FieldPath, useFormContext, UseFormSetValue } from "react-hook-form";
 
-type RootTable = NonNullable<EditCdcSinkTaskFormData["tables"]>[number];
-type EmbeddedTable = NonNullable<RootTable["embeddedTables"]>[number];
-type LinkedTable = NonNullable<RootTable["linkedTables"]>[number];
-type TableListPath = "tables" | `${string}.embeddedTables` | `${string}.linkedTables`;
+type TableListPath = "tables" | `tables.${number}.embeddedTables` | `tables.${number}.linkedTables`;
 type FormPath = FieldPath<EditCdcSinkTaskFormData>;
 
-const defaultEmbeddedTable = (): EmbeddedTable => ({
+const defaultEmbeddedTable = (): FormEmbeddedTable => ({
     caseSensitiveKeys: false,
     columns: [],
     embeddedTables: [],
@@ -38,7 +38,7 @@ const defaultEmbeddedTable = (): EmbeddedTable => ({
     type: "Array",
 });
 
-const defaultLinkedTable = (): LinkedTable => ({
+const defaultLinkedTable = (): FormLinkedTable => ({
     joinColumns: [],
     linkedCollectionName: "NewCollection",
     propertyName: "",
@@ -51,32 +51,28 @@ export function useEditCdcSinkTaskTableActions() {
     const confirm = useConfirm();
     const { getValues, setValue } = useFormContext<EditCdcSinkTaskFormData>();
 
-    const setFieldValue = <TValue>(path: FormPath, value: TValue) => {
+    const setFieldValue: UseFormSetValue<EditCdcSinkTaskFormData> = (path, value) => {
         setValue(path, value, { shouldDirty: true });
     };
 
     const getTableList = <TTable>(path: TableListPath) => (getValues(path as FormPath) as TTable[]) ?? [];
 
-    const setTableList = <TTable>(path: TableListPath, value: TTable[]) => {
-        setFieldValue(path as FormPath, value);
-    };
-
     const addEmbeddedTable = (parentPath: RootTablePath | EmbeddedTablePath) => {
         const listPath = `${parentPath}.embeddedTables` as TableListPath;
-        const embeddedTables = getTableList<EmbeddedTable>(listPath);
+        const embeddedTables = getTableList<FormEmbeddedTable>(listPath);
         const newPath = castToEmbeddedTablePath(`${listPath}.${embeddedTables.length}`);
 
-        setTableList(listPath, [...embeddedTables, defaultEmbeddedTable()]);
+        setFieldValue(listPath, [...embeddedTables, defaultEmbeddedTable()]);
         dispatch(editCdcSinkTaskActions.tableExpandedOneSet({ path: parentPath, isExpanded: true }));
         dispatch(editCdcSinkTaskActions.activeTableSet({ type: "embedded", path: newPath }));
     };
 
     const addLinkedTable = (parentPath: RootTablePath | EmbeddedTablePath) => {
         const listPath = `${parentPath}.linkedTables` as TableListPath;
-        const linkedTables = getTableList<LinkedTable>(listPath);
+        const linkedTables = getTableList<FormLinkedTable>(listPath);
         const newPath = castToLinkedTablePath(`${listPath}.${linkedTables.length}`);
 
-        setTableList(listPath, [...linkedTables, defaultLinkedTable()]);
+        setFieldValue(listPath, [...linkedTables, defaultLinkedTable()]);
         dispatch(editCdcSinkTaskActions.tableExpandedOneSet({ path: parentPath, isExpanded: true }));
         dispatch(editCdcSinkTaskActions.activeTableSet({ type: "linked", path: newPath }));
     };
@@ -88,9 +84,9 @@ export function useEditCdcSinkTaskTableActions() {
 
     const removeTable = (activeTable: CdcActiveTable) => {
         const { listPath, index } = getTableListLocation(activeTable.path);
-        const tables = getTableList(listPath);
+        const tables = getTableList<FormRootTable>(listPath);
 
-        setTableList(
+        setFieldValue(
             listPath,
             tables.filter((_, idx) => idx !== index)
         );
@@ -100,17 +96,17 @@ export function useEditCdcSinkTaskTableActions() {
 
     const changeLinkedToEmbedded = (path: LinkedTablePath) => {
         const { listPath, index } = getTableListLocation(path);
-        const linkedTables = getTableList<LinkedTable>(listPath);
+        const linkedTables = getTableList<FormLinkedTable>(listPath);
         const linkedTable = linkedTables[index];
         const embeddedListPath = getSiblingListPath(path, "embeddedTables");
-        const embeddedTables = getTableList<EmbeddedTable>(embeddedListPath);
+        const embeddedTables = getTableList<FormEmbeddedTable>(embeddedListPath);
         const newPath = castToEmbeddedTablePath(`${embeddedListPath}.${embeddedTables.length}`);
 
-        setTableList(
+        setFieldValue(
             listPath,
             linkedTables.filter((_, idx) => idx !== index)
         );
-        setTableList(embeddedListPath, [
+        setFieldValue(embeddedListPath, [
             ...embeddedTables,
             {
                 ...defaultEmbeddedTable(),
@@ -144,16 +140,16 @@ export function useEditCdcSinkTaskTableActions() {
         }
 
         const { listPath, index } = getTableListLocation(path);
-        const embeddedTables = getTableList<EmbeddedTable>(listPath);
+        const embeddedTables = getTableList<FormEmbeddedTable>(listPath);
         const linkedListPath = getSiblingListPath(path, "linkedTables");
-        const linkedTables = getTableList<LinkedTable>(linkedListPath);
+        const linkedTables = getTableList<FormLinkedTable>(linkedListPath);
         const newPath = castToLinkedTablePath(`${linkedListPath}.${linkedTables.length}`);
 
-        setTableList(
+        setFieldValue(
             listPath,
             embeddedTables.filter((_, idx) => idx !== index)
         );
-        setTableList(linkedListPath, [
+        setFieldValue(linkedListPath, [
             ...linkedTables,
             {
                 ...defaultLinkedTable(),
