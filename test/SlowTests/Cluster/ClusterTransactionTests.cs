@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Exceptions.Documents.Session;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -2783,6 +2784,32 @@ select incl(c)"
         }
 
         [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionStore_CanStoreNewDocument()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                // No atomic guard exists yet, so GetAtomicGuardAsync returns null.
+                // Store with a null atomic guard creates a new document.
+                session.Advanced.ClusterTransaction
+                    .Store("users/1", new User { Name = "NewDoc" }, atomicGuardChangeVector: null);
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<User>("users/1");
+                Assert.NotNull(loaded);
+                Assert.Equal("NewDoc", loaded.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanReplaceDocumentUsingClusterTransactionStore()
         {
             using var store = GetDocumentStore();
@@ -2856,12 +2883,11 @@ select incl(c)"
                     .GetAtomicGuardAsync("users/1");
 
                 var user2 = new User { Name = "Indych" };
-                var ex = Assert.Throws<InvalidOperationException>(() =>
+                Assert.Throws<NonUniqueObjectException>(() =>
                 {
                     session.Advanced.ClusterTransaction
                         .Store("users/1", user2, atomicGuard);
                 });
-                Assert.Contains("already tracked", ex.Message);
             }
         }
 
@@ -2882,12 +2908,11 @@ select incl(c)"
                 var atomicGuard = await session.Advanced.ClusterTransaction
                     .GetAtomicGuardAsync("users/2");
 
-                var ex = Assert.Throws<InvalidOperationException>(() =>
+                Assert.Throws<NonUniqueObjectException>(() =>
                 {
                     session.Advanced.ClusterTransaction
                         .Store("users/2", user, atomicGuard);
                 });
-                Assert.Contains("different id", ex.Message);
             }
         }
 
@@ -2896,8 +2921,6 @@ select incl(c)"
         {
             using var store = GetDocumentStore();
             var user1 = new User { Name = "Karmel" };
-            var user2 = new User { Name = "Indych" };
-            var user3 = new User { Name = "Oren" };
 
             // First transaction: store the document
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -2938,7 +2961,7 @@ select incl(c)"
             }))
             {
                 session.Advanced.ClusterTransaction
-                    .Store("users/1", user3, staleGuard);
+                    .Store("users/1", new User { Name = "Oren" }, staleGuard);
 
                 await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() =>
                     session.SaveChangesAsync());
