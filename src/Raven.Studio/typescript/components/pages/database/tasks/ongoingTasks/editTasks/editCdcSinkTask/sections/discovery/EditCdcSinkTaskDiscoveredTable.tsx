@@ -6,14 +6,16 @@ import {
     ColumnDef,
 } from "@tanstack/react-table";
 import { EmptySet } from "components/common/EmptySet";
+import ExpandableList from "components/common/ExpandableList";
 import { Icon } from "components/common/Icon";
 import { LoadError } from "components/common/LoadError";
+import RichAlert from "components/common/RichAlert";
 import { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import { columnCheckbox } from "components/common/virtualTable/utils/commonColumnDefs";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { UseAsyncReturn } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import { UseFieldArrayReturn } from "react-hook-form";
@@ -40,6 +42,10 @@ export default function EditCdcSinkTaskDiscoveredTable({
     const columns = useColumns(widthPx);
     const tablesData = useMemo(
         () => asyncGetSchema.result?.Tables.filter(isTableSupported) ?? [],
+        [asyncGetSchema.result]
+    );
+    const unsupportedTables = useMemo(
+        () => asyncGetSchema.result?.Tables.filter((table) => !isTableSupported(table)) ?? [],
         [asyncGetSchema.result]
     );
 
@@ -89,6 +95,7 @@ export default function EditCdcSinkTaskDiscoveredTable({
 
     return (
         <div className="position-relative">
+            <SchemaAlerts errors={asyncGetSchema.result?.Errors ?? []} unsupportedTables={unsupportedTables} />
             <VirtualTable table={table} heightInPx={300} isLoading={asyncGetSchema.loading} />
             {selectedCount > 0 && (
                 <div
@@ -109,6 +116,54 @@ export default function EditCdcSinkTaskDiscoveredTable({
     );
 }
 
+interface SchemaAlertsProps {
+    errors: string[];
+    unsupportedTables: CdcSinkSchema.CdcSinkSourceTable[];
+}
+
+function SchemaAlerts({ errors, unsupportedTables }: SchemaAlertsProps) {
+    return (
+        <>
+            {errors.length > 0 && (
+                <RichAlert variant="danger" className="mb-2">
+                    <AlertList items={errors} renderItem={(error) => error} />
+                </RichAlert>
+            )}
+            {unsupportedTables.length > 0 && (
+                <RichAlert variant="warning" className="mb-2">
+                    <AlertList items={unsupportedTables} renderItem={getUnsupportedTableMessage} />
+                </RichAlert>
+            )}
+        </>
+    );
+}
+
+interface AlertListProps<T> {
+    items: T[];
+    renderItem: (item: T) => string;
+}
+
+function AlertList<T>({ items, renderItem }: AlertListProps<T>) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <ExpandableList
+            itemsCount={items.length}
+            collapsedItemsCount={2}
+            isExpanded={isExpanded}
+            setIsExpanded={setIsExpanded}
+        >
+            {({ visibleCount }) => (
+                <div className="vstack gap-1">
+                    {items.slice(0, visibleCount).map((item, index) => (
+                        <div key={index}>{renderItem(item)}</div>
+                    ))}
+                </div>
+            )}
+        </ExpandableList>
+    );
+}
+
 const useColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSinkSourceTable>[] => {
     const bodyWidth = virtualTableUtils.getTableBodyWidth(widthPx - columnCheckbox.size);
     const getSize = useCallback(virtualTableUtils.getCellSizeProvider(bodyWidth), [bodyWidth]);
@@ -119,7 +174,7 @@ const useColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSinkSourceTable
             {
                 id: "TableName",
                 header: "Table name",
-                accessorFn: (x) => `${x.SourceTableSchema}.${x.SourceTableName}`,
+                accessorFn: getTableName,
                 cell: CellValueWrapper,
                 size: getSize(50),
             },
@@ -147,6 +202,16 @@ const propertyNameFromJoinColumn = (name: string) => pascalCase(name.endsWith("_
 
 function isTableSupported(table: CdcSinkSchema.CdcSinkSourceTable) {
     return table.IsCdcEnabled && table.UnsupportedReason == null;
+}
+
+function getTableName(table: CdcSinkSchema.CdcSinkSourceTable) {
+    return `${table.SourceTableSchema}.${table.SourceTableName}`;
+}
+
+function getUnsupportedTableMessage(table: CdcSinkSchema.CdcSinkSourceTable) {
+    const reasons = [!table.IsCdcEnabled ? "CDC is not enabled" : null, table.UnsupportedReason].filter(Boolean);
+
+    return `${getTableName(table)}: ${reasons.join(", ")}`;
 }
 
 function isColumnSupported(column: CdcSinkSchema.CdcSinkSourceColumn) {
