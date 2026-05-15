@@ -22,7 +22,8 @@ function prepareMocks(hasCdcSink = true) {
 
     tasksService.withConnectionStrings();
     tasksService.withVerifyCdcSink();
-    tasksService.withFetchSqlDatabaseSchema();
+    tasksService.withTestCdcSink();
+    tasksService.withGetCdcSinkTaskSchema();
 }
 
 export const NewTask: StoryObj = {

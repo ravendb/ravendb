@@ -117,6 +117,14 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         });
     }
 
+    withTestCdcSink(dto?: Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult) {
+        return this.mockResolvedValue(this.mocks.testCdcSink, dto, TasksStubs.testCdcSink());
+    }
+
+    withGetCdcSinkTaskSchema(dto?: MockedValue<Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema>) {
+        return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
+    }
+
     withFetchSqlDatabaseSchema(dto?: MockedValue<Raven.Server.SqlMigration.Schema.DatabaseSchema>) {
         return this.mockResolvedValue(this.mocks.fetchSqlDatabaseSchema, dto, TasksStubs.sqlDatabaseSchema());
     }

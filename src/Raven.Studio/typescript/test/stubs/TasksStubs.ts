@@ -741,6 +741,103 @@ export class TasksStubs {
         };
     }
 
+    static testCdcSink(): Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult {
+        return {
+            Errors: [],
+            Warnings: [],
+            Results: [
+                {
+                    DebugOutput: [],
+                    Document: JSON.stringify({
+                        Id: "orders/1",
+                        Company: "companies/1",
+                        Lines: [
+                            {
+                                Product: "products/1",
+                            },
+                        ],
+                    }),
+                    DocumentId: "Orders/1",
+                    Error: null,
+                    IgnoreDeletes: false,
+                    SourceRow: JSON.stringify({
+                        Id: "1",
+                        CompanyId: "companies/1",
+                    }),
+                    WouldDelete: false,
+                },
+            ],
+        };
+    }
+
+    static cdcSinkTaskSchema(): Raven.Client.Documents.Operations.CdcSink.Schema.CdcSinkSourceSchema {
+        return {
+            CatalogName: "Northwind",
+            Errors: [],
+            Tables: [
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "orders",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "CompanyId",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [
+                        {
+                            Columns: ["CompanyId"],
+                            ReferencedSchema: "dbo",
+                            ReferencedTable: "companies",
+                            ReferencedColumns: ["Id"],
+                        },
+                    ],
+                },
+                {
+                    SourceTableSchema: "dbo",
+                    SourceTableName: "companies",
+                    IsCdcEnabled: true,
+                    UnsupportedReason: null,
+                    PrimaryKeyColumns: ["Id"],
+                    Columns: [
+                        {
+                            Name: "Id",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: true,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                        {
+                            Name: "Name",
+                            NativeType: "nvarchar",
+                            SuggestedType: "Default",
+                            IsPrimaryKey: false,
+                            IsCdcCapturable: true,
+                            UnsupportedReason: null,
+                        },
+                    ],
+                    ForeignKeys: [],
+                },
+            ],
+        };
+    }
+
     static getReplicationSink(): OngoingTaskPullReplicationAsSink {
         return {
             TaskName: "ReplicationSinkTask",

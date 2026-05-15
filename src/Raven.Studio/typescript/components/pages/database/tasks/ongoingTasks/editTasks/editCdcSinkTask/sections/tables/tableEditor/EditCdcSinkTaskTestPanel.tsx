@@ -20,8 +20,8 @@ import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
 import Button from "react-bootstrap/Button";
-import Accordion from "react-bootstrap/esm/Accordion";
-import AccordionButton from "react-bootstrap/esm/AccordionButton";
+import Accordion from "react-bootstrap/Accordion";
+import AccordionButton from "react-bootstrap/AccordionButton";
 import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
 import * as yup from "yup";
 
