@@ -861,7 +861,7 @@ more responsive application.
 
         protected abstract Task<string> GenerateIdAsync(object entity);
 
-        protected virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
+        protected internal virtual void StoreEntityInUnitOfWork(string id, object entity, string changeVector, DynamicJsonValue metadata,
             ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (id != null)
