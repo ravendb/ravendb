@@ -795,7 +795,7 @@ more responsive application.
             AssertNoNonUniqueInstance(entity, id);
 
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
-            var metadata = CreateDocumentMetadata(entity, collectionName, _requestExecutor.Conventions.GetClrTypeName(entity));
+            var metadata = CreateDocumentMetadata(entity, _requestExecutor.Conventions);
 
             if (id != null)
                 _knownMissingIds.Remove(id);
@@ -803,12 +803,14 @@ more responsive application.
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
         }
 
-        internal static DynamicJsonValue CreateDocumentMetadata(object entity, string collectionName, string clrType)
+        internal static DynamicJsonValue CreateDocumentMetadata(object entity, DocumentConventions conventions)
         {
             var metadata = new DynamicJsonValue();
+            var collectionName = conventions.GetCollectionName(entity);
             if (collectionName != null)
                 metadata[Constants.Documents.Metadata.Collection] = collectionName;
 
+            var clrType = conventions.GetClrTypeName(entity);
             if (clrType != null)
                 metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
 

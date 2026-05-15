@@ -2405,10 +2405,9 @@ select incl(c)"
                 TransactionMode = TransactionMode.ClusterWide
             }))
             {
-                // No atomic guard exists yet, so GetAtomicGuardAsync returns null.
-                // Store with a null atomic guard creates a new document.
+                // Empty string means NEW document (no existing atomic guard)
                 session.Advanced.ClusterTransaction
-                    .Store("users/1", new User { Name = "NewDoc" }, atomicGuardChangeVector: null);
+                    .Store("users/1", new User { Name = "NewDoc" }, atomicGuardChangeVector: string.Empty);
 
                 await session.SaveChangesAsync();
             }
@@ -2418,6 +2417,34 @@ select incl(c)"
                 var loaded = await session.LoadAsync<User>("users/1");
                 Assert.NotNull(loaded);
                 Assert.Equal("NewDoc", loaded.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionStore_EmptyGuardFailsOnExistingDocument()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                // Empty string means NEW but the document already exists → concurrency error
+                session.Advanced.ClusterTransaction
+                    .Store("users/1", new User { Name = "Indych" }, atomicGuardChangeVector: string.Empty);
+
+                await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(() =>
+                    session.SaveChangesAsync());
             }
         }
 

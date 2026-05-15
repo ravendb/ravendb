@@ -75,6 +75,12 @@ namespace Raven.Client.Documents.Session
                     }
                 }
 
+                if (changeVector != null)
+                {
+                    _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    _missingDocumentsToAtomicGuardIndex[documentId] = changeVector;
+                }
+
                 return changeVector;
             }
         }
@@ -154,7 +160,9 @@ namespace Raven.Client.Documents.Session
                 && existing.Id != null
                 && existing.Id.Equals(documentId, StringComparison.OrdinalIgnoreCase) == false)
             {
-                throw new NonUniqueObjectException("Attempted to associate a different object with id '" + existing.Id + "'.");
+                throw new NonUniqueObjectException(
+                    $"Attempted to associate a different object with id '{documentId}'. " +
+                    $"The entity is already tracked with id '{existing.Id}'.");
             }
 
             // Same entity, same ID → just update the atomic guard CV
@@ -176,10 +184,8 @@ namespace Raven.Client.Documents.Session
 
             session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, documentId);
 
-            var conventions = session.RequestExecutor.Conventions;
             var metadata = InMemoryDocumentSessionOperations.CreateDocumentMetadata(entity,
-                conventions.GetCollectionName(entity),
-                conventions.GetClrTypeName(entity));
+                session.RequestExecutor.Conventions);
 
             session.StoreEntityInUnitOfWork(documentId, entity, atomicGuardChangeVector, metadata, ConcurrencyCheckMode.Auto);
         }
