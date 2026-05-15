@@ -794,7 +794,6 @@ more responsive application.
             // to detect if they generate duplicates.
             AssertNoNonUniqueInstance(entity, id);
 
-            var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
             var metadata = CreateDocumentMetadata(entity, _requestExecutor.Conventions);
 
             if (id != null)
