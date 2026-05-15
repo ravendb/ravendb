@@ -1,18 +1,34 @@
+import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { FormGroup, FormSelect, FormSwitch } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
-import { clusterSelectors } from "components/common/shell/clusterSlice";
-import { useAppSelector } from "components/store";
-import { useFormContext, useWatch } from "react-hook-form";
-import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
 import { SelectOption } from "components/common/select/Select";
+import { clusterSelectors } from "components/common/shell/clusterSlice";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppSelector } from "components/store";
+import { FieldValues, FieldPath, useWatch, UseControllerProps } from "react-hook-form";
 
-export default function EditGenAiTaskNodeField() {
-    const { control } = useFormContext<EditGenAiTaskFormData>();
-    const formValues = useWatch<EditGenAiTaskFormData>({ control });
+interface FormTaskResponsibleNodeProps<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+> {
+    control: UseControllerProps<TFieldValues>["control"];
+    isSetName: TName;
+    nodeName: TName;
+    isPinName: TName;
+}
 
-    const nodes = useAppSelector(clusterSelectors.allNodes);
+export function FormTaskResponsibleNode<
+    TFieldValues extends FieldValues = FieldValues,
+    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>({ control, isSetName, nodeName, isPinName }: FormTaskResponsibleNodeProps<TFieldValues, TName>) {
+    const isSet = useWatch({ control, name: isSetName });
+    const responsibleNode = useWatch({ control, name: nodeName });
+    const isPin = useWatch({ control, name: isPinName });
 
-    const possibleMentorOptions: SelectOption[] = nodes
+    const isDatabaseSharded = useAppSelector(databaseSelectors.activeDatabase)?.isSharded ?? false;
+    const allNodes = useAppSelector(clusterSelectors.allNodes);
+
+    const possibleMentorOptions: SelectOption[] = allNodes
         .filter((x) => x.type === "Member")
         .map((x) => ({ value: x.nodeTag, label: `Node ${x.nodeTag}` }));
 
@@ -24,26 +40,31 @@ export default function EditGenAiTaskNodeField() {
                 </RichAlert>
             )}
             <FormGroup>
-                <FormSwitch control={control} name="isSetResponsibleNode">
-                    Set Responsible Node
-                </FormSwitch>
+                <ConditionalPopover
+                    conditions={[
+                        {
+                            isActive: isDatabaseSharded,
+                            message: "This option is not respected in case of sharded databases.",
+                        },
+                    ]}
+                >
+                    <FormSwitch control={control} name={isSetName} disabled={isDatabaseSharded}>
+                        Set Responsible Node
+                    </FormSwitch>
+                </ConditionalPopover>
             </FormGroup>
-            {formValues.isSetResponsibleNode && (
+            {isSet && (
                 <>
                     <FormGroup>
-                        <FormSelect control={control} name="responsibleNode" options={possibleMentorOptions} />
+                        <FormSelect control={control} name={nodeName} options={possibleMentorOptions} />
                     </FormGroup>
-                    {formValues.responsibleNode && (
+                    {responsibleNode && (
                         <FormGroup>
-                            <FormSwitch
-                                control={control}
-                                name="isPinResponsibleNode"
-                                title="Toggle on to pin selected node"
-                            >
+                            <FormSwitch control={control} name={isPinName} title="Toggle on to pin selected node">
                                 Pin node
                             </FormSwitch>
-                            <RichAlert variant="info">
-                                {formValues.isPinResponsibleNode ? (
+                            <RichAlert variant="info" className="mt-2">
+                                {isPin ? (
                                     <>
                                         The selected node is now Pinned to handle this task.
                                         <br />
@@ -61,10 +82,6 @@ export default function EditGenAiTaskNodeField() {
                                         to handle the task.
                                     </>
                                 )}
-                                <strong>
-                                    <br />
-                                    This option won&apos;t be respected in case of sharded databases.
-                                </strong>
                             </RichAlert>
                         </FormGroup>
                     )}

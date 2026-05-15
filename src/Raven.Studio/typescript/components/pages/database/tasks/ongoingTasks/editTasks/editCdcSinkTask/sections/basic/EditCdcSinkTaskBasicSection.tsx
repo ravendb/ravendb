@@ -1,7 +1,6 @@
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import CollapseButton from "components/common/CollapseButton";
 import { SelectOption } from "components/common/select/Select";
-import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useBoolean from "components/hooks/useBoolean";
 import { useServices } from "components/hooks/useServices";
@@ -17,6 +16,7 @@ import { FormErrorIcon, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch 
 import RichAlert from "components/common/RichAlert";
 import { useEffect, useMemo } from "react";
 import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
+import { FormTaskResponsibleNode } from "components/common/formFields/FormTaskResponsibleNode";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -24,7 +24,6 @@ export default function EditCdcSinkTaskBasicSection() {
     const dispatch = useAppDispatch();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const nodes = useAppSelector(clusterSelectors.allNodes);
 
     const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
     const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
@@ -67,10 +66,6 @@ export default function EditCdcSinkTaskBasicSection() {
         selectedConnectionString?.FactoryName === "Npgsql" ||
         Boolean(formValues.postgresPublicationName || formValues.postgresSlotName);
 
-    const possibleMentorOptions: SelectOption[] = nodes
-        .filter((x) => x.type === "Member")
-        .map((x) => ({ value: x.nodeTag, label: `Node ${x.nodeTag}` }));
-
     const handleConnectionStringSave = async (connectionName: string) => {
         await asyncGetConnectionStrings.execute();
 
@@ -102,15 +97,7 @@ export default function EditCdcSinkTaskBasicSection() {
                     <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                         <FormGroup>
                             <FormLabel>Task Name</FormLabel>
-                            <FormInput
-                                type="text"
-                                control={control}
-                                name="name"
-                                placeholder="My CDC Sink task"
-                                rules={{
-                                    required: "Task name is required",
-                                }}
-                            />
+                            <FormInput type="text" control={control} name="name" placeholder="My CDC Sink task" />
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Task State</FormLabel>
@@ -124,9 +111,6 @@ export default function EditCdcSinkTaskBasicSection() {
                                     name="connectionStringName"
                                     options={connectionStringOptions}
                                     isLoading={asyncGetConnectionStrings.loading}
-                                    rules={{
-                                        required: "Connection string is required",
-                                    }}
                                 />
                                 <InputGroup.Text>
                                     <ButtonWithSpinner
@@ -174,45 +158,12 @@ export default function EditCdcSinkTaskBasicSection() {
                                 </FormGroup>
                             </>
                         )}
-                        <FormGroup>
-                            {possibleMentorOptions.length === 0 && (
-                                <RichAlert variant="warning" className="mb-3">
-                                    Currently, the responsible node cannot be selected because there are no nodes
-                                    available.
-                                </RichAlert>
-                            )}
-                            <FormGroup>
-                                <FormSwitch control={control} name="isSetResponsibleNode">
-                                    Set Responsible Node
-                                </FormSwitch>
-                            </FormGroup>
-                            {formValues.isSetResponsibleNode && (
-                                <>
-                                    <FormGroup>
-                                        <FormSelect
-                                            control={control}
-                                            name="responsibleNode"
-                                            options={possibleMentorOptions}
-                                            rules={{
-                                                required: "Responsible node is required",
-                                            }}
-                                        />
-                                    </FormGroup>
-                                    {formValues.responsibleNode && (
-                                        <FormGroup>
-                                            <FormSwitch control={control} name="isPinResponsibleNode">
-                                                Pin node
-                                            </FormSwitch>
-                                            <RichAlert variant="info" className="mt-2 mb-0">
-                                                {formValues.isPinResponsibleNode
-                                                    ? "The selected node is pinned. If it is unavailable, the task will not move to another node."
-                                                    : "The selected node is preferred. If it is unavailable, another node may take over the task."}
-                                            </RichAlert>
-                                        </FormGroup>
-                                    )}
-                                </>
-                            )}
-                        </FormGroup>
+                        <FormTaskResponsibleNode
+                            control={control}
+                            isSetName="isSetResponsibleNode"
+                            nodeName="responsibleNode"
+                            isPinName="isPinResponsibleNode"
+                        />
                         <FormGroup>
                             <FormSwitch control={control} name="skipInitialLoad">
                                 Skip initial load
