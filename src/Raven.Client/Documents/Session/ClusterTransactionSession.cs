@@ -8,6 +8,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
@@ -72,12 +73,6 @@ namespace Raven.Client.Documents.Session
                     {
                         changeVector = $"TRXN:{value.Index}-{clusterTransactionId}";
                     }
-                }
-
-                if (changeVector != null)
-                {
-                    _missingDocumentsToAtomicGuardIndex ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    _missingDocumentsToAtomicGuardIndex[documentId] = changeVector;
                 }
 
                 return changeVector;
@@ -159,8 +154,7 @@ namespace Raven.Client.Documents.Session
                 && existing.Id != null
                 && existing.Id.Equals(documentId, StringComparison.OrdinalIgnoreCase) == false)
             {
-                throw new InvalidOperationException(
-                    $"Cannot store the same entity (id: {existing.Id}) with a different id ({documentId})");
+                throw new NonUniqueObjectException("Attempted to associate a different object with id '" + existing.Id + "'.");
             }
 
             // Same entity, same ID → just update the atomic guard CV
@@ -173,9 +167,7 @@ namespace Raven.Client.Documents.Session
             // ID already tracked → throw (caller should use a clean session)
             if (session.DocumentsById.TryGetValue(documentId, out _))
             {
-                throw new InvalidOperationException(
-                    $"Document '{documentId}' is already tracked in this session. " +
-                    "Use Load() + modify properties, or open a fresh session.");
+                throw new NonUniqueObjectException("Attempted to associate a different object with id '" + documentId + "'.");
             }
 
             // Check for deferred commands
@@ -185,14 +177,9 @@ namespace Raven.Client.Documents.Session
             session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, documentId);
 
             var conventions = session.RequestExecutor.Conventions;
-            var metadata = new DynamicJsonValue();
-            var collectionName = conventions.GetCollectionName(entity);
-            if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
-
-            var clrType = conventions.GetClrTypeName(entity);
-            if (clrType != null)
-                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+            var metadata = InMemoryDocumentSessionOperations.CreateDocumentMetadata(entity,
+                conventions.GetCollectionName(entity),
+                conventions.GetClrTypeName(entity));
 
             session.StoreEntityInUnitOfWork(documentId, entity, atomicGuardChangeVector, metadata, ConcurrencyCheckMode.Auto);
         }
@@ -718,12 +705,12 @@ namespace Raven.Client.Documents.Session
         /// Stores the given entity under the specified document ID, replacing any existing document content
         /// in a cluster-wide transaction.
         ///
-        /// Unlike session.Store(), this does NOT throw NonUniqueObjectException when a different entity
-        /// instance is already tracked for the same ID. Instead, it throws if the document ID is
-        /// already tracked (callers should use a clean session).
+        /// Unlike session.Store(), this allows storing a different entity instance for the same document ID
+        /// as long as the document is not already tracked in this session.
+        /// If the document ID or entity is already tracked, a <see cref="NonUniqueObjectException"/> is thrown.
         ///
-        /// The atomic guard change vector must be provided — obtain it via GetCompareExchangeValueAsync()
-        /// for "rvn-atomic/{documentId}".
+        /// The atomic guard change vector must be provided — obtain it via
+        /// <see cref="IClusterTransactionOperationsAsync.GetAtomicGuardAsync"/>.
         /// </summary>
         /// <param name="documentId">The document ID to store under</param>
         /// <param name="entity">The entity to store</param>

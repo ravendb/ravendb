@@ -795,18 +795,24 @@ more responsive application.
             AssertNoNonUniqueInstance(entity, id);
 
             var collectionName = _requestExecutor.Conventions.GetCollectionName(entity);
-            var metadata = new DynamicJsonValue();
-            if (collectionName != null)
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
-
-            var clrType = _requestExecutor.Conventions.GetClrTypeName(entity);
-            if (clrType != null)
-                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+            var metadata = CreateDocumentMetadata(entity, collectionName, _requestExecutor.Conventions.GetClrTypeName(entity));
 
             if (id != null)
                 _knownMissingIds.Remove(id);
 
             StoreEntityInUnitOfWork(id, entity, changeVector, metadata, forceConcurrencyCheck);
+        }
+
+        internal static DynamicJsonValue CreateDocumentMetadata(object entity, string collectionName, string clrType)
+        {
+            var metadata = new DynamicJsonValue();
+            if (collectionName != null)
+                metadata[Constants.Documents.Metadata.Collection] = collectionName;
+
+            if (clrType != null)
+                metadata[Constants.Documents.Metadata.RavenClrType] = clrType;
+
+            return metadata;
         }
 
         public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
