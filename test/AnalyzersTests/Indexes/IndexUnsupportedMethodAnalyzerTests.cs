@@ -266,5 +266,57 @@ class Product { public string Name { get; set; } public int Rating { get; set; }
             Assert.Equal(2, diagnostics.Length);
             Assert.All(diagnostics, d => Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id));
         }
+
+        [Fact]
+        public async Task UserMethod_In_ExpressionBodied_Ctor_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex() =>
+        Map = products => from p in products select new { Name = MyHelpers.Normalize(p.Name) };
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task UserMethod_In_ThisMap_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyHelpers
+{
+    public static string Normalize(string s) => s.ToLower();
+}
+
+class ProductIndex : AbstractIndexCreationTask<Product>
+{
+    public ProductIndex()
+    {
+        this.Map = products => from p in products select new { Name = MyHelpers.Normalize(p.Name) };
+    }
+}
+
+class Product { public string Name { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexUnsupportedMethodAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexUnsupportedMethodCall, d.Id);
+            Assert.Contains("Normalize", d.GetMessage());
+        }
     }
 }

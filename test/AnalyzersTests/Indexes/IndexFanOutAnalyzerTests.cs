@@ -276,5 +276,47 @@ class Order { public IEnumerable<string> Tags { get; set; } }
             Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
             Assert.Contains("SelectMany", d.GetMessage());
         }
+
+        [Fact]
+        public async Task Map_ExpressionBodied_Ctor_WithSelectMany_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex() =>
+        Map = orders => orders.SelectMany(o => o.Tags).Select(t => new { Tag = t });
+}
+
+class Order { public IEnumerable<string> Tags { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
+            Assert.Contains("SelectMany", d.GetMessage());
+        }
+
+        [Fact]
+        public async Task ThisMap_WithSelectMany_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class OrderIndex : AbstractIndexCreationTask<Order>
+{
+    public OrderIndex()
+    {
+        this.Map = orders => orders.SelectMany(o => o.Tags).Select(t => new { Tag = t });
+    }
+}
+
+class Order { public IEnumerable<string> Tags { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexFanOutAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexFanOut, d.Id);
+            Assert.Contains("SelectMany", d.GetMessage());
+        }
     }
 }

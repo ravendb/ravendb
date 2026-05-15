@@ -64,7 +64,7 @@ namespace Raven.Analyzers.Indexes
             // RVN004 — No constructor assigns Map
             bool mapAssignedInCtor = classDecl.Members
                 .OfType<ConstructorDeclarationSyntax>()
-                .Any(ctor => ctor.Body != null && ContainsMapAssignment(ctor.Body, context.SemanticModel));
+                .Any(ctor => ctor.GetBodyNode() is SyntaxNode body && ContainsMapAssignment(body, context.SemanticModel));
 
             if (!mapAssignedInCtor)
             {
@@ -81,8 +81,7 @@ namespace Raven.Analyzers.Indexes
         {
             int totalAddMapCount = classDecl.Members
                 .OfType<ConstructorDeclarationSyntax>()
-                .Where(ctor => ctor.Body != null)
-                .Sum(ctor => CountAddMapInvocations(ctor.Body!, context.SemanticModel));
+                .Sum(ctor => ctor.GetBodyNode() is SyntaxNode body ? CountAddMapInvocations(body, context.SemanticModel) : 0);
 
             if (totalAddMapCount == 0)
             {
@@ -106,21 +105,23 @@ namespace Raven.Analyzers.Indexes
             SyntaxNodeAnalysisContext context,
             MethodDeclarationSyntax method)
         {
-            if (method.Body == null)
+            SyntaxNode? body = method.GetBodyNode();
+            if (body == null)
                 return;
 
             foreach (AssignmentExpressionSyntax assignment in
-                method.Body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+                body.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
-                if (assignment.Left is not IdentifierNameSyntax identifier)
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                if (nameNode == null)
                     continue;
 
-                string name = identifier.Identifier.Text;
+                string name = nameNode.Identifier.Text;
                 if (name != KnownTypes.MapFieldName && name != KnownTypes.ReduceFieldName)
                     continue;
 
                 // Confirm it resolves to the actual Map/Reduce property on an index base class
-                ISymbol? symbol = context.SemanticModel.GetSymbolInfo(identifier).Symbol;
+                ISymbol? symbol = context.SemanticModel.GetSymbolInfo(nameNode).Symbol;
                 if (symbol is (IFieldSymbol or IPropertySymbol)
                     && SyntaxHelpers.IsDefinedOnIndexBase(symbol.ContainingType))
                 {
@@ -132,18 +133,16 @@ namespace Raven.Analyzers.Indexes
             }
         }
 
-        private static bool ContainsMapAssignment(BlockSyntax body, SemanticModel model)
+        private static bool ContainsMapAssignment(SyntaxNode node, SemanticModel model)
         {
             foreach (AssignmentExpressionSyntax assignment in
-                body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+                node.DescendantNodesAndSelf().OfType<AssignmentExpressionSyntax>())
             {
-                if (assignment.Left is not IdentifierNameSyntax identifier)
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
                     continue;
 
-                if (identifier.Identifier.Text != KnownTypes.MapFieldName)
-                    continue;
-
-                ISymbol? symbol = model.GetSymbolInfo(identifier).Symbol;
+                ISymbol? symbol = model.GetSymbolInfo(nameNode).Symbol;
                 if (symbol is (IFieldSymbol or IPropertySymbol)
                     && SyntaxHelpers.IsDefinedOnIndexBase(symbol.ContainingType))
                 {
@@ -154,12 +153,12 @@ namespace Raven.Analyzers.Indexes
             return false;
         }
 
-        private static int CountAddMapInvocations(BlockSyntax body, SemanticModel model)
+        private static int CountAddMapInvocations(SyntaxNode node, SemanticModel model)
         {
             int count = 0;
 
             foreach (InvocationExpressionSyntax invocation in
-                body.DescendantNodes().OfType<InvocationExpressionSyntax>())
+                node.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
                 string? methodName = SyntaxHelpers.GetMethodName(invocation);
                 if (methodName != KnownTypes.AddMapMethodName && methodName != KnownTypes.AddMapForAllMethodName)

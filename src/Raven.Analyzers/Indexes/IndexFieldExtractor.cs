@@ -67,14 +67,15 @@ namespace Raven.Analyzers.Indexes
                 foreach (ConstructorDeclarationSyntax ctor in classDecl.Members
                     .OfType<ConstructorDeclarationSyntax>())
                 {
-                    if (ctor.Body == null)
+                    SyntaxNode? ctorBody = ctor.GetBodyNode();
+                    if (ctorBody == null)
                         continue;
 
                     // Bail if the constructor uses dynamic field creation
-                    if (ContainsDynamicFieldCalls(ctor.Body, bailOnStoreAllFields))
+                    if (ContainsDynamicFieldCalls(ctorBody, bailOnStoreAllFields))
                         return IndexFieldSet.Bail;
 
-                    IndexFieldInspection result = ExtractFromCtorBody(ctor.Body, model, allFields);
+                    IndexFieldInspection result = ExtractFromCtorBody(ctorBody, model, allFields);
                     if (result == IndexFieldInspection.BailCannotAnalyze)
                         return IndexFieldSet.Bail;
                 }
@@ -84,9 +85,9 @@ namespace Raven.Analyzers.Indexes
         }
 
 
-        private static bool ContainsDynamicFieldCalls(BlockSyntax body, bool bailOnStoreAllFields = true)
+        private static bool ContainsDynamicFieldCalls(SyntaxNode body, bool bailOnStoreAllFields = true)
         {
-            foreach (InvocationExpressionSyntax inv in body.DescendantNodes().OfType<InvocationExpressionSyntax>())
+            foreach (InvocationExpressionSyntax inv in body.DescendantNodesAndSelf().OfType<InvocationExpressionSyntax>())
             {
                 string? name = SyntaxHelpers.GetMethodName(inv);
                 // Also handle plain identifier calls like CreateField(...) without this. prefix
@@ -107,26 +108,28 @@ namespace Raven.Analyzers.Indexes
         }
 
         private static IndexFieldInspection ExtractFromCtorBody(
-            BlockSyntax body,
+            SyntaxNode body,
             SemanticModel model,
             HashSet<string> fields)
         {
-            foreach (SyntaxNode node in body.DescendantNodes())
+            foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
                 ExpressionSyntax? lambdaBody = null;
 
-                // Map = lambda
-                if (node is AssignmentExpressionSyntax assignment
-                    && assignment.Left is IdentifierNameSyntax identifier
-                    && identifier.Identifier.Text == KnownTypes.MapFieldName)
+                // Map = lambda  /  this.Map = lambda  /  base.Map = lambda
+                if (node is AssignmentExpressionSyntax assignment)
                 {
-                    ISymbol? sym = model.GetSymbolInfo(identifier).Symbol;
-                    if (sym is (IFieldSymbol or IPropertySymbol)
-                        && SyntaxHelpers.IsDefinedOnIndexBase(sym.ContainingType))
+                    SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                    if (nameNode != null && nameNode.Identifier.Text == KnownTypes.MapFieldName)
                     {
-                        lambdaBody = ExtractLambdaBody(assignment.Right);
-                        if (lambdaBody == null)
-                            return IndexFieldInspection.BailCannotAnalyze;
+                        ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
+                        if (sym is (IFieldSymbol or IPropertySymbol)
+                            && SyntaxHelpers.IsDefinedOnIndexBase(sym.ContainingType))
+                        {
+                            lambdaBody = ExtractLambdaBody(assignment.Right);
+                            if (lambdaBody == null)
+                                return IndexFieldInspection.BailCannotAnalyze;
+                        }
                     }
                 }
 
