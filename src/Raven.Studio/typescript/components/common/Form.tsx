@@ -2,6 +2,7 @@ import React, { ComponentProps, ReactNode, useCallback, useEffect, useRef, useSt
 import genUtils from "common/generalUtils";
 import { Checkbox, CheckboxProps, Radio, Switch } from "components/common/Checkbox";
 import {
+    ArrayPath,
     Control,
     ControllerProps,
     FieldError,
@@ -945,7 +946,7 @@ export const FormVerificationCodeInput = ({ name, control, onLastDigitInsertSubm
 
 interface FormErrorIconProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
-    paths: FieldPath<TFieldValues>[];
+    paths: (FieldPath<TFieldValues> | ArrayPath<TFieldValues>)[];
     onError?: () => void;
     errorMessage?: ReactNode;
 }
@@ -981,7 +982,7 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
 
 interface UseErrorMessageProps<TFieldValues extends FieldValues> {
     control: Control<TFieldValues>;
-    paths: FieldPath<TFieldValues>[];
+    paths: (FieldPath<TFieldValues> | ArrayPath<TFieldValues>)[];
 }
 
 export function useErrorMessage<TFieldValues extends FieldValues>({
@@ -990,7 +991,7 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
 }: UseErrorMessageProps<TFieldValues>) {
     const formState = useFormState({
         control,
-        name: paths,
+        name: paths as FieldPath<TFieldValues>[],
     });
 
     let error: FieldError = undefined;

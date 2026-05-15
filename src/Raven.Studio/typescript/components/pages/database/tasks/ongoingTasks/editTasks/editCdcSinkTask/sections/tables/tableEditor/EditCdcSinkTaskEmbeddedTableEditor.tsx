@@ -7,7 +7,7 @@ import EditCdcSinkTaskAdvancedSettings from "./EditCdcSinkTaskAdvancedSettings";
 import EditCdcSinkTaskFieldMapping from "./EditCdcSinkTaskFieldMapping";
 import EditCdcSinkTaskOnDeleteFields from "./EditCdcSinkTaskOnDeleteFields";
 import EditCdcSinkTaskPatchAdvancedField from "./EditCdcSinkTaskPatchAdvancedField";
-import EditCdcSinkTaskStringValueList from "./EditCdcSinkTaskStringValueList";
+import FormStringValueList from "components/common/formFields/FormStringValueList";
 
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
 
@@ -41,15 +41,23 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                     <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
-            <EditCdcSinkTaskStringValueList
+            <FormStringValueList
                 title="Primary key columns"
                 addButtonLabel="Add primary key column"
-                path={`${path}.primaryKeyColumns`}
+                control={control}
+                name={`${path}.primaryKeyColumns`}
+                fieldNameAccessor={(idx) => `${path}.primaryKeyColumns.${idx}.value`}
+                defaultValue={{ value: "" }}
+                className="mb-2"
             />
-            <EditCdcSinkTaskStringValueList
+            <FormStringValueList
                 title="Join columns"
                 addButtonLabel="Add join column"
-                path={`${path}.joinColumns`}
+                control={control}
+                name={`${path}.joinColumns`}
+                fieldNameAccessor={(idx) => `${path}.joinColumns.${idx}.value`}
+                defaultValue={{ value: "" }}
+                className="mb-2"
             />
             <EditCdcSinkTaskFieldMapping path={path} />
             <EditCdcSinkTaskAdvancedSettings hasAdvancedValues={hasAdvancedValues}>

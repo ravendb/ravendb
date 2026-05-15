@@ -1,8 +1,8 @@
 import { FormGroup, FormInput, FormLabel } from "components/common/Form";
+import FormStringValueList from "components/common/formFields/FormStringValueList";
 import { LinkedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useFormContext } from "react-hook-form";
-import EditCdcSinkTaskStringValueListEditor from "./EditCdcSinkTaskStringValueList";
 
 export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: LinkedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
@@ -27,10 +27,13 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
                     <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
-            <EditCdcSinkTaskStringValueListEditor
+            <FormStringValueList
                 title="Join columns"
                 addButtonLabel="Add join column"
-                path={`${path}.joinColumns`}
+                control={control}
+                name={`${path}.joinColumns`}
+                fieldNameAccessor={(idx) => `${path}.joinColumns.${idx}.value`}
+                defaultValue={{ value: "" }}
             />
         </div>
     );
