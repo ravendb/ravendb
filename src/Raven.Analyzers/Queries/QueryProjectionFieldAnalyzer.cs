@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
@@ -38,6 +39,7 @@ namespace Raven.Analyzers.Queries
                     SymbolEqualityComparer.Default);
                 var mapFieldCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
                     SymbolEqualityComparer.Default);
+                var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
 
                 startCtx.RegisterSymbolAction(symCtx =>
                 {
@@ -60,29 +62,38 @@ namespace Raven.Analyzers.Queries
                     indexByName.TryAdd(indexKey, type);
                 }, SymbolKind.NamedType);
 
-                startCtx.RegisterSyntaxNodeAction(
-                    ctx => AnalyzeInvocation(ctx, indexByName, storedFieldCache, mapFieldCache),
-                    SyntaxKind.InvocationExpression);
+                startCtx.RegisterSyntaxNodeAction(ctx =>
+                {
+                    var invocation = (InvocationExpressionSyntax)ctx.Node;
+                    string? methodName = SyntaxHelpers.GetMethodName(invocation);
+                    if (methodName != KnownTypes.ProjectIntoMethodName && methodName != KnownTypes.SelectMethodName)
+                        return;
+                    pending.Add((invocation, ctx.SemanticModel));
+                }, SyntaxKind.InvocationExpression);
+
+                startCtx.RegisterCompilationEndAction(endCtx =>
+                {
+                    foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
+                        AnalyzeInvocation(model, invocation, indexByName, storedFieldCache, mapFieldCache, endCtx.ReportDiagnostic);
+                });
             });
         }
 
         private static void AnalyzeInvocation(
-            SyntaxNodeAnalysisContext context,
+            SemanticModel model,
+            InvocationExpressionSyntax invocation,
             ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
             ConcurrentDictionary<INamedTypeSymbol, IndexStoredFieldSet> storedFieldCache,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache)
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> mapFieldCache,
+            Action<Diagnostic> reportDiagnostic)
         {
-            var invocation = (InvocationExpressionSyntax)context.Node;
-
             string? methodName = SyntaxHelpers.GetMethodName(invocation);
-            if (methodName != KnownTypes.ProjectIntoMethodName && methodName != KnownTypes.SelectMethodName)
-                return;
 
             // The receiver must be an IRavenQueryable<T>
             if (invocation.Expression is not MemberAccessExpressionSyntax memberAccess)
                 return;
 
-            ITypeSymbol? receiverType = context.SemanticModel.GetTypeInfo(memberAccess.Expression).Type;
+            ITypeSymbol? receiverType = model.GetTypeInfo(memberAccess.Expression).Type;
             if (!SyntaxHelpers.IsRavenQueryable(receiverType))
                 return;
 
@@ -91,20 +102,20 @@ namespace Raven.Analyzers.Queries
             if (queryCall == null)
                 return;
 
-            if (!QueryIndexResolver.IsSessionQueryCall(queryCall, context.SemanticModel))
+            if (!QueryIndexResolver.IsSessionQueryCall(queryCall, model))
                 return;
 
-            INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryCall, context.SemanticModel, indexByName);
+            INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryCall, model, indexByName);
             if (indexClass == null)
                 return;
 
-            INamedTypeSymbol? sourceType = QueryIndexResolver.ResolveSourceType(queryCall, context.SemanticModel);
+            INamedTypeSymbol? sourceType = QueryIndexResolver.ResolveSourceType(queryCall, model);
             if (sourceType == null)
                 return;
 
             // Extract stored fields from the index (bail if analysis not possible); cached per compilation
             IndexStoredFieldSet storedSet = storedFieldCache.GetOrAdd(indexClass,
-                ic => IndexStoredFieldExtractor.Extract(ic, context.SemanticModel.Compilation));
+                ic => IndexStoredFieldExtractor.Extract(ic, model.Compilation));
             if (storedSet.Status == StoredFieldsStatus.BailCannotAnalyze)
                 return;
 
@@ -113,7 +124,7 @@ namespace Raven.Analyzers.Queries
             if (storedSet.Status == StoredFieldsStatus.AllStored)
             {
                 IndexFieldSet mapFields = mapFieldCache.GetOrAdd(indexClass,
-                    ic => IndexFieldExtractor.ExtractMapFieldsIgnoringStoreAll(ic, context.SemanticModel.Compilation));
+                    ic => IndexFieldExtractor.ExtractMapFieldsIgnoringStoreAll(ic, model.Compilation));
                 if (mapFields.Status == IndexFieldInspection.BailCannotAnalyze)
                     return;
                 storedFields = mapFields.Fields;
@@ -133,11 +144,11 @@ namespace Raven.Analyzers.Queries
             // Now check projected fields based on which form this is
             if (methodName == KnownTypes.ProjectIntoMethodName)
             {
-                CheckProjectInto(context, invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior);
+                CheckProjectInto(model, invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior, reportDiagnostic);
             }
             else // Select
             {
-                CheckSelect(context, invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior);
+                CheckSelect(invocation, storedFields, sourceMembers, indexClass.Name, sourceType.Name, behavior, reportDiagnostic);
             }
         }
 
@@ -207,13 +218,14 @@ namespace Raven.Analyzers.Queries
         }
 
         private static void CheckProjectInto(
-            SyntaxNodeAnalysisContext context,
+            SemanticModel model,
             InvocationExpressionSyntax invocation,
             ImmutableHashSet<string> storedFields,
             ImmutableHashSet<string> sourceMembers,
             string indexName,
             string sourceName,
-            string behavior)
+            string behavior,
+            Action<Diagnostic> reportDiagnostic)
         {
             // ProjectInto<T>() — get the type argument
             if (invocation.Expression is not MemberAccessExpressionSyntax ma)
@@ -225,7 +237,7 @@ namespace Raven.Analyzers.Queries
             if (typeArgs.Count != 1)
                 return;
 
-            ITypeSymbol? typeArgSymbol = context.SemanticModel.GetTypeInfo(typeArgs[0]).Type;
+            ITypeSymbol? typeArgSymbol = model.GetTypeInfo(typeArgs[0]).Type;
             if (typeArgSymbol is not INamedTypeSymbol projectionType)
                 return;
 
@@ -240,7 +252,7 @@ namespace Raven.Analyzers.Queries
             {
                 if (!IsFieldRetrievable(field, storedFields, sourceMembers, behavior))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(
+                    reportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.QueryProjectionFieldNotRetrievable,
                         reportLocation,
                         field,
@@ -252,13 +264,13 @@ namespace Raven.Analyzers.Queries
         }
 
         private static void CheckSelect(
-            SyntaxNodeAnalysisContext context,
             InvocationExpressionSyntax invocation,
             ImmutableHashSet<string> storedFields,
             ImmutableHashSet<string> sourceMembers,
             string indexName,
             string sourceName,
-            string behavior)
+            string behavior,
+            Action<Diagnostic> reportDiagnostic)
         {
             SeparatedSyntaxList<ArgumentSyntax> args = invocation.ArgumentList.Arguments;
             if (args.Count == 0)
@@ -278,8 +290,8 @@ namespace Raven.Analyzers.Queries
             {
                 foreach (AnonymousObjectMemberDeclaratorSyntax initializer in anon.Initializers)
                 {
-                    CheckSelectInitializerRhs(context, initializer.Expression, paramName,
-                        storedFields, sourceMembers, indexName, sourceName, behavior);
+                    CheckSelectInitializerRhs(initializer.Expression, paramName,
+                        storedFields, sourceMembers, indexName, sourceName, behavior, reportDiagnostic);
                 }
                 return;
             }
@@ -287,8 +299,8 @@ namespace Raven.Analyzers.Queries
             // Select(x => new Dto { X = x.A }) — named object initializer
             if (lambdaBody is ObjectCreationExpressionSyntax objCreation)
             {
-                CheckObjectInitializer(context, objCreation.Initializer, paramName,
-                    storedFields, sourceMembers, indexName, sourceName, behavior);
+                CheckObjectInitializer(objCreation.Initializer, paramName,
+                    storedFields, sourceMembers, indexName, sourceName, behavior, reportDiagnostic);
                 return;
             }
 
@@ -296,14 +308,14 @@ namespace Raven.Analyzers.Queries
         }
 
         private static void CheckObjectInitializer(
-            SyntaxNodeAnalysisContext context,
             InitializerExpressionSyntax? initializer,
             string paramName,
             ImmutableHashSet<string> storedFields,
             ImmutableHashSet<string> sourceMembers,
             string indexName,
             string sourceName,
-            string behavior)
+            string behavior,
+            Action<Diagnostic> reportDiagnostic)
         {
             if (initializer == null || !initializer.IsKind(SyntaxKind.ObjectInitializerExpression))
                 return;
@@ -314,20 +326,20 @@ namespace Raven.Analyzers.Queries
                     continue;
 
                 // Check the RHS source field
-                CheckSelectInitializerRhs(context, assignment.Right, paramName,
-                    storedFields, sourceMembers, indexName, sourceName, behavior);
+                CheckSelectInitializerRhs(assignment.Right, paramName,
+                    storedFields, sourceMembers, indexName, sourceName, behavior, reportDiagnostic);
             }
         }
 
         private static void CheckSelectInitializerRhs(
-            SyntaxNodeAnalysisContext context,
             ExpressionSyntax rhs,
             string paramName,
             ImmutableHashSet<string> storedFields,
             ImmutableHashSet<string> sourceMembers,
             string indexName,
             string sourceName,
-            string behavior)
+            string behavior,
+            Action<Diagnostic> reportDiagnostic)
         {
             // Only check first-hop member access off the lambda parameter: x.Field
             if (rhs is not MemberAccessExpressionSyntax memberAccess)
@@ -342,7 +354,7 @@ namespace Raven.Analyzers.Queries
             // Under Default behavior the field is on source doc by C# compile check → only warn for FromIndex*
             if (!IsFieldRetrievable(fieldName, storedFields, sourceMembers, behavior))
             {
-                context.ReportDiagnostic(Diagnostic.Create(
+                reportDiagnostic(Diagnostic.Create(
                     DiagnosticDescriptors.QueryProjectionFieldNotRetrievable,
                     memberAccess.GetLocation(),
                     fieldName,

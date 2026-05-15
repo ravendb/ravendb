@@ -223,5 +223,113 @@ class Order { public string Id { get; set; } }
 
             Assert.Empty(diagnostics);
         }
+
+        // ── Expression-bodied constructor coverage ───────────────────────────────
+
+        [Fact]
+        public async Task Map_Assigned_In_ExpressionBodied_Ctor_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex() => Map = orders => from o in orders select new { o.Id };
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task Map_Assigned_In_Method_ExpressionBody_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex() { }
+    private void Configure() => Map = orders => from o in orders select new { o.Id };
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            // RVN001 for the out-of-ctor assignment; RVN004 because the ctor body is empty
+            Assert.Contains(diagnostics, d => d.Id == DiagnosticIds.IndexMapAssignedOutsideCtor);
+        }
+
+        [Fact]
+        public async Task MultiMap_AddMap_In_ExpressionBodied_Ctor_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyMultiMapIndex : AbstractMultiMapIndexCreationTask
+{
+    public MyMultiMapIndex()
+    {
+        AddMap<Order>(orders => from o in orders select new { o.Id });
+        AddMap<Product>(products => from p in products select new { p.Id });
+    }
+}
+
+class Order { public string Id { get; set; } }
+class Product { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        // ── this.Map / base.Map qualified assignment coverage ────────────────────
+
+        [Fact]
+        public async Task ThisMap_Assigned_In_Ctor_No_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex()
+    {
+        this.Map = orders => from o in orders select new { o.Id };
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public async Task ThisMap_Assigned_In_Method_Reports_Diagnostic()
+        {
+            const string source = CommonUsings + @"
+class MyIndex : AbstractIndexCreationTask<Order>
+{
+    public MyIndex()
+    {
+        Map = orders => from o in orders select new { o.Id };
+    }
+
+    public void Reconfigure()
+    {
+        this.Map = orders => from o in orders select new { o.Id, Extra = 1 };
+    }
+}
+
+class Order { public string Id { get; set; } }
+";
+            ImmutableArray<Diagnostic> diagnostics =
+                await RavenAnalyzerTest.AnalyzeAsync<IndexDefinitionAnalyzer>(source);
+
+            Diagnostic d = Assert.Single(diagnostics);
+            Assert.Equal(DiagnosticIds.IndexMapAssignedOutsideCtor, d.Id);
+        }
     }
 }

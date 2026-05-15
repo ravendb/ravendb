@@ -45,16 +45,17 @@ namespace Raven.Analyzers.Indexes
 
             foreach (ConstructorDeclarationSyntax ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
             {
-                if (ctor.Body == null)
+                SyntaxNode? body = ctor.GetBodyNode();
+                if (body == null)
                     continue;
 
-                AnalyzeCtorBody(context, ctor.Body);
+                AnalyzeCtorBody(context, body);
             }
         }
 
-        private static void AnalyzeCtorBody(SyntaxNodeAnalysisContext context, BlockSyntax body)
+        private static void AnalyzeCtorBody(SyntaxNodeAnalysisContext context, SyntaxNode body)
         {
-            foreach (SyntaxNode node in body.DescendantNodes())
+            foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
                 SyntaxNode? lambdaBody = TryGetMapLambdaBody(node, context.SemanticModel);
                 if (lambdaBody == null)
@@ -101,14 +102,14 @@ namespace Raven.Analyzers.Indexes
         // and never produces additional outputs per source document, so it cannot fan out.
         private static SyntaxNode? TryGetMapLambdaBody(SyntaxNode node, SemanticModel model)
         {
-            // Map = lambda
-            if (node is AssignmentExpressionSyntax assignment
-                && assignment.Left is IdentifierNameSyntax identifier)
+            // Map = lambda  /  this.Map = lambda  /  base.Map = lambda
+            if (node is AssignmentExpressionSyntax assignment)
             {
-                if (identifier.Identifier.Text != KnownTypes.MapFieldName)
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                if (nameNode == null || nameNode.Identifier.Text != KnownTypes.MapFieldName)
                     return null;
 
-                ISymbol? sym = model.GetSymbolInfo(identifier).Symbol;
+                ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
                 if (sym is not (IFieldSymbol or IPropertySymbol))
                     return null;
 

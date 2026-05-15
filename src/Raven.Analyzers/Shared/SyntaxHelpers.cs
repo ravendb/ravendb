@@ -164,5 +164,33 @@ namespace Raven.Analyzers.Shared
                 ParenthesizedLambdaExpressionSyntax { Body: ExpressionSyntax e } => e,
                 _ => null,
             };
+
+        /// <summary>
+        /// Returns the effective body of a method-like member as a single <see cref="SyntaxNode"/>:
+        /// the <see cref="BaseMethodDeclarationSyntax.Body"/> block when present, otherwise the
+        /// expression from the <c>=&gt;</c> arrow body, or <c>null</c> when the member has neither
+        /// (e.g. an abstract method or a declaration-only extern).
+        /// Covers constructors, ordinary methods, and any other <see cref="BaseMethodDeclarationSyntax"/>.
+        /// </summary>
+        internal static SyntaxNode? GetBodyNode(this BaseMethodDeclarationSyntax member) =>
+            (SyntaxNode?)member.Body ?? member.ExpressionBody?.Expression;
+
+        /// <summary>
+        /// Extracts the <see cref="SimpleNameSyntax"/> node that names the assigned member from an
+        /// assignment LHS, handling both the bare form (<c>Map = …</c>) and the qualified forms
+        /// (<c>this.Map = …</c> / <c>base.Map = …</c>).
+        /// Returns <c>null</c> for any other LHS shape.
+        /// </summary>
+        internal static SimpleNameSyntax? TryGetMapReduceLhsNameNode(ExpressionSyntax lhs)
+        {
+            if (lhs is IdentifierNameSyntax id)
+                return id;
+
+            if (lhs is MemberAccessExpressionSyntax ma
+                && ma.Expression is ThisExpressionSyntax or BaseExpressionSyntax)
+                return ma.Name;
+
+            return null;
+        }
     }
 }
