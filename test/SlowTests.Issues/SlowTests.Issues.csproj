@@ -81,6 +81,7 @@
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Legacy-Raven-Expiration-Date.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
 	<EmbeddedResource Include="Data\RavenDB_24529\RavenDB_24529.replay" />
   </ItemGroup>
