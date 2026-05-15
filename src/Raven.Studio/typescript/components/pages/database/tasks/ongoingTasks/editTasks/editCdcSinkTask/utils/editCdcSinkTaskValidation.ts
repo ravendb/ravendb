@@ -17,9 +17,6 @@ const cdcColumnMappingSchema = yup.object({
     type: yup.string<CdcColumnType>().required(),
 });
 
-type StringValueItem = yup.InferType<typeof stringValueItemSchema>;
-type CdcColumnMapping = yup.InferType<typeof cdcColumnMappingSchema>;
-
 const hasUniqueValues = <TItem>(items: TItem[], getValue: (item: TItem) => string) => {
     const values = (items ?? [])
         .map(getValue)
@@ -34,17 +31,17 @@ const stringValueListSchema = (uniqueMessage: string) =>
         .array()
         .of(stringValueItemSchema)
         .min(1)
-        .test("unique-values", uniqueMessage, (items) => hasUniqueValues(items, (item: StringValueItem) => item.value));
+        .test("unique-values", uniqueMessage, (items) => hasUniqueValues(items, (item) => item.value));
 
 const cdcColumnMappingsSchema = yup
     .array()
     .of(cdcColumnMappingSchema)
     .min(1)
     .test("unique-source-columns", "Source columns must be unique", (items) =>
-        hasUniqueValues(items, (item: CdcColumnMapping) => item.column)
+        hasUniqueValues(items, (item) => item.column)
     )
     .test("unique-target-columns", "Target columns must be unique", (items) =>
-        hasUniqueValues(items, (item: CdcColumnMapping) => item.name)
+        hasUniqueValues(items, (item) => item.name)
     );
 
 const cdcSinkOnDeleteSchema = yup.object({
