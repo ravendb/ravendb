@@ -29,7 +29,7 @@ import {
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 
 interface EditCdcSinkTaskDiscoveredTableProps {
-    asyncGetSchema: UseAsyncReturn<CdcSinkSchema.CdcSinkSourceSchema, []>;
+    asyncGetSchema: UseAsyncReturn<CdcSinkSchema.CdcSinkSourceSchema, [string[]]>;
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
     widthPx: number;
 }
@@ -66,7 +66,7 @@ export default function EditCdcSinkTaskDiscoveredTable({
     }
 
     if (asyncGetSchema.status === "error") {
-        return <LoadError error="Unable to discover tables" refresh={asyncGetSchema.execute} />;
+        return <LoadError error="Unable to discover tables" />;
     }
 
     const selectedRows = table.getSelectedRowModel().rows;

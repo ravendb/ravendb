@@ -12,6 +12,7 @@ import EditCdcSinkTaskDiscoveredTable from "components/pages/database/tasks/ongo
 import SizeGetter from "components/common/SizeGetter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import EditCdcSinkTaskVerifyResult from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskVerifyResult";
+import EditCdcSinkTaskDiscoverySchemasModal from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoverySchemasModal";
 
 interface EditCdcSinkTaskDiscoverySectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -20,6 +21,7 @@ interface EditCdcSinkTaskDiscoverySectionProps {
 export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: EditCdcSinkTaskDiscoverySectionProps) {
     const { tasksService } = useServices();
     const { value: isPanelOpen, toggle: toggleIsPanelOpen, setTrue: openPanel } = useBoolean(true);
+    const { value: isSchemasModalOpen, setTrue: openSchemasModal, setFalse: closeSchemasModal } = useBoolean(false);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
@@ -28,11 +30,11 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
         name: "connectionStringName",
     });
 
-    const asyncGetSchema = useAsyncCallback(async () => {
+    const asyncGetSchema = useAsyncCallback(async (schemas: string[]) => {
         openPanel();
 
         return await tasksService.getCdcSinkTaskSchema(databaseName, {
-            Schemas: null,
+            Schemas: schemas,
             Connection: null,
             ConnectionStringName: connectionStringName,
         });
@@ -71,7 +73,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                     <ButtonWithSpinner
                         variant="secondary"
                         className="rounded-pill"
-                        onClick={asyncGetSchema.execute}
+                        onClick={openSchemasModal}
                         disabled={!connectionStringName}
                         isSpinning={asyncGetSchema.loading}
                         icon="search"
@@ -79,6 +81,9 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                         Discover tables
                     </ButtonWithSpinner>
                 </ConditionalPopover>
+                {isSchemasModalOpen && (
+                    <EditCdcSinkTaskDiscoverySchemasModal onClose={closeSchemasModal} asyncGetSchema={asyncGetSchema} />
+                )}
                 <ConditionalPopover
                     conditions={[
                         {

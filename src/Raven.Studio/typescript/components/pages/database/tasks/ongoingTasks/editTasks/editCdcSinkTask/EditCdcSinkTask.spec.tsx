@@ -28,6 +28,7 @@ describe("Edit CDC Sink task", () => {
         await selectOption(user, screen, getSelectInputByLabel(screen, "Connection String"), "sql-name");
 
         await user.click(screen.getByRole("button", { name: /Discover tables/i }));
+        await user.click(await screen.findByRole("button", { name: /^Discover$/i }));
         expect(await screen.findByText("dbo.orders")).toBeInTheDocument();
 
         await user.click(screen.getByRole("row", { name: /dbo\.orders/i }).querySelector("input[type='checkbox']"));
