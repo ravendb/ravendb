@@ -50,6 +50,9 @@ namespace Raven.Client.Documents.Session
 
         internal async Task<string> GetAtomicGuardAsyncInternal(string documentId, CancellationToken token = default)
         {
+            if (string.IsNullOrWhiteSpace(documentId))
+                throw new ArgumentNullException(nameof(documentId));
+
             if (TryGetMissingAtomicGuardFor(documentId, out var changeVector))
                 return changeVector;
 
@@ -69,10 +72,10 @@ namespace Raven.Client.Documents.Session
                 if (value.Index > 0)
                 {
                     var clusterTransactionId = _session.SessionInfo?.ClusterTransactionId;
-                    if (clusterTransactionId != null)
-                    {
-                        changeVector = $"TRXN:{value.Index}-{clusterTransactionId}";
-                    }
+                    if (clusterTransactionId == null)
+                        return null; // can't compute change vector without cluster tx id
+
+                    changeVector = $"TRXN:{value.Index}-{clusterTransactionId}";
                 }
 
                 if (changeVector != null)
@@ -181,6 +184,9 @@ namespace Raven.Client.Documents.Session
             // Check for deferred commands
             if (session.DeferredCommandsDictionary.ContainsKey((documentId, CommandType.ClientAnyCommand, null)))
                 throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + documentId);
+
+            if (session.DeletedEntities.Contains(entity))
+                throw new InvalidOperationException("Can't store object, it was already deleted in this session. Document id: " + documentId);
 
             session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, documentId);
 
@@ -711,16 +717,18 @@ namespace Raven.Client.Documents.Session
         /// Stores the given entity under the specified document ID, replacing any existing document content
         /// in a cluster-wide transaction.
         ///
-        /// Unlike session.Store(), this allows storing a different entity instance for the same document ID
-        /// as long as the document is not already tracked in this session.
-        /// If the document ID or entity is already tracked, a <see cref="NonUniqueObjectException"/> is thrown.
+        /// If the same entity instance is already tracked under a different ID, or a different entity
+        /// is already tracked under the same ID, a <see cref="NonUniqueObjectException"/> is thrown.
+        /// If the same entity is already tracked under the same ID, the atomic guard change vector
+        /// is updated on the existing tracking without re-storing.
         ///
         /// The atomic guard change vector must be provided — obtain it via
-        /// <see cref="IClusterTransactionOperationsAsync.GetAtomicGuardAsync"/>.
+        /// <c>session.Advanced.ClusterTransaction.GetAtomicGuardAsync(documentId)</c>.
+        /// Pass <see cref="string.Empty"/> for new documents with no existing atomic guard.
         /// </summary>
         /// <param name="documentId">The document ID to store under</param>
         /// <param name="entity">The entity to store</param>
-        /// <param name="atomicGuardChangeVector">The change vector of the atomic guard (rvn-atomic/{documentId})</param>
+        /// <param name="atomicGuardChangeVector">The change vector of the atomic guard (rvn-atomic/{documentId}), or <see cref="string.Empty"/> for new documents</param>
         void Store(string documentId, object entity, string atomicGuardChangeVector);
     }
 
