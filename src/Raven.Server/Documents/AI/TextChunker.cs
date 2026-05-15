@@ -42,14 +42,15 @@ public static class TextChunker
         if (prefix is null)
             return maxTokensPerChunk;
 
+        // Count tokens for "<prefix> " (with trailing space) to match the emitted "<prefix> <chunk>".
         int prefixTokens;
         if (cache is null)
         {
-            prefixTokens = Tokenizer.CountTokens(prefix);
+            prefixTokens = Tokenizer.CountTokens(prefix + " ");
         }
         else if (cache.TryGetValue(prefix, out prefixTokens) == false)
         {
-            prefixTokens = Tokenizer.CountTokens(prefix);
+            prefixTokens = Tokenizer.CountTokens(prefix + " ");
             cache.Set(prefix, prefixTokens);
         }
 
