@@ -118,7 +118,7 @@ namespace Voron
                     continue;
                 }
 
-                if (env.Disposed)
+                if (env.IsDisposing || env.Disposed)
                     continue;
 
                 if (force == false && envSyncReq.Value.IsRequired == false &&
@@ -159,7 +159,7 @@ namespace Voron
         private void SyncEnvironment(EnvSyncReq req)
         {
             var storageEnvironment = req.Env;
-            if (storageEnvironment == null || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
+            if (storageEnvironment == null || storageEnvironment.IsDisposing || storageEnvironment.Disposed || storageEnvironment.Options.ManualSyncing)
                 return;
 
             try
@@ -171,6 +171,9 @@ namespace Voron
             }
             catch (Exception e)
             {
+                if (storageEnvironment.IsDisposing || storageEnvironment.Disposed)
+                    return;
+
                 if (_log.IsOperationsEnabled)
                     _log.Operations($"Failed to sync data file for {storageEnvironment.Options.BasePath}", e);
                 storageEnvironment.Options.SetCatastrophicFailure(ExceptionDispatchInfo.Capture(e));
@@ -229,9 +232,10 @@ namespace Voron
                 ThreadPool.QueueUserWorkItem(env =>
                 {
                     var storageEnvironment = ((StorageEnvironment)env);
+
                     try
                     {
-                        if (storageEnvironment.Disposed)
+                        if (storageEnvironment.IsDisposing || storageEnvironment.Disposed)
                             return;
 
                         storageEnvironment.BackgroundFlushWritesToDataFile();
@@ -239,6 +243,9 @@ namespace Voron
                     }
                     catch (Exception e)
                     {
+                        if (storageEnvironment.IsDisposing || storageEnvironment.Disposed)
+                            return;
+
                         if (_log.IsOperationsEnabled)
                             _log.Operations($"Failed to flush {storageEnvironment.Options.BasePath}", e);
 
