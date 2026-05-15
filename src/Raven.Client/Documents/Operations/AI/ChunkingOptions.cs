@@ -33,7 +33,8 @@ public class ChunkingOptions : IDynamicJson
     public string ContextPrefix { get; set; }
 
     /// <summary>
-    /// Internal-only marker indicating this instance was produced by <c>text.withContext</c>:
+    /// Internal-only marker indicating this instance was produced by calling
+    /// <c>withContextPrefix</c> on a raw string or string array in an embeddings script:
     /// the value is emitted unchunked with <see cref="ContextPrefix"/> prepended, and
     /// <see cref="MaxTokensPerChunk"/> / <see cref="OverlapTokens"/> are ignored.
     /// Never set by user-constructed config and not serialized.
@@ -61,7 +62,7 @@ public class ChunkingOptions : IDynamicJson
         if (ContextPrefix != null && string.IsNullOrWhiteSpace(ContextPrefix))
             errors.Add($"'{source}': {nameof(ContextPrefix)} cannot be empty or whitespace-only. Either provide a non-empty value or omit it.");
 
-        // NoChunking is set only by text.withContext (script handler) and bypasses the chunking budget rules.
+        // NoChunking is set only by the withContextPrefix script handler on raw strings/arrays and bypasses the chunking budget rules.
         if (NoChunking)
             return;
 
