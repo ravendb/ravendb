@@ -6,10 +6,7 @@ import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoing
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import Collapse from "react-bootstrap/Collapse";
-import { UseFieldArrayReturn } from "react-hook-form";
-import sqlMigration from "models/database/tasks/sql/sqlMigration";
-import { editCdcSinkTaskSelectors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
-import assertUnreachable from "components/utils/assertUnreachable";
+import { UseFieldArrayReturn, useFormContext, useWatch } from "react-hook-form";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import EditCdcSinkTaskDiscoveredTable from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoveredTable";
 import SizeGetter from "components/common/SizeGetter";
@@ -24,34 +21,33 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
     const { tasksService } = useServices();
     const { value: isPanelOpen, toggle: toggleIsPanelOpen, setTrue: openPanel } = useBoolean(true);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionString = useAppSelector(editCdcSinkTaskSelectors.selectedConnectionString);
 
-    const asyncFetchTables = useAsyncCallback(async () => {
+    const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const connectionStringName = useWatch({
+        control,
+        name: "connectionStringName",
+    });
+
+    const asyncGetSchema = useAsyncCallback(async () => {
         openPanel();
-        const provider = getProviderFromFactoryName(connectionString.FactoryName);
 
-        const result = await tasksService.fetchSqlDatabaseSchema(databaseName, {
-            Provider: provider,
-            ConnectionString: connectionString.ConnectionString,
+        return await tasksService.getCdcSinkTaskSchema(databaseName, {
             Schemas: null,
+            Connection: null,
+            ConnectionStringName: connectionStringName,
         });
-
-        const model = new sqlMigration();
-        model.onSchemaUpdated(result);
-
-        return model.tables();
     });
 
     const asyncVerifySource = useAsyncCallback(async () => {
         openPanel();
 
         return await tasksService.verifyCdcSink(databaseName, {
-            ConnectionStringName: connectionString.Name,
-            TableNames: asyncFetchTables.result.map((t) => t.tableName),
+            ConnectionStringName: connectionStringName,
+            TableNames: asyncGetSchema.result?.Tables?.map((t) => t.SourceTableName) ?? [],
         });
     });
 
-    const hasTables = Boolean(asyncFetchTables.result?.length);
+    const hasTables = Boolean(asyncGetSchema.result?.Tables?.length);
 
     return (
         <div className="mt-3">
@@ -66,7 +62,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                 <ConditionalPopover
                     conditions={[
                         {
-                            isActive: !connectionString,
+                            isActive: !connectionStringName,
                             message: "Please provide a connection string to fetch tables.",
                         },
                     ]}
@@ -75,9 +71,9 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                     <ButtonWithSpinner
                         variant="secondary"
                         className="rounded-pill"
-                        onClick={asyncFetchTables.execute}
-                        disabled={!connectionString}
-                        isSpinning={asyncFetchTables.loading}
+                        onClick={asyncGetSchema.execute}
+                        disabled={!connectionStringName}
+                        isSpinning={asyncGetSchema.loading}
                         icon="search"
                     >
                         Discover tables
@@ -86,7 +82,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                 <ConditionalPopover
                     conditions={[
                         {
-                            isActive: !connectionString,
+                            isActive: !connectionStringName,
                             message: "Please provide a connection string to verify source.",
                         },
                         {
@@ -100,7 +96,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                         className="rounded-pill"
                         onClick={asyncVerifySource.execute}
                         isSpinning={asyncVerifySource.loading}
-                        disabled={!hasTables || !connectionString}
+                        disabled={!hasTables || !connectionStringName}
                         icon="test"
                     >
                         Verify source
@@ -114,7 +110,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                         <SizeGetter
                             render={({ width }) => (
                                 <EditCdcSinkTaskDiscoveredTable
-                                    asyncFetchTables={asyncFetchTables}
+                                    asyncGetSchema={asyncGetSchema}
                                     tablesFieldArray={tablesFieldArray}
                                     widthPx={width}
                                 />
@@ -125,24 +121,4 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
             </Collapse>
         </div>
     );
-}
-
-function getProviderFromFactoryName(
-    factoryName: SqlConnectionStringFactoryName
-): Raven.Server.SqlMigration.MigrationProvider {
-    switch (factoryName) {
-        case "Microsoft.Data.SqlClient":
-        case "System.Data.SqlClient":
-            return "MsSQL";
-        case "MySqlConnector.MySqlConnectorFactory":
-            return "MySQL_MySqlConnector";
-        case "MySql.Data.MySqlClient":
-            return "MySQL_MySql_Data";
-        case "Npgsql":
-            return "NpgSQL";
-        case "Oracle.ManagedDataAccess.Client":
-            return "Oracle";
-        default:
-            assertUnreachable(factoryName);
-    }
 }

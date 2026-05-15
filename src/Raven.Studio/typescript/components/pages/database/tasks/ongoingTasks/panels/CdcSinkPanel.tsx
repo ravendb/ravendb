@@ -27,6 +27,7 @@ import { Icon } from "components/common/Icon";
 import moment from "moment";
 import genUtils from "common/generalUtils";
 import RichAlert from "components/common/RichAlert";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type CdcSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskCdcSinkInfo>;
 
@@ -46,6 +47,11 @@ function Details(props: CdcSinkPanelProps & { canEdit: boolean }) {
 
     return (
         <>
+            {data.shared.error && (
+                <div className="mx-3 mt-3">
+                    <RichAlert variant="danger">{data.shared.error}</RichAlert>
+                </div>
+            )}
             {data.shared.healthIssue && (
                 <div className="mx-3 mt-3">
                     <RichAlert variant="warning">{data.shared.healthIssue}</RichAlert>
@@ -110,6 +116,16 @@ export function CdcSinkPanel(props: CdcSinkPanelProps) {
                         </RichPanelSelect>
                     )}
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
+                    {data.shared.error && (
+                        <PopoverWithHoverWrapper message={data.shared.error}>
+                            <Icon icon="danger" color="danger" margin="mx-1" />
+                        </PopoverWithHoverWrapper>
+                    )}
+                    {data.shared.healthIssue && (
+                        <PopoverWithHoverWrapper message={data.shared.healthIssue}>
+                            <Icon icon="warning" color="warning" margin="mx-1" />
+                        </PopoverWithHoverWrapper>
+                    )}
                 </RichPanelInfo>
                 <RichPanelActions>
                     <span>

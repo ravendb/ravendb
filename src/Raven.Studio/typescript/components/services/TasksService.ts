@@ -44,6 +44,7 @@ import fetchSqlDatabaseSchemaCommand from "commands/database/tasks/fetchSqlDatab
 import testCdcSinkCommand from "commands/database/tasks/testCdcSinkCommand";
 import verifyCdcSinkCommand from "commands/database/tasks/verifyCdcSinkCommand";
 import saveCdcSinkTaskCommand from "commands/database/tasks/saveCdcSinkTaskCommand";
+import getCdcSinkTaskSchemaCommand from "commands/database/tasks/getCdcSinkTaskSchemaCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -247,5 +248,9 @@ export default class TasksService {
 
     async saveCdcSinkTask(...args: ConstructorParameters<typeof saveCdcSinkTaskCommand>) {
         return new saveCdcSinkTaskCommand(...args).execute();
+    }
+
+    async getCdcSinkTaskSchema(...args: ConstructorParameters<typeof getCdcSinkTaskSchemaCommand>) {
+        return new getCdcSinkTaskSchemaCommand(...args).execute();
     }
 }

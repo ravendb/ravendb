@@ -3,16 +3,10 @@ import endpoints = require("endpoints");
 
 type CdcSinkVerificationResult = Raven.Server.Documents.CdcSink.CdcSinkVerificationResult;
 
-// TODO Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest
-interface VerifyCdcSinkPayload {
-    ConnectionStringName: string;
-    TableNames?: string[];
-}
-
-class verifyCdcSinkCommand extends commandBase {
+export default class verifyCdcSinkCommand extends commandBase {
     constructor(
         private db: string,
-        private payload: VerifyCdcSinkPayload
+        private payload: Raven.Server.Documents.CdcSink.Handlers.CdcSinkVerifyRequest
     ) {
         super();
     }
@@ -27,5 +21,3 @@ class verifyCdcSinkCommand extends commandBase {
         );
     }
 }
-
-export = verifyCdcSinkCommand;

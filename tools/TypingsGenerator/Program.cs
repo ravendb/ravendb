@@ -145,6 +145,7 @@ using Operation = Raven.Server.Documents.Operations.Operation;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 using Size = Sparrow.Size;
 using Raven.Server.Documents.CdcSink.Stats.Performance;
+using Raven.Server.Documents.CdcSink.Handlers;
 
 namespace TypingsGenerator
 {
@@ -620,6 +621,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CdcSinkPerformanceStats));
             scripter.AddType(typeof(CdcSinkProcessPerformanceStats));
             scripter.AddType(typeof(CdcSinkTaskPerformanceStats));
+            scripter.AddType(typeof(CdcSinkVerifyRequest));
 
 
             // ongoing tasks - Snowflake ETL

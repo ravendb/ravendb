@@ -413,6 +413,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 lastActivityTime: incoming.LastActivityTime,
                 secondsSinceLastActivity: incoming.SecondsSinceLastActivity,
                 healthIssue: incoming.HealthIssue,
+                error: incoming.Error,
             };
             return result;
         }

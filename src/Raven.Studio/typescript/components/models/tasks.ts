@@ -154,6 +154,7 @@ export interface OngoingTaskCdcSinkSharedInfo extends OngoingTaskSharedInfo {
     lastActivityTime?: string;
     secondsSinceLastActivity?: number;
     healthIssue: string;
+    error: string;
 }
 
 export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSharedInfo {
