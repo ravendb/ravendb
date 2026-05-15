@@ -1,8 +1,28 @@
 import { composeStory } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/EditCdcSinkTask.stories";
-import { rtlRender, waitFor } from "test/rtlTestUtils";
+import { act, rtlRender, waitFor } from "test/rtlTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
+
+const selectors = {
+    newTaskTitle: "New CDC Sink task",
+    editTaskTitle: "Edit CDC Sink task",
+    taskName: "Task Name",
+    taskNameValue: "New CDC Sink",
+    existingTaskName: "CdcSinkTask",
+    connectionString: "Connection String",
+    connectionStringValue: "sql-name",
+    databaseName: "db1",
+    configureBasicSettings: "Configure basic settings",
+    schemaExplorer: "Schema Explorer",
+    configuredTables: "Configured Tables",
+    enterprise: "Enterprise",
+    ordersTable: "dbo.orders",
+    discoverTablesButton: /Discover tables/i,
+    discoverButton: /^Discover$/i,
+    configureSelectedTablesButton: /Configure selected tables/i,
+    saveTaskButton: /Save task configuration/i,
+};
 
 describe("Edit CDC Sink task", () => {
     it("can render new task view", async () => {
@@ -10,37 +30,42 @@ describe("Edit CDC Sink task", () => {
 
         const { screen } = rtlRender(<Story />);
 
-        expect(await screen.findByText("New CDC Sink task")).toBeInTheDocument();
-        expect(screen.getByText("Configure basic settings")).toBeInTheDocument();
-        expect(screen.getByText("Schema Explorer")).toBeInTheDocument();
-        expect(screen.getByText("Configured Tables")).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /Save task configuration/i })).toBeDisabled();
+        expect(await screen.findByText(selectors.newTaskTitle)).toBeInTheDocument();
+        expect(screen.getByText(selectors.configureBasicSettings)).toBeInTheDocument();
+        expect(screen.getByText(selectors.schemaExplorer)).toBeInTheDocument();
+        expect(screen.getByText(selectors.configuredTables)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: selectors.saveTaskButton })).toBeDisabled();
     });
 
     it("can create new task and send valid DTO on save", async () => {
         const Story = composeStory(stories.NewTask, stories.default);
 
-        const { screen, user } = rtlRender(<Story />);
+        const { screen, user, fillInput, fireClick } = rtlRender(<Story />);
 
-        await screen.findByText("New CDC Sink task");
+        await screen.findByText(selectors.newTaskTitle);
 
-        await user.type(screen.getByLabelText("Task Name"), "New CDC Sink");
-        await selectOption(user, screen, getSelectInputByLabel(screen, "Connection String"), "sql-name");
+        await fillInput(screen.getByLabelText(selectors.taskName), selectors.taskNameValue);
+        await selectOption(
+            user,
+            screen,
+            getSelectInputByLabel(screen, selectors.connectionString),
+            selectors.connectionStringValue
+        );
 
-        await user.click(screen.getByRole("button", { name: /Discover tables/i }));
-        await user.click(await screen.findByRole("button", { name: /^Discover$/i }));
-        expect(await screen.findByText("dbo.orders")).toBeInTheDocument();
+        await fireClick(getButtonByText(screen, selectors.discoverTablesButton));
+        await fireClick(await screen.findByText(selectors.discoverButton).then((x) => x.closest("button")));
+        expect(await screen.findByText(selectors.ordersTable)).toBeInTheDocument();
 
-        await user.click(screen.getByRole("row", { name: /dbo\.orders/i }).querySelector("input[type='checkbox']"));
-        await user.click(screen.getByRole("button", { name: /Configure selected tables/i }));
-        await user.click(screen.getByRole("button", { name: /Save task configuration/i }));
+        await fireClick(screen.getByText(selectors.ordersTable).closest("tr").querySelector("input[type='checkbox']"));
+        await fireClick(getButtonByText(screen, selectors.configureSelectedTablesButton));
+        await fireClick(getButtonByText(screen, selectors.saveTaskButton));
 
         await waitFor(() => expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalled());
-        expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalledWith("db1", {
+        expect(mockServices.tasksService.mock.saveCdcSinkTask).toHaveBeenCalledWith(selectors.databaseName, {
             TaskId: null,
-            Name: "New CDC Sink",
+            Name: selectors.taskNameValue,
             Disabled: false,
-            ConnectionStringName: "sql-name",
+            ConnectionStringName: selectors.connectionStringValue,
             MentorNode: null,
             PinToMentorNode: false,
             Postgres: null,
@@ -89,10 +114,10 @@ describe("Edit CDC Sink task", () => {
 
         const { screen } = rtlRender(<Story />);
 
-        expect(await screen.findByText("Edit CDC Sink task")).toBeInTheDocument();
-        expect(await screen.findByDisplayValue("CdcSinkTask")).toBeInTheDocument();
+        expect(await screen.findByText(selectors.editTaskTitle)).toBeInTheDocument();
+        expect(await screen.findByDisplayValue(selectors.existingTaskName)).toBeInTheDocument();
         expect(mockServices.tasksService.mock.getCdcSinkTaskInfo).toHaveBeenCalledWith(
-            "db1",
+            selectors.databaseName,
             TasksStubs.getCdcSink().TaskId
         );
     });
@@ -102,9 +127,9 @@ describe("Edit CDC Sink task", () => {
 
         const { screen } = rtlRender(<Story />);
 
-        expect(await screen.findByText("New CDC Sink task")).toBeInTheDocument();
-        expect(screen.getAllByText("Enterprise").length).toBeGreaterThan(0);
-        expect(screen.getByRole("button", { name: /Save task configuration/i })).toBeDisabled();
+        expect(await screen.findByText(selectors.newTaskTitle)).toBeInTheDocument();
+        expect(screen.getAllByText(selectors.enterprise).length).toBeGreaterThan(0);
+        expect(screen.getByRole("button", { name: selectors.saveTaskButton })).toBeDisabled();
     });
 });
 
@@ -114,10 +139,18 @@ async function selectOption(
     input: HTMLElement,
     option: string
 ) {
-    await user.click(input);
-    await user.click(await screen.findByText(option));
+    await act(async () => {
+        await user.click(input);
+    });
+    await act(async () => {
+        await user.click(await screen.findByText(option));
+    });
 }
 
 function getSelectInputByLabel(screen: ReturnType<typeof rtlRender>["screen"], label: string) {
     return screen.getByText(label).closest(".mb-3").querySelector("input");
+}
+
+function getButtonByText(screen: ReturnType<typeof rtlRender>["screen"], text: string | RegExp) {
+    return screen.getByText(text).closest("button");
 }
