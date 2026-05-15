@@ -2156,6 +2156,13 @@ public class RavenDB_21192_Multinode : ClusterTestBase
             Assert.Empty(otherItemErrors);
         }
 
+        // Ensure mentor's ETL state is persisted before mentor change, otherwise the new mentor may start with stale ChangeVector and reprocess phase 1 documents.
+        Assert.True(WaitForValue(() =>
+        {
+            var state = EtlProcess.GetProcessState(mentorDatabase, taskName, "embeddings-transform-script");
+            return state.LastProcessedEtagPerDbId.Count > 0;
+        }, true, timeout: 30_000));
+
         var newMentorTag = nodes[1].ServerStore.NodeTag;
         configuration.MentorNode = newMentorTag;
         store.Maintenance.Send(new UpdateEmbeddingsGenerationOperation(addResult.TaskId, configuration));
