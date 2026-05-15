@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Linq;
@@ -31,6 +32,7 @@ namespace Raven.Analyzers.Queries
                     System.StringComparer.Ordinal);
                 var fieldSetCache = new ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet>(
                     SymbolEqualityComparer.Default);
+                var pending = new ConcurrentBag<(InvocationExpressionSyntax Invocation, SemanticModel Model)>();
 
                 startCtx.RegisterSymbolAction(symCtx =>
                 {
@@ -42,40 +44,49 @@ namespace Raven.Analyzers.Queries
                     if (QueryIndexResolver.TryGetOverriddenIndexNameLiteral(type, out string? overriddenLiteral))
                     {
                         if (overriddenLiteral == null)
-                            return; // Override exists but is not a simple string literal — skip
+                            return;
                         indexKey = overriddenLiteral;
                     }
                     else
                     {
-                        // Default convention: GetType().Name.Replace("_", "/")
                         indexKey = type.Name.Replace("_", "/");
                     }
 
                     indexByName.TryAdd(indexKey, type);
                 }, SymbolKind.NamedType);
 
-                startCtx.RegisterSyntaxNodeAction(
-                    ctx => AnalyzeInvocation(ctx, indexByName, fieldSetCache),
-                    SyntaxKind.InvocationExpression);
+                startCtx.RegisterSyntaxNodeAction(ctx =>
+                {
+                    var invocation = (InvocationExpressionSyntax)ctx.Node;
+                    if (SyntaxHelpers.GetMethodName(invocation) != KnownTypes.QueryMethodName)
+                        return;
+                    pending.Add((invocation, ctx.SemanticModel));
+                }, SyntaxKind.InvocationExpression);
+
+                startCtx.RegisterCompilationEndAction(endCtx =>
+                {
+                    foreach ((InvocationExpressionSyntax invocation, SemanticModel model) in pending)
+                        AnalyzeInvocation(model, invocation, indexByName, fieldSetCache, endCtx.ReportDiagnostic);
+                });
             });
         }
 
         private static void AnalyzeInvocation(
-            SyntaxNodeAnalysisContext context,
+            SemanticModel model,
+            InvocationExpressionSyntax queryInvocation,
             ConcurrentDictionary<string, INamedTypeSymbol> indexByName,
-            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> fieldSetCache)
+            ConcurrentDictionary<INamedTypeSymbol, IndexFieldSet> fieldSetCache,
+            Action<Diagnostic> reportDiagnostic)
         {
-            var queryInvocation = (InvocationExpressionSyntax)context.Node;
-
-            if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, context.SemanticModel))
+            if (!QueryIndexResolver.IsSessionQueryCall(queryInvocation, model))
                 return;
 
-            INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryInvocation, context.SemanticModel, indexByName);
+            INamedTypeSymbol? indexClass = QueryIndexResolver.ResolveIndexClass(queryInvocation, model, indexByName);
             if (indexClass == null)
                 return;
 
             IndexFieldSet fieldSet = fieldSetCache.GetOrAdd(indexClass,
-                ic => IndexFieldExtractor.Extract(ic, context.SemanticModel.Compilation));
+                ic => IndexFieldExtractor.Extract(ic, model.Compilation));
             if (fieldSet.Status == IndexFieldInspection.BailCannotAnalyze)
                 return;
 
@@ -83,7 +94,6 @@ namespace Raven.Analyzers.Queries
             SyntaxNode current = queryInvocation;
             while (true)
             {
-                // Pattern: (MemberAccess (Invocation ...))
                 if (current.Parent is not MemberAccessExpressionSyntax memberAccess)
                     break;
                 if (memberAccess.Parent is not InvocationExpressionSyntax outerInvocation)
@@ -94,9 +104,8 @@ namespace Raven.Analyzers.Queries
                 if (IsFilterOrOrderMethod(methodName))
                 {
                     SeparatedSyntaxList<ArgumentSyntax> args = outerInvocation.ArgumentList.Arguments;
-                    // For all filter/order methods the field selector lambda is the first argument
                     if (args.Count > 0)
-                        CheckLambdaFields(context, args[0].Expression, fieldSet.Fields, methodName, indexClass.Name);
+                        CheckLambdaFields(args[0].Expression, fieldSet.Fields, methodName, indexClass.Name, reportDiagnostic);
                 }
 
                 current = outerInvocation;
@@ -112,11 +121,11 @@ namespace Raven.Analyzers.Queries
             || name == KnownTypes.SearchMethodName;
 
         private static void CheckLambdaFields(
-            SyntaxNodeAnalysisContext context,
             ExpressionSyntax lambdaExpr,
             ImmutableHashSet<string> indexedFields,
             string methodName,
-            string indexClassName)
+            string indexClassName,
+            Action<Diagnostic> reportDiagnostic)
         {
             string? paramName = GetLambdaParameterName(lambdaExpr);
             if (paramName == null)
@@ -129,8 +138,6 @@ namespace Raven.Analyzers.Queries
             foreach (MemberAccessExpressionSyntax memberAccess in
                 body.DescendantNodesAndSelf().OfType<MemberAccessExpressionSyntax>())
             {
-                // Only first-hop accesses off the lambda parameter: x.Field
-                // x.Field.Sub has expression x.Field (MemberAccess, not IdentifierName) → skipped automatically
                 if (memberAccess.Expression is not IdentifierNameSyntax id)
                     continue;
                 if (id.Identifier.ValueText != paramName)
@@ -139,7 +146,7 @@ namespace Raven.Analyzers.Queries
                 string fieldName = memberAccess.Name.Identifier.Text;
                 if (!indexedFields.Contains(fieldName))
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(
+                    reportDiagnostic(Diagnostic.Create(
                         DiagnosticDescriptors.QueryFieldNotIndexed,
                         memberAccess.GetLocation(),
                         fieldName,

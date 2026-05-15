@@ -44,16 +44,17 @@ namespace Raven.Analyzers.Indexes
 
             foreach (ConstructorDeclarationSyntax ctor in classDecl.Members.OfType<ConstructorDeclarationSyntax>())
             {
-                if (ctor.Body == null)
+                SyntaxNode? body = ctor.GetBodyNode();
+                if (body == null)
                     continue;
 
-                AnalyzeCtorBody(context, ctor.Body);
+                AnalyzeCtorBody(context, body);
             }
         }
 
-        private static void AnalyzeCtorBody(SyntaxNodeAnalysisContext context, BlockSyntax body)
+        private static void AnalyzeCtorBody(SyntaxNodeAnalysisContext context, SyntaxNode body)
         {
-            foreach (SyntaxNode node in body.DescendantNodes())
+            foreach (SyntaxNode node in body.DescendantNodesAndSelf())
             {
                 SyntaxNode? lambdaBody = TryGetMapReduceLambdaBody(node, context.SemanticModel);
                 if (lambdaBody == null)
@@ -86,15 +87,18 @@ namespace Raven.Analyzers.Indexes
         /// </summary>
         private static SyntaxNode? TryGetMapReduceLambdaBody(SyntaxNode node, SemanticModel model)
         {
-            // Map = lambda  or  Reduce = lambda
-            if (node is AssignmentExpressionSyntax assignment
-                && assignment.Left is IdentifierNameSyntax identifier)
+            // Map = lambda  /  Reduce = lambda  /  this.Map = lambda  /  base.Reduce = lambda  etc.
+            if (node is AssignmentExpressionSyntax assignment)
             {
-                string name = identifier.Identifier.Text;
+                SimpleNameSyntax? nameNode = SyntaxHelpers.TryGetMapReduceLhsNameNode(assignment.Left);
+                if (nameNode == null)
+                    return null;
+
+                string name = nameNode.Identifier.Text;
                 if (name != KnownTypes.MapFieldName && name != KnownTypes.ReduceFieldName)
                     return null;
 
-                ISymbol? sym = model.GetSymbolInfo(identifier).Symbol;
+                ISymbol? sym = model.GetSymbolInfo(nameNode).Symbol;
                 if (sym is not (IFieldSymbol or IPropertySymbol))
                     return null;
 
