@@ -5,8 +5,8 @@ import Button from "react-bootstrap/Button";
 import { ArrayPath, FieldArray, FieldPath, FieldValues, useFieldArray, UseFieldArrayProps } from "react-hook-form";
 
 type FormStringValueListProps<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends ArrayPath<TFieldValues> = ArrayPath<TFieldValues>,
+    TFieldValues extends FieldValues,
+    TName extends ArrayPath<TFieldValues>,
 > = UseFieldArrayProps<TFieldValues, TName> & {
     title: React.ReactNode;
     addButtonLabel: React.ReactNode;
@@ -15,10 +15,7 @@ type FormStringValueListProps<
     className?: string;
 };
 
-export default function FormStringValueList<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends ArrayPath<TFieldValues> = ArrayPath<TFieldValues>,
->({
+export default function FormStringValueList<TFieldValues extends FieldValues, TName extends ArrayPath<TFieldValues>>({
     control,
     name,
     title,

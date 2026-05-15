@@ -7,20 +7,19 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useAppSelector } from "components/store";
 import { FieldValues, FieldPath, useWatch, UseControllerProps } from "react-hook-form";
 
-interface FormTaskResponsibleNodeProps<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> {
+interface FormTaskResponsibleNodeProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: UseControllerProps<TFieldValues>["control"];
     isSetName: TName;
     nodeName: TName;
     isPinName: TName;
 }
 
-export function FormTaskResponsibleNode<
-    TFieldValues extends FieldValues = FieldValues,
-    TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->({ control, isSetName, nodeName, isPinName }: FormTaskResponsibleNodeProps<TFieldValues, TName>) {
+export function FormTaskResponsibleNode<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
+    control,
+    isSetName,
+    nodeName,
+    isPinName,
+}: FormTaskResponsibleNodeProps<TFieldValues, TName>) {
     const isSet = useWatch({ control, name: isSetName });
     const responsibleNode = useWatch({ control, name: nodeName });
     const isPin = useWatch({ control, name: isPinName });
