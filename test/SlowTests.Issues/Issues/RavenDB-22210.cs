@@ -310,6 +310,7 @@ public class RavenDB_22210 : RavenTestBase
                     // Strip the private key. macOS Keychain crashes if you try to add 
                     // an ephemeral private key. Validation only needs the public cert anyway.
                     using (var publicOnlyCert = CertificateLoaderUtil.CreateCertificateFromAny(certificate.Export(X509ContentType.Cert)))
+#pragma warning restore SYSLIB0057
                     {
                         store.Add(publicOnlyCert);
                     }

@@ -88,12 +88,40 @@
         </h3>
         <li class="scroll collections-list">
             <ul>
-                <!-- ko foreach: $root.collectionsTracker.collections -->
+                <!-- ko if: $root.collectionsTracker.systemCollections().length > 0 -->
+                <li class="system-collections-group">
+                    <a class="system-group-header" data-bind="click: $root.collectionsTracker.toggleSystemCollections.bind($root.collectionsTracker)">
+                        <i data-bind="css: $root.collectionsTracker.systemCollectionsExpanded() ? 'icon-arrow-filled-down' : 'icon-arrow-filled-right'"></i>
+                        <span>@system</span>
+                        <div class="collection-count">
+                            <div class="value label label-default" data-bind="text: $root.collectionsTracker.systemCollectionsCountPrefix"></div>
+                            <div data-bind="attr: { class: $root.collectionsTracker.systemCollectionsSizeClass }"></div>
+                        </div>
+                    </a>
+                    <!-- ko if: $root.collectionsTracker.systemCollectionsExpanded -->
+                    <ul class="system-collection-items">
+                        <!-- ko foreach: $root.collectionsTracker.systemCollections -->
+                        <li>
+                            <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name },
+                                          css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
+                                <span data-bind="text: name"></span>
+                                <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }">
+                                    <div class="value label label-default" data-bind="text: countPrefix"></div>
+                                    <div data-bind="attr: { class: sizeClass }"></div>
+                                </div>
+                            </a>
+                        </li>
+                        <!-- /ko -->
+                    </ul>
+                    <!-- /ko -->
+                </li>
+                <!-- /ko -->
+                <!-- ko foreach: $root.collectionsTracker.userCollections -->
                 <li>
                     <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name },
-                                  css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments">
+                                  css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
                         <span data-bind="text: name"></span>
-                        <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }">
+                        <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }">
                             <div class="value label label-default" data-bind="text: countPrefix"></div>
                             <div data-bind="attr: { class: sizeClass }"></div>
                         </div>

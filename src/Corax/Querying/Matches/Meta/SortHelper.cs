@@ -20,8 +20,6 @@ internal sealed unsafe class SortHelper
     private static int FindMatches(long* dst, long* left, int leftLength, long* right, int rightLength)
     {
         // assumptions:
-        // The left is <= than the right, since the left if up to 4K and we'll only get the right
-        // on > 4K elements.
         // 
         // We are called *multiple* times with the same right element, switching the left each time.
         //
@@ -62,6 +60,10 @@ internal sealed unsafe class SortHelper
             long leftValue = *leftPtr++;
             var inc = GallopSearch(leftValue);
             rightPtr += inc;
+            
+            if (rightPtr >= rightEndPtr)
+                break;
+            
             if (leftValue != *rightPtr) 
                 continue;
 

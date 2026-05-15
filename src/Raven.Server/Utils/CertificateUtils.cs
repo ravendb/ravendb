@@ -779,6 +779,7 @@ namespace Raven.Server.Utils
                 // prevents the AppleCrypto crash during CopyWithPrivateKey.
                 byte[] rawPublicBytes = certificate.Export(X509ContentType.Cert);
                 safeCertificate = CertificateLoaderUtil.CreateCertificateFromAny(rawPublicBytes);
+#pragma warning restore SYSLIB0057
             }
 
             // Combine the main certificate and the private key safely for both RSA and ECDSA.

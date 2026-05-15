@@ -82,4 +82,90 @@ describe("can complete order by ", function () {
         expect(suggestions.find(x => x.value.startsWith("desc ")))
             .toBeTruthy();
     });
+
+    it("can complete nulls first/last after field", async () => {
+        const suggestions = await autocomplete("from Orders order by Company |");
+
+        const nullsFirst = suggestions.find(x => x.value.startsWith("nulls first"));
+        const nullsLast = suggestions.find(x => x.value.startsWith("nulls last"));
+
+        expect(nullsFirst).toBeTruthy();
+        expect(nullsFirst.caption).toEqual("nulls first");
+        expect(nullsFirst.meta).toEqual(AUTOCOMPLETE_META.keyword);
+
+        expect(nullsLast).toBeTruthy();
+        expect(nullsLast.caption).toEqual("nulls last");
+        expect(nullsLast.meta).toEqual(AUTOCOMPLETE_META.keyword);
+    });
+
+    it("does NOT suggest standalone 'nulls' token", async () => {
+        const suggestions = await autocomplete("from Orders order by Company |");
+
+        const standaloneNulls = suggestions.find(x => x.caption === "nulls");
+        expect(standaloneNulls).toBeFalsy();
+    });
+
+    it("can complete nulls first/last after asc", async () => {
+        const suggestions = await autocomplete("from Orders order by Company asc |");
+
+        expect(suggestions.find(x => x.value.startsWith("nulls first")))
+            .toBeTruthy();
+        expect(suggestions.find(x => x.value.startsWith("nulls last")))
+            .toBeTruthy();
+    });
+
+    it("can complete nulls first/last after desc", async () => {
+        const suggestions = await autocomplete("from Orders order by Company desc |");
+
+        expect(suggestions.find(x => x.value.startsWith("nulls first")))
+            .toBeTruthy();
+        expect(suggestions.find(x => x.value.startsWith("nulls last")))
+            .toBeTruthy();
+    });
+
+    it("can complete nulls first/last after as <type>", async () => {
+        const suggestions = await autocomplete("from Orders order by Company as string |");
+
+        expect(suggestions.find(x => x.value.startsWith("nulls first")))
+            .toBeTruthy();
+        expect(suggestions.find(x => x.value.startsWith("nulls last")))
+            .toBeTruthy();
+    });
+
+    it("can complete nulls first/last after as <type> <direction>", async () => {
+        const suggestions = await autocomplete("from Orders order by Company as long desc |");
+
+        expect(suggestions.find(x => x.value.startsWith("nulls first")))
+            .toBeTruthy();
+        expect(suggestions.find(x => x.value.startsWith("nulls last")))
+            .toBeTruthy();
+    });
+
+    it("does NOT suggest nulls first/last after nulls clause already used", async () => {
+        const suggestions = await autocomplete("from Orders order by Company nulls first |");
+
+        expect(suggestions.find(x => x.value.startsWith("nulls first")))
+            .toBeFalsy();
+        expect(suggestions.find(x => x.value.startsWith("nulls last")))
+            .toBeFalsy();
+    });
+
+    it("can complete next keywords after nulls first", async () => {
+        const suggestions = await autocomplete("from Orders order by Company nulls first |");
+
+        const nextKeywords = ["select", "include", "limit"];
+
+        for (const keyword of nextKeywords) {
+            expect(suggestions.find(x => x.value.startsWith(keyword)))
+                .toBeTruthy();
+        }
+    });
+
+    it("can complete fields in second order by item after nulls first", async () => {
+        const suggestions = await autocomplete("from Orders order by Company nulls first, |");
+
+        const companyField = suggestions.find(x => x.value.startsWith("Freight") && x.meta === AUTOCOMPLETE_META.field);
+        expect(companyField)
+            .toBeTruthy();
+    });
 })

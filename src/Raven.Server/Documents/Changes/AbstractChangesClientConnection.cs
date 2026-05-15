@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
 using Sparrow.Server.Collections;
+using Sparrow.Server.Logging;
 using Sparrow.Threading;
 using Sparrow.Utils;
 
@@ -35,6 +36,7 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
     private DateTime _lastSendMessage;
 
     protected readonly JsonContextPoolBase<TOperationContext> ContextPool;
+    private readonly RavenLogger _logger;
     private readonly bool _throttleConnection;
 
     private readonly ConcurrentSet<long> _matchingOperations = new();
@@ -43,11 +45,12 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
     private bool _watchTopology;
 
-    protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, CancellationToken databaseShutdown, bool throttleConnection, bool fromStudio)
+    protected AbstractChangesClientConnection(WebSocket webSocket, JsonContextPoolBase<TOperationContext> contextPool, RavenLogger logger, CancellationToken databaseShutdown, bool throttleConnection, bool fromStudio)
     {
         Id = ChangesClientConnectionId.GetNextId();
         IsChangesConnectionOriginatedFromStudio = fromStudio;
         ContextPool = contextPool;
+        _logger = logger;
         _throttleConnection = throttleConnection;
         _webSocket = webSocket;
         _startedAt = SystemTime.UtcNow;
@@ -322,8 +325,11 @@ public abstract class AbstractChangesClientConnection<TOperationContext> : ILowM
 
     public virtual void Dispose()
     {
-        _isDisposed.Raise();
-        _cts.Cancel();
+        if (_isDisposed.Raise() == false)
+            return;
+
+        _cts.SafeCancel(_logger, "changes client connection");
+
         _sendQueue.Enqueue(new SendQueueItem
         {
             AllowSkip = false,

@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Queries.Timings
             public static string Cluster;
             public static string Reduce;
             public static string Paging;
+            public static string Embeddings;
         }
 
         private QueryInspectionNode _queryPlan;

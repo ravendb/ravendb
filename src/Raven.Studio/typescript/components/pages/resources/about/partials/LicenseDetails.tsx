@@ -263,7 +263,7 @@ function LicenseTable(props: LicenseTableProps) {
                 </div>
             )}
             {licenseType !== "Developer" && (
-                <small className="pb-2 text-center text-muted">
+                <small className="mt-2 pb-2 text-center text-muted">
                     <Icon icon="info" />
                     We offer a free{" "}
                     <a href={developerLicenseLink} target="_blank" className="text-developer">

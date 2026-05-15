@@ -83,7 +83,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
 
     private bool HasSkipReason(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
-        if (string.IsNullOrEmpty(Skip))
+        if (string.IsNullOrEmpty(Skip) == false)
             return true;
 
         if (RavenTestHelper.SkipAiIntegrationTests)

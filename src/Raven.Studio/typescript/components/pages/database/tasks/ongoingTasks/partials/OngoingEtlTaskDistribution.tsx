@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import { useState } from "react";
 import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import classNames from "classnames";
 import { AnyEtlOngoingTaskInfo, OngoingEtlTaskNodeInfo, OngoingTaskInfo } from "components/models/tasks";
@@ -7,10 +7,18 @@ import { OngoingEtlTaskProgressTooltip } from "../partials/OngoingEtlTaskProgres
 import { Icon } from "components/common/Icon";
 import { databaseLocationComparator, withPreventDefault } from "components/utils/common";
 import { ErrorModal } from "components/pages/database/tasks/ongoingTasks/partials/ErrorModal";
+import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
+import copyToClipboard from "common/copyToClipboard";
 
 interface OngoingEtlTaskDistributionProps {
     task: AnyEtlOngoingTaskInfo;
     showPreview: (transformationName: string) => void;
+}
+
+interface TxIdLayout {
+    scripts: string[];
+    isSingleScript: boolean;
 }
 
 interface ItemWithTooltipProps {
@@ -18,10 +26,117 @@ interface ItemWithTooltipProps {
     sharded: boolean;
     task: AnyEtlOngoingTaskInfo;
     showPreview: (transformationName: string) => void;
+    txIdLayout: TxIdLayout | null;
+}
+
+interface TransactionalIdCellProps {
+    txId: string | undefined;
+    hasProgress: boolean;
+    noTopBorder?: boolean;
+}
+
+function TransactionalIdCell({ txId, hasProgress, noTopBorder = false }: TransactionalIdCellProps) {
+    const borderClass = noTopBorder ? "border-top-0" : undefined;
+
+    if (!txId) {
+        return hasProgress ? (
+            <div className={borderClass}>-</div>
+        ) : (
+            <div className="d-flex align-items-center justify-content-center gap-1 text-muted">
+                <Spinner animation="border" size="sm" />
+                <small>Loading...</small>
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className={classNames(
+                "d-flex align-items-center justify-content-center gap-1 overflow-hidden",
+                borderClass
+            )}
+        >
+            <span className="text-truncate" title={txId}>
+                {txId}
+            </span>
+            <Button
+                variant="link"
+                size="xs"
+                className="p-0 flex-shrink-0"
+                onClick={() => copyToClipboard.copy(txId, "Transactional Id was copied to clipboard.")}
+                title="Copy to clipboard"
+            >
+                <Icon icon="copy" margin="m-0" />
+            </Button>
+        </div>
+    );
+}
+
+interface TransactionalIdCellsProps {
+    txIdLayout: TxIdLayout;
+    nodeInfo: OngoingEtlTaskNodeInfo;
+}
+
+function TransactionalIdCells({ txIdLayout, nodeInfo }: TransactionalIdCellsProps) {
+    const { scripts, isSingleScript } = txIdLayout;
+    const hasProgress = !!nodeInfo.etlProgress?.length;
+
+    if (scripts.length === 0) {
+        return (
+            <div className="d-flex align-items-center justify-content-center gap-1 text-muted">
+                <Spinner animation="border" size="sm" />
+                <small>Loading...</small>
+            </div>
+        );
+    }
+
+    if (isSingleScript) {
+        const txId = nodeInfo.etlProgress?.find((ep) => ep.transformationName === scripts[0])?.transactionalId;
+        return <TransactionalIdCell txId={txId} hasProgress={hasProgress} />;
+    }
+
+    return (
+        <>
+            <div />
+            {scripts.map((script) => {
+                const txId = nodeInfo.etlProgress?.find((ep) => ep.transformationName === script)?.transactionalId;
+                return <TransactionalIdCell key={script} txId={txId} hasProgress={hasProgress} noTopBorder />;
+            })}
+        </>
+    );
+}
+
+interface TransactionalIdLegendProps {
+    txIdLayout: TxIdLayout;
+}
+
+function TransactionalIdLegend({ txIdLayout }: TransactionalIdLegendProps) {
+    const { scripts } = txIdLayout;
+
+    if (scripts.length <= 1) {
+        return (
+            <div className="pe-1">
+                <Icon icon="identities" /> Transactional ID
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <div className="pe-1">
+                <Icon icon="identities" /> Transactional IDs
+            </div>
+            {scripts.map((script) => (
+                <div key={script} className="border-top-0 ps-3">
+                    {script}
+                </div>
+            ))}
+        </>
+    );
 }
 
 function ItemWithTooltip(props: ItemWithTooltipProps) {
-    const { nodeInfo, sharded, task, showPreview } = props;
+    const { nodeInfo, sharded, task, showPreview, txIdLayout } = props;
 
     const shard = (
         <div className="top shard">
@@ -50,7 +165,6 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                 {sharded && shard}
                 <div className={classNames("node", { top: !sharded })}>
                     {!sharded && <Icon icon="node" />}
-
                     {nodeInfo.location.nodeTag}
                 </div>
                 <div>{nodeInfo.status === "success" ? nodeInfo.details.taskConnectionStatus : ""}</div>
@@ -63,6 +177,7 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
                         "-"
                     )}
                 </div>
+                {txIdLayout && <TransactionalIdCells txIdLayout={txIdLayout} nodeInfo={nodeInfo} />}
                 <OngoingEtlTaskProgress task={task} nodeInfo={nodeInfo} />
             </DistributionItem>
             {node &&
@@ -82,6 +197,25 @@ function ItemWithTooltip(props: ItemWithTooltipProps) {
     );
 }
 
+function getTxIdLayout(task: AnyEtlOngoingTaskInfo, visibleNodes: OngoingEtlTaskNodeInfo[]): TxIdLayout | null {
+    if (task.shared.taskType !== "KafkaQueueEtl") {
+        return null;
+    }
+
+    const scripts = Array.from(
+        visibleNodes.reduce((acc, nodeInfo) => {
+            nodeInfo.etlProgress?.forEach((ep) => {
+                if (ep.transactionalId) {
+                    acc.add(ep.transformationName);
+                }
+            });
+            return acc;
+        }, new Set<string>())
+    );
+
+    return { scripts, isSingleScript: scripts.length === 1 };
+}
+
 export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProps) {
     const { task, showPreview } = props;
     const sharded = task.nodesInfo.some((x) => x.location.shardNumber != null);
@@ -91,11 +225,20 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
             nodeInfo.details && task.responsibleLocations.find((l) => databaseLocationComparator(l, nodeInfo.location))
     );
 
+    const txIdLayout = getTxIdLayout(task, visibleNodes);
+
     const items = visibleNodes.map((nodeInfo) => {
         const key = taskNodeInfoKey(nodeInfo);
 
         return (
-            <ItemWithTooltip key={key} nodeInfo={nodeInfo} sharded={sharded} showPreview={showPreview} task={task} />
+            <ItemWithTooltip
+                key={key}
+                nodeInfo={nodeInfo}
+                sharded={sharded}
+                showPreview={showPreview}
+                task={task}
+                txIdLayout={txIdLayout}
+            />
         );
     });
 
@@ -115,6 +258,7 @@ export function OngoingEtlTaskDistribution(props: OngoingEtlTaskDistributionProp
                     <div>
                         <Icon icon="warning" /> Error
                     </div>
+                    {txIdLayout && <TransactionalIdLegend txIdLayout={txIdLayout} />}
                     <div>
                         <Icon icon="changes" /> State
                     </div>

@@ -31,7 +31,7 @@ public class GenAiRemoteAttachments(ITestOutputHelper output) : RemoteAttachment
 
     private record Comment(string Id, string Author, string Content, string AuthorDescription, string ProfileImage);
 
-    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Attachments)]
+    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Attachments, AzureRequired = true)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldBeAbleToUseRemoteAttachments(Options options, GenAiConfiguration config)
     {
@@ -134,7 +134,7 @@ public class GenAiRemoteAttachments(ITestOutputHelper output) : RemoteAttachment
         }
     }
     
-    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Attachments)]
+    [RavenTheory(RavenTestCategory.Ai | RavenTestCategory.Attachments, AzureRequired = true)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task ShouldUseCachedResultGenAiResultWhenAttachmentsBecomeRemote(Options options, GenAiConfiguration config)
     {

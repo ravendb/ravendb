@@ -12,14 +12,14 @@ public struct IncludeNullMatch<TInner> : IQueryMatch
 where TInner : IQueryMatch
 {
     private readonly bool _forward;
-    private readonly bool _nullFirsts;
+    private readonly bool _nullIsSmallest;
     private bool _hasLeftNulls;
     private bool _innerEnd = false;
     private PostingList.Iterator _postingListIterator;
-    public IncludeNullMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward, bool nullFirsts)
+    public IncludeNullMatch(Querying.IndexSearcher searcher, in TInner inner, in FieldMetadata field, bool forward, bool nullIsSmallest)
     {
         _forward = forward;
-        _nullFirsts = nullFirsts;
+        _nullIsSmallest = nullIsSmallest;
         _inner = inner;
         
         _hasLeftNulls = searcher.TryGetPostingListForNull(in field, out var postingListId);
@@ -44,7 +44,9 @@ where TInner : IQueryMatch
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Fill(Span<long> matches)
     {
-        bool nullsFirst = _forward ? _nullFirsts : !_nullFirsts;
+        // _nullIsSmallest is config-style ("null is the smallest key"); flip on descending so
+        // `nullsFirst` reflects whether nulls should appear at the front of the result stream.
+        bool nullsFirst = _forward ? _nullIsSmallest : !_nullIsSmallest;
         
         return nullsFirst 
             ? NullFirstStreaming(matches) 

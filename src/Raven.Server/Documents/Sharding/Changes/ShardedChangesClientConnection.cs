@@ -63,7 +63,7 @@ public sealed class ShardedChangesClientConnection : AbstractChangesClientConnec
     private JsonOperationContext _queueContext;
 
     public ShardedChangesClientConnection(WebSocket webSocket, ServerStore serverStore, [NotNull] ShardedDatabaseContext context, bool throttleConnection, bool fromStudio)
-        : base(webSocket, serverStore.ContextPool, context.DatabaseShutdown, throttleConnection: false, fromStudio)
+        : base(webSocket, serverStore.ContextPool, context.Loggers.GetLogger<ShardedChangesClientConnection>(), context.DatabaseShutdown, throttleConnection: false, fromStudio)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _throttleConnection = throttleConnection;

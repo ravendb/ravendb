@@ -33,7 +33,11 @@ export default function DatabaseCustomSortersServerWideListItem({
 
                     {hasDatabaseAdminAccess && (
                         <RichPanelActions>
-                            <Button variant="secondary" onClick={toggleIsTestMode}>
+                            <Button
+                                variant="secondary"
+                                onClick={toggleIsTestMode}
+                                title={isTestMode ? "Exit test mode" : "Test custom sorter"}
+                            >
                                 <Icon icon="rocket" addon={isTestMode ? "cancel" : null} margin="m-0" />
                             </Button>
                         </RichPanelActions>

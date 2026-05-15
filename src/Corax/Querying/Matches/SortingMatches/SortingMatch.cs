@@ -32,7 +32,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private TInner _inner;
     private readonly OrderMetadata _orderMetadata;
     private readonly CancellationToken _cancellationToken;
-    private readonly bool _nullFirst;
+    private readonly NullsSortMode _defaultNullsSortMode;
     private readonly delegate*<ref SortingMatch<TInner>, Span<long>, int> _fillFunc;
     private readonly int _take;
     private const int NotStarted = -1;
@@ -42,21 +42,25 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     private ContextBoundNativeList<SpatialResult> _distancesResults;
     private ContextBoundNativeList<float> _scoresResults;
     private int _alreadyReadIdx;
-    
-    
+
+
     private SortingDataTransfer _sortingDataTransfer;
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
-    
+
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
+
     
-    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, bool nullFirst, int take = -1)
+    private readonly bool NullIsSmallest =>
+        (_orderMetadata.NullsSortMode ?? _defaultNullsSortMode) == NullsSortMode.NullsSmallest;
+
+    public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, NullsSortMode defaultNullsSortMode, int take = -1)
     {
         _searcher = searcher;
         _inner = inner;
         _orderMetadata = orderMetadata;
         _cancellationToken = cancellationToken;
-        _nullFirst = nullFirst;
+        _defaultNullsSortMode = defaultNullsSortMode;
         _take = take;
         _alreadyReadIdx = 0;
         _results = new ContextBoundNativeList<long>(searcher.Allocator);
@@ -265,7 +269,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private TDirection _termsIt;
         private readonly long _min;
         private readonly long _max;
-        private readonly bool _nullFirst;
+        private readonly bool _nullIsSmallest;
         private readonly bool _isForward;
         private readonly Querying.IndexSearcher _searcher;
         private readonly LowLevelTransaction _llt;
@@ -286,12 +290,12 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
         private long _nullPostingListId;
         private bool _nullPostingListRead;
 
-        public SortedIndexReader(LowLevelTransaction llt, Querying.IndexSearcher searcher, TDirection it, FieldMetadata metadata, long min, long max, bool nullFirst, bool isForward)
+        public SortedIndexReader(LowLevelTransaction llt, Querying.IndexSearcher searcher, TDirection it, FieldMetadata metadata, long min, long max, bool nullIsSmallest, bool isForward)
         {
             _termsIt = it;
             _min = min;
             _max = max;
-            _nullFirst = nullFirst;
+            _nullIsSmallest = nullIsSmallest;
             _isForward = isForward;
             _termsIt.Reset();
             _llt = llt;
@@ -380,7 +384,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
             _bufferIdx = 0;
             _bufferCount = 0;
             
-            bool nullsFirst = _isForward ? _nullFirst : !_nullFirst;
+            bool nullsFirst = _isForward ? _nullIsSmallest : !_nullIsSmallest;
             var buffer = new Span<long>(_itBuffer, BufferSize);
             if (nullsFirst)
                 LoadNonExistingAndNullIntoBuffer(buffer);
@@ -550,21 +554,21 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
                 typeof(TDirection) == typeof(Lookup<CompactTree.CompactKeyLookup>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.IterateValues<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.IterateValues<TDirection>(), match._orderMetadata.Field, min, max, match.NullIsSmallest, match._orderMetadata.Ascending);
             }
 
             if (typeof(TDirection) == typeof(Lookup<Int64LookupKey>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<Int64LookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetLongTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match.NullIsSmallest, match._orderMetadata.Ascending);
             }
 
             if (typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.ForwardIterator) ||
                 typeof(TDirection) == typeof(Lookup<DoubleLookupKey>.BackwardIterator))
             {
                 var termsTree = match._searcher.GetDoubleTermsFor(entryCmp.GetSortFieldName(ref match));
-                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match._nullFirst, match._orderMetadata.Ascending);
+                return new SortedIndexReader<TDirection>(llt, match._searcher, termsTree.Iterate<TDirection>(), match._orderMetadata.Field, min, max, match.NullIsSmallest, match._orderMetadata.Ascending);
             }
 
             throw new NotSupportedException(typeof(TDirection).FullName);

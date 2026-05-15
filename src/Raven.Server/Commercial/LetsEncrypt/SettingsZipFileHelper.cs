@@ -116,9 +116,7 @@ public static class SettingsZipFileHelper
                 settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.SetupMode)] = parameters.SetupMode.ToString();
 
                 if (parameters.SetupInfo.EnableExperimentalFeatures)
-                {
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-                }
+                    AddExperimentalFeaturesToSettingsJson(settingsJson);
                 
                 ModifySettingsJson(parameters.SetupInfo, parameters.Progress.SetupActionSteps, ref settingsJson);
 
@@ -330,9 +328,7 @@ public static class SettingsZipFileHelper
                 };
 
                 if (parameters.UnsecuredSetupInfo.EnableExperimentalFeatures)
-                {
-                    settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
-                }
+                    AddExperimentalFeaturesToSettingsJson(settingsJson);
                 
                 ModifySettingsJson(parameters.UnsecuredSetupInfo, parameters.Progress.SetupActionSteps, ref settingsJson);
 
@@ -750,4 +746,11 @@ public static class SettingsZipFileHelper
         return url;
     }
 
+    private static void AddExperimentalFeaturesToSettingsJson(BlittableJsonReaderObject settingsJson)
+    {
+        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Core.FeaturesAvailability)] = FeaturesAvailability.Experimental;
+#if !RVN
+        settingsJson.Modifications[RavenConfiguration.GetKey(x => x.Integrations.PostgreSql.Enabled)] = true;
+#endif
+    }
 }

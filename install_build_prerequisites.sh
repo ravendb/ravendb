@@ -1,51 +1,60 @@
 #!/bin/bash
 
 # Variable definitions
-UBUNTU_VERSION=$(lsb_release -rs)
-UBUNTU_CODENAME=$(lsb_release -cs)
+UBUNTU_VERSION=$(lsb_release -rs 2>/dev/null)
+UBUNTU_CODENAME=$(lsb_release -cs 2>/dev/null)
 
 # Introductory message
+if [ -n "$UBUNTU_VERSION" ]; then
 echo "Starting environment setup for RavenDB build on Ubuntu $UBUNTU_VERSION ($UBUNTU_CODENAME)"
-
-# Get the full path of the script
-SCRIPT_PATH=$(realpath "$0")
-
-# Check if the script is running with root privileges
-if [ "$EUID" -ne 0 ]; then
-    echo "This script must be run as root. Please use sudo."
-    echo "sudo $SCRIPT_PATH $*"
-    exit 1
+else
+    echo "Starting environment setup for RavenDB build (non-Ubuntu or lsb_release not available)"
 fi
 
-# Check Ubuntu version
-if ! echo "16.04 18.04 20.04 22.04 24.04" | grep -q "$UBUNTU_VERSION"; then
-    echo "Unsupported Ubuntu version: $UBUNTU_VERSION $UBUNTU_CODENAME. Must be 24.04, 22.04, 20.04, 18.04, or 16.04."
-    exit 1
+# Determine how to run privileged commands
+APT_PREFIX=""
+if [ "$EUID" -eq 0 ]; then
+    APT_PREFIX=""
+elif command -v sudo &> /dev/null; then
+    APT_PREFIX="sudo"
+else
+    echo "Note: Not running as root and sudo is not available."
+    echo "Will install tools using non-root methods where possible."
+    echo "Some packages (curl, jq, git) may need to be installed manually if not already present."
+    echo ""
+fi
+
+NEEDS_PATH_HINT=0
+
+apt_install() {
+    if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
+        $APT_PREFIX apt-get install -y "$@"
+    else
+        echo "WARNING: Cannot install $* via apt-get (no root/sudo). Please install manually."
+        return 1
+fi
+}
+
+# Update package lists if we have apt access
+if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
+    echo "Updating package lists..."
+    $APT_PREFIX apt-get update
 fi
 
 # Check and install curl
 echo "Checking for curl..."
-CURL_CMD=$(command -v curl)
-if [ -z "$CURL_CMD" ]; then
+if ! command -v curl &> /dev/null; then
     echo "curl not found. Installing curl..."
-    apt-get install -y curl
+    apt_install curl || { echo "Error: curl is required and could not be installed."; exit 1; }
 else
     echo "curl is already installed."
 fi
 
-# Set up Microsoft repository
-echo "Setting up Microsoft repository for .NET and PowerShell..."
-curl -sSL https://packages.microsoft.com/config/ubuntu/$UBUNTU_VERSION/packages-microsoft-prod.deb -o packages-microsoft-prod.deb
-dpkg -i packages-microsoft-prod.deb
-rm packages-microsoft-prod.deb
-apt-get update
-
 # Check and install jq for parsing JSON
 echo "Checking for jq..."
-JQ_CMD=$(command -v jq)
-if [ -z "$JQ_CMD" ]; then
+if ! command -v jq &> /dev/null; then
     echo "jq not found. Installing jq..."
-    apt-get install -y jq
+    apt_install jq || { echo "Error: jq is required and could not be installed."; exit 1; }
 else
     echo "jq is already installed."
 fi
@@ -70,16 +79,57 @@ if [ -z "$MAJOR_MINOR_VERSION" ]; then
     exit 1
     fi
     
-# Install .NET SDK
-echo "Installing .NET SDK version $MAJOR_MINOR_VERSION..."
-apt-get install -y dotnet-sdk-$MAJOR_MINOR_VERSION
+# Check and install .NET SDK
+echo "Checking for .NET SDK..."
+CURRENT_DOTNET_VERSION=$(dotnet --version 2>/dev/null)
+if [ -n "$CURRENT_DOTNET_VERSION" ]; then
+    CURRENT_MAJOR_MINOR=$(echo "$CURRENT_DOTNET_VERSION" | awk -F. '{print $1"."$2}')
+    if [ "$CURRENT_MAJOR_MINOR" == "$MAJOR_MINOR_VERSION" ]; then
+        echo ".NET SDK $CURRENT_DOTNET_VERSION is already installed and compatible."
+    else
+        echo ".NET SDK $CURRENT_DOTNET_VERSION found but need $MAJOR_MINOR_VERSION."
+        echo "Installing .NET SDK $MAJOR_MINOR_VERSION..."
+        if ! apt_install dotnet-sdk-$MAJOR_MINOR_VERSION; then
+            if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+                echo "ERROR: apt-get install failed and user-local fallback is not suitable under sudo"
+                echo "(dotnet-install.sh would install to /root/.dotnet, inaccessible to user $SUDO_USER)."
+                echo "Please fix the apt package source or rerun this script without sudo."
+                exit 1
+            fi
+            echo "Trying dotnet-install.sh (non-root method)..."
+            curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
+            export PATH="$HOME/.dotnet:$PATH"
+            export DOTNET_ROOT="$HOME/.dotnet"
+            NEEDS_PATH_HINT=1
+        fi
+    fi
+else
+    echo ".NET SDK not found. Installing .NET SDK $MAJOR_MINOR_VERSION..."
+    if ! apt_install dotnet-sdk-$MAJOR_MINOR_VERSION; then
+        if [ "$EUID" -eq 0 ] && [ -n "$SUDO_USER" ]; then
+            echo "ERROR: apt-get install failed and user-local fallback is not suitable under sudo"
+            echo "(dotnet-install.sh would install to /root/.dotnet, inaccessible to user $SUDO_USER)."
+            echo "Please fix the apt package source or rerun this script without sudo."
+            exit 1
+        fi
+        echo "Trying dotnet-install.sh (non-root method)..."
+        curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel "$MAJOR_MINOR_VERSION"
+        export PATH="$HOME/.dotnet:$PATH"
+        export DOTNET_ROOT="$HOME/.dotnet"
+        NEEDS_PATH_HINT=1
+    fi
+fi
 
 # Check and install PowerShell
 echo "Checking for PowerShell..."
-POWERSHELL_CMD=$(command -v pwsh)
-if [ -z "$POWERSHELL_CMD" ]; then
+if ! command -v pwsh &> /dev/null; then
     echo "PowerShell not found. Installing PowerShell..."
-    apt-get install -y powershell
+    if ! apt_install powershell; then
+        echo "Installing PowerShell via dotnet tool..."
+        dotnet tool install --global PowerShell
+        export PATH="$PATH:$HOME/.dotnet/tools"
+        NEEDS_PATH_HINT=1
+    fi
 else
     echo "PowerShell is already installed."
 fi
@@ -89,13 +139,26 @@ echo "Checking for Node.js..."
 NODE_CMD=$(command -v node)
 if [ -z "$NODE_CMD" ] ; then
     echo "Node.js not found. Installing Node.js..."
-    curl -sL https://deb.nodesource.com/setup_lts.x | bash -
-    apt-get install -y nodejs build-essential
+    if [ -n "$APT_PREFIX" ] || [ "$EUID" -eq 0 ]; then
+        curl -fsSL https://deb.nodesource.com/setup_lts.x | $APT_PREFIX bash -
+        apt_install nodejs build-essential
+else
+        echo "Installing Node.js via fnm (non-root method)..."
+        curl -fsSL https://fnm.vercel.app/install | bash
+        export PATH="$HOME/.local/share/fnm:$PATH"
+        eval "$(fnm env)"
+        fnm install --lts
+        NEEDS_PATH_HINT=1
+    fi
+    if ! command -v node &> /dev/null; then
+        echo "Error: Node.js installation failed. Please install Node.js 20.x or later manually."
+        exit 1
+    fi
 else
     NODE_VERSION="$($NODE_CMD --version)"
     MAJOR_VERSION=$(echo "$NODE_VERSION" | sed 's/^v\?\([0-9]*\)\..*/\1/')
-    if [ "$MAJOR_VERSION" -lt 8 ]; then
-        echo "Incompatible Node.js version found: $NODE_VERSION. Node.js 8.x or later is required."
+    if [ "$MAJOR_VERSION" -lt 20 ]; then
+        echo "Incompatible Node.js version found: $NODE_VERSION. Node.js 20.x or later is required."
         exit 1
     else
         echo "Node.js $NODE_VERSION is installed and compatible."
@@ -104,13 +167,34 @@ fi
 
 # Check and install git
 echo "Checking for git..."
-GIT_CMD=$(command -v git)
-if [ -z "$GIT_CMD" ]; then
+if ! command -v git &> /dev/null; then
     echo "git not found. Installing git..."
-    apt-get install -y git
+    apt_install git || { echo "Error: git is required and could not be installed."; exit 1; }
 else
     echo "git is already installed."
 fi
 
 # Completion message
+echo ""
+if [ "$NEEDS_PATH_HINT" -eq 1 ]; then
+    ENV_FILE="$HOME/.ravendb-build-env.sh"
+    {
+        echo "#!/bin/bash"
+        echo "# Generated by install_build_prerequisites.sh"
+        [ -d "$HOME/.dotnet" ] && echo "export DOTNET_ROOT=\"\$HOME/.dotnet\"" && echo "export PATH=\"\$HOME/.dotnet:\$PATH\""
+        [ -d "$HOME/.dotnet/tools" ] && echo "export PATH=\"\$HOME/.dotnet/tools:\$PATH\""
+        [ -d "$HOME/.local/share/fnm" ] && echo "export PATH=\"\$HOME/.local/share/fnm:\$PATH\"" && echo "eval \"\$(fnm env)\""
+    } > "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+
+    echo "NOTE: Some tools were installed to user-local directories."
+    echo "A shell environment file has been generated at: $ENV_FILE"
+    echo ""
+    echo "Before running ./build.sh, run:"
+    echo "  source \"$ENV_FILE\""
+    echo ""
+    echo "To make this permanent, add the following to your ~/.bashrc or ~/.profile:"
+    echo "  source \"$ENV_FILE\""
+    echo ""
+fi
 echo "Environment setup complete. To build RavenDB run: ./build.sh"

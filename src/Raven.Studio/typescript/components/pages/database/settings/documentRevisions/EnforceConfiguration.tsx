@@ -7,14 +7,15 @@ import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import FormCollectionsSelect from "components/common/FormCollectionsSelect";
-import { FormSwitch } from "components/common/Form";
+import { FormGroup, FormInput, FormSwitch, FormLabel } from "components/common/Form";
 import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
 import Modal from "components/common/Modal";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface EnforceConfigurationProps {
     toggle: () => void;
-    onConfirm: (includeForceCreated: boolean, collections: string[]) => Promise<void>;
+    onConfirm: (includeForceCreated: boolean, collections: string[], maxOpsPerSecond: number | null) => Promise<void>;
 }
 
 export default function EnforceConfiguration(props: EnforceConfigurationProps) {
@@ -28,6 +29,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
             isIncludeForceCreated: false,
             isAllCollections: false,
             collections: [],
+            maxOpsPerSecond: null,
         },
     });
 
@@ -36,7 +38,7 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
     const onEnforce: SubmitHandler<FormData> = (formData) => {
         const formCollections = formData.isAllCollections ? null : formData.collections;
 
-        onConfirm(formData.isIncludeForceCreated, formCollections);
+        onConfirm(formData.isIncludeForceCreated, formCollections, formData.maxOpsPerSecond);
         toggle();
     };
 
@@ -62,7 +64,16 @@ export default function EnforceConfiguration(props: EnforceConfigurationProps) {
                     >
                         Include Force Created Revisions
                     </FormSwitch>
-                    <hr />
+                    <FormGroup marginClass="m-0">
+                        <FormLabel>
+                            Max operations per second
+                            <PopoverWithHoverWrapper message="Limits the number of documents processed per second. Leave empty for no limit.">
+                                <Icon icon="info-new" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </FormLabel>
+                        <FormInput type="number" placeholder="No limit" control={control} name="maxOpsPerSecond" />
+                    </FormGroup>
+                    <hr className="my-1" />
                     <p>
                         Clicking <strong>Enforce</strong> will enforce the current revision configuration definitions{" "}
                         <strong>on all existing revisions</strong> in the database per collection.
@@ -111,6 +122,7 @@ const schema = yup.object({
             is: false,
             then: (schema) => schema.min(1),
         }),
+    maxOpsPerSecond: yup.number().nullable().integer().min(1),
 });
 
 const formResolver = yupResolver(schema);

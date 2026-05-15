@@ -22,6 +22,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -421,7 +422,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void Dispose()
         {
-            _cts.Cancel();
+            _cts.SafeCancel(_logger, $"{nameof(ClusterMaintenanceWorker)} '{_name}'");
             _tcp.Dispose();
 
             try

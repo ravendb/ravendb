@@ -248,10 +248,12 @@ public partial class Hnsw
                     insertedVector = n.GetVectorUnmanagedSpan(_searchState);
                     AddEdgesFromInFlightNodes(ref n, createdNodeIndex);
                 }
-                foreach(var item in SearchNearestAcrossLevels(insertedVector, currentMaxLevel))
+                
+                foreach(var item in SearchNearestAcrossLevels(insertedVector, currentMaxLevel, currentNodeIndex))
                 {
                     yield return item;
                 }
+                
                 for (int level = nodeRandomLevel; level >= 0; level--)
                 {
                     int startingPointIndex = _nearestIndexes[level];
@@ -273,6 +275,17 @@ public partial class Hnsw
 
                         ref var edgeList = ref edge.EdgesPerLevel[level];
                         edgeList.Add(_searchState.Llt.Allocator, node.NodeId);
+
+                        // Mirror the append into EdgesIndexesPerLevel so RegisterForPreloading
+                        // can skip its O(M) NodeId -> index rebuild. We only update when the
+                        // cache is already populated for this level and was in sync before this
+                        // append; otherwise we leave the lazy rebuild to fix it.
+                        if (edge.EdgesIndexesPerLevel.Count > level)
+                        {
+                            ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
+                            if (edgeIndexes.Count == edgeList.Count - 1)
+                                edgeIndexes.Add(_searchState.Llt.Allocator, currentNodeIndex);
+                        }
 
                         if (edgeList.Count <= _searchState.Options.NumberOfEdges)
                             continue;
@@ -301,6 +314,18 @@ public partial class Hnsw
                             foreach (var idx in _candidates)
                             {
                                 edgeList.AddUnsafe(_searchState.GetNodeByIndex(idx).NodeId);
+                            }
+
+                            // _candidates already holds node indexes, so we can rewrite the
+                            // mirrored cache directly without touching the node id table.
+                            if (edge.EdgesIndexesPerLevel.Count > level)
+                            {
+                                ref var edgeIndexes = ref edge.EdgesIndexesPerLevel[level];
+                                edgeIndexes.ResetAndEnsureCapacity(_searchState.Llt.Allocator, _candidates.Count);
+                                foreach (var idx in _candidates)
+                                {
+                                    edgeIndexes.AddUnsafe(idx);
+                                }
                             }
                         }
                     }
@@ -331,9 +356,10 @@ public partial class Hnsw
 
             private IEnumerable<WorkItem> NearestEdges(int startingPointIndex, int currentNodeIndex, UnmanagedSpan vector, int level)
             {
-                Debug.Assert(_candidatesQ.Count == 0, "_candidatesQ.Count == 0");
-                Debug.Assert(_nearestEdgesQ.Count == 0, "_nearestEdgesQ.Count == 0");
-
+                Debug.Assert(_candidatesQ.Count == 0);
+                Debug.Assert(_nearestEdgesQ.Count == 0);
+                Debug.Assert(startingPointIndex != currentNodeIndex);
+                
                 float lowerBound = float.MaxValue;
                 ClearVisited();
                 MarkVisited(currentNodeIndex); // we can't have an edge to itself
@@ -498,10 +524,11 @@ public partial class Hnsw
                 
             }
 
-            private IEnumerable<WorkItem> SearchNearestAcrossLevels(UnmanagedSpan from, int maxLevel)
+            private IEnumerable<WorkItem> SearchNearestAcrossLevels(UnmanagedSpan from, int maxLevel, int insertedNodeIndex)
             {
                 _nearestIndexes.Clear();
                 ClearVisited();
+                MarkVisited(insertedNodeIndex);
                 var currentNodeIndex = _searchState.GetNodeIndexById(EntryPointId);
                 var level = maxLevel;
                 var distance = float.MaxValue;
@@ -557,14 +584,25 @@ public partial class Hnsw
             
             private int GetLevelForNewNode(int maxLevel)
             {
-                int level = 0;
-                while ((parent.Random.Next() & 1) == 0 && // 50% chance 
-                       level < maxLevel)
-                {
-                    level++;
-                }
-
-                return level;
+                // Use the level assignment formula from the original HNSW paper.
+                // Most nodes stay at level 0 where they form a dense, detailed graph
+                // that captures fine-grained neighborhood relationships. Only a few
+                // nodes get promoted to upper levels, which act as sparse long-range
+                // shortcuts. During search, the algorithm quickly descends through
+                // these thin upper layers to find a good entry region, then switches
+                // to the dense level 0 to refine the actual nearest neighbors.
+                // If promotion were too aggressive (e.g. a 50% coin flip), half the
+                // nodes would reach level 1, a quarter level 2, and so on. The upper
+                // layers would become crowded with nodes and edges, making insertion
+                // and search spend most of their time navigating dense upper levels
+                // instead of quickly skipping down to where the real work happens.
+                int m = _searchState.Options.NumberOfEdges;
+                double mL = 1.0 / Math.Log(m);
+                double r = parent.Random.NextDouble();
+                // Avoid log(0)
+                if (r == 0.0) r = double.Epsilon;
+                int level = (int)(-Math.Log(r) * mL);
+                return Math.Min(level, maxLevel);
             }
 
             /// <summary>

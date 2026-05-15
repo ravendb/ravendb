@@ -5,6 +5,7 @@ using System.Threading;
 using Raven.Client.Exceptions;
 using Sparrow.Platform;
 using Sparrow.Server.Platform.Posix;
+using Voron.Util.Settings;
 
 namespace Raven.Server.Utils
 {
@@ -81,6 +82,9 @@ namespace Raven.Server.Utils
 
         public static void MoveDirectory(string src, string dst)
         {
+            if (PlatformDetails.RunningOnWindows)
+                (src, dst) = NormalizeLongPathPrefixOnWindows(src, dst);
+
             for (var i = 0; i < Retries; i++)
             {
                 try
@@ -218,6 +222,22 @@ namespace Raven.Server.Utils
                 AfterGc(null, (path, sw.Elapsed, attempt));
 
             Thread.Sleep(100);
+        }
+
+
+        private static (string Src, string Dst) NormalizeLongPathPrefixOnWindows(string src, string dst)
+        {
+            Debug.Assert(PlatformDetails.RunningOnWindows);
+
+            var srcHasPrefix = src.StartsWith(PathUtil.LongPathPrefixWindows, StringComparison.OrdinalIgnoreCase);
+            var dstHasPrefix = dst.StartsWith(PathUtil.LongPathPrefixWindows, StringComparison.OrdinalIgnoreCase);
+
+            if (srcHasPrefix == dstHasPrefix)
+                return (src, dst);
+
+            return srcHasPrefix
+                ? (src, PathUtil.LongPathPrefixWindows + dst)
+                : (PathUtil.LongPathPrefixWindows + src, dst);
         }
     }
 }

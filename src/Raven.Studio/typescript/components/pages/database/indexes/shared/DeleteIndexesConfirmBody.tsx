@@ -62,13 +62,23 @@ export default function DeleteIndexesConfirmBody({
             {showWarning && (
                 <>
                     <hr />
-                    <RichAlert variant="warning">
-                        Note: <br />
-                        &apos;Reduce Results Collections&apos; were created by above index(es).
-                        <br />
-                        Clicking &apos;Delete&apos; will delete the index(es) but Not the Results Collection(s).
-                        <br />
-                        Go to the collection itself to manually remove documents.
+                    <RichAlert variant="warning" className="align-items-start">
+                        <div>
+                            &apos;Reduce Results Collections&apos; were created by the index(es).
+                            <ul className="mt-2 mb-2 ps-3">
+                                <li>
+                                    <strong>Note</strong>:<br />
+                                    Clicking &apos;Delete&apos; will remove the index(es), but not the Reduce Results
+                                    Collection(s). You need to manually remove the documents from these collections.
+                                </li>
+                                <li className="mt-1">
+                                    <strong>Important</strong>:<br />
+                                    If running in a cluster, these documents must be deleted from{" "}
+                                    <strong>each node individually</strong>, because their deletion is not replicated
+                                    between nodes.
+                                </li>
+                            </ul>
+                        </div>
                     </RichAlert>
                 </>
             )}

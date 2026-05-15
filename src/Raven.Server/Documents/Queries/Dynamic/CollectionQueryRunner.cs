@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             QueryRunner.AssertValidQuery(query, result);
 
-            using (queryContext.OpenReadTransaction())
+            using (queryContext.AreTransactionsOpened() == false ? queryContext.OpenReadTransaction() : null)
             {
                 FillCountOfResultsAndIndexEtag(result, query.Metadata, queryContext);
 

@@ -27,6 +27,7 @@ using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Server.Utils;
+using Sparrow.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -875,7 +876,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void Dispose()
         {
-            _cts.Cancel();
+            _cts.SafeCancel(_observerLogger.Logger, $"{nameof(ClusterObserver)} on node {_nodeTag}");
 
             try
             {

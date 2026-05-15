@@ -85,7 +85,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
                 "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
                 "Indexing.Querying.UseSearchAnalyzerForDynamicFieldsIfNotSetExplicitlyInSearchQuery",
-                "Indexing.Querying.Corax.NullFirst",
+                "Indexing.Querying.Corax.NullsSortMode",
                 
                 
                 "Storage.DisableSparseRegions",
@@ -108,6 +108,7 @@ namespace FastTests.Issues
                 "Indexing.MaxTimeForMergesToKeepRunningInSec",
                 "Indexing.MergeFactor",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
+                "Indexing.Querying.Corax.NullFirst",
                 "Indexing.UseCompoundFileInMerging",
                 "Indexing.Storage.DisableSharedJournals"
             };

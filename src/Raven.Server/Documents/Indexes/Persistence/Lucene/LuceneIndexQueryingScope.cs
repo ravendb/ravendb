@@ -35,15 +35,18 @@ public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
         // we are paging, we need to check that we don't have duplicates in the previous pages
         // see here for details: http://groups.google.com/group/ravendb/browse_frm/thread/d71c44aa9e2a7c6e
 
-        if (_indexType.IsMap() && _fieldsToFetch.IsProjection == false && search.ScoreDocs.Length >= _query.Start)
+        if (_indexType.IsMap() && _fieldsToFetch.IsProjection == false && search.ScoreDocArray.Length >= _query.Start)
         {
             if (_isSortingQuery)
             {
+                var docReader = search.ScoreDocArray.GetReader(0);
+
                 // we need to scan all records from the beginning to requested 'start' position
-                for (var i = 0; i < _query.Start && i < search.ScoreDocs.Length; i++)
+                var i = 0;
+                while (i < _query.Start && docReader.Read(out var doc, out _))
                 {
-                    var scoreDoc = search.ScoreDocs[i];
-                    var document = _searcher.Doc(scoreDoc.Doc, _state);
+                    i++;
+                    var document = _searcher.Doc(doc, _state);
                     var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state);
 
                     _alreadySeenDocumentKeysInPreviousPage.Add(alreadyPagedKey);
@@ -52,7 +55,7 @@ public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
             else
             {
                 // that's not a sorted query so we need just to ensure that we won't return the last item of the previous page
-                var scoreDoc = search.ScoreDocs[_query.Start - 1];
+                var scoreDoc = search.ScoreDocArray[(int)_query.Start - 1];
                 var document = _searcher.Doc(scoreDoc.Doc, _state);
                 var alreadyPagedKey = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _state);
 
@@ -63,16 +66,19 @@ public sealed class LuceneIndexQueryingScope : IndexQueryingScopeBase<string>
         if (_fieldsToFetch.IsDistinct == false)
             return;
 
-        if (search.ScoreDocs.Length <= _alreadyScannedForDuplicates)
+        if (search.ScoreDocArray.Length <= _alreadyScannedForDuplicates)
             return;
 
-        if (search.ScoreDocs.Length <= _query.Start)
+        if (search.ScoreDocArray.Length <= _query.Start)
             return;
 
-        for (; _alreadyScannedForDuplicates < _query.Start; _alreadyScannedForDuplicates++)
+        var reader = search.ScoreDocArray.GetReader(_alreadyScannedForDuplicates);
+
+        while (_alreadyScannedForDuplicates < _query.Start && reader.Read(out var doc, out var score))
         {
-            var scoreDoc = search.ScoreDocs[_alreadyScannedForDuplicates];
-            var retrieverInput = new RetrieverInput(_searcher.Doc(scoreDoc.Doc, _state), scoreDoc, _state);
+            _alreadyScannedForDuplicates++;
+
+            var retrieverInput = new RetrieverInput(_searcher.Doc(doc, _state), (doc, score), _state);
             var result = _retriever.Get(ref retrieverInput, token);
 
             if (result.Document != null)

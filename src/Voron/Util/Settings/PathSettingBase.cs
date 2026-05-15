@@ -68,6 +68,8 @@ namespace Voron.Util.Settings
     
     public sealed class PathUtil
     {
+        public const string LongPathPrefixWindows = @"\\?\";
+
         public static string ToFullPath(string inputPath, string baseDataDirFullPath = null)
         {
             var path = Environment.ExpandEnvironmentVariables(inputPath);
@@ -93,9 +95,9 @@ namespace Voron.Util.Settings
 
             if (finalFullPath.Length >= 260 &&
                 RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                finalFullPath.StartsWith(@"\\?\") == false)
+                finalFullPath.StartsWith(LongPathPrefixWindows) == false)
             {
-                finalFullPath = @"\\?\" + finalFullPath;
+                finalFullPath = LongPathPrefixWindows + finalFullPath;
             }
             
             return finalFullPath;

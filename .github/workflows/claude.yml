@@ -1,0 +1,86 @@
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@hugin-bot') &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@hugin-bot') &&
+        (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@hugin-bot') &&
+        (github.event.review.author_association == 'OWNER' || github.event.review.author_association == 'MEMBER')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@hugin-bot') || contains(github.event.issue.title, '@hugin-bot')) &&
+        (github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER'))
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      actions: read # Required for Claude to read CI results on PRs
+    steps:
+      # Mint a custom GitHub App token so the action skips Anthropic's OIDC
+      # exchange (which 401s for some actor/event combinations) and so
+      # comments are posted as hugin-bot[bot] rather than claude[bot].
+      # See https://github.com/anthropics/claude-code-action/issues/1017
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.RAVENDB_BOT_APP_ID }}
+          private-key: ${{ secrets.RAVENDB_BOT_APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@62238ddb33772a079b0a6d8665a1ff3043583067 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+
+          # Match the action's internal trigger-phrase scan to the mention
+          # used in our workflow `if:` gate. Without this, the action defaults
+          # to looking for `@claude` and silently skips when the comment
+          # actually says `@hugin-bot`.
+          trigger_phrase: '@hugin-bot'
+
+          # Suppress the default "🤖 Generated with Claude Code" footer on
+          # comments and PR descriptions — hugin-bot[bot] is sufficient
+          # attribution. See https://code.claude.com/docs/en/settings#attribution-settings
+          settings: |
+            {
+              "attribution": {
+                "pr": "",
+                "commit": ""
+              }
+            }
+
+          # This is an optional setting that allows Claude to read CI results on PRs
+          additional_permissions: |
+            actions: read
+
+          # Tool allowlist: read access to PRs/issues, edit/write for code
+          # suggestions, no Bash escape, no WebFetch (exfiltration), no
+          # destructive gh subcommands like release/repo/api.
+          # Model is set via the RAVENDB_BOT_CODE_MODEL repository (or org)
+          # variable (e.g. claude-sonnet-4-6, claude-opus-4-7).
+          claude_args: '--max-turns 80 --model ${{ vars.RAVENDB_BOT_CODE_MODEL }} --allowedTools "Read,Grep,Glob,Task,TodoWrite,Edit,Write,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr list:*),Bash(gh pr comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh issue comment:*),Bash(gh issue create:*),Bash(gh search:*)"'
+
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options
+

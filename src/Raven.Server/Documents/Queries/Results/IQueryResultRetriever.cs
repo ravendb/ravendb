@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public string DocumentId;
 
-        public ScoreDoc Score;
+        public (int Doc, float Score)? Score;
 
         public float? CoraxScore;
         
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Queries.Results
         public IndexSearcher CoraxIndexSearcher;
         public Func<string, bool> HasTime;
 
-        public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, ScoreDoc score, IState state)
+        public RetrieverInput(Lucene.Net.Documents.Document luceneDocument, (int Doc, float Score) score, IState state)
         {
             LuceneDocument = luceneDocument;
             State = state;

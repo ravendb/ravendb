@@ -1,8 +1,8 @@
 <form data-bind="submit: saveDocument, css: { 'diff': inDiffMode }" class="edit-document" autocomplete="off">
     <div class="docEditor flex-window flex-grow content-margin" data-bind="style: { 'z-index': isFullScreenEditor() ? 1084 : undefined }">
         <div class="flex-window-head">
-            <div class="flex-horizontal copy-area">
-                <div class="flex-grow">
+            <div class="flex-horizontal copy-area gap-3 margin-bottom margin-bottom-xs">
+                <div class="left-header">
                     <div class="documentId">
                         <div data-bind="if: isCreatingNewDocument() && !isFullScreenEditor()">
                             <div class="input-group" data-bind="validationElement: userSpecifiedId">
@@ -14,40 +14,42 @@
                                        data-bind="textInput: userSpecifiedId, disable: $root.isBusy, hasFocus: userIdHasFocus()">
                             </div>
                         </div>
-                        <div class="flex-horizontal" data-bind="if: !isCreatingNewDocument()">
+                        <div class="flex-horizontal gap-2" data-bind="if: !isCreatingNewDocument()">
                             <!-- todo: bring back the star when doing issue RavenDB-8110 (vNext) -->
                             <!--<a class="reset-color btn-toggle markFavourite" data-bind="click: connectedDocuments.toggleStar">-->
                                 <!--<span data-bind="attr: { class: connectedDocuments.currentDocumentIsStarred()?'icon-star-filled favorite':'icon-star' }"></span>-->
                             <!--</a>-->
                             <span class="obj-name on-base-background" data-bind="text: userSpecifiedId, attr: { title: userSpecifiedId }"></span>
-                            <a href="#" class="inherit-position" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
                             <span data-bind="visible: revisionText(), text: revisionText()" class="text-primary revision flex-shrink-0"></span>
                             <span data-bind="visible: archivedText(), text: archivedText()" class="text-primary archived flex-shrink-0"></span>
-                            <a target="_blank" href="#" title="Click to view the raw content of the document" class="flex-shrink-0 margin-left margin-left-sm"
-                               data-bind="attr: { href: rawJsonUrl }, visible: !isDeleteRevision()"><i class="icon-json"></i>
-                            </a>
+                            <a href="#" class="inherit-position" title="Copy document Id" data-bind="click: copyDocumentIdToClipboard"><i class="icon-copy"></i></a>
                         </div>
                     </div>
                 </div>
-                <div class="flex-shrink-0" data-bind="visible: !inDiffMode()">
-                    <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
-                        <i class="icon-recent"></i>
-                        <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
-                    </p>
-                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange() && !displayDocumentDeleted()">
-                        <small>
-                            <i class="icon-warning"></i>
-                            <span>This document has been modified outside of Studio.</span>
-                            <a href="#" data-bind="click: refreshDocument">Click here to refresh.</a>
-                        </small>
-                    </p>
-                    <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentDeleted">
-                        <small>
-                            <i class="icon-warning"></i>
-                            <span>This document has been deleted outside of Studio.</span>
-                            <a href="#" data-bind="click: navigateAfterExternalDelete">Go to recent document.</a>
-                        </small>
-                    </p>
+                <div class="flex-horizontal flex-shrink-0 gap-2">
+                    <a target="_blank" href="#" title="Click to view the raw content of the document" class="flex-shrink-0"
+                       data-bind="attr: { href: rawJsonUrl }, visible: !isCreatingNewDocument() && !isDeleteRevision()"><i class="icon-json"></i>
+                    </a>
+                    <div class="flex-shrink-0" data-bind="visible: !inDiffMode()">
+                        <p class="pull-right-md text-right-md padding padding-xs on-base-background" data-bind="if: displayLastModifiedDate()">
+                            <i class="icon-recent"></i>
+                            <small>Last modified <span data-bind="text: $root.lastModifiedAsAgo"></span></small>
+                        </p>
+                        <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentChange() && !displayDocumentDeleted()">
+                            <small>
+                                <i class="icon-warning"></i>
+                                <span>This document has been modified outside of Studio.</span>
+                                <a href="#" data-bind="click: refreshDocument">Click here to refresh.</a>
+                            </small>
+                        </p>
+                        <p class="pull-right-md bg-warning padding padding-xs" data-bind="visible: displayDocumentDeleted">
+                            <small>
+                                <i class="icon-warning"></i>
+                                <span>This document has been deleted outside of Studio.</span>
+                                <a href="#" data-bind="click: navigateAfterExternalDelete">Go to recent document.</a>
+                            </small>
+                        </p>
+                    </div>
                 </div>
             </div>
             <div class="btn-bar toolbar">

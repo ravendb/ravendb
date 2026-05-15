@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -119,6 +120,11 @@ namespace Raven.Client.Http
 
             if (Disposed)
                 return false;
+
+#if NETCOREAPP3_1_OR_GREATER
+            Activity.Current = null;
+#endif
+
             var lockTaken = await _clusterTopologySemaphore.WaitAsync(parameters.TimeoutInMs).ConfigureAwait(false);
             if (lockTaken == false)
                 return false;

@@ -22,7 +22,7 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
     /// <summary>Values are indexes of documents inside batchResult, not the documents themselves.</summary>
     private Span<int> _documents;
 
-    internal bool _nullFirst;
+    internal bool _nullIsSmallest;
     internal int _nullResult;
     private Span<TTermType> _terms;
     
@@ -40,10 +40,10 @@ internal unsafe ref struct NumericalMaxHeapSorter<TTermType, TSecondaryComparer>
     private delegate*<ref NumericalMaxHeapSorter<TTermType, TSecondaryComparer>, TTermType, int, TTermType, int, int> _compare;
 
     public void Init(Span<int> documents, Span<TTermType> terms, ByteStringContext allocator, bool descending,
-        delegate*<ref NumericalMaxHeapSorter<TTermType, TSecondaryComparer>, TTermType, int, TTermType, int, int> compare, TSecondaryComparer secondaryCmp, bool nullFirst)
+        delegate*<ref NumericalMaxHeapSorter<TTermType, TSecondaryComparer>, TTermType, int, TTermType, int, int> compare, TSecondaryComparer secondaryCmp, bool nullIsSmallest)
     {
-        _nullFirst = nullFirst;
-        _nullResult = nullFirst ? 1 : -1;
+        _nullIsSmallest = nullIsSmallest;
+        _nullResult = nullIsSmallest ? 1 : -1;
         IsDescending = descending;
         _documents = documents;
         _terms = terms;

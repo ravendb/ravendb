@@ -262,6 +262,11 @@ namespace Raven.Embedded
                         _logger.Debug($"Killing global server PID {process.Id}.");
 
                     process.Kill();
+                    if (process.WaitForExit((int)_serverOptions!.ProcessKillTimeout.TotalMilliseconds) == false)
+                    {
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info($"Process {process.Id} did not exit after Kill() within {_serverOptions!.ProcessKillTimeout.ToString()} seconds.");
+                    }
                     
                     _forTestingPurposes?.OnProcessKilled?.Invoke(process);
                 }

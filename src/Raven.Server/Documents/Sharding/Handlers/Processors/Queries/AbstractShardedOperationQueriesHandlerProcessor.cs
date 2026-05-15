@@ -11,6 +11,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.NotificationCenter;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Sharding.Handlers.Processors.Queries;
@@ -49,6 +50,19 @@ internal abstract class AbstractShardedOperationQueriesHandlerProcessor : Abstra
         var token = RequestHandler.CreateTimeLimitedBackgroundOperationToken();
 
         var op = GetOperation(query, operationId, options);
+
+        if (RavenLogManager.Instance.IsAuditEnabled)
+        {
+            var logAction = op.Type switch
+            {
+                OperationType.UpdateByQuery => "UPDATE",
+                OperationType.DeleteByQuery => "DELETE",
+                OperationType.DeleteByCollection => "DELETE",
+                _ => op.Type.ToString().ToUpper()
+            };
+
+            RequestHandler.LogAuditForDatabase(logAction, $"Documents matching the query: {query}");
+        }
 
         var task = RequestHandler.DatabaseContext.Operations
             .AddRemoteOperation<OperationIdResult, BulkOperationResult, BulkInsertProgress>(

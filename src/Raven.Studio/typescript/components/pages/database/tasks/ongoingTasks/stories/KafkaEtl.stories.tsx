@@ -23,6 +23,7 @@ interface KafkaProps {
     runtimeError: boolean;
     loadError: boolean;
     databaseType: "sharded" | "cluster" | "singleNode";
+    multipleScripts: boolean;
 }
 
 export const Default: StoryObj<KafkaProps> = {
@@ -52,7 +53,34 @@ export const Default: StoryObj<KafkaProps> = {
             tasksService.withGetTasks(mockedValue);
         }
 
-        mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+        if (args.multipleScripts) {
+            tasksService.withGetEtlProgress((dto) => {
+                const kafkaTask = dto.Results.find((x) => x.TaskName === TasksStubs.getKafkaEtl().TaskName);
+                if (kafkaTask) {
+                    const base = kafkaTask.ProcessesProgress[0];
+                    kafkaTask.ProcessesProgress = [
+                        {
+                            ...base,
+                            TransformationName: "Script #1",
+                            TransactionalId: "bVhBBojWnEOKrsszfuQ+Yg-tst-kafka_Script #1",
+                            Disabled: args.disabled,
+                            Completed: args.completed,
+                            NumberOfDocumentsToProcess: args.completed ? 0 : base.NumberOfDocumentsToProcess,
+                        },
+                        {
+                            ...base,
+                            TransformationName: "Script #2",
+                            TransactionalId: "cXiCCpkXoFPLttttgvR+Zh-tst-kafka_Script #2",
+                            Disabled: args.disabled,
+                            Completed: args.completed,
+                            NumberOfDocumentsToProcess: args.completed ? 0 : base.NumberOfDocumentsToProcess,
+                        },
+                    ];
+                }
+            });
+        } else {
+            mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
+        }
 
         return <OngoingTasksPage />;
     },
@@ -62,6 +90,7 @@ export const Default: StoryObj<KafkaProps> = {
         runtimeError: false,
         loadError: false,
         emptyScript: false,
+        multipleScripts: false,
         customizeTask: undefined,
         databaseType: "sharded",
     },

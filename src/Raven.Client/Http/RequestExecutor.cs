@@ -500,6 +500,14 @@ namespace Raven.Client.Http
             if (Disposed)
                 return false;
 
+            // Isolate topology updates from any ambient trace — topology updates are background
+            // maintenance operations and should not appear as child spans of unrelated user traces.
+            // Setting Activity.Current = null here is safe: AsyncLocal semantics ensure the caller's
+            // Activity is unaffected once this method returns from its await.
+#if NETCOREAPP3_1_OR_GREATER
+            Activity.Current = null;
+#endif
+
             //prevent double topology updates if execution takes too much time
             // --> in cases with transient issues
             var lockTaken = await _updateDatabaseTopologySemaphore.WaitAsync(parameters.TimeoutInMs).ConfigureAwait(false);

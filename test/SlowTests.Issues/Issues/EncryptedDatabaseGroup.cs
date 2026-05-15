@@ -108,6 +108,14 @@ namespace SlowTests.Issues
 
                 await DeleteNodeFromGroup(store, notInDbGroupServer);
 
+                // wait for the failed database instance to be fully unloaded on the target node
+                // (its DisposeInternal may still be running in a background task, holding the db.lock)
+                var isLoaded = await WaitForValueAsync(() =>
+                {
+                    return notInDbGroupServer.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out _);
+                }, false, timeout: 30_000);
+                Assert.False(isLoaded, $"Database '{databaseName}' is still loaded on node '{notInDbGroupServer.ServerStore.NodeTag}' after waiting for it to unload.");
+
                 notInDbGroupServer.ServerStore.PutSecretKey(copy, databaseName, overwrite: true);
                 await AddNodeToGroup(store);
                 await TrySavingDocument(store, 2);

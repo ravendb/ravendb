@@ -221,7 +221,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _lookup = match._searcher.EntriesToTermsReader(fieldName);
             _batchResults = batchResults;
             _termsReader = match._searcher.TermsReaderFor(fieldName);
-            _nullResult = match._nullFirst ? 1 : -1;
+            _nullResult = match.GetNullIsSmallestForClause(_comparerId) ? 1 : -1;
             
             if (match._searcher.TryGetPostingListForNull(fieldName, out _, out _nullTermContainerId) == false)
                 _nullTermContainerId = -1;
@@ -251,7 +251,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
             using var _ = llt.Allocator.Allocate(heapSize, out Span<UnmanagedSpan> terms);
-            var sorter = HeapSorterBuilder.BuildCompoundCompactKeySorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match._nullFirst);
+            var sorter = HeapSorterBuilder.BuildCompoundCompactKeySorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match.GetNullIsSmallestForClause(_comparerId));
            
             for (int i = 0; i < indexes.Length; i++)
                 sorter.Insert(i, batchTerms[i]);
@@ -291,7 +291,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _comparerId = comparerId;
             _lookup = match._searcher.EntriesToTermsReader(GetSortFieldName(ref match));
             _batchResults = batchResults;
-            _missingValue = match._nullFirst ? long.MinValue : long.MaxValue;
+            _missingValue = match.GetNullIsSmallestForClause(_comparerId) ? long.MinValue : long.MaxValue;
         }
 
         public void SortBatch<TComparer2, TComparer3>(ref SortingMultiMatch<TInner> match, LowLevelTransaction llt, PageLocator pageLocator,
@@ -314,7 +314,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             using var _ = llt.Allocator.Allocate(heapSize, out Span<long> terms);
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
-            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match.GetNullIsSmallestForClause(_comparerId));
                 
             for (int i = 0; i < indexes.Length; i++)
                 heapSorter.Insert(i, batchTermIds[i]);
@@ -406,7 +406,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             using var _ = llt.Allocator.Allocate(heapSize, out Span<double> terms);
             var indexes = MemoryMarshal.Cast<long, int>(batchTermIds)[..(batchTermIds.Length)];
             var secondaryComparer = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
-            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildCompoundNumericalSorter(indexes.Slice(0, heapSize), terms, orderMetadata[0].Ascending == false, secondaryComparer, match.GetNullIsSmallestForClause(_comparerId));
                 
             for (int i = 0; i < indexes.Length; i++)
                 heapSorter.Insert(i, BitConverter.Int64BitsToDouble(batchTermIds[i]));
@@ -425,7 +425,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _comparerId = comparerId;
             _lookup = match._searcher.EntriesToTermsReader(GetSortFieldName(ref match));
             _batchResults = batchResults;
-            _missingValue = BitConverter.DoubleToInt64Bits(match._nullFirst ? double.MinValue : double.MaxValue);
+            _missingValue = BitConverter.DoubleToInt64Bits(match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue);
         }
 
         public int Compare(UnmanagedSpan x, UnmanagedSpan y)
@@ -465,7 +465,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
         private ByteStringContext _allocator;
         private long _nullTermContainerId;
         private long _nonExistingTermContainerId;
-        private bool _nullFirst;
+        private bool _nullIsSmallest;
 
         public Slice GetSortFieldName(ref SortingMultiMatch<TInner> match) => match._orderMetadata[_comparerId].Field.FieldName;
 
@@ -478,7 +478,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             _lookup = match._searcher.EntriesToTermsReader(fieldName);
             _batchResults = batchResults;
             _allocator = match._searcher.Allocator;
-            _nullFirst = match._nullFirst;
+            _nullIsSmallest = match.GetNullIsSmallestForClause(_comparerId);
             if (match._searcher.TryGetPostingListForNull(fieldName, out _, out _nullTermContainerId) == false)
                 _nullTermContainerId = SortingHelpers.InvalidTermId;
             if (match._searcher.TryGetPostingListForNonExisting(fieldName, out _, out _nonExistingTermContainerId) == false)
@@ -507,7 +507,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             var heapCapacity = match._take == -1 ? batchResults.Length : Math.Min(match._take, batchResults.Length);
             using var _ = _allocator.Allocate(heapCapacity, out Span<ByteString> terms);
             var secondaryComparers = new IndirectComparer2<TComparer2, TComparer3>(ref match, comparer2, comparer3);
-            var heapSorter = HeapSorterBuilder.BuildCompoundAlphanumericalSorter(documents.Slice(0, heapCapacity), terms, _allocator, orderMetadata[0].Ascending == false, secondaryComparers, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildCompoundAlphanumericalSorter(documents.Slice(0, heapCapacity), terms, _allocator, orderMetadata[0].Ascending == false, secondaryComparers, match.GetNullIsSmallestForClause(_comparerId));
 
             ContextBoundNativeList<int> nullIndexes = default;
             for (int i = 0; i < batchTermIds.Length; i++)
@@ -557,7 +557,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             if (xIsNull || yIsNull)
             {
                 if (xIsNull && yIsNull) return 0;
-                return _nullFirst 
+                return _nullIsSmallest 
                     ? (xIsNull ? -1 : 1) 
                     : (xIsNull ? 1 : -1);
             }
@@ -590,7 +590,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
 
             if (comparerId > 0)
             {
-                _missingValueForInnerSorter = match._nullFirst ? double.MinValue : double.MaxValue;
+                _missingValueForInnerSorter = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
             }
         }
 
@@ -614,7 +614,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
             using var _ = llt.Allocator.Allocate(heapSize, out Span<SpatialResult> terms);
 
 
-            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match._nullFirst);
+            var heapSorter = HeapSorterBuilder.BuildSingleNumericalSorter<SpatialResult>(indexes.Slice(0, heapSize), terms, descending, match.GetNullIsSmallestForClause(_comparerId));
             
 
 
@@ -623,7 +623,7 @@ public unsafe partial struct SortingMultiMatch<TInner> : IQueryMatch
                 SpatialResult distance; 
                 if (_reader.TryGetSpatialPoint(batchResults[i], out var coords) == false)
                 {
-                    var distanceForMissing = match._nullFirst ? double.MinValue : double.MaxValue;
+                    var distanceForMissing = match.GetNullIsSmallestForClause(_comparerId) ? double.MinValue : double.MaxValue;
                     distance = new SpatialResult() { Distance = distanceForMissing, Latitude = Double.NaN, Longitude = Double.NaN };
                 }
                 else

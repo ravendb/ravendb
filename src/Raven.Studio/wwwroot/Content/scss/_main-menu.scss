@@ -37,7 +37,7 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
         display: inline;
     }
     h2 {
-        padding: 0 $gutter-sm;
+        padding: 0 $gutter-xs;
         color: $text-color-var;
         margin: 0;
         font-size: 18px;
@@ -241,6 +241,16 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
             -webkit-transform-origin: 0 0;
             transform-origin: 0 0;
         }
+        li {
+            a {
+                padding: $gutter-xxs;
+                margin: $gutter-xxxs;
+                border-radius: $gutter-xxxs;
+            }
+        }
+        h3 {
+            padding-left: $gutter-xs;
+        }
         a {
             &:hover {
                 background-color: $base-panel-bg-2;
@@ -250,6 +260,51 @@ $menu-transition-ease: 0.4s cubic-bezier(0.21, 0.88, 0.35, 1);
     .collections-list {
         a {
             padding: $gutter-xxs $gutter-sm;
+        }
+        .system-group-header {
+            cursor: pointer;
+            color: $text-muted-var;
+
+            i {
+                font-size: 10px;
+                margin-right: $gutter-xxxs;
+                flex-shrink: 0;
+            }
+        }
+        .system-collection-items {
+            --tree-spacing: #{$gutter-sm};
+            --tree-radius: #{$gutter-xxxs};
+            --tree-line-color: #{$border-color-light-var};
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+            margin-left: calc(#{$gutter-xs} + 3px);
+
+            li {
+                position: relative;
+                border-left: 2px solid var(--tree-line-color);
+
+                &:last-child {
+                    border-color: transparent;
+                }
+
+                &::before {
+                    content: "";
+                    display: block;
+                    position: absolute;
+                    top: calc(var(--tree-spacing) / -4);
+                    left: -2px;
+                    width: calc(var(--tree-spacing) + 2px);
+                    height: calc(var(--tree-spacing) + 3px);
+                    border: solid var(--tree-line-color);
+                    border-width: 0 0 2px 2px;
+                    border-bottom-left-radius: var(--tree-radius);
+                }
+
+                a {
+                    margin-left: var(--tree-spacing);
+                }
+            }
         }
     }
     // Document Collections

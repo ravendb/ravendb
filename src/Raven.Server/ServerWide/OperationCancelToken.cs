@@ -16,6 +16,8 @@ namespace Raven.Server.ServerWide
         public readonly CancellationToken Token;
         private readonly long _minimumDelayTimeInMs;
 
+        public bool HasTimeout => _cancelAfter != Timeout.InfiniteTimeSpan;
+
         public OperationCancelToken(TimeSpan cancelAfter, CancellationToken token)
         {
             ValidateCancelAfter(cancelAfter);

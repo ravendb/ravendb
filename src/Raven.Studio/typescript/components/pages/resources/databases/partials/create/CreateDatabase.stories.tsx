@@ -22,6 +22,7 @@ interface DefaultCreateDatabaseProps {
     hasEncryption: boolean;
     hasDynamicNodesDistribution: boolean;
     maxReplicationFactorForSharding: number;
+    singleNode: boolean;
 }
 
 export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
@@ -46,7 +47,12 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         });
 
         accessManager.with_isServerSecure(props.isSecureServer);
-        cluster.with_Cluster();
+
+        if (props.singleNode) {
+            cluster.with_Single();
+        } else {
+            cluster.with_Cluster();
+        }
 
         return (
             <>
@@ -77,5 +83,6 @@ export const DefaultCreateDatabase: StoryObj<DefaultCreateDatabaseProps> = {
         hasEncryption: true,
         hasDynamicNodesDistribution: true,
         maxReplicationFactorForSharding: 1,
+        singleNode: false,
     },
 };

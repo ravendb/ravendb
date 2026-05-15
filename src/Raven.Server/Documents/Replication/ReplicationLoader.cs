@@ -760,7 +760,19 @@ namespace Raven.Server.Documents.Replication
 
                 IncomingReplicationRemoved?.Invoke(incoming);
 
-                value.Dispose();
+                try
+                {
+                    value.Dispose();
+                }
+                catch (Exception e)
+                {
+                    // RavenDB-26564: precautionary catch — the primary fix is in DisposeInternal
+                    // where _cts.Cancel() is now guarded. This ensures that even if Dispose fails
+                    // for an unexpected reason, the new connection is still accepted.
+                    if (_logger.IsWarnEnabled)
+                        _logger.Warn($"Failed to dispose the existing incoming replication handler from {incoming.FromToString}. " +
+                                     $"Proceeding to accept the new connection.", e);
+                }
             }
         }
 

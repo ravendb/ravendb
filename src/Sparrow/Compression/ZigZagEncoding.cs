@@ -13,39 +13,25 @@ namespace Sparrow.Compression
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
             if (typeof(T) == typeof(sbyte))
             {
-                byte b;
-                if (typeof(T) == typeof(bool))
-                    b = (bool)(object)value ? (byte)1 : (byte)0;
-                else if (typeof(T) == typeof(sbyte))
-                    b = (byte)(sbyte)(object)value;
-                else
-                    b = (byte)(object)value;
+                sbyte sb = (sbyte)(object)value;
 
-                byte uv = (byte)((b << 1) ^ (b >> sizeOfTInBits));
+                byte uv = (byte)((sb << 1) ^ (sb >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             if (typeof(T) == typeof(short))
             {
-                ushort us;
-                if (typeof(T) == typeof(short))
-                    us = (ushort)(short)(object)value;
-                else
-                    us = (ushort)(object)value;
+                short ss = (short)(object)value;
 
-                ushort uv = (ushort)((us << 1) ^ (us >> sizeOfTInBits));
+                ushort uv = (ushort)((ss << 1) ^ (ss >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
             if (typeof(T) == typeof(int))
             {
-                uint ui;
-                if (typeof(T) == typeof(int))
-                    ui = (uint)(int)(object)value;
-                else
-                    ui = (uint)(object)value;
+                int si = (int)(object)value;
 
-                uint uv = ((ui << 1) ^ (ui >> sizeOfTInBits));
+                uint uv = (uint)((si << 1) ^ (si >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer, uv, pos);
             }
 
@@ -66,39 +52,25 @@ namespace Sparrow.Compression
             int sizeOfTInBits = Unsafe.SizeOf<T>() * 8 - 1;
             if (typeof(T) == typeof(sbyte))
             {
-                byte b;
-                if (typeof(T) == typeof(bool))
-                    b = (bool)(object)value ? (byte)1 : (byte)0;
-                else if (typeof(T) == typeof(sbyte))
-                    b = (byte)(sbyte)(object)value;
-                else
-                    b = (byte)(object)value;
+                sbyte sb = (sbyte)(object)value;
 
-                byte uv = (byte)((b << 1) ^ (b >> sizeOfTInBits));
+                byte uv = (byte)((sb << 1) ^ (sb >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             if (typeof(T) == typeof(short))
             {
-                ushort us;
-                if (typeof(T) == typeof(short))
-                    us = (ushort)(short)(object)value;
-                else
-                    us = (ushort)(object)value;
+                short ss = (short)(object)value;
 
-                ushort uv = (ushort)((us << 1) ^ (us >> sizeOfTInBits));
+                ushort uv = (ushort)((ss << 1) ^ (ss >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
             if (typeof(T) == typeof(int))
             {
-                uint ui;
-                if (typeof(T) == typeof(int))
-                    ui = (uint)(int)(object)value;
-                else
-                    ui = (uint)(object)value;
+                int si = (int)(object)value;
 
-                uint uv = ((ui << 1) ^ (ui >> sizeOfTInBits));
+                uint uv = (uint)((si << 1) ^ (si >> sizeOfTInBits));
                 return VariableSizeEncoding.Write(buffer + pos, uv);
             }
 
@@ -170,13 +142,13 @@ namespace Sparrow.Compression
             if (typeof(T) == typeof(sbyte))
             {
                 var b = (byte)(sbyte)(object)value;
-                return (T)(object)((b & 1) != 0 ? (sbyte)(b >> 1) ^ -1 : (sbyte)(b >> 1));
+                return (T)(object)(sbyte)((b & 1) != 0 ? (sbyte)(b >> 1) ^ -1 : (sbyte)(b >> 1));
             }
 
             if (typeof(T) == typeof(short))
             {
                 var us = (ushort)(short)(object)value;
-                return (T)(object)((us & 1) != 0 ? (short)(us >> 1) ^ -1 : (short)(us >> 1));
+                return (T)(object)(short)((us & 1) != 0 ? (short)(us >> 1) ^ -1 : (short)(us >> 1));
             }
 
             if (typeof(T) == typeof(int))

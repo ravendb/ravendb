@@ -231,9 +231,10 @@ namespace SlowTests.Issues
             EnsureReplicating(storeA, storeB);
 
             // counter conflict (delete + blob) should be resolved to blob
-            AssertTestCounter(storeA, expectedValue: 5);
-            AssertTestCounter(storeB, expectedValue: 5);
-            AssertTestCounter(storeC, expectedValue: 5);
+            // use WaitForValue since replication convergence may take time after conflict resolution
+            Assert.Equal(5, WaitForValue(() => GetTestCounter(storeA), 5L, timeout: 30_000));
+            Assert.Equal(5, WaitForValue(() => GetTestCounter(storeB), 5L, timeout: 30_000));
+            Assert.Equal(5, WaitForValue(() => GetTestCounter(storeC), 5L, timeout: 30_000));
         }
 
         [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
@@ -743,6 +744,15 @@ namespace SlowTests.Issues
                 Assert.Equal(expectedValue, counter.Value);
             }
         }
+
+        private static long GetTestCounter(DocumentStore store)
+        {
+            using (var session = store.OpenSession())
+            {
+                return session.CountersFor(TestDocumentId).Get(TestCounterName) ?? -1;
+            }
+        }
+
         private static async Task DisableExternalReplication(ReplicationCreationResult replicationCreationResult)
         {
             replicationCreationResult.Configuration.Disabled = true;

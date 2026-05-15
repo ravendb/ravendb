@@ -28,6 +28,6 @@ internal sealed class AdminRevisionsHandlerProcessorForEnforceRevisionsConfigura
 
     protected override Task<IOperationResult> ExecuteOperation(Action<IOperationProgress> onProgress, EnforceRevisionsConfigurationOperation.Parameters parameters, OperationCancelToken token)
     {
-        return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters, token);
+        return RequestHandler.Database.DocumentsStorage.RevisionsStorage.EnforceConfigurationAsync(onProgress, parameters, parameters.MaxOpsPerSecond, token);
     }
 }
