@@ -18,6 +18,7 @@ import useEditCdcSinkTaskBreadcrumbs, {
     EditCdcSinkTaskBreadcrumbItem,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskBreadcrumbs";
 import { castToRootTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
+import { getShell } from "common/shell/shellAccessor";
 import classNames from "classnames";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
 import EditCdcSinkTaskTestPanel from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskTestPanel";
@@ -50,6 +51,7 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     const viewSheet = useViewSheet();
 
     const handleOpenRootTableTest = () => {
+        getShell()?.collapseMenu(true);
         viewSheet.open({
             component: <EditCdcSinkTaskTestPanel editForm={editForm} path={rootTablePath} />,
             isPinned: true,
