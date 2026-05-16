@@ -189,11 +189,18 @@ namespace Raven.Server.NotificationCenter.Handlers
 
             bool IsSocketClosed(Exception ex)
             {
+
+                if (ex is not WebSocketException webSocketException)
+                    return false;
+
+                if (webSocketException.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
+                    return true;
+
                 // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
-                return ex is WebSocketException webSocketException
-                       && (webSocketException.WebSocketErrorCode == WebSocketError.InvalidState)
+                return webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
                        && (_localWebSocket.State == WebSocketState.Closed || _remoteWebSocket.State == WebSocketState.Closed ||
-                           _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived);
+                           _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived ||
+                           _localWebSocket.State == WebSocketState.Aborted || _remoteWebSocket.State == WebSocketState.Aborted);
             }
         }
 
