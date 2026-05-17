@@ -836,7 +836,8 @@ namespace Raven.Server.Rachis
         public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task,
             bool validateNotInTopology = false)
         {
-            (bool success, task) = TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology).GetAwaiter().GetResult();
+            bool success;
+            (success, task) = AsyncHelpers.RunSyncWithSynchronization(() => TryModifyTopologyAsync(nodeTag, nodeUrl, modification, validateNotInTopology));
             return success;
         }
 
@@ -847,7 +848,7 @@ namespace Raven.Server.Rachis
                 RachisConsensus.ValidateNodeTag(nodeTag);
             }
 
-            using (await _disposerLock.EnsureNotDisposedAsync(continueOnCapturedContext: false))
+            using (await _disposerLock.EnsureNotDisposedAsync(continueOnCapturedContext: true))
             {
                 var topologyModification = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
                 var existing = Interlocked.CompareExchange(ref _topologyModification, topologyModification, null);

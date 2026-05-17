@@ -821,16 +821,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                         onProgress: _onProgress,
                         token: TaskCancelToken.Token);
 
-                    // force AsyncHelpers to use ExclusiveSynchronizationContext pump so all async
-                    // continuations execute on this dedicated backup thread (not ThreadPool threads).
-                    var previousContext = SynchronizationContext.Current;
-                    SynchronizationContext.SetSynchronizationContext(new SynchronizationContext());
-                    var previousValue = AsyncContextHelper.ContinueOnCapturedContext.Value;
-                    AsyncContextHelper.ContinueOnCapturedContext.Value = true;
+                    var prevWriterCaptureContextOnAwait = AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value;
+                    AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = true;
+
+                    bool prevZstdCaptureContextOnAwait = false;
+                    if (options.CompressionAlgorithm == ExportCompressionAlgorithm.Zstd)
+                    {
+                        prevZstdCaptureContextOnAwait = ZstdStream.CaptureContextOnAwait.Value;
+                        ZstdStream.CaptureContextOnAwait.Value = true;
+                    }
 
                     try
                     {
-                        AsyncHelpers.RunSync(() => smuggler.ExecuteAsync());
+                        AsyncHelpers.RunSyncWithSynchronization(() => smuggler.ExecuteAsync());
                     }
                     catch (TimeoutException e) when (TaskCancelToken.Token.IsCancellationRequested)
                     {
@@ -840,8 +843,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                     finally
                     {
-                        AsyncContextHelper.ContinueOnCapturedContext.Value = previousValue;
-                        SynchronizationContext.SetSynchronizationContext(previousContext);
+                        if (options.CompressionAlgorithm == ExportCompressionAlgorithm.Zstd)
+                        {
+                            AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = prevWriterCaptureContextOnAwait;
+                            ZstdStream.CaptureContextOnAwait.Value = prevZstdCaptureContextOnAwait;
+                        }
                     }
 
                     FlushToDisk(outputStream);

@@ -22,6 +22,8 @@ namespace Sparrow.Utils
         private readonly DisposeLock _disposerLock = new(nameof(ZstdStream));
         private bool _disposed;
 
+        internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
+
         private ZstdStream(Stream inner, bool compression, int level, bool leaveOpen)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
@@ -29,7 +31,7 @@ namespace Sparrow.Utils
             _compression = compression;
             _leaveOpen = leaveOpen;
 
-            _continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            _continueOnCapturedContext = CaptureContextOnAwait.Value;
         }
 
         public static ZstdStream Compress(Stream stream, CompressionLevel compressionLevel = CompressionLevel.Optimal, bool leaveOpen = false) => new(stream, compression: true, ToZstdLevel(compressionLevel), leaveOpen);

@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
@@ -16,12 +15,14 @@ namespace Sparrow.Json
         private readonly MemoryStream _innerStream;
         private readonly bool _continueOnCapturedContext;
 
+        internal static AsyncLocal<bool> CaptureContextOnAwait = new();
+
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
             _innerStream = _stream as MemoryStream; // Cache the cast since we know it's always MemoryStream
-            _continueOnCapturedContext = AsyncContextHelper.ContinueOnCapturedContext.Value;
+            _continueOnCapturedContext = CaptureContextOnAwait.Value;
 
             if (_innerStream == null)
                 throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
