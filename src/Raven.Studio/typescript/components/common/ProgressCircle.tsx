@@ -15,16 +15,17 @@ export interface ProgressCircleProps {
     inline?: boolean;
     onClick?: () => void;
     descClassName?: string;
+    className?: string;
 }
 
 export function ProgressCircle(props: ProgressCircleProps) {
-    const { state, children, inline, icon, progress, onClick, descClassName } = props;
+    const { state, children, inline, icon, progress, onClick, descClassName, className } = props;
 
     const showProgress = progress != null;
 
     return (
         <div
-            className={classNames("progress-circle", state, { inline }, { "cursor-pointer": onClick })}
+            className={classNames("progress-circle", state, { inline }, { "cursor-pointer": onClick }, className)}
             onClick={onClick}
         >
             <div className={classNames("state-desc", descClassName)}>

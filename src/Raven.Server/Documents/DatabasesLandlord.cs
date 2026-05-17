@@ -49,6 +49,19 @@ namespace Raven.Server.Documents
 
         public readonly ResourceCache<DocumentDatabase> DatabasesCache = new ResourceCache<DocumentDatabase>();
         public readonly ResourceCache<ShardedDatabaseContext> ShardedDatabasesCache = new ResourceCache<ShardedDatabaseContext>();
+        
+        public IEnumerable<DocumentDatabase> GetLoadedDatabases()
+        {
+            foreach (var kvp in DatabasesCache)
+            {
+                var databaseTask = kvp.Value;
+
+                if (databaseTask == null || databaseTask.IsCompletedSuccessfully == false)
+                    continue;
+
+                yield return databaseTask.Result;
+            }
+        }
 
         private static readonly RavenLogger _logger = RavenLogManager.Instance.GetLoggerForServer<DatabasesLandlord>();
         private readonly ServerStore _serverStore;

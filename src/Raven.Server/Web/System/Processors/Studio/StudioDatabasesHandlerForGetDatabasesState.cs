@@ -11,6 +11,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Json;
 using Raven.Server.Logging;
@@ -313,6 +314,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
             long performanceHints = 0;
             long indexingErrors = 0;
             long documentsCount = 0;
+            long tasksErrors = 0;
             if (database != null)
             {
                 (Size physical, Size allocated, Size tempBuffers) = database.GetSizeOnDisk();
@@ -324,6 +326,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
                 performanceHints = database.NotificationCenter.GetPerformanceHintCount();
                 indexingErrors = database.IndexStore?.GetIndexes()?.Sum(index => index.GetErrorCount()) ?? 0;
                 documentsCount = database.DocumentsStorage.GetNumberOfDocuments();
+                tasksErrors = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Etl)
+                              + database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Ai);
             }
             else if (databaseInfoCache.TryGet(databaseName, json =>
                      {
@@ -334,6 +338,7 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
                          json.TryGet(nameof(PerformanceHints), out performanceHints);
                          json.TryGet(nameof(IndexingErrors), out indexingErrors);
                          json.TryGet(nameof(DocumentsCount), out documentsCount);
+                         json.TryGet(nameof(TasksErrors), out tasksErrors);
 
                          totalPhysicalSize = GetSize(json, nameof(TotalPhysicalSize));
                          totalAllocatedSize = GetSize(json, nameof(TotalAllocatedSize));
@@ -357,7 +362,8 @@ internal sealed class StudioDatabasesHandlerForGetDatabasesState : AbstractDatab
                 IndexingErrors = indexingErrors,
                 DocumentsCount = documentsCount,
                 IndexingStatus = indexingStatus ?? IndexRunningStatus.Running,
-                DatabaseStatus = databaseStatus
+                DatabaseStatus = databaseStatus,
+                TasksErrors = tasksErrors
             };
 
             static Size GetSize(BlittableJsonReaderObject json, string propertyName)

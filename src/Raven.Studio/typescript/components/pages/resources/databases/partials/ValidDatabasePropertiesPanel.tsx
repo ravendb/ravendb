@@ -69,6 +69,7 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
         .filter((x) => x);
 
     const indexingErrors = sumBy(nonEmptyDbState, (x) => x?.indexingErrors ?? 0);
+    const tasksErrors = sumBy(nonEmptyDbState, (x) => x?.tasksErrors ?? 0);
     const alertsCount = sumBy(nonEmptyTopLevelState, (x) => x?.alerts ?? 0);
     const performanceHintsCount = sumBy(nonEmptyTopLevelState, (x) => x?.performanceHints ?? 0);
     const indexingPaused = nonEmptyDbState.some((x) => x?.indexingStatus === "Paused");
@@ -99,6 +100,11 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
     const indexingErrorsUrl = db.currentNode.isRelevant
         ? localIndexingErrorsUrl
         : appUrl.toExternalDatabaseUrl(db, localIndexingErrorsUrl);
+
+    const localTasksErrorsUrl = appUrl.forTasksErrors(db.name);
+    const tasksErrorsUrl = db.currentNode.isRelevant
+        ? localTasksErrorsUrl
+        : appUrl.toExternalDatabaseUrl(db, localTasksErrorsUrl);
 
     const localIndexingListUrl = appUrl.forIndexes(db.name);
     const indexingListUrl = db.currentNode.isRelevant
@@ -195,6 +201,15 @@ export function ValidDatabasePropertiesPanel(props: ValidDatabasePropertiesPanel
             )}
 
             <div className="rich-panel-details-right">
+                {tasksErrors > 0 && (
+                    <RichPanelDetailItem key="tasks-errors" title="Task errors. Click to view the Task Errors.">
+                        <Badge bg="faded-danger" className="d-flex align-items-center lh-base rounded-pill">
+                            <a href={tasksErrorsUrl} target={linksTarget} className="no-decor">
+                                <Icon icon="warning" /> {tasksErrors} Task errors
+                            </a>
+                        </Badge>
+                    </RichPanelDetailItem>
+                )}
                 {indexingErrors > 0 && (
                     <RichPanelDetailItem
                         key="indexing-errors"

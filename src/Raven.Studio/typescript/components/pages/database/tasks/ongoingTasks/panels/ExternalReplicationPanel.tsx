@@ -11,6 +11,7 @@ import {
 } from "components/common/RichPanel";
 import {
     ConnectionStringItem,
+    DestinationUrlItem,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -55,15 +56,7 @@ function Details(props: ExternalReplicationPanelProps & { canEdit: boolean }) {
                     {data.shared.destinationDatabase}
                 </RichPanelDetailItem>
             )}
-            <RichPanelDetailItem label="Actual Destination URL">
-                {data.shared.destinationUrl ? (
-                    <a href={data.shared.destinationUrl} target="_blank">
-                        {data.shared.destinationUrl}
-                    </a>
-                ) : (
-                    <div>N/A</div>
-                )}
-            </RichPanelDetailItem>
+            <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Destination URL" />
             {data.shared.topologyDiscoveryUrls?.length > 0 && (
                 <RichPanelDetailItem label="Topology Discovery URLs">
                     {data.shared.topologyDiscoveryUrls.join(", ")}

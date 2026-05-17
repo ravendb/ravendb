@@ -20,6 +20,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.NotificationCenter.Notifications;
@@ -106,29 +107,18 @@ namespace InterversionTests
 
                 Etl.AddEtl(store, configuration, connectionString);
 
-                AlertRaised alert = null;
+                IEnumerable<TaskItemErrorTableValue> errors = null;
                 Assert.True(await WaitForValueAsync(async () =>
                 {
-                    var operation = new GetEtlDebugStatsOperation();
-                    string statsJson = await store.Maintenance.SendAsync(operation);
+                    errors = await Etl.GetItemLoadErrorsAsync(store.Database, configuration);
 
-                    alert = await GetAlertWithDetailsFromEtlFailure(statsJson);
-
-                    if (alert == null)
-                        return false;
-
-                    return true;
+                    return errors.Any();
                 }, true, 60_000, interval: 322));
 
-                Assert.NotNull(alert);
-
-                Assert.Equal(AlertReason.Etl_LoadError, alert.Reason);
-                Assert.NotNull(alert.Details);
-                EtlErrorsDetails details = (EtlErrorsDetails)alert.Details;
-
-                Assert.NotEmpty(details.Errors);
-                var error = details.Errors.Dequeue();
-                Assert.NotNull(error.Date);
+                Assert.NotEmpty(errors);
+                
+                var error = errors.First();
+                Assert.NotNull(error.CreatedAt);
                 Assert.NotNull(error.Error);
                 Assert.Contains("System.NullReferenceException: System.NullReferenceException: Object reference not set to an instance of an object.", error.Error);
             }
@@ -237,8 +227,8 @@ namespace InterversionTests
                 }
 
                 // Verify no ETL errors occurred
-                var etlError = await Etl.TryGetLoadErrorAsync(sourceStore.Database, configuration);
-                Assert.Null(etlError);
+                var etlErrors = await Etl.GetItemLoadErrorsAsync(sourceStore.Database, configuration);
+                Assert.Empty(etlErrors);
             }
         }
 
@@ -548,53 +538,6 @@ namespace InterversionTests
             }
 
             return docId;
-        }
-
-        private static async Task<AlertRaised> GetAlertWithDetailsFromEtlFailure(string statsJson)
-        {
-            // Parse the JSON string to BlittableJsonReaderObject
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(statsJson)))
-            using (context.GetMemoryBuffer(out var bytes))
-            {
-                var statsBlittable = await context.ParseToMemoryAsync(stream, "etl-stats", BlittableJsonDocumentBuilder.UsageMode.None, bytes);
-
-                if (statsBlittable.TryGet("Results", out BlittableJsonReaderArray results))
-                {
-                    for (int resultIndex = 0; resultIndex < results.Length; resultIndex++)
-                    {
-                        var result = (BlittableJsonReaderObject)results[resultIndex];
-
-                        if (result.TryGet("Stats", out BlittableJsonReaderArray statsArray))
-                        {
-                            for (int statsIndex = 0; statsIndex < statsArray.Length; statsIndex++)
-                            {
-                                var stat = (BlittableJsonReaderObject)statsArray[statsIndex];
-
-                                if (stat.TryGet("Statistics", out BlittableJsonReaderObject statistics))
-                                {
-                                    // Parse LastAlert using AlertRaised.FromJson()
-                                    if (statistics.TryGet("LastAlert", out BlittableJsonReaderObject lastAlert) &&
-                                        lastAlert != null)
-                                    {
-                                        EtlErrorsDetails details = null;
-                                        if (lastAlert.TryGet("Details", out BlittableJsonReaderObject detailsb) && detailsb != null)
-                                        {
-                                            details = DocumentConventions.DefaultForServer.Serialization.DefaultConverter
-                                                .FromBlittable<EtlErrorsDetails>(detailsb);
-                                        }
-
-                                        AlertRaised alertRaised = AlertRaised.FromJson("lastAlert", lastAlert, details);
-                                        return alertRaised;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return null;
         }
 
         /// <summary>

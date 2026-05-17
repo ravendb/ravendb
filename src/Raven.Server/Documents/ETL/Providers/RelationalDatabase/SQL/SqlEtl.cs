@@ -23,12 +23,12 @@ public sealed class SqlEtl(Transformation transformation, SqlEtlConfiguration co
 
     protected override RelationalDatabaseWriterBase<SqlConnectionString, SqlEtlConfiguration> GetRelationalDatabaseWriterInstance()
     {
-        return new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
+        return new SqlDatabaseWriter(Database, Configuration, Name, RelationalMetrics, Statistics);
     }
 
     protected override RelationalDatabaseWriterSimulator GetWriterSimulator(bool withConnection)
     {
-        return new RelationalDatabaseWriterSimulator(new SqlDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics, withConnection),
+        return new RelationalDatabaseWriterSimulator(new SqlDatabaseWriter(Database, Configuration, Name, RelationalMetrics, Statistics, withConnection),
             Configuration.ParameterizeDeletes);
     }
 }

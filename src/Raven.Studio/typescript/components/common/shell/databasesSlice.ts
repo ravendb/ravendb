@@ -61,6 +61,7 @@ export function toDatabaseLocalInfo(db: StudioDatabaseState, nodeTag: string): D
         totalAllocatedSize: db.TotalAllocatedSize,
         tempBuffersSize: db.TempBuffersSize,
         databaseStatus: db.DatabaseStatus,
+        tasksErrors: db.TasksErrors,
     };
 }
 

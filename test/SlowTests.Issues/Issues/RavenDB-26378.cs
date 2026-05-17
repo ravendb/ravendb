@@ -9,7 +9,7 @@ using Npgsql;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.SQL;
-using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Documents.ETL;
 using Raven.Server.SqlMigration;
 using Tests.Infrastructure;
 using Xunit;
@@ -99,7 +99,7 @@ CREATE TABLE ""Users""
                     await bulkInsert.StoreAsync(new User { Name = "User-" + i });
             }
 
-            var loadErrorObserved = Etl.WaitForEtlToComplete(store, (_, s) => s.LastAlert != null);
+            var loadErrorObserved = Etl.WaitForEtlToComplete(store, (_, s) => s.LoadErrors > 0);
 
             // Schedule a single, well-timed kill mid-batch. Killing in a loop is overkill (one drop is
             // enough to surface the bug) and causes SQL Server to start rejecting connection attempts
@@ -110,19 +110,24 @@ CREATE TABLE ""Users""
             SetupSqlEtl(store, connectionString, factoryName);
 
             var observed = await loadErrorObserved.WaitAsync(TimeSpan.FromMinutes(2));
-            Assert.True(observed, "Did not observe a load-error alert within 2 minutes - the killer may not have landed in time.");
+            Assert.True(observed, "Did not observe a load error within 2 minutes - the killer may not have landed in time.");
 
             killerCts.Cancel();
             try { await killer; } catch { /* ignore */ }
 
             var database = await GetDatabase(store.Database);
             var etlProcess = database.EtlLoader.Processes.Single();
-            var alert = etlProcess.Statistics.LastAlert;
-            Assert.NotNull(alert);
-            var details = Assert.IsType<EtlErrorsDetails>(alert.Details);
-            var errors = details.Errors.ToList();
+            var processName = etlProcess.Name;
 
-            Assert.NotEmpty(errors);
+            List<TaskProcessErrorTableValue> errors = null;
+            Assert.True(WaitForValue(() =>
+            {
+                errors = database.TaskErrorsStorage
+                    .ReadProcessErrorsOfTask(TaskCategory.Etl, processName)
+                    .Where(e => e.Step == (long)TaskErrorStep.Load)
+                    .ToList();
+                return errors.Count > 0;
+            }, true, timeout: 30_000, interval: 500), "Expected at least one load error to be recorded in TaskErrorsStorage");
 
             // Anti-regression: the writer must not march on through a dead transaction. The strings
             // below only show up when CreateCommand or ExecuteNonQuery is called on a connection/transaction

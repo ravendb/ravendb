@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Server.Documents.ETL;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -168,8 +171,14 @@ if (this.Name === 'Aviv') {
             Assert.Equal(marker[0].Description, user3.ImageDescriptions[0].Description);
         }
 
-        var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-        Assert.True(ValidateErrorNotification(db, "Attachment must be loaded or base64 string (on type image/png)", "Users/2"));
+        IEnumerable<TaskItemErrorTableValue> errors = null;
+        var hasError = await WaitForValueAsync(async () =>
+        {
+            errors = await Etl.GetItemTransformationErrorsAsync(store.Database, config);
+            return errors.Any(e => e.DocumentId == "Users/2" && e.Error.Contains("Attachment must be loaded or base64 string (on type image/png)"));
+        }, true, timeout: 60_000);
+
+        Assert.True(hasError, $"Expected transformation error for Users/2 not found. Errors: {string.Join(", ", errors?.Select(e => $"{e.DocumentId}: {e.Error}") ?? Array.Empty<string>())}");
     }
 
     private class User

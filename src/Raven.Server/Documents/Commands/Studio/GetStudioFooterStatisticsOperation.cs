@@ -17,8 +17,12 @@ namespace Raven.Server.Documents.Commands.Studio
 
         internal sealed class GetStudioFooterStatisticsCommand : RavenCommand<FooterStatistics>
         {
-            public override bool IsReadRequest => true;
+            public GetStudioFooterStatisticsCommand(string nodeTag = null)
+            {
+                SelectedNodeTag = nodeTag;
+            }
 
+            public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {

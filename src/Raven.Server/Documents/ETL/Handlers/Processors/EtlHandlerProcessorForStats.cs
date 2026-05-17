@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Primitives;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Sharding;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -24,9 +25,16 @@ internal sealed class EtlHandlerProcessorForStats : AbstractEtlHandlerProcessorF
     protected override async ValueTask HandleCurrentNodeAsync()
     {
         var names = GetNames();
+        var nodeTag = ServerStore.NodeTag;
+        int? shardNumber = RequestHandler.Database is ShardedDocumentDatabase shardedDatabase ? shardedDatabase.ShardNumber : null;
         var etlStats = GetProcessesToReportOn(RequestHandler.Database, names).Select(x => new EtlTaskStats
         {
             TaskName = x.Key,
+            TaskId = x.Value.First().TaskId,
+            EtlType = x.Value.First().EtlType,
+            EtlSubType = x.Value.First().EtlSubType,
+            NodeTag = nodeTag,
+            ShardNumber = shardNumber,
             Stats = x.Value.Select(y => new EtlProcessTransformationStats
             {
                 TransformationName = y.TransformationName,

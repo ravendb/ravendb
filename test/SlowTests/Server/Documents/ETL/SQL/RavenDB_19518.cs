@@ -93,7 +93,7 @@ loadToItems(data);"
                 
                 var result = (RelationalDatabaseEtlTestScriptResult)testResult;
                 Assert.Equal(0, result.TransformationErrors.Count);
-                Assert.Equal(0, result.LoadErrors.Count);
+                Assert.Equal(0, result.ItemLoadErrors.Count);
                 Assert.Equal(0, result.SlowSqlWarnings.Count);
 
                 Assert.Equal(1, result.Summary.Count);

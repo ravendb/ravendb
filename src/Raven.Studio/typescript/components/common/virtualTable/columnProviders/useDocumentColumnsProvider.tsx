@@ -36,7 +36,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
 
         if (hasCheckbox) {
             columnsDefs.push(columnCheckbox as ColumnDef<document>);
-            initialColumnVisibility[columnCheckbox.header.toString()] = true;
+            initialColumnVisibility[columnCheckbox.id] = true;
             availableWidth -= columnCheckbox.size;
         }
 
@@ -48,7 +48,7 @@ export function useDocumentColumnsProvider(props: UseDocumentColumnsProviderProp
 
         if (hasFlags) {
             columnsDefs.push(columnDocumentFlags);
-            initialColumnVisibility[columnDocumentFlags.header.toString()] = true;
+            initialColumnVisibility[columnDocumentFlags.id] = true;
             availableWidth -= columnDocumentFlags.size ?? defaultSize;
         }
 

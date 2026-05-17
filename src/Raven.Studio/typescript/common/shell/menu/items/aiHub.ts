@@ -6,6 +6,8 @@ import AiTasks = require("components/pages/database/aiHub/aiTasks/AiTasks");
 import AiAgents = require("components/pages/database/aiHub/aiAgents/AiAgents");
 import EditAiAgent = require("components/pages/database/aiHub/aiAgents/edit/EditAiAgent");
 import ChatAiAgent = require("components/pages/database/aiHub/aiAgents/chat/ChatAiAgent");
+import AiTasksErrors = require("components/pages/database/aiHub/aiTasks/AiTasksErrors");
+import footer = require("common/shell/footer");
 
 export = getAiHubMenuItem;
 
@@ -65,10 +67,21 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             route: 'databases/ai/tasksStats',
             moduleId: require('viewmodels/database/aiHub/aiTasksStats'),
             shardingMode: "singleShard",
-            title: 'AI Tasks Stats',
+            title: 'AI Task Stats',
             nav: true,
             css: 'icon-replication-stats ai-hub',
             dynamicHash: appUrls.aiTasksStats
+        }),
+        new leafMenuItem({
+            route: 'databases/ai/tasksErrors',
+            moduleId: reactUtils.bridgeToReact(AiTasksErrors.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'AI Task Errors',
+            nav: true,
+            css: 'icon-tasks-errors ai-hub',
+            requiredAccess: "DatabaseReadWrite",
+            dynamicHash: appUrls.aiTasksErrors,
+            badgeData: ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfAiTasksErrors() : null; })
         }),
     ];
 

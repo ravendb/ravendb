@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Util;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -57,6 +58,8 @@ public sealed class MetricsProvider
         result.Certificate = GetCertificateMetrics();
         result.Cluster = GetClusterMetrics();
         result.Databases = GetAllDatabasesMetrics();
+        result.Etls = GetServerEtlMetrics();
+        result.AiTasks = GetServerAiTasksMetrics();
 
         return result;
     }
@@ -306,6 +309,64 @@ public sealed class MetricsProvider
         return result;
     }
 
+    private ServerEtlMetrics GetServerEtlMetrics()
+    {
+        var result = new ServerEtlMetrics();
+
+        var etlsCount = 0;
+        var errorsCount = 0L;
+        var healthyEtlsCount = 0;
+        var impairedEtlsCount = 0;
+        var failedEtlsCount = 0;
+        
+        foreach (var dbResult in _serverStore.DatabasesLandlord.GetLoadedDatabases())
+        {
+            etlsCount += dbResult.EtlLoader.Processes.Length;
+            errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Etl);
+            healthyEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+            impairedEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+            failedEtlsCount += dbResult.EtlLoader.Processes.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        }
+
+        result.Count = etlsCount;
+        result.ErrorsCount = errorsCount;
+        result.HealthyEtlsCount = healthyEtlsCount;
+        result.ImpairedEtlsCount = impairedEtlsCount;
+        result.FailedEtlsCount = failedEtlsCount;
+
+        return result;
+    }
+    
+    private ServerAiTasksMetrics GetServerAiTasksMetrics()
+    {
+        var result = new ServerAiTasksMetrics();
+
+        var aiTasksCount = 0;
+        var errorsCount = 0L;
+        var healthyTasksCount = 0;
+        var impairedTasksCount = 0;
+        var failedTasksCount = 0;
+        
+        foreach (var dbResult in _serverStore.DatabasesLandlord.GetLoadedDatabases())
+        {
+            var aiTasks = dbResult.EtlLoader.GetAiProcesses();
+
+            aiTasksCount += aiTasks.Length;
+            errorsCount += dbResult.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Ai);
+            healthyTasksCount += aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+            impairedTasksCount += aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+            failedTasksCount += aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        }
+
+        result.Count = aiTasksCount;
+        result.ErrorsCount = errorsCount;
+        result.HealthyTasksCount = healthyTasksCount;
+        result.ImpairedTasksCount = impairedTasksCount;
+        result.FailedTasksCount = failedTasksCount;
+
+        return result;
+    }
+
     private AllDatabasesMetrics GetAllDatabasesMetrics()
     {
         var result = new AllDatabasesMetrics();
@@ -339,6 +400,8 @@ public sealed class MetricsProvider
         result.Indexes = GetDatabaseIndexesMetrics(database);
         result.Storage = GetDatabaseStorageMetrics(database);
         result.Statistics = GetDatabaseStatistics(database);
+        result.Etls = GetDatabaseEtlsMetrics(database);
+        result.AiTasks = GetDatabaseAiTasksMetrics(database);
 
         return result;
     }
@@ -461,6 +524,38 @@ public sealed class MetricsProvider
         return result;
     }
 
+    private DatabaseEtlsMetrics GetDatabaseEtlsMetrics(DocumentDatabase database)
+    {
+        var result = new DatabaseEtlsMetrics();
+
+        var etls = database.EtlLoader.GetEtlProcesses();
+
+        result.Count = etls.Length;
+        result.ErrorsCount = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Etl);
+        
+        result.HealthyEtlsCount = etls.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+        result.ImpairedEtlsCount = etls.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+        result.FailedEtlsCount = etls.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+        
+        return result;
+    }
+
+    private DatabaseAiTasksMetrics GetDatabaseAiTasksMetrics(DocumentDatabase database)
+    {
+        var result = new DatabaseAiTasksMetrics();
+
+        var aiTasks = database.EtlLoader.GetAiProcesses();
+
+        result.Count = aiTasks.Length;
+        result.ErrorsCount = database.TaskErrorsStorage.ReadTotalErrorsCount(TaskCategory.Ai);
+
+        result.HealthyTasksCount = aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Healthy);
+        result.ImpairedTasksCount = aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Impaired);
+        result.FailedTasksCount = aiTasks.Count(x => x.Statistics.HealthStatus == EtlProcessHealthStatus.Failed);
+
+        return result;
+    }
+    
     private DatabaseStatistics GetDatabaseStatistics(DocumentDatabase database)
     {
         var result = new DatabaseStatistics();
@@ -507,6 +602,38 @@ public sealed class MetricsProvider
 
         result.Type = index.Type;
         result.EntriesCount = stats.EntriesCount;
+
+        return result;
+    }
+
+    public EtlMetrics CollectEtlMetrics(EtlProcess etl, TaskErrorsStorage errorsStorage)
+    {
+        var result = new EtlMetrics();
+
+        result.ProcessName = etl.Name;
+        result.HealthStatus = etl.Statistics.HealthStatus;
+        result.ErrorsCount = errorsStorage.ReadErrorsCountOfTask(TaskCategory.Etl, etl.Name);
+        result.DocumentsProcessedPerSec = etl.Metrics.BatchSizeMeter.OneMinuteRate;
+        
+        result.LastSuccessfulBatchTimeInSec = etl.Statistics.LastSuccessfulBatchTime.HasValue
+            ? (SystemTime.UtcNow - etl.Statistics.LastSuccessfulBatchTime.Value).TotalSeconds
+            : null;
+
+        return result;
+    }
+
+    public AiTaskMetrics CollectAiTaskMetrics(EtlProcess aiTask, TaskErrorsStorage errorsStorage)
+    {
+        var result = new AiTaskMetrics();
+
+        result.ProcessName = aiTask.Name;
+        result.HealthStatus = aiTask.Statistics.HealthStatus;
+        result.ErrorsCount = errorsStorage.ReadErrorsCountOfTask(TaskCategory.Ai, aiTask.Name);
+        result.DocumentsProcessedPerSec = aiTask.Metrics.BatchSizeMeter.OneMinuteRate;
+
+        result.LastSuccessfulBatchTimeInSec = aiTask.Statistics.LastSuccessfulBatchTime.HasValue
+            ? (SystemTime.UtcNow - aiTask.Statistics.LastSuccessfulBatchTime.Value).TotalSeconds
+            : null;
 
         return result;
     }

@@ -24,18 +24,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
                 yield return new RawDatabaseRecord(context, item.Value);
         }
 
-        protected IEnumerable<DocumentDatabase> GetLoadedDatabases()
-        {
-            foreach (var kvp in ServerStore.DatabasesLandlord.DatabasesCache)
-            {
-                var databaseTask = kvp.Value;
-
-                if (databaseTask == null || databaseTask.IsCompletedSuccessfully == false)
-                    continue;
-
-                yield return databaseTask.Result;
-            }
-        }
+        protected IEnumerable<DocumentDatabase> GetLoadedDatabases() => ServerStore.DatabasesLandlord.GetLoadedDatabases();
 
         protected static int GetCountSafely(DocumentDatabase database, Func<DocumentDatabase, int> getCount)
         {

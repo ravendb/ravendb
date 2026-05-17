@@ -24,7 +24,7 @@ export default function PopoverWithHoverWrapper({
     return (
         <>
             <div
-                style={targetStyle}
+                style={{ width: inline ? undefined : "fit-content", ...targetStyle }}
                 ref={setTarget}
                 className={classNames({ "d-inline-block": inline }, wrapperClassName)}
             >

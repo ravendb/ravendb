@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
@@ -224,9 +225,9 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
 
             await aiTaskDone.WaitAsync(TimeSpan.FromSeconds(5));
 
-            var transformationError = Etl.TryGetTransformationErrorAsync(store.Database, configuration).GetAwaiter().GetResult();
+            var transformationErrors = Etl.GetItemTransformationErrorsAsync(store.Database, configuration).GetAwaiter().GetResult();
 
-            Assert.Contains("text.splitLines(text | [text], maxTokensPerLine) has to be called with 2 arguments", transformationError.Error);
+            Assert.Contains("text.splitLines(text | [text], maxTokensPerLine) has to be called with 2 arguments", transformationErrors.First().Error);
         }
     }
     

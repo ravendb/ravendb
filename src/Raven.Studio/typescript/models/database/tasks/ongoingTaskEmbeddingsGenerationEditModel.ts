@@ -393,7 +393,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             ChunkingOptions: {
                 OverlapTokens: this.pathConfigurationOverlapTokens() ?? 0,
                 ChunkingMethod: this.pathConfigurationChunkingMethod(),
-                MaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue()
+                MaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
+                ContextPrefix: null
             }
         });
         this.pathConfigurationPath("");
@@ -489,10 +490,11 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 OverlapTokens: this.queryingOverlapTokens() ?? 0,
                 ChunkingMethod: this.queryingChunkingMethod(),
                 MaxTokensPerChunk: this.queryingMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
+                ContextPrefix: null
             },
             Quantization: this.quantizationType(),
             EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
-                Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
+                Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod(), ContextPrefix: null }
             } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),

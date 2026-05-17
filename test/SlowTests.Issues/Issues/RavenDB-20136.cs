@@ -42,13 +42,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                if (await loadDone1.WaitAsync(TimeSpan.FromSeconds(30)) == false)
-                {
-                    var loadError = await Etl.TryGetLoadErrorAsync(src.Database, configuration);
-                    var transformationError = await Etl.TryGetTransformationErrorAsync(src.Database, configuration);
-
-                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-                }
+                await Etl.AssertEtlDoneAsync(loadDone1, TimeSpan.FromSeconds(30), src.Database, configuration);
 
                 using (var session = dst.OpenAsyncSession())
                 {
@@ -63,13 +57,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                if (await loadDone2.WaitAsync(TimeSpan.FromSeconds(30)) == false)
-                {
-                    var loadError = await Etl.TryGetLoadErrorAsync(src.Database, configuration);
-                    var transformationError = await Etl.TryGetTransformationErrorAsync(src.Database, configuration);
-
-                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
-                }
+                await Etl.AssertEtlDoneAsync(loadDone2, TimeSpan.FromSeconds(30), src.Database, configuration);
 
                 using (var session = dst.OpenAsyncSession())
                 {
@@ -84,7 +72,7 @@ namespace SlowTests.Issues
                     await session.SaveChangesAsync();
                 }
 
-                Assert.True(await deleteDone.WaitAsync(TimeSpan.FromSeconds(30)));
+                await Etl.AssertEtlDoneAsync(deleteDone, TimeSpan.FromSeconds(30), src.Database, configuration);
 
                 using (var session = dst.OpenAsyncSession())
                 {

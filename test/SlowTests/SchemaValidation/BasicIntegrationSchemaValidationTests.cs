@@ -494,11 +494,11 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         {
             var response = await client.GetAsync($"{source.Urls.First()}/databases/{source.Database}/etl/stats");
             var json = await context.ReadForMemoryAsync(await response.Content.ReadAsStreamAsync(), "etl/test/script");
-            return HasError(json);
+            return await HasError(json);
         });
         return;
 
-        bool HasError(BlittableJsonReaderObject json)
+        async Task<bool> HasError(BlittableJsonReaderObject json)
         {
             if (json.TryGet("Results", out BlittableJsonReaderArray results) == false || results.Length == 0 || results.First() is not BlittableJsonReaderObject result)
                 return false;
@@ -510,20 +510,14 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             if (stat.TryGet(nameof(EtlProcessTransformationStats.Statistics), out BlittableJsonReaderObject statistics) == false)
                 return false;
 
-            if (statistics.TryGet(nameof(EtlProcessStatistics.LastAlert), out BlittableJsonReaderObject lastAlert) == false || lastAlert == null)
+            var database = await GetDatabase(source.Database);
+
+            var processErrors = database.TaskErrorsStorage.ReadAllProcessErrors(TaskCategory.Etl);
+            if (processErrors.Count == 0)
                 return false;
 
-            if (lastAlert.TryGet(nameof(AlertRaised.Details), out BlittableJsonReaderObject details) == false)
-                return false;
-
-            if (details.TryGet(nameof(EtlErrorsDetails.Errors), out BlittableJsonReaderArray errors) == false || errors.Length == 0 ||
-                errors.First() is not BlittableJsonReaderObject errorInfo)
-                return false;
-
-            if(errorInfo.TryGet(nameof(EtlErrorInfo.Error), out string error) == false || string.IsNullOrEmpty(error))
-                return false;
-            
-            return error.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"");
+            var processError = processErrors.First();
+            return processError.Error.Contains("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"");
         }
     }
 

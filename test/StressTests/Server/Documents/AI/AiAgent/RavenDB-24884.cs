@@ -105,8 +105,8 @@ ai.genContext({
 
         var value = await WaitForValueAsync(async () =>
         {
-            var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-            return error != null;
+            var errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+            return errors?.Any() == true;
         }, true, timeout: 60_000);
         Assert.True(value);
 
@@ -203,8 +203,8 @@ else{
 
         var value = await WaitForValueAsync(async () =>
         {
-            var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-            return error != null;
+            var errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+            return errors?.Any() == true;
         }, true, timeout: 180_000);
 
         Assert.True(value);
@@ -332,8 +332,8 @@ else{
 
         var value = await WaitForValueAsync(async () =>
         {
-            var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-            return error != null;
+            var errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+            return errors?.Any() == true;
         }, true, timeout: 60_000);
 
         Assert.True(value);

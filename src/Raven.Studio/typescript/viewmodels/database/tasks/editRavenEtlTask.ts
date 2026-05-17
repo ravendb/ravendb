@@ -60,7 +60,7 @@ class ravenTaskTestMode {
     debugOutput = ko.observableArray<string>([]);
 
     // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+    transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
 
     warningsCount = ko.pureComputed(() => {
         return this.transformationErrors().length;

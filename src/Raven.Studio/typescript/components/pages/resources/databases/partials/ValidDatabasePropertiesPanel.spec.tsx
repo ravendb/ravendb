@@ -258,6 +258,7 @@ describe("ValidDatabasePropertiesPanel", () => {
                     performanceHints: null,
                     name: "db",
                     backupInfo,
+                    tasksErrors: null,
                 },
             };
         }

@@ -28,7 +28,7 @@ public class RavenDB_25234 : RavenTestBase
         // add AI connection string
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-        // add a sample GenAI ETL
+        // add a sample GenAI
         config.Prompt = "Check if the following blog post comment is spam or not";
         config.Collection = "Posts";
         config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });

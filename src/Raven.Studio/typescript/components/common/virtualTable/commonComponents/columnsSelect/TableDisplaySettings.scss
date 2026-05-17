@@ -1,22 +1,47 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.table-display-settings {
-    .dropdown-menu {
-        width: max-content;
-    }
-
-    .column-list {
-        max-height: 300px;
-        overflow: auto;
-    }
+.column-list {
+    overflow: auto;
 
     .column-list-item {
-        padding: sizes.$gutter-xxs sizes.$gutter-sm;
+        padding: sizes.$gutter-xxs 0;
+        padding-right: sizes.$gutter-xs;
         background-color: colors.$well-bg-var;
+        gap: sizes.$gutter-xs;
 
         &:hover {
             filter: colors.$hover-filter-var;
+        }
+
+        .column-drag-handle {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            padding: 0 sizes.$gutter-xs;
+            touch-action: none;
+            cursor: grab;
+
+            &:active {
+                cursor: grabbing;
+            }
+        }
+
+        .column-list-item-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            &--always-visible {
+                padding-left: sizes.$gutter-xxxs;
+                opacity: 0.75;
+                font-style: italic;
+            }
+        }
+
+        &.column-list-item-preview {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border-radius: sizes.$border-radius-sm;
         }
     }
 }

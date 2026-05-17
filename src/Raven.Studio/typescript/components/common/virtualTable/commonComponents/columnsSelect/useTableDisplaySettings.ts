@@ -1,82 +1,68 @@
-import { Table as TanstackTable } from "@tanstack/react-table";
-import genUtils from "common/generalUtils";
-import useBoolean from "components/hooks/useBoolean";
-import { useState } from "react";
+import { Column, Table as TanstackTable } from "@tanstack/react-table";
+
+export interface ColumnMeta {
+    id: string;
+    headerTitle: string;
+    canHide: boolean;
+    canPin: boolean;
+}
+
+function getColumnHeaderTitle<T>(column: Column<T, unknown>): string {
+    const { columnDef } = column;
+    if (typeof columnDef.header === "string") {
+        return columnDef.header;
+    }
+    if ("accessorKey" in columnDef && typeof columnDef.accessorKey === "string") {
+        return columnDef.accessorKey;
+    }
+    return columnDef.id ?? column.id;
+}
 
 export function useTableDisplaySettings<T>(table: TanstackTable<T>) {
-    const { value: isDropdownOpen, setValue: setIsDropdownOpen } = useBoolean(false);
+    const allColumns = table.getAllColumns();
 
-    const availableColumns = table.getAllColumns().filter((column) => column.getCanHide());
-    const availableColumnsIds = availableColumns.map((x) => x.id);
+    const columnMetas: ColumnMeta[] = allColumns.map((column) => ({
+        id: column.id,
+        headerTitle: getColumnHeaderTitle(column),
+        canHide: column.getCanHide(),
+        canPin: column.getCanPin(),
+    }));
 
-    const [selectedColumnsIds, setSelectedColumnsIds] = useState(
-        availableColumns.filter((column) => column.getIsVisible()).map((x) => x.id)
-    );
-    const [initialSelectedColumnsIds] = useState(selectedColumnsIds);
+    const allColumnIds = allColumns.map((x) => x.id);
 
-    const selectionState = genUtils.getSelectionState(availableColumnsIds, selectedColumnsIds);
-
-    const handleToggleAll = () => {
-        if (selectionState === "Empty") {
-            setSelectedColumnsIds(availableColumnsIds);
-        } else {
-            setSelectedColumnsIds([]);
+    const getInitialColumnOrder = (): string[] => {
+        const order = table.getState().columnOrder;
+        if (order && order.length > 0) {
+            // Fill in any columns not yet in the order (e.g. first open)
+            const missing = allColumnIds.filter((id) => !order.includes(id));
+            return [...order, ...missing];
         }
+        return allColumnIds;
     };
 
-    const handleToggleOne = (id: string) => {
-        if (selectedColumnsIds.includes(id)) {
-            setSelectedColumnsIds(selectedColumnsIds.filter((x) => x !== id));
-        } else {
-            setSelectedColumnsIds([...selectedColumnsIds, id]);
-        }
+    const getInitialPinnedIds = (): string[] => {
+        const pinning = table.getState().columnPinning;
+        return pinning?.left ?? [];
     };
 
-    const handleOpenDropdown = () => {
-        setSelectedColumnsIds(availableColumns.filter((column) => column.getIsVisible()).map((x) => x.id));
-        setIsDropdownOpen(true);
-    };
+    const getInitialSelectedIds = (): string[] => allColumns.filter((column) => column.getIsVisible()).map((x) => x.id);
 
-    const handleCloseDropdown = () => {
-        setSelectedColumnsIds(initialSelectedColumnsIds);
-        setIsDropdownOpen(false);
-    };
-
-    const handleToggleDropdown = () => {
-        if (isDropdownOpen) {
-            handleCloseDropdown();
-        } else {
-            handleOpenDropdown();
-        }
-    };
-
-    const handleReset = () => {
-        setSelectedColumnsIds(initialSelectedColumnsIds);
-    };
-
-    const handleSave = () => {
-        availableColumns.forEach((column) => {
-            column.toggleVisibility(getIsColumnSelected(column.id));
+    const applySettings = (selectedIds: string[], columnOrder: string[], pinnedIds: string[]) => {
+        allColumns.forEach((column) => {
+            if (column.getCanHide()) {
+                column.toggleVisibility(selectedIds.includes(column.id));
+            }
         });
-        handleCloseDropdown();
+        table.setColumnOrder(columnOrder);
+        table.setColumnPinning({ left: pinnedIds });
     };
-
-    const getIsColumnSelected = (id: string) => selectedColumnsIds.includes(id);
 
     return {
-        isDropdownOpen,
-        availableColumns,
-        availableColumnsIds,
-        selectedColumnsIds,
-        selectionState,
-        getIsColumnSelected,
-        handlers: {
-            handleToggleAll,
-            handleToggleOne,
-            handleSave,
-            handleReset,
-            handleToggleDropdown,
-            handleCloseDropdown,
-        },
+        columnMetas,
+        allColumnIds,
+        getInitialColumnOrder,
+        getInitialPinnedIds,
+        getInitialSelectedIds,
+        applySettings,
     };
 }

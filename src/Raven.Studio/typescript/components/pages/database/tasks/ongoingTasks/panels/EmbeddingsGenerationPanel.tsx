@@ -1,16 +1,4 @@
-﻿import { useCallback } from "react";
-import {
-    BaseOngoingTaskPanelProps,
-    ConnectionStringItem,
-    ICanShowTransformationScriptPreview,
-    OngoingTaskActions,
-    OngoingTaskName,
-    OngoingTaskResponsibleNode,
-    OngoingTaskStatus,
-    useTasksOperations,
-} from "../../shared/shared";
-import { OngoingTaskEmbeddingsGenerationInfo } from "components/models/tasks";
-import { useAppUrls } from "hooks/useAppUrls";
+import React from "react";
 import {
     RichPanel,
     RichPanelActions,
@@ -20,69 +8,52 @@ import {
     RichPanelInfo,
     RichPanelSelect,
 } from "components/common/RichPanel";
+import {
+    ConnectionStringItem,
+    ICanShowTransformationScriptPreview,
+    OngoingTaskActions,
+    OngoingTaskName,
+    OngoingTaskResponsibleNode,
+    OngoingTaskStatus,
+} from "../../shared/shared";
+import { useAppUrls } from "hooks/useAppUrls";
+import { OngoingTaskEmbeddingsGenerationInfo } from "components/models/tasks";
+import { OngoingEtlTaskDistribution } from "../partials/OngoingEtlTaskDistribution";
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
-import { OngoingEtlTaskDistribution } from "../partials/OngoingEtlTaskDistribution";
+import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
+import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
+import copyToClipboard from "common/copyToClipboard";
 
-type EmbeddingsGenerationPanelProps = BaseOngoingTaskPanelProps<OngoingTaskEmbeddingsGenerationInfo>;
+type EmbeddingsGenerationPanelProps = EtlPanelBaseProps<OngoingTaskEmbeddingsGenerationInfo>;
 
-function Details(props: EmbeddingsGenerationPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
+export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps & ICanShowTransformationScriptPreview) {
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
+
+    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const editUrl = forCurrentDatabase.editEmbeddingsGeneration(data.shared.taskId)();
+
+    const {
+        canEdit,
+        goToTaskErrors,
+        detailsVisible,
+        toggleDetails,
+        onEdit,
+        showPreview,
+        taskHealth,
+        errorCount,
+        errorsByLocation,
+        etlProgress,
+    } = useEtlPanel(props, editUrl);
+
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
     const identifier = data.shared.identifier;
-
-    return (
-        <RichPanelDetails>
-            {identifier && (
-                <RichPanelDetails className="p-0">
-                    <RichPanelDetailItem label="Identifier">
-                        {identifier}
-                        <Button
-                            variant="link"
-                            onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
-                            size="xs"
-                        >
-                            <Icon icon="copy-to-clipboard" />
-                        </Button>
-                    </RichPanelDetailItem>
-                </RichPanelDetails>
-            )}
-            <ConnectionStringItem
-                connectionStringDefined
-                canEdit={canEdit}
-                connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
-            />
-        </RichPanelDetails>
-    );
-}
-
-export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps & ICanShowTransformationScriptPreview) {
-    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
-
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const { forCurrentDatabase } = useAppUrls();
-
-    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editEmbeddingsGeneration(data.shared.taskId)();
-
-    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
-
-    const showPreview = useCallback(
-        (transformationName: string) => {
-            showItemPreview(data, transformationName);
-        },
-        [data, showItemPreview]
-    );
 
     return (
         <RichPanel>
@@ -100,10 +71,6 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <span>
-                        <Icon icon="ai-etl" className="text-reset" />
-                        Embeddings Generation
-                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -119,13 +86,45 @@ export function EmbeddingsGenerationPanel(props: EmbeddingsGenerationPanelProps 
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
                         isDetailsOpen={detailsVisible}
+                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <RichPanelDetails>
+                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Type">
+                    <Icon icon="ai-etl" className="text-reset" />
+                    Embeddings Generation
+                </RichPanelDetailItem>
+                {identifier && (
+                    <RichPanelDetailItem label="Identifier">
+                        {identifier}
+                        <Button
+                            variant="link"
+                            onClick={() => copyToClipboard.copy(identifier, "Identifier copied to clipboard")}
+                            size="xs"
+                        >
+                            <Icon icon="copy-to-clipboard" />
+                        </Button>
+                    </RichPanelDetailItem>
+                )}
+                <ConnectionStringItem
+                    connectionStringDefined
+                    canEdit={canEdit}
+                    connectionStringName={data.shared.connectionStringName}
+                    connectionStringsUrl={connectionStringsUrl}
+                />
+                <EtlPanelHealthBadge taskHealth={taskHealth} />
+                <EtlPanelErrors
+                    errorCount={errorCount}
+                    errorsByLocation={errorsByLocation}
+                    goToTaskErrors={goToTaskErrors}
+                />
+                <EtlPanelProgressItem etlProgress={etlProgress} />
+            </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

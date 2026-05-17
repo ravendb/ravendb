@@ -51,7 +51,7 @@ export async function delay(ms: number) {
 }
 
 export function databaseLocationComparator(lhs: databaseLocationSpecifier, rhs: databaseLocationSpecifier) {
-    return lhs.nodeTag === rhs.nodeTag && lhs.shardNumber === rhs.shardNumber;
+    return lhs.nodeTag === rhs.nodeTag && (lhs.shardNumber ?? null) === (rhs.shardNumber ?? null);
 }
 
 export function boundCopy<TArgs>(story: StoryFn<TArgs>, args?: TArgs): StoryFn<TArgs> {

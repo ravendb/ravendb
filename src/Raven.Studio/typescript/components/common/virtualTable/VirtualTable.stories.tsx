@@ -12,6 +12,7 @@ import {
     ColumnDef,
     getFilteredRowModel,
     ColumnFiltersState,
+    ColumnPinningState,
 } from "@tanstack/react-table";
 import TableDisplaySettings from "./commonComponents/columnsSelect/TableDisplaySettings";
 import { FlexGrow } from "components/common/FlexGrow";
@@ -80,8 +81,9 @@ function VirtualTableExample() {
 
     const [rowSelection, setRowSelection] = useState({});
     const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(initialColumnVisibility);
-
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+    const [columnOrder, setColumnOrder] = useState<string[]>([]);
+    const [columnPinning, setColumnPinning] = useState<ColumnPinningState>({});
 
     const table = useReactTable({
         data: queryCommandResult.items,
@@ -91,6 +93,8 @@ function VirtualTableExample() {
             rowSelection,
             columnVisibility,
             columnFilters,
+            columnOrder,
+            columnPinning,
         },
         onColumnFiltersChange: setColumnFilters,
         getCoreRowModel: getCoreRowModel(),
@@ -98,6 +102,8 @@ function VirtualTableExample() {
         getFilteredRowModel: getFilteredRowModel(),
         onRowSelectionChange: setRowSelection,
         onColumnVisibilityChange: setColumnVisibility,
+        onColumnOrderChange: setColumnOrder,
+        onColumnPinningChange: setColumnPinning,
     });
 
     return (
@@ -112,6 +118,12 @@ function VirtualTableExample() {
             <pre>{JSON.stringify(rowSelection, null, 2)}</pre>
             <h5>Column filter:</h5>
             <pre>{JSON.stringify(columnFilters, null, 2)}</pre>
+            <h5>Column order:</h5>
+            <pre>{JSON.stringify(columnOrder, null, 2)}</pre>
+            <h5>Column pinning:</h5>
+            <pre>{JSON.stringify(columnPinning, null, 2)}</pre>
+            <h5>Column visibility:</h5>
+            <pre>{JSON.stringify(columnVisibility, null, 2)}</pre>
         </div>
     );
 }

@@ -26,7 +26,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     public string Identifier { get; set; }
 
     /// <summary>
-    /// The source collection on which the GenAI ETL will operate.
+    /// The source collection on which the GenAI will operate.
     /// </summary>
     public string Collection { get; set; }
 

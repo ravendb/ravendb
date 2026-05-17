@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -65,17 +66,19 @@ this.Comments[idx].IsSpam = $output.Blocked;
                 session.SaveChanges();
             }
 
-            EtlErrorInfo error = null;
+            IEnumerable<TaskItemErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetTransformationErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetItemTransformationErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value);
-            Assert.NotNull(error);
-            Assert.True(error.Error.Contains("Invalid number of arguments for ai.genContext(ctx)"));
-            Assert.Equal(docId, error.DocumentId);
+            
+            var errorsList = errors.ToList();
+            Assert.NotEmpty(errorsList);
+            Assert.True(errorsList.First().Error.Contains("Invalid number of arguments for ai.genContext(ctx)"));
+            Assert.Equal(docId, errorsList.First().DocumentId);
         }
     }
 
@@ -122,15 +125,18 @@ if($output.Blocked)
                 session.SaveChanges();
             }
 
-            EtlErrorInfo error = null;
+            IEnumerable<TaskItemErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
-            Assert.NotNull(error);
+
+            Assert.NotEmpty(errors);
+
+            var error = errors.First();
             Assert.True(error.Error.Contains("Failed to apply update script"));
             Assert.True(error.Error.Contains("JavaScriptException: Property 'findIndexf' of object is not a function"));
             Assert.Equal(docId, error.DocumentId);
@@ -185,16 +191,19 @@ if($output.Blocked)
                 session.Store(post, docId);
                 session.SaveChanges();
             }
-
-            EtlErrorInfo error = null;
+            
+            IEnumerable<TaskItemErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value);
-            Assert.NotNull(error);
+            
+            Assert.NotEmpty(errors);
+            
+            var error = errors.First();
 
             Assert.Contains("Failed to apply update script for context", error.Error);
             Assert.Contains("\"Text\":\"Free crypto airdrop! Sign up now at scamcoin.fake", error.Error);
@@ -264,15 +273,17 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
 
             Assert.True(await etlDone.WaitAsync(TimeSpan.FromMinutes(1)));
 
-            EtlErrorInfo error = null;
+            IEnumerable<TaskItemErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value);
-            Assert.NotNull(error);
+            Assert.NotEmpty(errors);
+
+            var error = errors.First();
 
             Assert.Contains("Model call failed", error.Error);
             Assert.Contains("win $$$$", error.Error);
@@ -348,14 +359,14 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             session.SaveChanges();
         }
 
-        EtlErrorInfo error = null;
+        IEnumerable<TaskItemErrorTableValue> errors = null;
         var gotError = await WaitForValueAsync(async () =>
         {
-            error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-            return error != null;
+            errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+            return errors.Any();
         }, true, timeout: 60_000);
-
-        Assert.True(gotError && error.Error.Contains("rate limit"), await AddDebugInfo(store, config));
+        
+        Assert.True(gotError && errors.First().Error.Contains("rate limit"));
 
         using (var session = store.OpenSession())
         {
@@ -466,16 +477,16 @@ this.Comments[idx].IsSpam = $output.Blocked;";
             session.SaveChanges();
         }
 
-        EtlErrorInfo error = null;
+        IEnumerable<TaskItemErrorTableValue> errors = null;
         var value = await WaitForValueAsync(async () =>
         {
-            error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-            return error != null;
+            errors = await Etl.GetItemLoadErrorsAsync(store.Database, config);
+            return errors.Any();
         }, true, timeout: 60_000);
 
         Assert.True(value);
-        Assert.NotNull(error);
-        Assert.Contains("Unauthorized", error.Error);
+        Assert.NotEmpty(errors);
+        Assert.Contains("Unauthorized", errors.First().Error);
 
         using (var session = store.OpenSession())
         {
@@ -541,25 +552,5 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
         lastProcessedEtag = state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag);
         Assert.True(lastProcessedEtag > 0);
-    }
-
-    private async Task<string> AddDebugInfo(IDocumentStore store, GenAiConfiguration config)
-    {
-        var database = await GetDocumentDatabaseInstanceFor(store);
-        var perfStats = Etl.GetEtlPerformanceStatsForDatabase(database);
-
-        var sb = new StringBuilder();
-        sb.AppendLine("ETL performance stats:").AppendLine(perfStats);
-
-        var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(
-            GenAiTask.GenAiTaskTag, $"{config.Name}/{config.Transforms.First().Name}", AlertReason.Etl_LoadError);
-
-        if (loadAlert?.Details is EtlErrorsDetails details)
-        {
-            sb.AppendLine("Etl error details:")
-                .AppendLine(string.Join(',', details.Errors.Select(e => e.Error)));
-        }
-
-        return sb.ToString();
     }
 }

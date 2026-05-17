@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using Raven.Client.Documents.Conventions;
+using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -14,28 +15,6 @@ namespace Raven.Server.NotificationCenter
         public EtlNotifications(AbstractDatabaseNotificationCenter notificationCenter)
         {
             _notificationCenter = notificationCenter;
-        }
-
-        public AlertRaised AddTransformationErrors(string processTag, string processName, Queue<EtlErrorInfo> errors, string preMessage = null)
-        {
-            var alert = GetOrCreateAlert<EtlErrorsDetails>(processTag,
-                processName,
-                AlertReason.Etl_TransformationError,
-                $"{preMessage}Transformation has failed for the following documents (last {EtlErrorsDetails.MaxNumberOfErrors} errors are shown)",
-                out var details);
-
-            return AddErrorAlert(errors, details, alert);
-        }
-
-        public AlertRaised AddLoadErrors(string processTag, string processName, Queue<EtlErrorInfo> errors, string preMessage = null)
-        {
-            var alert = GetOrCreateAlert<EtlErrorsDetails>(processTag,
-                processName,
-                AlertReason.Etl_LoadError,
-                $"{preMessage}Loading transformed data to the destination has failed (last {EtlErrorsDetails.MaxNumberOfErrors} errors are shown)",
-                out var details);
-
-            return AddErrorAlert(errors, details, alert);
         }
 
         public void AddSlowSqlWarnings(string processTag, string processName, Queue<SlowSqlStatementInfo> slowSqls)
@@ -54,14 +33,35 @@ namespace Raven.Server.NotificationCenter
             _notificationCenter.Add(alert);
         }
 
-        private AlertRaised AddErrorAlert(Queue<EtlErrorInfo> errors, EtlErrorsDetails details, AlertRaised alert)
+        public void AddTaskHealthChangeNotification(string processTag, string processName, EtlProcessHealthStatus status)
         {
-            details.Update(errors);
+            var existingAlert = GetAlert<EtlTaskHealthChangeDetails>(processTag, processName, AlertReason.Etl_HealthStatusChange);
+
+            var details = new EtlTaskHealthChangeDetails { HealthStatus = status };
+
+            if (existingAlert != null)
+            {
+                var existingDetails = existingAlert.Details as EtlTaskHealthChangeDetails;
+                details.PreviousHealthStatus = existingDetails?.HealthStatus;
+                details.PreviousHealthStatusChangeAt = existingAlert.CreatedAt;
+            }
+
+            var key = $"{processTag}/{processName}";
+
+            var message = status == EtlProcessHealthStatus.Healthy ? $"Task recovered to {nameof(EtlProcessHealthStatus.Healthy)} status." : $"Task health status was changed to {status}.";
+
+            var alert = AlertRaised.Create(
+                _notificationCenter.Database,
+                $"{processTag}: '{processName}'",
+                message,
+                AlertReason.Etl_HealthStatusChange,
+                NotificationSeverity.Warning,
+                key: key,
+                details: details);
 
             _notificationCenter.Add(alert);
-
-            return alert;
         }
+        
         public AlertRaised AddWarning(string processTag, string processName, string message, string documentId, string timeSeriesName)
         {
             var alert = GetOrCreateAlert<EtlWarningDetails>(
@@ -80,8 +80,10 @@ namespace Raven.Server.NotificationCenter
 
         private AlertRaised GetOrCreateAlert<T>(string processTag, string processName, AlertReason etlAlertReason, string message, out T details) where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError ||
-                         etlAlertReason == AlertReason.Etl_Warning);
+            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError 
+                         || etlAlertReason == AlertReason.Etl_TransformationError 
+                         || etlAlertReason == AlertReason.Etl_HealthStatusChange
+                         || etlAlertReason == AlertReason.Etl_Warning);
 
             var key = $"{processTag}/{processName}";
 
@@ -108,7 +110,7 @@ namespace Raven.Server.NotificationCenter
         public AlertRaised GetAlert<T>(string processTag, string processName, AlertReason etlAlertReason)
             where T : INotificationDetails, new()
         {
-            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError);
+            Debug.Assert(etlAlertReason == AlertReason.Etl_LoadError || etlAlertReason == AlertReason.Etl_TransformationError || etlAlertReason == AlertReason.Etl_HealthStatusChange);
 
             var key = $"{processTag}/{processName}";
 

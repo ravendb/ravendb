@@ -13,7 +13,7 @@ export function ViewSheet(props: ComponentProps<"div"> & Required<PropsWithChild
     const { className, children, ...rest } = props;
 
     return (
-        <div {...rest} className={classNames("vstack", className)}>
+        <div {...rest} className={classNames("vstack h-100", className)}>
             {children}
         </div>
     );
@@ -24,21 +24,21 @@ interface SheetHeaderProps extends Required<PropsWithChildren>, ClassNameProps {
     isCloseHidden?: boolean;
 }
 
-function SheetHeader(props: SheetHeaderProps) {
-    const hasDefaultButtons = !props.isPinHidden || !props.isCloseHidden;
+function SheetHeader({ isCloseHidden, isPinHidden, className, children }: SheetHeaderProps) {
+    const hasDefaultButtons = !isPinHidden && !isCloseHidden;
 
     return (
         <div
             className={classNames(
                 "d-flex justify-content-between align-items-center p-2 border-bottom border-color-light panel-bg-2",
-                props.className
+                className
             )}
         >
-            {props.children}
+            {children}
             {hasDefaultButtons && (
                 <div className="d-flex align-items-center">
-                    {!props.isPinHidden && <PinButton />}
-                    {!props.isCloseHidden && <CloseButton />}
+                    {!isPinHidden && <PinButton />}
+                    {!isCloseHidden && <CloseButton />}
                 </div>
             )}
         </div>
