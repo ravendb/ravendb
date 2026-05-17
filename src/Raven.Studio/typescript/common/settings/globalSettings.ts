@@ -22,6 +22,7 @@ class globalSettings extends abstractSettings {
     pinnedNotifications = new simpleStudioSetting<boolean | undefined>("local", false, x => this.saveSetting(x));
 
     isRequireTypedConfirmationToDeleteDocuments = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
+    isRequireTypedConfirmationToDeleteEtlErrors = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));
 
     isChatbotAlwaysAllowEndpointCalls = new simpleStudioSetting<boolean>("local", false, x => this.saveSetting(x));
     isChatbotDataSubmissionEnabled = new simpleStudioSetting<boolean>("local", true, x => this.saveSetting(x));

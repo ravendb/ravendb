@@ -6,6 +6,9 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
 using Raven.Client;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -403,6 +406,54 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.TimeTicks)]
             [Description("Time since creation of oldest transaction")]
             public const string ServerLongestTransaction = "1.19.1";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of ETL errors")]
+            public const string EtlErrors = "1.20.1";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count")]
+            public const string NumberOfHealthyEtls = "1.20.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count")]
+            public const string NumberOfImpairedEtls = "1.20.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count")]
+            public const string NumberOfFailedEtls = "1.20.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of ETL tasks")]
+            public const string TotalNumberOfEtls = "1.20.5";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("ETL tasks processing in the last minute")]
+            public const string NumberOfActiveEtls = "1.20.6";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of AI task errors")]
+            public const string AiTasksErrors = "1.21.1";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} AI tasks count")]
+            public const string NumberOfHealthyAiTasks = "1.21.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} AI tasks count")]
+            public const string NumberOfImpairedAiTasks = "1.21.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} AI tasks count")]
+            public const string NumberOfFailedAiTasks = "1.21.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of AI tasks")]
+            public const string TotalNumberOfAiTasks = "1.21.5";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("AI tasks processing in the last minute")]
+            public const string NumberOfActiveAiTasks = "1.21.6";
 
             public static Dictionary<string, string> CreateMapping()
             {
@@ -511,8 +562,6 @@ namespace Raven.Server.Monitoring.Snmp
                             break;
                     }
                 }
-
-
             }
         }
 
@@ -639,6 +688,14 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of indexing errors")]
             public const string IndexingErrors = "5.2.{0}.1.16";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of ETL errors")]
+            public const string EtlErrors = "5.2.{0}.1.17";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of AI task errors")]
+            public const string AiTaskErrors = "5.2.{0}.1.18";
 
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Documents storage allocated size in MB")]
@@ -747,6 +804,54 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Number of bytes written (documents, attachments, counters, timeseries)")]
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
+            
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} ETL tasks count")]
+            public const string NumberOfHealthyEtls = "5.2.{0}.7.1";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} ETL tasks count")]
+            public const string NumberOfImpairedEtls = "5.2.{0}.7.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} ETL tasks count")]
+            public const string NumberOfFailedEtls = "5.2.{0}.7.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of ETL tasks")]
+            public const string TotalNumberOfEtls = "5.2.{0}.7.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("ETL tasks processing in the last minute")]
+            public const string NumberOfActiveEtls = "5.2.{0}.7.5";
+
+            [SnmpDataType(SnmpType.Gauge32)]
+            [Description("Documents processed per second by all ETL tasks in the database (one minute rate)")]
+            public const string EtlDocumentsProcessedPerSec = "5.2.{0}.7.6";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Healthy)} AI tasks count")]
+            public const string NumberOfHealthyAiTasks = "5.2.{0}.8.1";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Impaired)} AI tasks count")]
+            public const string NumberOfImpairedAiTasks = "5.2.{0}.8.2";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description($"{nameof(EtlProcessHealthStatus.Failed)} AI tasks count")]
+            public const string NumberOfFailedAiTasks = "5.2.{0}.8.3";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Total number of AI tasks")]
+            public const string TotalNumberOfAiTasks = "5.2.{0}.8.4";
+
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("AI tasks processing in the last minute")]
+            public const string NumberOfActiveAiTasks = "5.2.{0}.8.5";
+
+            [SnmpDataType(SnmpType.Gauge32)]
+            [Description("Documents processed per second by all AI tasks in the database (one minute rate)")]
+            public const string AiTaskDocumentsProcessedPerSec = "5.2.{0}.8.6";
 
             public sealed class Indexes
             {
@@ -839,6 +944,161 @@ namespace Raven.Server.Monitoring.Snmp
                     }
 
                     return djv;
+                }
+            }
+
+            public sealed class Etls
+            {
+                private Etls()
+                {
+                }
+                
+                [Description("Number of task ETL errors")]
+                public const string EtlErrorsOfTask = "5.2.{0}.1.{{0}}.1";
+                
+                [Description("Health status of particular ETL task")]
+                public const string HealthStatus = "5.2.{0}.1.{{0}}.2";
+
+                [Description("Last successful batch time")]
+                public const string LastSuccessfulBatchTime = "5.2.{0}.1.{{0}}.3";
+
+                [Description("Documents processed per second (one minute rate)")]
+                public const string DocumentsProcessedPerSec = "5.2.{0}.1.{{0}}.4";
+
+                [Description("Responsible node tag of particular ETL task")]
+                public const string TaskResponsibleNode = "5.2.{0}.1.{{0}}.5";
+
+                public static Dictionary<string, string> CreateMapping(long ignoreIndex)
+                {
+                    var dictionary = new Dictionary<string, string>();
+                    foreach (var field in typeof(Etls).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+                        var databaseOid = string.Format(fieldValue.Oid, ignoreIndex);
+                        var etlOid = string.Format(databaseOid, ignoreIndex);
+                        dictionary.Add(Root + etlOid, fieldValue.Description);
+                    }
+
+                    return dictionary;
+                }
+
+                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
+                {
+                    var mapping = SnmpDatabase.GetEtlMapping(context, serverStore, record.DatabaseName);
+
+                    var djv = new DynamicJsonValue();
+                    if (mapping.Count == 0)
+                        return djv;
+
+                    foreach (var elasticSearchEtl in record.ElasticSearchEtls)
+                        ProcessEtl(elasticSearchEtl);
+                    
+                    foreach (var sqlEtl in record.SqlEtls)
+                        ProcessEtl(sqlEtl);
+
+                    foreach (var olapEtl in record.OlapEtls)
+                        ProcessEtl(olapEtl);
+                    
+                    foreach (var queueEtl in record.QueueEtls)
+                        ProcessEtl(queueEtl);
+
+                    foreach (var ravenEtl in record.RavenEtls)
+                        ProcessEtl(ravenEtl);
+                    
+                    return djv;
+
+                    void ProcessEtl<T>(EtlConfiguration<T> etlConfiguration) where T : ConnectionString
+                    {
+                        foreach (var transformation in etlConfiguration.Transforms)
+                        {
+                            var name = $"{etlConfiguration.Name}/{transformation.Name}";
+                            
+                            if (mapping.TryGetValue(name, out var index) == false)
+                                continue;
+
+                            var array = new DynamicJsonArray();
+                            foreach (var field in typeof(Etls).GetFields())
+                            {
+                                var fieldValue = GetFieldValue(field);
+                                var databaseOid = string.Format(fieldValue.Oid, databaseIndex);
+                                var indexOid = string.Format(databaseOid, index);
+                                array.Add(CreateJsonItem(Root + indexOid, fieldValue.Description));
+                            }
+
+                            djv[name] = array;
+                        }
+                    }
+                }
+            }
+            
+            public sealed class AiTasks
+            {
+                private AiTasks()
+                {
+                }
+                
+                [Description("Number of AI task errors")]
+                public const string AiTasksErrors = "5.2.{0}.2.{{0}}.1";
+                
+                [Description("Health status of particular AI task")]
+                public const string HealthStatus = "5.2.{0}.2.{{0}}.2";
+
+                [Description("Last successful batch time")]
+                public const string LastSuccessfulBatchTime = "5.2.{0}.2.{{0}}.3";
+
+                [Description("Documents processed per second (one minute rate)")]
+                public const string DocumentsProcessedPerSec = "5.2.{0}.2.{{0}}.4";
+
+                [Description("Responsible node tag of particular AI task")]
+                public const string TaskResponsibleNode = "5.2.{0}.2.{{0}}.5";
+
+                public static Dictionary<string, string> CreateMapping(long ignoreIndex)
+                {
+                    var dictionary = new Dictionary<string, string>();
+                    foreach (var field in typeof(AiTasks).GetFields())
+                    {
+                        var fieldValue = GetFieldValue(field);
+                        var databaseOid = string.Format(fieldValue.Oid, ignoreIndex);
+                        var aiTaskOid = string.Format(databaseOid, ignoreIndex);
+                        dictionary.Add(Root + aiTaskOid, fieldValue.Description);
+                    }
+
+                    return dictionary;
+                }
+
+                public static DynamicJsonValue ToJson(ServerStore serverStore, TransactionOperationContext context, RawDatabaseRecord record, long databaseIndex)
+                {
+                    var mapping = SnmpDatabase.GetAiTasksMapping(context, serverStore, record.DatabaseName);
+
+                    var djv = new DynamicJsonValue();
+                    if (mapping.Count == 0)
+                        return djv;
+
+                    foreach (var embeddingsGenerationTaskConfiguration in record.EmbeddingsGenerations)
+                        ProcessAiTask(embeddingsGenerationTaskConfiguration.Name, embeddingsGenerationTaskConfiguration.TransformationName);
+                    
+                    foreach (var genAiTaskConfiguration in record.GenAis)
+                        ProcessAiTask(genAiTaskConfiguration.Name, genAiTaskConfiguration.TransformationName);
+                    
+                    return djv;
+
+                    void ProcessAiTask(string configName, string transformationName)
+                    {
+                        var name = $"{configName}/{transformationName}";
+                        if (mapping.TryGetValue(name, out var index) == false)
+                            return;
+
+                        var array = new DynamicJsonArray();
+                        foreach (var field in typeof(AiTasks).GetFields())
+                        {
+                            var fieldValue = GetFieldValue(field);
+                            var databaseOid = string.Format(fieldValue.Oid, databaseIndex);
+                            var indexOid = string.Format(databaseOid, index);
+                            array.Add(CreateJsonItem(Root + indexOid, fieldValue.Description));
+                        }
+
+                        djv[name] = array;
+                    }
                 }
             }
 
@@ -1028,6 +1288,14 @@ namespace Raven.Server.Monitoring.Snmp
                 [Description("Number of active Gen AI tasks for all databases")]
                 public const string TotalNumberOfActiveGenAiTasks = "5.1.11.28";
 
+                [SnmpDataType(SnmpType.Gauge32)]
+                [Description("Number of documents processed per second by all ETL tasks across all databases (one minute rate)")]
+                public const string TotalEtlDocumentsProcessedPerSec = "5.1.12.1";
+
+                [SnmpDataType(SnmpType.Gauge32)]
+                [Description("Number of documents processed per second by all AI tasks across all databases (one minute rate)")]
+                public const string TotalAiTaskDocumentsProcessedPerSec = "5.1.12.2";
+
                 internal static Dictionary<string, string> CreateMapping()
                 {
                     var dictionary = new Dictionary<string, string>();
@@ -1066,7 +1334,12 @@ namespace Raven.Server.Monitoring.Snmp
 
             public static Dictionary<string, string> CreateMapping()
             {
-                var dict = General.CreateMapping().Concat(Indexes.CreateMapping(0)).ToDictionary();
+                var dict = General.CreateMapping()
+                    .Concat(Indexes.CreateMapping(0))
+                    .Concat(Etls.CreateMapping(0))
+                    .Concat(AiTasks.CreateMapping(0))
+                    .ToDictionary();
+                
                 foreach (var field in typeof(Databases).GetFields())
                 {
                     var fieldValue = GetFieldValue(field);
@@ -1104,7 +1377,9 @@ namespace Raven.Server.Monitoring.Snmp
                         djv[kvp.Key] = new DynamicJsonValue
                         {
                             [$"@{nameof(General)}"] = array,
-                            [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value)
+                            [nameof(Indexes)] = Indexes.ToJson(serverStore, context, record, kvp.Value),
+                            [nameof(Etls)] = Etls.ToJson(serverStore, context, record, kvp.Value),
+                            [nameof(AiTasks)] = AiTasks.ToJson(serverStore, context, record, kvp.Value)
                         };
                     }
                 }

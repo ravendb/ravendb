@@ -45,9 +45,6 @@ namespace SlowTests.Server.Documents.ETL
                 if (s.LoadErrors > 0)
                     throw new Exception($"Unexpected ETL load errors: {s.LoadErrors}");
 
-                if (s.LastLoadErrorsInCurrentBatch.Errors.Count > 0)
-                    throw new Exception($"Unexpected ETL batch load error details: {s.LastLoadErrorsInCurrentBatch}");
-
                 if (s.WasLatestLoadSuccessful == false)
                     throw new Exception("Latest ETL load was not successful.");
 

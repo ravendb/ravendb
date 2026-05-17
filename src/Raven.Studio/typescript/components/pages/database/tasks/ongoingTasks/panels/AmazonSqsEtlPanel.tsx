@@ -1,6 +1,5 @@
-import React, { useCallback } from "react";
+import React from "react";
 import {
-    BaseOngoingTaskPanelProps,
     ConnectionStringItem,
     EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
@@ -8,13 +7,13 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-    useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskAmazonSqsEtlInfo } from "components/models/tasks";
 import { useAppUrls } from "hooks/useAppUrls";
 import {
     RichPanel,
     RichPanelActions,
+    RichPanelDetailItem,
     RichPanelDetails,
     RichPanelHeader,
     RichPanelInfo,
@@ -25,48 +24,36 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
+import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
-type AmazonSqsEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAmazonSqsEtlInfo>;
+type AmazonSqsEtlPanelProps = EtlPanelBaseProps<OngoingTaskAmazonSqsEtlInfo>;
 
-function Details(props: AmazonSqsEtlPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
+export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
+
+    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const editUrl = forCurrentDatabase.editAmazonSqsEtl(data.shared.taskId)();
+
+    const {
+        canEdit,
+        goToTaskErrors,
+        detailsVisible,
+        toggleDetails,
+        onEdit,
+        showPreview,
+        taskHealth,
+        errorCount,
+        errorsByLocation,
+        etlProgress,
+    } = useEtlPanel(props, editUrl);
+
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(
         databaseName,
         "AmazonSqs",
         data.shared.connectionStringName
-    );
-    return (
-        <RichPanelDetails>
-            <ConnectionStringItem
-                connectionStringDefined
-                canEdit={canEdit}
-                connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
-            />
-            <EmptyScriptsWarning task={data} />
-        </RichPanelDetails>
-    );
-}
-
-export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
-
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-    const { forCurrentDatabase } = useAppUrls();
-    const editUrl = forCurrentDatabase.editAmazonSqsEtl(data.shared.taskId)();
-
-    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
-
-    const showPreview = useCallback(
-        (transformationName: string) => {
-            showItemPreview(data, transformationName);
-        },
-        [data, showItemPreview]
     );
 
     return (
@@ -85,10 +72,6 @@ export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransf
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <span>
-                        <Icon icon="amazon-sqs-etl" />
-                        Amazon SQS ETL
-                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -104,13 +87,34 @@ export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransf
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
                         isDetailsOpen={detailsVisible}
+                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <RichPanelDetails>
+                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Type">
+                    <Icon icon="amazon-sqs-etl" />
+                    Amazon SQS ETL
+                </RichPanelDetailItem>
+                <ConnectionStringItem
+                    connectionStringDefined
+                    canEdit={canEdit}
+                    connectionStringName={data.shared.connectionStringName}
+                    connectionStringsUrl={connectionStringsUrl}
+                />
+                <EtlPanelHealthBadge taskHealth={taskHealth} />
+                <EtlPanelErrors
+                    errorCount={errorCount}
+                    errorsByLocation={errorsByLocation}
+                    goToTaskErrors={goToTaskErrors}
+                />
+                <EtlPanelProgressItem etlProgress={etlProgress} />
+                <EmptyScriptsWarning task={data} />
+            </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

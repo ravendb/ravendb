@@ -16,9 +16,9 @@ import useDialog from "components/common/Dialog";
 import useConfirm from "components/common/ConfirmDialog";
 import { Icon } from "components/common/Icon";
 import { ClusterDebugNodeInfo } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
-import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
 import RichAlert from "components/common/RichAlert";
 import { useClusterDebugFetcher } from "../hooks/useClusterDebugFetcher";
+import { nodeAwareLoadableData } from "components/models/common";
 
 interface ClusterDebugEntriesProps {
     availableWidth: number;

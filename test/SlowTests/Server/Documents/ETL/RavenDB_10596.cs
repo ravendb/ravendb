@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
+using Raven.Server.Documents.ETL;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Tests.Infrastructure;
@@ -25,142 +26,36 @@ namespace SlowTests.Server.Documents.ETL
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
+                var etlDone = Etl.WaitForEtlToComplete(src);
+                
                 Etl.AddEtl(src, dest, "Users", script: @"throw 'super exception';
                                        loadToUsers(this);");
 
                 var database = await GetDatabase(src.Database);
 
-                var notifications = new AsyncQueue<DynamicJsonValue>();
-                using (database.NotificationCenter.TrackActions(notifications, null))
+                for (int i = 0; i < 3; i++)
                 {
-                    for (int i = 0; i < 3; i++)
+                    etlDone.Reset();
+
+                    using (var session = src.OpenSession())
                     {
-                        using (var session = src.OpenSession())
-                        {
-                            session.Store(new User()
+                        session.Store(new User()
                             {
                                 Name = "Joe Doe"
                             }, $"users/{i}");
 
-                            session.SaveChanges();
-                        }
-
-                        // let's ignore notification that's triggered by document put (DatabaseStatsChanged)
-
-                        DynamicJsonValue alert = null;
-
-                        for (int attempt = 0; attempt < 2; attempt++)
-                        {
-                            var notification = await notifications.TryDequeueAsync(TimeSpan.FromSeconds(30));
-
-                            Assert.True(notification.Item1);
-
-                            if (notification.Item2[nameof(Notification.Type)].ToString() == NotificationType.AlertRaised.ToString())
-                                alert = notification.Item2;
-                        }
-
-                        Assert.NotNull(alert);
-
-                        var details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
-                        var errors = (DynamicJsonArray)details[nameof(EtlErrorsDetails.Errors)];
-
-                        Assert.Equal(i + 1, errors.Items.Count);
-                        
-                        for (int j = 0; j < i + 1; j++)
-                        {
-                            var error = (DynamicJsonValue)errors.Items.ToArray()[j];
-
-                            Assert.Equal($"users/{j}", error[nameof(EtlErrorInfo.DocumentId)]);
-                            Assert.Contains("super exception", error[nameof(EtlErrorInfo.Error)].ToString());
-                            Assert.NotNull(error[nameof(EtlErrorInfo.Date)]);
-                        }
-                    }
-                }
-            }
-        }
-
-        [RavenFact(RavenTestCategory.Etl)]
-        public async Task CanAddAndUpdateLoadErrors()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var database = await GetDatabase(store.Database);
-
-                var transformationErrors = new Queue<EtlErrorInfo>();
-
-                transformationErrors.Enqueue(new EtlErrorInfo
-                {
-                    DocumentId = "items/1",
-                    Date = DateTime.UtcNow,
-                    Error = "fatal load error"
-                });
-
-                var notifications = new AsyncQueue<DynamicJsonValue>();
-                using (database.NotificationCenter.TrackActions(notifications, null))
-                {
-                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
-
-                    var alert = await GetAlert(notifications);
-
-                    Assert.Equal(NotificationType.AlertRaised.ToString(), alert[nameof(Notification.Type)]);
-                    Assert.Equal("Raven ETL Test: 'test'", alert[nameof(AlertRaised.Title)]);
-                    Assert.Contains("Loading transformed data to the destination has failed", alert[nameof(AlertRaised.Message)].ToString());
-
-                    var details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
-                    var errors = (DynamicJsonArray)details[nameof(EtlErrorsDetails.Errors)];
-
-                    Assert.Equal(1, errors.Items.Count);
-
-                    var error = (DynamicJsonValue)errors.Items.First();
-
-                    Assert.Equal("items/1", error[nameof(EtlErrorInfo.DocumentId)]);
-                    Assert.Equal("fatal load error", error[nameof(EtlErrorInfo.Error)].ToString());
-                    Assert.NotNull(error[nameof(EtlErrorInfo.Date)]);
-
-                    // add error for items/1 (should update) and for items/2 (new error)
-
-                    transformationErrors.Enqueue(new EtlErrorInfo
-                    {
-                        DocumentId = "items/2",
-                        Date = DateTime.UtcNow,
-                        Error = "fatal load error2"
-                    });
-
-                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
-
-                    alert = await GetAlert(notifications);
-
-                    details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
-                    errors = (DynamicJsonArray)details[nameof(EtlErrorsDetails.Errors)];
-
-                    Assert.Equal(2, errors.Items.Count);
-
-                    error = (DynamicJsonValue)errors.Items.Last();
-
-                    Assert.Equal("items/2", error[nameof(EtlErrorInfo.DocumentId)]);
-                    Assert.Equal("fatal load error2", error[nameof(EtlErrorInfo.Error)].ToString());
-                    Assert.NotNull(error[nameof(EtlErrorInfo.Date)]);
-                    
-                    // add a lot of errors - should not be more than 500
-
-                    for (int i = 0; i < EtlErrorsDetails.MaxNumberOfErrors + 1; i++)
-                    {
-                        transformationErrors.Enqueue(new EtlErrorInfo
-                        {
-                            DocumentId = $"items/{i}",
-                            Date = DateTime.UtcNow,
-                            Error = "fatal load error"
-                        });
+                        session.SaveChanges();
                     }
 
-                    database.NotificationCenter.EtlNotifications.AddLoadErrors("Raven ETL Test", "test", transformationErrors);
+                    await etlDone.WaitAsync(TimeSpan.FromSeconds(5));
 
-                    alert = await GetAlert(notifications);
+                    var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
 
-                    details = (DynamicJsonValue)alert[nameof(AlertRaised.Details)];
-                    errors = (DynamicJsonArray)details[nameof(EtlErrorsDetails.Errors)];
+                    Assert.Equal(i + 1, itemErrors.Count);
 
-                    Assert.Equal(EtlErrorsDetails.MaxNumberOfErrors, errors.Items.Count);
+                    Assert.Equal($"users/{i}", itemErrors[i].DocumentId);
+                    Assert.Contains("super exception", itemErrors[i].Error);
+                    Assert.NotNull(itemErrors[i].CreatedAt);
                 }
             }
         }

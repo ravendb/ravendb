@@ -23,11 +23,11 @@ public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConf
 
     protected override RelationalDatabaseWriterBase<SnowflakeConnectionString, SnowflakeEtlConfiguration> GetRelationalDatabaseWriterInstance()
     {
-        return new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics);
+        return new SnowflakeDatabaseWriter(Database, Configuration, Name, RelationalMetrics, Statistics);
     }
 
     protected override RelationalDatabaseWriterSimulator GetWriterSimulator(bool withConnection)
     {
-        return new RelationalDatabaseWriterSimulator(new SnowflakeDatabaseWriter(Database, Configuration, RelationalMetrics, Statistics, withConnection));
+        return new RelationalDatabaseWriterSimulator(new SnowflakeDatabaseWriter(Database, Configuration, Name, RelationalMetrics, Statistics, withConnection));
     }
 }

@@ -1,7 +1,9 @@
 ﻿/// <reference path="../../typings/tsd.d.ts"/>
 
 class colorsManager {
-    
+
+    static readonly nodeColors = ["#51d27a", "#945ab5", "#2f9ef3", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
+
     static setup(containerSelector: string, targetObject: any) {
         const $container = $(containerSelector);
         if (!$container.length) {

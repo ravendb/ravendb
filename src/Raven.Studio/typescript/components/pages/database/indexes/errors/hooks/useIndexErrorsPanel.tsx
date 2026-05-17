@@ -58,7 +58,7 @@ export function useIndexErrorsPanel({ errorItem, table, asyncFetchAllErrorCount 
             message: <IndexErrorsModalBody selectedErrors={selectedErrors} />,
             actionColor: "warning",
             icon: "trash",
-            confirmText: "Clear errors",
+            confirmText: "Delete errors",
         });
 
         if (!isConfirmed) {
@@ -87,7 +87,7 @@ interface IndexErrorsModalTitleProps {
 function IndexErrorsModalTitle({ shardNumber, nodeTag }: IndexErrorsModalTitleProps) {
     return (
         <span>
-            Clear errors for <Icon icon="node" color="node" margin="m-0" /> <strong>{nodeTag}</strong>{" "}
+            Delete errors for <Icon icon="node" color="node" margin="m-0" /> <strong>{nodeTag}</strong>{" "}
             {shardNumber != null && (
                 <>
                     <Icon icon="shard" color="shard" margin="m-0" /> <strong>#{shardNumber}</strong>
@@ -107,17 +107,17 @@ function IndexErrorsModalBody({ selectedErrors }: IndexErrorsModalBodyProps) {
             {selectedErrors.length === 0 ? (
                 <>
                     <span>
-                        Errors will be cleared for <strong>ALL</strong> indexes. <br />
+                        Errors will be deleted for <strong>ALL</strong> indexes. <br />
                     </span>
                     {selectedErrors.length === 0 && (
                         <span>
-                            To clear errors for <b>specific indexes</b>, select them in the dropdown.
+                            To delete errors for <b>specific indexes</b>, select them in the dropdown.
                         </span>
                     )}
                 </>
             ) : (
                 <>
-                    You&#39;re clearing errors for <b>{selectedErrors.length}</b>{" "}
+                    You&#39;re deleting errors for <b>{selectedErrors.length}</b>{" "}
                     {selectedErrors.length === 1 ? "index" : "indexes"}:
                     <ul>
                         {selectedErrors.map((error) => (

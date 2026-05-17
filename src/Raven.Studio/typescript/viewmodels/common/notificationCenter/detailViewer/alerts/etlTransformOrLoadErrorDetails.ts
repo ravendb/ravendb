@@ -11,7 +11,10 @@ import copyToClipboard = require("common/copyToClipboard");
 import generalUtils = require("common/generalUtils");
 import moment = require("moment");
 
-interface EtlAlertTableItem extends Partial<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo> {
+interface EtlAlertTableItem {
+    DocumentId?: string;
+    Date?: string;
+    Error?: string;
     TimeSeriesName?: string;
 }
 
@@ -39,7 +42,7 @@ class etlTransformOrLoadErrorDetails extends abstractAlertDetails {
                 TimeSeriesName: details.TimeSeriesName
             }];
         } else {
-            this.tableItems = (this.alert.details() as Raven.Server.NotificationCenter.Notifications.Details.EtlErrorsDetails)
+            this.tableItems = (this.alert.details() as { Errors: EtlAlertTableItem[] })
                 .Errors
                 .slice()
                 .reverse();

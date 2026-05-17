@@ -81,11 +81,13 @@ public class AzureQueueStorageEtlTests : AzureQueueStorageEtlTestBase
                 session.SaveChanges();
             }
 
-            var alert = await AssertWaitForNotNullAsync(() => Etl.TryGetLoadErrorAsync(store.Database, config), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
-
+            await AssertWaitForTrueAsync(async () => (await Etl.GetItemLoadErrorsAsync(store.Database, config)).Any(), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+            var itemLoadErrorsList = (await Etl.GetItemLoadErrorsAsync(store.Database, config)).ToList();
+            
+            Assert.Single(itemLoadErrorsList);
             Assert.Contains(
                 "The request body is too large and exceeds",
-                alert.Error);
+                itemLoadErrorsList.Single().Error);
         }
     }
 

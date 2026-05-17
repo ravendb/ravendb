@@ -39,7 +39,7 @@ public class UpdateGenAiOperation(long taskId, GenAiConfiguration configuration,
         /// </summary>
         /// <param name="conventions">Serialization conventions used to generate the request payload.</param>
         /// <param name="taskId">The server-side identifier of the task to update.</param>
-        /// <param name="configuration">The updated GenAI ETL configuration.</param>
+        /// <param name="configuration">The updated GenAI configuration.</param>
         /// <param name="startingPoint">
         /// The change vector from which the ETL should start.
         /// When <see langword="null"/>, defaults to <see cref="StartingPointChangeVector.DoNotChange"/>.

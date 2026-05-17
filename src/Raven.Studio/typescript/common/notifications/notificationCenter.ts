@@ -45,7 +45,6 @@ import slowIoDetails = require("viewmodels/common/notificationCenter/detailViewe
 import pagingDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/pagingDetails");
 import hugeDocumentsDetails = require("viewmodels/common/notificationCenter/detailViewer/performanceHint/hugeDocumentsDetails");
 import newVersionAvailableDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/newVersionAvailableDetails");
-import etlTransformOrLoadErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTransformOrLoadErrorDetails");
 import remoteAttachmentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/remoteAttachmentErrorDetails");
 import genericAlertDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/genericAlertDetails");
 import recentErrorDetails = require("viewmodels/common/notificationCenter/detailViewer/recentErrorDetails");
@@ -68,6 +67,7 @@ import cpuCreditsBalanceDetails = require("viewmodels/common/notificationCenter/
 import groupedVirtualNotification = require("common/notifications/models/groupedVirtualNotification");
 import typeUtils = require("common/typeUtils");
 import aiAgentExceededTokenThreshold = require("viewmodels/common/notificationCenter/detailViewer/alerts/aiAgentExceededTokenThreshold");
+import etlTaskHealthChangeDetails = require("viewmodels/common/notificationCenter/detailViewer/alerts/etlTaskHealthChangeDetails");
 
 interface detailsProvider {
     supportsDetailsFor(notification: abstractNotification): boolean;
@@ -192,7 +192,6 @@ class notificationCenter {
             
             // alerts:
             newVersionAvailableDetails,
-            etlTransformOrLoadErrorDetails,
             mismatchedReferenceLoadDetails,
             blockingTombstonesDetails,
             queueSinkErrorDetails,
@@ -202,6 +201,7 @@ class notificationCenter {
             complexFieldsAlertDetails,
             aiAgentExceededTokenThreshold,
             remoteAttachmentErrorDetails,
+            etlTaskHealthChangeDetails,
             genericAlertDetails  // leave it as last item on this list - this is fallback handler for all alert types
         );
 

@@ -8,7 +8,7 @@ import {
     RichPanelHeader,
     RichPanelInfo,
 } from "components/common/RichPanel";
-import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
+import { DestinationUrlItem, OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
 import { ExternalReplicationTaskDistribution } from "../partials/ExternalReplicationTaskDistribution";
 import { Icon } from "components/common/Icon";
 
@@ -36,13 +36,7 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
             <RichPanelDetails>
                 <RichPanelDetailItem label="Task Name">{data.shared.taskName}</RichPanelDetailItem>
                 <RichPanelDetailItem label="Sink Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
-                {data.shared.destinationUrl && (
-                    <RichPanelDetailItem label="Actual Sink URL">
-                        <a href={data.shared.destinationUrl} target="_blank">
-                            {data.shared.destinationUrl}
-                        </a>
-                    </RichPanelDetailItem>
-                )}
+                <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Sink URL" />
             </RichPanelDetails>
             <ExternalReplicationTaskDistribution task={data} />
         </RichPanel>

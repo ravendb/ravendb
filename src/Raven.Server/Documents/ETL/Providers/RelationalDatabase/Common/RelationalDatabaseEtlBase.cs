@@ -5,6 +5,7 @@ using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Enumerators;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Metrics;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.RelationalWriters;
@@ -167,7 +168,15 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             }
             catch (Exception e)
             {
-                Statistics.RecordPartialLoadError(e.ToString(), documentId: null, count: 1);
+                Database.TaskErrorsStorage.StoreProcessError(TaskCategory, new TaskProcessError
+                {
+                    CreatedAt = SystemTime.UtcNow,
+                    TaskName = Name,
+                    AffectedDocumentsCount = 0,
+                    Step = TaskErrorStep.Load,
+                    Error = e.ToString()
+                });
+                Statistics.RecordProcessLoadError(count: 0);
             }
         }
         else
@@ -182,11 +191,13 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
                 summaries.Add(new TableQuerySummary { TableName = records.TableName, Commands = commands });
             }
         }
+        
+        var itemErrors = Statistics.ReadInMemoryItemErrors();
 
         return new RelationalDatabaseEtlTestScriptResult
         {
-            TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
-            LoadErrors = Statistics.LastLoadErrorsInCurrentBatch.Errors.ToList(),
+            TransformationErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Transformation).ToList(),
+            ItemLoadErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Load).ToList(),
             SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
             Summary = summaries
         };

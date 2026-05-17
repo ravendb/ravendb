@@ -74,6 +74,12 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         ObjectInstance htmlObject = new JsObject(DocumentScript.ScriptEngine);
         htmlObject.SetClfFunc("strip", StripHtml);
         DocumentScript.ScriptEngine.SetValue("html", htmlObject);
+
+        var stringPrototype = (ObjectInstance)DocumentScript.ScriptEngine.Evaluate("String.prototype");
+        stringPrototype.SetClfFunc("withContextPrefix", StringOrArrayWithContextPrefix);
+
+        var arrayPrototype = (ObjectInstance)DocumentScript.ScriptEngine.Evaluate("Array.prototype");
+        arrayPrototype.SetClfFunc("withContextPrefix", StringOrArrayWithContextPrefix);
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
@@ -262,95 +268,212 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitLines(text | [text], maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitLines);
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitLines, supportsOverlap: false);
     }
-    
+
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens?)";
-        
-        if (args.Length != 2 && args.Length != 3)
+
+        if (args.Length < 2 || args.Length > 3)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with either 2 or 3 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitParagraphs);
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitParagraphs, supportsOverlap: true);
     }
-    
+
     private JsValue SplitPlainText(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.split(text | [text], maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplit);
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplit, supportsOverlap: false);
     }
-    
+
     private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitLines(text | [text], maxTokensPerLine)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitLines);
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitLines, supportsOverlap: false);
     }
-    
+
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens?)";
-        
-        if (args.Length != 2 && args.Length != 3)
+
+        if (args.Length < 2 || args.Length > 3)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with either 2 or 3 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitParagraphs);
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitParagraphs, supportsOverlap: true);
     }
 
     private JsValue StripHtml(JsValue self, JsValue[] args)
     {
         const string methodSignature = "html.strip(htmlText | [htmlText], maxTokensPerChunk)";
-        
+
         if (args.Length != 2)
             ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-        
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip);
-    }
-    
-    public class ObjectForChunking([NotNull] Engine engine) : ObjectInstance(engine)
-    {
-        public readonly List<(string,ChunkingOptions)> Value = [];
+
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip, supportsOverlap: false);
     }
 
-    private static JsValue ChunkFunc(JsValue self, JsValue[] args, string methodSignature, ChunkingMethod chunkingMethod)
+    private JsValue StringOrArrayWithContextPrefix(JsValue self, JsValue[] args)
     {
-        if(args[0].IsNull() || args[0].IsUndefined())
-            return JsValue.Undefined;
-        
-        if (args[0].IsString() == false && args[0].IsArray() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string or a string array");
-        
-        if (args[1].IsNumber() == false)
-            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+        const string methodSignature = "<string | [string]>.withContextPrefix(contextPrefix)";
 
-        int overlapTokens = 0;
-        if (args.Length == 3)
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        if (self.IsString() == false && self.IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} must be called on a string or a string array");
+
+        var prefix = args[0].AsString();
+
+        if (string.IsNullOrWhiteSpace(prefix))
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument (contextPrefix) cannot be empty or whitespace-only");
+
+        var chunkingOptions = new ChunkingOptions
         {
-            if (args[2].IsNumber() == false)
-                ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be a number");
+            NoChunking = true,
+            ContextPrefix = prefix
+        };
 
-            overlapTokens = (int)args[2].AsNumber();
+        var result = new PropertyChunkingResult(DocumentScript.ScriptEngine);
+
+        if (self.IsString())
+        {
+            result.Value.Add((self.AsString(), chunkingOptions));
+            return result;
         }
 
-        ChunkingOptions chunkingOptions = new() { 
-            MaxTokensPerChunk = (int)args[1].AsNumber(), 
-            ChunkingMethod = chunkingMethod,
-            OverlapTokens = overlapTokens
+        foreach (var line in self.AsArray())
+        {
+            if (line.IsNull() || line.IsUndefined())
+                continue;
+
+            if (line.IsString() == false)
+                throw new NotSupportedException("Only string arrays are supported, but got an array value of '" + line + "' in " + methodSignature);
+
+            result.Value.Add((line.AsString(), chunkingOptions));
+        }
+
+        return result;
+    }
+
+    private class PropertyChunkingResult : ObjectInstance
+    {
+        public readonly List<(string, ChunkingOptions)> Value = [];
+
+        public PropertyChunkingResult([NotNull] Engine engine) : base(engine)
+        {
+            this.SetClfFunc("withContextPrefix", PerPropertyContextPrefix);
+        }
+    }
+
+    private class EmbeddingsGenerateResult : ObjectInstance
+    {
+        public readonly EmbeddingGenerationScriptResult Item;
+
+        public EmbeddingsGenerateResult([NotNull] Engine engine, EmbeddingGenerationScriptResult item) : base(engine)
+        {
+            Item = item;
+            this.SetClfFunc("withContextPrefix", ObjectWideContextPrefix);
+        }
+    }
+
+    private static ChunkingOptions CloneWithPrefix(ChunkingOptions source, string prefix)
+    {
+        // Source is either the configuration's default options (shared across documents) or an instance
+        // shared by multiple tuples produced from the same chunker call - always clone before mutating.
+        return new ChunkingOptions
+        {
+            ChunkingMethod = source.ChunkingMethod,
+            MaxTokensPerChunk = source.MaxTokensPerChunk,
+            OverlapTokens = source.OverlapTokens,
+            ContextPrefix = prefix,
+            NoChunking = source.NoChunking
         };
-        
-        var result = new ObjectForChunking(((JsObject)self).Engine);
+    }
+
+    private static JsValue PerPropertyContextPrefix(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "<chunker>.withContextPrefix(contextPrefix)";
+
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        var prefix = args[0].AsString();
+
+        if (string.IsNullOrWhiteSpace(prefix))
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument (contextPrefix) cannot be empty or whitespace-only");
+
+        var pcr = (PropertyChunkingResult)self;
+        for (var i = 0; i < pcr.Value.Count; i++)
+        {
+            var (text, chunkingOptions) = pcr.Value[i];
+            pcr.Value[i] = (text, CloneWithPrefix(chunkingOptions, prefix));
+        }
+
+        return self;
+    }
+
+    private static JsValue ObjectWideContextPrefix(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "embeddings.generate({...}).withContextPrefix(contextPrefix)";
+
+        if (args.Length != 1)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 1 argument");
+
+        if (args[0].IsString() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string");
+
+        var prefix = args[0].AsString();
+
+        if (string.IsNullOrWhiteSpace(prefix))
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument (contextPrefix) cannot be empty or whitespace-only");
+
+        var result = (EmbeddingsGenerateResult)self;
+
+        foreach (var list in result.Item.Fields.Values)
+        {
+            for (var i = 0; i < list.Count; i++)
+            {
+                var (text, opts) = list[i];
+                if (string.IsNullOrEmpty(opts.ContextPrefix) == false)
+                    continue;
+
+                list[i] = (text, CloneWithPrefix(opts, prefix));
+            }
+        }
+
+        return JsValue.Undefined;
+    }
+
+    private static JsValue ChunkFunc(JsValue self, JsValue[] args, string methodSignature, ChunkingMethod chunkingMethod, bool supportsOverlap)
+    {
+        if (args[0].IsNull() || args[0].IsUndefined())
+            return JsValue.Undefined;
+
+        if (args[0].IsString() == false && args[0].IsArray() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} first argument must be a string or a string array");
+
+        ChunkingOptions chunkingOptions = BuildChunkingOptions(args, methodSignature, chunkingMethod, supportsOverlap);
+
+        var result = new PropertyChunkingResult(((JsObject)self).Engine);
 
         if (args[0].IsString())
         {
@@ -364,7 +487,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             {
                 if (line.IsNull() || line.IsUndefined())
                     continue;
-                
+
                 if (line.IsString() is false)
                     throw new NotSupportedException("Only string arrays are supported, but got an array value of '" + line + "' in " + methodSignature);
                 result.Value.Add((line.AsString(), chunkingOptions));
@@ -373,6 +496,29 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         }
 
         throw new NotSupportedException("Only string or string arrays are supported in " + methodSignature + " but got " + args[0]);
+    }
+
+    private static ChunkingOptions BuildChunkingOptions(JsValue[] args, string methodSignature, ChunkingMethod chunkingMethod, bool supportsOverlap)
+    {
+        if (args[1].IsNumber() == false)
+            ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
+
+        int overlapTokens = 0;
+
+        if (supportsOverlap && args.Length >= 3)
+        {
+            if (args[2].IsNumber() == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} third argument (overlapTokens) must be a number");
+
+            overlapTokens = (int)args[2].AsNumber();
+        }
+
+        return new ChunkingOptions
+        {
+            MaxTokensPerChunk = (int)args[1].AsNumber(),
+            ChunkingMethod = chunkingMethod,
+            OverlapTokens = overlapTokens
+        };
     }
 
     private JsValue EmbeddingsGenerate(JsValue self, JsValue[] args)
@@ -387,30 +533,30 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         var mainObj = args[0].AsObject();
 
-        EmbeddingGenerationScriptResult aiEtlEmbeddingItem;
+        EmbeddingGenerationScriptResult scriptResult;
         bool isNewInstance;
         if (_currentRun.Additions.Count > 0 && _currentRun.Additions[^1].DocumentId == Current.DocumentId)
         {
             isNewInstance = false;
-            aiEtlEmbeddingItem = _currentRun.Additions[^1];
+            scriptResult = _currentRun.Additions[^1];
         }
         else
         {
             isNewInstance = true;
-            aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
+            scriptResult = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
         }
 
         foreach (var propertyKey in mainObj.GetOwnPropertyKeys())
         {
             var propertyName = propertyKey.AsString();
-            ref var field = ref CollectionsMarshal.GetValueRefOrAddDefault(aiEtlEmbeddingItem.Fields, propertyName, out _);
+            ref var field = ref CollectionsMarshal.GetValueRefOrAddDefault(scriptResult.Fields, propertyName, out _);
 
             if (mainObj.TryGetValue(propertyKey, out JsValue value) is false ||
                 value.IsNull() ||
                 value.IsUndefined())
                 continue;
             
-            if (value is ObjectForChunking ofc)
+            if (value is PropertyChunkingResult ofc)
             {
                 field = ofc.Value;
                 continue;
@@ -427,7 +573,7 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
                 foreach (var jsValue in jsArray)
                 {
-                    if (jsValue is ObjectForChunking i)
+                    if (jsValue is PropertyChunkingResult i)
                     {
                         // to handle
                         //{ Text: [html.strip(this.Body), markdown.splitLines(this.Title)] }
@@ -449,10 +595,10 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         if (isNewInstance)
         {
-            _currentRun.Additions.Add(aiEtlEmbeddingItem);
+            _currentRun.Additions.Add(scriptResult);
         }
 
-        return JsValue.Null;
+        return new EmbeddingsGenerateResult(DocumentScript.ScriptEngine, scriptResult);
     }
 }
 #pragma warning restore SKEXP0050

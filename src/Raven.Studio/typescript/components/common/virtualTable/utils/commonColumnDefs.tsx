@@ -45,4 +45,5 @@ export const columnCheckbox: ColumnDef<unknown> = {
     enableSorting: false,
     enableHiding: false,
     enableColumnFilter: false,
+    enablePinning: false,
 };

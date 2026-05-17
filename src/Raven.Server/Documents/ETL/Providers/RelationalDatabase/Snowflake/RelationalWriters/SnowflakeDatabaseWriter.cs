@@ -20,8 +20,8 @@ public class SnowflakeDatabaseWriter: RelationalDatabaseWriterBase<SnowflakeConn
 
     private readonly SnowflakeEtlConfiguration _snowflakeEtlConfiguration;
 
-    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, RelationalDatabaseEtlMetricsCountersManager sqlMetrics,
-        EtlProcessStatistics statistics, bool shouldConnectToTarget = true) : base(database, configuration, sqlMetrics, statistics, shouldConnectToTarget)
+    public SnowflakeDatabaseWriter(DocumentDatabase database, SnowflakeEtlConfiguration configuration, string taskName, RelationalDatabaseEtlMetricsCountersManager sqlMetrics,
+        EtlProcessStatistics statistics, bool shouldConnectToTarget = true) : base(database, configuration, taskName, sqlMetrics, statistics, shouldConnectToTarget)
     {
         _snowflakeEtlConfiguration = configuration;
     }

@@ -53,7 +53,6 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             return 0;
         }
 
-        var tooLargeDocsErrors = new Queue<EtlErrorInfo>();
         idsToDelete = new List<string>();
         int count = 0;
 
@@ -104,7 +103,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
                     if (batchMessages.Count == 10)
                     {
                         ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count,
-                            idsToDelete, tooLargeDocsErrors);
+                            idsToDelete);
                     }
                 }
                 catch (Exception ex)
@@ -116,16 +115,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             // handle remaining messages in batch
             if (batchMessages.Count > 0)
             {
-                ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count, idsToDelete,
-                    tooLargeDocsErrors);
-            }
-
-            if (tooLargeDocsErrors.Count > 0)
-            {
-                Database.NotificationCenter.EtlNotifications.AddLoadErrors(Tag, Name, tooLargeDocsErrors,
-                    "ETL has partially loaded the data. " +
-                    "Some of the documents were too big (>256KB) to be handled by Amazon SQS. " +
-                    "It caused load errors, that have been skipped. ");
+                ProcessBatchMessages(queueName, batchMessages, documentIdToMessageId, queue, ref count, idsToDelete);
             }
         }
 
@@ -135,13 +125,12 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
     private void ProcessBatchMessages(string queueName,
         List<SendMessageBatchRequestEntry> batchMessages,
         Dictionary<string, string> documentIdToMessageId,
-        QueueWithItems<AmazonSqsItem> queue, ref int count, List<string> idsToDelete,
-        Queue<EtlErrorInfo> tooLargeDocsErrors)
+        QueueWithItems<AmazonSqsItem> queue, ref int count, List<string> idsToDelete)
     {
         if (TrySendBatchMessages(queueName, batchMessages) == false)
         {
             // If batch sending failed, send each message individually
-            SendMessagesOneByOne(queueName, batchMessages, documentIdToMessageId, queue, idsToDelete, tooLargeDocsErrors);
+            SendMessagesOneByOne(queueName, batchMessages, documentIdToMessageId, queue, idsToDelete);
         }
         else
         {
@@ -185,8 +174,12 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         }
         catch (Exception ex)
         {
+            var message = $"ETL process: {Name}. Failed to send messages in a batch: {ex}";
+
             if (Logger.IsWarnEnabled)
-                Logger.Warn($"ETL process: {Name}. Failed to send messages in a batch.", ex);
+                Logger.Warn(message, ex);
+
+            RecordLoadError(message, TaskErrorStep.Load, batchMessages.Count);
             return false;
         }
     }
@@ -195,8 +188,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
         List<SendMessageBatchRequestEntry> batchMessages,
         Dictionary<string, string> documentIdToMessageId,
         QueueWithItems<AmazonSqsItem> queue,
-        List<string> idsToDelete,
-        Queue<EtlErrorInfo> tooLargeDocsErrors)
+        List<string> idsToDelete)
     {
         foreach (var message in batchMessages)
         {
@@ -221,12 +213,13 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
             {
                 if (sqsEx.ErrorCode == "InvalidAttributeValue")
                 {
-                    tooLargeDocsErrors.Enqueue(new EtlErrorInfo()
-                    {
-                        Date = DateTime.UtcNow,
-                        DocumentId = message.Id,
-                        Error = sqsEx.Message
-                    });
+                    var errorMessage = $"""
+                                        Document {message.Id} is too big to be handled by Amazon SQS.
+                                        It has been skipped from processing. 
+                                        {sqsEx}
+                                        """;
+                    
+                    Statistics.RecordItemLoadError(errorMessage, message.Id);
                 }
                 else
                 {

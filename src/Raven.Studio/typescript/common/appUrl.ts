@@ -125,6 +125,7 @@ class appUrl {
         remoteAttachments: ko.pureComputed(() => appUrl.forRemoteAttachments(appUrl.currentDatabase())),
         documentSchema: ko.pureComputed(() => appUrl.forDocumentSchema(appUrl.currentDatabase())),
         documentSchemaPlayground: ko.pureComputed(() => appUrl.forDocumentSchemaPlayground(appUrl.currentDatabase())),
+        tasksError: ko.pureComputed(() => appUrl.forTasksErrors(appUrl.currentDatabase())),
 
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
         statusBucketsReport: ko.pureComputed(() => appUrl.forStatusBucketsReport(appUrl.currentDatabase())),
@@ -140,6 +141,7 @@ class appUrl {
         chatAiAgent: (id: string) => ko.pureComputed(() => appUrl.forChatAiAgent(appUrl.currentDatabase(), id)),
         aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
         aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
+        aiTasksErrors: ko.pureComputed(() => appUrl.forAiTasksErrors(appUrl.currentDatabase())),
     };
 
     static checkIsAreaActive(routeRoot: string): boolean {
@@ -450,6 +452,31 @@ class appUrl {
     
     static forRevisionsBinCleaner(db: database | string): string {
         return "#databases/settings/revisionsBinCleaner?" + appUrl.getEncodedDbPart(db);
+    }
+    
+    static forTasksErrors(
+        db: database | string,
+        params: {
+            taskName?: string;
+            nodeTags?: string[];
+            shardNumbers?: string[];
+            healthStatuses?: string[];
+            taskTypes?: string[];
+            groupBy?: string;
+        } = {}
+    ): string {
+        const encodeArray = (key: string, values?: string[]) =>
+            values?.length ? "&" + key + "=" + encodeURIComponent(values.join(",")) : "";
+
+        const { taskName, nodeTags, shardNumbers, healthStatuses, taskTypes, groupBy } = params;
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskNamePart = taskName ? "&taskName=" + encodeURIComponent(taskName) : "";
+        return "#databases/tasks/tasksErrors?" + databasePart + taskNamePart
+            + encodeArray("nodeTags", nodeTags)
+            + encodeArray("shardNumbers", shardNumbers)
+            + encodeArray("healthStatuses", healthStatuses)
+            + encodeArray("taskTypes", taskTypes)
+            + encodeArray("groupBy", groupBy ? [groupBy] : undefined);
     }
 
     static forRemoteAttachments(db: database): string {
@@ -824,6 +851,11 @@ class appUrl {
     static forAiTasksStats(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/ai/tasksStats?" + databasePart;
+    }
+
+    static forAiTasksErrors(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/tasksErrors?" + databasePart;
     }
 
     static getDatabaseNameFromUrl(): string {

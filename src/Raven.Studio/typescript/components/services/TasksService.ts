@@ -36,6 +36,10 @@ import saveEtlTaskCommand from "commands/database/tasks/saveEtlTaskCommand";
 import testGenAiCommand from "commands/database/tasks/testGenAiCommand";
 import geAiModelsCommand from "commands/database/tasks/geAiModelsCommand";
 import getJsonSchemaFromSampleObjectCommand from "commands/database/tasks/getJsonSchemaFromSampleObjectCommand";
+import getEtlErrorsCommand from "commands/database/tasks/getEtlErrorsCommand";
+import getEtlStatsCommand from "commands/database/tasks/getEtlStatsCommand";
+import deleteEtlErrorsCommand from "commands/database/tasks/deleteEtlErrorsCommand";
+import retryBatchEtlCommand from "commands/database/tasks/retryBatchEtlCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -203,5 +207,21 @@ export default class TasksService {
 
     async getJsonSchemaFromSampleObject(...args: ConstructorParameters<typeof getJsonSchemaFromSampleObjectCommand>) {
         return new getJsonSchemaFromSampleObjectCommand(...args).execute();
+    }
+
+    async getEtlErrors(...args: ConstructorParameters<typeof getEtlErrorsCommand>) {
+        return new getEtlErrorsCommand(...args).execute();
+    }
+
+    async getEtlStats(...args: ConstructorParameters<typeof getEtlStatsCommand>) {
+        return new getEtlStatsCommand(...args).execute();
+    }
+
+    async deleteEtlErrors(...args: ConstructorParameters<typeof deleteEtlErrorsCommand>) {
+        return new deleteEtlErrorsCommand(...args).execute();
+    }
+
+    async retryBatch(...args: ConstructorParameters<typeof retryBatchEtlCommand>) {
+        return new retryBatchEtlCommand(...args).execute();
     }
 }

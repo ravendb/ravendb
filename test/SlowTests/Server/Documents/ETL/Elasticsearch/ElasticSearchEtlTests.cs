@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.ETL.ElasticSearch;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.ServerWide.Context;
@@ -168,7 +169,9 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                         }
                     },
                 };
-
+                
+                var etlDone = Etl.WaitForEtlToComplete(store);
+                
                 Etl.AddEtl(store, config, new ElasticSearchConnectionString { Name = "test", Nodes = new[] { "http://localhost:1234" } }); //wrong elastic search url
 
                 using (var session = store.OpenAsyncSession())
@@ -182,14 +185,15 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                     });
                     await session.SaveChangesAsync();
                 }
-
-                var alert = await AssertWaitForNotNullAsync(async () =>
-                {
-                    var error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                    return error;
-                }, timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
                 
-                Assert.StartsWith("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", alert.Error);
+                await etlDone.WaitAsync(TimeSpan.FromSeconds(15));
+                
+                var database = await GetDatabase(store.Database);
+
+                var processErrors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskCategory.Etl, $"{config.Name}/{config.Transforms.Single().Name}").ToList();
+                
+                Assert.True(processErrors.Count > 0);
+                Assert.Contains("Raven.Server.Exceptions.ETL.ElasticSearch.ElasticSearchLoadException", processErrors.First().Error);
             }
         }
 

@@ -1,0 +1,38 @@
+@use "Content/scss/sizes";
+
+.tasks-errors-page {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .pills-container:has(.pill-group:hover) {
+        .pill-group:not(:hover) {
+            opacity: 0.6;
+            transition: opacity 0.15s ease;
+        }
+
+        .pill-group:hover {
+            transition: opacity 0.15s ease;
+        }
+    }
+
+    .tasks-pill {
+        height: 20px;
+        width: 10px;
+    }
+
+    .node-circle {
+        height: 15px;
+        width: 15px;
+    }
+}
+
+.task-pill-message {
+    min-width: 240px;
+    max-width: 320px;
+    padding: sizes.$gutter-xxxs;
+}
+
+.TaskErrorFilter {
+    min-width: 250px;
+}

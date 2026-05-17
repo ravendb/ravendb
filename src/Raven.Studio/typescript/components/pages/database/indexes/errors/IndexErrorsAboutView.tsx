@@ -27,11 +27,11 @@ export default function IndexErrorsAboutView() {
                         <i>map</i>,<i>reduce</i>, or <i>analyzer</i>.
                     </li>
                     <li className="mt-1">
-                        <strong>Clear errors</strong>
+                        <strong>Delete errors</strong>
                         <br />
-                        You can clear errors for selected indexes.
+                        You can delete errors for selected indexes.
                         <br />
-                        Note that clearing errors only removes the errors; the index state will not change. It will
+                        Note that deleting errors only removes the errors; the index state will not change. It will
                         remain in an <b>Error</b> state and will not be set back to the <b>Normal</b> state.
                     </li>
                 </ul>

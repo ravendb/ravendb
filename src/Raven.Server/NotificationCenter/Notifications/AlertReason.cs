@@ -5,6 +5,8 @@ namespace Raven.Server.NotificationCenter.Notifications
     {
         Etl_Error = 0,
         Etl_Warning = 1,
+        
+        // Backward compatibility
         Etl_TransformationError = 2,
         Etl_LoadError = 3,
         
@@ -107,6 +109,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         
         SchemaValidationConfiguration_Error = 70,
 
-        GcThreadContention = 71
+        GcThreadContention = 71,
+        
+        Etl_HealthStatusChange = 72,
     }
 }

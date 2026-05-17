@@ -197,6 +197,7 @@ namespace Raven.Server.Documents
                 MetricCacher = new DatabaseMetricCacher(this);
                 TxMerger = new DocumentsTransactionOperationsMerger(this);
                 ConfigurationStorage = new ConfigurationStorage(this);
+                TaskErrorsStorage = new TaskErrorsStorage();
                 NotificationCenter = new DatabaseNotificationCenter(this);
                 _clusterTransactionErrorNotifier = new ClusterTransactionErrorNotifier(NotificationCenter, Name);
                 HugeDocuments = new HugeDocuments(NotificationCenter, configuration.PerformanceHints.HugeDocumentsCollectionSize,
@@ -331,6 +332,8 @@ namespace Raven.Server.Documents
 
         public DatabaseNotificationCenter NotificationCenter { get; private set; }
 
+        public TaskErrorsStorage TaskErrorsStorage { get; private set; }
+
         public DatabaseOperations Operations { get; private set; }
 
         public HugeDocuments HugeDocuments { get; }
@@ -439,6 +442,8 @@ namespace Raven.Server.Documents
 
                 _addToInitLog(LogLevel.Debug, "Initializing ConfigurationStorage");
                 ConfigurationStorage.Initialize();
+                
+                TaskErrorsStorage.Initialize(DocumentsStorage.ContextPool, TxMerger);
 
                 _clusterTransactionErrorNotifier.Initialize();
 
@@ -2298,6 +2303,8 @@ namespace Raven.Server.Documents
             internal AsyncManualResetEvent DelayQueryByPatch;
 
             internal bool EnableWritesToTheWrongShard = false;
+            
+            internal TimeSpan? EtlFallbackTime;
 
             internal IDisposable CallDuringDocumentDatabaseInternalDispose(Action action)
             {

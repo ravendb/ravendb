@@ -129,6 +129,7 @@
     .make-icon-color(import-database, @color-1-3, @color-1-3);
     .make-icon-color(export-database, @color-2, @color-2);
     .make-icon-color(create-sample-data, @color-2-1, @color-2-1);
+    .make-icon-color(tasks-errors, @color-2-2, @color-2-2);
     //Settings section
     .make-icon-color(database-settings, @color-2-1, @color-2-1);
     .make-icon-color(manage-connection-strings, @color-2-2, @color-2-2);
@@ -178,6 +179,9 @@
         }
         &.icon-replication-stats::before {
             color: @color-5;
+        }
+        &.icon-tasks-errors::before {
+            color: @color-5-1;
         }
     }
 

@@ -145,11 +145,13 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            var alert = await AssertWaitForNotNullAsync(() => Etl.TryGetLoadErrorAsync(store.Database, config), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+            await AssertWaitForTrueAsync(async () => (await Etl.GetItemLoadErrorsAsync(store.Database, config)).Any(), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+
+            var errors = (await Etl.GetItemLoadErrorsAsync(store.Database, config)).ToList();
 
             Assert.Contains(
                 "MessageTooLong",
-                alert.Error);
+                errors.First().Error);
         }
     }
 
@@ -177,11 +179,13 @@ public class AmazonSqsEtlTests : AmazonSqsEtlTestBase
                 session.SaveChanges();
             }
 
-            var alert = await AssertWaitForNotNullAsync(() => Etl.TryGetLoadErrorAsync(store.Database, config), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+            await AssertWaitForTrueAsync(async () => (await Etl.GetProcessLoadErrorsAsync(store.Database, config)).Any(), timeout: (int)TimeSpan.FromMinutes(1).TotalMilliseconds);
+
+            var errors = (await Etl.GetProcessLoadErrorsAsync(store.Database, config)).ToList();
 
             Assert.Contains(
                 "QueueDoesNotExist",
-                alert.Error);
+                errors.First().Error);
         }
     }
 
