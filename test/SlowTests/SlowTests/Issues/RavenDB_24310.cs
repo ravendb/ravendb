@@ -421,6 +421,46 @@ public class RavenDB_24310 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task GetServerWideConnectionStrings_ReturnsUsedByTasks()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var csName = "MyServerWideRavenCS";
+            var ravenCs = new ServerWideConnectionString
+            {
+                ConnectionString = new RavenConnectionString
+                {
+                    Name = csName,
+                    Database = "TargetDb",
+                    TopologyDiscoveryUrls = new[] { store.Urls[0] }
+                }
+            };
+            await store.Maintenance.Server.SendAsync(new PutServerWideConnectionStringOperation(ravenCs));
+
+            var prefixedCsName = $"Server Wide Connection String, {csName}";
+            var etlConfig = new RavenEtlConfiguration
+            {
+                Name = "MyEtlTask",
+                ConnectionStringName = prefixedCsName,
+                Transforms = { new Transformation { Name = "t", Collections = { "Orders" }, Script = "" } }
+            };
+            var addEtlResult = await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfig));
+            Assert.True(addEtlResult.TaskId > 0);
+
+            var getResult = await store.Maintenance.Server.SendAsync(
+                new GetServerWideConnectionStringsOperation(csName, ConnectionStringType.Raven));
+
+            Assert.Equal(1, getResult.Results.Count);
+            var cs = getResult.Results[0];
+            Assert.Equal(csName, cs.Name);
+            Assert.NotNull(cs.UsedByTasks);
+            Assert.Equal(1, cs.UsedByTasks.Count);
+            Assert.Equal(addEtlResult.TaskId, cs.UsedByTasks[0].TaskId);
+            Assert.Equal("MyEtlTask", cs.UsedByTasks[0].TaskName);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Smuggler)]
     public async Task ServerWideConnectionStringFilteredOutDuringSmugglerExport()
     {

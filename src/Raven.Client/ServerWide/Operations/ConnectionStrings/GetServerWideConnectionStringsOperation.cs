@@ -119,4 +119,26 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             return result;
         }
     }
+
+    /// <summary>
+    /// Represents a single ETL task that uses a server-wide connection string.
+    /// </summary>
+    public sealed class ServerWideConnectionStringTaskUsage : IDynamicJson
+    {
+        /// <summary>
+        /// The unique identifier of the task.
+        /// </summary>
+        public long TaskId { get; set; }
+
+        /// <summary>
+        /// The display name of the task.
+        /// </summary>
+        public string TaskName { get; set; }
+
+        public DynamicJsonValue ToJson() => new DynamicJsonValue
+        {
+            [nameof(TaskId)] = TaskId,
+            [nameof(TaskName)] = TaskName,
+        };
+    }
 }

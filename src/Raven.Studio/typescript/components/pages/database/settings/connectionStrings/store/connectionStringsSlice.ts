@@ -166,7 +166,7 @@ export const connectionStringsSlice = createSlice({
                 state.loadStatus = "failure";
             })
             .addCase(fetchServerWideData.fulfilled, (state, { payload }) => {
-                state.connections = mapServerWideConnectionsFromDto(payload.serverWideDto, payload.ongoingTasks);
+                state.connections = mapServerWideConnectionsFromDto(payload.serverWideDto);
                 state.loadStatus = "success";
             })
             .addCase(fetchServerWideData.pending, (state) => {
@@ -186,7 +186,6 @@ interface FetchDataResult {
 
 interface FetchServerWideDataResult {
     serverWideDto: ServerWideConnectionStringDto[];
-    ongoingTasks: Raven.Client.Documents.Operations.OngoingTasks.OngoingTask[];
 }
 
 const fetchData = createAsyncThunk<
@@ -215,29 +214,11 @@ const fetchData = createAsyncThunk<
     };
 });
 
-const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void, { state: RootState }>(
+const fetchServerWideData = createAsyncThunk<FetchServerWideDataResult, void>(
     connectionStringsSlice.name + "/fetchServerWideConnectionStrings",
-    async (_, { getState }) => {
-        const state = getState();
+    async () => {
         const { Results } = await services.tasksService.getServerWideConnectionStrings();
-
-        const allDatabases = databaseSelectors.allDatabases(state);
-        const taskResults = await Promise.allSettled(
-            allDatabases.map((db) =>
-                services.tasksService.getOngoingTasks(
-                    db.name,
-                    DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
-                )
-            )
-        );
-
-        const ongoingTasks = taskResults
-            .filter(
-                (r): r is PromiseFulfilledResult<Raven.Server.Web.System.OngoingTasksResult> => r.status === "fulfilled"
-            )
-            .flatMap((r) => r.value.OngoingTasks);
-
-        return { serverWideDto: Results, ongoingTasks };
+        return { serverWideDto: Results };
     }
 );
 

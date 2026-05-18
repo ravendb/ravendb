@@ -357,7 +357,10 @@ export function mapAzureQueueStorageConnectionsFromDto(
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureQueueStorage")
         .map((d) =>
-            mapAzureQueueStorageFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "AzureQueueStorage", d.Name))
+            mapAzureQueueStorageFromSingleDto(
+                d,
+                getConnectionStringUsedTasks(ongoingTasks, "AzureQueueStorage", d.Name)
+            )
         );
 }
 
@@ -527,7 +530,10 @@ function mapAiFromSingleDto(
     } satisfies AiConnection;
 }
 
-type WithExcludedDatabases<T> = T & { ExcludedDatabases?: string[] };
+type WithExcludedDatabases<T> = T & {
+    ExcludedDatabases?: string[];
+    UsedByTasks?: { TaskId: number; TaskName: string }[];
+};
 
 export type ServerWideConnectionStringDto =
     | WithExcludedDatabases<RavenConnectionStringDto>
@@ -538,14 +544,9 @@ export type ServerWideConnectionStringDto =
     | WithExcludedDatabases<QueueConnectionStringDto>
     | WithExcludedDatabases<AiConnectionStringDto>;
 
-export function mapServerWideConnectionsFromDto(
-    results: ServerWideConnectionStringDto[],
-    ongoingTasks: OngoingTaskForConnection[]
-): {
+export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStringDto[]): {
     [key in StudioConnectionType]: Connection[];
 } {
-    const prefixed = (name: string) => `Server Wide Connection String, ${name}`;
-
     const mapped: Record<StudioConnectionType, Connection[]> = {
         Raven: [],
         Sql: [],
@@ -561,113 +562,58 @@ export function mapServerWideConnectionsFromDto(
 
     for (const dto of results) {
         const excludedDatabases = dto.ExcludedDatabases ?? [];
+        const usedByTasks = (dto.UsedByTasks ?? []).map(
+            (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+        );
         switch (dto.Type) {
             case "Raven": {
                 const d = dto as WithExcludedDatabases<RavenConnectionStringDto>;
-                mapped.Raven.push(
-                    mapRavenFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "Raven", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.Raven.push(mapRavenFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
             case "Sql": {
                 const d = dto as WithExcludedDatabases<SqlConnectionStringDto>;
-                mapped.Sql.push(
-                    mapSqlFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "Sql", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.Sql.push(mapSqlFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
             case "Snowflake": {
                 const d = dto as WithExcludedDatabases<SnowflakeConnectionStringDto>;
-                mapped.Snowflake.push(
-                    mapSnowflakeFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "Snowflake", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.Snowflake.push(mapSnowflakeFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
             case "Olap": {
                 const d = dto as WithExcludedDatabases<OlapConnectionStringDto>;
-                mapped.Olap.push(
-                    mapOlapFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "Olap", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.Olap.push(mapOlapFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
             case "ElasticSearch": {
                 const d = dto as WithExcludedDatabases<ElasticSearchConnectionStringDto>;
-                mapped.ElasticSearch.push(
-                    mapElasticSearchFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "ElasticSearch", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.ElasticSearch.push(mapElasticSearchFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
             case "Queue": {
                 const d = dto as WithExcludedDatabases<QueueConnectionStringDto>;
                 switch (d.BrokerType) {
                     case "Kafka":
-                        mapped.Kafka.push(
-                            mapKafkaFromSingleDto(
-                                d,
-                                getConnectionStringUsedTasks(ongoingTasks, "Kafka", prefixed(d.Name)),
-                                excludedDatabases
-                            )
-                        );
+                        mapped.Kafka.push(mapKafkaFromSingleDto(d, usedByTasks, excludedDatabases));
                         break;
                     case "RabbitMq":
-                        mapped.RabbitMQ.push(
-                            mapRabbitMqFromSingleDto(
-                                d,
-                                getConnectionStringUsedTasks(ongoingTasks, "RabbitMQ", prefixed(d.Name)),
-                                excludedDatabases
-                            )
-                        );
+                        mapped.RabbitMQ.push(mapRabbitMqFromSingleDto(d, usedByTasks, excludedDatabases));
                         break;
                     case "AzureQueueStorage":
                         mapped.AzureQueueStorage.push(
-                            mapAzureQueueStorageFromSingleDto(
-                                d,
-                                getConnectionStringUsedTasks(ongoingTasks, "AzureQueueStorage", prefixed(d.Name)),
-                                excludedDatabases
-                            )
+                            mapAzureQueueStorageFromSingleDto(d, usedByTasks, excludedDatabases)
                         );
                         break;
                     case "AmazonSqs":
-                        mapped.AmazonSqs.push(
-                            mapAmazonSqsFromSingleDto(
-                                d,
-                                getConnectionStringUsedTasks(ongoingTasks, "AmazonSqs", prefixed(d.Name)),
-                                excludedDatabases
-                            )
-                        );
+                        mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedByTasks, excludedDatabases));
                         break;
                 }
                 break;
             }
             case "Ai": {
                 const d = dto as WithExcludedDatabases<AiConnectionStringDto>;
-                mapped.Ai.push(
-                    mapAiFromSingleDto(
-                        d,
-                        getConnectionStringUsedTasks(ongoingTasks, "Ai", prefixed(d.Name)),
-                        excludedDatabases
-                    )
-                );
+                mapped.Ai.push(mapAiFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
         }

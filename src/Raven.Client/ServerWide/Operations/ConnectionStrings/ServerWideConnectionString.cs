@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json.Serialization;
@@ -27,6 +28,11 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         /// When <c>null</c> or empty, the connection string is propagated to all databases.
         /// </summary>
         public string[] ExcludedDatabases { get; set; }
+
+        /// <summary>
+        /// The list of ETL tasks that are currently using this server-wide connection string.
+        /// </summary>
+        public List<ServerWideConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ServerWideConnectionStringTaskUsage>();
 
         /// <summary>
         /// The name of the connection string, delegated from the underlying <see cref="ConnectionString"/>.
@@ -61,6 +67,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             var json = ConnectionString?.ToJson() ?? new DynamicJsonValue();
             json[nameof(Type)] = Type.ToString();
             json[nameof(ExcludedDatabases)] = ExcludedDatabases;
+            json[nameof(UsedByTasks)] = new DynamicJsonArray(UsedByTasks.Select(x => x.ToJson()));
             return json;
         }
 
@@ -86,11 +93,23 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                     excludedDatabases[i] = excludedArray[i]?.ToString();
             }
 
-            return new ServerWideConnectionString
+            var result = new ServerWideConnectionString
             {
                 ConnectionString = connectionString,
                 ExcludedDatabases = excludedDatabases
             };
+
+            if (blittable.TryGet(nameof(UsedByTasks), out BlittableJsonReaderArray usedByTasksArray) && usedByTasksArray != null)
+            {
+                foreach (BlittableJsonReaderObject taskBlittable in usedByTasksArray)
+                {
+                    taskBlittable.TryGet(nameof(ServerWideConnectionStringTaskUsage.TaskId), out long taskId);
+                    taskBlittable.TryGet(nameof(ServerWideConnectionStringTaskUsage.TaskName), out string taskName);
+                    result.UsedByTasks.Add(new ServerWideConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+                }
+            }
+
+            return result;
         }
 
         private static ConnectionString DeserializeConnectionString(BlittableJsonReaderObject blittable, ConnectionStringType type)

@@ -4,9 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.ElasticSearch;
+using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Documents.Operations.ETL.Queue;
+using Raven.Client.Documents.Operations.ETL.Snowflake;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Documents.Operations.QueueSink;
+using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Exceptions;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.Operations.OngoingTasks;
@@ -261,8 +271,61 @@ namespace Raven.Server.Web.System
                         result.Results.Add(connectionString);
                 }
 
+                var allDatabases = ServerStore.Cluster.GetAllDatabases(context);
+                var usageMap = BuildUsageMap(allDatabases);
+
+                foreach (var cs in result.Results)
+                {
+                    var prefixedName = ServerWideConnectionString.GetDatabaseRecordConnectionStringName(cs.Name);
+                    if (usageMap.TryGetValue(prefixedName, out var usages))
+                        cs.UsedByTasks = usages;
+                }
+
                 context.Write(writer, result.ToJson());
             }
+        }
+
+        private static Dictionary<string, List<ServerWideConnectionStringTaskUsage>> BuildUsageMap(
+            List<DatabaseRecord> databases)
+        {
+            var map = new Dictionary<string, List<ServerWideConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
+
+            void Add(string connectionStringName, long taskId, string taskName)
+            {
+                if (connectionStringName == null)
+                    return;
+                if (connectionStringName.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                    return;
+                if (map.TryGetValue(connectionStringName, out var list) == false)
+                    map[connectionStringName] = list = new List<ServerWideConnectionStringTaskUsage>();
+                list.Add(new ServerWideConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+            }
+
+            foreach (var db in databases)
+            {
+                foreach (var t in db.RavenEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.SqlEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.OlapEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.ElasticSearchEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.QueueEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.SnowflakeEtls)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.QueueSinks)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.EmbeddingsGenerations)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.ExternalReplications)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+                foreach (var t in db.SinkPullReplications)
+                    Add(t.ConnectionStringName, t.TaskId, t.Name);
+            }
+
+            return map;
         }
 
         [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.ClusterAdmin)]

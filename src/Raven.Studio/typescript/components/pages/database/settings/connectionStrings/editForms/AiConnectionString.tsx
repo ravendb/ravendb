@@ -44,11 +44,7 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: AiConnection;
 }
 
-export default function AiConnectionString({
-    initialConnection,
-    isForNewConnection,
-    onSave,
-}: AiConnectionStringProps) {
+export default function AiConnectionString({ initialConnection, isForNewConnection, onSave }: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
     const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
@@ -171,30 +167,15 @@ export default function AiConnectionString({
                         }}
                     />
                 </div>
-                {connectorType === "azureOpenAiSettings" && (
-                    <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {connectorType === "googleSettings" && (
-                    <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {connectorType === "huggingFaceSettings" && (
-                    <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {connectorType === "ollamaSettings" && (
-                    <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
+                {connectorType === "azureOpenAiSettings" && <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "ollamaSettings" && <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "embeddedSettings" && <EmbeddedSettings />}
-                {connectorType === "openAiSettings" && (
-                    <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
-                {connectorType === "mistralAiSettings" && (
-                    <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />
-                )}
+                {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "vertexSettings" && (
-                    <VertexSettings
-                        isUsedByAnyTask={isUsedByAnyTask}
-                        isForNewConnection={isForNewConnection}
-                    />
+                    <VertexSettings isUsedByAnyTask={isUsedByAnyTask} isForNewConnection={isForNewConnection} />
                 )}
 
                 {isUsedByAnyTask && (
