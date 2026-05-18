@@ -64,15 +64,19 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
                         }
                     }
 
-                    var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
+                    var skipReason = Skip;
+                    var aiIntegrationConfiguration = string.IsNullOrEmpty(skipReason)
+                        ? aiConnectionStringForTesting.GetAiConfiguration()
+                        : null;
 
-                    if (Data == null || Data.Length == 0)
-                    {
-                        result.Add(new TheoryDataRow(options, aiIntegrationConfiguration));
-                        continue;
-                    }
+                    var row = Data == null || Data.Length == 0
+                        ? new TheoryDataRow(options, aiIntegrationConfiguration)
+                        : new TheoryDataRow(new object[] { options, aiIntegrationConfiguration }.Concat(Data).ToArray());
 
-                    result.Add(new TheoryDataRow(new object[] { options, aiIntegrationConfiguration }.Concat(Data).ToArray()));
+                    if (string.IsNullOrEmpty(skipReason) == false)
+                        row.Skip = skipReason;
+
+                    result.Add(row);
                 }
             }
         }
