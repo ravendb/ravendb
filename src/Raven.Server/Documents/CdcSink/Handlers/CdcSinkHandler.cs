@@ -42,9 +42,23 @@ public class CdcSinkHandler : DatabaseRequestHandler
     /// </summary>
     private static readonly Regex IdentifierPattern = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
-    private static bool TryValidateIdentifier(string value, string fieldName, CdcSinkSourceSchema schemaResult, TestCdcSinkMappingResult testResult)
+    private static bool TryValidateIdentifier(string value, string fieldName, CdcSinkSourceSchema schemaResult, TestCdcSinkMappingResult testResult, bool allowEmpty = true)
     {
-        if (string.IsNullOrEmpty(value) || IdentifierPattern.IsMatch(value))
+        // Schema fields can legitimately be empty (default-schema fallback handles it). For
+        // table / PK / column identifiers, empty would flow into ORDER BY / WHERE generation
+        // as a SQL syntax error — callers in those positions pass allowEmpty: false.
+        if (string.IsNullOrEmpty(value))
+        {
+            if (allowEmpty)
+                return true;
+            var emptyError = $"'{fieldName}' must not be empty.";
+            if (schemaResult != null)
+                schemaResult.Errors.Add(emptyError);
+            if (testResult != null)
+                testResult.Errors.Add(emptyError);
+            return false;
+        }
+        if (IdentifierPattern.IsMatch(value))
             return true;
         var error = $"'{fieldName}' value '{value}' contains invalid characters. Use letters, digits, and underscores only.";
         if (schemaResult != null)
@@ -108,8 +122,10 @@ public class CdcSinkHandler : DatabaseRequestHandler
         // Reject any user-supplied identifier that doesn't match the standard SQL shape — these
         // flow into raw SQL via the provider's QuoteTable / QuoteColumn (see RavenDB-26636 for the
         // deeper provider-side fix). Same gate applied to the schema-discovery endpoint below.
+        // SourceTableSchema can be empty (default-schema fallback handles it); the resolved
+        // targetSchema is validated separately below. SourceTableName must not be empty.
         if (TryValidateIdentifier(request.SourceTableSchema, nameof(TestCdcSinkMappingRequest.SourceTableSchema), schemaResult: null, testResult: result) == false ||
-            TryValidateIdentifier(request.SourceTableName, nameof(TestCdcSinkMappingRequest.SourceTableName), schemaResult: null, testResult: result) == false)
+            TryValidateIdentifier(request.SourceTableName, nameof(TestCdcSinkMappingRequest.SourceTableName), schemaResult: null, testResult: result, allowEmpty: false) == false)
             return result;
 
         SqlConnectionString connection;
@@ -141,6 +157,14 @@ public class CdcSinkHandler : DatabaseRequestHandler
         // runtime would do.
         var defaultSchema = CdcSinkSchemaDiscovery.ResolveDefaultSchema(connection.FactoryName, connection.ConnectionString);
         var targetSchema = string.IsNullOrEmpty(request.SourceTableSchema) ? defaultSchema : request.SourceTableSchema;
+
+        // Validate the resolved value, not just the raw request field. For MySQL the default
+        // schema is pulled from the connection string's Database key (user-controlled) — a
+        // malformed value would bypass the request/config-side gates and reach QuoteTable. The
+        // resolved targetSchema is what actually flows into raw SQL, so the gate belongs here.
+        if (TryValidateIdentifier(targetSchema, "targetSchema", schemaResult: null, testResult: result, allowEmpty: false) == false)
+            return result;
+
         var matches = request.Configuration.Tables?
             .Where(t =>
                 string.Equals(
@@ -170,17 +194,17 @@ public class CdcSinkHandler : DatabaseRequestHandler
 
         // Same identifier gate applied to the per-table column names that flow through the
         // row-fetch query builder (BuildSelectFirstRowsQuery for ORDER BY, BuildSelectByPrimaryKeyQuery
-        // for the WHERE clause). SourceTableSchema on the config side was already coerced through
-        // the default-schema resolver; re-validate the result in case the resolver returned a
-        // user-controlled value (it doesn't today, but the gate is cheap).
+        // for the WHERE clause). SourceTableSchema can be empty (default-schema fallback); the
+        // resolved targetSchema is validated separately above. Table / PK / column names
+        // generate raw SQL when interpolated so empty is forbidden for them.
         if (TryValidateIdentifier(targetTable.SourceTableSchema, $"{nameof(CdcSinkTableConfig)}.{nameof(CdcSinkTableConfig.SourceTableSchema)}", schemaResult: null, testResult: result) == false ||
-            TryValidateIdentifier(targetTable.SourceTableName, $"{nameof(CdcSinkTableConfig)}.{nameof(CdcSinkTableConfig.SourceTableName)}", schemaResult: null, testResult: result) == false)
+            TryValidateIdentifier(targetTable.SourceTableName, $"{nameof(CdcSinkTableConfig)}.{nameof(CdcSinkTableConfig.SourceTableName)}", schemaResult: null, testResult: result, allowEmpty: false) == false)
             return result;
         if (targetTable.PrimaryKeyColumns != null)
         {
             foreach (var pkColumn in targetTable.PrimaryKeyColumns)
             {
-                if (TryValidateIdentifier(pkColumn, $"{nameof(CdcSinkTableConfig)}.{nameof(CdcSinkTableConfig.PrimaryKeyColumns)}", schemaResult: null, testResult: result) == false)
+                if (TryValidateIdentifier(pkColumn, $"{nameof(CdcSinkTableConfig)}.{nameof(CdcSinkTableConfig.PrimaryKeyColumns)}", schemaResult: null, testResult: result, allowEmpty: false) == false)
                     return result;
             }
         }
@@ -188,7 +212,7 @@ public class CdcSinkHandler : DatabaseRequestHandler
         {
             foreach (var column in targetTable.Columns)
             {
-                if (TryValidateIdentifier(column.Column, $"{nameof(CdcColumnMapping)}.{nameof(CdcColumnMapping.Column)}", schemaResult: null, testResult: result) == false)
+                if (TryValidateIdentifier(column.Column, $"{nameof(CdcColumnMapping)}.{nameof(CdcColumnMapping.Column)}", schemaResult: null, testResult: result, allowEmpty: false) == false)
                     return result;
             }
         }

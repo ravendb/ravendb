@@ -406,6 +406,173 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_EmptySchemaString_MatchesProviderDefault()
+        {
+            // Sibling of ClientOperation_ConfigWithEmptySchema_MatchesProviderDefault, but with
+            // SourceTableSchema = "" (empty string) instead of null. Round 4's default-schema
+            // resolver coerces both null AND empty on the runner's lookup side (uses
+            // IsNullOrEmpty), but CdcSinkDocumentProcessor still indexed tables via
+            // `table.SourceTableSchema ?? defaultSchema` which only catches null — empty
+            // landed under the literal "" key in _tableIndex. Result: GetProcessor returned null
+            // and the runner reported "Target table '.lecturers' is not registered in the
+            // document processor." This locks down the empty-string path end-to-end.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-empty-schema-string",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Lecturers/1", row.DocumentId);
+            Assert.Contains("\"Name\":\"Alice\"", row.Document);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_EmptyPrimaryKeyColumn_RejectedBeforeAnySql()
+        {
+            // TryValidateIdentifier allowed empty strings for every caller. Schema fields can
+            // legitimately be empty (default-schema fallback), but PK / column / table
+            // identifiers flow into ORDER BY and WHERE clauses — an empty string produces
+            // invalid SQL like "ORDER BY " or "WHERE  = @p0" which surfaces as a driver
+            // syntax error AFTER the connection is opened. The gate should fire before any
+            // SQL is run.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO lecturers (id, name) VALUES (1, 'Alice');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                PrimaryKeyColumns = new List<string> { "" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-empty-pk-column",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains(nameof(CdcSinkTableConfig.PrimaryKeyColumns), error);
+            Assert.Contains("must not be empty", error);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ClientOperation_MaliciousMySqlDatabaseName_RejectedAtValidationGate()
+        {
+            // The identifier gate only validated raw request/config schema fields, not the
+            // resolved targetSchema. For MySQL, ResolveDefaultSchema falls back to the
+            // connection string's Database value — which is user-controlled. A backtick in
+            // the DB name was being passed straight to QuoteTable when the user left
+            // SourceTableSchema empty. Validate the effective targetSchema after resolution.
+            //
+            // No live MySQL needed: the gate must fire before any connection is attempted.
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Items",
+                SourceTableSchema = null,
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-malicious-mysql-db",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "MySqlConnector.MySqlConnectorFactory",
+                    ConnectionString = "Server=irrelevant;Database=evil`name;User Id=root;Password=x",
+                },
+                SourceTableSchema = null,
+                SourceTableName = "items",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("contains invalid characters", error);
+            Assert.Contains("evil", error);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ClientOperation_ByPrimaryKey_OnNonDefaultSchema_FetchesRow()
         {
             // The test-mapping handler used to build the Postgres migrator without passing the
