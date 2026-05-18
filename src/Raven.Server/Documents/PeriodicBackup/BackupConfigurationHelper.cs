@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             AssertBackupConfigurationInternal(configuration);
             AssertDirectUpload(configuration, localConfiguration);
+            AssertS3Configuration(configuration);
 
             var retentionPolicy = configuration.RetentionPolicy;
             if (retentionPolicy != null && retentionPolicy.Disabled == false)
@@ -141,6 +142,18 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var backupToLocalFolder = BackupConfiguration.CanBackupUsing(configuration.LocalSettings);
             GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, localConfiguration); // will throw if destination isn't set correctly
+        }
+        
+        private static void AssertS3Configuration(PeriodicBackupConfiguration configuration)
+        {
+            var s3Settings = configuration.S3Settings;
+            if (s3Settings != null && s3Settings.Disabled == false)
+            {
+                if (s3Settings.CustomServerUrl == null && s3Settings.DisableChecksumValidation == true)
+                {
+                    throw new ArgumentException($"{nameof(s3Settings.DisableChecksumValidation)} can't be set to true if {nameof(s3Settings.CustomServerUrl)} is null");
+                }
+            }
         }
 
         internal static BackupConfiguration.BackupDestination GetBackupDestinationForDirectUpload(bool backupToLocalFolder, BackupConfiguration configuration, Config.Categories.BackupConfiguration localConfiguration)
