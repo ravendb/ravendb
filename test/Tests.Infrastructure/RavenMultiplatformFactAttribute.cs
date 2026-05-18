@@ -51,19 +51,13 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute, Xunit.v3.IFac
 {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-    private static readonly bool ForceUsing32BitsPager;
+    private static readonly bool ForceUsing32BitsPager = RavenTestHelper.EnvironmentVariables.VoronInternalForceUsing32BitsPager;
 
     private readonly RavenPlatform _platform;
     private readonly RavenArchitecture _architecture;
     private readonly RavenIntrinsics _intrinsics;
 
     private string _skip;
-
-    static RavenMultiplatformFactAttribute()
-    {
-        if (bool.TryParse(Environment.GetEnvironmentVariable("VORON_INTERNAL_ForceUsing32BitsPager"), out var result))
-            ForceUsing32BitsPager = result;
-    }
 
     public RavenMultiplatformFactAttribute(RavenTestCategory category, RavenPlatform platform = RavenPlatform.All)
      : this(category, platform, RavenArchitecture.All)

@@ -1,4 +1,3 @@
-﻿using System;
 using Amazon.SQS;
 using Raven.Client.Documents.Operations.ETL.Queue;
 using Raven.Client.Util;
@@ -10,7 +9,7 @@ public static class AmazonSqsHelper
 {
     private const string CannotConnectSkipMessage = "Test requires Elasticmq instance.";
 
-    private const string EnvironmentVariableNotFoundSkipMessage = $"'{AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable}' environment variable not found.";
+    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AmazonSqsEmulatorUrlKey}' environment variable not found.";
 
     private static bool CanConnectToElasticmq()
     {
@@ -18,7 +17,7 @@ public static class AmazonSqsHelper
 
         IAmazonSQS client =
             QueueBrokerConnectionHelper.CreateAmazonSqsClient(connectionSettings);
-        
+
         try
         {
             // attempt to get the queue URL that doesn't exists
@@ -34,21 +33,20 @@ public static class AmazonSqsHelper
 
     public static bool ShouldSkip(out string skipMessage)
     {
-        
-        if (RavenTestHelper.SkipIntegrationTests)
+
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
-        var connectionString = Environment.GetEnvironmentVariable(AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable);
-        
-        if (connectionString == null)
+
+        if (RavenTestHelper.EnvironmentVariables.AmazonSqsEmulatorUrl == null)
         {
             skipMessage = EnvironmentVariableNotFoundSkipMessage;
             return true;
         }
-        
-        if (RavenTestHelper.IsRunningOnCI)
+
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;

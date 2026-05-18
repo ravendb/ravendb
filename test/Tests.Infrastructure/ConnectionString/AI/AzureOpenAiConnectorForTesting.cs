@@ -1,53 +1,58 @@
-﻿using System;
 using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
 
 public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsAzureOpenAiConnectorForTesting>
 {
-    private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_API_KEY";
-    private const string EnvironmentVariableDeploymentEndpoint = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_ENDPOINT";
-    private const string EnvironmentVariableDeploymentName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_NAME";
     private const string Model = "text-embedding-3-small";
 
     public EmbeddingsAzureOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
+        RequiredEnvironmentVariables =
+        [
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentNameKey
+        ];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.AzureOpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {
-        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariableApiKey);
-        var endpoint = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentEndpoint);
-        var deploymentName = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentName);
-
-        return AzureOpenAiConnectorHelper.CreateAiConnectionString(apiKey, endpoint, Model, deploymentName, AiModelType.TextEmbeddings);
+        return AzureOpenAiConnectorHelper.CreateAiConnectionString(
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpoint,
+            Model,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentName,
+            AiModelType.TextEmbeddings);
     }
 }
 
 public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiAzureOpenAiConnectorForTesting>
 {
-    private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_API_KEY";
-    private const string EnvironmentVariableDeploymentEndpoint = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_ENDPOINT";
-    private const string EnvironmentVariableDeploymentName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_CHAT_DEPLOYMENT_NAME";
     private const string Model = "gpt-4.1-mini";
 
     public GenAiAzureOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
+        RequiredEnvironmentVariables =
+        [
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiChatDeploymentNameKey
+        ];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.AzureOpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {
-        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariableApiKey);
-        var endpoint = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentEndpoint);
-        var deploymentName = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentName);
-
-        return AzureOpenAiConnectorHelper.CreateAiConnectionString(apiKey, endpoint, Model, deploymentName, AiModelType.Chat);
+        return AzureOpenAiConnectorHelper.CreateAiConnectionString(
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKey,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpoint,
+            Model,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiChatDeploymentName,
+            AiModelType.Chat);
     }
 }
 

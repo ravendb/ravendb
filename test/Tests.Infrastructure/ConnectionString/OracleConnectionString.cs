@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text.RegularExpressions;
 using Oracle.ManagedDataAccess.Client;
 
@@ -9,7 +9,7 @@ namespace Tests.Infrastructure.ConnectionString
         private static OracleConnectionString _instance;
         public static OracleConnectionString Instance => _instance ??= new OracleConnectionString();
 
-        private OracleConnectionString() : base("RAVEN_ORACLESQL_CONNECTION_STRING")
+        private OracleConnectionString() : base(RavenTestHelper.EnvironmentVariables.OracleSqlConnectionStringKey)
         {
             AdditionFlags = "Pooling=false"; // have to use pooling=false, otherwise closed connections are kept IDLE.
         }

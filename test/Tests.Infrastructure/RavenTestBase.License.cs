@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -46,9 +46,9 @@ namespace FastTests
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
-            internal const string RL_COMM = "RAVEN_LICENSE_COMMUNITY";
-            internal const string RL_PRO = "RAVEN_LICENSE_PROFESSIONAL";
-            internal const string RL_DEV = "RAVEN_LICENSE_DEVELOPER";
+            internal const string RL_COMM = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseCommunityKey;
+            internal const string RL_PRO = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseProfessionalKey;
+            internal const string RL_DEV = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseDeveloperKey;
 
             internal const string DefaultConnectionStringName = "Local AI connection";
             internal const string DefaultEmbeddingGenerationTaskName = "localAiTask";

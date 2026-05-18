@@ -1,12 +1,10 @@
-﻿using System;
+using System;
 using Confluent.Kafka;
 
 namespace Tests.Infrastructure.ConnectionString;
 
 public class KafkaConnectionString
 {
-    private const string EnvironmentVariable = "RAVEN_KAFKA_URL";
-
     private static KafkaConnectionString _instance;
 
     public static KafkaConnectionString Instance => _instance ??= new KafkaConnectionString();
@@ -23,7 +21,7 @@ public class KafkaConnectionString
     {
         VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
 
-        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
+        Url = new Lazy<string>(() => RavenTestHelper.EnvironmentVariables.KafkaUrl ?? string.Empty);
 
         _canConnect = new Lazy<bool>(CanConnectInternal);
     }
@@ -53,7 +51,7 @@ public class KafkaConnectionString
             return singleLocalNode;
 
         if (Url.Value.Length == 0)
-            throw new InvalidOperationException($"Environment variable {EnvironmentVariable} is empty");
+            throw new InvalidOperationException($"Environment variable {RavenTestHelper.EnvironmentVariables.KafkaUrlKey} is empty");
 
 
         if (TryConnect(Url.Value, out var ex))

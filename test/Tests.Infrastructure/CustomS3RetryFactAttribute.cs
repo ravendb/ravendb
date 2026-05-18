@@ -8,31 +8,23 @@ namespace Tests.Infrastructure
 {
     public class CustomS3RetryFactAttribute : RetryFactAttribute
     {
-        private const string S3CredentialEnvironmentVariable = "CUSTOM_S3_SETTINGS";
-
         private static readonly S3Settings _s3Settings;
 
         public static S3Settings S3Settings => new S3Settings(_s3Settings);
 
         private static readonly string ParsingError;
 
-        private static readonly bool EnvVariableMissing;
-
         static CustomS3RetryFactAttribute()
         {
-            var strSettings = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
-            if (strSettings == null)
-            {
-                EnvVariableMissing = true;
+            if (RavenTestHelper.EnvironmentVariables.CustomS3Settings == null)
                 return;
-            }
 
-            if (string.IsNullOrEmpty(strSettings))
+            if (string.IsNullOrEmpty(RavenTestHelper.EnvironmentVariables.CustomS3Settings))
                 return;
 
             try
             {
-                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(strSettings);
+                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(RavenTestHelper.EnvironmentVariables.CustomS3Settings);
             }
             catch (Exception e)
             {
@@ -43,12 +35,12 @@ namespace Tests.Infrastructure
         public CustomS3RetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
             : base(maxRetries, delayBetweenRetriesMs)
         {
-            //if (RavenTestHelper.IsRunningOnCI)
+            //if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
             //    return;
 
-            if (EnvVariableMissing)
+            if (RavenTestHelper.EnvironmentVariables.CustomS3Settings == null)
             {
-                Skip = $"Test is missing '{S3CredentialEnvironmentVariable}' environment variable.";
+                Skip = $"Test is missing '{RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey}' environment variable.";
                 return;
             }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.Loader;
 using Microsoft.IdentityModel.Protocols.Configuration;
 using RabbitMQ.Client;
@@ -7,8 +7,6 @@ namespace Tests.Infrastructure.ConnectionString;
 
 public class RabbitMqConnectionString : IDisposable
 {
-    private const string EnvironmentVariable = "RAVEN_RABBITMQ_CONNECTION_STRING";
-
     private static RabbitMqConnectionString _instance;
 
     public static RabbitMqConnectionString Instance => _instance ??= new RabbitMqConnectionString();
@@ -25,7 +23,7 @@ public class RabbitMqConnectionString : IDisposable
     {
         VerifiedUrl = new Lazy<string>(VerifiedNodesValueFactory);
 
-        Url = new Lazy<string>(() => Environment.GetEnvironmentVariable(EnvironmentVariable) ?? string.Empty);
+        Url = new Lazy<string>(() => RavenTestHelper.EnvironmentVariables.RabbitMqConnectionString ?? string.Empty);
 
         _canConnect = new Lazy<bool>(CanConnectInternal);
     }
@@ -39,7 +37,7 @@ public class RabbitMqConnectionString : IDisposable
             return localConnectionString;
 
         if (Url.Value.Length == 0)
-            throw new InvalidConfigurationException($"Environment variable {EnvironmentVariable} is empty");
+            throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.RabbitMqConnectionStringKey} is empty");
 
         _connection = CreateConnection(Url.Value, out var ex);
         if (_connection != null)

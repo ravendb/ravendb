@@ -10,31 +10,23 @@ public class CustomS3RetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFact
 {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-    private const string S3CredentialEnvironmentVariable = "CUSTOM_S3_SETTINGS";
-
     private static readonly S3Settings _s3Settings;
 
     public static S3Settings S3Settings => new S3Settings(_s3Settings);
 
     private static readonly string ParsingError;
 
-    private static readonly bool EnvVariableMissing;
-
     static CustomS3RetryTheoryAttribute()
     {
-        var strSettings = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
-        if (strSettings == null)
-        {
-            EnvVariableMissing = true;
+        if (RavenTestHelper.EnvironmentVariables.CustomS3Settings == null)
             return;
-        }
 
-        if (string.IsNullOrEmpty(strSettings))
+        if (string.IsNullOrEmpty(RavenTestHelper.EnvironmentVariables.CustomS3Settings))
             return;
 
         try
         {
-            _s3Settings = JsonConvert.DeserializeObject<S3Settings>(strSettings);
+            _s3Settings = JsonConvert.DeserializeObject<S3Settings>(RavenTestHelper.EnvironmentVariables.CustomS3Settings);
         }
         catch (Exception e)
         {
@@ -63,7 +55,7 @@ public class CustomS3RetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFact
 
     private static bool ShouldSkip(out string skipMessage)
     {
-        skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, S3CredentialEnvironmentVariable, ParsingError, _s3Settings, skipIsRunningOnCI: true);
+        skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.CustomS3Settings == null, RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey, ParsingError, _s3Settings, skipIsRunningOnCI: true);
         return string.IsNullOrEmpty(skipMessage) == false;
     }
 }

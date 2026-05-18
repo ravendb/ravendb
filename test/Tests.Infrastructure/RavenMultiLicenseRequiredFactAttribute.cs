@@ -6,18 +6,17 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        private static readonly bool RavenLicense;
-        private static readonly bool RavenLicenseDeveloper;
-        private static readonly bool RavenLicenseCommunity;
-        private static readonly bool RavenLicenseProfessional;
+        internal static readonly bool HasLicense = RavenTestHelper.EnvironmentVariables.HasLicense
+                                                   && RavenTestHelper.EnvironmentVariables.HasLicenseDeveloper
+                                                   && RavenTestHelper.EnvironmentVariables.HasLicenseCommunity
+                                                   && RavenTestHelper.EnvironmentVariables.HasLicenseProfessional;
 
-        internal static readonly bool HasLicense;
         private string _skip;
         internal static string SkipMessage = $"Requires Licenses to be set via environment variable. : " +
-                                             $"'RAVEN_LICENSE' - {IsSet(RavenLicense)} . " +
-                                             $"'RAVEN_LICENSE_DEVELOPER' - {IsSet(RavenLicenseDeveloper)} . " +
-                                             $"'RAVEN_LICENSE_COMMUNITY' - {IsSet(RavenLicenseCommunity)} . " +
-                                             $"'RAVEN_LICENSE_PROFESSIONAL' - {IsSet(RavenLicenseProfessional)} . ";
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicense)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseDeveloperKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseDeveloper)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseCommunityKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseCommunity)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseProfessionalKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseProfessional)} . ";
 
         public RavenMultiLicenseRequiredFactAttribute(RavenTestCategory category) : base(category)
         {
@@ -26,15 +25,6 @@ namespace Tests.Infrastructure
         internal static string IsSet(bool licenseSet)
         {
             return licenseSet ? "is set" : "is not set";
-        }
-        static RavenMultiLicenseRequiredFactAttribute()
-        {
-            RavenLicense = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE")) == false;
-            RavenLicenseDeveloper = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE_DEVELOPER")) == false;
-            RavenLicenseCommunity = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE_COMMUNITY")) == false;
-            RavenLicenseProfessional = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PROFESSIONAL")) == false;
-
-            HasLicense = RavenLicense && RavenLicenseDeveloper && RavenLicenseCommunity && RavenLicenseProfessional;
         }
 
         public RavenArchitecture Architecture { get; set; } = RavenArchitecture.All;

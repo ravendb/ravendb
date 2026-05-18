@@ -1,4 +1,4 @@
-﻿using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.Backups;
 
 namespace Tests.Infrastructure
 {
@@ -6,10 +6,10 @@ namespace Tests.Infrastructure
     {
         public static string TestIsMissingCloudCredentialEnvironmentVariable(bool envVariableMissing, string environmentVariable, string parsingError, BackupSettings settings, bool skipIsRunningOnCI = false)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
                 return RavenTestHelper.SkipIntegrationMessage;
 
-            if (skipIsRunningOnCI == false && RavenTestHelper.IsRunningOnCI) 
+            if (skipIsRunningOnCI == false && RavenTestHelper.EnvironmentVariables.IsRunningOnCI) 
                 return null;
 
             if (envVariableMissing)

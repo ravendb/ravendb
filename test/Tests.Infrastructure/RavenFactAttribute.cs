@@ -159,13 +159,13 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
 
     private static bool ShouldSkipService(Func<bool> canConnect, string serviceName, out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;
@@ -226,14 +226,13 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
 
     internal static bool ShouldSkipLicense(out string skipMessage)
     {
-        var hasLicense = !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE"));
-        if (hasLicense)
+        if (RavenTestHelper.EnvironmentVariables.HasLicense)
         {
             skipMessage = null;
             return false;
         }
 
-        skipMessage = "Requires License to be set via 'RAVEN_LICENSE' environment variable.";
+        skipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseKey}' environment variable.";
         return true;
     }
 }

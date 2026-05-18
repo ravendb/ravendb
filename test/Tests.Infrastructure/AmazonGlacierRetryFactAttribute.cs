@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
@@ -8,28 +8,20 @@ namespace Tests.Infrastructure
 {
     public class AmazonGlacierRetryFactAttribute : RetryFactAttribute
     {
-        private const string GlacierCredentialEnvironmentVariable = "GLACIER_CREDENTIAL";
-
         private static readonly GlacierSettings _glacierSettings;
 
         public static GlacierSettings GlacierSettings => new GlacierSettings(_glacierSettings);
 
         private static readonly string ParsingError;
 
-        private static readonly bool EnvVariableMissing;
-
         static AmazonGlacierRetryFactAttribute()
         {
-            var glacierSettingsString = Environment.GetEnvironmentVariable(GlacierCredentialEnvironmentVariable);
-            if (glacierSettingsString == null)
-            {
-                EnvVariableMissing = true;
+            if (RavenTestHelper.EnvironmentVariables.GlacierCredential == null)
                 return;
-            }
 
             try
             {
-                _glacierSettings = JsonConvert.DeserializeObject<GlacierSettings>(glacierSettingsString);
+                _glacierSettings = JsonConvert.DeserializeObject<GlacierSettings>(RavenTestHelper.EnvironmentVariables.GlacierCredential);
             }
             catch (Exception e)
             {
@@ -40,18 +32,18 @@ namespace Tests.Infrastructure
         public AmazonGlacierRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
             : base(maxRetries, delayBetweenRetriesMs)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
-            if (EnvVariableMissing)
+            if (RavenTestHelper.EnvironmentVariables.GlacierCredential == null)
             {
-                Skip = $"Test is missing '{GlacierCredentialEnvironmentVariable}' environment variable.";
+                Skip = $"Test is missing '{RavenTestHelper.EnvironmentVariables.GlacierCredentialKey}' environment variable.";
                 return;
             }
 

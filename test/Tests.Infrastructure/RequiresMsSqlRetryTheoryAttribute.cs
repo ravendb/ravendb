@@ -30,13 +30,13 @@ public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.
 
     private static bool ShouldSkip(out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;

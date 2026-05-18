@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.Backups;
@@ -8,8 +8,6 @@ namespace Tests.Infrastructure
 {
     public class AzureSasTokenRetryFactAttribute : RetryFactAttribute
     {
-        private const string AzureCredentialEnvironmentVariable = "AZURE_SAS_TOKEN_CREDENTIAL";
-
         private static readonly AzureSettings _azureSettings;
 
         public static AzureSettings AzureSettings => new AzureSettings(_azureSettings);
@@ -18,13 +16,12 @@ namespace Tests.Infrastructure
 
         static AzureSasTokenRetryFactAttribute()
         {
-            var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
-            if (azureSettingsString == null)
+            if (RavenTestHelper.EnvironmentVariables.AzureSasTokenCredential == null)
                 return;
 
             try
             {
-                _azureSettings = JsonConvert.DeserializeObject<AzureSettings>(azureSettingsString);
+                _azureSettings = JsonConvert.DeserializeObject<AzureSettings>(RavenTestHelper.EnvironmentVariables.AzureSasTokenCredential);
             }
             catch (Exception e)
             {
@@ -35,13 +32,13 @@ namespace Tests.Infrastructure
         public AzureSasTokenRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
             : base(maxRetries, delayBetweenRetriesMs)
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
             if (string.IsNullOrEmpty(ParsingError) == false)

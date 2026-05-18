@@ -10,28 +10,20 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        private const string AzureCredentialEnvironmentVariable = "AZURE_CREDENTIAL";
-
         private static readonly AzureSettings _azureSettings;
 
         public static AzureSettings AzureSettings => new AzureSettings(_azureSettings);
 
         private static readonly string ParsingError;
 
-        private static readonly bool EnvVariableMissing;
-
         static AzureRetryTheoryAttribute()
         {
-            var azureSettingsString = Environment.GetEnvironmentVariable(AzureCredentialEnvironmentVariable);
-            if (azureSettingsString == null)
-            {
-                EnvVariableMissing = true;
+            if (RavenTestHelper.EnvironmentVariables.AzureCredential == null)
                 return;
-            }
 
             try
             {
-                _azureSettings = JsonConvert.DeserializeObject<AzureSettings>(azureSettingsString);
+                _azureSettings = JsonConvert.DeserializeObject<AzureSettings>(RavenTestHelper.EnvironmentVariables.AzureCredential);
             }
             catch (Exception e)
             {
@@ -62,7 +54,7 @@ namespace Tests.Infrastructure
 
         public static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, AzureCredentialEnvironmentVariable, ParsingError, _azureSettings);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureCredential == null, RavenTestHelper.EnvironmentVariables.AzureCredentialKey, ParsingError, _azureSettings);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

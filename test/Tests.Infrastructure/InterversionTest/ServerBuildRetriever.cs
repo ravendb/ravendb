@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -47,7 +47,7 @@ namespace Tests.Infrastructure.InterversionTest
                     return _serverDownloadPath;
                 }
 
-                var path = Environment.GetEnvironmentVariable("RAVEN_INTERVERSIONTEST_SERVER_DIR") ?? Path.Combine(Path.GetTempPath(), "RavenServersForTesting");
+                var path = RavenTestHelper.EnvironmentVariables.InterversionTestServerDir ?? Path.Combine(Path.GetTempPath(), "RavenServersForTesting");
 
                 if (Directory.Exists(path) == false)
                 {

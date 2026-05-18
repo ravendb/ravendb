@@ -1,4 +1,3 @@
-﻿using System;
 using Tests.Infrastructure.ConnectionString;
 
 namespace Tests.Infrastructure;
@@ -7,19 +6,17 @@ public static class SnowflakeHelper
 {
     internal static bool ShouldSkip(out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
-            string snowflakeTestingBranch = Environment.GetEnvironmentVariable("RAVEN_SNOWFLAKE_TESTING_BRANCH");
-            string currentBranch = Environment.GetEnvironmentVariable("branch");
-            if (currentBranch != snowflakeTestingBranch)
+            if (RavenTestHelper.EnvironmentVariables.Branch != RavenTestHelper.EnvironmentVariables.SnowflakeTestingBranch)
             {
-                skipMessage = $"Snowflake tests are only allowed to run on branch '{snowflakeTestingBranch}' branch. Current branch: {currentBranch}";
+                skipMessage = $"Snowflake tests are only allowed to run on branch '{RavenTestHelper.EnvironmentVariables.SnowflakeTestingBranch}' branch. Current branch: {RavenTestHelper.EnvironmentVariables.Branch}";
                 return true;
             }
 

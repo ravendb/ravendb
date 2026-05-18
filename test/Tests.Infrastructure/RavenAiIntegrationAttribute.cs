@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -61,7 +61,7 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
                         if (aiConnectionStringForTesting.CanConnect.Value == false)
                         {
                             Skip = $"Test requires connection to {aiConnectionStringForTesting.AiConnectorType}.";
-                    }
+                        }
                     }
 
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
@@ -86,23 +86,23 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
         if (string.IsNullOrEmpty(Skip) == false)
             return true;
 
-        if (RavenTestHelper.SkipAiIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipAiIntegrationTests)
         {
             Skip = RavenTestHelper.SkipAiIntegrationMessage;
             return true;
-    }
+        }
 
         if (Is32Bit)
-    {
+        {
             Skip = "AI tests are skipped on 32-bit process";
             return true;
-    }
+        }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
             return false;
 
         if (aiConnectorForTesting.MissingRequiredEnvVariables(out var envVar))
-    {
+        {
             Skip = $"The environment variable {envVar} is required for {aiConnectorForTesting.AiConnectorType}, but was not set.";
             return true;
         }
