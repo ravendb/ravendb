@@ -21,74 +21,10 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import { mapDestinationsFromDto } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
-import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
 type AiConnectionStringDto = Raven.Client.Documents.Operations.AI.AiConnectionString;
-
-type OngoingTaskForConnection = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask & {
-    ConnectionStringName?: string;
-    BrokerType?: Raven.Client.Documents.Operations.ETL.Queue.QueueBrokerType;
-};
-
-function getConnectionStringUsedTasks(
-    tasks: OngoingTaskForConnection[],
-    connectionType: StudioConnectionType,
-    connectionName: string
-): ConnectionStringUsedTask[] {
-    let filteredTasks: OngoingTaskForConnection[] = [];
-
-    switch (connectionType) {
-        case "Raven":
-            filteredTasks = tasks.filter((task) =>
-                ["RavenEtl", "Replication", "PullReplicationAsSink"].includes(task.TaskType)
-            );
-            break;
-        case "Sql":
-            filteredTasks = tasks.filter((task) => task.TaskType === "SqlEtl");
-            break;
-        case "Snowflake":
-            filteredTasks = tasks.filter((task) => task.TaskType === "SnowflakeEtl");
-            break;
-        case "Olap":
-            filteredTasks = tasks.filter((task) => task.TaskType === "OlapEtl");
-            break;
-        case "ElasticSearch":
-            filteredTasks = tasks.filter((task) => task.TaskType === "ElasticSearchEtl");
-            break;
-        case "RabbitMQ":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "RabbitMq");
-            break;
-        case "Kafka":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "Kafka");
-            break;
-        case "AzureQueueStorage":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AzureQueueStorage");
-            break;
-        case "AmazonSqs":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AmazonSqs");
-            break;
-        case "AzureServiceBus":
-            filteredTasks = tasks.filter((task) => task.BrokerType === "AzureServiceBus");
-            break;
-        case "Ai":
-            filteredTasks = tasks.filter((task) => task.TaskType === "EmbeddingsGeneration");
-            break;
-        default:
-            assertUnreachable(connectionType);
-    }
-
-    filteredTasks = filteredTasks.filter((task) => task.ConnectionStringName === connectionName);
-
-    return filteredTasks.map(
-        (x) =>
-            ({
-                id: x.TaskId,
-                name: x.TaskName,
-            }) satisfies ConnectionStringUsedTask
-    );
-}
 
 function mapRavenFromSingleDto(
     d: RavenConnectionStringDto,
@@ -135,29 +71,35 @@ function mapSnowflakeFromSingleDto(
 }
 
 export function mapRavenConnectionsFromDto(
-    connections: Record<string, RavenConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, RavenConnectionStringDto>
 ): RavenConnection[] {
     return Object.values(connections).map((d) =>
-        mapRavenFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Raven", d.Name))
+        mapRavenFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
     );
 }
 
 export function mapSqlConnectionsFromDto(
-    connections: Record<string, SqlConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, SqlConnectionStringDto>
 ): SqlConnection[] {
     return Object.values(connections).map((d) =>
-        mapSqlFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Sql", d.Name))
+        mapSqlFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
     );
 }
 
 export function mapSnowflakeConnectionsFromDto(
-    connections: Record<string, SnowflakeConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, SnowflakeConnectionStringDto>
 ): SnowflakeConnection[] {
     return Object.values(connections).map((d) =>
-        mapSnowflakeFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Snowflake", d.Name))
+        mapSnowflakeFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
     );
 }
 
@@ -176,11 +118,13 @@ function mapOlapFromSingleDto(
 }
 
 export function mapOlapConnectionsFromDto(
-    connections: Record<string, OlapConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, OlapConnectionStringDto>
 ): OlapConnection[] {
     return Object.values(connections).map((d) =>
-        mapOlapFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Olap", d.Name))
+        mapOlapFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
     );
 }
 
@@ -229,11 +173,13 @@ function mapElasticSearchFromSingleDto(
 }
 
 export function mapElasticSearchConnectionsFromDto(
-    connections: Record<string, ElasticSearchConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, ElasticSearchConnectionStringDto>
 ): ElasticSearchConnection[] {
     return Object.values(connections).map((d) =>
-        mapElasticSearchFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "ElasticSearch", d.Name))
+        mapElasticSearchFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
     );
 }
 
@@ -271,21 +217,29 @@ function mapRabbitMqFromSingleDto(
 }
 
 export function mapKafkaConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): KafkaConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "Kafka")
-        .map((d) => mapKafkaFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Kafka", d.Name)));
+        .map((d) =>
+            mapKafkaFromSingleDto(
+                d,
+                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            )
+        );
 }
 
 export function mapRabbitMqConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): RabbitMqConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "RabbitMq")
-        .map((d) => mapRabbitMqFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "RabbitMQ", d.Name)));
+        .map((d) =>
+            mapRabbitMqFromSingleDto(
+                d,
+                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            )
+        );
 }
 
 function getAzureQueueStorageAuthType(dto: QueueConnectionStringDto): AzureQueueStorageAuthenticationType {
@@ -351,26 +305,29 @@ function mapAmazonSqsFromSingleDto(
 }
 
 export function mapAzureQueueStorageConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): AzureQueueStorageConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AzureQueueStorage")
         .map((d) =>
             mapAzureQueueStorageFromSingleDto(
                 d,
-                getConnectionStringUsedTasks(ongoingTasks, "AzureQueueStorage", d.Name)
+                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
             )
         );
 }
 
 export function mapAmazonSqsConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
+    connections: Record<string, QueueConnectionStringDto>
 ): AmazonSqsConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "AmazonSqs")
-        .map((d) => mapAmazonSqsFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "AmazonSqs", d.Name)));
+        .map((d) =>
+            mapAmazonSqsFromSingleDto(
+                d,
+                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+            )
+        );
 }
 
 function getAmazonSqsAuthType(dto: QueueConnectionStringDto): AmazonSqsAuthenticationType {
@@ -530,33 +487,36 @@ function mapAiFromSingleDto(
     } satisfies AiConnection;
 }
 
+export function mapAiConnectionsFromDto(
+    connections: Record<string, AiConnectionStringDto>
+): AiConnection[] {
+    return Object.values(connections).map((d) =>
+        mapAiFromSingleDto(
+            d,
+            (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+        )
+    );
+}
+
 export function mapAllConnectionsFromDto(
-    connectionStringsDto: GetConnectionStringsResult,
-    ongoingTasks: OngoingTaskForConnection[]
+    connectionStringsDto: GetConnectionStringsResult
 ): { [key in StudioConnectionType]: Connection[] } {
     return {
-        Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings, ongoingTasks),
-        Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks),
-        Snowflake: mapSnowflakeConnectionsFromDto(connectionStringsDto.SnowflakeConnectionStrings, ongoingTasks),
-        Olap: mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks),
-        ElasticSearch: mapElasticSearchConnectionsFromDto(
-            connectionStringsDto.ElasticSearchConnectionStrings,
-            ongoingTasks
-        ),
-        Kafka: mapKafkaConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
-        RabbitMQ: mapRabbitMqConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
-        AzureQueueStorage: mapAzureQueueStorageConnectionsFromDto(
-            connectionStringsDto.QueueConnectionStrings,
-            ongoingTasks
-        ),
-        AmazonSqs: mapAmazonSqsConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
-        Ai: mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings, ongoingTasks),
+        Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings),
+        Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings),
+        Snowflake: mapSnowflakeConnectionsFromDto(connectionStringsDto.SnowflakeConnectionStrings),
+        Olap: mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings),
+        ElasticSearch: mapElasticSearchConnectionsFromDto(connectionStringsDto.ElasticSearchConnectionStrings),
+        Kafka: mapKafkaConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        RabbitMQ: mapRabbitMqConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AzureQueueStorage: mapAzureQueueStorageConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        AmazonSqs: mapAmazonSqsConnectionsFromDto(connectionStringsDto.QueueConnectionStrings),
+        Ai: mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings),
     };
 }
 
 type WithExcludedDatabases<T> = T & {
     ExcludedDatabases?: string[];
-    UsedByTasks?: { TaskId: number; TaskName: string }[];
 };
 
 export type ServerWideConnectionStringDto =
@@ -644,13 +604,4 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
     }
 
     return mapped;
-}
-
-export function mapAiConnectionsFromDto(
-    connections: Record<string, AiConnectionStringDto>,
-    ongoingTasks: OngoingTaskForConnection[]
-): AiConnection[] {
-    return Object.values(connections).map((d) =>
-        mapAiFromSingleDto(d, getConnectionStringUsedTasks(ongoingTasks, "Ai", d.Name))
-    );
 }

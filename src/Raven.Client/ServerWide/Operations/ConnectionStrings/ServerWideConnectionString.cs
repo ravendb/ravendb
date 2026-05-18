@@ -32,7 +32,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
         /// <summary>
         /// The list of ETL tasks that are currently using this server-wide connection string.
         /// </summary>
-        public List<ServerWideConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ServerWideConnectionStringTaskUsage>();
+        public List<ConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ConnectionStringTaskUsage>();
 
         /// <summary>
         /// The name of the connection string, delegated from the underlying <see cref="ConnectionString"/>.
@@ -103,9 +103,9 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             {
                 foreach (BlittableJsonReaderObject taskBlittable in usedByTasksArray)
                 {
-                    taskBlittable.TryGet(nameof(ServerWideConnectionStringTaskUsage.TaskId), out long taskId);
-                    taskBlittable.TryGet(nameof(ServerWideConnectionStringTaskUsage.TaskName), out string taskName);
-                    result.UsedByTasks.Add(new ServerWideConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+                    taskBlittable.TryGet(nameof(ConnectionStringTaskUsage.TaskId), out long taskId);
+                    taskBlittable.TryGet(nameof(ConnectionStringTaskUsage.TaskName), out string taskName);
+                    result.UsedByTasks.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
                 }
             }
 

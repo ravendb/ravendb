@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,6 +10,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
     public abstract class ConnectionString : IDynamicJson
     {
         public string Name { get; set; }
+
+        public List<ConnectionStringTaskUsage> UsedByTasks { get; set; } = new List<ConnectionStringTaskUsage>();
 
         public bool Validate(List<string> errors)
         {
@@ -29,7 +33,8 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
         {
             return new DynamicJsonValue
             {
-                [nameof(Name)] = Name
+                [nameof(Name)] = Name,
+                [nameof(UsedByTasks)] = new DynamicJsonArray(UsedByTasks.Select(x => x.ToJson())),
             };
         }
 
@@ -59,6 +64,18 @@ namespace Raven.Client.Documents.Operations.ConnectionStrings
 
             return connectionStringType;
         }
+    }
+
+    public sealed class ConnectionStringTaskUsage : IDynamicJson
+    {
+        public long TaskId { get; set; }
+        public string TaskName { get; set; }
+
+        public DynamicJsonValue ToJson() => new DynamicJsonValue
+        {
+            [nameof(TaskId)] = TaskId,
+            [nameof(TaskName)] = TaskName,
+        };
     }
 
     public enum ConnectionStringType

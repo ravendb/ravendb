@@ -461,6 +461,40 @@ public class RavenDB_24310 : RavenTestBase
         }
     }
 
+    [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Etl)]
+    public async Task GetConnectionStrings_ReturnsUsedByTasks()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var cs = new RavenConnectionString
+            {
+                Name = "MyRavenCS",
+                Database = "TargetDb",
+                TopologyDiscoveryUrls = new[] { store.Urls[0] }
+            };
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<RavenConnectionString>(cs));
+
+            var etlConfig = new RavenEtlConfiguration
+            {
+                Name = "MyEtlTask",
+                ConnectionStringName = "MyRavenCS",
+                Transforms = { new Transformation { Name = "t", Collections = { "Orders" }, Script = "" } }
+            };
+            var addEtlResult = await store.Maintenance.SendAsync(new AddEtlOperation<RavenConnectionString>(etlConfig));
+            Assert.True(addEtlResult.TaskId > 0);
+
+            var getResult = await store.Maintenance.SendAsync(new GetConnectionStringsOperation());
+
+            Assert.True(getResult.RavenConnectionStrings.ContainsKey("MyRavenCS"));
+            var fetchedCs = getResult.RavenConnectionStrings["MyRavenCS"];
+
+            Assert.NotNull(fetchedCs.UsedByTasks);
+            Assert.Equal(1, fetchedCs.UsedByTasks.Count);
+            Assert.Equal(addEtlResult.TaskId, fetchedCs.UsedByTasks[0].TaskId);
+            Assert.Equal("MyEtlTask", fetchedCs.UsedByTasks[0].TaskName);
+        }
+    }
+
     [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Smuggler)]
     public async Task ServerWideConnectionStringFilteredOutDuringSmugglerExport()
     {

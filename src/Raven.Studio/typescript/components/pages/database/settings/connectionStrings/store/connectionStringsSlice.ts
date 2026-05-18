@@ -10,7 +10,6 @@ import {
     ServerWideConnectionStringDto,
 } from "./connectionStringsMapsFromDto";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export type ConnectionStringsViewContext =
@@ -98,10 +97,10 @@ export const connectionStringsSlice = createSlice({
     extraReducers: (builder) => {
         builder
             .addCase(fetchData.fulfilled, (state, { payload }) => {
-                const { connectionStringsDto, ongoingTasksDto } = payload;
+                const { connectionStringsDto } = payload;
                 const { urlParameters } = state;
 
-                state.connections = mapAllConnectionsFromDto(connectionStringsDto, ongoingTasksDto.OngoingTasks);
+                state.connections = mapAllConnectionsFromDto(connectionStringsDto);
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {
@@ -132,7 +131,6 @@ export const connectionStringsSlice = createSlice({
 });
 
 interface FetchDataResult {
-    ongoingTasksDto: Raven.Server.Web.System.OngoingTasksResult;
     connectionStringsDto: GetConnectionStringsResult;
     hasDatabaseAdminAccess: boolean;
 }
@@ -152,16 +150,11 @@ const fetchData = createAsyncThunk<
 
     const db = databaseSelectors.databaseByName(databaseName)(state);
 
-    const ongoingTasksDto = await services.tasksService.getOngoingTasks(
-        databaseName,
-        DatabaseUtils.getFirstLocation(db, state.cluster.localNodeTag)
-    );
     const connectionStringsDto = await services.tasksService.getConnectionStrings(db.name);
 
     const hasDatabaseAdminAccess = accessManagerSelectors.getHasDatabaseAdminAccess(state)(db.name);
 
     return {
-        ongoingTasksDto,
         connectionStringsDto,
         hasDatabaseAdminAccess,
     };

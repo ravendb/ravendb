@@ -285,10 +285,10 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static Dictionary<string, List<ServerWideConnectionStringTaskUsage>> BuildUsageMap(
+        private static Dictionary<string, List<ConnectionStringTaskUsage>> BuildUsageMap(
             List<DatabaseRecord> databases)
         {
-            var map = new Dictionary<string, List<ServerWideConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
+            var map = new Dictionary<string, List<ConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
 
             void Add(string connectionStringName, long taskId, string taskName)
             {
@@ -297,8 +297,8 @@ namespace Raven.Server.Web.System
                 if (connectionStringName.StartsWith(ServerWideConnectionString.NamePrefix, StringComparison.OrdinalIgnoreCase) == false)
                     return;
                 if (map.TryGetValue(connectionStringName, out var list) == false)
-                    map[connectionStringName] = list = new List<ServerWideConnectionStringTaskUsage>();
-                list.Add(new ServerWideConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+                    map[connectionStringName] = list = new List<ConnectionStringTaskUsage>();
+                list.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
             }
 
             foreach (var db in databases)

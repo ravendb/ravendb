@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -54,6 +55,8 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     {
                         connectionStrings = rawRecord.GetConnectionStrings();
                     }
+
+                    AssignUsedByTasks(connectionStrings, rawRecord);
                 }
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
@@ -61,6 +64,57 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                     context.Write(writer, connectionStrings.ToJson());
                 }
             }
+        }
+
+        private static void AssignUsedByTasks(GetConnectionStringsResult result, RawDatabaseRecord rawRecord)
+        {
+            var usageMap = BuildUsageMap(rawRecord);
+
+            AssignToDict(result.RavenConnectionStrings);
+            AssignToDict(result.SqlConnectionStrings);
+            AssignToDict(result.OlapConnectionStrings);
+            AssignToDict(result.ElasticSearchConnectionStrings);
+            AssignToDict(result.QueueConnectionStrings);
+            AssignToDict(result.SnowflakeConnectionStrings);
+            AssignToDict(result.AiConnectionStrings);
+
+            void AssignToDict<T>(Dictionary<string, T> dict) where T : ConnectionString
+            {
+                if (dict == null)
+                    return;
+                foreach (var cs in dict.Values)
+                {
+                    if (usageMap.TryGetValue(cs.Name, out var usages))
+                        cs.UsedByTasks = usages;
+                }
+            }
+        }
+
+        private static Dictionary<string, List<ConnectionStringTaskUsage>> BuildUsageMap(RawDatabaseRecord rawRecord)
+        {
+            var map = new Dictionary<string, List<ConnectionStringTaskUsage>>(StringComparer.OrdinalIgnoreCase);
+
+            void Add(string connectionStringName, long taskId, string taskName)
+            {
+                if (connectionStringName == null)
+                    return;
+                if (map.TryGetValue(connectionStringName, out var list) == false)
+                    map[connectionStringName] = list = new List<ConnectionStringTaskUsage>();
+                list.Add(new ConnectionStringTaskUsage { TaskId = taskId, TaskName = taskName });
+            }
+
+            foreach (var t in rawRecord.RavenEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SqlEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.OlapEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.ElasticSearchEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.QueueEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SnowflakeEtls) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.QueueSinks) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.EmbeddingsGenerations) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.ExternalReplications) Add(t.ConnectionStringName, t.TaskId, t.Name);
+            foreach (var t in rawRecord.SinkPullReplications) Add(t.ConnectionStringName, t.TaskId, t.Name);
+
+            return map;
         }
     }
 }
