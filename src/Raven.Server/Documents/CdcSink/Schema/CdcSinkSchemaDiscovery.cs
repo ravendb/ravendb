@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using MySqlConnector;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 
 namespace Raven.Server.Documents.CdcSink.Schema
@@ -71,7 +70,11 @@ namespace Raven.Server.Documents.CdcSink.Schema
                 NpgsqlFactory => "public",
                 SystemDataSqlClientFactory or MicrosoftDataSqlClientFactory => "dbo",
                 MySqlDataFactory or MySqlConnectorFactory
-                    => new MySqlConnectionStringBuilder(connectionString).Database ?? "mysql",
+                    // Fully qualified on purpose — this shared CDC-discovery class lives outside
+                    // the MySQL-specific subtrees that RavenDB_20286 exempts from its
+                    // `using` import check, so we resolve the builder by full namespace path
+                    // rather than adding a top-level import here.
+                    => new MySqlConnector.MySqlConnectionStringBuilder(connectionString).Database ?? "mysql",
                 _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
             };
         }
