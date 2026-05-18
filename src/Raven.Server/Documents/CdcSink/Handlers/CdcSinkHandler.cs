@@ -155,7 +155,23 @@ public class CdcSinkHandler : DatabaseRequestHandler
         // that left the field empty — or vice versa. Resolve the default once and apply it to
         // both sides of the comparison + the runner so the test endpoint mirrors what the
         // runtime would do.
-        var defaultSchema = CdcSinkSchemaDiscovery.ResolveDefaultSchema(connection.FactoryName, connection.ConnectionString);
+        // MySQL's ResolveDefaultSchema parses the user-supplied connection string via
+        // MySqlConnectionStringBuilder, which throws on malformed input. Without this catch
+        // the failure escaped ExecuteTestMappingAsync as HTTP 500 — inconsistent with every
+        // other failure on the endpoint. Mirror the row-fetch / schema-discovery catch shape:
+        // structured Errors with the full driver exception detail, Logger.Warn for the stack.
+        string defaultSchema;
+        try
+        {
+            defaultSchema = CdcSinkSchemaDiscovery.ResolveDefaultSchema(connection.FactoryName, connection.ConnectionString);
+        }
+        catch (Exception e)
+        {
+            result.Errors.Add("Failed to resolve provider default schema from the connection string: " + e);
+            if (Logger.IsWarnEnabled)
+                Logger.Warn("CDC test-mapping default-schema resolution failed", e);
+            return result;
+        }
         var targetSchema = string.IsNullOrEmpty(request.SourceTableSchema) ? defaultSchema : request.SourceTableSchema;
 
         // Validate the resolved value, not just the raw request field. For MySQL the default

@@ -522,6 +522,55 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ClientOperation_MalformedMySqlConnectionString_ReturnsStructuredError()
+        {
+            // CdcSinkSchemaDiscovery.ResolveDefaultSchema parses the user-supplied MySQL
+            // connection string before any try/catch envelope. A malformed string makes
+            // MySqlConnectionStringBuilder's ctor throw, bubbling out of ExecuteTestMappingAsync
+            // as HTTP 500 — inconsistent with how every other failure on this endpoint surfaces
+            // (structured Errors with HTTP 200). Wrap the resolve call so the failure becomes
+            // an Errors entry, matching the row-fetch and schema-discovery catch patterns.
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Items",
+                SourceTableSchema = "dbo",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-malformed-mysql-cs",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "MySqlConnector.MySqlConnectorFactory",
+                    ConnectionString = "this is not a valid mysql connection string",
+                },
+                SourceTableSchema = "dbo",
+                SourceTableName = "items",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("Failed to resolve provider default schema", error);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
         public async Task ClientOperation_MaliciousMySqlDatabaseName_RejectedAtValidationGate()
         {
             // The identifier gate only validated raw request/config schema fields, not the
