@@ -8,7 +8,7 @@ namespace Tests.Infrastructure;
 
 public class CustomS3RetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     private static readonly S3Settings _s3Settings;
 

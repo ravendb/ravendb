@@ -37,7 +37,7 @@ namespace Tests.Infrastructure
 
             if (string.IsNullOrWhiteSpace(GoogleCloudSettings.GoogleCredentialsJson))
             {
-                Skip = $"Google cloud {memberName} tests missing {RavenTestHelper.EnvironmentVariables.GoogleCloudBucketNameKey} environment variable.";
+                Skip = $"Google cloud {memberName} tests missing {RavenTestHelper.EnvironmentVariables.GoogleCloudCredentialKey} environment variable.";
                 return;
             }
         }

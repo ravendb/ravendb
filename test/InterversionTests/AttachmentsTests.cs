@@ -26,7 +26,6 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Olap;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;

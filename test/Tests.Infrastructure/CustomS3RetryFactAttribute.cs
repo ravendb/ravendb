@@ -35,25 +35,12 @@ namespace Tests.Infrastructure
         public CustomS3RetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
             : base(maxRetries, delayBetweenRetriesMs)
         {
-            //if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
-            //    return;
-
-            if (RavenTestHelper.EnvironmentVariables.CustomS3Settings == null)
-            {
-                Skip = $"Test is missing '{RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey}' environment variable.";
-                return;
-            }
-
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse custom S3 settings, error: {ParsingError}";
-                return;
-            }
-
-            if (_s3Settings == null)
-            {
-                Skip = $"S3 {memberName} tests missing S3 settings.";
-            }
+            Skip = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(
+                envVariableMissing: RavenTestHelper.EnvironmentVariables.CustomS3Settings == null,
+                environmentVariable: RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey,
+                parsingError: ParsingError,
+                settings: _s3Settings,
+                skipIsRunningOnCI: true);
         }
     }
 }

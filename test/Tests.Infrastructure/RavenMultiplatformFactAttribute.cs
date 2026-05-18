@@ -49,7 +49,7 @@ public enum RavenIntrinsics
 
 public class RavenMultiplatformFactAttribute : RavenFactAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     private static readonly bool ForceUsing32BitsPager = RavenTestHelper.EnvironmentVariables.VoronInternalForceUsing32BitsPager;
 
@@ -125,7 +125,7 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute, Xunit.v3.IFac
                             continue;
 
                         if (intrinsics.HasFlag(flag))
-                            yield return intrinsics.ToString();
+                            yield return flag.ToString();
                     }
                 }
             }

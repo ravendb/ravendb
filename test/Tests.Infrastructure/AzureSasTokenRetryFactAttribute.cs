@@ -32,26 +32,11 @@ namespace Tests.Infrastructure
         public AzureSasTokenRetryFactAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0)
             : base(maxRetries, delayBetweenRetriesMs)
         {
-            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
-            {
-                Skip = RavenTestHelper.SkipIntegrationMessage;
-                return;
-            }
-
-            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
-                return;
-
-            if (string.IsNullOrEmpty(ParsingError) == false)
-            {
-                Skip = $"Failed to parse the Azure settings, error: {ParsingError}";
-                return;
-            }
-
-            if (_azureSettings == null)
-            {
-                Skip = $"S3 {memberName} tests missing Azure settings.";
-                return;
-            }
+            Skip = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(
+                envVariableMissing: RavenTestHelper.EnvironmentVariables.AzureSasTokenCredential == null,
+                environmentVariable: RavenTestHelper.EnvironmentVariables.AzureSasTokenCredentialKey,
+                parsingError: ParsingError,
+                settings: _azureSettings);
         }
     }
 }

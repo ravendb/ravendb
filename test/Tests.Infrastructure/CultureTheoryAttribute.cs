@@ -10,11 +10,15 @@ namespace Tests.Infrastructure
         {
             get
             {
+                if (string.IsNullOrEmpty(base.Skip) == false)
+                    return base.Skip;
+
                 if (RavenTestHelper.EnvironmentVariables.EnableCultureTests == false)
                     return $"Culture tests are disabled. Please set '{RavenTestHelper.EnvironmentVariables.EnableCultureTestsKey}' environment variable to 'true' to enable them.";
 
                 return null;
             }
+            set => base.Skip = value;
         }
     }
 }
