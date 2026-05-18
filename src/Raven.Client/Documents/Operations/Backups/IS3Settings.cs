@@ -50,4 +50,9 @@ public interface IS3Settings
     /// Gets or sets the remote folder path.
     /// </summary>
     public string RemoteFolderName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to disable checksum validation.
+    /// </summary>
+    public bool DisableChecksumValidation { get; set; }
 }

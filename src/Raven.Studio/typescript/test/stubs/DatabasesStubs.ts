@@ -1073,6 +1073,7 @@ return docs[0];`,
                     AwsRegionName: "eu-central-1",
                     CustomServerUrl: "",
                     ForcePathStyle: false,
+                    DisableChecksumValidation: false,
                     RemoteFolderName: "",
                 },
                 AzureSettings: {

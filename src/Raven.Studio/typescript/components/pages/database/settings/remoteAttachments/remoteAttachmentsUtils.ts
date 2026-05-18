@@ -76,6 +76,7 @@ function mapFromDto(dto: RemoteAttachmentsConfiguration): RemoteAttachmentsFormD
                         isUseCustomHost: s3Config.CustomServerUrl != null,
                         customServerUrl: s3Config.CustomServerUrl,
                         forcePathStyle: s3Config.ForcePathStyle,
+                        disableChecksumValidation: s3Config.DisableChecksumValidation,
                         storageClass: s3Config.StorageClass,
                     },
                     azure: null,
@@ -146,10 +147,14 @@ const mapS3ToDto = (
     const forcePathStyle =
         !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
 
+    const disableChecksumValidation =
+        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.disableChecksumValidation : undefined;
+    
     return {
         ...mapAmazonToDto(destination),
         CustomServerUrl: customServerUrl,
         ForcePathStyle: forcePathStyle,
+        DisableChecksumValidation: disableChecksumValidation,
         BucketName: destination.bucketName,
         StorageClass: destination.storageClass,
     };
