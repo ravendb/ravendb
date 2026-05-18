@@ -1,8 +1,6 @@
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
-using Raven.Client.Util;
 using Xunit;
 using Xunit.Sdk;
 using Xunit.v3;
@@ -35,41 +33,32 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
             {
                 foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
                 {
-                    using (SkipIfNeeded(databaseMode))
+                    var skipReason = RavenDataAttributeBase.GetSkipReason(databaseMode, Skip);
+
+                    var length = item.Length + 1;
+                    if (Data is { Length: > 0 })
+                        length += Data.Length;
+
+                    var array = new object[length];
+
+                    array[0] = o;
+
+                    for (int i = 0; i < item.Length; i++)
                     {
-                        var length = item.Length + 1;
-                        if (Data is { Length: > 0 })
-                            length += Data.Length;
-
-                        var array = new object[length];
-
-                        array[0] = o;
-
-                        for (int i = 0; i < item.Length; i++)
-                        {
-                            array[i + 1] = item[i];
-                        }
-
-                        for (var i = item.Length + 1; i < array.Length; i++)
-                            array[i] = Data[i - 1];
-
-                        result.Add(new TheoryDataRow(array));
+                        array[i + 1] = item[i];
                     }
+
+                    for (var i = item.Length + 1; i < array.Length; i++)
+                        array[i] = Data[i - 1];
+
+                    var theoryRow = new TheoryDataRow(array);
+                    if (skipReason != null)
+                        theoryRow.Skip = skipReason;
+                    result.Add(theoryRow);
                 }
             }
         }
 
         return result;
-    }
-
-    private IDisposable SkipIfNeeded(RavenDatabaseMode databaseMode)
-    {
-        if (RavenDataAttributeBase.CanContinue(databaseMode, Skip))
-        {
-            return null;
-        }
-
-        Skip = RavenDataAttributeBase.ShardingSkipMessage;
-        return new DisposableAction(() => Skip = null);
     }
 }

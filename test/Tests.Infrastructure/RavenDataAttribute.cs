@@ -69,20 +69,22 @@ public class RavenDataAttribute : RavenDataAttributeBase
         {
             foreach (var (_, o) in FillOptions(options, SearchEngineMode))
             {
-                using (SkipIfNeeded(databaseMode))
-                {
-                    var length = 1;
-                    if (Data is { Length: > 0 })
-                        length += Data.Length;
+                var skipReason = GetSkipReason(databaseMode);
 
-                    var array = new object[length];
-                    array[0] = o;
+                var length = 1;
+                if (Data is { Length: > 0 })
+                    length += Data.Length;
 
-                    for (var i = 1; i < array.Length; i++)
-                        array[i] = Data[i - 1];
+                var array = new object[length];
+                array[0] = o;
 
-                    result.Add(new TheoryDataRow(array));
-                }
+                for (var i = 1; i < array.Length; i++)
+                    array[i] = Data[i - 1];
+
+                var row = new TheoryDataRow(array);
+                if (skipReason != null)
+                    row.Skip = skipReason;
+                result.Add(row);
             }
         }
         return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);
