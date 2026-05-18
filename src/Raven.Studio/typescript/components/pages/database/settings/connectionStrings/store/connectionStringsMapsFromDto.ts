@@ -530,6 +530,30 @@ function mapAiFromSingleDto(
     } satisfies AiConnection;
 }
 
+export function mapAllConnectionsFromDto(
+    connectionStringsDto: GetConnectionStringsResult,
+    ongoingTasks: OngoingTaskForConnection[]
+): { [key in StudioConnectionType]: Connection[] } {
+    return {
+        Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings, ongoingTasks),
+        Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks),
+        Snowflake: mapSnowflakeConnectionsFromDto(connectionStringsDto.SnowflakeConnectionStrings, ongoingTasks),
+        Olap: mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks),
+        ElasticSearch: mapElasticSearchConnectionsFromDto(
+            connectionStringsDto.ElasticSearchConnectionStrings,
+            ongoingTasks
+        ),
+        Kafka: mapKafkaConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
+        RabbitMQ: mapRabbitMqConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
+        AzureQueueStorage: mapAzureQueueStorageConnectionsFromDto(
+            connectionStringsDto.QueueConnectionStrings,
+            ongoingTasks
+        ),
+        AmazonSqs: mapAmazonSqsConnectionsFromDto(connectionStringsDto.QueueConnectionStrings, ongoingTasks),
+        Ai: mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings, ongoingTasks),
+    };
+}
+
 type WithExcludedDatabases<T> = T & {
     ExcludedDatabases?: string[];
     UsedByTasks?: { TaskId: number; TaskName: string }[];

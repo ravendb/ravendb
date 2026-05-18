@@ -5,17 +5,7 @@ import { Connection, StudioConnectionType } from "../connectionStringsTypes";
 import { RootState } from "components/store";
 import { ConnectionStringsUrlParameters } from "../ConnectionStrings";
 import {
-    mapElasticSearchConnectionsFromDto,
-    mapKafkaConnectionsFromDto,
-    mapOlapConnectionsFromDto,
-    mapRabbitMqConnectionsFromDto,
-    mapAzureQueueStorageConnectionsFromDto,
-    mapRavenConnectionsFromDto,
-    mapSqlConnectionsFromDto,
-    mapSnowflakeConnectionsFromDto,
-    mapAmazonSqsConnectionsFromDto,
-    mapAzureServiceBusConnectionsFromDto,
-    mapAiConnectionsFromDto,
+    mapAllConnectionsFromDto,
     mapServerWideConnectionsFromDto,
     ServerWideConnectionStringDto,
 } from "./connectionStringsMapsFromDto";
@@ -109,46 +99,9 @@ export const connectionStringsSlice = createSlice({
         builder
             .addCase(fetchData.fulfilled, (state, { payload }) => {
                 const { connectionStringsDto, ongoingTasksDto } = payload;
-                const ongoingTasks = ongoingTasksDto.OngoingTasks;
+                const { urlParameters } = state;
 
-                const { connections, urlParameters } = state;
-
-                connections.Sql = mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings, ongoingTasks);
-                connections.Snowflake = mapSnowflakeConnectionsFromDto(
-                    connectionStringsDto.SnowflakeConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Olap = mapOlapConnectionsFromDto(connectionStringsDto.OlapConnectionStrings, ongoingTasks);
-
-                connections.Raven = mapRavenConnectionsFromDto(
-                    connectionStringsDto.RavenConnectionStrings,
-                    ongoingTasks
-                );
-                connections.ElasticSearch = mapElasticSearchConnectionsFromDto(
-                    connectionStringsDto.ElasticSearchConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Kafka = mapKafkaConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.RabbitMQ = mapRabbitMqConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AzureQueueStorage = mapAzureQueueStorageConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AmazonSqs = mapAmazonSqsConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.AzureServiceBus = mapAzureServiceBusConnectionsFromDto(
-                    connectionStringsDto.QueueConnectionStrings,
-                    ongoingTasks
-                );
-                connections.Ai = mapAiConnectionsFromDto(connectionStringsDto.AiConnectionStrings, ongoingTasks);
+                state.connections = mapAllConnectionsFromDto(connectionStringsDto, ongoingTasksDto.OngoingTasks);
                 state.loadStatus = "success";
 
                 if (payload.hasDatabaseAdminAccess && urlParameters.name && urlParameters.type) {
