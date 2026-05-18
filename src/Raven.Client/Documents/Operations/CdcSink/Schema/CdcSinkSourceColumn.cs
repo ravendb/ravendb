@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// names mirror <see cref="CdcColumnMapping"/> so Studio can drop the response
 /// straight into its mapping model.
 /// </summary>
-public class CdcSinkSourceColumn : IDynamicJson
+internal class CdcSinkSourceColumn : IDynamicJson
 {
     /// <summary>
     /// Source column name. Matches <see cref="CdcColumnMapping.Column"/>.

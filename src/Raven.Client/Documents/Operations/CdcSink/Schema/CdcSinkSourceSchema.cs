@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// source-side schema annotated with CDC-specific capturability hints so
 /// Studio can drive the CDC mapping UI without a second round-trip.
 /// </summary>
-public class CdcSinkSourceSchema : IDynamicJson
+internal class CdcSinkSourceSchema : IDynamicJson
 {
     /// <summary>
     /// Source database / catalog name (whatever <c>connection.Database</c> returns

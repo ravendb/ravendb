@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Test;
 /// each <see cref="TestCdcSinkRowResult.Error"/>; whole-request failures (validation,
 /// connection, missing table) live in <see cref="Errors"/>.
 /// </summary>
-public class TestCdcSinkMappingResult : IDynamicJson
+internal class TestCdcSinkMappingResult : IDynamicJson
 {
     public List<TestCdcSinkRowResult> Results { get; set; } = new();
 

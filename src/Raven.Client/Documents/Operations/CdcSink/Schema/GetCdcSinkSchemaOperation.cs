@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// the CDC mapping UI without a manual schema dump. Calls <c>POST /admin/cdc-sink/schema</c>.
 /// Requires <c>DatabaseAdmin</c>.
 /// </summary>
-public class GetCdcSinkSchemaOperation : IMaintenanceOperation<CdcSinkSourceSchema>
+internal class GetCdcSinkSchemaOperation : IMaintenanceOperation<CdcSinkSourceSchema>
 {
     private readonly CdcSinkSchemaRequest _request;
 

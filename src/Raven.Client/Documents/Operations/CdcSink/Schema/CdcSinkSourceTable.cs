@@ -9,7 +9,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// Field names mirror <see cref="CdcSinkTableConfig"/> so Studio can populate
 /// the CDC mapping form with minimal transformation.
 /// </summary>
-public class CdcSinkSourceTable : IDynamicJson
+internal class CdcSinkSourceTable : IDynamicJson
 {
     /// <summary>
     /// SQL schema. Matches <see cref="CdcSinkTableConfig.SourceTableSchema"/>.

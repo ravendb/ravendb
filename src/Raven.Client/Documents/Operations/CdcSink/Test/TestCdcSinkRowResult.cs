@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Test;
 /// independent of the request-executor's transient context lifetime. Studio's <c>JSON.parse</c>
 /// and .NET's preferred JSON library (System.Text.Json / Newtonsoft.Json) both work.
 /// </remarks>
-public class TestCdcSinkRowResult : IDynamicJson
+internal class TestCdcSinkRowResult : IDynamicJson
 {
     public string DocumentId { get; set; }
 

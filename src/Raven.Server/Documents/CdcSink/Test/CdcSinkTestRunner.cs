@@ -20,11 +20,11 @@ namespace Raven.Server.Documents.CdcSink.Test
     /// N+1..end populated in the response.
     /// </summary>
     /// <remarks>
-    /// Public so the SlowTests project (which has no <c>InternalsVisibleTo</c> grant from
-    /// <c>Raven.Server</c>) can call <see cref="Run"/> directly. Production usage is limited
-    /// to <c>CdcSinkHandler.PostScriptTest</c>; treat this as a server-internal surface.
+    /// Production usage is limited to <c>CdcSinkHandler.PostScriptTest</c>. SlowTests reaches
+    /// the runner directly via the <c>InternalsVisibleTo</c> grant on Raven.Server (see
+    /// CommonAssemblyInfo); external consumers cannot.
     /// </remarks>
-    public static class CdcSinkTestRunner
+    internal static class CdcSinkTestRunner
     {
         public static TestCdcSinkMappingResult Run(
             DocumentDatabase database,

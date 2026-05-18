@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.CdcSink.Schema
     /// result with CDC-specific hints (suggested column type, capturability, table enrollment).
     /// Consumed by <c>POST /admin/cdc-sink/schema</c>.
     /// </summary>
-    public abstract class CdcSinkSchemaDiscovery
+    internal abstract class CdcSinkSchemaDiscovery
     {
         // ADO.NET factory names. Kept here so `For`, `IsSupportedFactoryName`, and
         // `ResolveDefaultSchema` all agree on the canonical strings and any future caller

@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.CdcSink.Test;
 
-public enum TestCdcSinkRowSelector
+internal enum TestCdcSinkRowSelector
 {
     /// <summary>Sample the first N rows of the table, ordered by primary key.</summary>
     First,

@@ -1,6 +1,6 @@
 namespace Raven.Client.Documents.Operations.CdcSink.Test;
 
-public enum TestCdcSinkOperation
+internal enum TestCdcSinkOperation
 {
     /// <summary>Drive each row through the per-table <c>Patch</c> script.</summary>
     Upsert,

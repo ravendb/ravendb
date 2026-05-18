@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Test;
 /// table — used to preview how rows will become documents before saving a CDC task.
 /// Calls <c>POST /admin/cdc-sink/test</c>. Requires <c>DatabaseAdmin</c>.
 /// </summary>
-public class TestCdcSinkMappingOperation : IMaintenanceOperation<TestCdcSinkMappingResult>
+internal class TestCdcSinkMappingOperation : IMaintenanceOperation<TestCdcSinkMappingResult>
 {
     private readonly TestCdcSinkMappingRequest _request;
 

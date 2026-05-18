@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Test;
 /// one or more rows pulled from the configured source table — used by the Studio "Test"
 /// button and by .NET clients that want to preview how rows will become documents.
 /// </summary>
-public class TestCdcSinkMappingRequest : IDynamicJson
+internal class TestCdcSinkMappingRequest : IDynamicJson
 {
     /// <summary>
     /// The full CDC task configuration — same JSON Studio uses to create/update a CDC task.

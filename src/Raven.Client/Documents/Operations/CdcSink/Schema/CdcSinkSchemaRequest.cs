@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.CdcSink.Schema;
 /// tables, columns, PKs, and FKs annotated with CDC-specific hints so Studio (or a .NET
 /// client) can render the mapping UI before saving a CDC task.
 /// </summary>
-public class CdcSinkSchemaRequest : IDynamicJson
+internal class CdcSinkSchemaRequest : IDynamicJson
 {
     /// <summary>
     /// Inline credentials. Required path for Studio's Task Creation view, where the user
