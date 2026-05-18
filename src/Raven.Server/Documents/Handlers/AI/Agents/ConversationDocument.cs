@@ -38,7 +38,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public int RemainingToolIterations;
 
-    public bool EnableFullDebug;
+    public bool Debug;
 
     public HashSet<string> SubConversationIds = new (StringComparer.OrdinalIgnoreCase);
 
@@ -241,8 +241,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(SubConversationIds)] = new DynamicJsonArray(SubConversationIds)
         };
 
-        if (EnableFullDebug)
-            json[nameof(EnableFullDebug)] = true;
+        if (Debug)
+            json[nameof(Debug)] = true;
 
         return json;
     }
@@ -284,7 +284,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(RemainingToolIterations), out int remainingToolIterations) == false)
             remainingToolIterations = maxModelIterationsPerCall;
 
-        document.TryGet(nameof(EnableFullDebug), out bool enableFullDebug);
+        document.TryGet(nameof(Debug), out bool debug);
 
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
@@ -304,7 +304,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             CreatedAt = createAt,
             Expires = expires,
             RemainingToolIterations = remainingToolIterations,
-            EnableFullDebug = enableFullDebug
+            Debug = debug
         };
 
         if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))

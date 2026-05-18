@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using Microsoft.IO;
 using Sparrow;
 
-namespace Raven.Server.Documents.AI;
+namespace Raven.Server.Utils;
 
 internal sealed class TeeStream : Stream
 {
     private readonly Stream _primary;
     private readonly RecyclableMemoryStream _ownedSecondary;
     private bool _disposed;
+
     public TeeStream(Stream primary)
     {
         _primary = primary ?? throw new ArgumentNullException(nameof(primary));
@@ -22,10 +23,13 @@ internal sealed class TeeStream : Stream
     /// <summary>
     /// Returns the bytes written through the tee so far, decoded as UTF-8.
     /// May be partial / non-JSON if serialization failed mid-write.
+    /// Returns null if the underlying buffer cannot be retrieved.
     /// </summary>
     public string Result()
     {
-        _ownedSecondary.TryGetBuffer(out var seg);
+        if (_ownedSecondary.TryGetBuffer(out var seg) == false)
+            return null;
+
         return Encoding.UTF8.GetString(seg);
     }
 

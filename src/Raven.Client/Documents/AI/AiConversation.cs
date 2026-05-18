@@ -21,7 +21,7 @@ internal class AiConversation : IAiConversationOperations
     private readonly AiOperations _aiOperations;
     private readonly string _agentId;
     private readonly AiConversationCreationOptions _options;
-    private readonly bool? _enableFullDebug;
+    private readonly bool? _debug;
 
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
@@ -53,10 +53,10 @@ internal class AiConversation : IAiConversationOperations
         _changeVector = changeVector;
     }
 
-    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? enableFullDebug)
+    internal AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector, bool? debug)
         : this(aiOperations, agentId, conversationId, options, changeVector)
     {
-        _enableFullDebug = enableFullDebug;
+        _debug = debug;
     }
 
     public void AddAttachment(string name, Stream stream, string contentType)
@@ -306,7 +306,7 @@ internal class AiConversation : IAiConversationOperations
                 Status = AiConversationResult.Done
             };
         }
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _enableFullDebug);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _promptParts, [.. _actionResponses.Values], _artificialActions, _options, _changeVector, _attachmentsCommands, streamPropertyPath, streamedChunksCallback, _debug);
 
         try
         {

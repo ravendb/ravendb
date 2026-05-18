@@ -123,8 +123,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 .Append("&agentId=").Append(Uri.EscapeDataString(agent));
 
             // Always propagate the parent's current debug state to the sub-agent so the child
-            // doesn't keep `EnableFullDebug=true` sticky once the parent flips it off.
-            queryStringBuilder.Append($"&enableFullDebug={_document.EnableFullDebug}");
+            // doesn't keep `Debug=true` sticky once the parent flips it off.
+            queryStringBuilder.Append($"&debug={_document.Debug}");
 
             var queryString = queryStringBuilder.ToString();
 

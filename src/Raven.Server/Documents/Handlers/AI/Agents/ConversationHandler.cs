@@ -50,18 +50,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
-    private bool? _enableFullDebugOverride;
+    private bool? _debugOverride;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
     public required RavenServer.AuthenticateConnection Authentication;
-    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? enableFullDebugOverride = null)
+    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null)
     {
         _conversationId = conversationId;
         _request = body;
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
-        _enableFullDebugOverride = enableFullDebugOverride;
+        _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
     }
 
@@ -131,8 +131,8 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             }
         }
 
-        if (_enableFullDebugOverride.HasValue)
-            _document.EnableFullDebug = _enableFullDebugOverride.Value;
+        if (_debugOverride.HasValue)
+            _document.Debug = _debugOverride.Value;
 
         if (_request.AttachmentCommands?.ParsedCommands is { Count: >0})
         {
@@ -395,7 +395,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         bool isFirstIteration = true;
-        var debugTraces = new AiDebugTraceCollector(_document.EnableFullDebug);
+        var debugTraces = new AiDebugTraceCollector(_document.Debug, database);
 
         try
         {
@@ -475,7 +475,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
         finally
         {
-            await debugTraces.PersistAsync(_document, database);
+            await debugTraces.PersistAsync(_document);
         }
 
         foreach (ExceededTokenThresholdDetails pendingAlertDetails in pendingAlertsDetails)

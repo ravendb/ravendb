@@ -148,6 +148,6 @@ public class AiOperations
     public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
         new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
 
-    internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? enableFullDebug, string changeVector = null) =>
-        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, enableFullDebug);
+    internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? debug, string changeVector = null) =>
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, debug);
 }

@@ -48,7 +48,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         if (ServerStore.LicenseManager.LicenseStatus.HasAiAgent == false)
             throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
 
-        await ExecuteInternalAsync(handler, context, request.Configuration, conversationId, body, changeVector: null, streaming: streaming, enableFullDebugOverride: null, token: token);
+        await ExecuteInternalAsync(handler, context, request.Configuration, conversationId, body, changeVector: null, streaming: streaming, debugOverride: null, token: token);
     }
 
     public class TestConversationHandler(ServerStore server, DocumentDatabase database, AiAgentTestRequest request) : ConversationHandler(server, database)

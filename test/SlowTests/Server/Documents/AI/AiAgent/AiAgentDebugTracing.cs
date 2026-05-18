@@ -51,7 +51,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.SetUserPrompt("What is 2+2?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
         Assert.Equal(AiConversationResult.Done, r.Status);
@@ -94,7 +94,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_FlippedOnExistingConversation_TracesOnlyNextTurn(Options options, GenAiConfiguration config)
+    public async Task Debug_FlippedOnExistingConversation_TracesOnlyNextTurn(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -114,15 +114,15 @@ public class AiAgentDebugTracing : RavenTestBase
         var statsAfterTurn1 = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
         Assert.False(statsAfterTurn1.Collections.ContainsKey(Constants.Documents.Collections.AiAgentConversationDebugCollection));
 
-        // Flip EnableFullDebug by patching the conversation document directly —
+        // Flip Debug by patching the conversation document directly —
         // this is what a user would do in Studio to enable tracing mid-conversation.
         await store.Operations.SendAsync(new PatchOperation(
             chat.Id,
             changeVector: null,
-            patch: new PatchRequest { Script = "this.EnableFullDebug = true;" },
+            patch: new PatchRequest { Script = "this.Debug = true;" },
             patchIfMissing: null));
 
-        // Turn 2: same conversation, EnableFullDebug now persisted on the document.
+        // Turn 2: same conversation, Debug now persisted on the document.
         // A fresh handle with no change vector is used so the server skips the CV check
         // (the patch above changed the document's CV).
         var chat2 = store.AI.Conversation(createResult.Identifier, chat.Id, creationOptions: null, changeVector: null);
@@ -141,7 +141,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_QueryStringOverride_FlipsPersistedAttributeFromFalseToTrue(Options options, GenAiConfiguration config)
+    public async Task Debug_QueryStringOverride_FlipsPersistedAttributeFromFalseToTrue(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -162,13 +162,13 @@ public class AiAgentDebugTracing : RavenTestBase
         {
             var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
             Assert.NotNull(doc);
-            Assert.False(doc.EnableFullDebug, "Expected EnableFullDebug=false persisted on a fresh conversation with no override");
+            Assert.False(doc.Debug, "Expected Debug=false persisted on a fresh conversation with no override");
         }
 
-        // Turn 2: same conversation, ?enableFullDebug=true — must flip persisted false → true
+        // Turn 2: same conversation, ?debug=true — must flip persisted false → true
         // AND must take effect on this turn (traces are written).
         var chat2 = store.AI.Conversation(createResult.Identifier, chat.Id,
-            creationOptions: null, changeVector: null, enableFullDebug: true);
+            creationOptions: null, changeVector: null, debug: true);
         chat2.SetUserPrompt("What is 3+3?");
         await chat2.RunAsync<OutputSchema>(CancellationToken.None);
 
@@ -176,7 +176,7 @@ public class AiAgentDebugTracing : RavenTestBase
         {
             var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
             Assert.NotNull(doc);
-            Assert.True(doc.EnableFullDebug, "Expected EnableFullDebug=true persisted after ?enableFullDebug=true");
+            Assert.True(doc.Debug, "Expected Debug=true persisted after ?debug=true");
 
             var traces = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).ToList();
             Assert.True(traces.Count == 1, "Expected at least one trace document after the turn that flipped the flag on");
@@ -185,7 +185,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_QueryStringOverride_FlipsPersistedAttributeFromTrueToFalse(Options options, GenAiConfiguration config)
+    public async Task Debug_QueryStringOverride_FlipsPersistedAttributeFromTrueToFalse(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -197,9 +197,9 @@ public class AiAgentDebugTracing : RavenTestBase
         };
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
-        // Turn 1: ?enableFullDebug=true on a brand-new conversation — must persist as true.
+        // Turn 1: ?debug=true on a brand-new conversation — must persist as true.
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.SetUserPrompt("What is 2+2?");
         await chat.RunAsync<OutputSchema>(CancellationToken.None);
 
@@ -208,16 +208,16 @@ public class AiAgentDebugTracing : RavenTestBase
         {
             var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
             Assert.NotNull(doc);
-            Assert.True(doc.EnableFullDebug, "Expected EnableFullDebug=true persisted after ?enableFullDebug=true");
+            Assert.True(doc.Debug, "Expected Debug=true persisted after ?debug=true");
 
             tracesAfterTurn1 = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).Count();
             Assert.True(tracesAfterTurn1 == 1);
         }
 
-        // Turn 2: same conversation, ?enableFullDebug=false — must flip persisted true → false
+        // Turn 2: same conversation, ?debug=false — must flip persisted true → false
         // AND the override must be honored on this turn (no new traces written).
         var chat2 = store.AI.Conversation(createResult.Identifier, chat.Id,
-            creationOptions: null, changeVector: null, enableFullDebug: false);
+            creationOptions: null, changeVector: null, debug: false);
         chat2.SetUserPrompt("What is 3+3?");
         await chat2.RunAsync<OutputSchema>(CancellationToken.None);
 
@@ -225,7 +225,7 @@ public class AiAgentDebugTracing : RavenTestBase
         {
             var doc = await session.LoadAsync<ConversationDocShape>(chat.Id);
             Assert.NotNull(doc);
-            Assert.False(doc.EnableFullDebug, "Expected EnableFullDebug=false persisted after ?enableFullDebug=false");
+            Assert.False(doc.Debug, "Expected Debug=false persisted after ?debug=false");
 
             var tracesAfterTurn2 = (await session.Advanced.LoadStartingWithAsync<DebugTraceDoc>($"{chat.Id}/{AiDebugTrace.TraceSegment}/")).Count();
             Assert.Equal(tracesAfterTurn1, tracesAfterTurn2);
@@ -234,7 +234,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_WithAttachment_PersistsAttachmentNames(Options options, GenAiConfiguration config)
+    public async Task Debug_WithAttachment_PersistsAttachmentNames(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -247,7 +247,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.AddAttachment("heart.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
         chat.SetUserPrompt("What do you see in this image?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
@@ -267,7 +267,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_Streaming_PersistsStreamEvents(Options options, GenAiConfiguration config)
+    public async Task Debug_Streaming_PersistsStreamEvents(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -280,7 +280,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.SetUserPrompt("What is 2+2?");
 
         var streamedChunks = new List<string>();
@@ -307,7 +307,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_WithQueryTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
+    public async Task Debug_WithQueryTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -334,7 +334,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.SetUserPrompt("What products do you have available?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
         Assert.Equal(AiConversationResult.Done, r.Status);
@@ -349,7 +349,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_WithActionTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
+    public async Task Debug_WithActionTool_PersistsOneTracePerLlmCall(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -371,7 +371,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
         chat.Handle<object>("GetPrice", _ => "the price is $9.99");
         chat.SetUserPrompt("What is the price of a widget?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
@@ -386,7 +386,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task EnableFullDebug_FailedLlmCall_TracesStillPersisted()
+    public async Task Debug_FailedLlmCall_TracesStillPersisted()
     {
         using var store = GetDocumentStore();
 
@@ -414,7 +414,7 @@ public class AiAgentDebugTracing : RavenTestBase
             {
                 CreationOptions = new AiConversationCreationOptions(),
                 UserPrompt = "What is 2+2?"
-            }, changeVector: null, enableFullDebugOverride: true);
+            }, changeVector: null, debugOverride: true);
 
             await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequest(context, CancellationToken.None));
             conversationDocId = handler.ConversationDocId;
@@ -425,7 +425,7 @@ public class AiAgentDebugTracing : RavenTestBase
         // Despite the LLM failure the finally block must have persisted whatever traces were captured.
         var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
         Assert.True(stats.Collections.TryGetValue(Constants.Documents.Collections.AiAgentConversationDebugCollection, out long count),
-            "Expected the debug-trace collection to exist after a failed turn with EnableFullDebug=true");
+            "Expected the debug-trace collection to exist after a failed turn with Debug=true");
         Assert.True(count == 1);
 
         using var session = store.OpenAsyncSession();
@@ -435,7 +435,7 @@ public class AiAgentDebugTracing : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task EnableFullDebug_RequestSerializationThrowsMidWrite_PartialRequestBodyPersisted()
+    public async Task Debug_RequestSerializationThrowsMidWrite_PartialRequestBodyPersisted()
     {
         using var store = GetDocumentStore();
 
@@ -473,7 +473,7 @@ public class AiAgentDebugTracing : RavenTestBase
             {
                 CreationOptions = new AiConversationCreationOptions(),
                 UserPrompt = "What is 2+2?"
-            }, changeVector: null, enableFullDebugOverride: true);
+            }, changeVector: null, debugOverride: true);
 
             await Assert.ThrowsAnyAsync<Exception>(() => handler.HandleRequest(context, CancellationToken.None));
             conversationDocId = handler.ConversationDocId;
@@ -483,7 +483,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
         var stats = await store.Maintenance.SendAsync(new GetCollectionStatisticsOperation());
         Assert.True(stats.Collections.TryGetValue(Constants.Documents.Collections.AiAgentConversationDebugCollection, out long count),
-            "Expected the debug-trace collection to exist after a mid-write failure with EnableFullDebug=true");
+            "Expected the debug-trace collection to exist after a mid-write failure with Debug=true");
         Assert.True(count == 1);
 
         using var session = store.OpenAsyncSession();
@@ -500,19 +500,19 @@ public class AiAgentDebugTracing : RavenTestBase
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { true })]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { false })]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Data = new object[] { null })]
-    public async Task EnableFullDebug_PropagatesToSubAgent(Options options, GenAiConfiguration config, bool? enableFullDebug)
+    public async Task Debug_PropagatesToSubAgent(Options options, GenAiConfiguration config, bool? debug)
     {
         using var store = await CreateStoreWithSubAgentArithmetic(options, config);
 
         const string conversationId = "chats/propagation-test";
 
-        // Null case: we need the parent doc to already have EnableFullDebug=true persisted so the
+        // Null case: we need the parent doc to already have Debug=true persisted so the
         // null override actually has something to preserve. Drive a non-arithmetic warm-up turn
         // that won't invoke the sub-agent, then the real turn below uses the null override.
-        if (enableFullDebug == null)
+        if (debug == null)
         {
             var warmup = store.AI.Conversation(_parentAgentIdentifier, conversationId,
-                creationOptions: null, enableFullDebug: true);
+                creationOptions: null, debug: true);
             warmup.SetUserPrompt("Just say hi. Do not call any tools.");
             await warmup.RunAsync<OutputSchema>(CancellationToken.None);
 
@@ -522,12 +522,12 @@ public class AiAgentDebugTracing : RavenTestBase
             using var s = store.OpenAsyncSession();
             var warmupDoc = await s.LoadAsync<ConversationDocShape>(conversationId);
             Assert.NotNull(warmupDoc);
-            Assert.True(warmupDoc.EnableFullDebug, "warm-up should persist EnableFullDebug=true");
+            Assert.True(warmupDoc.Debug, "warm-up should persist Debug=true");
             Assert.Empty(warmupDoc.SubConversationIds);
         }
 
         var chat = store.AI.Conversation(_parentAgentIdentifier, conversationId,
-            creationOptions: null, changeVector: null, enableFullDebug: enableFullDebug);
+            creationOptions: null, changeVector: null, debug: debug);
         chat.SetUserPrompt("What is 2+2?");
         var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
         Assert.Equal(AiConversationResult.Done, r.Status);
@@ -536,7 +536,7 @@ public class AiAgentDebugTracing : RavenTestBase
         Assert.NotNull(snap.SubId);
 
         // true OR null-after-true-warmup -> tracing on; false -> tracing off.
-        var expectTracing = enableFullDebug != false;
+        var expectTracing = debug != false;
         Assert.Equal(expectTracing, snap.ParentPersisted);
         Assert.Equal(expectTracing, snap.SubPersisted);
 
@@ -549,7 +549,7 @@ public class AiAgentDebugTracing : RavenTestBase
             //     the warm-up turn ("just say hi" -> single LLM call, no tool dispatch).
             // A real LLM may occasionally do an extra reflection / re-dispatch round, so we use
             // lower bounds rather than equality.
-            var minParentTraces = enableFullDebug == null ? 3 : 2;
+            var minParentTraces = debug == null ? 3 : 2;
             Assert.True(snap.ParentTraces >= minParentTraces,
                 $"expected >= {minParentTraces} parent trace docs, got {snap.ParentTraces}");
             Assert.True(snap.SubAgentTraces >= 1,
@@ -568,7 +568,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
-    public async Task EnableFullDebug_MultipleAttachments_PersistsAllNamesInOrder(Options options, GenAiConfiguration config)
+    public async Task Debug_MultipleAttachments_PersistsAllNamesInOrder(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -581,7 +581,7 @@ public class AiAgentDebugTracing : RavenTestBase
         var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
 
         var chat = store.AI.Conversation(createResult.Identifier, "chats/",
-            creationOptions: null, enableFullDebug: true);
+            creationOptions: null, debug: true);
 
         chat.AddAttachment("heart.png", new MemoryStream(Convert.FromBase64String(AiTestData.HeartPngBase64)), "image/png");
         chat.AddAttachment("star.png", new MemoryStream(Convert.FromBase64String(AiTestData.StarPngBase64)), "image/png");
@@ -675,8 +675,8 @@ public class AiAgentDebugTracing : RavenTestBase
         {
             ParentTraces = parentTraces,
             SubAgentTraces = subTraces,
-            ParentPersisted = parentDoc.EnableFullDebug,
-            SubPersisted = subDoc?.EnableFullDebug ?? false,
+            ParentPersisted = parentDoc.Debug,
+            SubPersisted = subDoc?.Debug ?? false,
             SubId = subId
         };
     }
@@ -701,7 +701,7 @@ public class AiAgentDebugTracing : RavenTestBase
 
     private class ConversationDocShape
     {
-        public bool EnableFullDebug { get; set; }
+        public bool Debug { get; set; }
         public HashSet<string> SubConversationIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 }
