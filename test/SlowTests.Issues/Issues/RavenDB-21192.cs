@@ -1998,22 +1998,17 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var mentorNode = nodes[0];
         var mentorDatabase = await GetDatabase(mentorNode, srcDatabaseName);
         
+        int transformationErrors = 0, loadSuccesses = 0;
         Assert.True(WaitForValue(() =>
         {
             var process = mentorDatabase.EtlLoader.Processes.FirstOrDefault(x => x.Name == $"{etlName}/{transformationName}");
-            return process?.Statistics.TransformationErrors >= 5;
-        }, true, timeout: 30_000));
+            transformationErrors = process?.Statistics.TransformationErrors ?? 0;
+            loadSuccesses = process?.Statistics.LoadSuccesses ?? 0;
+            return transformationErrors >= 5 && loadSuccesses >= 3;
+        }, true, timeout: 30_000), $"Expected TransformationErrors >= 5 (got {transformationErrors}) and LoadSuccesses >= 3 (got {loadSuccesses})");
 
-        Assert.True(WaitForValue(() =>
-        {
-            var process = mentorDatabase.EtlLoader.Processes.FirstOrDefault(x => x.Name == $"{etlName}/{transformationName}");
-            return process?.Statistics.LoadSuccesses >= 3;
-        }, true, timeout: 30_000));
+        await WaitAndAssertForValueAsync(() => mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, $"{etlName}/{transformationName}").Count, 5, timeout: 30_000);
 
-        Assert.True(WaitForValue(() => mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}").Count == 5, true, timeout: 30_000));
-        var mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}");
-        Assert.Equal(5, mentorItemErrors.Count);
-        
         for (int i = 1; i < clusterSize; i++)
         {
             var otherDatabase = await GetDatabase(nodes[i], srcDatabaseName);
@@ -2028,10 +2023,7 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var newMentorNode = nodes[1];
         var newMentorDatabase = await GetDatabase(newMentorNode, srcDatabaseName);
         
-        Assert.True(WaitForValue(() =>
-        {
-            return newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}");
-        }, true, timeout: 30_000));
+        await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == $"{etlName}/{transformationName}"), true, timeout: 30_000);
 
         using (var session = src.OpenSession())
         {
@@ -2040,26 +2032,26 @@ public class RavenDB_21192_Multinode : ClusterTestBase
 
             session.SaveChanges();
         }
-        
+
+        transformationErrors = 0;
         Assert.True(WaitForValue(() =>
         {
             var process = newMentorDatabase.EtlLoader.Processes.FirstOrDefault(x => x.Name == $"{etlName}/{transformationName}");
-            return process?.Statistics.TransformationErrors >= 7;
-        }, true, timeout: 30_000));
+            transformationErrors = process?.Statistics.TransformationErrors ?? 0;
+            return transformationErrors >= 7;
+        }, true, timeout: 30_000), $"Expected TransformationErrors >= 7 on new mentor, but got {transformationErrors}");
 
-        Assert.True(WaitForValue(() => newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}").Count == 7, true, timeout: 30_000));
-        var newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}");
-        Assert.Equal(7, newMentorItemErrors.Count);
+        await WaitAndAssertForValueAsync(() => newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, $"{etlName}/{transformationName}").Count, 7, timeout: 30_000);
 
-        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}");
+        var mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, $"{etlName}/{transformationName}");
         Assert.Equal(5, mentorItemErrors.Count);
-        
+
         newMentorDatabase.TaskErrorsStorage.DeleteErrorsOfTask($"{etlName}/{transformationName}", TaskCategory.Etl);
-        
-        newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}");
+
+        var newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, $"{etlName}/{transformationName}");
         Assert.Empty(newMentorItemErrors);
-        
-        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl,$"{etlName}/{transformationName}");
+
+        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Etl, $"{etlName}/{transformationName}");
         Assert.Equal(5, mentorItemErrors.Count);
     }
     
@@ -2139,29 +2131,30 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var mentorNode = nodes[0];
         var mentorDatabase = await GetDatabase(mentorNode, databaseName);
 
+        int transformationErrors = 0, loadSuccesses = 0;
         Assert.True(WaitForValue(() =>
         {
             var process = mentorDatabase.EtlLoader.Processes.FirstOrDefault(x => x.Name == processName);
-            return process?.Statistics.TransformationErrors >= 5 && process?.Statistics.LoadSuccesses >= 3;
-        }, true, timeout: 30_000));
+            transformationErrors = process?.Statistics.TransformationErrors ?? 0;
+            loadSuccesses = process?.Statistics.LoadSuccesses ?? 0;
+            return transformationErrors >= 5 && loadSuccesses >= 3;
+        }, true, timeout: 30_000), $"Expected TransformationErrors >= 5 (got {transformationErrors}) and LoadSuccesses >= 3 (got {loadSuccesses})");
 
-        Assert.True(WaitForValue(() => mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName).Count == 5, true, timeout: 30_000));
-        var mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
-        Assert.Equal(5, mentorItemErrors.Count);
+        await WaitAndAssertForValueAsync(() => mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName).Count, 5, timeout: 30_000);
 
         for (int i = 1; i < clusterSize; i++)
         {
             var otherDatabase = await GetDatabase(nodes[i], databaseName);
-            var otherItemErrors = otherDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
+            var otherItemErrors = otherDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName);
             Assert.Empty(otherItemErrors);
         }
 
         // Ensure mentor's ETL state is persisted before mentor change, otherwise the new mentor may start with stale ChangeVector and reprocess phase 1 documents.
-        Assert.True(WaitForValue(() =>
+        await WaitAndAssertForValueAsync(() =>
         {
             var state = EtlProcess.GetProcessState(mentorDatabase, taskName, "embeddings-transform-script");
             return state.LastProcessedEtagPerDbId.Count > 0;
-        }, true, timeout: 30_000));
+        }, true, timeout: 30_000);
 
         var newMentorTag = nodes[1].ServerStore.NodeTag;
         configuration.MentorNode = newMentorTag;
@@ -2170,10 +2163,7 @@ public class RavenDB_21192_Multinode : ClusterTestBase
         var newMentorNode = nodes[1];
         var newMentorDatabase = await GetDatabase(newMentorNode, databaseName);
 
-        Assert.True(WaitForValue(() =>
-        {
-            return newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName);
-        }, true, timeout: 30_000));
+        await WaitAndAssertForValueAsync(() => newMentorDatabase.EtlLoader.Processes.Any(x => x.Name == processName), true, timeout: 30_000);
 
         using (var session = store.OpenSession())
         {
@@ -2183,25 +2173,25 @@ public class RavenDB_21192_Multinode : ClusterTestBase
             session.SaveChanges();
         }
 
+        transformationErrors = 0;
         Assert.True(WaitForValue(() =>
         {
             var process = newMentorDatabase.EtlLoader.Processes.FirstOrDefault(x => x.Name == processName);
-            return process?.Statistics.TransformationErrors >= 7;
-        }, true, timeout: 30_000));
+            transformationErrors = process?.Statistics.TransformationErrors ?? 0;
+            return transformationErrors >= 7;
+        }, true, timeout: 30_000), $"Expected TransformationErrors >= 7 on new mentor, but got {transformationErrors}");
 
-        Assert.True(WaitForValue(() => newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName).Count == 7, true, timeout: 30_000));
-        var newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
-        Assert.Equal(7, newMentorItemErrors.Count);
+        await WaitAndAssertForValueAsync(() => newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName).Count, 7, timeout: 30_000);
 
-        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
+        var mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName);
         Assert.Equal(5, mentorItemErrors.Count);
 
         newMentorDatabase.TaskErrorsStorage.DeleteErrorsOfTask(processName, TaskCategory.Ai);
 
-        newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
+        var newMentorItemErrors = newMentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName);
         Assert.Empty(newMentorItemErrors);
 
-        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai,processName);
+        mentorItemErrors = mentorDatabase.TaskErrorsStorage.ReadItemErrorsOfTask(TaskCategory.Ai, processName);
         Assert.Equal(5, mentorItemErrors.Count);
     }
 
