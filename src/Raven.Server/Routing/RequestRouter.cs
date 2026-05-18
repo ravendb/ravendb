@@ -496,7 +496,7 @@ namespace Raven.Server.Routing
                     return;
                 }
 
-                var message = GetFailedAuthorizationMessage(context, resourceType, database, feature?.Certificate, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
+                var message = GetFailedAuthorizationMessage(context, resourceType, database, feature, feature?.Status ?? AuthenticationStatus.None, authorizationStatus, out var statusCode);
 
                 context.Response.StatusCode = (int)statusCode;
 
@@ -508,8 +508,9 @@ namespace Raven.Server.Routing
             }
         }
 
-        public static string GetFailedAuthorizationMessage(HttpContext context, ResourceType resourceType, string database, X509Certificate2 certificate, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
+        public static string GetFailedAuthorizationMessage(HttpContext context, ResourceType resourceType, string database, AuthenticateConnection feature, AuthenticationStatus authenticationStatus, AuthorizationStatus authorizationStatus, out HttpStatusCode statusCode)
         {
+            var certificate = feature?.Certificate;
             string message;
             statusCode = HttpStatusCode.Forbidden;
             if (certificate == null || authenticationStatus is AuthenticationStatus.None or AuthenticationStatus.NoCertificateProvided)
@@ -523,7 +524,11 @@ namespace Raven.Server.Routing
                 if (string.IsNullOrWhiteSpace(name))
                     name = certificate.ToString(false);
 
-                name += $"(Thumbprint: {certificate.Thumbprint})";
+                var details = $"Thumbprint: {certificate.Thumbprint}";
+                if (string.IsNullOrEmpty(feature?.SsoUserIdentity) == false)
+                    details += $", SSO identity: {feature.SsoUserIdentity}";
+
+                name += $"({details})";
 
                 if (authenticationStatus == AuthenticationStatus.UnfamiliarCertificate)
                 {

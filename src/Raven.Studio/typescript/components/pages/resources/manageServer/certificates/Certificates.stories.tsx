@@ -61,4 +61,3 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
         securityClearance: securityClearanceArgType,
     },
 };
-

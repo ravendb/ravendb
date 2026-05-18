@@ -224,7 +224,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                             )}
                             {certificate.Usage === "SsoClient" && (
                                 <Badge bg="primary" className="ms-1 fs-6" pill>
-                                    SSO: {certificate.Thumbprint}
+                                    SSO User
                                 </Badge>
                             )}
                         </div>
@@ -355,9 +355,7 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     message={
                                         <ul className="mb-0 ps-3">
                                             {authorizedSsoUsers.map((u) => (
-                                                <li key={u.Thumbprint}>
-                                                    {u.Name?.replace(/^SSO User:\s*/, "") ?? u.Thumbprint}
-                                                </li>
+                                                <li key={u.Thumbprint}>{u.Name ?? u.Thumbprint}</li>
                                             ))}
                                         </ul>
                                     }
@@ -365,6 +363,22 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                                     <Icon icon="info" color="info" margin="ms-1" className="small" />
                                 </PopoverWithHoverWrapper>
                             )}
+                        </RichPanelDetailItem>
+                    )}
+                    {certificate.Usage === "SsoClient" && certificate.SsoIdentifiers?.length > 0 && (
+                        <RichPanelDetailItem
+                            label={
+                                <>
+                                    <Icon icon="user" />
+                                    Identifiers
+                                </>
+                            }
+                        >
+                            {certificate.SsoIdentifiers.map((id) =>
+                                id.Provider === "Windows" && id.Domain
+                                    ? `Windows\\${id.Domain}: ${id.Identifier}`
+                                    : `${id.Provider}: ${id.Identifier}`
+                            ).join(" · ")}
                         </RichPanelDetailItem>
                     )}
                     {certificate.Usage === "SsoClient" && (

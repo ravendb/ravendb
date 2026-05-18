@@ -185,7 +185,7 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse<ResourceType>(aeAsString, ignoreCase: true, out var resourceType) == false)
                 resourceType = ResourceType.Server;
 
-            var message = RequestRouter.GetFailedAuthorizationMessage(HttpContext, resourceType, database: null, feature?.Certificate, authenticationStatus, authorizationStatus, out _);
+            var message = RequestRouter.GetFailedAuthorizationMessage(HttpContext, resourceType, database: null, feature, authenticationStatus, authorizationStatus, out _);
 
             HttpContext.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
             SetupSecurityHeaders();

@@ -326,13 +326,6 @@ namespace Raven.Server
             var auth = context.Features.Get<Microsoft.AspNetCore.Http.Features.Authentication.IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var (clientIp, proxyIp) = SsoForwardedForHelper.GetIps(context, auth);
 
-            if (proxyIp == null && context.Request.Headers.TryGetValue("X-Forwarded-For", out var xffVal))
-            {
-                var xffStr = xffVal.ToString().Trim();
-                if (string.IsNullOrEmpty(xffStr) == false)
-                    proxyIp = xffStr;
-            }
-
             var twn = new TrafficWatchHttpChange
             {
                 TimeStamp = DateTime.UtcNow,
@@ -349,6 +342,8 @@ namespace Raven.Server
                 ClientIP = clientIp,
                 ProxyIP = proxyIp,
                 CertificateThumbprint = context.Connection.ClientCertificate?.Thumbprint,
+                CertificateName = auth?.Definition?.Name,
+                SsoUserIdentity = auth?.SsoUserIdentity,
                 RequestSizeInBytes = ((StreamWithTimeout)context.Items["RequestStream"])?.TotalRead ?? 0,
                 ResponseSizeInBytes = ((StreamWithTimeout)context.Items["ResponseStream"])?.TotalWritten ?? 0,
             };

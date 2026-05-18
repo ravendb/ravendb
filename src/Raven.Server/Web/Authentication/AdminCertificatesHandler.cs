@@ -4,7 +4,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
@@ -44,6 +46,15 @@ namespace Raven.Server.Web.Authentication
 
         public const string HasTwoFactorFieldName = "HasTwoFactor";
         public const string TwoFactorExpirationDate = "TwoFactorExpirationDate";
+
+        private const string SsoServerCertificatePath = "/api/certificate";
+        private const long MaxFetchedCertBytes = 1 * 1024 * 1024;
+        private static readonly TimeSpan SsoCertFetchTimeout = TimeSpan.FromSeconds(10);
+
+        private static readonly RavenHttpClient SsoCertFetchClient = new RavenHttpClient(new HttpClientHandler { AllowAutoRedirect = false })
+        {
+            MaxResponseContentBufferSize = MaxFetchedCertBytes
+        };
 
         [RavenAction("/admin/certificates/2fa/generate", "GET", AuthorizationStatus.Operator)]
         public async Task GenerateSecret()
@@ -276,8 +287,8 @@ namespace Raven.Server.Web.Authentication
                 if (string.IsNullOrWhiteSpace(certificateDefinition.Name))
                     throw new ArgumentException($"{nameof(certificateDefinition.Name)} is a required field for SSO user entries.");
 
-                if (string.IsNullOrWhiteSpace(certificateDefinition.Thumbprint))
-                    throw new ArgumentException($"{nameof(certificateDefinition.Thumbprint)} is a required field for SSO user entries (set it to the SSO user identifier, e.g. email).");
+                if (certificateDefinition.SsoIdentifiers == null || certificateDefinition.SsoIdentifiers.Count == 0)
+                    throw new ArgumentException("At least one SSO identifier is required.");
 
                 if (certificateDefinition.AllowAnySsoServer == false &&
                     (certificateDefinition.SsoServerPublicKeyPinningHashes == null || certificateDefinition.SsoServerPublicKeyPinningHashes.Count == 0))
@@ -303,6 +314,9 @@ namespace Raven.Server.Web.Authentication
                 }
 
                 certificateDefinition.Usage = CertificateUsage.SsoClient;
+                // Generate synthetic keys so the entry can be stored in the cert table keyed by thumbprint
+                var syntheticKey = Guid.NewGuid().ToString("N");
+                certificateDefinition.Thumbprint = syntheticKey;
                 certificateDefinition.PublicKeyPinningHash = Guid.NewGuid().ToString();
 
                 if (AuditLogger.IsAuditEnabled)
@@ -311,15 +325,83 @@ namespace Raven.Server.Web.Authentication
                     var serverHashes = certificateDefinition.AllowAnySsoServer
                         ? "any"
                         : string.Join(", ", certificateDefinition.SsoServerPublicKeyPinningHashes.Select(h => $"'{h}'"));
+                    var identifiers = string.Join(", ", certificateDefinition.SsoIdentifiers.Select(id =>
+                        new SsoExtensionPayload(id.Identifier, id.Provider, id.Domain).GetDisplayIdentity()));
                     LogAuditForServer("ADD SSO USER",
-                        $"SSO user entry {certificateDefinition.Name}, Thumbprint: '{certificateDefinition.Thumbprint}', SsoServerHashes: [{serverHashes}], AllowAnySsoServer: {certificateDefinition.AllowAnySsoServer}. " +
+                        $"SSO user entry '{certificateDefinition.Name}', Identifiers: [{identifiers}], SsoServerHashes: [{serverHashes}], AllowAnySsoServer: {certificateDefinition.AllowAnySsoServer}. " +
                         $"Security Clearance: {certificateDefinition.SecurityClearance}. Permissions:{permissions}");
                 }
 
                 var putCertificateCommand = new PutCertificateCommand(certificateDefinition.Thumbprint, certificateDefinition, GetRaftRequestIdFromQuery());
                 await ServerStore.SendToLeaderAsync(putCertificateCommand);
 
-                NoContentStatus(HttpStatusCode.Created);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                await using (var writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(CertificateDefinition.Thumbprint));
+                    writer.WriteString(certificateDefinition.Thumbprint);
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        [RavenAction("/admin/certificates/sso/server/fetch", "GET", AuthorizationStatus.ClusterAdmin)]
+        public async Task FetchSsoServerCertificateFromUrl()
+        {
+            ServerStore.LicenseManager.AssertCanUseSso();
+
+            var url = GetStringQueryString("url");
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("Query parameter 'url' is required.");
+
+            if (Uri.TryCreate(url, UriKind.Absolute, out Uri baseUri) == false ||
+                (baseUri.Scheme != Uri.UriSchemeHttps && baseUri.Scheme != Uri.UriSchemeHttp))
+                throw new ArgumentException("The URL must be an absolute http or https URL.");
+
+            Uri fetchUri = new UriBuilder(baseUri.Scheme, baseUri.Host, baseUri.Port)
+            {
+                Path = SsoServerCertificatePath
+            }.Uri;
+
+            using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
+            cts.CancelAfter(SsoCertFetchTimeout);
+
+            byte[] certBytes;
+            try
+            {
+                certBytes = await SsoCertFetchClient.GetByteArrayAsync(fetchUri, cts.Token);
+            }
+            catch (Exception e)
+            {
+                await WriteJsonErrorAsync(HttpStatusCode.BadGateway, $"Failed to fetch certificate from '{url}': {e.Message}");
+                return;
+            }
+
+            try
+            {
+                using X509Certificate2 _ = CertificateLoaderUtil.CreateCertificate(certBytes);
+            }
+            catch (Exception e)
+            {
+                await WriteJsonErrorAsync(HttpStatusCode.UnprocessableEntity, $"The content at '{url}' is not a valid certificate: {e.Message}");
+                return;
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                await using AsyncBlittableJsonTextWriter writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream());
+                ctx.Write(writer, new Sparrow.Json.Parsing.DynamicJsonValue { ["Base64"] = Convert.ToBase64String(certBytes) });
+            }
+        }
+
+        private async Task WriteJsonErrorAsync(HttpStatusCode status, string error)
+        {
+            HttpContext.Response.StatusCode = (int)status;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                await using AsyncBlittableJsonTextWriter writer = new AsyncBlittableJsonTextWriter(ctx, ResponseBodyStream());
+                ctx.Write(writer, new Sparrow.Json.Parsing.DynamicJsonValue { ["Error"] = error });
             }
         }
 
@@ -736,6 +818,41 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
+        private BlittableJsonReaderObject TryBuildSsoCertificateDefinitionForWhoAmI(TransactionOperationContext ctx, X509Certificate2 clientCert)
+        {
+            RavenServer.AuthenticateConnection auth = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            if (auth?.IsSsoAuthenticated != true)
+                return null;
+
+            X509Extension ssoUserIdExtension = clientCert.Extensions[Constants.Certificates.SsoUserIdExtensionOid];
+            if (ssoUserIdExtension == null)
+                return null;
+
+            SsoExtensionPayload payload = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+            if (payload.IsEmpty)
+                return null;
+
+            CertificateDefinition storedEntry = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
+            if (storedEntry == null)
+                return null;
+
+            CertificateDefinition ssoUserDef = new CertificateDefinition
+            {
+                Name = storedEntry.Name,
+                Permissions = storedEntry.Permissions ?? new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance = storedEntry.SecurityClearance,
+                Thumbprint = clientCert.Thumbprint,
+                Usage = CertificateUsage.SsoClient,
+                SsoServerPublicKeyPinningHashes = storedEntry.SsoServerPublicKeyPinningHashes ?? new List<string>(),
+                AllowAnySsoServer = storedEntry.AllowAnySsoServer,
+                SsoIdentifiers = storedEntry.SsoIdentifiers ?? new List<SsoIdentifier>(),
+                Disabled = storedEntry.Disabled,
+                NotAfter = clientCert.NotAfter,
+                NotBefore = clientCert.NotBefore
+            };
+            return ctx.ReadObject(ssoUserDef.ToJson(), "SSO/Certificate/Definition");
+        }
+
         [RavenAction("/certificates/whoami", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task WhoAmI()
         {
@@ -757,24 +874,7 @@ namespace Raven.Server.Web.Authentication
 
                 if (certificate == null)
                 {
-                    // The client certificate is not registered in the ServerStore.
-                    // Check if this is an SSO-authenticated connection first.
-                    var auth = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-                    if (auth?.IsSsoAuthenticated == true)
-                    {
-                        var ssoUserDef = new CertificateDefinition
-                        {
-                            Name = "SSO User: " + auth.SsoUserIdentity,
-                            Permissions = new Dictionary<string, DatabaseAccess>(auth.AuthorizedDatabases),
-                            SecurityClearance = auth.Definition?.SecurityClearance ?? SecurityClearance.ValidUser,
-                            Thumbprint = clientCert.Thumbprint,
-                            Usage = CertificateUsage.SsoClient,
-                            SsoServerPublicKeyPinningHashes = auth.SsoServerPublicKeyPinningHash != null ? new List<string> { auth.SsoServerPublicKeyPinningHash } : new List<string>(),
-                            NotAfter = clientCert.NotAfter,
-                            NotBefore = clientCert.NotBefore
-                        };
-                        certificate = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/Certificate/Definition");
-                    }
+                    certificate = TryBuildSsoCertificateDefinitionForWhoAmI(ctx, clientCert);
 
                     // Let's check if the client is using the server certificate or one of the well known admin certs.
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
@@ -954,8 +1054,21 @@ namespace Raven.Server.Web.Authentication
                         $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Disabled: {effectiveDisabled}.");
                 }
 
-                var isSsoClient = existingCertificate.Usage == CertificateUsage.SsoClient;
-                var cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
+                bool isSsoClient = existingCertificate.Usage == CertificateUsage.SsoClient;
+                List<string> mergedSsoHashes = existingCertificate.SsoServerPublicKeyPinningHashes;
+                bool mergedAllowAnySso = existingCertificate.AllowAnySsoServer;
+                List<SsoIdentifier> mergedSsoIdentifiers = existingCertificate.SsoIdentifiers;
+
+                if (isSsoClient)
+                {
+                    if (editedCertificate.SsoServerPublicKeyPinningHashes?.Count > 0)
+                        mergedSsoHashes = editedCertificate.SsoServerPublicKeyPinningHashes;
+                    mergedAllowAnySso = editedCertificate.AllowAnySsoServer;
+                    if (editedCertificate.SsoIdentifiers?.Count > 0)
+                        mergedSsoIdentifiers = editedCertificate.SsoIdentifiers;
+                }
+
+                PutCertificateCommand cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
                     new CertificateDefinition
                     {
                         Name = editedCertificate.Name,
@@ -968,14 +1081,9 @@ namespace Raven.Server.Web.Authentication
                         NotBefore = existingCertificate.NotBefore,
                         Disabled = effectiveDisabled,
                         Usage = existingCertificate.Usage ?? CertificateUsage.Client,
-                        SsoServerPublicKeyPinningHashes = isSsoClient
-                            ? (editedCertificate.SsoServerPublicKeyPinningHashes?.Count > 0
-                                ? editedCertificate.SsoServerPublicKeyPinningHashes
-                                : existingCertificate.SsoServerPublicKeyPinningHashes)
-                            : existingCertificate.SsoServerPublicKeyPinningHashes,
-                        AllowAnySsoServer = isSsoClient
-                            ? editedCertificate.AllowAnySsoServer
-                            : existingCertificate.AllowAnySsoServer
+                        SsoServerPublicKeyPinningHashes = mergedSsoHashes,
+                        AllowAnySsoServer = mergedAllowAnySso,
+                        SsoIdentifiers = mergedSsoIdentifiers
                     }, GetRaftRequestIdFromQuery())
                 { TwoFactorAuthenticationKey = twoFactorAuthenticationKey };
 

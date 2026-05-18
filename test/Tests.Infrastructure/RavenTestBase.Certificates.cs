@@ -328,7 +328,7 @@ public partial class RavenTestBase
             }
         }
 
-        public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId)
+        public X509Certificate2 CreateSsoUserCertificate(SsoTestCertificates ssoCerts, string ssoUserId, SsoProvider provider = SsoProvider.Github, string domain = null)
         {
             const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
 
@@ -343,10 +343,11 @@ public partial class RavenTestBase
             request.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(
                 new OidCollection { new Oid("1.3.6.1.5.5.7.3.2") }, false));
 
-            // Add the SSO user ID custom OID extension, DER-encoded as a UTF8String using AsnWriter —
-            // identical to how real SSO servers encode it via BuildSsoIdentityExtension.
+            // Add the SSO user ID custom OID extension, DER-encoded as a UTF8String containing JSON —
+            // matches the format parsed by CertificateUtils.DecodeSsoUserIdExtension.
+            var jsonPayload = BuildSsoUserIdJsonPayload(ssoUserId, provider, domain);
             var asnWriter = new AsnWriter(AsnEncodingRules.DER);
-            asnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, ssoUserId);
+            asnWriter.WriteCharacterString(UniversalTagNumber.UTF8String, jsonPayload);
             request.CertificateExtensions.Add(new X509Extension(new Oid(ssoUserIdExtensionOid), asnWriter.Encode(), false));
 
             byte[] serialNumber = new byte[20];
@@ -368,6 +369,22 @@ public partial class RavenTestBase
             var certWithKey = cert.CopyWithPrivateKey(userKey);
             var pfxBytes = certWithKey.Export(X509ContentType.Pfx, string.Empty);
             return CertificateLoaderUtil.CreateCertificate(pfxBytes, flags: CertificateLoaderUtil.FlagsForPersist);
+        }
+
+        private static string BuildSsoUserIdJsonPayload(string username, SsoProvider provider, string domain)
+        {
+            // Use a JSON writer so values are properly escaped (mirrors the production decoder which uses System.Text.Json).
+            using var stream = new MemoryStream();
+            using (var writer = new System.Text.Json.Utf8JsonWriter(stream))
+            {
+                writer.WriteStartObject();
+                writer.WriteString("username", username);
+                writer.WriteString("provider", provider.ToString());
+                if (provider == SsoProvider.Windows && string.IsNullOrEmpty(domain) == false)
+                    writer.WriteString("domain", domain);
+                writer.WriteEndObject();
+            }
+            return Encoding.UTF8.GetString(stream.ToArray());
         }
 
         public void RegisterSsoServerCert(TestCertificatesHolder certificates, SsoTestCertificates ssoCerts, string name = "SSO Server Certificate", RavenServer server = null)
@@ -402,14 +419,16 @@ public partial class RavenTestBase
             }
         }
 
-        public void RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
-            Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        public string RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
+            Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null,
+            SsoProvider provider = SsoProvider.Github, string domain = null)
         {
-            RegisterSsoUserEntry(certificates, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer: false, permissions, clearance, server);
+            return RegisterSsoUserEntry(certificates, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer: false, permissions, clearance, server, provider, domain);
         }
 
-        public void RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
-            bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null)
+        public string RegisterSsoUserEntry(TestCertificatesHolder certificates, string ssoUserId, string ssoServerPublicKeyPinningHash,
+            bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer server = null,
+            SsoProvider provider = SsoProvider.Github, string domain = null)
         {
             using var store = _parent.GetDocumentStore(new Options
             {
@@ -426,8 +445,9 @@ public partial class RavenTestBase
             var requestExecutor = store.GetRequestExecutor();
             using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new PutSsoUserEntryCommand(store.Conventions, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer, permissions, clearance);
+                var command = new PutSsoUserEntryCommand(store.Conventions, ssoUserId, ssoServerPublicKeyPinningHash, allowAnySsoServer, permissions, clearance, provider, domain);
                 requestExecutor.Execute(command, context);
+                return command.GeneratedThumbprint;
             }
         }
 
@@ -489,9 +509,14 @@ public partial class RavenTestBase
             private readonly bool _allowAnySsoServer;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly SecurityClearance _clearance;
+            private readonly SsoProvider _provider;
+            private readonly string _domain;
+
+            public string GeneratedThumbprint { get; private set; }
 
             public PutSsoUserEntryCommand(DocumentConventions conventions, string ssoUserId, string ssoServerPublicKeyPinningHash,
-                bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
+                bool allowAnySsoServer, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance,
+                SsoProvider provider, string domain)
             {
                 _conventions = conventions;
                 _ssoUserId = ssoUserId;
@@ -499,6 +524,9 @@ public partial class RavenTestBase
                 _allowAnySsoServer = allowAnySsoServer;
                 _permissions = permissions;
                 _clearance = clearance;
+                _provider = provider;
+                _domain = domain;
+                ResponseType = RavenCommandResponseType.Object;
             }
 
             public override bool IsReadRequest => false;
@@ -515,13 +543,27 @@ public partial class RavenTestBase
                         {
                             writer.WriteStartObject();
                             writer.WritePropertyName(nameof(CertificateDefinition.Name));
-                            writer.WriteString($"SSO User: {_ssoUserId}");
-                            writer.WriteComma();
-                            writer.WritePropertyName(nameof(CertificateDefinition.Thumbprint));
                             writer.WriteString(_ssoUserId);
                             writer.WriteComma();
                             writer.WritePropertyName(nameof(CertificateDefinition.Usage));
                             writer.WriteString(CertificateUsage.SsoClient.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(CertificateDefinition.SsoIdentifiers));
+                            writer.WriteStartArray();
+                            writer.WriteStartObject();
+                            writer.WritePropertyName(nameof(SsoIdentifier.Provider));
+                            writer.WriteString(_provider.ToString());
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(SsoIdentifier.Identifier));
+                            writer.WriteString(_ssoUserId);
+                            if (string.IsNullOrEmpty(_domain) == false)
+                            {
+                                writer.WriteComma();
+                                writer.WritePropertyName(nameof(SsoIdentifier.Domain));
+                                writer.WriteString(_domain);
+                            }
+                            writer.WriteEndObject();
+                            writer.WriteEndArray();
                             writer.WriteComma();
                             writer.WriteArray(nameof(CertificateDefinition.SsoServerPublicKeyPinningHashes), _ssoServerPublicKeyPinningHashes);
                             writer.WriteComma();
@@ -548,6 +590,14 @@ public partial class RavenTestBase
                         }
                     }, _conventions)
                 };
+            }
+
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    return;
+                if (response.TryGet(nameof(CertificateDefinition.Thumbprint), out string thumbprint))
+                    GeneratedThumbprint = thumbprint;
             }
 
             public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();

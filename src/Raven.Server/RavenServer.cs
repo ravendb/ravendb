@@ -2248,23 +2248,33 @@ namespace Raven.Server
                     return;
                 }
 
-                var ssoUserId = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+                var payload = CertificateUtils.DecodeSsoUserIdExtension(ssoUserIdExtension.RawData);
+                if (payload.IsEmpty)
+                {
+                    if (_auditLogger.IsAuditEnabled)
+                        _auditLogger.Audit(
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
+                            $"which was signed by SSO server '{ssoServerDef.Name}' but has a malformed or unrecognized SSO user ID extension.");
+                    return;
+                }
+
+                var ssoUserIdentity = payload.GetDisplayIdentity();
                 var ssoServerPinningHash = ssoServerDef.PublicKeyPinningHash;
 
                 if (string.IsNullOrEmpty(ssoServerPinningHash))
                     continue;
 
-                // Look up the SSO user entry by user ID
-                var ssoUserDef = ServerStore.Cluster.GetCertificateBySsoUserId(ctx, ssoUserId);
+                var ssoUserDef = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
                 if (ssoUserDef == null)
                 {
                     string remoteAddress = GetRemoteAddress(connectionInfo);
                     if (_auditLogger.IsAuditEnabled)
                         _auditLogger.Audit(
                             $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user ID '{ssoUserId}' is not registered in the cluster - rejecting.");
+                            $"signed by SSO server '{ssoServerDef.Name}'. SSO identity '{ssoUserIdentity}' is not registered in the cluster - rejecting.");
 
                     authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
                     return;
                 }
 
@@ -2274,13 +2284,13 @@ namespace Raven.Server
                     if (_auditLogger.IsAuditEnabled)
                         _auditLogger.Audit(
                             $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
-                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user '{ssoUserId}' is disabled - rejecting.");
+                            $"signed by SSO server '{ssoServerDef.Name}'. SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) is disabled - rejecting.");
 
                     authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
                     return;
                 }
 
-                // Verify this SSO server is allowed for the user entry
                 if (ssoUserDef.AllowAnySsoServer == false &&
                     (ssoUserDef.SsoServerPublicKeyPinningHashes == null ||
                      ssoUserDef.SsoServerPublicKeyPinningHashes.Any(h => CertificateUtils.PinningHashEquals(h, ssoServerPinningHash)) == false))
@@ -2290,15 +2300,15 @@ namespace Raven.Server
                         _auditLogger.Audit(
                             $"Connection from {remoteAddress} with certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' " +
                             $"signed by SSO server '{ssoServerDef.Name}' (hash '{ssoServerPinningHash}'). " +
-                            $"SSO user '{ssoUserId}' exists but is not bound to this SSO server - rejecting.");
+                            $"SSO user '{ssoUserDef.Name}' ({ssoUserIdentity}) exists but is not bound to this SSO server - rejecting.");
 
                     authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    authenticationStatus.SsoUserIdentity = ssoUserIdentity;
                     continue;
                 }
 
-                // Found the SSO user entry - SSO-specific fields set here, permissions set by main flow
                 authenticationStatus.IsSsoAuthenticated = true;
-                authenticationStatus.SsoUserIdentity = ssoUserId;
+                authenticationStatus.SsoUserIdentity = ssoUserIdentity;
                 authenticationStatus.SsoServerPublicKeyPinningHash = ssoServerPinningHash;
 
                 cert = ctx.ReadObject(ssoUserDef.ToJson(), "SSO/User/Certificate/Definition");
@@ -2306,7 +2316,7 @@ namespace Raven.Server
                 if (_auditLogger.IsAuditEnabled)
                     _auditLogger.Audit(
                         $"Connection from {GetRemoteAddress(connectionInfo)} with SSO-authenticated certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})'. " +
-                        $"SSO user: '{ssoUserId}', SSO server: '{ssoServerDef.Name}' ({ssoServerDef.Thumbprint}). " +
+                        $"SSO user: '{ssoUserDef.Name}' ({ssoUserIdentity}), SSO server: '{ssoServerDef.Name}' ({ssoServerDef.Thumbprint}). " +
                         $"Security Clearance: {ssoUserDef.SecurityClearance}, " +
                         $"Permissions:{Environment.NewLine}{string.Join(Environment.NewLine, ssoUserDef.Permissions.Select(kvp => kvp.Key + ": " + kvp.Value.ToString()))}");
 

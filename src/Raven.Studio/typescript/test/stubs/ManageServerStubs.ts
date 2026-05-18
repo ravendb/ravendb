@@ -700,8 +700,12 @@ export class ManageServerStubs {
                     Thumbprint: "AA11904E1926ED2EDD5BB4BA8BC34742960BAAA1",
                     SecurityClearance: "ValidUser",
                     Permissions: {},
-                    NotAfter: moment().add(2 as const, "years").format(),
-                    NotBefore: moment().add(-10 as const, "days").format(),
+                    NotAfter: moment()
+                        .add(2 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: ssoServerPinningHash1,
@@ -713,8 +717,12 @@ export class ManageServerStubs {
                     Thumbprint: "BB22904E1926ED2EDD5BB4BA8BC34742960BBBB2",
                     SecurityClearance: "ValidUser",
                     Permissions: {},
-                    NotAfter: moment().add(1 as const, "years").format(),
-                    NotBefore: moment().add(-5 as const, "days").format(),
+                    NotAfter: moment()
+                        .add(1 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-5 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: ssoServerPinningHash2,
@@ -728,8 +736,12 @@ export class ManageServerStubs {
                     Permissions: {
                         db1: "ReadWrite",
                     },
-                    NotAfter: moment().add(2 as const, "years").format(),
-                    NotBefore: moment().add(-10 as const, "days").format(),
+                    NotAfter: moment()
+                        .add(2 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: "CCZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/CC3=",
@@ -743,8 +755,12 @@ export class ManageServerStubs {
                     Thumbprint: "DD44904E1926ED2EDD5BB4BA8BC34742960BDDD4",
                     SecurityClearance: "Operator",
                     Permissions: {},
-                    NotAfter: moment().add(2 as const, "years").format(),
-                    NotBefore: moment().add(-10 as const, "days").format(),
+                    NotAfter: moment()
+                        .add(2 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",
                     PublicKeyPinningHash: "DDZWHsvbycEsXVNFnj7a3Ou6r1B2xVmPQMhlmgw/DD4=",

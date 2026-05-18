@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide.Operations.Certificates
@@ -35,6 +36,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         public CertificateUsage? Usage;
         public List<string> SsoServerPublicKeyPinningHashes = new List<string>();
         public bool AllowAnySsoServer;
+        public List<SsoIdentifier> SsoIdentifiers = new List<SsoIdentifier>();
 
         public DynamicJsonValue ToJson()
         {
@@ -58,10 +60,33 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 [nameof(Disabled)] = Disabled,
                 [nameof(Usage)] = Usage,
                 [nameof(SsoServerPublicKeyPinningHashes)] = SsoServerPublicKeyPinningHashes,
-                [nameof(AllowAnySsoServer)] = AllowAnySsoServer
+                [nameof(AllowAnySsoServer)] = AllowAnySsoServer,
+                [nameof(SsoIdentifiers)] = new DynamicJsonArray(SsoIdentifiers.Select(x => x.ToJson())),
             };
             return jsonValue;
         }
+    }
+
+    public enum SsoProvider
+    {
+        Github,
+        Google,
+        Microsoft,
+        Windows,
+    }
+
+    public sealed class SsoIdentifier
+    {
+        public SsoProvider Provider;
+        public string Domain;
+        public string Identifier;
+
+        public DynamicJsonValue ToJson() => new DynamicJsonValue
+        {
+            [nameof(Provider)] = Provider,
+            [nameof(Domain)] = Domain,
+            [nameof(Identifier)] = Identifier,
+        };
     }
 
     public enum CertificateUsage

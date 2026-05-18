@@ -16,6 +16,10 @@ import { useServices } from "components/hooks/useServices";
 import { certificatesActions } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { certificatesSelectors } from "components/pages/resources/manageServer/certificates/store/certificatesSliceSelectors";
 import { certificatesUtils } from "components/pages/resources/manageServer/certificates/utils/certificatesUtils";
+import {
+    SsoIdentifierDto,
+    SsoProvider,
+} from "components/pages/resources/manageServer/certificates/utils/certificatesTypes";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { FormProvider, SubmitHandler, useFieldArray, useForm, useWatch } from "react-hook-form";
@@ -25,6 +29,17 @@ import Card from "react-bootstrap/Card";
 import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import * as yup from "yup";
+
+const ssoProviders: SsoProvider[] = ["Github", "Google", "Microsoft", "Windows"];
+
+const ssoProviderOptions: SelectOption[] = ssoProviders.map((p) => ({ value: p, label: p }));
+
+const identifierPlaceholderByProvider: Record<SsoProvider, string> = {
+    Windows: "Username",
+    Google: "email@gmail.com",
+    Github: "Username or email",
+    Microsoft: "Username or email",
+};
 
 export default function CertificatesRegisterSsoUserModal() {
     const dispatch = useAppDispatch();
@@ -46,7 +61,15 @@ export default function CertificatesRegisterSsoUserModal() {
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
         defaultValues: {
-            ssoUserId: isEditing ? (ssoUserToEdit?.Thumbprint ?? "") : "",
+            displayName: sourceForDefaults?.Name ?? "",
+            ssoIdentifiers:
+                sourceForDefaults?.SsoIdentifiers?.length > 0
+                    ? sourceForDefaults.SsoIdentifiers.map((id) => ({
+                          provider: id.Provider as SsoProvider,
+                          domain: id.Domain ?? "",
+                          identifier: id.Identifier,
+                      }))
+                    : [{ provider: "Github" as SsoProvider, domain: "", identifier: "" }],
             ssoServerPublicKeyPinningHashes: sourceForDefaults?.SsoServerPublicKeyPinningHashes ?? [],
             allowAnySso: sourceForDefaults?.AllowAnySsoServer ?? false,
             securityClearance:
@@ -60,6 +83,7 @@ export default function CertificatesRegisterSsoUserModal() {
     const formValues = useWatch({ control });
 
     const permissionsFieldArray = useFieldArray({ control, name: "databasePermissions" });
+    const identifiersFieldArray = useFieldArray({ control, name: "ssoIdentifiers" });
 
     const handleClose = () => dispatch(certificatesActions.isRegisterSsoUserModalOpenToggled());
 
@@ -75,12 +99,18 @@ export default function CertificatesRegisterSsoUserModal() {
                           ])
                       );
 
+            const ssoIdentifiers: SsoIdentifierDto[] = formData.ssoIdentifiers.map((id) => ({
+                Provider: id.provider,
+                Domain: id.provider === "Windows" && id.domain ? id.domain : undefined,
+                Identifier: id.identifier,
+            }));
+
             if (isEditing) {
                 reportEvent("certificates", "edit-sso-user");
 
                 await manageServerService.updateCertificate(
                     {
-                        Name: ssoUserToEdit.Name,
+                        Name: formData.displayName,
                         Thumbprint: ssoUserToEdit.Thumbprint,
                         SecurityClearance: formData.securityClearance,
                         Permissions: permissions,
@@ -89,6 +119,7 @@ export default function CertificatesRegisterSsoUserModal() {
                             ? []
                             : formData.ssoServerPublicKeyPinningHashes,
                         AllowAnySsoServer: formData.allowAnySso,
+                        SsoIdentifiers: ssoIdentifiers,
                     },
                     false
                 );
@@ -96,9 +127,9 @@ export default function CertificatesRegisterSsoUserModal() {
                 reportEvent("certificates", "register-sso-user");
 
                 await manageServerService.registerSsoUserEntry({
-                    Name: `SSO User: ${formData.ssoUserId}`,
-                    Thumbprint: formData.ssoUserId,
+                    Name: formData.displayName,
                     Usage: "SsoClient",
+                    SsoIdentifiers: ssoIdentifiers,
                     SsoServerPublicKeyPinningHashes: formData.allowAnySso
                         ? []
                         : formData.ssoServerPublicKeyPinningHashes,
@@ -134,27 +165,34 @@ export default function CertificatesRegisterSsoUserModal() {
                             />
                         </div>
                         <div className="text-center lead">
-                            {isEditing ? "Edit SSO user" : isCloning ? "Clone SSO user" : "Generate SSO user"}
+                            {isEditing ? "Edit SSO user" : isCloning ? "Clone SSO user" : "Add SSO user"}
                         </div>
                     </Modal.Header>
                     <Modal.Body>
                         <FormGroup>
-                            <div className="hstack gap-1">
-                                <FormLabel className="d-flex align-items-center gap-1">
-                                    User ID{" "}
+                            <FormLabel>Display name</FormLabel>
+                            <FormInput
+                                control={control}
+                                type="text"
+                                name="displayName"
+                                placeholder="e.g. Alice Smith"
+                            />
+                        </FormGroup>
+                        <FormGroup>
+                            <div className="hstack gap-1 mb-2">
+                                <FormLabel className="mb-0 d-flex align-items-center gap-1">
+                                    Identifiers{" "}
                                     <ConditionalPopover
                                         conditions={{
                                             isActive: true,
                                             message: (
                                                 <>
-                                                    The way the user will identify.
+                                                    Map this user to one or more identity providers.
                                                     <br />
-                                                    Available formats:
-                                                    <ul className="mb-0">
-                                                        <li>username,</li>
-                                                        <li>email,</li>
-                                                        <li>domain + username</li>
-                                                    </ul>
+                                                    The incoming SSO certificate extension will be matched against these
+                                                    entries.
+                                                    <br />
+                                                    For Windows, specify the domain as well.
                                                 </>
                                             ),
                                         }}
@@ -163,17 +201,63 @@ export default function CertificatesRegisterSsoUserModal() {
                                         <Icon icon="info" margin="m-0" className="small" color="info" />
                                     </ConditionalPopover>
                                 </FormLabel>
+                                <FlexGrow />
+                                <Button
+                                    variant="outline-primary"
+                                    size="sm"
+                                    onClick={() =>
+                                        identifiersFieldArray.append({
+                                            provider: "Github",
+                                            domain: "",
+                                            identifier: "",
+                                        })
+                                    }
+                                >
+                                    <Icon icon="plus" margin="m-0" />
+                                    Add
+                                </Button>
                             </div>
-                            {isEditing ? (
-                                <Form.Control type="text" value={ssoUserToEdit.Thumbprint} disabled />
-                            ) : (
-                                <FormInput
-                                    control={control}
-                                    type="text"
-                                    name="ssoUserId"
-                                    placeholder="e.g. john@example.com"
-                                />
-                            )}
+                            <div className="vstack gap-2">
+                                {identifiersFieldArray.fields.map((field, idx) => {
+                                    const provider = formValues.ssoIdentifiers?.[idx]?.provider;
+                                    return (
+                                        <Card key={field.id} className="p-2">
+                                            <div className="hstack gap-2 align-items-start">
+                                                <div style={{ minWidth: "130px" }}>
+                                                    <FormSelect
+                                                        control={control}
+                                                        name={`ssoIdentifiers.${idx}.provider`}
+                                                        options={ssoProviderOptions}
+                                                        placeholder="Provider"
+                                                    />
+                                                </div>
+                                                {provider === "Windows" && (
+                                                    <FormInput
+                                                        control={control}
+                                                        type="text"
+                                                        name={`ssoIdentifiers.${idx}.domain`}
+                                                        placeholder="Domain (e.g. CORP)"
+                                                    />
+                                                )}
+                                                <FormInput
+                                                    control={control}
+                                                    type="text"
+                                                    name={`ssoIdentifiers.${idx}.identifier`}
+                                                    placeholder={identifierPlaceholderByProvider[provider] ?? "Username or email"}
+                                                />
+                                                <Button
+                                                    variant="link"
+                                                    className="px-0"
+                                                    onClick={() => identifiersFieldArray.remove(idx)}
+                                                    disabled={identifiersFieldArray.fields.length === 1}
+                                                >
+                                                    <Icon icon="trash" margin="m-0" className="text-danger" />
+                                                </Button>
+                                            </div>
+                                        </Card>
+                                    );
+                                })}
+                            </div>
                         </FormGroup>
                         <FormGroup>
                             <FormLabel>Security clearance</FormLabel>
@@ -327,9 +411,8 @@ export default function CertificatesRegisterSsoUserModal() {
                             variant="primary"
                             className="rounded-pill"
                             isSpinning={formState.isSubmitting}
-                            icon={isEditing ? undefined : undefined}
                         >
-                            {isEditing ? "Save changes" : "Generate user"}
+                            {isEditing ? "Save changes" : "Add user"}
                         </ButtonWithSpinner>
                     </Modal.Footer>
                 </Form>
@@ -338,8 +421,19 @@ export default function CertificatesRegisterSsoUserModal() {
     );
 }
 
+const ssoIdentifierSchema = yup.object({
+    provider: yup.string<SsoProvider>().required("Provider is required"),
+    domain: yup.string().when("provider", {
+        is: "Windows",
+        then: (s) => s.required("Domain is required for Windows"),
+        otherwise: (s) => s.optional(),
+    }),
+    identifier: yup.string().required("Identifier is required"),
+});
+
 const schema = yup.object({
-    ssoUserId: yup.string().required(),
+    displayName: yup.string().required("Display name is required"),
+    ssoIdentifiers: yup.array().of(ssoIdentifierSchema).min(1, "At least one identifier is required").required(),
     ssoServerPublicKeyPinningHashes: yup
         .array()
         .of(yup.string())

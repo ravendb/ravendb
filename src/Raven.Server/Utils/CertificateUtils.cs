@@ -8,9 +8,11 @@ using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Commercial.SetupWizard;
@@ -917,26 +919,66 @@ namespace Raven.Server.Utils
         }
 
         /// <summary>
-        /// Decodes the SSO user ID from a custom X.509 extension's RawData.
-        /// The value must be a DER-encoded ASN.1 UTF8String with no trailing bytes.
-        /// Returns empty string if the input is null, empty, or malformed.
+        /// Decodes the SSO user payload from a custom X.509 extension's RawData.
+        /// The value must be a DER-encoded ASN.1 UTF8String containing JSON:
+        ///   {"username":"...", "provider":"Github|Google|Microsoft|Windows", "domain":"..."}
+        /// Returns an empty payload if the input is null, empty, or malformed.
         /// </summary>
-        public static string DecodeSsoUserIdExtension(byte[] rawData)
+        public static SsoExtensionPayload DecodeSsoUserIdExtension(byte[] rawData)
         {
             if (rawData == null || rawData.Length == 0)
-                return string.Empty;
+                return default;
 
             try
             {
                 var reader = new AsnReader(rawData, AsnEncodingRules.DER);
-                var value = reader.ReadCharacterString(UniversalTagNumber.UTF8String);
+                var json = reader.ReadCharacterString(UniversalTagNumber.UTF8String);
                 reader.ThrowIfNotEmpty();
-                return value;
+
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("username", out var usernameEl) == false ||
+                    root.TryGetProperty("provider", out var providerEl) == false)
+                    return default;
+
+                var username = usernameEl.GetString();
+                if (Enum.TryParse<SsoProvider>(providerEl.GetString(), ignoreCase: true, out var provider) == false)
+                    return default;
+
+                string domain = null;
+                if (root.TryGetProperty("domain", out var domainEl))
+                    domain = domainEl.GetString();
+
+                return new SsoExtensionPayload(username, provider, domain);
             }
-            catch (AsnContentException)
+            catch (Exception e) when (e is AsnContentException or JsonException or DecoderFallbackException or ArgumentException)
             {
-                return string.Empty;
+                return default;
             }
+        }
+    }
+
+    public readonly struct SsoExtensionPayload
+    {
+        public readonly string Username;
+        public readonly SsoProvider Provider;
+        public readonly string Domain;
+
+        public SsoExtensionPayload(string username, SsoProvider provider, string domain = null)
+        {
+            Username = username;
+            Provider = provider;
+            Domain = domain;
+        }
+
+        public bool IsEmpty => string.IsNullOrEmpty(Username);
+
+        public string GetDisplayIdentity()
+        {
+            if (Provider == SsoProvider.Windows && string.IsNullOrEmpty(Domain) == false)
+                return $"Windows\\{Domain}:{Username}";
+            return $"{Provider}:{Username}";
         }
     }
 }

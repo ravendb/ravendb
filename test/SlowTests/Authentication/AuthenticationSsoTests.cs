@@ -22,6 +22,14 @@ namespace SlowTests.Authentication
         {
         }
 
+        public static IEnumerable<object[]> AllProviders => new[]
+        {
+            new object[] { SsoProvider.Github,    null    },
+            new object[] { SsoProvider.Google,    null    },
+            new object[] { SsoProvider.Microsoft, null    },
+            new object[] { SsoProvider.Windows,   "CORP"  },
+        };
+
         [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
         public void CanAccessDatabaseWithSsoAuthentication()
         {
@@ -236,10 +244,6 @@ namespace SlowTests.Authentication
             var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
             var ssoUserId = "renewed@example.com";
 
-            Certificates.RegisterSsoServerCert(certificates, ssoCerts);
-            Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
-                new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
-
             // Create a "renewed" SSO server cert using the same private key (different serial/thumbprint)
             var renewedSsoServerCert = CreateRenewedSsoServerCert(ssoCerts);
             var renewedPinningHash = renewedSsoServerCert.GetPublicKeyPinningHash();
@@ -254,35 +258,53 @@ namespace SlowTests.Authentication
 
             var ssoUserCert = Certificates.CreateSsoUserCertificate(renewedSsoCerts, ssoUserId);
 
-            using (var ssoStore = new DocumentStore
-                   {
-                       Urls = new[] { Server.WebUrl },
-                       Database = dbName,
-                       Certificate = ssoUserCert,
-                       Conventions = new DocumentConventions
-                       {
-                           DisposeCertificate = false
-                       }
-                   }.Initialize())
+            using (var adminStore = GetDocumentStore(new Options
             {
-                var requestExecutor = ssoStore.GetRequestExecutor();
-                await requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(
-                    new ServerNode { Url = Server.WebUrl, Database = dbName })
-                {
-                    TimeoutInMs = 15000,
-                    DebugTag = "sso-renewal-test"
-                });
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite });
 
-                using (var session = ssoStore.OpenSession())
-                {
-                    session.Store(new { Name = "Renewed" }, "test/1");
-                    session.SaveChanges();
-                }
+                // Register the renewed SSO server cert so the chain validation succeeds.
+                // The user entry is pinned to the original public-key hash, which is identical to the
+                // renewed cert's hash (same private key) — so existing user entries keep working.
+                Certificates.RegisterSsoServerCert(certificates, renewedSsoCerts, "Renewed SSO Server Certificate");
 
-                using (var session = ssoStore.OpenSession())
+                using (var ssoStore = new DocumentStore
+                       {
+                           Urls = new[] { Server.WebUrl },
+                           Database = dbName,
+                           Certificate = ssoUserCert,
+                           Conventions = new DocumentConventions
+                           {
+                               DisposeCertificate = false,
+                               DisableTopologyUpdates = true
+                           }
+                       }.Initialize())
                 {
-                    var doc = session.Load<dynamic>("test/1");
-                    Assert.NotNull(doc);
+                    var requestExecutor = ssoStore.GetRequestExecutor();
+                    await requestExecutor.UpdateTopologyAsync(new RequestExecutor.UpdateTopologyParameters(
+                        new ServerNode { Url = Server.WebUrl, Database = dbName })
+                    {
+                        TimeoutInMs = 15000,
+                        DebugTag = "sso-renewal-test"
+                    });
+
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Renewed" }, "test/1");
+                        session.SaveChanges();
+                    }
+
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        var doc = session.Load<dynamic>("test/1");
+                        Assert.NotNull(doc);
+                    }
                 }
             }
         }
@@ -501,13 +523,13 @@ namespace SlowTests.Authentication
             }))
             {
                 Certificates.RegisterSsoServerCert(certificates, ssoCerts);
-                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
+                var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
 
                 // Disable immediately, before any successful auth
                 var disableParams = new EditClientCertificateOperation.Parameters
                 {
-                    Thumbprint = ssoUserId,
-                    Name = $"SSO User: {ssoUserId}",
+                    Thumbprint = ssoUserThumbprint,
+                    Name = ssoUserId,
                     Permissions = permissions,
                     Clearance = SecurityClearance.ValidUser,
                     Disabled = true
@@ -558,12 +580,12 @@ namespace SlowTests.Authentication
             }))
             {
                 Certificates.RegisterSsoServerCert(certificates, ssoCerts);
-                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
+                var ssoUserThumbprint = Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash, permissions);
 
                 var editParams = new EditClientCertificateOperation.Parameters
                 {
-                    Thumbprint = ssoUserId,
-                    Name = $"SSO User: {ssoUserId}",
+                    Thumbprint = ssoUserThumbprint,
+                    Name = ssoUserId,
                     Permissions = permissions,
                     Clearance = SecurityClearance.ValidUser,
                     Disabled = true
@@ -743,6 +765,341 @@ namespace SlowTests.Authentication
                         session.SaveChanges();
                     }
                 });
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        [MemberData(nameof(AllProviders))]
+        public void CanAccessDatabaseWithSsoAuthentication_AllProviders(SsoProvider provider, string domain)
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = $"user-{provider}@example.com";
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, ssoUserId, provider, domain);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: provider, domain: domain);
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions
+                    {
+                        DisposeCertificate = false,
+                        DisableTopologyUpdates = true
+                    }
+                }.Initialize())
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        var doc = session.Load<dynamic>("test/1");
+                        Assert.NotNull(doc);
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        [MemberData(nameof(AllProviders))]
+        public void SsoUserWithNoMatchingEntry_AllProviders_IsRejected(SsoProvider provider, string domain)
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, $"unknown-{provider}@example.com", provider, domain);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+            }
+
+            using (var ssoStore = new DocumentStore
+            {
+                Urls = new[] { Server.WebUrl },
+                Database = dbName,
+                Certificate = ssoUserCert,
+                Conventions = new DocumentConventions { DisposeCertificate = false }
+            }.Initialize())
+            {
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+                });
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        [MemberData(nameof(AllProviders))]
+        public void SpecificSsoServer_WrongServer_AllProviders_IsRejected(SsoProvider provider, string domain)
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCertsA = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoCertsB = CreateIndependentSsoServerCertificates();
+
+            var ssoUserId = $"specificserver-{provider}@example.com";
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCertsA);
+                Certificates.RegisterSsoServerCert(certificates, ssoCertsB, "SSO Server B");
+
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCertsA.SsoServerPublicKeyPinningHash, allowAnySsoServer: false,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: provider, domain: domain);
+            }
+
+            // Sign the user cert with SSO server B — chain validates but hash binding fails
+            var ssoUserCertSignedByB = Certificates.CreateSsoUserCertificate(ssoCertsB, ssoUserId, provider, domain);
+
+            using (var ssoStore = new DocumentStore
+            {
+                Urls = new[] { Server.WebUrl },
+                Database = dbName,
+                Certificate = ssoUserCertSignedByB,
+                Conventions = new DocumentConventions { DisposeCertificate = false }
+            }.Initialize())
+            {
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+                });
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void Windows_SsoUser_WrongDomain_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "alice";
+
+            // User cert claims a different domain than the one registered in the user entry.
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, ssoUserId, SsoProvider.Windows, domain: "OTHER");
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Windows, domain: "CORP");
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    Assert.Throws<AuthorizationException>(() =>
+                    {
+                        using (var session = ssoStore.OpenSession())
+                        {
+                            session.Store(new { Name = "Test" }, "test/1");
+                            session.SaveChanges();
+                        }
+                    });
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void Windows_SsoUser_DomainMatchIsCaseInsensitive()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "bob";
+
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, ssoUserId, SsoProvider.Windows, domain: "corp");
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Windows, domain: "CORP");
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        session.Store(new { Name = "Test" }, "test/1");
+                        session.SaveChanges();
+                    }
+
+                    using (var session = ssoStore.OpenSession())
+                    {
+                        var doc = session.Load<dynamic>("test/1");
+                        Assert.NotNull(doc);
+                    }
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void SameIdentifier_DifferentProvider_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            var ssoUserId = "alice@example.com";
+
+            // User entry is registered as Github; user cert is signed with the same SSO server but claims Google.
+            var ssoUserCert = Certificates.CreateSsoUserCertificate(ssoCerts, ssoUserId, SsoProvider.Google);
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+
+                using (var ssoStore = new DocumentStore
+                {
+                    Urls = new[] { Server.WebUrl },
+                    Database = dbName,
+                    Certificate = ssoUserCert,
+                    Conventions = new DocumentConventions { DisposeCertificate = false, DisableTopologyUpdates = true }
+                }.Initialize())
+                {
+                    Assert.Throws<AuthorizationException>(() =>
+                    {
+                        using (var session = ssoStore.OpenSession())
+                        {
+                            session.Store(new { Name = "Test" }, "test/1");
+                            session.SaveChanges();
+                        }
+                    });
+                }
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void NonWindowsProvider_WithDomain_IsRejectedAtRegistration()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Certificates.RegisterSsoUserEntry(certificates, "carol@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                        new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                        provider: SsoProvider.Google, domain: "shouldNotBeAllowed");
+                });
+
+                Assert.Contains("Domain", ex.ToString(), StringComparison.OrdinalIgnoreCase);
             }
         }
 

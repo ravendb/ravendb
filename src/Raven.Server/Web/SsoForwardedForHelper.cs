@@ -48,7 +48,7 @@ internal static class SsoForwardedForHelper
         if (validHops.Count == 0)
             return false;
 
-        sanitized = string.Join(", ", validHops);
+        sanitized = string.Join(" -> ", validHops);
         return true;
     }
 

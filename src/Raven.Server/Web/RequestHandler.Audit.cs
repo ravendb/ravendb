@@ -100,8 +100,11 @@ namespace Raven.Server.Web
             if (auth?.IsSsoAuthenticated == true)
             {
                 var (_, proxyIp) = SsoForwardedForHelper.GetIps(httpContext, auth);
+                string userDisplay = auth.Definition?.Name ?? auth.SsoUserIdentity;
                 if (proxyIp != null)
-                    sb.Append($" (via SSO proxy {proxyIp}, user: {auth.SsoUserIdentity})");
+                    sb.Append($" (via SSO proxy {proxyIp}, user: {userDisplay} ({auth.SsoUserIdentity}))");
+                else
+                    sb.Append($" (SSO user: {userDisplay} ({auth.SsoUserIdentity}))");
             }
             else if (httpContext.Request.Headers.TryGetValue("X-Forwarded-For", out var xff))
             {

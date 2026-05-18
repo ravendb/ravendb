@@ -43,6 +43,7 @@ export interface UpdateCertificateDto {
     Disabled?: boolean;
     SsoServerPublicKeyPinningHashes?: string[];
     AllowAnySsoServer?: boolean;
+    SsoIdentifiers?: SsoIdentifierDto[];
 }
 
 export interface UploadCertificateDto {
@@ -68,14 +69,26 @@ export interface RegisterSsoServerCertDto {
     Permissions: Record<string, DatabaseAccess>;
 }
 
+export type SsoProvider = Raven.Client.ServerWide.Operations.Certificates.SsoProvider;
+
+export interface SsoIdentifierDto {
+    Provider: SsoProvider;
+    Domain?: string;
+    Identifier: string;
+}
+
 export interface RegisterSsoUserEntryDto {
     Name: string;
-    Thumbprint: string;
     Usage: "SsoClient";
+    SsoIdentifiers: SsoIdentifierDto[];
     SsoServerPublicKeyPinningHashes: string[];
     AllowAnySsoServer: boolean;
     SecurityClearance: SecurityClearance;
     Permissions: Record<string, DatabaseAccess>;
+}
+
+export interface FetchSsoServerCertResult {
+    Base64: string;
 }
 
 export type ExpireTimeUnit = Extract<unitOfTime.Base, "days" | "months">;

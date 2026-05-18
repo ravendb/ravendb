@@ -156,8 +156,7 @@ const selectFilteredCertificates = createSelector(
 
             if (managementTypeFilter.length > 0) {
                 const isServer =
-                    cert.Thumbprints.includes(serverThumbprint) ||
-                    cert.Thumbprints.includes(serverForCommThumbprint);
+                    cert.Thumbprints.includes(serverThumbprint) || cert.Thumbprints.includes(serverForCommThumbprint);
                 const isClient = !isServer && !isSso;
 
                 const matchesFilter =

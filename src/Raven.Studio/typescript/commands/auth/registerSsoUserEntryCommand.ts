@@ -12,7 +12,7 @@ class registerSsoUserEntryCommand extends commandBase {
         const url = endpoints.global.adminCertificates.adminCertificatesSsoUser;
 
         return this.put<void>(url, JSON.stringify(this.dto), null, { dataType: undefined })
-            .done(() => this.reportSuccess("SSO user entry was saved successfully"))
+            .done(() => this.reportSuccess(`SSO user '${this.dto.Name}' was saved successfully`))
             .fail((response: JQueryXHR) => this.reportError("Unable to save SSO user entry", response.responseText, response.statusText));
     }
 }
