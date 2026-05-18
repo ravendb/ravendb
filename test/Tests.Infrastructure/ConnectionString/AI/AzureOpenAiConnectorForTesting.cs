@@ -10,9 +10,9 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
     {
         RequiredEnvironmentVariables =
         [
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentNameKey
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentNameEnvName
         ];
     }
 
@@ -37,9 +37,9 @@ public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTest
     {
         RequiredEnvironmentVariables =
         [
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiChatDeploymentNameKey
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiApiKeyEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiDeploymentEndpointEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationAzureOpenAiChatDeploymentNameEnvName
         ];
     }
 

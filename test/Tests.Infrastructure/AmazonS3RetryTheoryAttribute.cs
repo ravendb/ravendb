@@ -54,7 +54,7 @@ namespace Tests.Infrastructure
 
         public static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.S3Credential == null, RavenTestHelper.EnvironmentVariables.S3CredentialKey, ParsingError, _s3Settings);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.S3Credential == null, RavenTestHelper.EnvironmentVariables.S3CredentialEnvName, ParsingError, _s3Settings);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

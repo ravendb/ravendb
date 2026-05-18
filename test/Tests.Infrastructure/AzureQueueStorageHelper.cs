@@ -9,7 +9,7 @@ public static class AzureQueueStorageHelper
 {
     private const string CannotConnectSkipMessage = "Test requires Azurite instance with Azure Queue Storage.";
 
-    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AzureQueueStorageConnectionStringKey}' environment variable not found.";
+    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AzureQueueStorageConnectionStringEnvName}' environment variable not found.";
 
     private const double MillisecondsToWaitForAzureQueueStorage = 1000;
 

@@ -14,7 +14,7 @@ namespace Tests.Infrastructure
                     return base.Skip;
 
                 if (RavenTestHelper.EnvironmentVariables.EnableCultureTests == false)
-                    return $"Culture tests are disabled. Please set '{RavenTestHelper.EnvironmentVariables.EnableCultureTestsKey}' environment variable to 'true' to enable them.";
+                    return $"Culture tests are disabled. Please set '{RavenTestHelper.EnvironmentVariables.EnableCultureTestsEnvName}' environment variable to 'true' to enable them.";
 
                 return null;
             }

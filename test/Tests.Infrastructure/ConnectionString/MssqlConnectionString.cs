@@ -7,7 +7,7 @@ namespace Tests.Infrastructure.ConnectionString
     {
         public static readonly MsSqlConnectionString Instance = new MsSqlConnectionString();
 
-        private MsSqlConnectionString() : base(RavenTestHelper.EnvironmentVariables.MsSqlConnectionStringKey)
+        private MsSqlConnectionString() : base(RavenTestHelper.EnvironmentVariables.MsSqlConnectionStringEnvName)
         {
         }
 
@@ -23,7 +23,7 @@ namespace Tests.Infrastructure.ConnectionString
                 return remoteConnectionString;
 
             throw new InvalidOperationException($"Use a valid connection string. " +
-                                                $"Connection string from environment variable {RavenTestHelper.EnvironmentVariables.MsSqlConnectionStringKey} is \"{remoteConnectionString}\"" +
+                                                $"Connection string from environment variable {RavenTestHelper.EnvironmentVariables.MsSqlConnectionStringEnvName} is \"{remoteConnectionString}\"" +
                                                 $"Local connection string is {localConnectionString}" +
                                                 $"Error message is '{errorMessage}'");
 

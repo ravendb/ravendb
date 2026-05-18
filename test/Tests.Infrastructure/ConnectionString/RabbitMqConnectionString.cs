@@ -37,7 +37,7 @@ public class RabbitMqConnectionString : IDisposable
             return localConnectionString;
 
         if (Url.Value.Length == 0)
-            throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.RabbitMqConnectionStringKey} is empty");
+            throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.RabbitMqConnectionStringEnvName} is empty");
 
         _connection = CreateConnection(Url.Value, out var ex);
         if (_connection != null)

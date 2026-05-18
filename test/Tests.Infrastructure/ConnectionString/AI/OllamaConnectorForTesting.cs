@@ -8,7 +8,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 
     public EmbeddingsOllamaConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaEmbUriKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaEmbUriEnvName];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;
@@ -22,7 +22,7 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
 
     public GenAiOllamaConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaChatUriKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOllamaChatUriEnvName];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Ollama;

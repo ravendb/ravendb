@@ -40,7 +40,7 @@ namespace Tests.Infrastructure
         {
             get
             {
-                return CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureCredential == null, RavenTestHelper.EnvironmentVariables.AzureCredentialKey, ParsingError, _azureSettings);
+                return CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureCredential == null, RavenTestHelper.EnvironmentVariables.AzureCredentialEnvName, ParsingError, _azureSettings);
             }
 
             set => base.Skip = value;
@@ -48,7 +48,7 @@ namespace Tests.Infrastructure
 
         public static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureCredential == null, RavenTestHelper.EnvironmentVariables.AzureCredentialKey, ParsingError, _azureSettings);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureCredential == null, RavenTestHelper.EnvironmentVariables.AzureCredentialEnvName, ParsingError, _azureSettings);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

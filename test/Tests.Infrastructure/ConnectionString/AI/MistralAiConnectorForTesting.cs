@@ -9,7 +9,7 @@ public class EmbeddingsMistralAiConnectorForTesting : AbstractEmbeddingsConnecto
 
     public EmbeddingsMistralAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationMistralApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationMistralApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.MistralAi;
 

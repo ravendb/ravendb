@@ -7,7 +7,7 @@ namespace Tests.Infrastructure.ConnectionString
         private static MySqlConnectionString _instance;
         public static MySqlConnectionString Instance => _instance ??= new MySqlConnectionString();
 
-        private MySqlConnectionString() : base(RavenTestHelper.EnvironmentVariables.MySqlConnectionStringKey)
+        private MySqlConnectionString() : base(RavenTestHelper.EnvironmentVariables.MySqlConnectionStringEnvName)
         {
         }
     }

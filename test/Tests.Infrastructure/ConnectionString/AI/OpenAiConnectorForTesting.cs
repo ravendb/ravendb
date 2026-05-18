@@ -8,7 +8,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
 
     public EmbeddingsOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 
@@ -21,7 +21,7 @@ public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<G
 
     public GenAiOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 

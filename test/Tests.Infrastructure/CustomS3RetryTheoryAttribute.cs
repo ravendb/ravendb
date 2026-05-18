@@ -55,7 +55,7 @@ public class CustomS3RetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFact
 
     private static bool ShouldSkip(out string skipMessage)
     {
-        skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.CustomS3Settings == null, RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey, ParsingError, _s3Settings, skipIsRunningOnCI: true);
+        skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.CustomS3Settings == null, RavenTestHelper.EnvironmentVariables.CustomS3SettingsEnvName, ParsingError, _s3Settings, skipIsRunningOnCI: true);
         return string.IsNullOrEmpty(skipMessage) == false;
     }
 }

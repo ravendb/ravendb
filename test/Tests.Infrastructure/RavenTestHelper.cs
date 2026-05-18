@@ -37,75 +37,75 @@ namespace Tests.Infrastructure
 
         public static class EnvironmentVariables
         {
-            // Test execution / control - keys
-            public const string LicenseKey = "RAVEN_LICENSE";
-            public const string LicenseDeveloperKey = "RAVEN_LICENSE_DEVELOPER";
-            public const string LicenseCommunityKey = "RAVEN_LICENSE_COMMUNITY";
-            public const string LicenseProfessionalKey = "RAVEN_LICENSE_PROFESSIONAL";
-            public const string IsRunningOnCIKey = "RAVEN_IS_RUNNING_ON_CI";
-            public const string SkipIntegrationTestsKey = "RAVEN_SKIP_INTEGRATION_TESTS";
-            public const string SkipAiIntegrationTestsKey = "RAVEN_SKIP_AI_INTEGRATION_TESTS";
-            public const string RunTestsWithDocsCompressionKey = "RAVEN_DOCS_COMPRESSION_TESTS";
-            public const string MaxRunningTestsKey = "RAVEN_MAX_RUNNING_TESTS";
-            public const string WriteRunningTestsToFileKey = "RAVEN_WRITE_RUNNING_TESTS_TO_FILE";
-            public const string EnableCultureTestsKey = "RAVEN_ENABLE_CULTURE_TESTS";
-            public const string EnableNightlyBuildTestsKey = "RAVEN_ENABLE_NIGHTLY_BUILD_TESTS";
-            public const string ForceNightlyBuildTestsKey = "RAVEN_FORCE_NIGHTLY_BUILD_TESTS";
-            public const string NightlyBuildTestsStartHourKey = "RAVEN_NIGHTLY_BUILD_TESTS_START_HOUR";
-            public const string NightlyBuildTestsEndHourKey = "RAVEN_NIGHTLY_BUILD_TESTS_END_HOUR";
-            public const string InterversionTestServerDirKey = "RAVEN_INTERVERSIONTEST_SERVER_DIR";
+            // Test execution / control - env var names
+            public const string LicenseEnvName = "RAVEN_LICENSE";
+            public const string LicenseDeveloperEnvName = "RAVEN_LICENSE_DEVELOPER";
+            public const string LicenseCommunityEnvName = "RAVEN_LICENSE_COMMUNITY";
+            public const string LicenseProfessionalEnvName = "RAVEN_LICENSE_PROFESSIONAL";
+            public const string IsRunningOnCIEnvName = "RAVEN_IS_RUNNING_ON_CI";
+            public const string SkipIntegrationTestsEnvName = "RAVEN_SKIP_INTEGRATION_TESTS";
+            public const string SkipAiIntegrationTestsEnvName = "RAVEN_SKIP_AI_INTEGRATION_TESTS";
+            public const string RunTestsWithDocsCompressionEnvName = "RAVEN_DOCS_COMPRESSION_TESTS";
+            public const string MaxRunningTestsEnvName = "RAVEN_MAX_RUNNING_TESTS";
+            public const string WriteRunningTestsToFileEnvName = "RAVEN_WRITE_RUNNING_TESTS_TO_FILE";
+            public const string EnableCultureTestsEnvName = "RAVEN_ENABLE_CULTURE_TESTS";
+            public const string EnableNightlyBuildTestsEnvName = "RAVEN_ENABLE_NIGHTLY_BUILD_TESTS";
+            public const string ForceNightlyBuildTestsEnvName = "RAVEN_FORCE_NIGHTLY_BUILD_TESTS";
+            public const string NightlyBuildTestsStartHourEnvName = "RAVEN_NIGHTLY_BUILD_TESTS_START_HOUR";
+            public const string NightlyBuildTestsEndHourEnvName = "RAVEN_NIGHTLY_BUILD_TESTS_END_HOUR";
+            public const string InterversionTestServerDirEnvName = "RAVEN_INTERVERSIONTEST_SERVER_DIR";
 
-            // ETL / messaging - keys
-            public const string KafkaUrlKey = "RAVEN_KAFKA_URL";
-            public const string RabbitMqConnectionStringKey = "RAVEN_RABBITMQ_CONNECTION_STRING";
-            public const string AzureQueueStorageConnectionStringKey = "RAVEN_AZURE_QUEUE_STORAGE_CONNECTION_STRING";
-            public const string AmazonSqsEmulatorUrlKey = AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable;
+            // ETL / messaging - env var names
+            public const string KafkaUrlEnvName = "RAVEN_KAFKA_URL";
+            public const string RabbitMqConnectionStringEnvName = "RAVEN_RABBITMQ_CONNECTION_STRING";
+            public const string AzureQueueStorageConnectionStringEnvName = "RAVEN_AZURE_QUEUE_STORAGE_CONNECTION_STRING";
+            public const string AmazonSqsEmulatorUrlEnvName = AmazonSqsConnectionSettings.EmulatorUrlEnvironmentVariable;
 
-            // SQL / external databases - keys
-            public const string MsSqlConnectionStringKey = "RAVEN_MSSQL_CONNECTION_STRING";
-            public const string MySqlConnectionStringKey = "RAVEN_MYSQL_CONNECTION_STRING";
-            public const string NpgSqlConnectionStringKey = "RAVEN_NPGSQL_CONNECTION_STRING";
-            public const string OracleSqlConnectionStringKey = "RAVEN_ORACLESQL_CONNECTION_STRING";
-            public const string SnowflakeConnectionStringKey = "RAVEN_SNOWFLAKE_CONNECTION_STRING";
-            public const string SnowflakeTestingBranchKey = "RAVEN_SNOWFLAKE_TESTING_BRANCH";
-            public const string MongoDbConnectionStringKey = "RAVEN_MONGODB_CONNECTION_STRING";
-            public const string ElasticSearchNodeUrlsKey = "RAVEN_ELASTICSEARCH_NODE_URLS";
+            // SQL / external databases - env var names
+            public const string MsSqlConnectionStringEnvName = "RAVEN_MSSQL_CONNECTION_STRING";
+            public const string MySqlConnectionStringEnvName = "RAVEN_MYSQL_CONNECTION_STRING";
+            public const string NpgSqlConnectionStringEnvName = "RAVEN_NPGSQL_CONNECTION_STRING";
+            public const string OracleSqlConnectionStringEnvName = "RAVEN_ORACLESQL_CONNECTION_STRING";
+            public const string SnowflakeConnectionStringEnvName = "RAVEN_SNOWFLAKE_CONNECTION_STRING";
+            public const string SnowflakeTestingBranchEnvName = "RAVEN_SNOWFLAKE_TESTING_BRANCH";
+            public const string MongoDbConnectionStringEnvName = "RAVEN_MONGODB_CONNECTION_STRING";
+            public const string ElasticSearchNodeUrlsEnvName = "RAVEN_ELASTICSEARCH_NODE_URLS";
 
-            // AI integrations - keys
-            public const string AiIntegrationOpenAiApiKeyKey = "RAVEN_AI_INTEGRATION_OPENAI_API_KEY";
-            public const string AiIntegrationAzureOpenAiApiKeyKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_API_KEY";
-            public const string AiIntegrationAzureOpenAiDeploymentEndpointKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_ENDPOINT";
-            public const string AiIntegrationAzureOpenAiDeploymentNameKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_NAME";
-            public const string AiIntegrationAzureOpenAiChatDeploymentNameKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_CHAT_DEPLOYMENT_NAME";
-            public const string AiIntegrationGoogleApiKeyKey = "RAVEN_AI_INTEGRATION_GOOGLE_API_KEY";
-            public const string AiIntegrationHuggingFaceApiKeyKey = "RAVEN_AI_INTEGRATION_HUGGINGFACE_API_KEY";
-            public const string AiIntegrationMistralApiKeyKey = "RAVEN_AI_INTEGRATION_MISTRAL_API_KEY";
-            public const string AiIntegrationOllamaEmbUriKey = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
-            public const string AiIntegrationOllamaChatUriKey = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
-            public const string AiIntegrationVllmApiKeyKey = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
-            public const string AiIntegrationVllmEmbEndpointKey = "RAVEN_AI_INTEGRATION_VLLM_EMB_ENDPOINT";
-            public const string AiIntegrationVllmEmbModelKey = "RAVEN_AI_INTEGRATION_VLLM_EMB_MODEL";
-            public const string AiIntegrationVllmChatEndpointKey = "RAVEN_AI_INTEGRATION_VLLM_CHAT_ENDPOINT";
-            public const string AiIntegrationVllmChatModelKey = "RAVEN_AI_INTEGRATION_VLLM_CHAT_MODEL";
-            public const string AiIntegrationVertexGoogleCredentialsJsonKey = "RAVEN_AI_INTEGRATION_VERTEX_GOOGLE_CREDENTIALS_JSON";
-            public const string AiIntegrationVertexLocationKey = "RAVEN_AI_INTEGRATION_VERTEX_LOCATION";
+            // AI integrations - env var names
+            public const string AiIntegrationOpenAiApiKeyEnvName = "RAVEN_AI_INTEGRATION_OPENAI_API_KEY";
+            public const string AiIntegrationAzureOpenAiApiKeyEnvName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_API_KEY";
+            public const string AiIntegrationAzureOpenAiDeploymentEndpointEnvName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_ENDPOINT";
+            public const string AiIntegrationAzureOpenAiDeploymentNameEnvName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_NAME";
+            public const string AiIntegrationAzureOpenAiChatDeploymentNameEnvName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_CHAT_DEPLOYMENT_NAME";
+            public const string AiIntegrationGoogleApiKeyEnvName = "RAVEN_AI_INTEGRATION_GOOGLE_API_KEY";
+            public const string AiIntegrationHuggingFaceApiKeyEnvName = "RAVEN_AI_INTEGRATION_HUGGINGFACE_API_KEY";
+            public const string AiIntegrationMistralApiKeyEnvName = "RAVEN_AI_INTEGRATION_MISTRAL_API_KEY";
+            public const string AiIntegrationOllamaEmbUriEnvName = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
+            public const string AiIntegrationOllamaChatUriEnvName = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
+            public const string AiIntegrationVllmApiKeyEnvName = "RAVEN_AI_INTEGRATION_VLLM_API_KEY";
+            public const string AiIntegrationVllmEmbEndpointEnvName = "RAVEN_AI_INTEGRATION_VLLM_EMB_ENDPOINT";
+            public const string AiIntegrationVllmEmbModelEnvName = "RAVEN_AI_INTEGRATION_VLLM_EMB_MODEL";
+            public const string AiIntegrationVllmChatEndpointEnvName = "RAVEN_AI_INTEGRATION_VLLM_CHAT_ENDPOINT";
+            public const string AiIntegrationVllmChatModelEnvName = "RAVEN_AI_INTEGRATION_VLLM_CHAT_MODEL";
+            public const string AiIntegrationVertexGoogleCredentialsJsonEnvName = "RAVEN_AI_INTEGRATION_VERTEX_GOOGLE_CREDENTIALS_JSON";
+            public const string AiIntegrationVertexLocationEnvName = "RAVEN_AI_INTEGRATION_VERTEX_LOCATION";
 
-            // Cloud credentials (non-RAVEN_ prefixed) - keys
-            public const string S3CredentialKey = "S3_CREDENTIAL";
-            public const string CustomS3SettingsKey = "CUSTOM_S3_SETTINGS";
-            public const string AzureCredentialKey = "AZURE_CREDENTIAL";
-            public const string AzureSasTokenCredentialKey = "AZURE_SAS_TOKEN_CREDENTIAL";
-            public const string GlacierCredentialKey = "GLACIER_CREDENTIAL";
-            public const string GoogleCloudBucketNameKey = "GOOGLE_CLOUD_BUCKET_NAME";
-            public const string GoogleCloudCredentialKey = "GOOGLE_CLOUD_CREDENTIAL";
+            // Cloud credentials (non-RAVEN_ prefixed) - env var names
+            public const string S3CredentialEnvName = "S3_CREDENTIAL";
+            public const string CustomS3SettingsEnvName = "CUSTOM_S3_SETTINGS";
+            public const string AzureCredentialEnvName = "AZURE_CREDENTIAL";
+            public const string AzureSasTokenCredentialEnvName = "AZURE_SAS_TOKEN_CREDENTIAL";
+            public const string GlacierCredentialEnvName = "GLACIER_CREDENTIAL";
+            public const string GoogleCloudBucketNameEnvName = "GOOGLE_CLOUD_BUCKET_NAME";
+            public const string GoogleCloudCredentialEnvName = "GOOGLE_CLOUD_CREDENTIAL";
 
-            // Voron / test resource analyzer (non-RAVEN_ prefixed) - keys
-            public const string VoronInternalForceUsing32BitsPagerKey = "VORON_INTERNAL_ForceUsing32BitsPager";
-            public const string TestResourceAnalyzerEnableKey = "TEST_RESOURCE_ANALYZER_ENABLE";
-            public const string TestResourceAnalyzerSamplingKey = "TEST_RESOURCE_ANALYZER_SAMPLING";
+            // Voron / test resource analyzer (non-RAVEN_ prefixed) - env var names
+            public const string VoronInternalForceUsing32BitsPagerEnvName = "VORON_INTERNAL_ForceUsing32BitsPager";
+            public const string TestResourceAnalyzerEnableEnvName = "TEST_RESOURCE_ANALYZER_ENABLE";
+            public const string TestResourceAnalyzerSamplingEnvName = "TEST_RESOURCE_ANALYZER_SAMPLING";
 
-            // CI metadata - keys
-            public const string BranchKey = "branch";
+            // CI metadata - env var names
+            public const string BranchEnvName = "branch";
 
             // Test execution / control - values
             public static readonly string License;
@@ -115,7 +115,7 @@ namespace Tests.Infrastructure
             public static readonly bool IsRunningOnCI;
             public static readonly bool SkipIntegrationTests;
             public static readonly bool SkipAiIntegrationTests;
-            public static bool RunTestsWithDocsCompression;
+            public static readonly bool RunTestsWithDocsCompression;
             public static readonly int MaxRunningTests;
             public static readonly bool WriteRunningTestsToFile;
             public static readonly bool EnableCultureTests;
@@ -250,74 +250,74 @@ namespace Tests.Infrastructure
             static EnvironmentVariables()
             {
                 // Test execution / control
-                (License, HasLicense) = ParseString(LicenseKey);
-                (LicenseDeveloper, HasLicenseDeveloper) = ParseString(LicenseDeveloperKey);
-                (LicenseCommunity, HasLicenseCommunity) = ParseString(LicenseCommunityKey);
-                (LicenseProfessional, HasLicenseProfessional) = ParseString(LicenseProfessionalKey);
-                (IsRunningOnCI, HasIsRunningOnCI) = ParseBool(IsRunningOnCIKey);
-                (SkipIntegrationTests, HasSkipIntegrationTests) = ParseBool(SkipIntegrationTestsKey);
-                (SkipAiIntegrationTests, HasSkipAiIntegrationTests) = ParseBool(SkipAiIntegrationTestsKey);
-                (RunTestsWithDocsCompression, HasRunTestsWithDocsCompression) = ParseBool(RunTestsWithDocsCompressionKey);
-                (MaxRunningTests, HasMaxRunningTests) = ParseInt(MaxRunningTestsKey);
-                (WriteRunningTestsToFile, HasWriteRunningTestsToFile) = ParseBool(WriteRunningTestsToFileKey);
-                (EnableCultureTests, HasEnableCultureTests) = ParseBool(EnableCultureTestsKey);
-                (EnableNightlyBuildTests, HasEnableNightlyBuildTests) = ParseBool(EnableNightlyBuildTestsKey);
-                (ForceNightlyBuildTests, HasForceNightlyBuildTests) = ParseBool(ForceNightlyBuildTestsKey);
-                (NightlyBuildTestsStartHour, HasNightlyBuildTestsStartHour) = ParseInt(NightlyBuildTestsStartHourKey);
-                (NightlyBuildTestsEndHour, HasNightlyBuildTestsEndHour) = ParseInt(NightlyBuildTestsEndHourKey);
-                (InterversionTestServerDir, HasInterversionTestServerDir) = ParseString(InterversionTestServerDirKey);
+                (License, HasLicense) = ParseString(LicenseEnvName);
+                (LicenseDeveloper, HasLicenseDeveloper) = ParseString(LicenseDeveloperEnvName);
+                (LicenseCommunity, HasLicenseCommunity) = ParseString(LicenseCommunityEnvName);
+                (LicenseProfessional, HasLicenseProfessional) = ParseString(LicenseProfessionalEnvName);
+                (IsRunningOnCI, HasIsRunningOnCI) = ParseBool(IsRunningOnCIEnvName);
+                (SkipIntegrationTests, HasSkipIntegrationTests) = ParseBool(SkipIntegrationTestsEnvName);
+                (SkipAiIntegrationTests, HasSkipAiIntegrationTests) = ParseBool(SkipAiIntegrationTestsEnvName);
+                (RunTestsWithDocsCompression, HasRunTestsWithDocsCompression) = ParseBool(RunTestsWithDocsCompressionEnvName);
+                (MaxRunningTests, HasMaxRunningTests) = ParseInt(MaxRunningTestsEnvName);
+                (WriteRunningTestsToFile, HasWriteRunningTestsToFile) = ParseBool(WriteRunningTestsToFileEnvName);
+                (EnableCultureTests, HasEnableCultureTests) = ParseBool(EnableCultureTestsEnvName);
+                (EnableNightlyBuildTests, HasEnableNightlyBuildTests) = ParseBool(EnableNightlyBuildTestsEnvName);
+                (ForceNightlyBuildTests, HasForceNightlyBuildTests) = ParseBool(ForceNightlyBuildTestsEnvName);
+                (NightlyBuildTestsStartHour, HasNightlyBuildTestsStartHour) = ParseInt(NightlyBuildTestsStartHourEnvName);
+                (NightlyBuildTestsEndHour, HasNightlyBuildTestsEndHour) = ParseInt(NightlyBuildTestsEndHourEnvName);
+                (InterversionTestServerDir, HasInterversionTestServerDir) = ParseString(InterversionTestServerDirEnvName);
 
                 // ETL / messaging
-                (KafkaUrl, HasKafkaUrl) = ParseString(KafkaUrlKey);
-                (RabbitMqConnectionString, HasRabbitMqConnectionString) = ParseString(RabbitMqConnectionStringKey);
-                (AzureQueueStorageConnectionString, HasAzureQueueStorageConnectionString) = ParseString(AzureQueueStorageConnectionStringKey);
-                (AmazonSqsEmulatorUrl, HasAmazonSqsEmulatorUrl) = ParseString(AmazonSqsEmulatorUrlKey);
+                (KafkaUrl, HasKafkaUrl) = ParseString(KafkaUrlEnvName);
+                (RabbitMqConnectionString, HasRabbitMqConnectionString) = ParseString(RabbitMqConnectionStringEnvName);
+                (AzureQueueStorageConnectionString, HasAzureQueueStorageConnectionString) = ParseString(AzureQueueStorageConnectionStringEnvName);
+                (AmazonSqsEmulatorUrl, HasAmazonSqsEmulatorUrl) = ParseString(AmazonSqsEmulatorUrlEnvName);
 
                 // SQL / external databases
-                (MsSqlConnectionString, HasMsSqlConnectionString) = ParseString(MsSqlConnectionStringKey);
-                (MySqlConnectionString, HasMySqlConnectionString) = ParseString(MySqlConnectionStringKey);
-                (NpgSqlConnectionString, HasNpgSqlConnectionString) = ParseString(NpgSqlConnectionStringKey);
-                (OracleSqlConnectionString, HasOracleSqlConnectionString) = ParseString(OracleSqlConnectionStringKey);
-                (SnowflakeConnectionString, HasSnowflakeConnectionString) = ParseString(SnowflakeConnectionStringKey);
-                (SnowflakeTestingBranch, HasSnowflakeTestingBranch) = ParseString(SnowflakeTestingBranchKey);
-                (MongoDbConnectionString, HasMongoDbConnectionString) = ParseString(MongoDbConnectionStringKey);
-                (ElasticSearchNodeUrls, HasElasticSearchNodeUrls) = ParseString(ElasticSearchNodeUrlsKey);
+                (MsSqlConnectionString, HasMsSqlConnectionString) = ParseString(MsSqlConnectionStringEnvName);
+                (MySqlConnectionString, HasMySqlConnectionString) = ParseString(MySqlConnectionStringEnvName);
+                (NpgSqlConnectionString, HasNpgSqlConnectionString) = ParseString(NpgSqlConnectionStringEnvName);
+                (OracleSqlConnectionString, HasOracleSqlConnectionString) = ParseString(OracleSqlConnectionStringEnvName);
+                (SnowflakeConnectionString, HasSnowflakeConnectionString) = ParseString(SnowflakeConnectionStringEnvName);
+                (SnowflakeTestingBranch, HasSnowflakeTestingBranch) = ParseString(SnowflakeTestingBranchEnvName);
+                (MongoDbConnectionString, HasMongoDbConnectionString) = ParseString(MongoDbConnectionStringEnvName);
+                (ElasticSearchNodeUrls, HasElasticSearchNodeUrls) = ParseString(ElasticSearchNodeUrlsEnvName);
 
                 // AI integrations
-                (AiIntegrationOpenAiApiKey, HasAiIntegrationOpenAiApiKey) = ParseString(AiIntegrationOpenAiApiKeyKey);
-                (AiIntegrationAzureOpenAiApiKey, HasAiIntegrationAzureOpenAiApiKey) = ParseString(AiIntegrationAzureOpenAiApiKeyKey);
-                (AiIntegrationAzureOpenAiDeploymentEndpoint, HasAiIntegrationAzureOpenAiDeploymentEndpoint) = ParseString(AiIntegrationAzureOpenAiDeploymentEndpointKey);
-                (AiIntegrationAzureOpenAiDeploymentName, HasAiIntegrationAzureOpenAiDeploymentName) = ParseString(AiIntegrationAzureOpenAiDeploymentNameKey);
-                (AiIntegrationAzureOpenAiChatDeploymentName, HasAiIntegrationAzureOpenAiChatDeploymentName) = ParseString(AiIntegrationAzureOpenAiChatDeploymentNameKey);
-                (AiIntegrationGoogleApiKey, HasAiIntegrationGoogleApiKey) = ParseString(AiIntegrationGoogleApiKeyKey);
-                (AiIntegrationHuggingFaceApiKey, HasAiIntegrationHuggingFaceApiKey) = ParseString(AiIntegrationHuggingFaceApiKeyKey);
-                (AiIntegrationMistralApiKey, HasAiIntegrationMistralApiKey) = ParseString(AiIntegrationMistralApiKeyKey);
-                (AiIntegrationOllamaEmbUri, HasAiIntegrationOllamaEmbUri) = ParseString(AiIntegrationOllamaEmbUriKey);
-                (AiIntegrationOllamaChatUri, HasAiIntegrationOllamaChatUri) = ParseString(AiIntegrationOllamaChatUriKey);
-                (AiIntegrationVllmApiKey, HasAiIntegrationVllmApiKey) = ParseString(AiIntegrationVllmApiKeyKey);
-                (AiIntegrationVllmEmbEndpoint, HasAiIntegrationVllmEmbEndpoint) = ParseString(AiIntegrationVllmEmbEndpointKey);
-                (AiIntegrationVllmEmbModel, HasAiIntegrationVllmEmbModel) = ParseString(AiIntegrationVllmEmbModelKey);
-                (AiIntegrationVllmChatEndpoint, HasAiIntegrationVllmChatEndpoint) = ParseString(AiIntegrationVllmChatEndpointKey);
-                (AiIntegrationVllmChatModel, HasAiIntegrationVllmChatModel) = ParseString(AiIntegrationVllmChatModelKey);
-                (AiIntegrationVertexGoogleCredentialsJson, HasAiIntegrationVertexGoogleCredentialsJson) = ParseString(AiIntegrationVertexGoogleCredentialsJsonKey);
-                (AiIntegrationVertexLocation, HasAiIntegrationVertexLocation) = ParseString(AiIntegrationVertexLocationKey);
+                (AiIntegrationOpenAiApiKey, HasAiIntegrationOpenAiApiKey) = ParseString(AiIntegrationOpenAiApiKeyEnvName);
+                (AiIntegrationAzureOpenAiApiKey, HasAiIntegrationAzureOpenAiApiKey) = ParseString(AiIntegrationAzureOpenAiApiKeyEnvName);
+                (AiIntegrationAzureOpenAiDeploymentEndpoint, HasAiIntegrationAzureOpenAiDeploymentEndpoint) = ParseString(AiIntegrationAzureOpenAiDeploymentEndpointEnvName);
+                (AiIntegrationAzureOpenAiDeploymentName, HasAiIntegrationAzureOpenAiDeploymentName) = ParseString(AiIntegrationAzureOpenAiDeploymentNameEnvName);
+                (AiIntegrationAzureOpenAiChatDeploymentName, HasAiIntegrationAzureOpenAiChatDeploymentName) = ParseString(AiIntegrationAzureOpenAiChatDeploymentNameEnvName);
+                (AiIntegrationGoogleApiKey, HasAiIntegrationGoogleApiKey) = ParseString(AiIntegrationGoogleApiKeyEnvName);
+                (AiIntegrationHuggingFaceApiKey, HasAiIntegrationHuggingFaceApiKey) = ParseString(AiIntegrationHuggingFaceApiKeyEnvName);
+                (AiIntegrationMistralApiKey, HasAiIntegrationMistralApiKey) = ParseString(AiIntegrationMistralApiKeyEnvName);
+                (AiIntegrationOllamaEmbUri, HasAiIntegrationOllamaEmbUri) = ParseString(AiIntegrationOllamaEmbUriEnvName);
+                (AiIntegrationOllamaChatUri, HasAiIntegrationOllamaChatUri) = ParseString(AiIntegrationOllamaChatUriEnvName);
+                (AiIntegrationVllmApiKey, HasAiIntegrationVllmApiKey) = ParseString(AiIntegrationVllmApiKeyEnvName);
+                (AiIntegrationVllmEmbEndpoint, HasAiIntegrationVllmEmbEndpoint) = ParseString(AiIntegrationVllmEmbEndpointEnvName);
+                (AiIntegrationVllmEmbModel, HasAiIntegrationVllmEmbModel) = ParseString(AiIntegrationVllmEmbModelEnvName);
+                (AiIntegrationVllmChatEndpoint, HasAiIntegrationVllmChatEndpoint) = ParseString(AiIntegrationVllmChatEndpointEnvName);
+                (AiIntegrationVllmChatModel, HasAiIntegrationVllmChatModel) = ParseString(AiIntegrationVllmChatModelEnvName);
+                (AiIntegrationVertexGoogleCredentialsJson, HasAiIntegrationVertexGoogleCredentialsJson) = ParseString(AiIntegrationVertexGoogleCredentialsJsonEnvName);
+                (AiIntegrationVertexLocation, HasAiIntegrationVertexLocation) = ParseString(AiIntegrationVertexLocationEnvName);
 
                 // Cloud credentials
-                (S3Credential, HasS3Credential) = ParseString(S3CredentialKey);
-                (CustomS3Settings, HasCustomS3Settings) = ParseString(CustomS3SettingsKey);
-                (AzureCredential, HasAzureCredential) = ParseString(AzureCredentialKey);
-                (AzureSasTokenCredential, HasAzureSasTokenCredential) = ParseString(AzureSasTokenCredentialKey);
-                (GlacierCredential, HasGlacierCredential) = ParseString(GlacierCredentialKey);
-                (GoogleCloudBucketName, HasGoogleCloudBucketName) = ParseString(GoogleCloudBucketNameKey);
-                (GoogleCloudCredential, HasGoogleCloudCredential) = ParseString(GoogleCloudCredentialKey);
+                (S3Credential, HasS3Credential) = ParseString(S3CredentialEnvName);
+                (CustomS3Settings, HasCustomS3Settings) = ParseString(CustomS3SettingsEnvName);
+                (AzureCredential, HasAzureCredential) = ParseString(AzureCredentialEnvName);
+                (AzureSasTokenCredential, HasAzureSasTokenCredential) = ParseString(AzureSasTokenCredentialEnvName);
+                (GlacierCredential, HasGlacierCredential) = ParseString(GlacierCredentialEnvName);
+                (GoogleCloudBucketName, HasGoogleCloudBucketName) = ParseString(GoogleCloudBucketNameEnvName);
+                (GoogleCloudCredential, HasGoogleCloudCredential) = ParseString(GoogleCloudCredentialEnvName);
 
                 // Voron / test resource analyzer
-                (VoronInternalForceUsing32BitsPager, HasVoronInternalForceUsing32BitsPager) = ParseBool(VoronInternalForceUsing32BitsPagerKey);
-                (TestResourceAnalyzerEnable, HasTestResourceAnalyzerEnable) = ParseBool(TestResourceAnalyzerEnableKey);
-                (TestResourceAnalyzerSampling, HasTestResourceAnalyzerSampling) = ParseBool(TestResourceAnalyzerSamplingKey);
+                (VoronInternalForceUsing32BitsPager, HasVoronInternalForceUsing32BitsPager) = ParseBool(VoronInternalForceUsing32BitsPagerEnvName);
+                (TestResourceAnalyzerEnable, HasTestResourceAnalyzerEnable) = ParseBool(TestResourceAnalyzerEnableEnvName);
+                (TestResourceAnalyzerSampling, HasTestResourceAnalyzerSampling) = ParseBool(TestResourceAnalyzerSamplingEnvName);
 
                 // CI metadata
-                (Branch, HasBranch) = ParseString(BranchKey);
+                (Branch, HasBranch) = ParseString(BranchEnvName);
             }
 
             private static (string Value, bool IsSet) ParseString(string key)

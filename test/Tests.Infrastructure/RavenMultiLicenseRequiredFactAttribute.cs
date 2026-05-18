@@ -13,10 +13,10 @@ namespace Tests.Infrastructure
 
         private string _skip;
         internal static string SkipMessage = $"Requires Licenses to be set via environment variable. : " +
-                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicense)} . " +
-                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseDeveloperKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseDeveloper)} . " +
-                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseCommunityKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseCommunity)} . " +
-                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseProfessionalKey}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseProfessional)} . ";
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseEnvName}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicense)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseDeveloperEnvName}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseDeveloper)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseCommunityEnvName}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseCommunity)} . " +
+                                             $"'{RavenTestHelper.EnvironmentVariables.LicenseProfessionalEnvName}' - {IsSet(RavenTestHelper.EnvironmentVariables.HasLicenseProfessional)} . ";
 
         public RavenMultiLicenseRequiredFactAttribute(RavenTestCategory category) : base(category)
         {

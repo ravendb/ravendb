@@ -37,7 +37,7 @@ namespace Tests.Infrastructure
         {
             Skip = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(
                 envVariableMissing: RavenTestHelper.EnvironmentVariables.CustomS3Settings == null,
-                environmentVariable: RavenTestHelper.EnvironmentVariables.CustomS3SettingsKey,
+                environmentVariable: RavenTestHelper.EnvironmentVariables.CustomS3SettingsEnvName,
                 parsingError: ParsingError,
                 settings: _s3Settings,
                 skipIsRunningOnCI: true);

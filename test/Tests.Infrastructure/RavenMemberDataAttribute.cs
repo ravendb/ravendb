@@ -49,7 +49,7 @@ public class RavenMemberDataAttribute : MemberDataAttributeBase
                     }
 
                     for (var i = item.Length + 1; i < array.Length; i++)
-                        array[i] = Data[i - 1];
+                        array[i] = Data[i - item.Length - 1];
 
                     var theoryRow = new TheoryDataRow(array);
                     if (skipReason != null)

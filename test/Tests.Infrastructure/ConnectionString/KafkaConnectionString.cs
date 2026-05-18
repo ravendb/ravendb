@@ -51,7 +51,7 @@ public class KafkaConnectionString
             return singleLocalNode;
 
         if (Url.Value.Length == 0)
-            throw new InvalidOperationException($"Environment variable {RavenTestHelper.EnvironmentVariables.KafkaUrlKey} is empty");
+            throw new InvalidOperationException($"Environment variable {RavenTestHelper.EnvironmentVariables.KafkaUrlEnvName} is empty");
 
 
         if (TryConnect(Url.Value, out var ex))

@@ -8,7 +8,7 @@ public class EmbeddingsHuggingFaceConnectorForTesting : AbstractEmbeddingsConnec
 
     public EmbeddingsHuggingFaceConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationHuggingFaceApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationHuggingFaceApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.HuggingFace;
 

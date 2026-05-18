@@ -58,7 +58,7 @@ namespace Tests.Infrastructure.ConnectionString
                 return singleLocalNode;
 
             if (Nodes.Value.Length == 0)
-                throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.ElasticSearchNodeUrlsKey} is empty");
+                throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.ElasticSearchNodeUrlsEnvName} is empty");
 
             if (TryConnect(Nodes.Value, out pingResponse))
                 return Nodes.Value;

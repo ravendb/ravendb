@@ -6,7 +6,7 @@ public class SnowflakeConnectionString : SqlConnectionString<SnowflakeDbConnecti
     private static SnowflakeConnectionString _instance;
     public static SnowflakeConnectionString Instance => _instance ??= new SnowflakeConnectionString();
 
-    private SnowflakeConnectionString() : base(RavenTestHelper.EnvironmentVariables.SnowflakeConnectionStringKey)
+    private SnowflakeConnectionString() : base(RavenTestHelper.EnvironmentVariables.SnowflakeConnectionStringEnvName)
     {
     }
 }

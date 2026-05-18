@@ -34,7 +34,7 @@ namespace Tests.Infrastructure
         {
             Skip = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(
                 envVariableMissing: RavenTestHelper.EnvironmentVariables.AzureSasTokenCredential == null,
-                environmentVariable: RavenTestHelper.EnvironmentVariables.AzureSasTokenCredentialKey,
+                environmentVariable: RavenTestHelper.EnvironmentVariables.AzureSasTokenCredentialEnvName,
                 parsingError: ParsingError,
                 settings: _azureSettings);
         }

@@ -8,7 +8,7 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        internal static string SkipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseKey}' environment variable.";
+        internal static string SkipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseEnvName}' environment variable.";
 
         public new string Skip
         {

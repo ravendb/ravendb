@@ -34,7 +34,7 @@ namespace Tests.Infrastructure
         {
             Skip = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(
                 envVariableMissing: RavenTestHelper.EnvironmentVariables.GlacierCredential == null,
-                environmentVariable: RavenTestHelper.EnvironmentVariables.GlacierCredentialKey,
+                environmentVariable: RavenTestHelper.EnvironmentVariables.GlacierCredentialEnvName,
                 parsingError: ParsingError,
                 settings: _glacierSettings,
                 skipIsRunningOnCI: true);

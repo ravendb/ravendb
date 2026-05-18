@@ -52,7 +52,7 @@ namespace Tests.Infrastructure
 
         private static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.GlacierCredential == null, RavenTestHelper.EnvironmentVariables.GlacierCredentialKey, ParsingError, _glacierSettings, skipIsRunningOnCI: true);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.GlacierCredential == null, RavenTestHelper.EnvironmentVariables.GlacierCredentialEnvName, ParsingError, _glacierSettings, skipIsRunningOnCI: true);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

@@ -18,7 +18,7 @@ namespace Tests.Infrastructure
             var startHourUtc = RavenTestHelper.EnvironmentVariables.HasNightlyBuildTestsStartHour ? RavenTestHelper.EnvironmentVariables.NightlyBuildTestsStartHour : 16;
             var endHourUtc = RavenTestHelper.EnvironmentVariables.HasNightlyBuildTestsEndHour ? RavenTestHelper.EnvironmentVariables.NightlyBuildTestsEndHour : 6;
 
-            SkipMessage = $"Nightly build tests are only working between {startHourUtc}:00 and {endHourUtc}:00 UTC and when '{RavenTestHelper.EnvironmentVariables.EnableNightlyBuildTestsKey}' is set to 'true'. They also can be enforced by setting '{RavenTestHelper.EnvironmentVariables.ForceNightlyBuildTestsKey}' to 'true'.";
+            SkipMessage = $"Nightly build tests are only working between {startHourUtc}:00 and {endHourUtc}:00 UTC and when '{RavenTestHelper.EnvironmentVariables.EnableNightlyBuildTestsEnvName}' is set to 'true'. They also can be enforced by setting '{RavenTestHelper.EnvironmentVariables.ForceNightlyBuildTestsEnvName}' to 'true'.";
 
             if (IsNightlyBuild)
                 return;

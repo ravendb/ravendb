@@ -9,7 +9,7 @@ public class EmbeddingsGoogleConnectorForTesting : AbstractEmbeddingsConnectorFo
 
     public EmbeddingsGoogleConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationGoogleApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationGoogleApiKeyEnvName];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Google;
@@ -31,7 +31,7 @@ public class GenAiGoogleConnectorForTesting : AbstractGenAiConnectorForTesting<G
 
     public GenAiGoogleConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationGoogleApiKeyKey];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationGoogleApiKeyEnvName];
     }
 
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.Google;

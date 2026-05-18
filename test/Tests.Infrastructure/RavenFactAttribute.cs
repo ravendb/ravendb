@@ -232,7 +232,7 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute, Xunit.v3.IFact
             return false;
         }
 
-        skipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseKey}' environment variable.";
+        skipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseEnvName}' environment variable.";
         return true;
     }
 }

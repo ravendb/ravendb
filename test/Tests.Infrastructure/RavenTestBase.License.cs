@@ -46,9 +46,9 @@ namespace FastTests
                 _parent = parent ?? throw new ArgumentNullException(nameof(parent));
             }
 
-            internal const string RL_COMM = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseCommunityKey;
-            internal const string RL_PRO = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseProfessionalKey;
-            internal const string RL_DEV = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseDeveloperKey;
+            internal const string RL_COMM = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseCommunityEnvName;
+            internal const string RL_PRO = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseProfessionalEnvName;
+            internal const string RL_DEV = Tests.Infrastructure.RavenTestHelper.EnvironmentVariables.LicenseDeveloperEnvName;
 
             internal const string DefaultConnectionStringName = "Local AI connection";
             internal const string DefaultEmbeddingGenerationTaskName = "localAiTask";

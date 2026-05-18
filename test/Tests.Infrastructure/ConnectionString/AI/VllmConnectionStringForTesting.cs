@@ -8,9 +8,9 @@ public class EmbeddingsVllmConnectorForTesting : AbstractEmbeddingsConnectorForT
     {
         RequiredEnvironmentVariables =
         [
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmApiKeyKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmEmbEndpointKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmEmbModelKey
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmApiKeyEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmEmbEndpointEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmEmbModelEnvName
         ];
         NamePrefix = nameof(RavenAiIntegration.vLLM);
     }
@@ -33,9 +33,9 @@ public class GenAiVllmConnectorForTesting : AbstractGenAiConnectorForTesting<Gen
     {
         RequiredEnvironmentVariables =
         [
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmApiKeyKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmChatEndpointKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmChatModelKey
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmApiKeyEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmChatEndpointEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVllmChatModelEnvName
         ];
         NamePrefix = nameof(RavenAiIntegration.vLLM);
     }

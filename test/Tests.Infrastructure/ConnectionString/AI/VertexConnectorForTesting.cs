@@ -10,8 +10,8 @@ public class EmbeddingsVertexConnectorForTesting : AbstractEmbeddingsConnectorFo
     {
         RequiredEnvironmentVariables =
         [
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVertexGoogleCredentialsJsonKey,
-            RavenTestHelper.EnvironmentVariables.AiIntegrationVertexLocationKey
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVertexGoogleCredentialsJsonEnvName,
+            RavenTestHelper.EnvironmentVariables.AiIntegrationVertexLocationEnvName
         ];
     }
 

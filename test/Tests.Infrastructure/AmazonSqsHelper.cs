@@ -9,7 +9,7 @@ public static class AmazonSqsHelper
 {
     private const string CannotConnectSkipMessage = "Test requires Elasticmq instance.";
 
-    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AmazonSqsEmulatorUrlKey}' environment variable not found.";
+    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AmazonSqsEmulatorUrlEnvName}' environment variable not found.";
 
     private static bool CanConnectToElasticmq()
     {

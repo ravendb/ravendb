@@ -9,7 +9,7 @@ namespace Tests.Infrastructure.ConnectionString
         private static OracleConnectionString _instance;
         public static OracleConnectionString Instance => _instance ??= new OracleConnectionString();
 
-        private OracleConnectionString() : base(RavenTestHelper.EnvironmentVariables.OracleSqlConnectionStringKey)
+        private OracleConnectionString() : base(RavenTestHelper.EnvironmentVariables.OracleSqlConnectionStringEnvName)
         {
             AdditionFlags = "Pooling=false"; // have to use pooling=false, otherwise closed connections are kept IDLE.
         }
