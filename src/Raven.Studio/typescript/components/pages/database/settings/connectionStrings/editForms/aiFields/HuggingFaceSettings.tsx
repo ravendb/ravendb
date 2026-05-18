@@ -11,6 +11,7 @@ import ConnectionTestResult from "components/common/connectionTests/ConnectionTe
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAsyncCallback } from "react-async-hook";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import OptionalLabel from "components/common/OptionalLabel";
@@ -18,16 +19,11 @@ import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesFiel
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function HuggingFaceSettings({
-    isUsedByAnyTask,
-    isServerwide,
-}: {
-    isUsedByAnyTask: boolean;
-    isServerwide?: boolean;
-}) {
+export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -42,7 +38,7 @@ export default function HuggingFaceSettings({
             Endpoint: formValues.huggingFaceSettings.endpoint,
             Model: formValues.huggingFaceSettings.model,
         };
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAiConnectionString("HuggingFace", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, settings);
     });

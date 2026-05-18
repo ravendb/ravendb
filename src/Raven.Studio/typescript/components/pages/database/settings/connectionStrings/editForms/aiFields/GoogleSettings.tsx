@@ -13,6 +13,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import RichAlert from "components/common/RichAlert";
@@ -22,16 +23,11 @@ import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function GoogleSettings({
-    isUsedByAnyTask,
-    isServerwide,
-}: {
-    isUsedByAnyTask: boolean;
-    isServerwide?: boolean;
-}) {
+export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -48,7 +44,7 @@ export default function GoogleSettings({
             Model: formValues.googleSettings.model,
             Endpoint: formValues.googleSettings.endpoint,
         };
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAiConnectionString("Google", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, settings);
     });

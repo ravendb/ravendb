@@ -31,10 +31,10 @@ export interface AmazonSqsConnectionStringProps extends EditConnectionStringForm
 export default function AmazonSqsConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: AmazonSqsConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AmazonSqs"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -63,7 +63,7 @@ export default function AmazonSqsConnectionString({
         }
 
         const dto = mapAmazonSqsConnectionStringSettingsToDto(formValues);
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAmazonSqsServerConnection(dto)
             : tasksService.testAmazonSqsServerConnection(databaseName, dto);
     });
@@ -141,7 +141,7 @@ export default function AmazonSqsConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editAmazonSqsEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }

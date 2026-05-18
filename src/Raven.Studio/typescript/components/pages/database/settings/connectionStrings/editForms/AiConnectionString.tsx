@@ -47,10 +47,10 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
 export default function AiConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const form = useForm<FormData>({
         mode: "all",
@@ -172,29 +172,28 @@ export default function AiConnectionString({
                     />
                 </div>
                 {connectorType === "azureOpenAiSettings" && (
-                    <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "googleSettings" && (
-                    <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "huggingFaceSettings" && (
-                    <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "ollamaSettings" && (
-                    <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <OllamaSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "embeddedSettings" && <EmbeddedSettings />}
                 {connectorType === "openAiSettings" && (
-                    <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "mistralAiSettings" && (
-                    <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} isServerwide={isServerwide} />
+                    <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />
                 )}
                 {connectorType === "vertexSettings" && (
                     <VertexSettings
                         isUsedByAnyTask={isUsedByAnyTask}
                         isForNewConnection={isForNewConnection}
-                        isServerwide={isServerwide}
                     />
                 )}
 
@@ -210,7 +209,7 @@ export default function AiConnectionString({
                     tasks={initialConnection.usedByTasks}
                     urlProvider={forCurrentDatabase.editEmbeddingsGeneration}
                 />
-                {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+                {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
         </FormProvider>
     );

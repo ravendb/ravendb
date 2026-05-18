@@ -35,10 +35,10 @@ export interface SqlConnectionStringProps extends EditConnectionStringFormProps 
 export default function SqlConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: SqlConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Sql"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, handleSubmit, trigger } = useForm<FormData>({
@@ -62,7 +62,7 @@ export default function SqlConnectionString({
             return;
         }
 
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideSqlConnectionString(formValues.connectionString, formValues.factoryName)
             : tasksService.testSqlConnectionString(databaseName, formValues.connectionString, formValues.factoryName);
     });
@@ -166,7 +166,7 @@ export default function SqlConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSqlEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );

@@ -33,10 +33,10 @@ interface KafkaConnectionStringProps extends EditConnectionStringFormProps {
 export default function KafkaConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: KafkaConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Kafka"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger, setValue } = useForm<FormData>({
         mode: "all",
@@ -76,7 +76,7 @@ export default function KafkaConnectionString({
         }
 
         const connectionOptionsDto = getConnectionOptionsDto(formValues.connectionOptions);
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideKafkaServerConnection(formValues.bootstrapServers, false, connectionOptionsDto)
             : tasksService.testKafkaServerConnection(
                   databaseName,
@@ -214,7 +214,7 @@ export default function KafkaConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editKafkaEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }

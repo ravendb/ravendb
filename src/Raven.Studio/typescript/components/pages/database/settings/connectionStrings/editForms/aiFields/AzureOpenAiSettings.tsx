@@ -13,6 +13,7 @@ import ConnectionTestResult from "components/common/connectionTests/ConnectionTe
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
@@ -20,16 +21,11 @@ import { SelectOption } from "components/common/select/Select";
 import TemperatureField from "./TemperatureField";
 import PromptCacheField from "./PromptCacheField";
 
-export default function AzureOpenAiSettings({
-    isUsedByAnyTask,
-    isServerwide,
-}: {
-    isUsedByAnyTask: boolean;
-    isServerwide?: boolean;
-}) {
+export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -50,7 +46,7 @@ export default function AzureOpenAiSettings({
                 ? formValues.azureOpenAiSettings.temperature
                 : null,
         };
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAiConnectionString("AzureOpenAi", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, settings);
     });

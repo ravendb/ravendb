@@ -35,11 +35,10 @@ export interface EditConnectionStringsProps {
     initialConnection?: Connection;
     afterSave?: (name: string) => void;
     afterClose?: () => void;
-    isServerwide?: boolean;
 }
 
 export default function EditConnectionStrings(props: EditConnectionStringsProps) {
-    const { initialConnection, afterSave, afterClose, isServerwide = false } = props;
+    const { initialConnection, afterSave, afterClose } = props;
 
     const isForNewConnection = !initialConnection.name;
 
@@ -51,10 +50,11 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const EditConnectionStringComponent = getEditConnectionStringComponent(connectionStringType);
 
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const asyncSave = useAsyncCallback((dto) =>
-        isServerwide
+        isServerWide
             ? tasksService.saveServerWideConnectionString(dto)
             : tasksService.saveConnectionString(databaseName, dto)
     );
@@ -62,12 +62,12 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const save = async (newConnection: Connection) => {
         return tryHandleSubmit(async () => {
             const dto = mapConnectionStringToDto(newConnection);
-            if (isServerwide) {
+            if (isServerWide) {
                 (dto as ServerWideConnectionStringDto).ExcludedDatabases = newConnection.excludedDatabases ?? [];
             }
             await asyncSave.execute(dto);
 
-            if (!isServerwide) {
+            if (!isServerWide) {
                 if (isForNewConnection) {
                     dispatch(
                         connectionStringsActions.connectionAdded({
@@ -96,7 +96,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const availableConnectionStringsOptions = getAvailableConnectionStringsOptions(licenseFeatures);
 
     const handleCancel = () => {
-        if (!isServerwide) {
+        if (!isServerWide) {
             dispatch(connectionStringsActions.editConnectionModalClosed());
         }
         afterClose?.();
@@ -136,7 +136,6 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
                     <EditConnectionStringComponent
                         initialConnection={initialConnection}
                         isForNewConnection={isForNewConnection}
-                        isServerwide={isServerwide}
                         onSave={save}
                     />
                 )}

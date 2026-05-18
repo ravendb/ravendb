@@ -31,10 +31,10 @@ interface OlapConnectionStringProps extends EditConnectionStringFormProps {
 export default function OlapConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: OlapConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Olap"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const form = useForm<FormData>({
         mode: "all",
@@ -72,7 +72,7 @@ export default function OlapConnectionString({
                     />
                 </div>
                 <FormDestinationList isForNewConnection={isForNewConnection} />
-                {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+                {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             </Form>
 
             <ConnectionStringUsedByTasks

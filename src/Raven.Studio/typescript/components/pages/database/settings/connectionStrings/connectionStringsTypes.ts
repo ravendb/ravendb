@@ -246,7 +246,6 @@ export type ConnectionStringDto = Partial<
 export interface EditConnectionStringFormProps {
     initialConnection: Connection;
     isForNewConnection: boolean;
-    isServerwide?: boolean;
     onSave: (x: Connection) => void;
 }
 

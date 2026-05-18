@@ -30,10 +30,10 @@ export interface SnowflakeConnectionStringProps extends EditConnectionStringForm
 export default function SnowflakeConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: SnowflakeConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Snowflake"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, handleSubmit, trigger } = useForm<FormData>({
@@ -56,7 +56,7 @@ export default function SnowflakeConnectionString({
             return;
         }
 
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideSnowflakeConnectionString(formValues.connectionString)
             : tasksService.testSnowflakeConnectionString(databaseName, formValues.connectionString);
     });
@@ -120,7 +120,7 @@ export default function SnowflakeConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editSnowflakeEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );

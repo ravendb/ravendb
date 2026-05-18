@@ -31,10 +31,10 @@ export interface RavenConnectionStringProps extends EditConnectionStringFormProp
 export default function RavenConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: RavenConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Raven"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, formState, watch, trigger } = useForm<FormData>({
         mode: "all",
@@ -110,7 +110,7 @@ export default function RavenConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRavenEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }

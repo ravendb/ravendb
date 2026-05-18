@@ -15,6 +15,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import Button from "react-bootstrap/Button";
@@ -26,13 +27,13 @@ type FormData = ConnectionFormData<AiConnection>;
 interface VertexSettingsProps {
     isUsedByAnyTask: boolean;
     isForNewConnection: boolean;
-    isServerwide?: boolean;
 }
 
-export default function VertexSettings({ isUsedByAnyTask, isForNewConnection, isServerwide }: VertexSettingsProps) {
+export default function VertexSettings({ isUsedByAnyTask, isForNewConnection }: VertexSettingsProps) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
     const { value: isCredentialsJsonVisible, toggle: toggleCredentialsJsonVisible } = useBoolean(isForNewConnection);
     const formValues = useWatch({ control });
 
@@ -48,7 +49,7 @@ export default function VertexSettings({ isUsedByAnyTask, isForNewConnection, is
             Model: formValues.vertexSettings.model,
             Location: formValues.vertexSettings.location,
         };
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAiConnectionString("Vertex", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "Vertex", formValues.modelType, settings);
     });

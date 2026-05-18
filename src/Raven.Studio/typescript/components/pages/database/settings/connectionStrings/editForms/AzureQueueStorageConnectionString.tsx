@@ -37,10 +37,10 @@ export interface AzureQueueStorageConnectionStringProps extends EditConnectionSt
 export default function AzureQueueStorageConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: AzureQueueStorageConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["AzureQueueStorage"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -69,7 +69,7 @@ export default function AzureQueueStorageConnectionString({
         }
 
         const dto = mapAzureQueueStorageConnectionStringSettingsToDto(formValues);
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAzureQueueStorageServerConnection(dto)
             : tasksService.testAzureQueueStorageServerConnection(databaseName, dto);
     });
@@ -147,7 +147,7 @@ export default function AzureQueueStorageConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editAzureQueueStorageEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }

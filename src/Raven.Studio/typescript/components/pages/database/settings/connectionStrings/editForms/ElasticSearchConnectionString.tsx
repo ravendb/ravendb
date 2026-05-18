@@ -44,10 +44,10 @@ export interface ElasticSearchStringProps extends EditConnectionStringFormProps 
 export default function ElasticSearchConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: ElasticSearchStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["ElasticSearch"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, formState, handleSubmit, setValue, trigger } = useForm<FormData>({
         mode: "all",
@@ -140,7 +140,6 @@ export default function ElasticSearchConnectionString({
                             isDeleteButtonVisible={urlFieldArray.fields.length > 1}
                             onDelete={() => urlFieldArray.remove(idx)}
                             trigger={trigger}
-                            isServerwide={isServerwide}
                         />
                     ))}
                 </div>
@@ -256,7 +255,7 @@ export default function ElasticSearchConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editElasticSearchEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
         </Form>
     );
 }
@@ -268,11 +267,11 @@ interface NodeUrlProps {
     isDeleteButtonVisible: boolean;
     onDelete: () => void;
     trigger: UseFormTrigger<FormData>;
-    isServerwide?: boolean;
 }
 
-function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger, isServerwide }: NodeUrlProps) {
+function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, trigger }: NodeUrlProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
     const { tasksService } = useServices();
 
     const asyncTest = useAsyncCallback(async () => {
@@ -283,7 +282,7 @@ function NodeUrl({ idx, control, formValues, isDeleteButtonVisible, onDelete, tr
 
         const url = formValues.nodes[idx].url;
         const authDto = mapElasticSearchAuthenticationToDto(formValues);
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideElasticSearchNodeConnection(url, authDto)
             : tasksService.testElasticSearchNodeConnection(databaseName, url, authDto);
     });

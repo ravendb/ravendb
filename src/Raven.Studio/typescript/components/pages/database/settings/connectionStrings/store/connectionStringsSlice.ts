@@ -253,4 +253,5 @@ export const connectionStringSelectors = {
     initialEditConnection: (store: RootState) => store.connectionStrings.initialEditConnection,
     isEmpty: (store: RootState) => _.isEqual(store.connectionStrings.connections, initialState.connections),
     viewContext: (store: RootState) => store.connectionStrings.viewContext,
+    isServerWide: (store: RootState) => store.connectionStrings.viewContext === "serverWideConnectionStrings",
 };

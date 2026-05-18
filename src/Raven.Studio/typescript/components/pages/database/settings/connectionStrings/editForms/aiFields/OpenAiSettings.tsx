@@ -13,6 +13,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
+import { connectionStringSelectors } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useFormContext, useWatch } from "react-hook-form";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
@@ -22,16 +23,11 @@ import PromptCacheField from "./PromptCacheField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function OpenAiSettings({
-    isUsedByAnyTask,
-    isServerwide,
-}: {
-    isUsedByAnyTask: boolean;
-    isServerwide?: boolean;
-}) {
+export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const formValues = useWatch({ control });
 
@@ -50,7 +46,7 @@ export default function OpenAiSettings({
             ProjectId: formValues.openAiSettings.projectId,
             Temperature: formValues.openAiSettings.isSetTemperature ? formValues.openAiSettings.temperature : null,
         };
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideAiConnectionString("OpenAi", formValues.modelType, settings)
             : tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, settings);
     });

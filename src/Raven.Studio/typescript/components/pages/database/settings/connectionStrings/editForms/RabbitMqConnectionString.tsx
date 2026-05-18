@@ -31,10 +31,10 @@ interface RabbitMqConnectionStringProps extends EditConnectionStringFormProps {
 export default function RabbitMqConnectionString({
     initialConnection,
     isForNewConnection,
-    isServerwide,
     onSave,
 }: RabbitMqConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["RabbitMQ"].map((x) => x.name);
+    const isServerWide = useAppSelector(connectionStringSelectors.isServerWide);
 
     const { control, handleSubmit, trigger } = useForm<FormData>({
         mode: "all",
@@ -57,7 +57,7 @@ export default function RabbitMqConnectionString({
             return;
         }
 
-        return isServerwide
+        return isServerWide
             ? tasksService.testServerWideRabbitMqServerConnection(formValues.connectionString)
             : tasksService.testRabbitMqServerConnection(databaseName, formValues.connectionString);
     });
@@ -122,7 +122,7 @@ export default function RabbitMqConnectionString({
                 tasks={initialConnection.usedByTasks}
                 urlProvider={forCurrentDatabase.editRabbitMqEtl}
             />
-            {isServerwide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
+            {isServerWide && <ExcludedDatabasesFormSelect control={control} name="excludedDatabases" />}
             {asyncTest.result?.Error && <ConnectionTestResult testResult={asyncTest.result} />}
         </Form>
     );

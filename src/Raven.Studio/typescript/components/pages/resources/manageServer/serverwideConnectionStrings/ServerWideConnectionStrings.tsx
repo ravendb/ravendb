@@ -80,7 +80,6 @@ export default function ServerWideConnectionStrings() {
                     initialConnection={initialEditConnection}
                     afterSave={handleSave}
                     afterClose={() => dispatch(connectionStringsActions.editConnectionModalClosed())}
-                    isServerwide
                 />
             )}
             <Col xxl={12}>
