@@ -196,7 +196,16 @@ public class CdcSinkHandler : DatabaseRequestHandler
         IDatabaseDriver driver;
         try
         {
-            driver = DatabaseDriverDispatcher.CreateDriver(connection.FactoryName, connection.ConnectionString);
+            // Pass the resolved targetSchema into the driver so the Postgres migrator's
+            // FindSchema() can locate non-default-schema tables when ByPrimaryKey mode looks
+            // up PK column types for ValueAsObject coercion. NpgSqlSchemaQueries otherwise
+            // folds null to ["public"] in its INFORMATION_SCHEMA filter and rejects anything
+            // outside that schema as "table not found". SQL Server and MySQL drivers ignore
+            // the schemas argument, so this is a Postgres-only behaviour change.
+            driver = DatabaseDriverDispatcher.CreateDriver(
+                connection.FactoryName,
+                connection.ConnectionString,
+                schemas: new[] { targetSchema });
         }
         catch (InvalidOperationException e)
         {

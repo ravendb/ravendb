@@ -406,6 +406,69 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task ClientOperation_ByPrimaryKey_OnNonDefaultSchema_FetchesRow()
+        {
+            // The test-mapping handler used to build the Postgres migrator without passing the
+            // target schema. The two-arg DatabaseDriverDispatcher.CreateDriver overload defaults
+            // schemas: null, which NpgSqlSchemaQueries folds to ["public"] for its
+            // INFORMATION_SCHEMA filter. Then FetchRowsAsync(ByPrimaryKey) calls FindSchema() to
+            // type-coerce the PK string values and looks the target up by (schema, table) — any
+            // table outside `public` was absent from the cached schema and threw
+            // "Table 'shop.items' was not found in the source database". The fix passes the
+            // already-resolved targetSchema into CreateDriver so FindSchema sees the right
+            // schema. Multi-schema Postgres deployments are common in multi-tenant setups —
+            // this is the path Studio hits when an admin clicks "Test" on a non-public table.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+
+            ExecuteNpgSql(connectionString, @"
+                CREATE SCHEMA IF NOT EXISTS shop;
+                CREATE TABLE shop.items (id SERIAL PRIMARY KEY, name VARCHAR(200));
+                INSERT INTO shop.items (id, name) VALUES (1, 'Widget');");
+
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Items",
+                SourceTableSchema = "shop",
+                SourceTableName = "items",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                    new() { Column = "name", Name = "Name" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-non-default-schema",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = connectionString,
+                },
+                SourceTableSchema = "shop",
+                SourceTableName = "items",
+                RowSelector = TestCdcSinkRowSelector.ByPrimaryKey,
+                PrimaryKeyValues = new[] { "1" },
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Equal("Items/1", row.DocumentId);
+            Assert.Contains("\"Name\":\"Widget\"", row.Document);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task ClientOperation_PatchWithSyntaxError_ReturnsStructuredError()
         {
             // A malformed Patch script (Jint compile error) used to bubble through
