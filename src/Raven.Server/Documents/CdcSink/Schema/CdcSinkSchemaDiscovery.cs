@@ -14,6 +14,16 @@ namespace Raven.Server.Documents.CdcSink.Schema
     /// </summary>
     public abstract class CdcSinkSchemaDiscovery
     {
+        // ADO.NET factory names. Kept here so `For`, `IsSupportedFactoryName`, and
+        // `ResolveDefaultSchema` all agree on the canonical strings and any future caller
+        // (e.g. the CDC verify endpoint) can compare against the same identifiers instead
+        // of repeating the literals.
+        internal const string NpgsqlFactory = "Npgsql";
+        internal const string SystemDataSqlClientFactory = "System.Data.SqlClient";
+        internal const string MicrosoftDataSqlClientFactory = "Microsoft.Data.SqlClient";
+        internal const string MySqlDataFactory = "MySql.Data.MySqlClient";
+        internal const string MySqlConnectorFactory = "MySqlConnector.MySqlConnectorFactory";
+
         public abstract Task<CdcSinkSourceSchema> DiscoverAsync(string connectionString, string[] schemas, CancellationToken ct);
 
         /// <summary>
@@ -25,9 +35,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
         {
             return factoryName switch
             {
-                "Npgsql" => new PostgresCdcSinkSchemaDiscovery(),
-                "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => new SqlServerCdcSinkSchemaDiscovery(),
-                "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory" => new MySqlCdcSinkSchemaDiscovery(),
+                NpgsqlFactory => new PostgresCdcSinkSchemaDiscovery(),
+                SystemDataSqlClientFactory or MicrosoftDataSqlClientFactory => new SqlServerCdcSinkSchemaDiscovery(),
+                MySqlDataFactory or MySqlConnectorFactory => new MySqlCdcSinkSchemaDiscovery(),
                 _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
             };
         }
@@ -40,9 +50,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
         /// </summary>
         public static bool IsSupportedFactoryName(string factoryName)
         {
-            return factoryName is "Npgsql"
-                or "System.Data.SqlClient" or "Microsoft.Data.SqlClient"
-                or "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory";
+            return factoryName is NpgsqlFactory
+                or SystemDataSqlClientFactory or MicrosoftDataSqlClientFactory
+                or MySqlDataFactory or MySqlConnectorFactory;
         }
 
         /// <summary>
@@ -58,9 +68,9 @@ namespace Raven.Server.Documents.CdcSink.Schema
         {
             return factoryName switch
             {
-                "Npgsql" => "public",
-                "System.Data.SqlClient" or "Microsoft.Data.SqlClient" => "dbo",
-                "MySql.Data.MySqlClient" or "MySqlConnector.MySqlConnectorFactory"
+                NpgsqlFactory => "public",
+                SystemDataSqlClientFactory or MicrosoftDataSqlClientFactory => "dbo",
+                MySqlDataFactory or MySqlConnectorFactory
                     => new MySqlConnectionStringBuilder(connectionString).Database ?? "mysql",
                 _ => throw new InvalidOperationException(UnsupportedProviderMessage(factoryName)),
             };
@@ -68,7 +78,8 @@ namespace Raven.Server.Documents.CdcSink.Schema
 
         internal static string UnsupportedProviderMessage(string factoryName) =>
             $"CDC sink does not support provider '{factoryName}'. " +
-            "Supported providers: Npgsql (PostgreSQL), System.Data.SqlClient / Microsoft.Data.SqlClient (SQL Server), " +
-            "MySql.Data.MySqlClient / MySqlConnector (MySQL/MariaDB).";
+            $"Supported providers: {NpgsqlFactory} (PostgreSQL), " +
+            $"{SystemDataSqlClientFactory} / {MicrosoftDataSqlClientFactory} (SQL Server), " +
+            $"{MySqlDataFactory} / {MySqlConnectorFactory} (MySQL/MariaDB).";
     }
 }

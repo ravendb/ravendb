@@ -38,6 +38,10 @@ namespace Raven.Server.Documents.CdcSink.Test
         {
             var result = new TestCdcSinkMappingResult();
 
+            // Deliberate one-shot mutation: the caller (CdcSinkHandler) hands us its
+            // request-scoped CdcSinkConfiguration that won't be reused after the response is
+            // written. Flipping TestMode lets downstream Validate() and the dispatcher know
+            // we're in dry-run, without forcing a deep clone of the whole configuration.
             configuration.TestMode = true;
             // CdcSinkConfiguration.Validate(validateConnection: true) requires Initialize() first,
             // which captures the SqlConnectionString. Test mode doesn't run the actual sink, so the
@@ -112,11 +116,13 @@ namespace Raven.Server.Documents.CdcSink.Test
                     runner.DebugOutput ??= new List<string>();
                 }
 
-                // Read transaction is sufficient — the runner mints synthetic Blittables via
-                // context.ReadObject + runner.Translate but never writes them back to storage.
-                // No call to OpenWriteTransaction means we don't contend with concurrent writers
-                // on the same database for what is effectively a preview / dry-run.
-                using (context.OpenReadTransaction())
+                // Open a WRITE transaction so user patches that legitimately call put() / del()
+                // (which the production CDC runner supports — see OriginalDocumentUpdatedOrDeleted
+                // below) don't hit "transaction must be opened in WRITE mode" errors in the
+                // preview. We never call tx.Commit() — disposing the using-block rolls back any
+                // writes the script attempted, preserving the dry-run guarantee. The contention
+                // cost is acceptable for an admin one-shot endpoint.
+                using (var tx = context.OpenWriteTransaction())
                 {
                     foreach (var values in rows)
                     {
@@ -125,6 +131,7 @@ namespace Raven.Server.Documents.CdcSink.Test
                             hasUserScript, runner,
                             isDelete, wouldDelete, ignoreDeletes));
                     }
+                    // Intentionally no tx.Commit() — let Dispose roll back.
                 }
             }
             finally

@@ -38,6 +38,7 @@ public class TestCdcSinkMappingOperation : IMaintenanceOperation<TestCdcSinkMapp
             _request = request ?? throw new ArgumentNullException(nameof(request));
         }
 
+        // POST verb but no server-side state change — allow FastestNode failover.
         public override bool IsReadRequest => true;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

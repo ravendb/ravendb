@@ -192,13 +192,13 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
-        public async Task ClientOperation_RowFetchConnectionFailure_ReturnsGenericErrorWithoutDriverDetails()
+        public async Task ClientOperation_RowFetchConnectionFailure_ReturnsStructuredErrorWithDriverDetails()
         {
             using var store = GetDocumentStore();
 
             // Point at a host that won't resolve so FetchRowsAsync throws inside the handler.
-            // The driver's raw exception text contains the host and internal Npgsql codes; the
-            // response body must echo NEITHER and instead surface the generic operator message.
+            // The admin caller needs the driver's exception text (host / internal code) to
+            // diagnose the source-side problem — surface it directly in the structured Errors.
             var table = new CdcSinkTableConfig
             {
                 CollectionName = "Lecturers",
@@ -236,7 +236,13 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.Empty(result.Results);
             var error = Assert.Single(result.Errors);
             Assert.Contains("Failed to fetch rows from the source database", error);
-            Assert.DoesNotContain("cdc-test-no-such-host", error);
+            // Driver detail must be present — the admin caller needs it to diagnose. The
+            // exact Npgsql wording varies (DNS lookup vs. connection refused vs. timeout
+            // depending on platform), but the chain formatter always surfaces a typed
+            // exception name after the prefix, never an empty tail.
+            var detail = error.Substring(error.IndexOf("source database:") + "source database:".Length).Trim();
+            Assert.True(detail.Length > 0, $"Expected driver detail after the prefix, got '{error}'");
+            Output.WriteLine($"Driver error surfaced to caller: {error}");
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
@@ -515,6 +521,54 @@ namespace SlowTests.Server.Documents.CdcSink
             var row = Assert.Single(result.Results);
             Assert.Equal("Lecturers/1", row.DocumentId);
             Assert.Contains("\"Name\":\"Alice\"", row.Document);
+        }
+
+        [RavenFact(RavenTestCategory.Sinks)]
+        public async Task ClientOperation_MaliciousIdentifierInRequest_RejectedBeforeAnySqlIsRun()
+        {
+            // The handler interpolates SourceTableSchema / SourceTableName / PrimaryKeyColumns
+            // / Columns[].Column into raw SQL via provider QuoteTable / QuoteColumn (the deeper
+            // quoting fix lives in RavenDB-26636). Until that lands, the admin endpoints must
+            // reject identifiers that don't match the standard SQL shape so a malicious or
+            // malformed value can't break out of the quoted context.
+            using var store = GetDocumentStore();
+
+            var table = new CdcSinkTableConfig
+            {
+                CollectionName = "Lecturers",
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers'); DROP TABLE users; --",
+                PrimaryKeyColumns = new List<string> { "id" },
+                Columns = new List<CdcColumnMapping>
+                {
+                    new() { Column = "id", Name = "DbId" },
+                },
+            };
+
+            var request = new TestCdcSinkMappingRequest
+            {
+                Configuration = new CdcSinkConfiguration
+                {
+                    Name = "client-api-bad-identifier",
+                    Tables = new List<CdcSinkTableConfig> { table },
+                },
+                Connection = new SqlConnectionString
+                {
+                    FactoryName = "Npgsql",
+                    ConnectionString = "Host=irrelevant;Database=postgres;User Id=postgres;Password=x",
+                },
+                SourceTableSchema = "public",
+                SourceTableName = "lecturers'); DROP TABLE users; --",
+                RowSelector = TestCdcSinkRowSelector.First,
+                Operation = TestCdcSinkOperation.Upsert,
+                MaxRows = 1,
+            };
+
+            var result = await store.Maintenance.SendAsync(new TestCdcSinkMappingOperation(request));
+
+            Assert.Empty(result.Results);
+            var error = Assert.Single(result.Errors);
+            Assert.Contains("contains invalid characters", error);
         }
 
         [RavenFact(RavenTestCategory.Sinks)]

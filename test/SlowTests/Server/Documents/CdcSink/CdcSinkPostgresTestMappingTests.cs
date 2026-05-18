@@ -318,6 +318,46 @@ namespace SlowTests.Server.Documents.CdcSink
         }
 
         [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+        public async Task PatchCallingPut_RunsUnderWriteTxAndIsRolledBack()
+        {
+            // Production CDC patches can legitimately call put() or del() on other documents.
+            // Test mode used to run under OpenReadTransaction, which the script runner rejects
+            // for those calls — valid patches would surface a per-row "Transaction must be
+            // opened in WRITE mode" error in the preview. Switch to a write tx that we never
+            // commit so the put/del semantics match production while the dry-run guarantee
+            // (no persistent side-effects) is preserved.
+            using var teardown = WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out _, dataSet: null, includeData: false);
+            ExecuteNpgSql(connectionString, @"
+                CREATE TABLE lecturers (id SERIAL PRIMARY KEY, name VARCHAR(200), email VARCHAR(200));
+                INSERT INTO lecturers (id, name, email) VALUES (1, 'Alice', 'alice@example.com');");
+
+            var (db, ctx, _, scope) = await SetupAsync(); using var _scope = scope;
+            var table = BuildLecturersTableConfig();
+            // A side-doc put followed by a marker on `this`. If put() runs, the patch reaches the
+            // marker assignment; if the runner rejects it under a read tx, the patch throws before
+            // the marker is set and result.Results[0].Error is populated.
+            table.Patch = "put('Audit/' + $row.id, { Source: 'cdc-test', Id: $row.id }); this.Marker = 'patched-' + $row.id;";
+            var config = new CdcSinkConfiguration { Name = "test", Tables = new List<CdcSinkTableConfig> { table } };
+
+            var result = await RunAsync(db, ctx, connectionString, config, table,
+                TestCdcSinkRowSelector.First, pkValues: null, TestCdcSinkOperation.Upsert, maxRows: 1);
+
+            Assert.Empty(result.Errors);
+            var row = Assert.Single(result.Results);
+            Assert.Null(row.Error);
+            // Patch ran end-to-end — the marker assignment after put() succeeded.
+            Assert.Contains("\"Marker\":\"patched-1\"", row.Document);
+
+            // Rollback guarantee: the put() call must not have committed to the RavenDB store.
+            using var session = (await GetDatabase(db.Name)).DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext checkCtx);
+            using (checkCtx.OpenReadTransaction())
+            {
+                var audit = db.DocumentsStorage.Get(checkCtx, "Audit/1");
+                Assert.Null(audit);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
         public async Task FetchRowsAsync_ByPrimaryKey_AppliesServerSideMaxRows()
         {
             // BuildSelectByPrimaryKeyQuery used to emit `SELECT * FROM <table> WHERE pk1=@p0 AND ...`

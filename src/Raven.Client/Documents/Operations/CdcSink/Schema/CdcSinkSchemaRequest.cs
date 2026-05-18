@@ -26,6 +26,11 @@ public class CdcSinkSchemaRequest : IDynamicJson
     /// Provider-specific schema filter. Currently only consumed by PostgreSQL (defaults to
     /// <c>["public"]</c> when null/empty).
     /// </summary>
+    /// <remarks>
+    /// Each entry is server-validated against the SQL identifier shape <c>^[A-Za-z_][A-Za-z0-9_]*$</c>.
+    /// Legal-when-quoted Postgres schema names that contain hyphens, dots, or non-ASCII characters
+    /// will be rejected with a structured error; quote those by hand in custom drivers if needed.
+    /// </remarks>
     public string[] Schemas { get; set; }
 
     public DynamicJsonValue ToJson()

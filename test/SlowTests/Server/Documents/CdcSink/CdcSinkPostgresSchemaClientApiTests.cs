@@ -127,9 +127,14 @@ namespace SlowTests.Server.Documents.CdcSink
             Assert.NotNull(result);
             Assert.Empty(result.Tables);
             var error = Assert.Single(result.Errors);
-            // Generic operator-friendly message; must NOT echo the raw driver text (no host name in the response).
+            // Structured response (not HTTP 500) with the driver detail included — the admin
+            // needs the error chain to diagnose the source-side problem. Exact wording varies
+            // by platform, so assert only that the formatter surfaced something non-empty after
+            // the prefix.
             Assert.Contains("Schema discovery against the source database failed", error);
-            Assert.DoesNotContain("cdc-test-no-such-host", error);
+            var detail = error.Substring(error.IndexOf("source database failed:") + "source database failed:".Length).Trim();
+            Assert.True(detail.Length > 0, $"Expected driver detail after the prefix, got '{error}'");
+            Output.WriteLine($"Driver error surfaced to caller: {error}");
         }
     }
 }
