@@ -1,0 +1,181 @@
+name: Claude Code Review
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    if: |
+      github.event.issue.pull_request != null &&
+      contains(github.event.comment.body, '@hugin-review') &&
+      (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER')
+
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+
+    steps:
+      # Mint a custom GitHub App token so the action skips Anthropic's OIDC
+      # exchange (which 401s for some actor/event combinations) and so review
+      # comments are posted as hugin-bot[bot] rather than claude[bot].
+      # See https://github.com/anthropics/claude-code-action/issues/1017
+      # Reject branch-name or tag values for the pinned SHA. If an
+      # admin sets this to "main" instead of a 40-char hex SHA, the
+      # pin becomes a moving target and the tamper-resistance of
+      # the review tree is silently broken.
+      - name: Validate RAVENDB_BOT_REVIEW_SHA is a 40-char hex SHA
+        run: |
+          sha='${{ vars.RAVENDB_BOT_REVIEW_SHA }}'
+          if [[ ! "$sha" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::RAVENDB_BOT_REVIEW_SHA must be a full 40-char hex SHA (got: '$sha'). Refusing to run with a mutable pin."
+            exit 1
+          fi
+
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
+        with:
+          app-id: ${{ secrets.RAVENDB_BOT_APP_ID }}
+          private-key: ${{ secrets.RAVENDB_BOT_APP_PRIVATE_KEY }}
+
+      # Refuse to review a PR that hasn't passed pr-gate. The `if:`
+      # on the job above only checks that a MEMBER/OWNER commented
+      # `@hugin-review` — it does not link the bot to the gate's
+      # verdict. Without this check, a tampered PR that pr-gate
+      # already closed could still be reviewed if a member comments
+      # anyway. The bot's own trust-boundary instructions are
+      # defence-in-depth; the gate is the gate.
+      - name: Require pr-gate to have passed on the PR head SHA
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          head_sha=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid --jq .headRefOid)
+          conclusion=$(gh api "repos/$REPO/commits/$head_sha/check-runs" \
+            --jq '[.check_runs[] | select(.name == "gate")] | sort_by(.completed_at) | last | .conclusion // "missing"')
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::pr-gate has not passed on $head_sha (conclusion: $conclusion). Refusing to run hugin-bot."
+            exit 1
+          fi
+          echo "pr-gate passed on $head_sha; proceeding."
+
+      - name: Checkout repository (PR head — data only)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Nuke any _review/ directory the PR head might ship. An
+      # attacker who commits a fake _review/ tree could otherwise
+      # try to shadow the pinned instructions we are about to
+      # checkout. Belt-and-braces — actions/checkout would
+      # overwrite, but we don't trust filenames the PR controls.
+      - name: Purge any PR-supplied _review/ directory
+        run: rm -rf _review
+
+      # Tamper-resistant review instructions: checked out from a
+      # separate repo at a pinned SHA so an attacker PR cannot edit
+      # the rules hugin-bot follows. The PR head above is data; the
+      # tree below is the only source of instructions. See
+      # https://github.com/ravendb/ravendb-skills/blob/main/raven-ci/README.md
+      - name: Checkout pinned review instructions (raven-ci)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ vars.RAVENDB_BOT_REVIEW_REPO }}
+          ref: ${{ vars.RAVENDB_BOT_REVIEW_SHA }}
+          path: _review
+          fetch-depth: 1
+          persist-credentials: false
+
+      # Belt-and-braces: the previous step is synchronous and either
+      # succeeds or fails the job, so under normal conditions _review/
+      # is already present. This loop covers transient I/O / filesystem
+      # propagation delays. The bot's own hugin-bot.md instructions
+      # also tell the model to wait up to 5 minutes — this step waits
+      # *before* the model is even invoked, so the model sees a
+      # consistent tree or never starts.
+      - name: Verify _review/raven-ci/ is present (retry up to 5 min)
+        run: |
+          set -euo pipefail
+          required=(
+            _review/raven-ci/hugin-bot.md
+            _review/raven-ci/review.md
+            _review/raven-ci/AGENTS.md
+            _review/raven-ci/references/severity.md
+            _review/raven-ci/references/comment-format.md
+          )
+          deadline=$(( $(date +%s) + 300 ))
+          attempt=0
+          while :; do
+            attempt=$((attempt + 1))
+            missing=()
+            for f in "${required[@]}"; do
+              [ -f "$f" ] || missing+=("$f")
+            done
+            if [ "${#missing[@]}" -eq 0 ]; then
+              echo "raven-ci tree present after $attempt attempt(s)."
+              break
+            fi
+            if [ "$(date +%s)" -ge "$deadline" ]; then
+              echo "::error::Pinned raven-ci tree missing after 5 minutes:"
+              for f in "${missing[@]}"; do echo "::error::  - $f"; done
+              echo "::error::Refusing to run hugin-bot without pinned instructions."
+              exit 1
+            fi
+            echo "Attempt $attempt: missing ${#missing[@]} file(s); retrying in 15s..."
+            sleep 15
+          done
+
+      - name: Load hugin-bot prompt
+        id: prompt
+        run: |
+          {
+            echo 'body<<EOF_HUGIN'
+            cat _review/raven-ci/hugin-bot.md
+            echo 'EOF_HUGIN'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@62238ddb33772a079b0a6d8665a1ff3043583067 # v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ steps.app-token.outputs.token }}
+          # Suppress the default "🤖 Generated with Claude Code" footer on
+          # comments and PR descriptions — hugin-bot[bot] is sufficient
+          # attribution. See https://code.claude.com/docs/en/settings#attribution-settings
+          settings: |
+            {
+              "attribution": {
+                "pr": "",
+                "commit": ""
+              }
+            }
+          # Role + workflow instructions come from
+          # _review/raven-ci/hugin-bot.md (see the "Load hugin-bot
+          # prompt" step above); the specific request (PR slug) is
+          # appended last.
+          prompt: |-
+            ${{ steps.prompt.outputs.body }}
+
+            Review pull request ${{ github.repository }}/pull/${{ github.event.issue.number }}.
+          # Allowlist mirrors the code-review plugin's own allowed-tools plus
+          # Read/Grep/Glob/Task/TodoWrite needed by its subagent orchestration.
+          # No Bash escape, no WebFetch, no Edit/Write — code review is read-only.
+          # Model is set via the RAVENDB_BOT_REVIEW_MODEL repository (or org)
+          # variable (e.g. claude-sonnet-4-6, claude-opus-4-7).
+          claude_args: '--max-turns 50 --model ${{ vars.RAVENDB_BOT_REVIEW_MODEL }} --allowedTools "Read,Grep,Glob,Task,TodoWrite,mcp__github_inline_comment__create_inline_comment,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+          # Set the RAVENDB_BOT_REVIEW_SHOW_FULL_OUTPUT repository (or org)
+          # variable to "true" to print Claude's full execution trace to
+          # the workflow log for debugging. Leave unset or set to "false"
+          # for normal runs — the trace can leak source snippets the
+          # agent read while reviewing.
+          show_full_output: ${{ vars.RAVENDB_BOT_REVIEW_SHOW_FULL_OUTPUT }}
+          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
+          # or https://code.claude.com/docs/en/cli-reference for available options

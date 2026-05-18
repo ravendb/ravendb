@@ -1,0 +1,195 @@
+name: PR gate (anti-tamper + pinned-rules check)
+
+# Runs from the BASE branch on every PR open/sync via pull_request_target.
+# The workflow source is trusted (base branch); the PR data is hostile.
+# We deliberately never check out the PR head into the runner — only the
+# diff metadata, which we read via the GitHub API.
+#
+# Outcomes:
+#   1. The pinned raven-ci/ tree is unreachable → fail. Hugin-bot rules
+#      are mandatory infrastructure; if they're broken, nothing merges.
+#   2. The PR modifies a watched review-surface path → close + lock + fail.
+#   3. The PR diff or body contains prompt-injection markers → close +
+#      lock + fail.
+#   4. Otherwise → pass (this becomes the required status check on the
+#      base branch).
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 8
+    steps:
+      # Reject branch-name or tag values. A mutable pin defeats the
+      # whole design — fail loudly rather than silently.
+      - name: Validate RAVENDB_BOT_REVIEW_SHA is a 40-char hex SHA
+        run: |
+          sha='${{ vars.RAVENDB_BOT_REVIEW_SHA }}'
+          if [[ ! "$sha" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::RAVENDB_BOT_REVIEW_SHA must be a full 40-char hex SHA (got: '$sha'). Refusing to run with a mutable pin."
+            exit 1
+          fi
+
+      # Verify the pinned raven-ci/ tree resolves. Failing here is
+      # intentional — if the rules are gone, no PR should pass the gate.
+      - name: Checkout pinned review instructions (raven-ci)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: ${{ vars.RAVENDB_BOT_REVIEW_REPO }}
+          ref: ${{ vars.RAVENDB_BOT_REVIEW_SHA }}
+          path: _review
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify raven-ci layout
+        run: |
+          set -euo pipefail
+          for f in raven-ci/hugin-bot.md raven-ci/review.md \
+                   raven-ci/AGENTS.md \
+                   raven-ci/references/severity.md \
+                   raven-ci/references/comment-format.md; do
+            test -f "_review/$f" || { echo "::error::Missing _review/$f in pinned raven-ci"; exit 1; }
+          done
+
+      - name: Fetch PR metadata
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr view "$PR_NUMBER" --repo "$REPO" \
+            --json body,files,title \
+            > pr.json
+          jq -r '.files[].path' pr.json > changed.txt
+          jq -r '.body // ""'    pr.json > body.txt
+          jq -r '.title // ""'   pr.json > title.txt
+
+      # Block any change to the review-surface paths. These rules are
+      # only authoritative when they live in raven-ci/ — local copies
+      # in this repo are not allowed.
+      - name: Reject changes to watched review-surface paths
+        id: watched
+        run: |
+          set -euo pipefail
+          # Globs that must not be modified by a PR. Edit alongside the
+          # ruleset definition in the org settings.
+          patterns=(
+            '^\.github/'
+            '^AGENTS\.md$'
+            '^CLAUDE\.md$'
+            '^GEMINI\.md$'
+            '(^|/)code-review\.md$'
+            '^_review/'
+          )
+          violations=()
+          while IFS= read -r path; do
+            for p in "${patterns[@]}"; do
+              if echo "$path" | grep -Eq "$p"; then
+                violations+=("$path")
+                break
+              fi
+            done
+          done < changed.txt
+          if [ "${#violations[@]}" -gt 0 ]; then
+            {
+              echo "blocked=true"
+              echo 'reason<<EOF'
+              echo "PR modifies watched review-surface paths. These rules are"
+              echo "pinned in ravendb/ravendb-skills (raven-ci/) and"
+              echo "cannot be changed from a PR. Offending paths:"
+              for v in "${violations[@]}"; do echo "  - $v"; done
+              echo EOF
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Block PRs whose diff, body, or title contains text aimed at the
+      # reviewing agent. The list is intentionally narrow — broad
+      # natural-language patterns false-positive on docs.
+      - name: Scan diff and body for prompt-injection markers
+        id: injection
+        if: steps.watched.outputs.blocked != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr diff "$PR_NUMBER" --repo "$REPO" > diff.patch || true
+          markers=(
+            '<\|im_start\|>'
+            '<\|im_end\|>'
+            '\[INST\]'
+            '\[/INST\]'
+            '### *system'
+            'ignore (all )?previous instructions'
+            'disregard (all )?previous instructions'
+            'you are now '
+            'act as (the |an? )?(reviewer|maintainer|admin)'
+            'new persona:'
+            'system prompt:'
+          )
+          hits=()
+          for src in diff.patch body.txt title.txt; do
+            for m in "${markers[@]}"; do
+              if grep -inE "$m" "$src" >/dev/null 2>&1; then
+                line=$(grep -inE "$m" "$src" | head -1)
+                hits+=("$src: $line")
+                break
+              fi
+            done
+          done
+          if [ "${#hits[@]}" -gt 0 ]; then
+            {
+              echo "blocked=true"
+              echo 'reason<<EOF'
+              echo "PR contains text matching prompt-injection markers."
+              echo "First hit per source:"
+              for h in "${hits[@]}"; do echo "  - $h"; done
+              echo EOF
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "blocked=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Close and lock blocked PR
+        if: steps.watched.outputs.blocked == 'true' || steps.injection.outputs.blocked == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          WATCHED_REASON: ${{ steps.watched.outputs.reason }}
+          INJECTION_REASON: ${{ steps.injection.outputs.reason }}
+        run: |
+          set -euo pipefail
+          {
+            echo "🛑 **pr-gate**: this PR was closed by the review-surface"
+            echo "gate before any reviewer (human or bot) acted on it."
+            echo
+            if [ -n "${WATCHED_REASON:-}" ]; then
+              echo "${WATCHED_REASON}"
+              echo
+            fi
+            if [ -n "${INJECTION_REASON:-}" ]; then
+              echo "${INJECTION_REASON}"
+              echo
+            fi
+            echo "If this was a legitimate change to review infrastructure,"
+            echo "open the PR against \`ravendb/ravendb-skills\` instead"
+            echo "and ask a maintainer to bump \`RAVENDB_BOT_REVIEW_SHA\`."
+          } > comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file comment.md
+          gh pr close   "$PR_NUMBER" --repo "$REPO"
+          gh pr lock    "$PR_NUMBER" --reason "off-topic" || true
+          exit 1
