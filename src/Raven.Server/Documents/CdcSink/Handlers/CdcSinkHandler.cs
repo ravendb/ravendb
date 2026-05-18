@@ -108,6 +108,21 @@ public class CdcSinkHandler : DatabaseRequestHandler
             result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be between 1 and {MaxAllowedTestRows:N0}.");
             return result;
         }
+        // C# enums are int-backed and accept arbitrary numeric values from the JSON body. Reject
+        // out-of-range values here so downstream branches (PK validation block, row-fetch mode
+        // ternary, runner's Delete/Upsert branch) only see defined cases. Without this, an
+        // unknown RowSelector silently fell through to ByPrimaryKey without the PK guard
+        // running, and an unknown Operation silently became Upsert.
+        if (Enum.IsDefined(typeof(TestCdcSinkRowSelector), request.RowSelector) == false)
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.RowSelector)}' value '{(int)request.RowSelector}' is not a valid {nameof(TestCdcSinkRowSelector)}. Allowed values: {string.Join(", ", Enum.GetNames<TestCdcSinkRowSelector>())}.");
+            return result;
+        }
+        if (Enum.IsDefined(typeof(TestCdcSinkOperation), request.Operation) == false)
+        {
+            result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.Operation)}' value '{(int)request.Operation}' is not a valid {nameof(TestCdcSinkOperation)}. Allowed values: {string.Join(", ", Enum.GetNames<TestCdcSinkOperation>())}.");
+            return result;
+        }
         if (request.RowSelector == TestCdcSinkRowSelector.ByPrimaryKey && request.MaxRows > 1)
         {
             result.Errors.Add($"'{nameof(TestCdcSinkMappingRequest.MaxRows)}' must be 1 when '{nameof(TestCdcSinkMappingRequest.RowSelector)}' is '{nameof(TestCdcSinkRowSelector.ByPrimaryKey)}'.");
