@@ -97,11 +97,7 @@ export default function AmazonS3() {
                                             <span className="d-flex gap-1 align-items-center">
                                                 Disable Checksum Validation
                                                 <PopoverWithHoverWrapper
-                                                    message={
-                                                        <>
-                                                            Disables S3 checksum validation for uploads
-                                                        </>
-                                                    }
+                                                    message={<>Disables S3 checksum validation for uploads</>}
                                                 >
                                                     <Icon icon="info" color="info" />
                                                 </PopoverWithHoverWrapper>

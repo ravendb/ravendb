@@ -58,7 +58,9 @@ export function mapS3ToDto(destination: S3Destination): Raven.Client.Documents.O
         !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
 
     const disableChecksumValidation =
-        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.disableChecksumValidation : undefined;
+        !destination.config.isOverrideConfig && destination.isUseCustomHost
+            ? destination.disableChecksumValidation
+            : undefined;
 
     return {
         ...mapBackupSettingsToDto(destination),

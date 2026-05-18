@@ -133,7 +133,7 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 GetBackupConfigurationScript: null,
                 CustomServerUrl: null, // TODO RavenDB-14716
                 ForcePathStyle: false,
-                DisableChecksumValidation: false
+                DisableChecksumValidation: false,
             },
             true,
             isSharded ? index : undefined

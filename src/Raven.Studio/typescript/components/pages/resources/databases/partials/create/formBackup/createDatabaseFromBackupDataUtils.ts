@@ -242,7 +242,7 @@ function getSourceDto(
                     GetBackupConfigurationScript: null,
                     CustomServerUrl: data.isUseCustomHost ? data.customHost : null,
                     ForcePathStyle: data.isUseCustomHost && data.isForcePathStyle,
-                    DisableChecksumValidation: data.isUseCustomHost && data.isDisableChecksumValidation
+                    DisableChecksumValidation: data.isUseCustomHost && data.isDisableChecksumValidation,
                 } satisfies S3Settings,
             };
         }

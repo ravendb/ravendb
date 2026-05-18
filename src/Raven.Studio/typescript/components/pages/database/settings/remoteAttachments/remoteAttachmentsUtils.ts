@@ -148,8 +148,10 @@ const mapS3ToDto = (
         !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.forcePathStyle : undefined;
 
     const disableChecksumValidation =
-        !destination.config.isOverrideConfig && destination.isUseCustomHost ? destination.disableChecksumValidation : undefined;
-    
+        !destination.config.isOverrideConfig && destination.isUseCustomHost
+            ? destination.disableChecksumValidation
+            : undefined;
+
     return {
         ...mapAmazonToDto(destination),
         CustomServerUrl: customServerUrl,
