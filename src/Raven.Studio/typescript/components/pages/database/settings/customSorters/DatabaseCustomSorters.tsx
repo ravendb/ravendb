@@ -118,6 +118,7 @@ export default function DatabaseCustomSorters() {
                     fetchStatus={asyncGetDatabaseSorters.status}
                     reload={asyncGetDatabaseSorters.execute}
                     serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
+                    takenNames={sorters.map((s) => s.name).filter(Boolean)}
                     remove={removeSorter}
                     markAsSaved={markAsSaved}
                 />
