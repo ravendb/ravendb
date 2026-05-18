@@ -38,11 +38,11 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
     const dispatch = useDispatch();
     const { tasksService } = useServices();
 
-    const isFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
+    const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
     const deleteButtonId = useUniqueId("delete");
-    const isDeleteDisabled = connection.usedByTasks?.length > 0 || isFromServerWide;
-    const isEditDisabled = connection.usedByTasks?.length > 0 || isFromServerWide;
+    const isDeleteDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
+    const isEditDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -86,7 +86,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                     {hasWriteAccess && (
                         <ConditionalPopover
                             conditions={{
-                                isActive: isFromServerWide,
+                                isActive: isInheritedFromServerWide,
                                 message: (
                                     <>
                                         This connection string is managed server-wide. To edit or delete it, go to{" "}
@@ -98,12 +98,12 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                 ),
                             }}
                         >
-                            <div className={classNames({ "item-disabled pe-none": isFromServerWide })}>
+                            <div className={classNames({ "item-disabled pe-none": isInheritedFromServerWide })}>
                                 <RichPanelActions>
                                     <ConditionalPopover
                                         conditions={[
                                             {
-                                                isActive: isFromServerWide,
+                                                isActive: isInheritedFromServerWide,
                                                 message: (
                                                     <>
                                                         This connection string is managed server-wide. To edit or delete
@@ -138,7 +138,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                                               )
                                                           )
                                                 }
-                                                disabled={isFromServerWide}
+                                                disabled={isInheritedFromServerWide}
                                             >
                                                 <Icon icon="edit" margin="m-0" />
                                             </Button>
@@ -154,7 +154,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                                             <ButtonWithSpinner
                                                 variant="danger"
                                                 title="Delete connection string"
-                                                disabled={isDeleteDisabled || isFromServerWide}
+                                                disabled={isDeleteDisabled || isInheritedFromServerWide}
                                                 onClick={onDelete}
                                                 icon="trash"
                                                 isSpinning={asyncDelete.loading}
