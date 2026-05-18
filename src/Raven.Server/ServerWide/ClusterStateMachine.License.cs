@@ -202,7 +202,7 @@ public sealed partial class ClusterStateMachine
 
         AssertClusterSizeAndCores(serverStore, newLicenseLimits);
 
-        var emptySubscriptionExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+        var subscriptionExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var databaseName in serverStore.Cluster.GetDatabaseNames(context))
         {
@@ -236,14 +236,11 @@ public sealed partial class ClusterStateMachine
             AssertOlapEtlLicenseLimits(databaseRecord, newLicenseLimits, context);
             AssertDocumentsCompressionLicenseLimits(databaseRecord, newLicenseLimits, context);
 
-            var perDbExclusions = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase)
-            {
-                { databaseRecord.DatabaseName, new List<string>() }
-            };
-            AssertNumberOfSubscriptionsPerDatabaseLimits(newLicenseLimits, items, context, perDbExclusions);
+            subscriptionExclusions[databaseRecord.DatabaseName] = new List<string>();
         }
 
-        AssertNumberOfSubscriptionsPerClusterLimits(newLicenseLimits, items, context, emptySubscriptionExclusions);
+        AssertNumberOfSubscriptionsPerDatabaseLimits(newLicenseLimits, items, context, subscriptionExclusions);
+        AssertNumberOfSubscriptionsPerClusterLimits(newLicenseLimits, items, context, subscriptionExclusions);
     }
 
     private void AssertMultiNodeSharding(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
@@ -364,7 +361,7 @@ public sealed partial class ClusterStateMachine
         }
 
         if (databaseRecord.Revisions.Default != null && databaseRecord.Revisions.Default.Disabled == false)
-            AssertCollectionRevisionLimits("Default", databaseRecord.Revisions.Default, maxRevisionsToKeep, maxRevisionAgeToKeepInDays);
+            AssertCollectionRevisionLimits(collectionName: null, databaseRecord.Revisions.Default, maxRevisionsToKeep, maxRevisionAgeToKeepInDays);
 
         if (databaseRecord.Revisions.Collections == null)
             return;
@@ -380,13 +377,17 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertCollectionRevisionLimits(string collectionName, RevisionsCollectionConfiguration configuration, int? maxRevisionsToKeep, int? maxRevisionAgeToKeepInDays)
     {
+        var scope = collectionName == null
+            ? "for the default revisions configuration"
+            : $"for collection '{collectionName}'";
+
         if (configuration.MinimumRevisionsToKeep != null &&
             maxRevisionsToKeep != null &&
             configuration.MinimumRevisionsToKeep > maxRevisionsToKeep)
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                 $"The defined minimum revisions to keep '{configuration.MinimumRevisionsToKeep}' " +
-                $"for collection '{collectionName}' exceeds the licensed one '{maxRevisionsToKeep}'");
+                $"{scope} exceeds the licensed one '{maxRevisionsToKeep}'");
         }
 
         if (configuration.MinimumRevisionAgeToKeep != null &&
@@ -395,7 +396,7 @@ public sealed partial class ClusterStateMachine
         {
             throw new LicenseLimitException(LimitType.RevisionsConfiguration,
                 $"The defined minimum revisions age to keep '{configuration.MinimumRevisionAgeToKeep}' " +
-                $"for collection '{collectionName}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+                $"{scope} exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
         }
     }
 
@@ -682,7 +683,7 @@ public sealed partial class ClusterStateMachine
         return false;
     }
 
-    private bool AssertNumberOfSubscriptionsPerClusterLimits(
+    private void AssertNumberOfSubscriptionsPerClusterLimits(
         LicenseStatus licenseStatus,
         Table items,
         ClusterOperationContext context,
@@ -690,10 +691,10 @@ public sealed partial class ClusterStateMachine
     {
         var maxSubscriptionsPerCluster = licenseStatus.MaxNumberOfSubscriptionsPerCluster;
         if (maxSubscriptionsPerCluster is not >= 0)
-            return false;
+            return;
 
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
-            return true;
+            return;
 
         var clusterSubscriptionsCounts =
             GetDatabaseNames(context)
@@ -707,8 +708,6 @@ public sealed partial class ClusterStateMachine
         if (clusterSubscriptionsCounts + subscriptionCommandsCount > maxSubscriptionsPerCluster)
             throw new LicenseLimitException(LimitType.Subscriptions,
                 $"The maximum number of subscriptions per cluster cannot exceed the limit of: {maxSubscriptionsPerCluster}");
-
-        return false;
     }
 
     private void AssertSubscriptionRevisionFeatureLimits(LicenseStatus licenseStatus, bool includeRevisions, ClusterOperationContext context)

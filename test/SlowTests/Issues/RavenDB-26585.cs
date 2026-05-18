@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Commercial;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -58,7 +59,11 @@ namespace SlowTests.Issues
                     // Before the fix, restoring even a single subscription threw:
                     //   "The maximum number of subscriptions per cluster cannot exceed the limit of: 15"
                     // because of the inverted `>` check. After the fix this should succeed.
-                    RunRestore(store, backupPath);
+                    using (RunRestore(store, backupPath, out var restoredDatabase))
+                    {
+                        var subscriptions = await store.Subscriptions.GetSubscriptionsAsync(0, 10, database: restoredDatabase);
+                        Assert.Contains(subscriptions, s => s.SubscriptionName == "Sub1");
+                    }
                 }
             }
             finally
@@ -229,7 +234,11 @@ namespace SlowTests.Issues
                 {
                     await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
 
-                    RunRestore(store, backupPath);
+                    using (RunRestore(store, backupPath, out var restoredDatabase))
+                    {
+                        var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(restoredDatabase));
+                        Assert.Contains(record.QueueSinks, x => x.Name == "DisabledQueueSink");
+                    }
                 }
             }
             finally
@@ -309,6 +318,8 @@ namespace SlowTests.Issues
                     var store = GetDocumentStore();
                     stores.Add(store);
 
+                    await LicenseHelper.DisableRevisionCompression(Server, store);
+
                     await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions
                     {
                         Name = "Sub_a",
@@ -319,7 +330,6 @@ namespace SlowTests.Issues
                         Name = "Sub_b",
                         Query = "from Users"
                     });
-                    await LicenseHelper.DisableRevisionCompression(Server, store);
                 }
 
                 await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.Subscriptions);
@@ -344,7 +354,7 @@ namespace SlowTests.Issues
                 KafkaConnectionSettings = new KafkaConnectionSettings { BootstrapServers = "localhost:9092" }
             };
             var putCs = await store.Maintenance.SendAsync(new PutConnectionStringOperation<QueueConnectionString>(connectionString));
-            Assert.NotNull(putCs.RaftCommandIndex);
+            Assert.True(putCs.RaftCommandIndex > 0);
 
             var configuration = new QueueSinkConfiguration
             {
@@ -367,15 +377,18 @@ namespace SlowTests.Issues
             Assert.NotEqual(0, addResult.TaskId);
         }
 
-        private void RunRestore(DocumentStore store, string backupPath)
+        private IDisposable RunRestore(DocumentStore store, string backupPath) => RunRestore(store, backupPath, out _);
+
+        private IDisposable RunRestore(DocumentStore store, string backupPath, out string restoredDatabase)
         {
+            restoredDatabase = store.Database + "_restored";
             var configuration = new RestoreBackupConfiguration
             {
-                DatabaseName = store.Database + "_restored",
+                DatabaseName = restoredDatabase,
                 BackupLocation = Directory.GetDirectories(backupPath).First()
             };
 
-            Backup.RestoreDatabase(store, configuration);
+            return Backup.RestoreDatabase(store, configuration);
         }
 
         private static async Task RunBackup(DocumentStore store, string backupPath)
