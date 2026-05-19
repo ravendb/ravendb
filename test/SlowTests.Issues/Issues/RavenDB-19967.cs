@@ -305,7 +305,10 @@ namespace SlowTests.Issues
         [InlineData(EtlType.Olap)]
         [InlineData(EtlType.ElasticSearch)]
         [InlineData(EtlType.Queue)]
-        [InlineData(EtlType.Snowflake)]
+        [InlineData(EtlType.Snowflake,
+            Skip = "Snowflake is not configured in this environment",
+            SkipType = typeof(SnowflakeHelper),
+            SkipUnless = nameof(SnowflakeHelper.IsAvailable))]
         [InlineData(EtlType.EmbeddingsGeneration)]
         //[InlineData(EtlType.GenAi)] not relevant since GenAi doesn't handle deletions
         public async Task TombstoneCleaningAfterEtlLoaderDisabled(EtlType etlType)
