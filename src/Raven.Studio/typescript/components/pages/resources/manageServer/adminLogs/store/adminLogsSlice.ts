@@ -7,7 +7,7 @@ import { logLevelRelevances } from "components/utils/common";
 
 export interface AdminLogsMessage {
     Date: string;
-    NodeTag: string;
+    NodeTag?: string;
     Level: Uppercase<Sparrow.Logging.LogLevel>;
     ThreadID: string;
     Resource: string;

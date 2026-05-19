@@ -88,7 +88,7 @@ export default function AdminLogsVirtualList(props: { availableHeightInPx: numbe
                                         />
                                     </div>
                                     <span className="text-truncate">
-                                        {log.Date} | {log.NodeTag} | {log.Level} | {log.Resource} | {log.Component} | {log.Message}
+                                        {log.Date} | {log.NodeTag ?? "?"} | {log.Level} | {log.Resource} | {log.Component} | {log.Message}
                                     </span>
                                 </div>
                                 {log._meta.isExpanded && (
