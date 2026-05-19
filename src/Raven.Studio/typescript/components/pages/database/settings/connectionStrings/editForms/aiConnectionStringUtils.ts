@@ -7,7 +7,10 @@ import _ from "lodash";
 
 type AiConnectionString = Raven.Client.Documents.Operations.AI.AiConnectionString;
 type AiConnectorType = Raven.Client.Documents.Operations.AI.AiConnectorType;
-type AiConnectionSetting = Exclude<keyof AiConnectionString, "Type" | "Identifier" | "ModelType" | "Name">;
+type AiConnectionSetting = Exclude<
+    keyof AiConnectionString,
+    "Type" | "Identifier" | "ModelType" | "Name" | "UsedByTasks"
+>;
 
 const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
     const mapping: Record<AiConnectionSetting, AiConnectorType> = {

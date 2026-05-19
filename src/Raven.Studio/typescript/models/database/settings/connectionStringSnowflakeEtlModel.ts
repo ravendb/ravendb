@@ -58,12 +58,14 @@ class connectionStringSnowflakeEtlModel extends connectionStringModel {
         return new connectionStringSnowflakeEtlModel({
             Type: "Snowflake",
             Name: "",
-            ConnectionString: ""
+            ConnectionString: "",
+            UsedByTasks: []
         }, true, []);
     }
     
     toDto(): Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString {
         return {
+            UsedByTasks: [],
             Type: "Snowflake",
             Name: this.connectionStringName(),
             ConnectionString: this.connectionString()

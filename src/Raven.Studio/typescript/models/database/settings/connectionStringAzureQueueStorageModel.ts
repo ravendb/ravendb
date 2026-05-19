@@ -223,6 +223,7 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "AzureQueueStorage",
             Name: "",
+            UsedByTasks: [],
 
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,
@@ -254,6 +255,7 @@ class connectionStringAzureQueueStorageModel extends connectionStringModel {
         return {
             Type: "Queue",
             BrokerType: "AzureQueueStorage",
+            UsedByTasks: [],
             Name: this.connectionStringName(),
             RabbitMqConnectionSettings: null,
             KafkaConnectionSettings: null,

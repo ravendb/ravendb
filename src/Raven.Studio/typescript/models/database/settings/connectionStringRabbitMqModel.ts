@@ -49,7 +49,8 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "RabbitMq",
             Name: "",
-            
+            UsedByTasks: [],
+
             RabbitMqConnectionSettings: {
                 ConnectionString: ""
             },
@@ -66,7 +67,8 @@ class connectionStringRabbitMqModel extends connectionStringModel {
             Type: "Queue",
             BrokerType: "RabbitMq",
             Name: this.connectionStringName(),
-            
+            UsedByTasks: [],
+
             RabbitMqConnectionSettings: {
                 ConnectionString: this.rabbitMqConnectionString()
             },

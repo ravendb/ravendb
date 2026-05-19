@@ -3,6 +3,7 @@ import shardedDatabase from "models/resources/shardedDatabase";
 import document from "models/database/documents/document";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { RevisionsPreviewResultItem } from "commands/database/documents/getRevisionsPreviewCommand";
+import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import DetailedDatabaseStatistics = Raven.Client.Documents.Operations.DetailedDatabaseStatistics;
 import EssentialDatabaseStatistics = Raven.Client.Documents.Operations.EssentialDatabaseStatistics;
 import StudioDatabaseInfo = Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabases.StudioDatabaseInfo;
@@ -15,7 +16,6 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
-import { ServerWideConnectionStringDto } from "components/pages/database/settings/connectionStrings/store/connectionStringsMapsFromDto";
 import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 
@@ -444,6 +444,7 @@ export class DatabasesStubs {
         return {
             RavenConnectionStrings: {
                 "raven-name (used by task)": {
+                    UsedByTasks: [],
                     Type: "Raven",
                     Name: "raven-name (used by task)",
                     Database: "some-db",
@@ -452,6 +453,7 @@ export class DatabasesStubs {
             },
             SqlConnectionStrings: {
                 "sql-name": {
+                    UsedByTasks: [],
                     Type: "Sql",
                     Name: "sql-name",
                     ConnectionString: "some-connection-string",
@@ -460,6 +462,7 @@ export class DatabasesStubs {
             },
             SnowflakeConnectionStrings: {
                 "snowflake-name": {
+                    UsedByTasks: [],
                     Type: "Snowflake",
                     Name: "snowflake-name",
                     ConnectionString: "some-snowflake-connection-string",
@@ -467,6 +470,7 @@ export class DatabasesStubs {
             },
             OlapConnectionStrings: {
                 "olap-name": {
+                    UsedByTasks: [],
                     Type: "Olap",
                     Name: "olap-name",
                     LocalSettings: {
@@ -483,6 +487,7 @@ export class DatabasesStubs {
             },
             ElasticSearchConnectionStrings: {
                 "elasticsearch-name": {
+                    UsedByTasks: [],
                     Type: "ElasticSearch",
                     Name: "elasticsearch-name",
                     Nodes: ["http://test"],
@@ -496,6 +501,7 @@ export class DatabasesStubs {
             },
             QueueConnectionStrings: {
                 "kafka-name": {
+                    UsedByTasks: [],
                     Type: "Queue",
                     Name: "kafka-name",
                     BrokerType: "Kafka",
@@ -510,6 +516,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "rabbitmq-name": {
+                    UsedByTasks: [],
                     Type: "Queue",
                     Name: "rabbitmq-name",
                     BrokerType: "RabbitMq",
@@ -522,6 +529,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-queue-storage-name": {
+                    UsedByTasks: [],
                     Type: "Queue",
                     Name: "azure-queue-storage-name",
                     BrokerType: "AzureQueueStorage",
@@ -536,6 +544,7 @@ export class DatabasesStubs {
                     AzureServiceBusConnectionSettings: null,
                 },
                 "azure-sqs-name": {
+                    UsedByTasks: [],
                     Type: "Queue",
                     Name: "azure-sqs-name",
                     BrokerType: "AmazonSqs",
@@ -571,6 +580,7 @@ export class DatabasesStubs {
             AiConnectionStrings: {
                 "ai-name": {
                     Type: "Ai",
+                    UsedByTasks: [],
                     Name: "ai-name",
                     Identifier: "some-identifier",
                     ModelType: "TextEmbeddings",
@@ -590,6 +600,7 @@ export class DatabasesStubs {
                 },
                 "ai-name-gen-ai": {
                     Type: "Ai",
+                    UsedByTasks: [],
                     Name: "ai-name-gen-ai",
                     Identifier: "some-identifier",
                     ModelType: "Chat",
@@ -615,6 +626,7 @@ export class DatabasesStubs {
         return [
             {
                 Type: "Raven",
+                UsedByTasks: [],
                 Name: "sw-raven-name",
                 Database: "some-db",
                 TopologyDiscoveryUrls: ["http://test"],
@@ -622,6 +634,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Sql",
+                UsedByTasks: [],
                 Name: "sw-sql-name",
                 ConnectionString: "some-connection-string",
                 FactoryName: "System.Data.SqlClient",
@@ -629,6 +642,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Olap",
+                UsedByTasks: [],
                 Name: "sw-olap-name",
                 LocalSettings: {
                     Disabled: false,
@@ -644,6 +658,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "ElasticSearch",
+                UsedByTasks: [],
                 Name: "sw-elasticsearch-name",
                 Nodes: ["http://test"],
                 EnableCompatibilityMode: false,
@@ -656,6 +671,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
+                UsedByTasks: [],
                 Name: "sw-kafka-name",
                 BrokerType: "Kafka",
                 KafkaConnectionSettings: {
@@ -670,6 +686,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
+                UsedByTasks: [],
                 Name: "sw-rabbitmq-name",
                 BrokerType: "RabbitMq",
                 KafkaConnectionSettings: null,
@@ -682,12 +699,14 @@ export class DatabasesStubs {
             },
             {
                 Type: "Snowflake",
+                UsedByTasks: [],
                 Name: "sw-snowflake-name",
                 ConnectionString: "some-snowflake-connection-string",
                 ExcludedDatabases: [],
             },
             {
                 Type: "Queue",
+                UsedByTasks: [],
                 Name: "sw-azure-queue-storage-name",
                 BrokerType: "AzureQueueStorage",
                 KafkaConnectionSettings: null,
@@ -702,6 +721,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Queue",
+                UsedByTasks: [],
                 Name: "sw-amazon-sqs-name",
                 BrokerType: "AmazonSqs",
                 KafkaConnectionSettings: null,
@@ -719,6 +739,7 @@ export class DatabasesStubs {
             },
             {
                 Type: "Ai",
+                UsedByTasks: [],
                 Name: "sw-ai-name",
                 Identifier: "some-identifier",
                 ModelType: "TextEmbeddings",

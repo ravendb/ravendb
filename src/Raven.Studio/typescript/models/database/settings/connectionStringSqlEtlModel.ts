@@ -93,12 +93,14 @@ class connectionStringSqlEtlModel extends connectionStringModel {
             Type: "Sql",
             FactoryName: null,
             Name: "",
+            UsedByTasks: [],
             ConnectionString: ""
         }, true, []);
     }
     
     toDto(): Raven.Client.Documents.Operations.ETL.SQL.SqlConnectionString {
         return {
+            UsedByTasks: [],
             Type: "Sql",
             Name: this.connectionStringName(),
             FactoryName: this.factoryName(),
