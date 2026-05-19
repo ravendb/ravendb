@@ -23,6 +23,7 @@ import {
 } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Ai",
@@ -143,12 +144,18 @@ function ServerWideConnectionStringsBody() {
                             <div key={type} className="mb-4 connection-strings-panels">
                                 <HrHeader
                                     right={
-                                        hasClusterAdminAccess && (
+                                        <ConditionalPopover
+                                            conditions={{
+                                                isActive: !hasClusterAdminAccess,
+                                                message: getAccessRequiredMessage("ClusterAdmin"),
+                                            }}
+                                        >
                                             <Button
                                                 variant="info"
                                                 size="sm"
                                                 className="rounded-pill"
                                                 title="Add new connection string"
+                                                disabled={!hasClusterAdminAccess}
                                                 onClick={() =>
                                                     dispatch(
                                                         connectionStringsActions.editConnectionModalOpened({
@@ -160,7 +167,7 @@ function ServerWideConnectionStringsBody() {
                                                 <Icon icon="plus" />
                                                 Add new
                                             </Button>
-                                        )
+                                        </ConditionalPopover>
                                     }
                                 >
                                     <Icon icon={getIcon(type)} />

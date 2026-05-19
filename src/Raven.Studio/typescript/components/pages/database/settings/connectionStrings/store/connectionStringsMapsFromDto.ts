@@ -21,6 +21,7 @@ import OlapConnectionStringDto = Raven.Client.Documents.Operations.ETL.OLAP.Olap
 import QueueConnectionStringDto = Raven.Client.Documents.Operations.ETL.Queue.QueueConnectionString;
 import RavenConnectionStringDto = Raven.Client.Documents.Operations.ETL.RavenConnectionString;
 import { mapDestinationsFromDto } from "components/common/formDestinations/utils/formDestinationsMapsFromDto";
+import assertUnreachable from "components/utils/assertUnreachable";
 
 type SqlConnectionStringDto = SqlConnectionString;
 type SnowflakeConnectionStringDto = Raven.Client.Documents.Operations.ETL.Snowflake.SnowflakeConnectionString;
@@ -37,7 +38,7 @@ function mapRavenFromSingleDto(
         database: d.Database,
         topologyDiscoveryUrls: d.TopologyDiscoveryUrls.map((url) => ({ url })),
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies RavenConnection;
 }
 
@@ -52,7 +53,7 @@ function mapSqlFromSingleDto(
         connectionString: d.ConnectionString,
         factoryName: d.FactoryName,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies SqlConnection;
 }
 
@@ -66,7 +67,7 @@ function mapSnowflakeFromSingleDto(
         name: d.Name,
         connectionString: d.ConnectionString,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies SnowflakeConnection;
 }
 
@@ -108,7 +109,7 @@ function mapOlapFromSingleDto(
         type: "Olap",
         name: d.Name,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
         ...mapDestinationsFromDto(_.omit(d, "Type", "Name")),
     } satisfies OlapConnection;
 }
@@ -162,7 +163,7 @@ function mapElasticSearchFromSingleDto(
         certificatesBase64: d.Authentication?.Certificate?.CertificatesBase64,
         nodes: d.Nodes.map((url) => ({ url })),
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies ElasticSearchConnection;
 }
 
@@ -192,7 +193,7 @@ function mapKafkaFromSingleDto(
         })),
         isUseRavenCertificate: d.KafkaConnectionSettings.UseRavenCertificate,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies KafkaConnection;
 }
 
@@ -206,7 +207,7 @@ function mapRabbitMqFromSingleDto(
         name: d.Name,
         connectionString: d.RabbitMqConnectionSettings.ConnectionString,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies RabbitMqConnection;
 }
 
@@ -274,7 +275,7 @@ function mapAzureQueueStorageFromSingleDto(
             },
         },
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies AzureQueueStorageConnection;
 }
 
@@ -296,7 +297,7 @@ function mapAmazonSqsFromSingleDto(
             },
         },
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
     } satisfies AmazonSqsConnection;
 }
 
@@ -422,7 +423,7 @@ function mapAiFromSingleDto(
         type: "Ai",
         name: d.Name,
         usedByTasks,
-        ...(excludedDatabases !== undefined && { excludedDatabases }),
+        excludedDatabases,
         identifier: d.Identifier,
         connectorType: getAiConnectorType(d),
         modelType: d.ModelType,
@@ -590,6 +591,10 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
                     case "AmazonSqs":
                         mapped.AmazonSqs.push(mapAmazonSqsFromSingleDto(d, usedByTasks, excludedDatabases));
                         break;
+                    case "None":
+                        break;
+                    default:
+                        assertUnreachable(d.BrokerType);
                 }
                 break;
             }
@@ -598,6 +603,10 @@ export function mapServerWideConnectionsFromDto(results: ServerWideConnectionStr
                 mapped.Ai.push(mapAiFromSingleDto(d, usedByTasks, excludedDatabases));
                 break;
             }
+            case "None":
+                break;
+            default:
+                assertUnreachable(dto.Type);
         }
     }
 
