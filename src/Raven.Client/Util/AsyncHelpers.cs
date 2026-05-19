@@ -101,6 +101,11 @@ namespace Raven.Client.Util
             return RunSyncCore(task, oldContext, sw);
         }
 
+        /// <remarks>
+        /// If <paramref name="task"/> throws <see cref="OperationCanceledException"/>, <see cref="HandleException"/> translates it
+        /// into a <see cref="TimeoutException"/>. Callers that need to distinguish cancellation from timeout must catch
+        /// <see cref="TimeoutException"/> and re-check their cancellation token.
+        /// </remarks>
         internal static T RunSyncWithSynchronization<T>(Func<Task<T>> task)
         {
             return RunSyncCore(task, SynchronizationContext.Current, Stopwatch.StartNew());

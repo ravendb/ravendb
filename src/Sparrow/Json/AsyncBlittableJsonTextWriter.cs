@@ -15,7 +15,7 @@ namespace Sparrow.Json
         private readonly MemoryStream _innerStream;
         private readonly bool _continueOnCapturedContext;
 
-        internal static AsyncLocal<bool> CaptureContextOnAwait = new();
+        internal static readonly AsyncLocal<bool> CaptureContextOnAwait = new();
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {

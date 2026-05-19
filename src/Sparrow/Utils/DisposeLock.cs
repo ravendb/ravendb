@@ -44,7 +44,7 @@ namespace Sparrow.Utils
             return disposable;
         }
 
-        public async ValueTask<IDisposable> EnsureNotDisposedAsync(bool continueOnCapturedContext)
+        public async ValueTask<IDisposable> EnsureNotDisposedAsync(bool continueOnCapturedContext = false)
         {
             IDisposable disposable = null;
             try

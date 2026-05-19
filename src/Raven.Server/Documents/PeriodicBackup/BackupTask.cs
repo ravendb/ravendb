@@ -843,11 +843,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
                     finally
                     {
+                        AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = prevWriterCaptureContextOnAwait;
+
                         if (options.CompressionAlgorithm == ExportCompressionAlgorithm.Zstd)
-                        {
-                            AsyncBlittableJsonTextWriter.CaptureContextOnAwait.Value = prevWriterCaptureContextOnAwait;
                             ZstdStream.CaptureContextOnAwait.Value = prevZstdCaptureContextOnAwait;
-                        }
                     }
 
                     FlushToDisk(outputStream);
