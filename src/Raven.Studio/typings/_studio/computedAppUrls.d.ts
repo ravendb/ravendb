@@ -69,6 +69,7 @@ interface computedAppUrls {
     editAmazonSqsEtlTaskUrl: KnockoutComputed<string>;
     editKafkaSinkTaskUrl: KnockoutComputed<string>;
     editRabbitMqSinkTaskUrl: KnockoutComputed<string>;
+    editAzureServiceBusSinkTaskUrl: KnockoutComputed<string>;
     editEmbeddingsGenerationTaskUrl: KnockoutComputed<string>;
     editGenAiTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;

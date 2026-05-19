@@ -12,7 +12,6 @@ import { MultiCheckboxToggle } from "components/common/toggles/MultiCheckboxTogg
 import IconName from "typings/server/icons";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useEventsCollector } from "hooks/useEventsCollector";
 import LicenseRestrictedBadge, { LicenseBadgeText } from "components/common/LicenseRestrictedBadge";
 import { useNewOngoingTasks } from "components/pages/database/tasks/shared/shared";
@@ -21,7 +20,7 @@ import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongo
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
+import { DatabaseAccessPopover } from "components/common/DatabaseAccessPopover";
 
 interface AddNewOngoingTaskProps {
     isAiOnly: boolean;
@@ -185,13 +184,10 @@ function TaskItem({
     const isDisabled = isShardingNotSupported || !canHandleOperation || !!customDisabledReason;
 
     return (
-        <ConditionalPopover
+        <DatabaseAccessPopover
             className="w-100 h-100"
+            accessRequired={accessRequired}
             conditions={[
-                {
-                    isActive: !canHandleOperation,
-                    message: getDatabaseAccessRequiredMessage(accessRequired),
-                },
                 {
                     isActive: isShardingNotSupported,
                     message: "Sharding is not supported for this task",
@@ -233,6 +229,6 @@ function TaskItem({
                     />
                 )}
             </a>
-        </ConditionalPopover>
+        </DatabaseAccessPopover>
     );
 }
