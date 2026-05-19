@@ -282,7 +282,7 @@ namespace Raven.Server.Web.System
                             && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
-                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
+                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord, rawDatabaseRecord.Settings);
                         }
                     }
                 }
@@ -344,12 +344,12 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord)
+        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, string> settings)
         {
-            if (Server.ServerStore.Cluster.DatabaseExists(databaseRecord.DatabaseName))
+            if (Server.ServerStore.Cluster.DatabaseExists(databaseName))
                 return;
 
-            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
+            var databaseConfiguration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, databaseName, settings);
             var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
             if (databaseConfiguration.Indexing.RunInMemory ||
                 (Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false) && Directory.Exists(indexesPath) == false)
