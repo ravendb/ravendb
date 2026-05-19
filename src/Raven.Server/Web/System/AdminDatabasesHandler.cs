@@ -53,6 +53,7 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Util.Settings;
+using static Lucene.Net.Documents.Field;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
@@ -277,7 +278,8 @@ namespace Raven.Server.Web.System
                 {
                     foreach (var rawDatabaseRecord in raw.AsShardsOrNormal())
                     {
-                        if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
+                        if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false
+                            && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
                                 RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
@@ -344,6 +346,9 @@ namespace Raven.Server.Web.System
 
         private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord)
         {
+            if (Server.ServerStore.Cluster.DatabaseExists(databaseRecord.DatabaseName))
+                return;
+
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
             var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
             if (databaseConfiguration.Indexing.RunInMemory ||
