@@ -106,7 +106,7 @@ internal static class QueueEtlTestConnectionHelpers
         }
         catch (Exception ex)
         {
-            await WriteErrorAsync(requestHandler, ex.ToString());
+            await WriteErrorAsync(requestHandler, ex);
         }
     }
 
@@ -125,7 +125,7 @@ internal static class QueueEtlTestConnectionHelpers
         }
         catch (Exception ex)
         {
-            await WriteErrorAsync(requestHandler, ex.ToString());
+            await WriteErrorAsync(requestHandler, ex);
         }
     }
 
@@ -154,7 +154,7 @@ internal static class QueueEtlTestConnectionHelpers
         }
         catch (Exception ex)
         {
-            await WriteErrorAsync(requestHandler, ex.ToString());
+            await WriteErrorAsync(requestHandler, ex);
         }
     }
 
@@ -168,8 +168,10 @@ internal static class QueueEtlTestConnectionHelpers
         }
     }
 
-    private static async Task WriteErrorAsync(RequestHandler requestHandler, string errorMessage)
+    private static async Task WriteErrorAsync(RequestHandler requestHandler, Exception exception)
     {
+        var errorJson = JsonConvert.SerializeObject(new { Message = exception.Message, Error = exception.ToString() });
+
         using (requestHandler.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         await using (var writer = new AsyncBlittableJsonTextWriter(context, requestHandler.ResponseBodyStream()))
         {
@@ -177,7 +179,7 @@ internal static class QueueEtlTestConnectionHelpers
                 new DynamicJsonValue
                 {
                     [nameof(NodeConnectionTestResult.Success)] = false,
-                    [nameof(NodeConnectionTestResult.Error)] = errorMessage
+                    [nameof(NodeConnectionTestResult.Error)] = errorJson
                 });
         }
     }
