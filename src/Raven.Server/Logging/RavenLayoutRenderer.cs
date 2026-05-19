@@ -6,14 +6,25 @@ using Raven.Server.Rachis;
 
 namespace Raven.Server.Logging;
 
-[LayoutRenderer("nodeTag")]
+[LayoutRenderer("rvn")]
 [ThreadAgnostic]
-internal sealed class NodeTagLayoutRenderer : LayoutRenderer
+internal sealed class RvnLayoutRenderer : LayoutRenderer
 {
-    public static volatile string NodeTag;
+    internal static volatile string NodeTag;
+
+    [DefaultParameter]
+    public string Item { get; set; }
+
+    public string Default { get; set; }
 
     protected override void Append(StringBuilder builder, LogEventInfo logEvent)
     {
-        builder.Append(NodeTag ?? RachisConsensus.InitialTag);
+        builder.Append(Resolve(Item) ?? Default ?? string.Empty);
     }
+
+    private static string Resolve(string item) => item switch
+    {
+        "NodeTag" => NodeTag ?? RachisConsensus.InitialTag,
+        _ => null
+    };
 }

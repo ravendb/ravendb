@@ -105,7 +105,7 @@ internal static class RavenLogManagerServerExtensions
 
     private static bool RegisterRenderers()
     {
-        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<NodeTagLayoutRenderer>("nodeTag"));
+        LogManager.Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer<RvnLayoutRenderer>("rvn"));
         return true;
     }
 
