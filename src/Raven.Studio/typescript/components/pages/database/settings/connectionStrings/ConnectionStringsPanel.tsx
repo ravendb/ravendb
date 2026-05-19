@@ -22,7 +22,6 @@ import useUniqueId from "components/hooks/useUniqueId";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import copyToClipboard from "common/copyToClipboard";
-import classNames from "classnames";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { serverWideConnectionStringPrefix } from "./connectionStringsUtils";
 
@@ -40,7 +39,6 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
 
     const isInheritedFromServerWide = !isServerWide && connection.name?.startsWith(serverWideConnectionStringPrefix);
 
-    const deleteButtonId = useUniqueId("delete");
     const isDeleteDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
     const isEditDisabled = connection.usedByTasks?.length > 0 || isInheritedFromServerWide;
 
@@ -84,86 +82,70 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                         <RichPanelName>{connection.name}</RichPanelName>
                     </RichPanelInfo>
                     {hasWriteAccess && (
-                        <ConditionalPopover
-                            conditions={{
-                                isActive: isInheritedFromServerWide,
-                                message: (
-                                    <>
-                                        This connection string is managed server-wide. To edit or delete it, go to{" "}
-                                        <a href={appUrl.forServerwideConnectionStrings()}>
-                                            Server-Wide Connection Strings
-                                        </a>
-                                        .
-                                    </>
-                                ),
-                            }}
-                        >
-                            <div className={classNames({ "item-disabled pe-none": isInheritedFromServerWide })}>
-                                <RichPanelActions>
-                                    <ConditionalPopover
-                                        conditions={[
-                                            {
-                                                isActive: isInheritedFromServerWide,
-                                                message: (
-                                                    <>
-                                                        This connection string is managed server-wide. To edit or delete
-                                                        it, go to{" "}
-                                                        <a href={appUrl.forServerwideConnectionStrings()}>
-                                                            Server-Wide Connection Strings
-                                                        </a>
-                                                        .
-                                                    </>
-                                                ),
-                                            },
-                                            {
-                                                isActive: isEditDisabled,
-                                                message: "Connection string is being used by an ongoing task",
-                                            },
-                                        ]}
-                                    >
-                                        <div>
-                                            <Button
-                                                variant="secondary"
-                                                title="Edit connection string"
-                                                onClick={() =>
-                                                    isServerWide
-                                                        ? dispatch(
-                                                              connectionStringsActions.serverWideEditConnectionOpened(
-                                                                  connection
-                                                              )
-                                                          )
-                                                        : dispatch(
-                                                              connectionStringsActions.editConnectionModalOpened(
-                                                                  connection
-                                                              )
-                                                          )
-                                                }
-                                                disabled={isInheritedFromServerWide}
-                                            >
-                                                <Icon icon="edit" margin="m-0" />
-                                            </Button>
-                                        </div>
-                                    </ConditionalPopover>
-                                    <ConditionalPopover
-                                        conditions={{
-                                            isActive: isDeleteDisabled,
-                                            message: "Connection string is being used by an ongoing task",
-                                        }}
-                                    >
-                                        <div id={deleteButtonId}>
-                                            <ButtonWithSpinner
-                                                variant="danger"
-                                                title="Delete connection string"
-                                                disabled={isDeleteDisabled || isInheritedFromServerWide}
-                                                onClick={onDelete}
-                                                icon="trash"
-                                                isSpinning={asyncDelete.loading}
-                                            />
-                                        </div>
-                                    </ConditionalPopover>
-                                </RichPanelActions>
-                            </div>
-                        </ConditionalPopover>
+                        <RichPanelActions>
+                            <ConditionalPopover
+                                conditions={[
+                                    {
+                                        isActive: isInheritedFromServerWide,
+                                        message: (
+                                            <>
+                                                This connection string is managed server-wide. To edit or delete it, go
+                                                to{" "}
+                                                <a href={appUrl.forServerwideConnectionStrings()}>
+                                                    Server-Wide Connection Strings
+                                                </a>
+                                                .
+                                            </>
+                                        ),
+                                    },
+                                    {
+                                        isActive: isEditDisabled,
+                                        message: "Connection string is being used by an ongoing task",
+                                    },
+                                ]}
+                            >
+                                <Button
+                                    variant="secondary"
+                                    title="Edit connection string"
+                                    onClick={() =>
+                                        dispatch(connectionStringsActions.editConnectionModalOpened(connection))
+                                    }
+                                    disabled={isEditDisabled}
+                                >
+                                    <Icon icon="edit" margin="m-0" />
+                                </Button>
+                            </ConditionalPopover>
+                            <ConditionalPopover
+                                conditions={[
+                                    {
+                                        isActive: isInheritedFromServerWide,
+                                        message: (
+                                            <>
+                                                This connection string is managed server-wide. To edit or delete it, go
+                                                to{" "}
+                                                <a href={appUrl.forServerwideConnectionStrings()}>
+                                                    Server-Wide Connection Strings
+                                                </a>
+                                                .
+                                            </>
+                                        ),
+                                    },
+                                    {
+                                        isActive: isDeleteDisabled,
+                                        message: "Connection string is being used by an ongoing task",
+                                    },
+                                ]}
+                            >
+                                <ButtonWithSpinner
+                                    variant="danger"
+                                    title="Delete connection string"
+                                    disabled={isDeleteDisabled || isInheritedFromServerWide}
+                                    onClick={onDelete}
+                                    icon="trash"
+                                    isSpinning={asyncDelete.loading}
+                                />
+                            </ConditionalPopover>
+                        </RichPanelActions>
                     )}
                 </RichPanelHeader>
 

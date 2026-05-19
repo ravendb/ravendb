@@ -65,9 +65,6 @@ export const connectionStringsSlice = createSlice({
         editConnectionModalOpened: (state, { payload: connection }: PayloadAction<Connection>) => {
             state.initialEditConnection = connection;
         },
-        serverWideEditConnectionOpened: (state, { payload: connection }: PayloadAction<Connection>) => {
-            state.initialEditConnection = connection;
-        },
         editConnectionModalClosed: (state) => {
             state.initialEditConnection = null;
         },
@@ -76,7 +73,6 @@ export const connectionStringsSlice = createSlice({
                 ...connection,
                 usedByTasks: connection.usedByTasks ?? [],
             };
-
             state.connections[connection.type].push(newConnection);
         },
         connectionEdited: (state, { payload }: PayloadAction<{ oldName: string; newConnection: Connection }>) => {

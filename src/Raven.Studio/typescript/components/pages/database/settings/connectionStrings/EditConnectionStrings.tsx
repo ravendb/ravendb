@@ -67,27 +67,26 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
             }
             await asyncSave.execute(dto);
 
-            if (!isServerWide) {
-                if (isForNewConnection) {
-                    dispatch(
-                        connectionStringsActions.connectionAdded({
+            if (isForNewConnection) {
+                dispatch(
+                    connectionStringsActions.connectionAdded({
+                        ...newConnection,
+                        usedByTasks: initialConnection.usedByTasks,
+                    })
+                );
+            } else {
+                dispatch(
+                    connectionStringsActions.connectionEdited({
+                        oldName: initialConnection.name,
+                        newConnection: {
                             ...newConnection,
                             usedByTasks: initialConnection.usedByTasks,
-                        })
-                    );
-                } else {
-                    dispatch(
-                        connectionStringsActions.connectionEdited({
-                            oldName: initialConnection.name,
-                            newConnection: {
-                                ...newConnection,
-                                usedByTasks: initialConnection.usedByTasks,
-                            },
-                        })
-                    );
-                }
-                dispatch(connectionStringsActions.editConnectionModalClosed());
+                        },
+                    })
+                );
             }
+
+            dispatch(connectionStringsActions.editConnectionModalClosed());
 
             afterSave?.(newConnection.name);
         });
@@ -96,9 +95,7 @@ export default function EditConnectionStrings(props: EditConnectionStringsProps)
     const availableConnectionStringsOptions = getAvailableConnectionStringsOptions(licenseFeatures);
 
     const handleCancel = () => {
-        if (!isServerWide) {
-            dispatch(connectionStringsActions.editConnectionModalClosed());
-        }
+        dispatch(connectionStringsActions.editConnectionModalClosed());
         afterClose?.();
     };
 

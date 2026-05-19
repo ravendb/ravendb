@@ -70,9 +70,7 @@ function mapSnowflakeFromSingleDto(
     } satisfies SnowflakeConnection;
 }
 
-export function mapRavenConnectionsFromDto(
-    connections: Record<string, RavenConnectionStringDto>
-): RavenConnection[] {
+export function mapRavenConnectionsFromDto(connections: Record<string, RavenConnectionStringDto>): RavenConnection[] {
     return Object.values(connections).map((d) =>
         mapRavenFromSingleDto(
             d,
@@ -81,9 +79,7 @@ export function mapRavenConnectionsFromDto(
     );
 }
 
-export function mapSqlConnectionsFromDto(
-    connections: Record<string, SqlConnectionStringDto>
-): SqlConnection[] {
+export function mapSqlConnectionsFromDto(connections: Record<string, SqlConnectionStringDto>): SqlConnection[] {
     return Object.values(connections).map((d) =>
         mapSqlFromSingleDto(
             d,
@@ -117,9 +113,7 @@ function mapOlapFromSingleDto(
     } satisfies OlapConnection;
 }
 
-export function mapOlapConnectionsFromDto(
-    connections: Record<string, OlapConnectionStringDto>
-): OlapConnection[] {
+export function mapOlapConnectionsFromDto(connections: Record<string, OlapConnectionStringDto>): OlapConnection[] {
     return Object.values(connections).map((d) =>
         mapOlapFromSingleDto(
             d,
@@ -216,15 +210,15 @@ function mapRabbitMqFromSingleDto(
     } satisfies RabbitMqConnection;
 }
 
-export function mapKafkaConnectionsFromDto(
-    connections: Record<string, QueueConnectionStringDto>
-): KafkaConnection[] {
+export function mapKafkaConnectionsFromDto(connections: Record<string, QueueConnectionStringDto>): KafkaConnection[] {
     return Object.values(connections)
         .filter((x) => x.BrokerType === "Kafka")
         .map((d) =>
             mapKafkaFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+                (d.UsedByTasks ?? []).map(
+                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                )
             )
         );
 }
@@ -237,7 +231,9 @@ export function mapRabbitMqConnectionsFromDto(
         .map((d) =>
             mapRabbitMqFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+                (d.UsedByTasks ?? []).map(
+                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                )
             )
         );
 }
@@ -312,7 +308,9 @@ export function mapAzureQueueStorageConnectionsFromDto(
         .map((d) =>
             mapAzureQueueStorageFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+                (d.UsedByTasks ?? []).map(
+                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                )
             )
         );
 }
@@ -325,7 +323,9 @@ export function mapAmazonSqsConnectionsFromDto(
         .map((d) =>
             mapAmazonSqsFromSingleDto(
                 d,
-                (d.UsedByTasks ?? []).map((t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask)
+                (d.UsedByTasks ?? []).map(
+                    (t) => ({ id: t.TaskId, name: t.TaskName }) satisfies ConnectionStringUsedTask
+                )
             )
         );
 }
@@ -487,9 +487,7 @@ function mapAiFromSingleDto(
     } satisfies AiConnection;
 }
 
-export function mapAiConnectionsFromDto(
-    connections: Record<string, AiConnectionStringDto>
-): AiConnection[] {
+export function mapAiConnectionsFromDto(connections: Record<string, AiConnectionStringDto>): AiConnection[] {
     return Object.values(connections).map((d) =>
         mapAiFromSingleDto(
             d,
@@ -498,9 +496,9 @@ export function mapAiConnectionsFromDto(
     );
 }
 
-export function mapAllConnectionsFromDto(
-    connectionStringsDto: GetConnectionStringsResult
-): { [key in StudioConnectionType]: Connection[] } {
+export function mapAllConnectionsFromDto(connectionStringsDto: GetConnectionStringsResult): {
+    [key in StudioConnectionType]: Connection[];
+} {
     return {
         Raven: mapRavenConnectionsFromDto(connectionStringsDto.RavenConnectionStrings),
         Sql: mapSqlConnectionsFromDto(connectionStringsDto.SqlConnectionStrings),

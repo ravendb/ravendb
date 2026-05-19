@@ -100,7 +100,7 @@ export default function ServerWideConnectionStrings() {
                                 variant="primary"
                                 className="mb-3 mt-4"
                                 onClick={() =>
-                                    dispatch(connectionStringsActions.serverWideEditConnectionOpened({ type: null }))
+                                    dispatch(connectionStringsActions.editConnectionModalOpened({ type: null }))
                                 }
                                 disabled={!hasClusterAdminAccess || !hasServerWideConnectionStrings}
                             >
@@ -151,7 +151,7 @@ function ServerWideConnectionStringsBody() {
                                                 title="Add new connection string"
                                                 onClick={() =>
                                                     dispatch(
-                                                        connectionStringsActions.serverWideEditConnectionOpened({
+                                                        connectionStringsActions.editConnectionModalOpened({
                                                             type,
                                                         })
                                                     )
