@@ -206,7 +206,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/configuration/server-wide/connection-strings", "PUT", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "PUT", AuthorizationStatus.Operator)]
         public async Task PutServerWideConnectionString()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -241,7 +241,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/configuration/server-wide/connection-strings", "GET", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "GET", AuthorizationStatus.Operator)]
         public async Task GetServerWideConnectionStrings()
         {
             var name = GetStringQueryString("connectionStringName", required: false);
@@ -328,7 +328,7 @@ namespace Raven.Server.Web.System
             return map;
         }
 
-        [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.ClusterAdmin)]
+        [RavenAction("/admin/configuration/server-wide/connection-strings", "DELETE", AuthorizationStatus.Operator)]
         public async Task RemoveServerWideConnectionString()
         {
             var name = GetStringQueryString("connectionString", required: true);

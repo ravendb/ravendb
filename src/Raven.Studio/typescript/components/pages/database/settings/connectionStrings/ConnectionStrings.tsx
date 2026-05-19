@@ -26,7 +26,7 @@ export interface ConnectionStringsUrlParameters {
 export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps<ConnectionStringsUrlParameters>) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const { appUrl } = useAppUrls();
 
     const dispatch = useAppDispatch();
@@ -78,7 +78,7 @@ export default function ConnectionStrings({ queryParams }: ReactQueryParamsProps
                                 Add new
                             </Button>
                         )}
-                        {hasClusterAdminAccess && (
+                        {hasOperatorAccess && (
                             <Button
                                 size="xs"
                                 variant="link"

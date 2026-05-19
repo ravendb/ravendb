@@ -40,7 +40,7 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
 
 export default function ServerWideConnectionStrings() {
     const dispatch = useAppDispatch();
-    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const hasServerWideConnectionStrings = useAppSelector(
         licenseSelectors.statusValue("HasServerWideConnectionStrings")
     );
@@ -103,7 +103,7 @@ export default function ServerWideConnectionStrings() {
                                 onClick={() =>
                                     dispatch(connectionStringsActions.editConnectionModalOpened({ type: null }))
                                 }
-                                disabled={!hasClusterAdminAccess || !hasServerWideConnectionStrings}
+                                disabled={!hasOperatorAccess || !hasServerWideConnectionStrings}
                             >
                                 <Icon icon="plus" />
                                 Add a server-wide connection string
@@ -124,13 +124,13 @@ export default function ServerWideConnectionStrings() {
 
 function ServerWideConnectionStringsBody() {
     const dispatch = useAppDispatch();
-    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
     const loadStatus = useAppSelector(connectionStringSelectors.loadStatus);
     const connections = useAppSelector(connectionStringSelectors.connections);
     const isEmpty = useAppSelector(connectionStringSelectors.isEmpty);
 
     return (
-        <div className={hasClusterAdminAccess ? null : "item-disabled pe-none"}>
+        <div className={hasOperatorAccess ? null : "item-disabled pe-none"}>
             <LazyLoad active={loadStatus === "loading"}>
                 {isEmpty ? (
                     <EmptySet>No server-wide connection strings have been defined</EmptySet>
@@ -146,8 +146,8 @@ function ServerWideConnectionStringsBody() {
                                     right={
                                         <ConditionalPopover
                                             conditions={{
-                                                isActive: !hasClusterAdminAccess,
-                                                message: getAccessRequiredMessage("ClusterAdmin"),
+                                                isActive: !hasOperatorAccess,
+                                                message: getAccessRequiredMessage("Operator"),
                                             }}
                                         >
                                             <Button
@@ -155,7 +155,7 @@ function ServerWideConnectionStringsBody() {
                                                 size="sm"
                                                 className="rounded-pill"
                                                 title="Add new connection string"
-                                                disabled={!hasClusterAdminAccess}
+                                                disabled={!hasOperatorAccess}
                                                 onClick={() =>
                                                     dispatch(
                                                         connectionStringsActions.editConnectionModalOpened({

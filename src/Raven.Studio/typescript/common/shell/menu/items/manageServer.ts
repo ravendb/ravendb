@@ -194,7 +194,7 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-manage-connection-strings',
             dynamicHash: appUrl.forServerwideConnectionStrings,
-            requiredAccess: "ClusterAdmin",
+            requiredAccess: "Operator",
             search: {
                 innerActions: [
                     { name: "Add New Server-Wide Connection String", alternativeNames: ["Create Server-Wide Connection String"] },

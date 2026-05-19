@@ -44,8 +44,8 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const hasClusterAdminAccess = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
-    const hasWriteAccess = isServerWide ? hasClusterAdminAccess : hasDatabaseAdminAccess;
+    const hasOperatorAccess = useAppSelector(accessManagerSelectors.isOperatorOrAbove);
+    const hasWriteAccess = isServerWide ? hasOperatorAccess : hasDatabaseAdminAccess;
     const { appUrl } = useAppUrls();
 
     const asyncDelete = useAsyncCallback(async () => {
@@ -86,7 +86,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                             conditions={[
                                 {
                                     isActive: !hasWriteAccess,
-                                    message: getAccessRequiredMessage(isServerWide ? "ClusterAdmin" : "DatabaseAdmin"),
+                                    message: getAccessRequiredMessage(isServerWide ? "Operator" : "DatabaseAdmin"),
                                 },
                                 {
                                     isActive: isInheritedFromServerWide,
@@ -119,7 +119,7 @@ export default function ConnectionStringsPanel({ connection }: ConnectionStrings
                             conditions={[
                                 {
                                     isActive: !hasWriteAccess,
-                                    message: getAccessRequiredMessage(isServerWide ? "ClusterAdmin" : "DatabaseAdmin"),
+                                    message: getAccessRequiredMessage(isServerWide ? "Operator" : "DatabaseAdmin"),
                                 },
                                 {
                                     isActive: isInheritedFromServerWide,
