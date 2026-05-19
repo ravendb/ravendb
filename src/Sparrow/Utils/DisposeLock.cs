@@ -49,9 +49,7 @@ namespace Sparrow.Utils
             IDisposable disposable = null;
             try
             {
-                #pragma warning disable RDB0002
                 disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(continueOnCapturedContext);
-                #pragma warning restore RDB0002
             }
             catch
             {

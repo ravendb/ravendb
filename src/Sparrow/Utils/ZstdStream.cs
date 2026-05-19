@@ -132,7 +132,6 @@ namespace Sparrow.Utils
             return ReadAsync(new Memory<byte>(buffer, offset, count), cancellationToken).AsTask();
         }
 
-        #pragma warning disable RDB0002
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
@@ -155,7 +154,6 @@ namespace Sparrow.Utils
                 }
             }
         }
-        #pragma warning restore RDB0002
 
         public override void Write(ReadOnlySpan<byte> buffer)
         {
@@ -184,7 +182,6 @@ namespace Sparrow.Utils
             return WriteAsync(new ReadOnlyMemory<byte>(buffer, offset, count), cancellationToken).AsTask();
         }
 
-        #pragma warning disable RDB0002
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
             using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
@@ -201,7 +198,6 @@ namespace Sparrow.Utils
                 }
             }
         }
-        #pragma warning restore RDB0002
 
         public override void Flush()
         {
@@ -224,7 +220,6 @@ namespace Sparrow.Utils
             _inner.Flush();
         }
 
-        #pragma warning disable RDB0002
         public override async Task FlushAsync(CancellationToken cancellationToken)
         {
             using (await _disposerLock.EnsureNotDisposedAsync(_continueOnCapturedContext).ConfigureAwait(_continueOnCapturedContext))
@@ -232,9 +227,7 @@ namespace Sparrow.Utils
                 await FlushInternalAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
             }
         }
-        #pragma warning restore RDB0002
 
-        #pragma warning disable RDB0002
         private async Task FlushInternalAsync(CancellationToken cancellationToken = default)
         {
             while (true)
@@ -248,7 +241,6 @@ namespace Sparrow.Utils
 
             await _inner.FlushAsync(cancellationToken).ConfigureAwait(_continueOnCapturedContext);
         }
-        #pragma warning restore RDB0002
 
         public override async ValueTask DisposeAsync()
         {
@@ -261,8 +253,6 @@ namespace Sparrow.Utils
                     return;
 
                 _disposed = true;
-
-                #pragma warning disable RDB0002
 
                 if (_compressContext != null)
                 {
@@ -282,7 +272,6 @@ namespace Sparrow.Utils
 
                 if (_leaveOpen == false)
                     await _inner.DisposeAsync().ConfigureAwait(_continueOnCapturedContext);
-                #pragma warning restore RDB0002
 
                 ReleaseResources();
             }

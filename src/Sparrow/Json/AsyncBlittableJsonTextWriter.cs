@@ -28,7 +28,6 @@ namespace Sparrow.Json
                 throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
         }
 
-        #pragma warning disable RDB0002
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
         {
             await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
@@ -42,7 +41,6 @@ namespace Sparrow.Json
                 await FlushAsync(token).ConfigureAwait(_continueOnCapturedContext);
             }
         }
-        #pragma warning restore RDB0002
 
         public bool ShouldFlushAsync
         {
@@ -86,9 +84,7 @@ namespace Sparrow.Json
         
         private async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
         {
-            #pragma warning disable RDB0002 // ConfigureAwait is intentionally dynamic to support dedicated backup thread pump
             await writeTask.ConfigureAwait(_continueOnCapturedContext);
-            #pragma warning restore RDB0002
 
             innerStream.SetLength(0);
             return bytesCount;
@@ -126,7 +122,6 @@ namespace Sparrow.Json
             return DisposeAsyncSlow(flushTask);
         }
 
-        #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
         {
             var bytesWritten = await flushTask.ConfigureAwait(_continueOnCapturedContext);
@@ -135,15 +130,12 @@ namespace Sparrow.Json
 
             await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
-        #pragma warning restore RDB0002
 
-        #pragma warning disable RDB0002
         private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
         {
             await outputFlushTask.ConfigureAwait(_continueOnCapturedContext);
             await DisposeStreamAsync().ConfigureAwait(_continueOnCapturedContext);
         }
-        #pragma warning restore RDB0002
 
         private ValueTask DisposeStreamAsync()
         {
