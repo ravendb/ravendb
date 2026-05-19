@@ -3326,8 +3326,11 @@ namespace Raven.Server.Documents.Indexes
                     contextRelease?.Dispose();
                 }
             }
-            catch
+            catch (Exception e)
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to compute heaviness grade for index '{Name}'.", e);
+
                 return null;
             }
         }

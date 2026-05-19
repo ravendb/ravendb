@@ -297,7 +297,7 @@ namespace Raven.Server.Documents.Indexes
 
             int additionalAssembliesCount = definition.AdditionalAssemblies?.Count ?? 0;
             if (additionalAssembliesCount > 0)
-                score += AddPenalty(penalties, $"AdditionalAssemblies ({additionalAssembliesCount} assembly/assemblies)", PenaltyAdditionalAssembliesBase + PenaltyAdditionalAssembliesPerAssembly * additionalAssembliesCount);
+                score += AddPenalty(penalties, $"AdditionalAssemblies ({additionalAssembliesCount} {(additionalAssembliesCount == 1 ? "assembly" : "assemblies")})", PenaltyAdditionalAssembliesBase + PenaltyAdditionalAssembliesPerAssembly * additionalAssembliesCount);
 
             bool indexesAllDocs = collections?.Contains(Constants.Documents.Collections.AllDocumentsCollection, StringComparer.OrdinalIgnoreCase) == true;
             if (indexesAllDocs)
@@ -455,7 +455,8 @@ namespace Raven.Server.Documents.Indexes
 
         /// <summary>
         /// Attempts to extract collection names from the map expressions of an IndexDefinition using Roslyn.
-        /// Returns null if parsing fails.
+        /// Returns null if no collections could be extracted (all maps failed to parse or yielded no names).
+        /// Parse errors for individual maps are silently skipped; extraction continues with remaining maps.
         /// </summary>
         internal static HashSet<string> ExtractCollectionsFromMaps(IndexDefinition definition)
         {
