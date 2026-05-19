@@ -280,7 +280,7 @@ namespace Raven.Server.Web.System
                         if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
-                                RecreateIndexes(rawDatabaseRecord.DatabaseName, databaseRecord);
+                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
                         }
                     }
                 }
@@ -342,11 +342,11 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private void RecreateIndexes(string databaseName, DatabaseRecord databaseRecord)
+        private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
             if (databaseConfiguration.Indexing.RunInMemory ||
-                Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
+                (Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false && Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false))
             {
                 return;
             }
@@ -371,6 +371,25 @@ namespace Raven.Server.Web.System
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);
 
+                SetLastCompletedClusterTransactionIndex(documentDatabase);
+
+                RecreateIndexes(documentDatabase);
+            }
+
+            return;
+                    
+            void SetLastCompletedClusterTransactionIndex(DocumentDatabase documentDatabase)
+            {
+                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    documentDatabase.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, 0);
+                    tx.Commit();
+                }
+            }
+
+            void RecreateIndexes(DocumentDatabase documentDatabase)
+            {
                 var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
                 var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
 
