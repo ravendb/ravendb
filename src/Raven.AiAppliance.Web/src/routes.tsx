@@ -9,10 +9,15 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router";
-import App from "@/App";
-import { DashboardHome } from "@/pages/DashboardHome";
-import { PlaceholderPage } from "@/pages/PlaceholderPage";
-import { SetupConnect } from "@/pages/SetupConnect";
+import App from "@/app";
+import {
+  RedirectAuthenticated,
+  RequireAuth,
+} from "@/components/auth/auth-routes";
+import { DashboardHome } from "@/pages/dashboard-home";
+import { Login } from "@/pages/login";
+import { PlaceholderPage } from "@/pages/placeholder-page";
+import { SetupConnect } from "@/pages/setup-connect";
 
 export type AppRouteHandle = {
   title: string;
@@ -133,7 +138,11 @@ const dashboardRoutes: RouteObject[] = dashboardPages.map((page) => ({
 
 const setupConnectRoute: RouteObject = {
   path: "/setup/connect",
-  element: <SetupConnect />,
+  element: (
+    <RequireAuth>
+      <SetupConnect />
+    </RequireAuth>
+  ),
   handle: {
     title: "Setup",
     subtitle: "Application connection wizard",
@@ -151,8 +160,20 @@ export function isAppRouteHandle(handle: unknown): handle is AppRouteHandle {
 
 export const router = createBrowserRouter([
   {
+    path: "/login",
+    element: (
+      <RedirectAuthenticated>
+        <Login />
+      </RedirectAuthenticated>
+    ),
+  },
+  {
     path: "/",
-    Component: App,
+    element: (
+      <RequireAuth>
+        <App />
+      </RequireAuth>
+    ),
     children: dashboardRoutes,
   },
   setupConnectRoute,
