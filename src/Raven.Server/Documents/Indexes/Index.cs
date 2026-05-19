@@ -26,6 +26,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
@@ -614,20 +615,27 @@ namespace Raven.Server.Documents.Indexes
 
         private static void AttemptToLinkDatabaseAndIndexJournals(string name, StorageEnvironmentOptions indexOptions, DocumentDatabase documentDatabase)
         {
-            if (documentDatabase.Configuration.Indexing.DisableSharedJournals is false &&
-                indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options))
+            var logger = RavenLogManager.Instance.GetLoggerForIndex(typeof(Index), documentDatabase.Name, name);
+
+            if (documentDatabase.Configuration.Indexing.DisableSharedJournals)
             {
-                // here we enable the root / branch model for this index
-                documentDatabase.IndexStore.RegisterSharedJournals(indexOptions);
+                if (logger.IsInfoEnabled)
+                    logger.Info($"Shared journals disabled by '{RavenConfiguration.GetKey(c => c.Indexing.DisableSharedJournals)}' for index '{name}'.");
                 return;
             }
 
-            var logger = RavenLogManager.Instance.GetLoggerForIndex(typeof(Index), documentDatabase.Name, name);
-            if (logger.IsWarnEnabled)
+            if (indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options) == false)
             {
-                logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}'." +
-                            $"Shared journals mode is disabled for this index: {name}");
+                if (logger.IsWarnEnabled)
+                {
+                    logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}'. " +
+                                $"Shared journals mode is disabled for this index: {name}.");
+                }
+                return;
             }
+
+            // here we enable the root / branch model for this index
+            documentDatabase.IndexStore.RegisterSharedJournals(indexOptions);
         }
 
         public IndexType Type { get; }
