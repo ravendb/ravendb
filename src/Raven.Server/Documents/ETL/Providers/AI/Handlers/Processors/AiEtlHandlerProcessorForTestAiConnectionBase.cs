@@ -102,7 +102,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                     case AiModelType.Chat:
                         using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString))
                         {
-                            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
+                            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{\"answer\":\"the answer to the user's prompt\"}");
                             await client.TestCompleteAsync("Reply with exact word only: raven", "hi", schema, HttpContext.RequestAborted);
                         }
 
