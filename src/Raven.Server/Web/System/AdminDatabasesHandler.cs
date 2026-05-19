@@ -279,7 +279,7 @@ namespace Raven.Server.Web.System
                     {
                         if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
                         {
-                            using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
+                            using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
                                 RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
                         }
                     }
@@ -345,8 +345,9 @@ namespace Raven.Server.Web.System
         private void RecreateDatabase(string databaseName, DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
+            var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
             if (databaseConfiguration.Indexing.RunInMemory ||
-                (Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false && Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false))
+                (Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false) && Directory.Exists(indexesPath) == false)
             {
                 return;
             }
@@ -375,8 +376,6 @@ namespace Raven.Server.Web.System
 
                 RecreateIndexes(documentDatabase);
             }
-
-            return;
                     
             void SetLastCompletedClusterTransactionIndex(DocumentDatabase documentDatabase)
             {
@@ -390,7 +389,9 @@ namespace Raven.Server.Web.System
 
             void RecreateIndexes(DocumentDatabase documentDatabase)
             {
-                var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
+                if (Directory.Exists(indexesPath) == false)
+                    return;
+
                 var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
 
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
