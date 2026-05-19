@@ -4,7 +4,6 @@ using System.IO;
 using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
@@ -124,20 +123,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                     if (Logger.IsInfoEnabled)
                         Logger.Info("Client was disconnected", ex);
                 }
-                catch (AggregateException ae)
-                {
-                    if (IsSocketClosed(ae.ExtractSingleInnerException()))
-                    {
-                        //ignore
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
                 catch (Exception ex)
                 {
-                    if (IsSocketClosed(ex))
+                    if (WebSocketHelper.IsSocketClosed(ex, _webSocket))
                     {
                         // ignore
                     }
@@ -147,19 +135,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                     }
                 }
             }
-        }
-
-        private bool IsSocketClosed(Exception ex)
-        {
-            if (ex is not WebSocketException webSocketException)
-                return false;
-
-            if (webSocketException.WebSocketErrorCode == WebSocketError.ConnectionClosedPrematurely)
-                return true;
-
-            // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
-            return webSocketException.WebSocketErrorCode == WebSocketError.InvalidState
-                   && (_webSocket.State == WebSocketState.Closed || _webSocket.State == WebSocketState.CloseReceived || _webSocket.State == WebSocketState.Aborted);
         }
 
         private async Task HandleCommand(BlittableJsonReaderObject reader)
