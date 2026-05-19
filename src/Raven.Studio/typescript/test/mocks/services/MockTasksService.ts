@@ -217,7 +217,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withEtlErrors(dto?: MockedValue<EtlErrors[]>) {
         return this.mockResolvedValue(this.mocks.getEtlErrors, dto, TasksStubs.etlErrors());
-}
+    }
 
     withEtlStats(dto?: MockedValue<EtlTaskStats[]>) {
         return this.mockResolvedValue(this.mocks.getEtlStats, dto, TasksStubs.etlStats());

@@ -1470,7 +1470,7 @@ return docs[0];`,
                 TaskName: "ETL1/Transformation1",
             },
         ];
-}
+    }
 
     static etlStats(): EtlTaskStats[] {
         return [

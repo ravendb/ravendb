@@ -2,7 +2,7 @@ import React from "react";
 import { ConditionalPopover, ConditionalPopoverProps } from "components/common/ConditionalPopover";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import { getDatabaseAccessRequiredMessage } from "components/utils/accessUtils";
+import { getAccessRequiredMessage } from "components/utils/accessUtils";
 
 export interface DatabaseAccessPopoverProps extends Omit<ConditionalPopoverProps, "conditions"> {
     accessRequired: databaseAccessLevel;
@@ -24,7 +24,7 @@ export function DatabaseAccessPopover({
             conditions={[
                 {
                     isActive: !canHandleOperation,
-                    message: getDatabaseAccessRequiredMessage(accessRequired),
+                    message: getAccessRequiredMessage(accessRequired),
                 },
                 ...additionalConditions,
             ]}
