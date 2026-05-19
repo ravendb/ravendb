@@ -25,6 +25,7 @@ import { components, OptionProps } from "react-select";
 import AzureQueueStorageConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureQueueStorageConnectionString";
 import SnowflakeConnectionString from "components/pages/database/settings/connectionStrings/editForms/SnowflakeConnectionString";
 import AmazonSqsConnectionString from "components/pages/database/settings/connectionStrings/editForms/AmazonSqsConnectionString";
+import AzureServiceBusConnectionString from "components/pages/database/settings/connectionStrings/editForms/AzureServiceBusConnectionString";
 import AiConnectionString from "components/pages/database/settings/connectionStrings/editForms/AiConnectionString";
 import Modal from "components/common/Modal";
 import { FormLabel } from "components/common/Form";
@@ -169,6 +170,8 @@ function getEditConnectionStringComponent(
             return AzureQueueStorageConnectionString;
         case "AmazonSqs":
             return AmazonSqsConnectionString;
+        case "AzureServiceBus":
+            return AzureServiceBusConnectionString;
         case "Ai":
             return AiConnectionString;
         default:
@@ -250,6 +253,13 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
             value: "AmazonSqs",
             label: "Amazon SQS",
             icon: "amazon-sqs",
+            licenseRequired: "Enterprise",
+            isDisabled: !features.hasQueueEtl,
+        },
+        {
+            value: "AzureServiceBus",
+            label: "Azure Service Bus",
+            icon: "azure",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },

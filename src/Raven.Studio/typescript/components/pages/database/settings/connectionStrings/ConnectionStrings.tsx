@@ -106,5 +106,6 @@ const allStudioEtlTypes = exhaustiveStringTuple<StudioConnectionType>()(
     "Kafka",
     "RabbitMQ",
     "AzureQueueStorage",
-    "AmazonSqs"
+    "AmazonSqs",
+    "AzureServiceBus"
 );

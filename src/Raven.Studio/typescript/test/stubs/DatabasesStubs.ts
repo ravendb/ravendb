@@ -551,6 +551,20 @@ export class DatabasesStubs {
                     },
                     AzureServiceBusConnectionSettings: null,
                 },
+                "azure-service-bus-name": {
+                    Type: "Queue",
+                    Name: "azure-service-bus-name",
+                    BrokerType: "AzureServiceBus",
+                    KafkaConnectionSettings: null,
+                    RabbitMqConnectionSettings: null,
+                    AzureQueueStorageConnectionSettings: null,
+                    AmazonSqsConnectionSettings: null,
+                    AzureServiceBusConnectionSettings: {
+                        ConnectionString: "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                        EntraId: null,
+                        Passwordless: null,
+                    },
+                },
             },
             AiConnectionStrings: {
                 "ai-name": {

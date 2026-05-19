@@ -65,6 +65,8 @@ function getTypeLabel(type: StudioConnectionType): string {
             return "Azure Queue Storage";
         case "AmazonSqs":
             return "Amazon SQS";
+        case "AzureServiceBus":
+            return "Azure Service Bus";
         case "Ai":
             return "AI";
         default:
@@ -92,6 +94,8 @@ function getIcon(type: StudioConnectionType): IconName {
             return "azure";
         case "AmazonSqs":
             return "amazon-sqs";
+        case "AzureServiceBus":
+            return "azure";
         case "Ai":
             return "sparkles";
         default:
