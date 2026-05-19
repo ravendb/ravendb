@@ -50,16 +50,18 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     private AiAgentConfiguration _configuration;
     private string _changeVector;
     private string _raftId;
+    private bool? _debugOverride;
     protected int _maxModelIterationsPerCall;
     internal List<string> _persistedAttachmentsNames;
     public required RavenServer.AuthenticateConnection Authentication;
-    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null)
+    public void Initialize(AiAgentConfiguration configuration, string conversationId, RequestBody body, string changeVector, string raftId = null, bool? debugOverride = null)
     {
         _conversationId = conversationId;
         _request = body;
         _configuration = configuration;
         _changeVector = changeVector;
         _raftId = raftId;
+        _debugOverride = debugOverride;
         _maxModelIterationsPerCall = GetMaxModelIterationsPerCall(body, configuration);
     }
 
@@ -128,6 +130,9 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 _document.ChangeVector = conversation.ChangeVector;
             }
         }
+
+        if (_debugOverride.HasValue)
+            _document.Debug = _debugOverride.Value;
 
         if (_request.AttachmentCommands?.ParsedCommands is { Count: >0})
         {
@@ -390,78 +395,88 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
 
         var pendingAlertsDetails = new List<ExceededTokenThresholdDetails>();
         bool isFirstIteration = true;
-        while (shouldContinueConversation)
+        var debugTraces = new AiDebugTraceCollector(_document.Debug, database);
+
+        try
         {
-            var attachments = _request.Attachments ?? new List<AiAttachment>();
-
-            database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
-
-            using var request = talker.CreateCompletionRequest(attachments);
-            
-            r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, token);
-
-            var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
-            //we want that message only on when we upload an attachment and not when the internal tool is called.
-            if (isFirstIteration && _request.AttachmentCommands?.ParsedCommands.Count > 0)
+            while (shouldContinueConversation)
             {
-                AddMessageWithAttachmentsName(context, isFirstIteration);
-            }
-            isFirstIteration = false;
+                var attachments = _request.Attachments ?? new List<AiAttachment>();
 
-            _document.AddMessage(context, r.Message, currentTurnUsage);
-            _document.UpdateUsage(talker.AiUsage);
-            OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
+                database.ForTestingPurposes?.BeforeAiAgentTalk?.Invoke(talker.Document);
 
-            if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
-            {
-                if (_document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
+                var trace = debugTraces.CreateTrace();
+
+                using var request = talker.CreateCompletionRequest(attachments, trace);
+                r = await talker.RunAsync(database.DocumentsStorage.ContextPool, request, trace, token);
+
+                var currentTurnUsage = AiUsage.GetUsageDifference(talker.AiUsage, _document.CurrentUsage);
+                //we want that message only on when we upload an attachment and not when the internal tool is called.
+                if (isFirstIteration && _request.AttachmentCommands?.ParsedCommands.Count > 0)
                 {
-                    pendingAlertsDetails.Add(ExceededTokenThresholdDetails.Add(
-                            database.NotificationCenter,
-                            _configuration.Name,
-                            _conversationId,
-                            currentTurnUsage.PromptTokens,
-                            database.Configuration.Ai.ToolsTokenUsageThreshold,
-                            toolCalls
-                        )
-                    );
+                    AddMessageWithAttachmentsName(context, isFirstIteration);
                 }
-            }
+                isFirstIteration = false;
 
-            toolsIterations++;
-            if (r.Type is AiResponseType.Result)
-            {
-                _document.RemainingToolIterations = _maxModelIterationsPerCall;
-                shouldContinueConversation = false;
-            }
-            else
-            {
-                var iterations = await HandleQueryAndAgentCallsAsync(context, r.ToolCalls);
-                toolsIterations += iterations;
-                if (TryGetUserTools(context, r.ToolCalls))
+                _document.AddMessage(context, r.Message, currentTurnUsage);
+                _document.UpdateUsage(talker.AiUsage);
+                OnUpdateUsage?.Invoke(database.Name, currentTurnUsage);
+
+                if (currentTurnUsage.PromptTokens > database.Configuration.Ai.ToolsTokenUsageThreshold)
                 {
+                    if (_document.TryGetDetailsOfRecentToolCall(_configuration, out var toolCalls))
+                    {
+                        pendingAlertsDetails.Add(ExceededTokenThresholdDetails.Add(
+                                database.NotificationCenter,
+                                _configuration.Name,
+                                _conversationId,
+                                currentTurnUsage.PromptTokens,
+                                database.Configuration.Ai.ToolsTokenUsageThreshold,
+                                toolCalls
+                            )
+                        );
+                    }
+                }
+
+                toolsIterations++;
+                if (r.Type is AiResponseType.Result)
+                {
+                    _document.RemainingToolIterations = _maxModelIterationsPerCall;
                     shouldContinueConversation = false;
                 }
                 else
                 {
-                    //should close the tool calls that were handled internally
-                    HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
+                    var iterations = await HandleQueryAndAgentCallsAsync(context, r.ToolCalls);
+                    toolsIterations += iterations;
+                    if (TryGetUserTools(context, r.ToolCalls))
+                    {
+                        shouldContinueConversation = false;
+                    }
+                    else
+                    {
+                        //should close the tool calls that were handled internally
+                        HandleInternalSystemActions(context, _document.OpenActionCalls.Values.ToList());
+                    }
+                }
+
+                _document.CurrentUsage = talker.AiUsage;
+
+                // check if we should summarize or truncate the chat history
+                var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
+                if (reductionResult != null)
+                {
+                    historyDocs ??= [];
+                    historyDocs.Add(reductionResult);
                 }
             }
 
-            _document.CurrentUsage = talker.AiUsage;
-
-            // check if we should summarize or truncate the chat history
-            var reductionResult = await TryReduceChatSizeAsync(context, talker.Client, talker.AiUsage, token);
-            if (reductionResult != null)
-            {
-                historyDocs ??= [];
-                historyDocs.Add(reductionResult);
-            }
+            _elapsed = sw.Elapsed;
+            _conversationId = await TryPersistAsync(context, historyDocs);
         }
-
-        _elapsed = sw.Elapsed;
-        _conversationId = await TryPersistAsync(context, historyDocs);
+        finally
+        {
+            await debugTraces.PersistAsync(_document);
+        }
 
         foreach (ExceededTokenThresholdDetails pendingAlertDetails in pendingAlertsDetails)
         {
@@ -591,7 +606,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         var usage = new AiUsage();
         var tools = client.GenerateTools(context, configuration, this);
         using var request = client.CreateCompletionRequest(context, messages, attachments: null, tools, useTools: false, streaming: false, schema: SummarizationOutputSchema);
-        var result = await client.CompleteAsync(context, request, usage, token);
+        var result = await client.CompleteAsync(context, request, usage, trace: null, token);
 
         if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
             throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };

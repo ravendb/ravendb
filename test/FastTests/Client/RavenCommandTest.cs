@@ -78,7 +78,8 @@ namespace FastTests.Client
                 "AddOrUpdateAiAgentOperationCommand","DeleteAiAgentOperationCommand","RunConversationOperationCommand","GetAiAgentOperationCommand",
                 "ConfigureAttachmentsRemoteCommand", "GetRemoteAttachmentsConfigurationCommand", "DeleteAttachmentsCommand",
                 "ConfigureSchemaValidationCommand", "GetSchemaValidationCommand", "StartSchemaValidationCommand",
-                "AddCdcSinkCommand", "UpdateCdcSinkCommand"
+                "AddCdcSinkCommand", "UpdateCdcSinkCommand",
+                "GetCdcSinkSchemaCommand", "TestCdcSinkMappingCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

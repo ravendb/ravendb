@@ -282,13 +282,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var directoryFiles = new IndexTransactionCache.DirectoryFiles();
             newCache.DirectoriesByName[_directory.Name] = directoryFiles;
-            FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, _directory.Name);
+            FillLuceneFilesChunks(tx, directoryFiles, _directory.Name);
 
             foreach (var (name, _) in _suggestionsDirectories)
             {
                 directoryFiles = new IndexTransactionCache.DirectoryFiles();
                 newCache.DirectoriesByName[name] = directoryFiles;
-                FillLuceneFilesChunks(tx, directoryFiles.ChunksByName, name);
+                FillLuceneFilesChunks(tx, directoryFiles, name);
             }
 
             return newCache;
@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void FillLuceneFilesChunks(Transaction tx, Dictionary<string, Tree.ChunkDetails[]> cache, string name)
+        private unsafe void FillLuceneFilesChunks(Transaction tx, IndexTransactionCache.DirectoryFiles cache, string name)
         {
             var filesTree = tx.ReadTree(name);
             if (filesTree == null)
@@ -386,10 +386,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     do
                     {
-                        var chunkDetails = filesTree.ReadTreeChunks(it.CurrentKey, out _);
+                        var key = it.CurrentKey;
+                        
+                        if (filesTree.IsInlineStream(key, out var inlineData, out _, out var page))
+                        {
+                            var header = (Tree.InlineStreamHeader*)inlineData;
+                            var tagSize = header->Info.TagSize;
+                            var dataSize = (int)header->Info.TotalSize;
+                            var dataOffsetInPage = (int)(inlineData + Tree.InlineStreamHeader.SizeOf + tagSize - page.Base);
+                            cache.InlinesByName[key.ToString()] = new IndexTransactionCache.InlineFileLocation(
+                                page.PageNumber, dataOffsetInPage, dataSize);
+                            continue;
+                        }
+
+                        var chunkDetails = filesTree.ReadTreeChunks(key, out _);
                         if (chunkDetails == null)
                             continue;
-                        cache[it.CurrentKey.ToString()] = chunkDetails;
+                        cache.ChunksByName[key.ToString()] = chunkDetails;
                     } while (it.MoveNext());
                 }
             }

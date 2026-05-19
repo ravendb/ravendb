@@ -15,6 +15,8 @@ import RevisionsConfiguration = Raven.Client.Documents.Operations.Revisions.Revi
 import RevisionsCollectionConfiguration = Raven.Client.Documents.Operations.Revisions.RevisionsCollectionConfiguration;
 import SorterDefinition = Raven.Client.Documents.Queries.Sorting.SorterDefinition;
 import AnalyzerDefinition = Raven.Client.Documents.Indexes.Analysis.AnalyzerDefinition;
+import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
+import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 
 export class DatabasesStubs {
     static nonShardedSingleNodeDatabaseDto() {
@@ -616,7 +618,7 @@ export class DatabasesStubs {
                     Script: `
 var maxRecord = 0;
 for (var i = 0; i < docs.length; i++) {
-    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);   
+    maxRecord = Math.max(docs[i].MaxRecord, maxRecord);
 }
 docs[0].MaxRecord = maxRecord;
 
@@ -627,7 +629,7 @@ return docs[0];`,
                     Script: `
 var maxPrice = 0;
 for (var i = 0; i < docs.length; i++) {
-    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);   
+    maxPrice = Math.max(docs[i].PricePerUnit, maxPrice);
 }
 docs[0].PricePerUnit = maxPrice;
 
@@ -1276,5 +1278,58 @@ return docs[0];`,
             LastStatus: "Ok",
             LastError: null,
         };
+    }
+
+    static etlErrors(): EtlErrors[] {
+        return [
+            {
+                ProcessErrors: [],
+                EtlSubType: null,
+                ItemErrors: [
+                    {
+                        TaskName: "ETL1/Transformation1",
+                        CreatedAt: "2026-03-09T09:52:12.6923003",
+                        Step: "Transformation",
+                        Error: 'Raven.Client.Exceptions.Documents.Patching.JavaScriptException: At 11:6 Script failed for document ID \'\'. {"message":"dummy error","stack":"   at call :6:12\\r\\n   at execute (doc, args) :13:5\\r\\n   at :15:1"}\r\n ---> Jint.Runtime.JavaScriptException: dummy error\r\n ---> Error: dummy error\r\n   at call :6:12\r\n   at execute (doc, args) :13:5\r\n   at :15:1\r\n   --- End of inner exception stack trace ---\r\n   at Jint.Runtime.ExceptionHelper.ThrowJavaScriptException(Engine engine, JsValue value, Completion& result)\r\n   at Jint.Native.Function.ScriptFunction.Call(JsValue thisObject, JsValue[] arguments)\r\n   at Jint.Engine.Call(Function function, JsValue thisObject, JsValue[] arguments, JintExpression expression)\r\n   at Jint.Engine.<>c__DisplayClass135_0.<Call>g__Callback|0()\r\n   at Jint.Engine.ExecuteWithConstraints[T](Boolean strict, Func`1 callback)\r\n   at Jint.Engine.Call(JsValue callable, JsValue thisObject, JsValue[] arguments)\r\n   at Raven.Server.Documents.Patch.ScriptRunner.SingleRun.Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, String method, String documentId, Object[] args, QueryTimingsScope scope, CancellationToken token)\r\n   --- End of inner exception stack trace ---\r\n   at Raven.Server.Documents.Patch.ScriptRunner.SingleRun.Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, String method, String documentId, Object[] args, QueryTimingsScope scope, CancellationToken token)\r\n   at Raven.Server.Documents.Patch.ScriptRunner.SingleRun.Run(JsonOperationContext jsonCtx, DocumentsOperationContext docCtx, String method, Object[] args, QueryTimingsScope scope, CancellationToken token)\r\n   at Raven.Server.Documents.ETL.Providers.Raven.RavenEtlDocumentTransformer.Transform(RavenEtlItem item, EtlStatsScope stats, EtlProcessState state)\r\n   at Raven.Server.Documents.ETL.EtlProcess`6.Transform(IEnumerable`1 items, DocumentsOperationContext context, TStatsScope stats, EtlProcessState state)',
+                        DocumentId: "users/1000-A",
+                    },
+                ],
+                TaskName: "ETL1/Transformation1",
+            },
+        ];
+    }
+
+    static etlStats(): EtlTaskStats[] {
+        return [
+            {
+                TaskName: "ETL1",
+                NodeTag: "A",
+                Stats: [
+                    {
+                        TransformationName: "Transformation1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 1000,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            LoadSuccessesInCurrentBatch: 0,
+                            AverageErrorsRatio: {},
+                            HealthStatus: "Failed",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: null,
+                            LastSlowSqlWarningsInCurrentBatch: null,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+                EtlType: "Raven",
+                TaskId: 1,
+                EtlSubType: null,
+            },
+        ];
     }
 }

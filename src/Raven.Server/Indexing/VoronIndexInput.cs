@@ -4,8 +4,9 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Lucene.Net.Store;
-using Raven.Client.Extensions.Streams;
 using Voron;
+using Voron.Data.BTrees;
+using Voron.Global;
 using Voron.Impl;
 
 namespace Raven.Server.Indexing
@@ -35,7 +36,7 @@ namespace Raven.Server.Indexing
             return _name;
         }
 
-        internal static LuceneVoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string treeName)
+        internal static unsafe LuceneVoronStream OpenVoronStream(Transaction transaction, LuceneVoronDirectory directory, string name, string treeName)
         {
             if (transaction.IsWriteTransaction == false)
             {
@@ -45,10 +46,17 @@ namespace Raven.Server.Indexing
                     {
                         if (files.ChunksByName.TryGetValue(name, out var details))
                         {
-                            // we don't dispose here explicitly, the fileName needs to be
-                            // alive as long as the transaction is
-                            Slice.From(transaction.Allocator, name, out Slice fileName);
-                            return new LuceneVoronStream(fileName, details, transaction.LowLevelTransaction);
+                            return new LuceneVoronStream(name, details, transaction.LowLevelTransaction);
+                        }
+
+                        if (files.InlinesByName.TryGetValue(name, out var inline))
+                        {
+                            if (inline.DataOffsetInPage <= 0 || inline.DataOffsetInPage + inline.DataSize > Constants.Storage.PageSize)
+                                ThrowInvalidInlineStreamLocation(name, inline);
+
+                            var llt = transaction.LowLevelTransaction;
+                            var dataPtr = llt.GetPage(inline.PageNumber).Pointer + inline.DataOffsetInPage;
+                            return new LuceneVoronStream(name, treeName, dataPtr, inline.DataSize, llt);
                         }
                     }
                 }
@@ -60,11 +68,20 @@ namespace Raven.Server.Indexing
 
             using (Slice.From(transaction.Allocator, name, out Slice fileName))
             {
+                if (fileTree.IsInlineStream(fileName, out var inlineData, out _, out _))
+                {
+                    var header = (Tree.InlineStreamHeader*)inlineData;
+                    var tagSize = header->Info.TagSize;
+                    var dataSize = (int)header->Info.TotalSize;
+                    var dataPtr = inlineData + Tree.InlineStreamHeader.SizeOf + tagSize;
+                    return new LuceneVoronStream(name, treeName, dataPtr, dataSize, fileTree.Llt);
+                }
+
                 var details = fileTree.ReadTreeChunks(fileName, out var tree);
                 if (details == null)
                     throw new FileNotFoundException("Could not find index input", name);
 
-                return new LuceneVoronStream(tree.Name, details, fileTree.Llt);
+                return new LuceneVoronStream(name, details, fileTree.Llt);
             }
         }
         
@@ -225,6 +242,13 @@ namespace Raven.Server.Indexing
         private void ThrowInvalidSeekPosition(long pos)
         {
             throw new InvalidOperationException($"Cannot set stream position to {pos} because the length of '{_name}' stream is {_stream.Length}");
+        }
+
+        [DoesNotReturn]
+        private static void ThrowInvalidInlineStreamLocation(string name, IndexTransactionCache.InlineFileLocation inline)
+        {
+            throw new InvalidOperationException(
+                $"Cached inline stream location for '{name}' is out of page bounds: PageNumber={inline.PageNumber}, DataOffsetInPage={inline.DataOffsetInPage}, DataSize={inline.DataSize}");
         }
     }
 }

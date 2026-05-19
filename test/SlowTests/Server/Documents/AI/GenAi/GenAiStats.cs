@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -345,15 +346,16 @@ this.Comments[idx].IsSpam = $output.Blocked;
             session.SaveChanges();
         }
 
-        EtlErrorInfo error = null;
+        IEnumerable<TaskItemErrorTableValue> errors = null;
         var value = await WaitForValueAsync(async () =>
         {
-            error = await Etl.TryGetLoadErrorAsync(store.Database, configuration);
-            return error != null;
+            errors = await Etl.GetItemLoadErrorsAsync(store.Database, configuration);
+            return errors.Any();
         }, true, timeout: 60_000);
 
         Assert.True(value);
-        Assert.Contains("rate limit", error?.Error);
+        Assert.NotEmpty(errors);
+        Assert.Contains("rate limit", errors.First().Error);
 
         var stats = etlProcess.GetPerformanceStats()
             .Where(x => x.LastExtractedEtags[EtlItemType.Document] > 0)

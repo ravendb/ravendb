@@ -32,6 +32,8 @@ using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.CdcSink;
+using Raven.Client.Documents.Operations.CdcSink.Schema;
+using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
@@ -78,6 +80,7 @@ using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -95,7 +98,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.QueueSink.Stats.Performance;
 using Raven.Server.Documents.CdcSink;
-using Raven.Server.Documents.CdcSink.Test;
 using Raven.Server.Documents.QueueSink.Test;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Stats;
@@ -323,9 +325,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
             scripter.AddType(typeof(ExceptionDetails));
+            scripter.AddType(typeof(EtlTaskHealthChangeDetails));
 
             // alerts
-            scripter.AddType(typeof(EtlErrorsDetails));
             scripter.AddType(typeof(EtlWarningDetails));
             scripter.AddType(typeof(SlowSqlDetails));
             scripter.AddType(typeof(SlowIoDetails));
@@ -494,6 +496,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(Transformation));
             scripter.AddType(typeof(SchemaType));
+            scripter.AddType(typeof(TaskErrors));
 
             // ongoing tasks - replication
             scripter.AddType(typeof(OngoingTaskReplication));
@@ -601,8 +604,16 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CdcColumnMapping));
             scripter.AddType(typeof(CdcColumnType));
             scripter.AddType(typeof(CdcSinkPostgresSettings));
-            scripter.AddType(typeof(TestCdcSinkScript));
-            scripter.AddType(typeof(TestCdcSinkScriptResult));
+            scripter.AddType(typeof(TestCdcSinkMappingRequest));
+            scripter.AddType(typeof(TestCdcSinkMappingResult));
+            scripter.AddType(typeof(TestCdcSinkRowResult));
+            scripter.AddType(typeof(TestCdcSinkRowSelector));
+            scripter.AddType(typeof(TestCdcSinkOperation));
+            scripter.AddType(typeof(CdcSinkSchemaRequest));
+            scripter.AddType(typeof(CdcSinkSourceSchema));
+            scripter.AddType(typeof(CdcSinkSourceTable));
+            scripter.AddType(typeof(CdcSinkSourceColumn));
+            scripter.AddType(typeof(CdcSinkSourceForeignKey));
             scripter.AddType(typeof(CdcSinkVerificationResult));
 
             // ongoing tasks - Snowflake ETL
@@ -637,6 +648,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestResult));
             scripter.AddType(typeof(AiAgentActionRequest));
             scripter.AddType(typeof(ConversionRequestBody));
+
+            // ongoing tasks - ETLs
+            scripter.AddType(typeof(EtlTaskStats));
+            scripter.AddType(typeof(EtlProcessTransformationStats));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

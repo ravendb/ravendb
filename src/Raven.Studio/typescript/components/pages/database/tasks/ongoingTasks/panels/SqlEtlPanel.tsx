@@ -1,6 +1,5 @@
-﻿import React, { useCallback } from "react";
+﻿import React from "react";
 import {
-    BaseOngoingTaskPanelProps,
     ConnectionStringItem,
     EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
@@ -8,7 +7,6 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-    useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskSqlEtlInfo } from "components/models/tasks";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -26,53 +24,34 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
+import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
-type SqlEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskSqlEtlInfo>;
-
-function Details(props: SqlEtlPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
-    const connectionStringDefined = data.shared.connectionStringDefined;
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
-
-    return (
-        <RichPanelDetails>
-            {connectionStringDefined && (
-                <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
-                    {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
-                </RichPanelDetailItem>
-            )}
-            <ConnectionStringItem
-                connectionStringDefined={connectionStringDefined}
-                canEdit={canEdit}
-                connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
-            />
-            <EmptyScriptsWarning task={data} />
-        </RichPanelDetails>
-    );
-}
+type SqlEtlPanelProps = EtlPanelBaseProps<OngoingTaskSqlEtlInfo>;
 
 export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
 
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-
-    const { forCurrentDatabase } = useAppUrls();
+    const { forCurrentDatabase, appUrl } = useAppUrls();
     const editUrl = forCurrentDatabase.editSqlEtl(data.shared.taskId)();
 
-    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
+    const {
+        canEdit,
+        goToTaskErrors,
+        detailsVisible,
+        toggleDetails,
+        onEdit,
+        showPreview,
+        taskHealth,
+        errorCount,
+        errorsByLocation,
+        etlProgress,
+    } = useEtlPanel(props, editUrl);
 
-    const showPreview = useCallback(
-        (transformationName: string) => {
-            showItemPreview(data, transformationName);
-        },
-        [data, showItemPreview]
-    );
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Sql", data.shared.connectionStringName);
+    const connectionStringDefined = data.shared.connectionStringDefined;
 
     return (
         <RichPanel>
@@ -90,10 +69,6 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <span>
-                        <Icon icon="sql-etl" />
-                        SQL ETL
-                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -109,13 +84,39 @@ export function SqlEtlPanel(props: SqlEtlPanelProps & ICanShowTransformationScri
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
                         isDetailsOpen={detailsVisible}
+                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <RichPanelDetails>
+                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Type">
+                    <Icon icon="sql-etl" />
+                    SQL ETL
+                </RichPanelDetailItem>
+                <ConnectionStringItem
+                    connectionStringDefined={connectionStringDefined}
+                    canEdit={canEdit}
+                    connectionStringName={data.shared.connectionStringName}
+                    connectionStringsUrl={connectionStringsUrl}
+                />
+                {connectionStringDefined && (
+                    <RichPanelDetailItem label="Destination" title="Destination <database>@<server>">
+                        {(data.shared.destinationDatabase ?? "") + "@" + (data.shared.destinationServer ?? "")}
+                    </RichPanelDetailItem>
+                )}
+                <EtlPanelHealthBadge taskHealth={taskHealth} />
+                <EtlPanelErrors
+                    errorCount={errorCount}
+                    errorsByLocation={errorsByLocation}
+                    goToTaskErrors={goToTaskErrors}
+                />
+                <EtlPanelProgressItem etlProgress={etlProgress} />
+                <EmptyScriptsWarning task={data} />
+            </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

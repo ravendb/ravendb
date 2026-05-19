@@ -1,7 +1,9 @@
+import moment = require("moment");
+import collectionsStats = require("models/database/documents/collectionsStats");
+import collection = require("models/database/documents/collection");
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import EtlTaskProgress = Raven.Server.Documents.ETL.Stats.EtlTaskProgress;
 import EtlType = Raven.Client.Documents.Operations.ETL.EtlType;
-import moment = require("moment");
 import OngoingTaskBackup = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskBackup;
 import OngoingTaskPullReplicationAsSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsSink;
 import OngoingTaskPullReplicationAsHub = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskPullReplicationAsHub;
@@ -15,8 +17,6 @@ import OngoingTaskSqlEtl = Raven.Client.Documents.Operations.OngoingTasks.Ongoin
 import OngoingTaskOlapEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
 import OngoingTaskQueueEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueEtl;
 import OngoingTaskElasticSearchEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
-import collectionsStats = require("models/database/documents/collectionsStats");
-import collection = require("models/database/documents/collection");
 import OngoingTaskQueueSink = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
@@ -24,6 +24,8 @@ import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.Rep
 import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
 import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
+import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
+import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -399,6 +401,7 @@ export class TasksStubs {
                             OverlapTokens: 0,
                             ChunkingMethod: "PlainTextSplit",
                             MaxTokensPerChunk: 2048,
+                            ContextPrefix: null,
                         },
                     },
                 ],
@@ -409,6 +412,7 @@ export class TasksStubs {
                     OverlapTokens: 0,
                     ChunkingMethod: "PlainTextSplit",
                     MaxTokensPerChunk: 2048,
+                    ContextPrefix: null,
                 },
                 EmbeddingsCacheForQueryingExpiration: "14.00:00:00",
             },
@@ -1240,5 +1244,524 @@ namespace Orders
                 },
             ],
         };
+    }
+
+    static etlErrors(): EtlErrors[] {
+        return [
+            {
+                TaskName: "AzureETL/T1",
+                EtlType: "Queue",
+                EtlSubType: "AzureQueueStorage",
+                ProcessErrors: [
+                    {
+                        TaskName: "AzureETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "ElasticETL/T1",
+                EtlType: "ElasticSearch",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "ElasticETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "EmbeddingsETL/embeddings-transform-script",
+                EtlType: "EmbeddingsGeneration",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "EmbeddingsETL/embeddings-transform-script",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "GenAiETL/GenAi-transform-script",
+                EtlType: "GenAi",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "GenAiETL/GenAi-transform-script",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "KafkaETL/T1",
+                EtlType: "Queue",
+                EtlSubType: "Kafka",
+                ProcessErrors: [
+                    {
+                        TaskName: "KafkaETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "OlapETL/T1",
+                EtlType: "Olap",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "OlapETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "RabbitETL/T1",
+                EtlType: "Queue",
+                EtlSubType: "RabbitMq",
+                ProcessErrors: [
+                    {
+                        TaskName: "RabbitETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "RavenETL/T1",
+                EtlType: "Raven",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "RavenETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "SnowflakeETL/T1",
+                EtlType: "Snowflake",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "SnowflakeETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "SqlETL/T1",
+                EtlType: "Sql",
+                EtlSubType: null,
+                ProcessErrors: [
+                    {
+                        TaskName: "SqlETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "SqsETL/T1",
+                EtlType: "Queue",
+                EtlSubType: "AmazonSqs",
+                ProcessErrors: [
+                    {
+                        TaskName: "SqsETL/T1",
+                        CreatedAt: "2026-04-27T11:20:13.9928839",
+                        Step: "Transformation",
+                        Error: "dummy error",
+                        AffectedDocumentsCount: 1,
+                    },
+                ],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "EmbeddingsETL/embeddings-transform-script",
+                EtlType: "EmbeddingsGeneration",
+                EtlSubType: null,
+                ProcessErrors: [],
+                ItemErrors: [],
+            },
+            {
+                TaskName: "GenAiETL/GenAi-transform-script",
+                EtlType: "GenAi",
+                EtlSubType: null,
+                ProcessErrors: [],
+                ItemErrors: [],
+            },
+        ];
+    }
+
+    static etlStats(): EtlTaskStats[] {
+        return [
+            {
+                TaskName: "AzureETL",
+                TaskId: 22,
+                EtlType: "Queue",
+                EtlSubType: "AzureQueueStorage",
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "ElasticETL",
+                TaskId: 16,
+                EtlType: "ElasticSearch",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "EmbeddingsETL",
+                TaskId: 26,
+                EtlType: "EmbeddingsGeneration",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "embeddings-transform-script",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "GenAiETL",
+                TaskId: 28,
+                EtlType: "GenAi",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "GenAi-transform-script",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "KafkaETL",
+                TaskId: 18,
+                EtlType: "Queue",
+                EtlSubType: "Kafka",
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "OlapETL",
+                TaskId: 14,
+                EtlType: "Olap",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "RabbitETL",
+                TaskId: 20,
+                EtlType: "Queue",
+                EtlSubType: "RabbitMq",
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "RavenETL",
+                TaskId: 8,
+                EtlType: "Raven",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "SnowflakeETL",
+                TaskId: 12,
+                EtlType: "Snowflake",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "SqlETL",
+                TaskId: 10,
+                EtlType: "Sql",
+                EtlSubType: null,
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+            {
+                TaskName: "SqsETL",
+                TaskId: 24,
+                EtlType: "Queue",
+                EtlSubType: "AmazonSqs",
+                NodeTag: "A",
+                ShardNumber: null,
+                Stats: [
+                    {
+                        TransformationName: "T1",
+                        Statistics: {
+                            LastLoadErrorTime: null,
+                            LastProcessedEtag: 0,
+                            TransformationSuccesses: 0,
+                            TransformationErrors: 0,
+                            LoadSuccesses: 0,
+                            LoadErrors: 0,
+                            AverageErrorsRatio: 0.0,
+                            HealthStatus: "Healthy",
+                            NextBatchRetryTime: null,
+                            LastSuccessfulBatchTime: null,
+                            BatchStopReason: null,
+                            LastChangeVector: "",
+                            LastSlowSqlWarningsInCurrentBatch: undefined,
+                            LoadSuccessesInCurrentBatch: 0,
+                            WasLatestLoadSuccessful: false,
+                        },
+                    },
+                ],
+            },
+        ];
     }
 }

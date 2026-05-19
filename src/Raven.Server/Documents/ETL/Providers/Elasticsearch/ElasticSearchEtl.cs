@@ -293,10 +293,12 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
                     Commands = commands.ToArray()
                 });
             }
+
+            var etlItemErrors = Statistics.ReadInMemoryItemErrors();
             
             return new ElasticSearchEtlTestScriptResult
             {
-                TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
+                TransformationErrors = etlItemErrors.Where(x => x.Step == TaskErrorStep.Transformation).ToList(),
                 Summary = summaries
             };
         }

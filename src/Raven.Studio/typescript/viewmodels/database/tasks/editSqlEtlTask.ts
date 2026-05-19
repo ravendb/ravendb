@@ -58,8 +58,8 @@ class sqlTaskTestMode {
     debugOutput = ko.observableArray<string>([]);
     
     // all kinds of alerts:
-    transformationErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
-    loadErrors = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.EtlErrorInfo>([]);
+    transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
+    loadErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
     slowSqlWarnings = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>([]);
     
     warningsCount = ko.pureComputed(() => {
@@ -153,10 +153,10 @@ class sqlTaskTestMode {
             
             new testSqlReplicationCommand(this.db, dto)
                 .execute()
-                .done((testResult: Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test.RelationalDatabaseEtlTestScriptResult) => {
+                .done((testResult) => {
                     this.testResults(testResult.Summary.flatMap(x => x.Commands));
                     this.debugOutput(testResult.DebugOutput);
-                    this.loadErrors(testResult.LoadErrors);
+                    this.loadErrors(testResult.ItemLoadErrors);
                     this.slowSqlWarnings(testResult.SlowSqlWarnings); 
                     this.transformationErrors(testResult.TransformationErrors);
                     
@@ -339,7 +339,7 @@ class editSqlEtlTask extends shardViewModelBase {
             }
 
             return null;
-        }); 
+        });
 
         this.collectionNames = ko.pureComputed(() => {
            return collectionsTracker.default.getCollectionNames(); 

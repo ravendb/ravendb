@@ -10,6 +10,8 @@ import { SharedStubs } from "test/stubs/SharedStubs";
 import ReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.ReplicationTaskProgress;
 import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stats.InternalReplicationTaskProgress;
 import { mockJQueryError } from "test/mocks/utils";
+import EtlErrors = Raven.Server.Documents.ETL.Stats.TaskErrors;
+import EtlTaskStats = Raven.Server.Documents.ETL.Stats.EtlTaskStats;
 
 export default class MockTasksService extends AutoMockService<TasksService> {
     constructor() {
@@ -184,5 +186,13 @@ export default class MockTasksService extends AutoMockService<TasksService> {
 
     withAiModels(dto?: MockedValue<string[]>) {
         return this.mockResolvedValue(this.mocks.getAiModels, dto, SharedStubs.aiModels());
+    }
+
+    withEtlErrors(dto?: MockedValue<EtlErrors[]>) {
+        return this.mockResolvedValue(this.mocks.getEtlErrors, dto, TasksStubs.etlErrors());
+    }
+
+    withEtlStats(dto?: MockedValue<EtlTaskStats[]>) {
+        return this.mockResolvedValue(this.mocks.getEtlStats, dto, TasksStubs.etlStats());
     }
 }

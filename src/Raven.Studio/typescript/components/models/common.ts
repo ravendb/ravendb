@@ -28,6 +28,10 @@ export interface loadableData<T> {
     error?: any;
 }
 
+export interface nodeAwareLoadableData<T> extends loadableData<T> {
+    nodeTag: string;
+}
+
 export interface locationAwareLoadableData<T> extends loadableData<T> {
     location: databaseLocationSpecifier;
 }

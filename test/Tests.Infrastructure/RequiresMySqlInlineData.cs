@@ -15,13 +15,13 @@ namespace Tests.Infrastructure
 
         public RequiresMySqlInlineData()
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
             
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
             if (MySqlConnectionString.Instance.CanConnect == false)

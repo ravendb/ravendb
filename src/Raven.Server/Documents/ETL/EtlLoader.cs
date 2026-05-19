@@ -97,6 +97,62 @@ namespace Raven.Server.Documents.ETL
             return items.Count();
         }
 
+        public EtlProcess[] GetEtlProcesses()
+        {
+            return _processes.Where(x => x.EtlType is not EtlType.EmbeddingsGeneration and not EtlType.GenAi).ToArray();
+        }
+
+        public EtlProcess[] GetAiProcesses()
+        {
+            return _processes.Where(x => x.EtlType is EtlType.EmbeddingsGeneration or EtlType.GenAi).ToArray();
+        }
+
+        public IEnumerable<string> GetEtlProcessNamesFromRecord()
+        {
+            if (RavenDestinations != null)
+                foreach (var config in RavenDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (SqlDestinations != null)
+                foreach (var config in SqlDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (OlapDestinations != null)
+                foreach (var config in OlapDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (ElasticSearchDestinations != null)
+                foreach (var config in ElasticSearchDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (QueueDestinations != null)
+                foreach (var config in QueueDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (SnowflakeDestinations != null)
+                foreach (var config in SnowflakeDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+        }
+
+        public IEnumerable<string> GetAiProcessNamesFromRecord()
+        {
+            if (EmbeddingsGenerationDestinations != null)
+                foreach (var config in EmbeddingsGenerationDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+
+            if (GenAiDestinations != null)
+                foreach (var config in GenAiDestinations)
+                    foreach (var transform in config.Transforms)
+                        yield return EtlProcess.GetProcessName(config.Name, transform.Name);
+        }
+
         public void Initialize(DatabaseRecord record)
         {
             LoadProcesses(record, record.RavenEtls, record.SqlEtls, record.OlapEtls, record.ElasticSearchEtls, record.QueueEtls, record.SnowflakeEtls, record.EmbeddingsGenerations, record.GenAis, toRemove: null, null, null);
@@ -890,6 +946,8 @@ namespace Raven.Server.Documents.ETL
             if (toRemove.Count == 0)
                 return;
 
+            DeleteErrorsForRemovedTasks(record, toRemove);
+
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 Parallel.ForEach(toRemove, x =>
@@ -924,6 +982,42 @@ namespace Raven.Server.Documents.ETL
                     }
                 });
             });
+        }
+        
+        private void DeleteErrorsForRemovedTasks(DatabaseRecord record, Dictionary<string, List<EtlProcess>> toRemove)
+        {
+            var existingProcessNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            AddProcessNames<RavenEtlConfiguration, RavenConnectionString>(record.RavenEtls);
+            AddProcessNames<SqlEtlConfiguration, SqlConnectionString>(record.SqlEtls);
+            AddProcessNames<OlapEtlConfiguration, OlapConnectionString>(record.OlapEtls);
+            AddProcessNames<ElasticSearchEtlConfiguration, ElasticSearchConnectionString>(record.ElasticSearchEtls);
+            AddProcessNames<QueueEtlConfiguration, QueueConnectionString>(record.QueueEtls);
+            AddProcessNames<SnowflakeEtlConfiguration, SnowflakeConnectionString>(record.SnowflakeEtls);
+            AddProcessNames<EmbeddingsGenerationConfiguration, AiConnectionString>(record.EmbeddingsGenerations);
+            AddProcessNames<GenAiConfiguration, AiConnectionString>(record.GenAis);
+
+            foreach (var processGroup in toRemove)
+            {
+                foreach (var process in processGroup.Value)
+                {
+                    if (existingProcessNames.Contains(process.Name))
+                        continue;
+
+                    _database.TaskErrorsStorage.DeleteTaskErrorsTablesForTask(process.Name, TaskTypeExtensions.FromEtlType(process.EtlType));
+                }
+            }
+
+            return;
+
+            void AddProcessNames<TConfig, TConnection>(IEnumerable<TConfig> configs)
+                where TConnection : ConnectionString
+                where TConfig : EtlConfiguration<TConnection>
+            {
+                foreach (var config in configs)
+                    foreach (var transform in config.Transforms)
+                        existingProcessNames.Add(EtlProcess.GetProcessName(config.Name, transform.Name));
+            }
         }
 
         private void LogLongRunningDisposeIfNeeded(Stopwatch sp, string processName)

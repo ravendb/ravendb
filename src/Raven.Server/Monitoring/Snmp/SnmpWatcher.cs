@@ -465,6 +465,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new TotalDatabaseWritesPerSecond(server.ServerStore));
             store.Add(new TotalDatabaseDataWrittenPerSecond(server.ServerStore));
 
+            store.Add(new TotalEtlDocumentsProcessedPerSec(server.ServerStore));
+            store.Add(new TotalAiTaskDocumentsProcessedPerSec(server.ServerStore));
+
             store.Add(new ClusterNodeState(server.ServerStore));
             store.Add(new ClusterNodeTag(server.ServerStore));
 
@@ -518,6 +521,20 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new MonitorLockContentionCount());
 
             store.Add(new ServerLongestTransaction(server.ServerStore));
+            
+            store.Add(new ServerEtlErrors(server.ServerStore));
+            store.Add(new ServerHealthyEtls(server.ServerStore));
+            store.Add(new ServerImpairedEtls(server.ServerStore));
+            store.Add(new ServerFailedEtls(server.ServerStore));
+            store.Add(new ServerTotalNumberOfEtls(server.ServerStore));
+            store.Add(new ServerActiveEtls(server.ServerStore));
+
+            store.Add(new ServerAiTasksErrors(server.ServerStore));
+            store.Add(new ServerHealthyAiTasks(server.ServerStore));
+            store.Add(new ServerImpairedAiTasks(server.ServerStore));
+            store.Add(new ServerFailedAiTasks(server.ServerStore));
+            store.Add(new ServerTotalNumberOfAiTasks(server.ServerStore));
+            store.Add(new ServerActiveAiTasks(server.ServerStore));
 
             return store;
 

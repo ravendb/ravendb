@@ -246,7 +246,9 @@ export type AnyEtlOngoingTaskInfo =
     | OngoingTaskKafkaEtlInfo
     | OngoingTaskRabbitMqEtlInfo
     | OngoingTaskAzureQueueStorageEtlInfo
-    | OngoingTaskAmazonSqsEtlInfo;
+    | OngoingTaskAmazonSqsEtlInfo
+    | OngoingTaskGenAiInfo
+    | OngoingTaskEmbeddingsGenerationInfo;
 
 export interface OngoingTaskInfo<
     TSharded extends OngoingTaskSharedInfo = OngoingTaskSharedInfo,

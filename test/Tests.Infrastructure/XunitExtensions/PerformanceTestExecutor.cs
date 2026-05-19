@@ -20,8 +20,7 @@ namespace Tests.Infrastructure.XunitExtensions
             ITestFrameworkExecutionOptions executionOptions,
             CancellationToken cancellationToken)
         {
-            var resourceSnapshotEnabled = bool.TryParse(
-                Environment.GetEnvironmentVariable("TEST_RESOURCE_ANALYZER_ENABLE"), out var value) && value;
+            var resourceSnapshotEnabled = RavenTestHelper.EnvironmentVariables.TestResourceAnalyzerEnable;
 
             using var testResourceSnapshotWriter = new TestResourceSnapshotWriter();
             PerformanceTestState.Writer = testResourceSnapshotWriter;

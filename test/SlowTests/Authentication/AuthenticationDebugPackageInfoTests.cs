@@ -63,7 +63,7 @@ namespace SlowTests.Authentication
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json", "replication.progress.json", "replication.internal.outgoing.progress.json", 
-                "collections.stats.detailed.json", "notifications.json"
+                "collections.stats.detailed.json", "notifications.json", "ai.errors.json", "etl.errors.json"
             };
 
             var dbName = GetDatabaseName();
@@ -82,7 +82,7 @@ namespace SlowTests.Authentication
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json", "replication.progress.json", "replication.internal.outgoing.progress.json",
-                "collections.stats.detailed.json", "notifications.json"
+                "collections.stats.detailed.json", "notifications.json", "ai.errors.json", "etl.errors.json"
             };
 
             var dbName = GetDatabaseName();
@@ -101,7 +101,7 @@ namespace SlowTests.Authentication
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "admin.txinfo.json", "admin.cluster.txinfo.json", "admin.configuration.settings.json", "etl.stats.json", "etl.progress.json",
                 "admin.tombstones.state.json", "indexes.performance.json", "replication.progress.json", "replication.internal.outgoing.progress.json",
-                "collections.stats.detailed.json", "notifications.json"
+                "collections.stats.detailed.json", "notifications.json", "ai.errors.json", "etl.errors.json"
             };
 
             var dbName = GetDatabaseName();
@@ -120,7 +120,7 @@ namespace SlowTests.Authentication
                 "replication.outgoing-reconnect-queue.json", "stats.json", "subscriptions.json", "tcp.json", "documents.huge.json", "identities.json",
                 "queries.running.json", "queries.cache.list.json", "script-runners.json", "storage.report.json",
                 "etl.stats.json", "etl.progress.json", "indexes.performance.json", "replication.progress.json", "replication.internal.outgoing.progress.json",
-                "collections.stats.detailed.json", "notifications.json"
+                "collections.stats.detailed.json", "notifications.json", "ai.errors.json", "etl.errors.json"
             };
 
             var dbName = GetDatabaseName();

@@ -40,4 +40,25 @@ public sealed class ShardedEtlHandler : ShardedDatabaseRequestHandler
         using (var processor = new ShardedEtlHandlerProcessorForProgress(this))
             await processor.ExecuteAsync();
     }
+    
+    [RavenShardedAction("/databases/*/etl/errors", "GET")]
+    public async Task GetErrors()
+    {
+        using (var processor = new ShardedEtlHandlerProcessorForGetErrors(this))
+            await processor.ExecuteAsync();
+    }
+    
+    [RavenShardedAction("/databases/*/etl/errors", "DELETE")]
+    public async Task DeleteErrors()
+    {
+        using (var processor = new ShardedEtlHandlerProcessorForDeleteErrors(this))
+            await processor.ExecuteAsync();
+    }
+    
+    [RavenShardedAction("/databases/*/etl/retry-batch", "POST")]
+    public async Task RetryBatch()
+    {
+        using (var processor = new ShardedEtlHandlerProcessorForRetryBatch(this))
+            await processor.ExecuteAsync();
+    }
 }

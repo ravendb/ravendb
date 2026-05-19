@@ -264,18 +264,11 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
                 var message = "Couldn't parse OLAP ETL " +
                               $"frequency {runFrequency}, task id: {Configuration.TaskId}, " +
                               $"ETL name: {Name} , error: {e.Message}";
-
-
+                
                 if (Logger.IsErrorEnabled)
                     Logger.Error(message);
-
-                Database.NotificationCenter.Add(AlertRaised.Create(
-                    Database.Name,
-                    "OLAP ETL run frequency parsing error",
-                    message,
-                    AlertReason.Etl_Error,
-                    NotificationSeverity.Error,
-                    details: new ExceptionDetails(e)));
+                
+                RecordConfigurationError(message);
 
                 return default;
             }

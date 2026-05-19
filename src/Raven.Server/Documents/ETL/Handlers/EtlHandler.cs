@@ -40,5 +40,26 @@ namespace Raven.Server.Documents.ETL.Handlers
             using (var processor = new EtlHandlerProcessorForProgress(this))
                 await processor.ExecuteAsync();
         }
+        
+        [RavenAction("/databases/*/etl/errors", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task GetErrors()
+        {
+            using (var processor = new EtlHandlerProcessorForGetErrors(this))
+                await processor.ExecuteAsync();
+        }
+        
+        [RavenAction("/databases/*/etl/errors", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task DeleteErrors()
+        {
+            using (var processor = new EtlHandlerProcessorForDeleteErrors(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/databases/*/etl/retry-batch", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+        public async Task RetryBatch()
+        {
+            using (var processor = new EtlHandlerProcessorForRetryBatch(this))
+                await processor.ExecuteAsync();
+        }
     }
 }

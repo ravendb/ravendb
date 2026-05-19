@@ -2,6 +2,7 @@
 import {
     BaseOngoingTaskPanelProps,
     ConnectionStringItem,
+    DestinationUrlItem,
     OngoingTaskActions,
     OngoingTaskName,
     OngoingTaskResponsibleNode,
@@ -49,7 +50,7 @@ function Details(props: ReplicationSinkPanelProps & { canEdit: boolean }) {
             {data.shared.destinationDatabase && (
                 <RichPanelDetailItem label="Hub Database">{data.shared.destinationDatabase}</RichPanelDetailItem>
             )}
-            <RichPanelDetailItem label="Actual Hub URL">{data.shared.destinationUrl ?? "N/A"}</RichPanelDetailItem>
+            <DestinationUrlItem destinationUrl={data.shared.destinationUrl} label="Actual Hub URL" />
 
             {data.shared.topologyDiscoveryUrls.map((url) => (
                 <RichPanelDetailItem label="Topology Discovery URL" key={url}>

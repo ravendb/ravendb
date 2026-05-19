@@ -1,14 +1,10 @@
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import { useCallback, useReducer } from "react";
-import { loadableData } from "components/models/common";
+import { nodeAwareLoadableData } from "components/models/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { produce } from "immer";
 import { useAsync } from "react-async-hook";
-
-export interface nodeAwareLoadableData<T> extends loadableData<T> {
-    nodeTag: string;
-}
 
 interface ClusterWideReducerState<T> {
     result: nodeAwareLoadableData<T>[];
@@ -47,7 +43,7 @@ export function useClusterWideAsync<T>(perNodeProvider: (nodeTag: string) => Pro
     };
 }
 
-function initReducer<T>(nodeTags: string[]): ClusterWideReducerState<T> {
+export function initReducer<T>(nodeTags: string[]): ClusterWideReducerState<T> {
     return {
         result: nodeTags.map(
             (tag): nodeAwareLoadableData<T> => ({

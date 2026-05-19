@@ -1365,9 +1365,14 @@ namespace Voron.Data.BTrees
                         if (State.Header.RootObjectType == RootObjectType.Table) // tables might have mixed values, fixed size trees inside have dedicated handling
                             continue;
                         
-                        if ((State.Header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees)
+                        if ((State.Header.Flags & TreeFlags.FixedSizeTrees) == TreeFlags.FixedSizeTrees ||
+                            (State.Header.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                         {
                             var valueReader = GetValueReaderFromHeader(node);
+
+                            // Check if this is an inline stream - no extra pages to collect
+                            if (valueReader.Length >= 1 && ((RootObjectType*)valueReader.Base)[0] == RootObjectType.InlineStream)
+                                continue;
 
                             var valueSize = ((FixedSizeTreeHeader.Embedded*)valueReader.Base)->ValueSize;
 

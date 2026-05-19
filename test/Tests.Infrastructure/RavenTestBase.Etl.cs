@@ -240,74 +240,31 @@ namespace FastTests
                 });
             }
 
-            public async Task<EtlErrorInfo> TryGetLoadErrorAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
+            public async Task<IEnumerable<TaskItemErrorTableValue>> GetItemLoadErrorsAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
             {
                 var database = await _parent.GetDatabase(databaseName);
 
-                string tag;
+                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
-                if (typeof(T) == typeof(ElasticSearchConnectionString))
-                    tag = ElasticSearchEtl.ElasticSearchEtlTag;
-                else if (typeof(T) == typeof(SqlConnectionString<>))
-                    tag = SqlEtl.SqlEtlTag;
-                else if (typeof(T) == typeof(RavenConnectionString))
-                    tag = RavenEtl.RavenEtlTag;
-                else if (typeof(T) == typeof(OlapConnectionString))
-                    tag = OlapEtl.OlaptEtlTag;
-                else if (typeof(T) == typeof(QueueConnectionString))
-                    tag = QueueEtl<QueueItem>.QueueEtlTag;
-                else if (typeof(T) == typeof(SnowflakeConnectionString))
-                    tag = SnowflakeEtl.SnowflakeEtlTag;
-                else if (config is GenAiConfiguration)
-                    tag = GenAiTask.GenAiTaskTag;
-                else if (config is EmbeddingsGenerationConfiguration)
-                    tag = EmbeddingsGenerationTask.EmbeddingsTaskTag;
-                else
-                    throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
-
-                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertReason.Etl_LoadError);
-
-                if (loadAlert is null)
-                    return null;
-
-                var details = (EtlErrorsDetails)loadAlert.Details;
-
-                return details.Errors.Count != 0 ? details.Errors.First() : null;
+                return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
             }
 
-            public async Task<EtlErrorInfo> TryGetTransformationErrorAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
+            public async Task<IEnumerable<TaskProcessErrorTableValue>> GetProcessLoadErrorsAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
             {
                 var database = await _parent.GetDatabase(databaseName);
 
-                string tag;
+                var errors = database.TaskErrorsStorage.ReadProcessErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
-                if (typeof(T) == typeof(ElasticSearchConnectionString))
-                    tag = ElasticSearchEtl.ElasticSearchEtlTag;
-                else if (typeof(T) == typeof(SqlConnectionString))
-                    tag = SqlEtl.SqlEtlTag;
-                else if (typeof(T) == typeof(RavenConnectionString))
-                    tag = RavenEtl.RavenEtlTag;
-                else if (typeof(T) == typeof(OlapConnectionString))
-                    tag = OlapEtl.OlaptEtlTag;
-                else if (typeof(T) == typeof(QueueConnectionString))
-                    tag = QueueEtl<QueueItem>.QueueEtlTag;
-                else if (typeof(T) == typeof(SnowflakeConnectionString))
-                    tag = SnowflakeEtl.SnowflakeEtlTag;
-                else if (config is GenAiConfiguration)
-                    tag = GenAiTask.GenAiTaskTag;
-                else if (config is EmbeddingsGenerationConfiguration)
-                    tag = EmbeddingsGenerationTask.EmbeddingsTaskTag;
-                else
-                    throw new NotSupportedException($"Unknown ETL type: {typeof(T)}");
+                return errors.Where(error => error.Step == (int)TaskErrorStep.Load);
+            }
 
-                var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(tag, $"{config.Name}/{config.Transforms.First().Name}", AlertReason.Etl_TransformationError);
-                
-                if (loadAlert is null)
-                    return null;
+            public async Task<IEnumerable<TaskItemErrorTableValue>> GetItemTransformationErrorsAsync<T>(string databaseName, EtlConfiguration<T> config) where T : ConnectionString
+            {
+                var database = await _parent.GetDatabase(databaseName);
 
-                var details = (EtlErrorsDetails)loadAlert.Details;
+                var errors = database.TaskErrorsStorage.ReadItemErrorsOfTask(TaskTypeExtensions.FromEtlType(config.EtlType), $"{config.Name}/{config.Transforms.First().Name}");
 
-                return details.Errors.Count != 0 ? details.Errors.First() : null;
+                return errors.Where(error => error.Step == (int)TaskErrorStep.Transformation);
             }
 
             public async Task<DocumentDatabase> GetDatabaseFor(IDocumentStore store, string docId)
@@ -354,12 +311,21 @@ namespace FastTests
             {
                 if (await etlDone.WaitAsync(timeout) == false)
                 {
-                    var loadError = await TryGetLoadErrorAsync(databaseName, config);
-                    var transformationError = await TryGetTransformationErrorAsync(databaseName, config);
+                    var loadErrors = (await GetItemLoadErrorsAsync(databaseName, config)).ToList();
+                    var transformationErrors = (await GetItemTransformationErrorsAsync(databaseName, config)).ToList();
 
-                    Assert.Fail($"ETL wasn't done. Load error: {loadError?.Error}. Transformation error: {transformationError?.Error}");
+                    var errorMessage = new StringBuilder("ETL wasn't done.");
+
+                    if (loadErrors.Count != 0)
+                        errorMessage.Append($"First load error: {loadErrors.First().Error}");
+                    
+                    if (transformationErrors.Count != 0)
+                        errorMessage.Append($"First transformation error: {transformationErrors.First().Error}");
+                    
+                    Assert.Fail(errorMessage.ToString());
                 }
             }
+            
             public void Dispose()
             {
                 try

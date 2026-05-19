@@ -1,6 +1,5 @@
-﻿import React, { useCallback } from "react";
+﻿import React from "react";
 import {
-    BaseOngoingTaskPanelProps,
     ConnectionStringItem,
     EmptyScriptsWarning,
     ICanShowTransformationScriptPreview,
@@ -8,7 +7,6 @@ import {
     OngoingTaskName,
     OngoingTaskResponsibleNode,
     OngoingTaskStatus,
-    useTasksOperations,
 } from "../../shared/shared";
 import { OngoingTaskKafkaEtlInfo } from "components/models/tasks";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -26,49 +24,33 @@ import Collapse from "react-bootstrap/Collapse";
 import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
-import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { Icon } from "components/common/Icon";
+import { EtlPanelBaseProps, useEtlPanel } from "./etlPanelUtils";
+import { EtlPanelErrors, EtlPanelHealthBadge, EtlPanelProgressItem, EtlPanelToggleButton } from "./EtlPanelComponents";
 
-type KafkaEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaEtlInfo>;
+type KafkaEtlPanelProps = EtlPanelBaseProps<OngoingTaskKafkaEtlInfo>;
 
-function Details(props: KafkaEtlPanelProps & { canEdit: boolean }) {
-    const { data, canEdit } = props;
-    const { appUrl } = useAppUrls();
+export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformationScriptPreview) {
+    const { data, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState, etlStats } = props;
+
+    const { forCurrentDatabase, appUrl } = useAppUrls();
+    const editUrl = forCurrentDatabase.editKafkaEtl(data.shared.taskId)();
+
+    const {
+        canEdit,
+        goToTaskErrors,
+        detailsVisible,
+        toggleDetails,
+        onEdit,
+        showPreview,
+        taskHealth,
+        errorCount,
+        errorsByLocation,
+        etlProgress,
+    } = useEtlPanel(props, editUrl);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Kafka", data.shared.connectionStringName);
-
-    return (
-        <RichPanelDetails>
-            <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
-            <ConnectionStringItem
-                connectionStringDefined
-                canEdit={canEdit}
-                connectionStringName={data.shared.connectionStringName}
-                connectionStringsUrl={connectionStringsUrl}
-            />
-            <EmptyScriptsWarning task={data} />
-        </RichPanelDetails>
-    );
-}
-
-export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformationScriptPreview) {
-    const { data, showItemPreview, toggleSelection, isSelected, onTaskOperation, isDeleting, isTogglingState } = props;
-
-    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
-    const { forCurrentDatabase } = useAppUrls();
-
-    const canEdit = hasDatabaseAdminAccess && !data.shared.serverWide;
-    const editUrl = forCurrentDatabase.editKafkaEtl(data.shared.taskId)();
-
-    const { detailsVisible, toggleDetails, onEdit } = useTasksOperations(editUrl, props);
-
-    const showPreview = useCallback(
-        (transformationName: string) => {
-            showItemPreview(data, transformationName);
-        },
-        [data, showItemPreview]
-    );
 
     return (
         <RichPanel>
@@ -86,10 +68,6 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
-                    <span>
-                        <Icon icon="kafka-etl" />
-                        Kafka ETL
-                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -105,13 +83,35 @@ export function KafkaEtlPanel(props: KafkaEtlPanelProps & ICanShowTransformation
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
                         isDetailsOpen={detailsVisible}
+                        isEtl
                     />
                 </RichPanelActions>
             </RichPanelHeader>
+            <RichPanelDetails>
+                <EtlPanelToggleButton detailsVisible={detailsVisible} toggleDetails={toggleDetails} />
+                <RichPanelDetailItem label="Type">
+                    <Icon icon="kafka-etl" />
+                    Kafka ETL
+                </RichPanelDetailItem>
+                <ConnectionStringItem
+                    connectionStringDefined
+                    canEdit={canEdit}
+                    connectionStringName={data.shared.connectionStringName}
+                    connectionStringsUrl={connectionStringsUrl}
+                />
+                <RichPanelDetailItem label="Bootstrap Servers">{data.shared.url}</RichPanelDetailItem>
+                <EtlPanelHealthBadge taskHealth={taskHealth} />
+                <EtlPanelErrors
+                    errorCount={errorCount}
+                    errorsByLocation={errorsByLocation}
+                    goToTaskErrors={goToTaskErrors}
+                />
+                <EtlPanelProgressItem etlProgress={etlProgress} />
+                <EmptyScriptsWarning task={data} />
+            </RichPanelDetails>
             <Collapse in={detailsVisible}>
                 <div>
-                    <Details {...props} canEdit={canEdit} />
-                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} />
+                    <OngoingEtlTaskDistribution task={data} showPreview={showPreview} etlStats={etlStats} />
                 </div>
             </Collapse>
         </RichPanel>

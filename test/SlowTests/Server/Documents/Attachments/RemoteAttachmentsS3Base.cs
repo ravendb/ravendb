@@ -14,7 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
-using SlowTests.Server.Documents.ETL.Olap;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Server.Documents.Attachments;

@@ -3,6 +3,7 @@ import CellValue, { CellValueWrapper } from "components/common/virtualTable/cell
 import React, { useMemo } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import moment from "moment";
+import genUtils from "common/generalUtils";
 
 type CellContextSubset<TData, TValue> = Pick<CellContext<TData, TValue>, "cell" | "getValue">;
 
@@ -15,7 +16,7 @@ export interface DateFormatterCellProps<TData, TValue> extends CellContextSubset
 export function DateFormatterCell<TData, TValue>({
     getValue,
     cellClassName,
-    displayFormat,
+    displayFormat = genUtils.dateFormat,
     showTooltip = true,
 }: DateFormatterCellProps<TData, TValue>) {
     const rawValue = getValue();

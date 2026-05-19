@@ -38,12 +38,9 @@ function getCellSizeProvider(tableWidthInPx = 0) {
     return (percentage: number) => Math.floor((tableWidthInPx * percentage) / 100);
 }
 
-function getHeightInPx(rowsCount: number, maxHeightInPx: number): number {
+function getHeightInPx(rowsCount: number, maxHeightInPx: number, rowHeight = defaultRowHeightInPx): number {
     const calculatedHeightInPx =
-        Math.max(defaultRowHeightInPx, rowsCount * defaultRowHeightInPx) +
-        paddingInPx +
-        headerHeightInPx +
-        scrollbarHeightInPx;
+        Math.max(rowHeight, rowsCount * rowHeight) + paddingInPx + headerHeightInPx + scrollbarHeightInPx;
 
     return Math.min(calculatedHeightInPx, maxHeightInPx);
 }

@@ -25,6 +25,7 @@ export interface DatabaseLocalInfo {
     upTime?: string;
     backupInfo: Raven.Client.ServerWide.Operations.BackupInfo;
     databaseStatus: Raven.Server.Web.System.Processors.Studio.StudioDatabasesHandlerForGetDatabasesState.StudioDatabaseStatus;
+    tasksErrors: number;
 }
 
 export interface OrchestratorLocalInfo {

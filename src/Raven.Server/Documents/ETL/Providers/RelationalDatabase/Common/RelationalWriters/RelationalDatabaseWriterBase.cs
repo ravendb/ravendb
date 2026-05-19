@@ -37,16 +37,18 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     private readonly RelationalDatabaseEtlMetricsCountersManager _sqlMetrics;
     private readonly EtlProcessStatistics _statistics;
     private readonly string _etlName;
+    private readonly string _taskName;
     protected readonly EtlConfiguration<TRelationalConnectionString> Configuration;
     private readonly List<Func<DbParameter, string, bool>> _stringParserList;
     private const int LongStatementWarnThresholdInMs = 3000;
 
-    protected RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration,
+    protected RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration, string taskName,
         RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics, bool shouldConnectToTarget = true)
     {
         _sqlMetrics = sqlMetrics;
         _statistics = statistics;
         _etlName = configuration.Name;
+        _taskName = taskName;
 
         Database = database;
         ProviderFactory = GetDbProviderFactory(configuration);
@@ -174,9 +176,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                                 $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
                         }
 
-                        _statistics.RecordPartialLoadError(
-                            $"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}",
-                            itemToReplicate.DocumentId);
+                        var errorMessage = $"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}";
+                        _statistics.RecordItemLoadError(errorMessage, itemToReplicate.DocumentId);
                     }
                 }
                 finally
@@ -282,9 +283,16 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                             Logger.Info($"Failure to replicate deletions to relational database for: {_etlName}, " +
                                         "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        _statistics.RecordPartialLoadError(
-                            $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}",
-                            null);
+                        var errorMessage = $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}";
+                        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+                        {
+                            CreatedAt = SystemTime.UtcNow,
+                            TaskName = _taskName,
+                            AffectedDocumentsCount = countOfDeletes,
+                            Step = TaskErrorStep.Load,
+                            Error = errorMessage
+                        });
+                        _statistics.RecordProcessLoadError(countOfDeletes);
                     }
                 }
                 finally

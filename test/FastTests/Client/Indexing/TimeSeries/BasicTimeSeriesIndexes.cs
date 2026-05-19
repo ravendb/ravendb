@@ -568,8 +568,6 @@ namespace FastTests.Client.Indexing.TimeSeries
 
                 terms = store.Maintenance.Send(new GetTermsOperation(indexName, "HeartBeat", null));
                 Assert.Equal(0, terms.Length);
-
-                WaitForUserToContinueTheTest(store);
             }
         }
 

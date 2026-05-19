@@ -10,28 +10,20 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        private const string S3CredentialEnvironmentVariable = "S3_CREDENTIAL";
-
         private static readonly S3Settings _s3Settings;
 
         public static S3Settings S3Settings => _s3Settings == null ? null : new S3Settings(_s3Settings);
 
         private static readonly string ParsingError;
 
-        private static readonly bool EnvVariableMissing;
-
         static AmazonS3RetryFactAttribute()
         {
-            var s3SettingsString = Environment.GetEnvironmentVariable(S3CredentialEnvironmentVariable);
-            if (s3SettingsString == null)
-            {
-                EnvVariableMissing = true;
+            if (RavenTestHelper.EnvironmentVariables.S3Credential == null)
                 return;
-            }
 
             try
             {
-                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(s3SettingsString);
+                _s3Settings = JsonConvert.DeserializeObject<S3Settings>(RavenTestHelper.EnvironmentVariables.S3Credential);
             }
             catch (Exception e)
             {
@@ -57,7 +49,7 @@ namespace Tests.Infrastructure
 
         public static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, S3CredentialEnvironmentVariable, ParsingError, _s3Settings);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.S3Credential == null, RavenTestHelper.EnvironmentVariables.S3CredentialEnvName, ParsingError, _s3Settings);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

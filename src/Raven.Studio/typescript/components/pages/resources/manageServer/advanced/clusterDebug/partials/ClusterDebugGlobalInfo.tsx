@@ -1,7 +1,7 @@
 import { Icon } from "components/common/Icon";
 import React from "react";
-import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
 import { ClusterDebugNodeInfo } from "components/pages/resources/manageServer/advanced/clusterDebug/partials/common";
+import { nodeAwareLoadableData } from "components/models/common";
 
 interface ClusterDebugGlobalInfoProps {
     nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];

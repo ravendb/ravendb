@@ -19,7 +19,7 @@ namespace Tests.Infrastructure.ConnectionString
         {
             ConnectionString = new Lazy<string>(() =>
             {
-                var connectionString = Environment.GetEnvironmentVariable("RAVEN_MONGODB_CONNECTION_STRING");
+                var connectionString = RavenTestHelper.EnvironmentVariables.MongoDbConnectionString;
                 return string.IsNullOrEmpty(connectionString)
                     ? string.Empty
                     : connectionString;

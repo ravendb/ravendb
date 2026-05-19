@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide;
 using Raven.Server.Commercial;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Monitoring;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -39,6 +40,7 @@ namespace Raven.Server.Web.System
             public static readonly string ArchivedDataProcessingBehavior = FormatEnumHelp<ArchivedDataProcessingBehavior>();
             public static readonly string IndexRunningStatus = FormatEnumHelp<IndexRunningStatus>();
             public static readonly string IndexType = FormatEnumHelp<IndexType>();
+            public static readonly string EtlHealthStatus = FormatEnumHelp<EtlProcessHealthStatus>();
             
             private static string FormatEnumHelp<TEnum>() where TEnum : struct, Enum
             {
@@ -58,6 +60,8 @@ namespace Raven.Server.Web.System
             var skipDatabases = GetBoolValueQueryString("skipDatabasesMetrics", false) ?? false;
             var skipIndexes = GetBoolValueQueryString("skipIndexesMetrics", false) ?? false;
             var skipCollections = GetBoolValueQueryString("skipCollectionsMetrics", false) ?? false;
+            var skipEtls = GetBoolValueQueryString("skipEtlsMetrics", false) ?? false;
+            var skipAiTasks = GetBoolValueQueryString("skipAiTasksMetrics", false) ?? false;
             var includeGc = GetBoolValueQueryString("includeGcMetrics", false) ?? false;
 
             var provider = new MetricsProvider(Server);
@@ -84,6 +88,16 @@ namespace Raven.Server.Web.System
             if (skipCollections == false)
             {
                 await WriteCollectionMetricsAsync(databases, responseStream);
+            }
+
+            if (skipEtls == false)
+            {
+                await WriteEtlMetricsAsync(provider, databases, responseStream);
+            }
+
+            if (skipAiTasks == false)
+            {
+                await WriteAiTaskMetricsAsync(provider, databases, responseStream);
             }
         }
 
@@ -197,6 +211,20 @@ namespace Raven.Server.Web.System
                     WriteGaugeWithHelp(writer, "Server license expiration left", "license_expiration_left_seconds", serverMetrics.License.ExpirationLeftInSec);
                     WriteGaugeWithHelp(writer, "Server license utilized CPU cores", "license_utilized_cpu_cores", serverMetrics.License.UtilizedCpuCores);
                     WriteGaugeWithHelp(writer, "Server license max CPU cores", "license_max_cores", serverMetrics.License.MaxCores);
+                    
+                    // ETLs
+                    WriteCounterWithHelp(writer, "Number of ETLs", "server_etls_count", serverMetrics.Etls.Count);
+                    WriteCounterWithHelp(writer, "Number of ETL errors", "server_etls_errors_count", serverMetrics.Etls.ErrorsCount);
+                    WriteCounterWithHelp(writer, "Number of healthy ETLs", "server_etls_healthy_count", serverMetrics.Etls.HealthyEtlsCount);
+                    WriteCounterWithHelp(writer, "Number of impaired ETLs", "server_etls_impaired_count", serverMetrics.Etls.ImpairedEtlsCount);
+                    WriteCounterWithHelp(writer, "Number of failed ETLs", "server_etls_failed_count", serverMetrics.Etls.FailedEtlsCount);
+
+                    // AI Tasks
+                    WriteCounterWithHelp(writer, "Number of AI tasks", "server_ai_tasks_count", serverMetrics.AiTasks.Count);
+                    WriteCounterWithHelp(writer, "Number of AI task errors", "server_ai_tasks_errors_count", serverMetrics.AiTasks.ErrorsCount);
+                    WriteCounterWithHelp(writer, "Number of healthy AI tasks", "server_ai_tasks_healthy_count", serverMetrics.AiTasks.HealthyTasksCount);
+                    WriteCounterWithHelp(writer, "Number of impaired AI tasks", "server_ai_tasks_impaired_count", serverMetrics.AiTasks.ImpairedTasksCount);
+                    WriteCounterWithHelp(writer, "Number of failed AI tasks", "server_ai_tasks_failed_count", serverMetrics.AiTasks.FailedTasksCount);
                 }
 
                 ms.Position = 0;
@@ -318,6 +346,20 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Disk Write Throughput", "database_storage_write_throughput_bytes", metrics, x => KiloBytesToBytes(x.Storage.WriteThroughputInKb),
                         cachedTags);
                     WriteGauges(writer, "Disk Queue length", "database_storage_queue_length", metrics, x => x.Storage.QueueLength, cachedTags);
+                    
+                    // ETLs
+                    WriteGauges(writer, "Number of ETLs", "database_etls_count", metrics, x => x.Etls.Count, cachedTags);
+                    WriteGauges(writer, "Number of ETL errors", "database_etls_errors_count", metrics, x => x.Etls.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "Number of healthy ETLs", "database_etls_healthy_count", metrics, x => x.Etls.HealthyEtlsCount, cachedTags);
+                    WriteGauges(writer, "Number of impaired ETLs", "database_etls_impaired_count", metrics, x => x.Etls.ImpairedEtlsCount, cachedTags);
+                    WriteGauges(writer, "Number of failed ETLs", "database_etls_failed_count", metrics, x => x.Etls.FailedEtlsCount, cachedTags);
+
+                    // AI Tasks
+                    WriteGauges(writer, "Number of AI tasks", "database_ai_tasks_count", metrics, x => x.AiTasks.Count, cachedTags);
+                    WriteGauges(writer, "Number of AI task errors", "database_ai_tasks_errors_count", metrics, x => x.AiTasks.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "Number of healthy AI tasks", "database_ai_tasks_healthy_count", metrics, x => x.AiTasks.HealthyTasksCount, cachedTags);
+                    WriteGauges(writer, "Number of impaired AI tasks", "database_ai_tasks_impaired_count", metrics, x => x.AiTasks.ImpairedTasksCount, cachedTags);
+                    WriteGauges(writer, "Number of failed AI tasks", "database_ai_tasks_failed_count", metrics, x => x.AiTasks.FailedTasksCount, cachedTags);
                 }
 
                 ms.Position = 0;
@@ -367,7 +409,75 @@ namespace Raven.Server.Web.System
                 await ms.CopyToAsync(responseStream);
             }
         }
-        
+
+        private async Task WriteEtlMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        {
+            var metrics = new List<EtlMetrics>();
+            var cachedTags = new List<string>();
+
+            foreach (var database in databases)
+            {
+                foreach (var etl in database.EtlLoader.GetEtlProcesses())
+                {
+                    var etlMetrics = provider.CollectEtlMetrics(etl, database.TaskErrorsStorage);
+                    metrics.Add(etlMetrics);
+                    cachedTags.Add(SerializeTags(new Dictionary<string, string>
+                    {
+                        { "database_name", database.Name },
+                        { "etl_name", etl.Name }
+                    }));
+                }
+            }
+            
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
+            {
+                await using (var writer = PrometheusWriter(ms))
+                {
+                    WriteGauges(writer, "Number of ETL errors", "etl_errors_count", metrics, x => x.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "ETL health status, " + EnumHelp.EtlHealthStatus, "etl_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
+                    WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "etl_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
+                    WriteGauges(writer, "Documents processed per second (one minute rate)", "etl_documents_processed_per_second", metrics, x => x.DocumentsProcessedPerSec, cachedTags);
+                }
+
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
+            }
+        }
+
+        private async Task WriteAiTaskMetricsAsync(MetricsProvider provider, List<DocumentDatabase> databases, Stream responseStream)
+        {
+            var metrics = new List<AiTaskMetrics>();
+            var cachedTags = new List<string>();
+
+            foreach (var database in databases)
+            {
+                foreach (var aiTask in database.EtlLoader.GetAiProcesses())
+                {
+                    var aiTaskMetrics = provider.CollectAiTaskMetrics(aiTask, database.TaskErrorsStorage);
+                    metrics.Add(aiTaskMetrics);
+                    cachedTags.Add(SerializeTags(new Dictionary<string, string>
+                    {
+                        { "database_name", database.Name },
+                        { "ai_task_name", aiTask.Name }
+                    }));
+                }
+            }
+
+            using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
+            {
+                await using (var writer = PrometheusWriter(ms))
+                {
+                    WriteGauges(writer, "Number of AI task errors", "ai_task_errors_count", metrics, x => x.ErrorsCount, cachedTags);
+                    WriteGauges(writer, "AI task health status, " + EnumHelp.EtlHealthStatus, "ai_task_health_status", metrics, x => (int)x.HealthStatus, cachedTags);
+                    WriteGauges(writer, "Time elapsed since Last successful batch (in seconds)", "ai_task_last_successful_batch_time_in_seconds", metrics, x => x.LastSuccessfulBatchTimeInSec, cachedTags);
+                    WriteGauges(writer, "Documents processed per second (one minute rate)", "ai_task_documents_processed_per_second", metrics, x => x.DocumentsProcessedPerSec, cachedTags);
+                }
+
+                ms.Position = 0;
+                await ms.CopyToAsync(responseStream);
+            }
+        }
+
         private async Task WriteCollectionMetricsAsync(List<DocumentDatabase> databases, Stream responseStream)
         {
             var metrics = new List<CollectionMetrics>();

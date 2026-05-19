@@ -99,6 +99,7 @@ interface computedAppUrls {
     conflictResolution: KnockoutComputed<string>;
     revisionsBinCleaner: KnockoutComputed<string>;
     remoteAttachments: KnockoutComputed<string>;
+    tasksError: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;
     whatsNew: KnockoutComputed<string>;
@@ -119,4 +120,5 @@ interface computedAppUrls {
     chatAiAgent: (id: string) => KnockoutComputed<string>;
     aiTasks: KnockoutComputed<string>;
     aiTasksStats: KnockoutComputed<string>;
+    aiTasksErrors: KnockoutComputed<string>;
 }

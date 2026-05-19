@@ -334,7 +334,9 @@ namespace Raven.Server.ServerWide
             [nameof(RevisionsBinConfigurationCommand)] = GenerateJsonDeserializationRoutine<RevisionsBinConfigurationCommand>(),
             [nameof(AddOrUpdateAiAgentCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateAiAgentCommand>(),
             [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>(),
-            [nameof(EditSchemaValidationConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditSchemaValidationConfigurationCommand>()
+            [nameof(EditSchemaValidationConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditSchemaValidationConfigurationCommand>(),
+            [nameof(UpdateSnmpDatabaseEtlsMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseEtlsMappingCommand>(),
+            [nameof(UpdateSnmpDatabaseAiTasksMappingCommand)] = GenerateJsonDeserializationRoutine<UpdateSnmpDatabaseAiTasksMappingCommand>(),
         };
     }
 }

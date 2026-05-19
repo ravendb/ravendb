@@ -22,7 +22,9 @@ describe("OLAP", function () {
 
         await fireClick(detailsBtn);
 
-        expect(await container.findByText(/Destination/)).toBeInTheDocument();
+        expect(await container.findByTestId("destination")).toBeInTheDocument();
+
+        expect(await container.findByText("Destination Description")).toBeInTheDocument();
 
         expect(await container.findByText(/Connection String/)).toBeInTheDocument();
 

@@ -25,6 +25,7 @@ import storageKeyProvider = require("common/storage/storageKeyProvider");
 import Packery = require("packery");
 import Draggabilly = require("draggabilly");
 import gcInfoWidget = require("viewmodels/resources/widgets/gcInfoWidget");
+import colorsManager = require("common/colorsManager");
 
 interface savedWidgetsLayout {
     widgets: savedWidget[];
@@ -44,8 +45,6 @@ class clusterDashboard extends viewModelBase {
     view = require("views/resources/clusterDashboard.html");
 
     static localStorageName = storageKeyProvider.storageKeyFor("clusterDashboardLayout");
-    
-    private static readonly nodeColors = ["#51d27a", "#945ab5", "#2f9ef3", "#f0b362", "#7bd85d", "#7069ee", "#d85b9a", "#f38a66", "#edcd51", "#37c4ac"];
     
     private packery: Packery;
     resizeObserver: ResizeObserver;
@@ -149,7 +148,7 @@ class clusterDashboard extends viewModelBase {
         const styles = document.getElementById("cluster-dashboard-node-styles") as HTMLStyleElement;
         
         const rules = nodes.map((node, idx) => {
-            const color = clusterDashboard.nodeColors[idx % clusterDashboard.nodeColors.length];
+            const color = colorsManager.nodeColors[idx % colorsManager.nodeColors.length];
             return `.node-${node.tag()} { --node-color: ${color}; } `;
         });
         

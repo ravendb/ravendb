@@ -50,7 +50,8 @@ export const Default: StoryObj<RavenEtlProps> = {
         } else {
             tasksService.withGetTasks(mockedValue);
         }
-
+        tasksService.withEtlErrors([]);
+        tasksService.withEtlStats([]);
         mockEtlProgress(tasksService, args.completed, args.disabled, args.emptyScript);
 
         return <OngoingTasksPage />;

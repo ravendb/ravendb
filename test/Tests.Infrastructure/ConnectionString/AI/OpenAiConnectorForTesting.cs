@@ -1,4 +1,3 @@
-﻿using System;
 using Raven.Client.Documents.Operations.AI;
 
 namespace Tests.Infrastructure.ConnectionString.AI;
@@ -9,7 +8,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
 
     public EmbeddingsOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [OpenAiConnectorHelper.EnvironmentVariable];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 
@@ -22,26 +21,24 @@ public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<G
 
     public GenAiOpenAiConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [OpenAiConnectorHelper.EnvironmentVariable];
+        RequiredEnvironmentVariables = [RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKeyEnvName];
     }
     public override AiConnectorType AiConnectorType { get; init; } = AiConnectorType.OpenAi;
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat);
-    
+
 }
 
 internal static class OpenAiConnectorHelper
 {
-    public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OPENAI_API_KEY";
     public const string Endpoint = "https://api.openai.com/";
 
     public static AiConnectionString CreateAiConnectionString(string model, AiModelType modelType)
     {
-        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariable);
         return new AiConnectionString
         {
             ModelType = modelType,
-            OpenAiSettings = new OpenAiSettings(apiKey, Endpoint, model, reasoningEffort: OpenAiReasoningEffort.Minimal, seed: 48)
+            OpenAiSettings = new OpenAiSettings(RavenTestHelper.EnvironmentVariables.AiIntegrationOpenAiApiKey, Endpoint, model, reasoningEffort: OpenAiReasoningEffort.Minimal, seed: 48)
         };
     }
 }

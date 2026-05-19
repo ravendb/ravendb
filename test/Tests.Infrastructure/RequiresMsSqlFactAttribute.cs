@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
@@ -9,13 +9,13 @@ public class RequiresMsSqlFactAttribute : FactAttribute
 {
     public RequiresMsSqlFactAttribute()
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             Skip = RavenTestHelper.SkipIntegrationMessage;
             return;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
             return;
 
         if (MsSqlConnectionString.Instance.CanConnect == false)
@@ -24,13 +24,13 @@ public class RequiresMsSqlFactAttribute : FactAttribute
 
     internal static bool ShouldSkip(out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;

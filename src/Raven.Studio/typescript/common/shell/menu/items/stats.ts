@@ -73,14 +73,14 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/status/ongoingTasksStats',
             moduleId: require('viewmodels/database/status/ongoingTasksStats'),
             shardingMode: "singleShard",
-            title: 'Ongoing Tasks Stats',
+            title: 'Ongoing Task Stats',
             nav: true,
             css: 'icon-replication-stats',
             dynamicHash: appUrls.ongoingTasksStats,
             search: {
                 innerActions: [
-                    { name: "Export Ongoing Tasks Stats" },
-                    { name: "Import Ongoing Tasks Stats" },
+                    { name: "Export Ongoing Task Stats" },
+                    { name: "Import Ongoing Task Stats" },
                 ],
             },
         }),

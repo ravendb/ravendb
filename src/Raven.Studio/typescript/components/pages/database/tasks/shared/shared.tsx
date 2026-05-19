@@ -174,17 +174,20 @@ interface OngoingTaskActionsProps {
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: boolean;
     isDetailsOpen?: boolean;
+    isEtl?: boolean;
 }
 
 export function OngoingTaskActions(props: OngoingTaskActionsProps) {
-    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting, isDetailsOpen } = props;
+    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting, isDetailsOpen, isEtl } = props;
 
     return (
         <div className="actions">
             <ButtonGroup>
-                <Button variant="secondary" onClick={toggleDetails} title="Click for details">
-                    <Icon icon={isDetailsOpen ? "fold" : "unfold"} margin="m-0" />
-                </Button>
+                {!isEtl && (
+                    <Button variant="secondary" onClick={toggleDetails} title="Click for details">
+                        <Icon icon={isDetailsOpen ? "fold" : "unfold"} margin="m-0" />
+                    </Button>
+                )}
                 {!task.shared.serverWide && (
                     <Button variant="secondary" onClick={onEdit} title="Edit task">
                         <Icon icon="edit" margin="m-0" />
@@ -235,6 +238,26 @@ export function ConnectionStringItem(props: {
         <RichPanelDetailItem label="Connection String">
             <Icon icon="danger" color="danger" />
             <span className="text-danger">This connection string is not defined.</span>
+        </RichPanelDetailItem>
+    );
+}
+
+export function DestinationUrlItem({
+    destinationUrl,
+    label = "Destination URL",
+}: {
+    destinationUrl: string;
+    label?: string;
+}) {
+    if (!destinationUrl) {
+        return null;
+    }
+
+    return (
+        <RichPanelDetailItem label={label}>
+            <a href={destinationUrl} target="_blank">
+                {destinationUrl}
+            </a>
         </RichPanelDetailItem>
     );
 }

@@ -281,28 +281,28 @@ loadToOrders(orderData, {  // load to the 'Orders' Queue with optional params
 embeddingsGenerationSampleTextHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleText);
 
 static readonly embeddingsGenerationSampleText =
-`embeddings.generate({ 
+`embeddings.generate({
     Name: this.Name,
-    Note: text.split(this.Note, 2048),
+    Note: text.split(this.Note, 2048).withContextPrefix('Note:'),
     Description: text.splitLines(this.Description, 2048),
-    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128)
-});`;
+    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128),
+    Title: this.Title.withContextPrefix('Document title:')
+}).withContextPrefix(this.Title);`;
 
 embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleMarkdown);
 
 static readonly embeddingsGenerationSampleMarkdown =
-`embeddings.generate({ 
+`embeddings.generate({
     MarkdownDescription: markdown.splitLines(this.MarkdownDescription, 2048),
     MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024, 64)
-});`
+}).withContextPrefix(this.Title);`
 
 embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleHtml);
 
 static readonly embeddingsGenerationSampleHtml =
-`embeddings.generate({ 
+`embeddings.generate({
     HtmlContent: html.strip(this.HtmlContent, 2048)
 });`
-    
     
     kafkaEtlSampleHtml = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.kafkaEtlSampleText);
     

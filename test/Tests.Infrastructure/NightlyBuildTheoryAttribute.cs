@@ -1,4 +1,3 @@
-using System;
 using Raven.Client.Util;
 using Xunit;
 
@@ -16,37 +15,27 @@ namespace Tests.Infrastructure
 
         static NightlyBuildTheoryAttribute()
         {
-            int startHourUtc = 16;
-            int endHourUtc = 6;
+            var startHourUtc = RavenTestHelper.EnvironmentVariables.HasNightlyBuildTestsStartHour ? RavenTestHelper.EnvironmentVariables.NightlyBuildTestsStartHour : 16;
+            var endHourUtc = RavenTestHelper.EnvironmentVariables.HasNightlyBuildTestsEndHour ? RavenTestHelper.EnvironmentVariables.NightlyBuildTestsEndHour : 6;
 
-            var startHourUtcAsString = Environment.GetEnvironmentVariable("RAVEN_NIGHTLY_BUILD_TESTS_START_HOUR");
-            var endHourUtcAsString = Environment.GetEnvironmentVariable("RAVEN_NIGHTLY_BUILD_TESTS_END_HOUR");
-
-            if (startHourUtcAsString != null && int.TryParse(startHourUtcAsString, out var newStartHourUtc))
-                startHourUtc = newStartHourUtc;
-
-            if (endHourUtcAsString != null && int.TryParse(endHourUtcAsString, out var newEndHourUtc))
-                endHourUtc = newEndHourUtc;
-
-            SkipMessage = $"Nightly build tests are only working between {startHourUtc}:00 and {endHourUtc}:00 UTC and when 'RAVEN_ENABLE_NIGHTLY_BUILD_TESTS' is set to 'true'. They also can be enforced by setting 'RAVEN_FORCE_NIGHTLY_BUILD_TESTS' to 'true'.";
+            SkipMessage = $"Nightly build tests are only working between {startHourUtc}:00 and {endHourUtc}:00 UTC and when '{RavenTestHelper.EnvironmentVariables.EnableNightlyBuildTestsEnvName}' is set to 'true'. They also can be enforced by setting '{RavenTestHelper.EnvironmentVariables.ForceNightlyBuildTestsEnvName}' to 'true'.";
 
             if (IsNightlyBuild)
                 return;
 
-            var forceVariable = Environment.GetEnvironmentVariable("RAVEN_FORCE_NIGHTLY_BUILD_TESTS");
-            if (forceVariable != null && bool.TryParse(forceVariable, out var forceNightlyBuildTests) && forceNightlyBuildTests)
+            if (RavenTestHelper.EnvironmentVariables.ForceNightlyBuildTests)
             {
                 IsNightlyBuild = true;
                 return;
             }
 
-            var variable = Environment.GetEnvironmentVariable("RAVEN_ENABLE_NIGHTLY_BUILD_TESTS");
-            if (variable == null || bool.TryParse(variable, out IsNightlyBuild) == false)
+            if (RavenTestHelper.EnvironmentVariables.HasEnableNightlyBuildTests == false)
             {
                 IsNightlyBuild = false;
                 return;
             }
 
+            IsNightlyBuild = RavenTestHelper.EnvironmentVariables.EnableNightlyBuildTests;
             if (IsNightlyBuild == false)
                 return;
 
@@ -58,6 +47,9 @@ namespace Tests.Infrastructure
         {
             get
             {
+                if (string.IsNullOrEmpty(base.Skip) == false)
+                    return base.Skip;
+
                 if (IsNightlyBuild)
                     return null;
 

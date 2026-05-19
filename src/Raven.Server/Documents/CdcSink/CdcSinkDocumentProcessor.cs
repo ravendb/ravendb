@@ -36,7 +36,12 @@ public class CdcSinkDocumentProcessor
 
         foreach (var table in config.Tables)
         {
-            var schema = table.SourceTableSchema ?? defaultSchema;
+            // IsNullOrEmpty rather than `??` so callers that supply "" (empty) get the same
+            // default-schema substitution as null. The test endpoint resolves SourceTableSchema
+            // via string.IsNullOrEmpty before looking up tables in _tableIndex; this keeps the
+            // index keys in sync. Production CDC benefits too — a saved task with empty schema
+            // now indexes consistently.
+            var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? defaultSchema : table.SourceTableSchema;
 
             // Register the root table
             var rootKey = MakeKey(schema, table.SourceTableName);
@@ -80,7 +85,7 @@ public class CdcSinkDocumentProcessor
 
         foreach (var table in _config.Tables)
         {
-            var schema = table.SourceTableSchema ?? _defaultSchema;
+            var schema = string.IsNullOrEmpty(table.SourceTableSchema) ? _defaultSchema : table.SourceTableSchema;
 
             if (table.Patch != null)
                 tableScripts.TryAdd(MakeKey(schema, table.SourceTableName), table.Patch);
@@ -90,7 +95,7 @@ public class CdcSinkDocumentProcessor
 
             CdcSinkConfiguration.ForEachEmbeddedTable(table.EmbeddedTables, e =>
             {
-                var embeddedSchema = e.SourceTableSchema ?? _defaultSchema;
+                var embeddedSchema = string.IsNullOrEmpty(e.SourceTableSchema) ? _defaultSchema : e.SourceTableSchema;
                 if (e.Patch != null)
                     tableScripts.TryAdd(MakeKey(embeddedSchema, e.SourceTableName), e.Patch);
                 if (e.OnDelete?.Patch != null)
@@ -210,7 +215,7 @@ public class CdcSinkDocumentProcessor
             //   This requires that ALL descendant tables carry the root's FK (company_id) as a denormalized column.
             var rootJoinColumns = path[0].Config.JoinColumns;
 
-            var embeddedSchema = embedded.SourceTableSchema ?? defaultSchema;
+            var embeddedSchema = string.IsNullOrEmpty(embedded.SourceTableSchema) ? defaultSchema : embedded.SourceTableSchema;
             var key = MakeKey(embeddedSchema, embedded.SourceTableName);
             var embeddedPropertyLookup = BuildPropertyLookup(embedded.Columns);
             var processor = new CdcSinkTableProcessor

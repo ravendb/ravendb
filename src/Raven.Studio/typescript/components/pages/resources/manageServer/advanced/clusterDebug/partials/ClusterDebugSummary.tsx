@@ -3,7 +3,6 @@ import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import "./ClusterDebugSummary.scss";
 import classNames from "classnames";
-import { nodeAwareLoadableData } from "hooks/useClusterWideAsync";
 import { useAppSelector } from "components/store";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import endpoints from "endpoints";
@@ -24,6 +23,7 @@ import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { EmptySet } from "components/common/EmptySet";
+import { nodeAwareLoadableData } from "components/models/common";
 
 interface ClusterDebugSummaryProps {
     nodes: nodeAwareLoadableData<ClusterDebugNodeInfo>[];

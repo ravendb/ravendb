@@ -16,7 +16,7 @@ const textSelectors = {
     nodePanelItemStatusBadge: "OK",
     erroredNodePanelTotalErrorCount: "Total count",
     title: "Index Errors",
-    clearErrorsButtonLabel: "Clear Errors",
+    clearErrorsButtonLabel: "Delete Errors",
 };
 
 const totalErrorCount = IndexesStubs.getIndexesErrorCount().Results.reduce(
@@ -55,7 +55,7 @@ describe("IndexErrors", function () {
         expect(within(totalErrorsElement).getByText(`${totalErrorCount} errors`)).toBeInTheDocument();
     });
 
-    it("does not show 'Clear errors' button for users with 'DatabaseRead' access", async () => {
+    it("does not show 'Delete errors' button for users with 'DatabaseRead' access", async () => {
         const { screen } = rtlRender(<IndexErrorsStory hasErrors databaseAccess="DatabaseRead" isSharded={false} />);
 
         expect(await screen.findByRole("heading", { name: textSelectors.title })).toBeInTheDocument();

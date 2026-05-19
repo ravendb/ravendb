@@ -24,7 +24,7 @@
 
     thead {
         background-color: colors.$panel-bg-2-var;
-        z-index: 1;
+        z-index: 2;
         position: sticky;
         top: 0;
 
@@ -42,6 +42,13 @@
                 .sortable-controls {
                     opacity: 1;
                 }
+            }
+
+            &.col-pinned {
+                position: sticky !important;
+                background-color: colors.$panel-bg-2-var;
+                box-shadow: inset -2px 0 0 colors.$border-color-var;
+                z-index: 3;
             }
         }
 
@@ -130,6 +137,12 @@
                     white-space: nowrap;
                 }
 
+                &.col-pinned {
+                    box-shadow: inset -2px 0 0 colors.$border-color-var;
+                    z-index: 1;
+                    background-color: colors.$row-even-bg-var !important;
+                }
+
                 .value-string {
                     color: colors.$token-string;
                 }
@@ -153,6 +166,10 @@
 
                 td {
                     background-color: colors.$row-bg-var;
+
+                    &.col-pinned {
+                        background-color: colors.$row-bg-var !important;
+                    }
                 }
             }
 

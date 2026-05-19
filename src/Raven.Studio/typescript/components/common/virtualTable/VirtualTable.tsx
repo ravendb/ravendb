@@ -16,6 +16,7 @@ import { values } from "lodash";
 
 interface VirtualTableProps<T> extends Omit<VirtualTableBodyWrapperProps<T>, "tableContainerRef"> {
     overscan?: number;
+    rowHeightInPx?: number;
     tableContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
@@ -25,6 +26,7 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
         className,
         heightInPx = 300,
         overscan = 5,
+        rowHeightInPx,
         isLoading = false,
         isCompact,
         isRoundingDisabled,
@@ -53,7 +55,8 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
     const rowVirtualizer = useVirtualizer({
         count: rows.length,
         estimateSize: () =>
-            isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx,
+            rowHeightInPx ??
+            (isCompact ? virtualTableConstants.compactRowHeightInPx : virtualTableConstants.defaultRowHeightInPx),
         getScrollElement: () => tableContainerRef.current,
         overscan,
     });
@@ -87,18 +90,30 @@ export default function VirtualTable<T>(props: VirtualTableProps<T> & ClassNameP
                             }}
                             className={classNames({ "is-odd": virtualRow.index % 2 !== 0 })}
                         >
-                            {row.getVisibleCells().map((cell) => (
-                                <td
-                                    key={cell.id}
-                                    style={{
-                                        width: cell.column.getSize(),
-                                        padding: isCompact ? "0px 7.5px" : undefined,
-                                    }}
-                                    className={classNames("d-flex align-items-center", { "font-size-11": isCompact })}
-                                >
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </td>
-                            ))}
+                            {row.getVisibleCells().map((cell) => {
+                                const isPinned = cell.column.getIsPinned();
+                                return (
+                                    <td
+                                        key={cell.id}
+                                        style={{
+                                            width: cell.column.getSize(),
+                                            padding: isCompact ? "0px 7.5px" : undefined,
+                                            ...(isPinned
+                                                ? {
+                                                      position: "sticky",
+                                                      left: cell.column.getStart("left"),
+                                                  }
+                                                : {}),
+                                        }}
+                                        className={classNames("align-content-center", {
+                                            "col-pinned": isPinned,
+                                            "font-size-11": isCompact,
+                                        })}
+                                    >
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </td>
+                                );
+                            })}
                         </tr>
                     );
                 })}

@@ -42,7 +42,6 @@ public class AiAgentHandler : DatabaseRequestHandler
         }
     }
 
-
     [RavenAction("/databases/*/ai/agent/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
     public async Task AiAgentTest()
     {

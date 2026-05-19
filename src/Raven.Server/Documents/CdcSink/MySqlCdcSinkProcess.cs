@@ -12,6 +12,7 @@ using MySqlCdc.Providers.MySql;
 using MySqlConnector;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.SqlMigration.MySQL;
 
 namespace Raven.Server.Documents.CdcSink;
 
@@ -278,28 +279,17 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
 
         foreach (var tableInfo in allTables)
         {
-            var columns = new List<ColumnInfo>();
-            await using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE
-                FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
-                ORDER BY ORDINAL_POSITION";
-            cmd.Parameters.AddWithValue("@schema", tableInfo.Schema);
-            cmd.Parameters.AddWithValue("@table", tableInfo.TableName);
+            var rawColumns = await MySqlSchemaQueries.FetchTableColumnsAsync(conn, tableInfo.Schema, tableInfo.TableName, ct);
 
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            while (await reader.ReadAsync(ct))
+            var columns = new List<ColumnInfo>(rawColumns.Count);
+            foreach (var rawColumn in rawColumns)
             {
-                var colName = reader.GetString(0);
-                var dataType = reader.GetString(1).ToLowerInvariant();
-                var columnType = reader.GetString(2).ToLowerInvariant();
                 // tinyint(1) is the canonical "boolean" shape in MySQL/MariaDB. MySqlConnector
                 // returns CLR bool for it (TreatTinyAsBoolean=true is the default), but MySqlCdc's
                 // binlog parser returns sbyte. Detecting the column type up front lets the
                 // streaming pre-pass coerce sbyte/byte -> bool so both paths emit JSON booleans.
                 // bit(1) is added defensively even though both paths already produce bool today.
-                var category = (dataType, columnType) switch
+                var category = (rawColumn.DataType, rawColumn.DetailedType) switch
                 {
                     (_, "tinyint(1)") or (_, "tinyint(1) unsigned") => MySqlColumnCategory.Boolean,
                     ("bit", "bit(1)")                                => MySqlColumnCategory.Boolean,
@@ -309,7 +299,7 @@ public class MySqlCdcSinkProcess : CdcSinkProcess
                         or "char" or "varchar" or "enum" or "set", _) => MySqlColumnCategory.Text,
                     _                                                => MySqlColumnCategory.Other,
                 };
-                columns.Add(new ColumnInfo(colName, category, dataType));
+                columns.Add(new ColumnInfo(rawColumn.Name, category, rawColumn.DataType));
             }
 
             var columnsArray = columns.ToArray();

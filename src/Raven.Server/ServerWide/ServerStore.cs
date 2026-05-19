@@ -49,6 +49,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
@@ -207,7 +208,7 @@ namespace Raven.Server.ServerWide
             NotificationCenter = new ServerNotificationCenter(this, _notificationsStorage);
 
             ThreadsInfoNotifications = new ThreadsInfoNotifications(ServerShutdown);
-
+            
             _operationsStorage = new OperationsStorage();
 
             Operations = new ServerOperations(this, _operationsStorage);

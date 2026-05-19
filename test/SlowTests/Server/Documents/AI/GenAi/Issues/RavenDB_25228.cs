@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -6,6 +8,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.ETL;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Tests.Infrastructure;
 using Xunit;
@@ -207,16 +210,16 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 session.SaveChanges();
             }
 
-            EtlErrorInfo error = null;
+            IEnumerable<TaskProcessErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetProcessLoadErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
-            Assert.NotNull(error);
-            Assert.True(error.Error.Contains("Tool query 'recent-orders-for-customer' contains parameters that are not defined in the agent configuration: 'customerId'"));
+            Assert.NotEmpty(errors);
+            Assert.True(errors.First().Error.Contains("Tool query 'recent-orders-for-customer' contains parameters that are not defined in the agent configuration: 'customerId'"));
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -283,16 +286,16 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues
                 session.SaveChanges();
             }
 
-            EtlErrorInfo error = null;
+            IEnumerable<TaskProcessErrorTableValue> errors = null;
             var value = await WaitForValueAsync(async () =>
             {
-                error = await Etl.TryGetLoadErrorAsync(store.Database, config);
-                return error != null;
+                errors = await Etl.GetProcessLoadErrorsAsync(store.Database, config);
+                return errors.Any();
             }, true, timeout: 60_000);
 
             Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
-            Assert.NotNull(error);
-            Assert.True(error.Error.Contains("Parameter customerId is defined on both the agent level and the query level for recent-orders-for-customer"));
+            Assert.NotEmpty(errors);
+            Assert.True(errors.First().Error.Contains("Parameter customerId is defined on both the agent level and the query level for recent-orders-for-customer"));
         }
 
         private class Order

@@ -34,6 +34,9 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                     <Icon icon="list" /> Documents
                 </div>
                 <div>
+                    <Icon icon="ongoing-tasks" addon="close" /> Task Errors
+                </div>
+                <div>
                     <Icon icon="warning" /> Indexing Errors
                 </div>
                 <div>
@@ -100,6 +103,7 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                                 localState.data?.documentsCount.toLocaleString()
                             )}
                         </div>
+                        <div className="entries">{localState.data?.tasksErrors?.toLocaleString()}</div>
                         <div className="entries">{localState.data?.indexingErrors?.toLocaleString()}</div>
                         <div className="entries">{localState.data?.indexingStatus}</div>
                         <div className="entries">{localState.data?.alerts?.toLocaleString()}</div>

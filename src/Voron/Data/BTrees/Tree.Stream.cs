@@ -49,6 +49,23 @@ namespace Voron.Data.BTrees
             }
         }
 
+        /// <summary>
+        /// Header for streams stored inline in the tree node.
+        /// Layout: [RootObjectType (1 byte)][StreamInfo (16 bytes)][Tag (TagSize bytes)][Data (TotalSize bytes)]
+        /// Note: Unlike chunked streams (which store data first, then metadata), inline streams store metadata first, then data.
+        /// </summary>
+        [StructLayout(LayoutKind.Explicit, Size = SizeOf)]
+        public struct InlineStreamHeader
+        {
+            public const int SizeOf = 1 + StreamInfo.SizeOf; // 17 bytes
+
+            [FieldOffset(0)]
+            public RootObjectType Type; // = RootObjectType.InlineStream
+
+            [FieldOffset(1)]
+            public StreamInfo Info;
+        }
+
         private const int MaxNumberOfPagerPerChunk = 4 * Constants.Size.Megabyte / Constants.Storage.PageSize;
         
         private struct StreamToPageWriter
@@ -71,63 +88,61 @@ namespace Voron.Data.BTrees
             {
                 _parent = parent;
                 _numberOfPagesPerChunk = 1;
-                _tree = _parent.FixedTreeFor(key, ChunkDetails.SizeOf);
                 _version = _parent.DeleteStream(key).Version;
+                _tree = _parent.FixedTreeFor(key, ChunkDetails.SizeOf);
                 _numberOfPagesPerChunk = initialNumberOfPagesPerChunk ?? 1;
                 _tag = tag;
             }
 
             public void Write(Stream stream)
             {
+                AllocateNextPage();
+
+                ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
+
+                var buffer = stream != Stream.Null ? _parent.Llt.Transaction.StreamBuffer : StreamBufferAllocator.Buffer.Null;
+                var localBuffer = buffer.AsSpan();
+
                 {
-                    AllocateNextPage();
-
-                    ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
-
-                    var buffer = stream != Stream.Null ? _parent.Llt.Transaction.StreamBuffer : StreamBufferAllocator.Buffer.Null;
-                    var localBuffer = buffer.AsSpan();
-
+                    while (true)
                     {
+                        var read = stream.Read(localBuffer);
+                        if (read == 0)
+                            break;
+
+                        var toWrite = 0L;
                         while (true)
                         {
-                            var read = stream.Read(localBuffer);
-                            if (read == 0)
+                            toWrite += WriteBufferToPage(buffer.Pointer + toWrite, read - toWrite);
+                            if (toWrite == read)
                                 break;
 
-                            var toWrite = 0L;
-                            while (true)
-                            {
-                                toWrite += WriteBufferToPage(buffer.Pointer + toWrite, read - toWrite);
-                                if (toWrite == read)
-                                    break;
-
-                                // run out of room, need to allocate more
-                                RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
-                                AllocateNextPage();
-                            }
-                        }
-
-                        var chunkSize = (int)(_writePos - _currentPage.DataPointer);
-                        RecordChunkPage(_currentPage.PageNumber, chunkSize);
-
-                        var remaining = _writePosEnd - _writePos;
-                        var infoSize = StreamInfo.SizeOf;
-
-                        if (_tag != null)
-                            infoSize += _tag.Value.Size;
-
-                        if (remaining < infoSize)
-                        {
-                            _numberOfPagesPerChunk = 1;
+                            // run out of room, need to allocate more
+                            RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
                             AllocateNextPage();
-                            chunkSize = 0;
-                            RecordChunkPage(_currentPage.PageNumber, chunkSize);
                         }
-
-                        RecordStreamInfo();
-
-                        _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
                     }
+
+                    var chunkSize = (int)(_writePos - _currentPage.DataPointer);
+                    RecordChunkPage(_currentPage.PageNumber, chunkSize);
+
+                    var remaining = _writePosEnd - _writePos;
+                    var infoSize = StreamInfo.SizeOf;
+
+                    if (_tag != null)
+                        infoSize += _tag.Value.Size;
+
+                    if (remaining < infoSize)
+                    {
+                        _numberOfPagesPerChunk = 1;
+                        AllocateNextPage();
+                        chunkSize = 0;
+                        RecordChunkPage(_currentPage.PageNumber, chunkSize);
+                    }
+
+                    RecordStreamInfo();
+
+                    _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
                 }
             }
 
@@ -215,33 +230,146 @@ namespace Voron.Data.BTrees
 
         public void AddStream(Slice key, Stream stream, Slice? tag = null, int? initialNumberOfPagesPerChunk = null)
         {
-            var writer = new StreamToPageWriter();
-            writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
-            writer.Write(stream);
-
+            Debug.Assert(stream.CanSeek, "Stream must be seekable, we need it to simplify reseting position when stream is too large for inline storage");
+            
             if ((State.Header.Flags & TreeFlags.Streams) != TreeFlags.Streams)
             {
                 ref var state = ref State.Modify();
                 state.Flags |= TreeFlags.Streams;
             }
+
+            if (TryAddInlineStream(key, stream, tag))
+                return;
+
+            var writer = new StreamToPageWriter();
+            writer.Init(this, key, tag, initialNumberOfPagesPerChunk);
+            writer.Write(stream);
         }
 
-        public VoronStream ReadStream(string key)
+        private bool TryAddInlineStream(Slice key, Stream stream, Slice? tag)
+        {
+            var tagSize = tag?.Size ?? 0;
+            // maxInlineSize calculates space available for the value (header + tag + data).
+            // Key.Size is not subtracted because DirectAdd(key, len, ...) only accounts for value length.
+            var maxInlineSize = _llt.DataPager.NodeMaxSize - Constants.Tree.NodeHeaderSize - InlineStreamHeader.SizeOf - tagSize;
+            if (maxInlineSize <= 0)
+                return false;
+
+            var nodeMaxSize = _llt.DataPager.NodeMaxSize;
+
+            var buffer = _llt.Transaction.StreamBuffer;
+            var localBuffer = buffer.AsSpan().Slice(0, nodeMaxSize);
+            var totalRead = 0;
+            while (totalRead < nodeMaxSize)
+            {
+                var read = stream.Read(localBuffer.Slice(totalRead));
+                if (read == 0)
+                    break;
+                totalRead += read;
+            }
+
+            if (totalRead > maxInlineSize)
+            {
+                // Stream is too large for inline storage, reset and fall back
+                stream.Position = 0;
+                return false;
+            }
+
+            // The entire stream fits inline
+            var version = DeleteStream(key).Version;
+            var inlineSize = InlineStreamHeader.SizeOf + tagSize + totalRead;
+            using (DirectAdd(key, inlineSize, out byte* ptr))
+            {
+                var header = (InlineStreamHeader*)ptr;
+                header->Type = RootObjectType.InlineStream;
+                header->Info.TotalSize = totalRead;
+                header->Info.Version = version + 1;
+                header->Info.TagSize = tagSize;
+
+                var dest = ptr + InlineStreamHeader.SizeOf;
+                if (tag != null)
+                {
+                    tag.Value.CopyTo(dest);
+                    dest += tagSize;
+                }
+
+                Memory.Copy(dest, buffer.Pointer, totalRead);
+            }
+
+            return true;
+        }
+
+        public Stream ReadStream(string key)
         {
             using (Slice.From(_tx.Allocator, key, out Slice str))
                 return ReadStream(str);
         }
 
-        public VoronStream ReadStream(Slice key)
+        public Stream ReadStream(Slice key)
         {
+            if (IsInlineStream(key, out var inlineData, out _, out _))
+            {
+                var header = (InlineStreamHeader*)inlineData;
+                var tagSize = header->Info.TagSize;
+                var dataSize = (int)header->Info.TotalSize;
+                var dataPtr = inlineData + InlineStreamHeader.SizeOf + tagSize;
+
+                return new UnmanagedVoronStream(dataPtr, dataSize);
+            }
+
             var pieces = ReadTreeChunks(key, out var tree);
             if (pieces == null)
                 return null;
-            return new VoronStream(tree.Name, pieces, _llt);
+            return new VoronStream(pieces, _llt);
+        }
+
+        public bool IsInlineStream(string key, out byte* data, out int dataSize, out TreePage treePage)
+        {
+            using (Slice.From(_tx.Allocator, key, out Slice str))
+                return IsInlineStream(str, out data, out dataSize, out treePage);
+        }
+
+        public bool IsInlineStream(Slice key, out byte* data, out int dataSize, out TreePage treePage)
+        {
+            data = null;
+            dataSize = 0;
+            treePage = default;
+
+            var p = FindPageFor(key, out TreeNodeHeader* node);
+            if (p.LastMatch != 0 || node == null)
+                return false;
+
+            if (node->Flags == TreeNodeFlags.PageRef)
+                return false;
+
+            var nodeData = (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
+            var nodeDataSize = node->DataSize;
+
+            if (nodeDataSize < InlineStreamHeader.SizeOf)
+                return false;
+
+            // Defensive check: verify we have the Streams flag set 
+            // This prevents misidentification if another structure's first byte happens to match RootObjectType.InlineStream.
+            if ((State.Header.Flags & TreeFlags.Streams) == 0)
+                return false;
+
+            if (((RootObjectType*)nodeData)[0] != RootObjectType.InlineStream)
+                return false;
+
+            data = nodeData;
+            dataSize = nodeDataSize;
+            treePage = p;
+            return true;
         }
 
         public ChunkDetails[] ReadTreeChunks(Slice key, out FixedSizeTree tree)
         {
+            if (IsInlineStream(key, out _, out _, out _))
+            {
+                tree = null;
+                return null;
+            }
+
             tree = FixedTreeFor(key, ChunkDetails.SizeOf);
             var numberOfChunks = tree.NumberOfEntries;
 
@@ -273,12 +401,22 @@ namespace Voron.Data.BTrees
 
         public bool StreamExist(Slice key)
         {
-            var tree = FixedTreeFor(key, ChunkDetails.SizeOf);
-            return tree.NumberOfEntries > 0;
+            return Exists(key);
         }
 
         public int TouchStream(Slice key)
         {
+            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
+            {
+                // The page from IsInlineStream may be read-only, so call ModifyPage to get
+                // a writable copy (preserving search position).
+                var p = ModifyPage(inlinePage);
+                var node = p.GetNode(p.LastSearchPosition);
+                var data = (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
+                var header = (InlineStreamHeader*)data;
+                return ++header->Info.Version;
+            }
+
             var info = GetStreamInfo(key, writable: true);
 
             if (info == null)
@@ -290,6 +428,20 @@ namespace Voron.Data.BTrees
         public StreamInfo? GetStreamInfoForReporting(Slice key, out string tag)
         {
             tag = null;
+
+            if (IsInlineStream(key, out var inlineData, out _, out _))
+            {
+                var header = (InlineStreamHeader*)inlineData;
+                var infoPtr = &header->Info;
+                tag = GetStreamTag(infoPtr);
+
+                return new StreamInfo
+                {
+                    TagSize = infoPtr->TagSize,
+                    TotalSize = infoPtr->TotalSize,
+                    Version = infoPtr->Version
+                };
+            }
 
             if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
                 return null;
@@ -374,6 +526,20 @@ namespace Voron.Data.BTrees
 
         public StreamInfo* GetStreamInfo(Slice key, bool writable)
         {
+            if (IsInlineStream(key, out var inlineData, out _, out var inlinePage))
+            {
+                if (writable)
+                {
+                    // The page from IsInlineStream may be read-only, so call ModifyPage to get
+                    // a writable copy (preserving search position).
+                    var p = ModifyPage(inlinePage);
+                    var node = p.GetNode(p.LastSearchPosition);
+                    inlineData = (byte*)node + node->KeySize + Constants.Tree.NodeHeaderSize;
+                }
+
+                return &((InlineStreamHeader*)inlineData)->Info;
+            }
+
             if (TryGetLastChunkDetailsForStream(key, out var lastChunk) == false)
                 return null;
 
@@ -424,6 +590,15 @@ namespace Voron.Data.BTrees
         {
             int version = 0;
             long size = 0;
+            if (IsInlineStream(key, out var inlineData, out _, out _))
+            {
+                var header = (InlineStreamHeader*)inlineData;
+                version = header->Info.Version;
+                size = header->Info.TotalSize;
+                Delete(key); // Regular tree key deletion — no overflow pages to free
+                return (version, size);
+            }
+
 
             var info = GetStreamInfo(key, writable: false);
 

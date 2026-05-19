@@ -121,10 +121,10 @@ export function IndexErrorsPanel(props: IndexErrorsPanelProps) {
                                 disabled={isLoading}
                                 variant="warning"
                                 onClick={handleClearErrors}
-                                title="Click to clear errors from the selected indexes"
+                                title="Click to delete errors from the selected indexes"
                             >
                                 <Icon icon="trash" />
-                                Clear errors
+                                Delete errors
                             </Button>
                         </RichPanelActions>
                     )}
