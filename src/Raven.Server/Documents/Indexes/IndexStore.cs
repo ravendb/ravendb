@@ -839,6 +839,8 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_sharedJournals != null)
                 return Task.CompletedTask;
+            if (_documentDatabase.Configuration.Indexing.DisableSharedJournals)
+                return Task.CompletedTask;
             return Task.Run(() =>
             {
                 _sharedJournals ??= new SharedIndexJournals(_documentDatabase);
@@ -851,7 +853,8 @@ namespace Raven.Server.Documents.Indexes
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
 
             InitializePath(_documentDatabase.Configuration.Indexing.StoragePath);
-            InitializePath(_documentDatabase.Configuration.Indexing.SharedJournalsPath);
+            if (_documentDatabase.Configuration.Indexing.DisableSharedJournals == false)
+                InitializePath(_documentDatabase.Configuration.Indexing.SharedJournalsPath);
 
             _initialized = true;
 
