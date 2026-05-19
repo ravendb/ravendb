@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Indexes)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenPlatform.Windows)]
         public void Recursion_In_Additional_Sources_Should_Not_Crash_The_Server()
         {
             using (var store = GetDocumentStore())
@@ -65,7 +65,7 @@ public static class PeopleUtil
             }
         }
 
-        [RavenFact(RavenTestCategory.Indexes)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenPlatform.Windows)]
         public void Recursion_In_Expression_Bodied_Additional_Sources_Should_Not_Crash_The_Server()
         {
             using (var store = GetDocumentStore())
@@ -112,7 +112,7 @@ public static class TreeUtil
             }
         }
 
-        [RavenFact(RavenTestCategory.Indexes)]
+        [RavenMultiplatformFact(RavenTestCategory.Indexes, RavenPlatform.Windows)]
         public void Recursion_In_Local_Function_Additional_Sources_Should_Not_Crash_The_Server()
         {
             using (var store = GetDocumentStore())
