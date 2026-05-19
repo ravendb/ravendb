@@ -13,7 +13,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource-variable/figtree": "^5.2.10",
+    "@fontsource-variable/geist": "^5.2.9",
+    "@fontsource-variable/geist-mono": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.100.10",
     "class-variance-authority": "^0.7.1",
