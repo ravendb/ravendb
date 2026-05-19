@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -666,32 +667,30 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             var db2Name = GetDatabaseName();
 
             const string userId = "users/1";
-            using (var server = GetNewServer())
+            var user1 = new User { Id = userId, Name = "SingleUser" };
+            var db1Name = GetDatabaseName();
+            using (var store1 = GetDocumentStore(new Options { ModifyDatabaseName = _ => db1Name }))
             {
-                var db1Name = GetDatabaseName();
-                using (var store1 = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => db1Name }))
+                for (int i = 0; i < 16; i++)
                 {
-                    for (int i = 0; i < 16; i++)
+                    using (var session = store1.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
                     {
-                        using (var session = store1.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                        {
-                            await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
-                            await session.SaveChangesAsync();
-                        }
-                    }
-                }
-
-                using (var store2 = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => db2Name }))
-                {
-                    using (var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
-                    {
-                        await session.StoreAsync(new User { Name = "SingleUser" }, userId);
+                        await session.StoreAsync(new User { Name = $"User{i}" }, $"users/{i}");
                         await session.SaveChangesAsync();
                     }
-
-                    var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                    await Backup.UpdateConfigAndRunBackupAsync(server, config, store2);
                 }
+            }
+
+            using (var store2 = GetDocumentStore(new Options { ModifyDatabaseName = _ => db2Name }))
+            {
+                using (var session = store2.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user1);
+                    await session.SaveChangesAsync();
+                }
+
+                var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
+                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store2);
             }
 
             using var newServer = GetNewServer();
@@ -708,6 +707,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             using (var restoredStore = GetDocumentStore(new Options { Server = newServer, CreateDatabase = false, ModifyDatabaseName = _ => restoredDbName }))
             {
+                using (var session = restoredStore.OpenAsyncSession(new SessionOptions { TransactionMode = TransactionMode.ClusterWide }))
+                {
+                    await session.StoreAsync(user1);
+                    await Assert.ThrowsAsync<ClusterTransactionConcurrencyException>(async () => await session.SaveChangesAsync());
+                }
+
                 var user2 = new User { Id = "users/2", Name = "Grisha" };
                 var user3 = new User { Id = "users/3", Name = "Igal" };
 
