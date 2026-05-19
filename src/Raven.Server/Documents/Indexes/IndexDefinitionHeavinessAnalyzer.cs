@@ -436,21 +436,21 @@ namespace Raven.Server.Documents.Indexes
             return score;
         }
 
-        private static string GetStaticLabel(int score)
+        private static IndexStaticGrade GetStaticLabel(int score)
         {
-            if (score <= StaticSimpleMax) return "Simple";
-            if (score <= StaticModerateMax) return "Moderate";
-            if (score <= StaticComplexMax) return "Complex";
-            return "Very Complex";
+            if (score <= StaticSimpleMax) return IndexStaticGrade.Simple;
+            if (score <= StaticModerateMax) return IndexStaticGrade.Moderate;
+            if (score <= StaticComplexMax) return IndexStaticGrade.Complex;
+            return IndexStaticGrade.VeryComplex;
         }
 
-        private static string GetFullLabel(double score)
+        private static IndexFullGrade GetFullLabel(double score)
         {
-            if (score <= FullLightMax) return "Light";
-            if (score <= FullModerateMax) return "Moderate";
-            if (score <= FullHeavyMax) return "Heavy";
-            if (score <= FullVeryHeavyMax) return "Very Heavy";
-            return "Extreme";
+            if (score <= FullLightMax) return IndexFullGrade.Lightweight;
+            if (score <= FullModerateMax) return IndexFullGrade.Moderate;
+            if (score <= FullHeavyMax) return IndexFullGrade.Heavy;
+            if (score <= FullVeryHeavyMax) return IndexFullGrade.VeryHeavy;
+            return IndexFullGrade.Extreme;
         }
 
         /// <summary>

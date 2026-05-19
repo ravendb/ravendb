@@ -2,6 +2,23 @@ using System.Collections.Generic;
 
 namespace Raven.Client.Documents.Indexes
 {
+    public enum IndexStaticGrade
+    {
+        Simple,
+        Moderate,
+        Complex,
+        VeryComplex
+    }
+
+    public enum IndexFullGrade
+    {
+        Lightweight,
+        Moderate,
+        Heavy,
+        VeryHeavy,
+        Extreme
+    }
+
     /// <summary>
     /// Represents the computed heaviness grade for an index, quantifying its expected resource impact.
     /// </summary>
@@ -21,14 +38,14 @@ namespace Raven.Client.Documents.Indexes
         public double FullScore { get; set; }
 
         /// <summary>
-        /// Human-readable label for the static score: Simple, Moderate, Complex, Very Complex
+        /// Grade label for the static score.
         /// </summary>
-        public string StaticGradeLabel { get; set; }
+        public IndexStaticGrade StaticGradeLabel { get; set; }
 
         /// <summary>
-        /// Human-readable label for the full score: Light, Moderate, Heavy, Very Heavy, Extreme
+        /// Grade label for the full score.
         /// </summary>
-        public string FullGradeLabel { get; set; }
+        public IndexFullGrade FullGradeLabel { get; set; }
 
         /// <summary>
         /// Individual penalty contributions that made up the static score.

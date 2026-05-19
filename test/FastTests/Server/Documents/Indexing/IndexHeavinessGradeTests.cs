@@ -30,7 +30,7 @@ namespace FastTests.Server.Documents.Indexing
             IndexHeavinessGrade grade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(definition);
 
             Assert.True(grade.StaticScore <= 10, $"Expected simple index to have static score <= 10 but got {grade.StaticScore}");
-            Assert.Equal("Simple", grade.StaticGradeLabel);
+            Assert.Equal(IndexStaticGrade.Simple, grade.StaticGradeLabel);
             Assert.NotNull(grade.StaticPenalties);
             Assert.True(grade.StaticPenalties.Count > 0);
         }
@@ -55,7 +55,7 @@ namespace FastTests.Server.Documents.Indexing
             // MapReduce penalty = 10 + 2 fields = 12
             Assert.True(grade.StaticScore >= 11, $"Expected map-reduce index to have static score >= 11 but got {grade.StaticScore}");
             Assert.True(grade.StaticScore <= 25, $"Expected map-reduce index to have static score <= 25 but got {grade.StaticScore}");
-            Assert.Equal("Moderate", grade.StaticGradeLabel);
+            Assert.Equal(IndexStaticGrade.Moderate, grade.StaticGradeLabel);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
@@ -246,7 +246,7 @@ namespace FastTests.Server.Documents.Indexing
         [RavenFact(RavenTestCategory.Indexes)]
         public void ScoreLabels_AreCorrect()
         {
-            void AssertLabel(IndexDefinition definition, IEnumerable<string> collections, string expectedStaticLabel)
+            void AssertLabel(IndexDefinition definition, IEnumerable<string> collections, IndexStaticGrade expectedStaticLabel)
             {
                 IndexHeavinessGrade grade = IndexDefinitionHeavinessAnalyzer.ComputeStaticGrade(definition, collections);
                 Assert.Equal(expectedStaticLabel, grade.StaticGradeLabel);
@@ -258,14 +258,14 @@ namespace FastTests.Server.Documents.Indexing
                 Name = "Simple",
                 Maps = { "from doc in docs.Items select new { doc.Name }" },
                 Fields = new Dictionary<string, IndexFieldOptions> { { "Name", new IndexFieldOptions() } }
-            }, new[] { "Items" }, "Simple");
+            }, new[] { "Items" }, IndexStaticGrade.Simple);
 
             // Complex via LoadDocument (15 points — Moderate range)
             AssertLabel(new IndexDefinition
             {
                 Name = "Complex",
                 Maps = { "from order in docs.Orders let company = LoadDocument(order.Company, \"Companies\") select new { order.Id, CompanyName = company.Name }" }
-            }, new[] { "Orders" }, "Moderate");
+            }, new[] { "Orders" }, IndexStaticGrade.Moderate);
         }
 
         [RavenFact(RavenTestCategory.Indexes)]
