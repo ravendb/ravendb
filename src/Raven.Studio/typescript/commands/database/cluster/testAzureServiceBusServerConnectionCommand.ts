@@ -3,13 +3,8 @@ import endpoints = require("endpoints");
 import database = require("models/resources/database");
 
 class testAzureServiceBusServerConnectionCommand extends commandBase {
-    private readonly db: database | string;
-    private readonly settings: Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings;
-
-    constructor(db: database | string, settings: Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings) {
+    constructor(private readonly db: database | string, private readonly settings: Raven.Client.Documents.Operations.ETL.Queue.AzureServiceBusConnectionSettings) {
         super();
-        this.db = db;
-        this.settings = settings;
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {

@@ -4,7 +4,7 @@ import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/O
 import React from "react";
 import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
 import { Meta, StoryObj } from "@storybook/react-webpack5";
-import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
+import { DatabaseType, withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
@@ -18,7 +18,7 @@ interface AzureServiceBusSinkProps {
     disabled: boolean;
     completed: boolean;
     customizeTask: (x: OngoingTaskQueueSinkListView) => void;
-    databaseType: "sharded" | "cluster" | "singleNode";
+    databaseType: DatabaseType;
 }
 
 export const Default: StoryObj<AzureServiceBusSinkProps> = {
