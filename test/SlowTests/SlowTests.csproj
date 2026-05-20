@@ -134,6 +134,12 @@
     <EmbeddedResource Include="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
     <None Remove="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_25136\RavenDB_25136.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_25738\Dump.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_25738\Dump.ravendbdump" />
     <None Remove="Data\RavenDB-24529\RavenDB_24529.replay" />
     <EmbeddedResource Include="Data\RavenDB_24529\RavenDB_24529.replay" />
   </ItemGroup>
