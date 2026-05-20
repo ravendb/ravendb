@@ -20,11 +20,11 @@ export interface DocumentRevisionsConfig extends RevisionsCollectionConfiguratio
 export interface DocumentRevisionsState {
     loadStatus: loadStatus;
     selectedConfigNames: DocumentRevisionsConfigName[];
-    configs: EntityState<DocumentRevisionsConfig, string>;
-    originalConfigs: EntityState<DocumentRevisionsConfig, string>;
+    configs: EntityState<DocumentRevisionsConfig, DocumentRevisionsConfigName>;
+    originalConfigs: EntityState<DocumentRevisionsConfig, DocumentRevisionsConfigName>;
 }
 
-const configsAdapter = createEntityAdapter<DocumentRevisionsConfig, string>({
+const configsAdapter = createEntityAdapter<DocumentRevisionsConfig, DocumentRevisionsConfigName>({
     selectId: (config) => config.Name,
 });
 
@@ -65,9 +65,9 @@ export const documentRevisionsSlice = createSlice({
         },
         allSelectedConfigNamesToggled: (state) => {
             if (state.selectedConfigNames.length === 0) {
-                state.selectedConfigNames = (
-                    configsSelectors.selectIds(state.configs) as DocumentRevisionsConfigName[]
-                ).filter((name) => name !== documentRevisionsConfigNames.conversations);
+                state.selectedConfigNames = configsSelectors
+                    .selectIds(state.configs)
+                    .filter((name) => name !== documentRevisionsConfigNames.conversations);
             } else {
                 state.selectedConfigNames = [];
             }
