@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 using FastTests;
@@ -353,7 +354,8 @@ namespace Tests.Infrastructure
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;
-                        var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".create.sql"));
+                        var prefix = "SlowTests.Data.npgsql." + dataSet;
+                        using var textStreamReader = new StreamReader(OpenSqlResource(assembly, prefix + ".create"));
                         dbCommand.CommandText = textStreamReader.ReadToEnd();
                         dbCommand.ExecuteNonQuery();
                     }
@@ -363,7 +365,8 @@ namespace Tests.Infrastructure
                         using (var dbCommand = dbConnection.CreateCommand())
                         {
                             dbCommand.CommandTimeout = CommandTimeout;
-                            var dataStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.npgsql." + dataSet + ".insert.sql"));
+                            var prefix = "SlowTests.Data.npgsql." + dataSet;
+                            using var dataStreamReader = new StreamReader(OpenSqlResource(assembly, prefix + ".insert"));
                             dbCommand.CommandText = dataStreamReader.ReadToEnd();
                             dbCommand.ExecuteNonQuery();
                         }
@@ -467,6 +470,20 @@ namespace Tests.Infrastructure
                     con.Close();
                 }
             });
+        }
+
+        private static Stream OpenSqlResource(System.Reflection.Assembly assembly, string prefix)
+        {
+            var zipStream = assembly.GetManifestResourceStream(prefix + ".zip");
+            if (zipStream != null)
+            {
+                var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+                var entry = archive.Entries.First(e => e.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
+                return entry.Open();
+            }
+
+            return assembly.GetManifestResourceStream(prefix + ".sql")
+                ?? throw new InvalidOperationException($"No SQL resource found for prefix '{prefix}'");
         }
 
         private static void TerminateWalSender(NpgsqlCommand dbCommand, string dbName)

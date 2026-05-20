@@ -1,0 +1,7 @@
+{
+    "Setup.Mode": "Unsecured",
+    "ServerUrl": "http://0.0.0.0:8080",
+    "DataDir": "/var/lib/ai-appliance/ravendb",
+    "Security.UnsecuredAccessAllowed": "Local,PrivateNetwork",
+    "License.Eula.Accepted": true
+}
