@@ -4,14 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.TimeSeries;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Server.Documents;
@@ -246,32 +247,77 @@ public class ControlCharacterTests : ClusterTestBase
         const int numberOfNodes = 3;
         const string counterName = TestStr + "counter";
 
+        var backupPath = NewDataPath(forceCreateDir: true);
+        RestoreBackupConfiguration restoreConfig;
+
         var (nodes, leader) = await CreateRaftCluster(numberOfNodes);
         options.Server = leader;
         options.ReplicationFactor = numberOfNodes;
         AllowControlCharactersInIdentifier(options);
-        using var store = GetDocumentStore(options);
-
-        using (var session = store.OpenAsyncSession())
+        using (var store = GetDocumentStore(options))
         {
-            await session.StoreAsync(new TestObj(), DocId);
-            await session.SaveChangesAsync();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestObj(), DocId);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
+                session.CountersFor(DocId).Increment(counterName);
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var counters = await session.CountersFor(DocId).GetAllAsync();
+                Assert.Equal(1, counters.Count);
+            }
+
+            foreach (var node in nodes)
+            {
+                using var nodeStore = new DocumentStore { Database = store.Database, Urls = [node.WebUrl], Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize();
+                using var session = nodeStore.OpenAsyncSession();
+                var counterValue = await session.CountersFor(DocId).GetAsync(counterName);
+                Assert.NotNull(counterValue);
+                Assert.Equal(1, counterValue.Value);
+            }
+
+            var operation = await store.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+            {
+                BackupType = BackupType.Backup,
+                LocalSettings = new LocalSettings
+                {
+                    FolderPath = backupPath
+                }
+            }));
+
+            if (options.DatabaseMode == RavenDatabaseMode.Single)
+            {
+                var r = await operation.WaitForCompletionAsync<BackupResult>(TimeSpan.FromSeconds(30));
+                restoreConfig = new RestoreBackupConfiguration { BackupLocation = Path.Combine(backupPath, r.LocalBackup.BackupDirectory) };
+            }
+            else
+            {
+                var r = await operation.WaitForCompletionAsync<ShardedBackupResult>(TimeSpan.FromSeconds(30));
+                var paths = r.Results.Select(s => Path.Combine(backupPath, s.Result.LocalBackup.BackupDirectory)).ToArray();
+                var shardingConfig = await Sharding.GetShardingConfigurationAsync(store);
+                var settings = Sharding.Backup.GenerateShardRestoreSettings(paths, shardingConfig);
+                restoreConfig = new RestoreBackupConfiguration { ShardRestoreSettings = settings };
+            }
         }
 
-        using (var session = store.OpenAsyncSession())
+        using (var store = GetDocumentStore(new Options { CreateDatabase = false, Server = leader }))
         {
-            session.Advanced.WaitForReplicationAfterSaveChanges(timeout: TimeSpan.FromSeconds(15), replicas: numberOfNodes - 1);
-            session.CountersFor(DocId).Increment(counterName);
-
-            await session.SaveChangesAsync();
-        }
-
-        foreach (var node in nodes)
-        {
-            using var nodeStore = new DocumentStore { Database = store.Database, Urls = [node.WebUrl], Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize();
-            using var session = nodeStore.OpenAsyncSession();
-            var counterValue = await session.CountersFor(DocId).GetAsync(counterName);
-            Assert.Equal(1, counterValue.Value);
+            restoreConfig.DatabaseName = store.Database;
+            using (Backup.RestoreDatabase(store, restoreConfig, timeout: TimeSpan.FromSeconds(60)))
+            {
+                using var session = store.OpenAsyncSession();
+                var counters = await session.CountersFor(DocId).GetAllAsync();
+                Assert.Equal(1, counters.Count);
+            }
         }
     }
 
@@ -575,6 +621,65 @@ public class ControlCharacterTests : ClusterTestBase
         }
     }
     
+    [RavenTheory(RavenTestCategory.BackupExportImport)]
+    [InlineData("ControlChars.ravendb-full-backup")]
+    [InlineData("ControlChars.ravendb-snapshot")]
+    public async Task ControlCharIdentifiers_FromBackup_ShouldRestoreAndBeLoadable(string resourceName)
+    {
+        var backupPath = NewDataPath(forceCreateDir: true);
+        var file = Path.Combine(backupPath, resourceName);
+        ExtractBackupFile(file, $"SlowTests.Data.RavenDB_25738.{resourceName}");
+        
+        using var store = GetDocumentStore(new Options{CreateDatabase = false});
+        using var _ = Backup.RestoreDatabase(store, new RestoreBackupConfiguration { BackupLocation = backupPath, DatabaseName = store.Database });
+        
+        await AssertLegacyControlCharIdentifiersReadableAsync(store);
+    }
+
+    [RavenFact(RavenTestCategory.BackupExportImport)]
+    public async Task ControlCharIdentifiers_FromDump_ShouldImportAndBeLoadable()
+    {
+        using var store = GetDocumentStore(AllowControlCharactersInIdentifier());
+        await using var stream = typeof(ControlCharacterTests).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_25738.Dump.ravendbdump");
+        var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream);
+        await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
+        await AssertLegacyControlCharIdentifiersReadableAsync(store);
+    }
+    
+    private static async Task AssertLegacyControlCharIdentifiersReadableAsync(DocumentStore store)
+    {
+        using (var session = store.OpenAsyncSession())
+        {
+            var docs = await session.Query<TestObj>().ToArrayAsync();
+            Assert.Equal(2, docs.Length);
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var doc = await session.LoadAsync<TestObj>("normalid");
+            var attachmentName = session.Advanced.Attachments.GetNames(doc).Single();
+            using (var attachment = await session.Advanced.Attachments.GetAsync(doc, attachmentName.Name))
+            {
+                var count = await attachment.Stream.ReadAsync(new Memory<byte>(new byte[10]));
+                Assert.Equal(1, count);
+            }
+
+            var counters = await session.CountersFor(doc).GetAllAsync();
+            Assert.Equal(1, counters.Count);
+        
+            var timeseries = session.Advanced.GetTimeSeriesFor(doc).Single();
+            var entries = await session.TimeSeriesFor(doc, timeseries).GetAsync();
+            Assert.Equal(1, entries.Length);
+        }
+    }
+
+    private static void ExtractBackupFile(string destinationPath, string resourceName)
+    {
+        using var fileStream = File.Create(destinationPath);
+        using var stream = typeof(ControlCharacterTests).Assembly.GetManifestResourceStream(resourceName);
+        stream!.CopyTo(fileStream);
+    }
+
     public static async Task AssertThrowsAnyAsync<T>(Func<Task> testCode) where T : Exception
     {
         var e = await Assert.ThrowsAnyAsync<Exception>(testCode);

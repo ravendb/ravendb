@@ -97,6 +97,12 @@
     <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
     <None Remove="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
     <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot.zip" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-full-backup" />
+    <None Remove="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_25738\ControlChars.ravendb-snapshot" />
+    <None Remove="Data\RavenDB_25738\Dump.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_25738\Dump.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
