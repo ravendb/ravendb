@@ -31,7 +31,6 @@ using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.Expiration;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
 using Raven.Client.Documents.Operations.QueueSink;
@@ -80,7 +79,6 @@ using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -597,31 +595,15 @@ namespace TypingsGenerator
 
             // ongoing tasks - CDC Sink
             scripter.AddType(typeof(OngoingTaskCdcSink));
-            scripter.AddType(typeof(CdcSinkConfiguration));
-            scripter.AddType(typeof(CdcSinkTableConfig));
-            scripter.AddType(typeof(CdcSinkEmbeddedTableConfig));
-            scripter.AddType(typeof(CdcSinkLinkedTableConfig));
-            scripter.AddType(typeof(CdcSinkOnDeleteConfig));
-            scripter.AddType(typeof(CdcSinkRelationType));
-            scripter.AddType(typeof(CdcColumnMapping));
-            scripter.AddType(typeof(CdcColumnType));
-            scripter.AddType(typeof(CdcSinkPostgresSettings));
             scripter.AddType(typeof(TestCdcSinkMappingRequest));
             scripter.AddType(typeof(TestCdcSinkMappingResult));
-            scripter.AddType(typeof(TestCdcSinkRowResult));
-            scripter.AddType(typeof(TestCdcSinkRowSelector));
-            scripter.AddType(typeof(TestCdcSinkOperation));
             scripter.AddType(typeof(CdcSinkSchemaRequest));
             scripter.AddType(typeof(CdcSinkSourceSchema));
-            scripter.AddType(typeof(CdcSinkSourceTable));
-            scripter.AddType(typeof(CdcSinkSourceColumn));
-            scripter.AddType(typeof(CdcSinkSourceForeignKey));
-            scripter.AddType(typeof(CdcSinkVerificationResult));
-            scripter.AddType(typeof(CdcSinkPerformanceOperation));
             scripter.AddType(typeof(CdcSinkPerformanceStats));
             scripter.AddType(typeof(CdcSinkProcessPerformanceStats));
             scripter.AddType(typeof(CdcSinkTaskPerformanceStats));
             scripter.AddType(typeof(CdcSinkVerifyRequest));
+            scripter.AddType(typeof(CdcSinkVerificationResult));
 
 
             // ongoing tasks - Snowflake ETL
