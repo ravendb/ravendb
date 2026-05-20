@@ -70,7 +70,6 @@
         border: 1px solid colors.$border-color-light-var;
         border-radius: bs5variables.$border-radius-md;
         background-color: colors.$panel-bg-1-var;
-        z-index: bs5variables.$zindex-dropdown;
         width: fit-content;
 
         .react-select__menu-list {
@@ -113,4 +112,8 @@
     .react-select__single-value {
         color: colors.$text-color-var;
     }
+}
+
+.react-select__menu-portal {
+    z-index: bs5variables.$zindex-popover !important;
 }

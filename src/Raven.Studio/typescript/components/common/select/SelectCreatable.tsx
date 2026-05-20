@@ -23,6 +23,7 @@ export default function SelectCreatable<
     isClearedAfterSelect,
     className,
     styles = {},
+    classNames: classNamesProp,
     ...rest
 }: SelectCreatableProps<Option, IsMulti, Group>) {
     if (isRoundedPill) {
@@ -33,9 +34,11 @@ export default function SelectCreatable<
         <ReactSelectCreatable
             styles={styles}
             formatCreateLabel={(value) => value ?? ""}
+            menuPortalTarget={document.body}
             {...rest}
             classNamePrefix="react-select"
             className={classNames("bs5 react-select-container", { "rounded-pill": isRoundedPill }, className)}
+            classNames={{ menuPortal: () => "bs5 react-select-container", ...classNamesProp }}
             value={isClearedAfterSelect ? null : rest.value}
         />
     );
