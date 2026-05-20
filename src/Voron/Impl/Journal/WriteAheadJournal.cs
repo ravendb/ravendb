@@ -33,6 +33,7 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
+using Voron.Platform;
 using Voron.Util;
 using Voron.Util.PFor;
 using Constants = Voron.Global.Constants;
@@ -550,15 +551,20 @@ namespace Voron.Impl.Journal
                     _files[i].DoneWriting.Raise();
                 }
                 var lastFile = _files[^1];
-                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 &&
-                    lastFile.HasLegacyTransaction is false)
-                    // it must have at least one page for the next transaction header and one 4kb for data
+                bool mustRollToNewFile = _env.Options.RootJournal is null
+                                         && HardLinkInfo.GetLinkCount(lastFile.JournalWriter.FileName.FullPath) > 1;
+                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && // room for next tx header + 4kb of data
+                    lastFile.HasLegacyTransaction is false && // legacy txs cannot be mixed with new ones in the same file
+                    mustRollToNewFile is false) // standalone env must not append to a hard-linked journal - would corrupt the env owning the other link
                 {
                     CurrentFile = lastFile;
                 }
                 else
                 {
                     lastFile.DoneWriting.Raise();
+                    if (mustRollToNewFile)
+                        addToInitLog?.Invoke(LogLevel.Info,
+                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked; rolling to a new file.");
                 }
             }
 
