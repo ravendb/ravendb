@@ -348,12 +348,8 @@ namespace Raven.Server.Web.System
                 return;
 
             var databaseConfiguration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, databaseName, settings);
-            var indexesPath = databaseConfiguration.Indexing.StoragePath.FullPath;
-            if (databaseConfiguration.Indexing.RunInMemory ||
-                (Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false) && Directory.Exists(indexesPath) == false)
-            {
+            if (databaseConfiguration.Core.RunInMemory)
                 return;
-            }
 
             var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
             {
@@ -378,12 +374,12 @@ namespace Raven.Server.Web.System
                 documentDatabase.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
 
                 // recrate the indexes on the new database
-                if (Directory.Exists(indexesPath) == false)
+                if (databaseConfiguration.Indexing.RunInMemory || Directory.Exists(databaseConfiguration.Indexing.StoragePath.FullPath) == false)
                     return;
 
                 var sideBySideIndexes = new Dictionary<string, IndexDefinition>();
 
-                foreach (var indexPath in Directory.GetDirectories(indexesPath))
+                foreach (var indexPath in Directory.GetDirectories(databaseConfiguration.Indexing.StoragePath.FullPath))
                 {
                     Index index = null;
                     try
