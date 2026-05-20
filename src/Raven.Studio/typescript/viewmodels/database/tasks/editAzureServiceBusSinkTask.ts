@@ -22,6 +22,9 @@ import patchDebugActions = require("viewmodels/database/patch/patchDebugActions"
 import licenseModel = require("models/auth/licenseModel");
 import EditAzureServiceBusSinkTaskInfoHub = require("./EditAzureServiceBusSinkTaskInfoHub");
 import typeUtils = require("common/typeUtils");
+import EditConnectionStrings = require("components/pages/database/settings/connectionStrings/EditConnectionStrings");
+import connectionStringsSlice = require("components/pages/database/settings/connectionStrings/store/connectionStringsSlice");
+import storeCompat = require("components/storeCompat");
 
 class azureServiceBusTaskTestMode {
     db: KnockoutObservable<database>;
@@ -96,7 +99,6 @@ class azureServiceBusTaskTestMode {
 class editAzureServiceBusSinkTask extends viewModelBase {
 
     view = require("views/database/tasks/editAzureServiceBusSinkTask.html");
-    connectionStringView = require("views/database/settings/connectionStringAzureServiceBus.html");
     taskResponsibleNodeSectionView = require("views/partial/taskResponsibleNodeSection.html");
     pinResponsibleNodeTextScriptView = require("views/partial/pinResponsibleNodeTextScript.html");
 
@@ -129,11 +131,10 @@ class editAzureServiceBusSinkTask extends viewModelBase {
     fullErrorDetailsVisible = ko.observable<boolean>(false);
     shortErrorText: KnockoutObservable<string>;
 
-    createNewConnectionString = ko.observable<boolean>(false);
-    newConnectionString = ko.observable<connectionStringAzureServiceBusModel>();
-
-    connectionStringDefined: KnockoutComputed<boolean>;
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+
+    isNewConnectionStringOpen = ko.observable<boolean>(false);
+    newConnectionStringView: ReactInKnockout<typeof EditConnectionStrings.default>;
 
     collections = collectionsTracker.default.collections;
 
@@ -148,16 +149,35 @@ class editAzureServiceBusSinkTask extends viewModelBase {
         aceEditorBindingHandler.install();
         this.bindToCurrentInstance("useConnectionString", "removeScript",
             "cancelEditedScript", "saveEditedScript", "syntaxHelp", "onTestConnectionAzureServiceBus", "toggleTestArea",
-            "setState");
+            "setState", "toggleIsNewConnectionStringOpen");
 
         this.infoHubView = ko.pureComputed(() => ({
             component: EditAzureServiceBusSinkTaskInfoHub.EditAzureServiceBusSinkTaskInfoHub
+        }));
+
+        this.newConnectionStringView = ko.pureComputed(() => ({
+            component: EditConnectionStrings.default,
+            props: {
+                initialConnection: {
+                    type: "AzureServiceBus" as const
+                },
+                afterSave: async (name: string) => {
+                    await this.getAllConnectionStrings();
+                    this.editedAzureServiceBusSink().connectionStringName(name);
+                    this.toggleIsNewConnectionStringOpen();
+                },
+                afterClose: () => {
+                    this.toggleIsNewConnectionStringOpen();
+                }
+            }
         }));
     }
 
     activate(args: any) {
         super.activate(args);
         const deferred = $.Deferred<void>();
+
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("aiTask"));
 
         this.loadPossibleMentors();
 
@@ -224,35 +244,14 @@ class editAzureServiceBusSinkTask extends viewModelBase {
             return generalUtils.trimMessage(result.Error);
         });
 
-        this.newConnectionString(connectionStringAzureServiceBusModel.empty());
-        this.newConnectionString().setNameUniquenessValidator(name => !this.azureServiceBusConnectionStringsDetails().find(x => x.Name.toLocaleLowerCase() === name.toLocaleLowerCase()));
-
         const connectionStringName = this.editedAzureServiceBusSink().connectionStringName();
         const connectionStringIsMissing = connectionStringName && !this.azureServiceBusConnectionStringsDetails()
             .find(x => x.Name.toLocaleLowerCase() === connectionStringName.toLocaleLowerCase());
 
-        if (!this.azureServiceBusConnectionStringsDetails().length || connectionStringIsMissing) {
-            this.createNewConnectionString(true);
-        }
-
         if (connectionStringIsMissing) {
             // looks like user imported data w/o connection strings, prefill form with desired name
-            this.newConnectionString().connectionStringName(connectionStringName);
             this.editedAzureServiceBusSink().connectionStringName(null);
         }
-
-        // Discard test connection result when needed
-        this.createNewConnectionString.subscribe(() => this.testConnectionResult(null));
-        this.newConnectionString().azureServiceBusConnectionString.subscribe(() => this.testConnectionResult(null));
-
-        this.connectionStringDefined = ko.pureComputed(() => {
-            const editedEtl = this.editedAzureServiceBusSink();
-            if (this.createNewConnectionString()) {
-                return !!this.newConnectionString().azureServiceBusConnectionString();
-            } else {
-                return !!editedEtl.connectionStringName();
-            }
-        });
 
         this.enableTestArea.subscribe(testMode => {
             $("body").toggleClass('show-test', testMode);
@@ -272,7 +271,6 @@ class editAzureServiceBusSinkTask extends viewModelBase {
             return dto;
         };
 
-
         this.test = new azureServiceBusTaskTestMode(this.activeDatabase, () => {
             return this.isValid(this.editedAzureServiceBusSink().editedScriptSandbox().testValidationGroup);
         }, dtoProvider);
@@ -280,10 +278,12 @@ class editAzureServiceBusSinkTask extends viewModelBase {
         this.test.initObservables();
 
         this.dirtyFlag = new ko.DirtyFlag([
-            this.createNewConnectionString,
-            this.newConnectionString().dirtyFlag().isDirty,
             this.editedAzureServiceBusSink().dirtyFlag().isDirty
         ], false, jsonUtil.newLineNormalizingHashFunction);
+    }
+
+    toggleIsNewConnectionStringOpen() {
+        this.isNewConnectionStringOpen(!this.isNewConnectionStringOpen());
     }
 
     useConnectionString(connectionStringToUse: string) {
@@ -291,33 +291,26 @@ class editAzureServiceBusSinkTask extends viewModelBase {
     }
 
     onTestConnectionAzureServiceBus() {
+        const name = this.editedAzureServiceBusSink().connectionStringName();
+        if (!name) {
+            return;
+        }
+
         eventsCollector.default.reportEvent("azure-service-bus-connection-string", "test-connection");
         this.spinners.test(true);
         this.testConnectionResult(null);
 
-        // New connection string
-        if (this.createNewConnectionString()) {
-            this.newConnectionString()
-                .testConnection(this.activeDatabase())
-                .done(result => this.testConnectionResult(result))
-                .always(() => {
-                    this.spinners.test(false);
-                    this.fullErrorDetailsVisible(false);
-                });
-        } else {
-            // Existing connection string
-            getConnectionStringInfoCommand.forAzureServiceBusEtl(this.activeDatabase(), this.editedAzureServiceBusSink().connectionStringName())
-                .execute()
-                .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                    new connectionStringAzureServiceBusModel(result.QueueConnectionStrings[this.editedAzureServiceBusSink().connectionStringName()], true, [])
-                        .testConnection(this.activeDatabase())
-                        .done((testResult) => this.testConnectionResult(testResult))
-                        .always(() => {
-                            this.spinners.test(false);
-                            this.fullErrorDetailsVisible(false);
-                        });
-                });
-        }
+        getConnectionStringInfoCommand.forAzureServiceBusEtl(this.activeDatabase(), name)
+            .execute()
+            .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
+                new connectionStringAzureServiceBusModel(result.QueueConnectionStrings[name], true, [])
+                    .testConnection(this.activeDatabase())
+                    .done((testResult) => this.testConnectionResult(testResult))
+                    .always(() => {
+                        this.spinners.test(false);
+                        this.fullErrorDetailsVisible(false);
+                    });
+            });
     }
 
     saveAzureServiceBusEtl() {
@@ -334,17 +327,7 @@ class editAzureServiceBusSinkTask extends viewModelBase {
             }
         }
 
-        // 2. Validate *new connection string* (if relevant..)
-        if (this.createNewConnectionString()) {
-            if (!this.isValid(this.newConnectionString().validationGroup)) {
-                hasAnyErrors = true;
-            } else {
-                // Use the new connection string
-                editedSink.connectionStringName(this.newConnectionString().connectionStringName());
-            }
-        }
-
-        // 3. Validate *general form*
+        // 2. Validate *general form*
         if (!this.isValid(editedSink.validationGroup)) {
             hasAnyErrors = true;
         }
@@ -354,34 +337,17 @@ class editAzureServiceBusSinkTask extends viewModelBase {
             return false;
         }
 
-        // 4. All is well, Save connection string (if relevant..)
-        const savingNewStringAction = $.Deferred<void>();
-        if (this.createNewConnectionString()) {
-            this.newConnectionString()
-                .saveConnectionString(this.activeDatabase())
-                .done(() => {
-                    savingNewStringAction.resolve();
-                })
-                .fail(() => {
-                    this.spinners.save(false);
-                });
-        } else {
-            savingNewStringAction.resolve();
-        }
+        // 3. All is well, Save Azure Service Bus Sink task
+        eventsCollector.default.reportEvent("azure-service-bus-sink", "save");
 
-        // 5. All is well, Save Azure Service Bus Sink task
-        savingNewStringAction.done(()=> {
-            eventsCollector.default.reportEvent("azure-service-bus-sink", "save");
-
-            const dto = editedSink.toDto();
-            new saveQueueSinkCommand(this.activeDatabase(), dto)
-                .execute()
-                .done(() => {
-                    this.dirtyFlag().reset();
-                    this.goToOngoingTasksView();
-                })
-                .always(() => this.spinners.save(false));
-        });
+        const dto = editedSink.toDto();
+        new saveQueueSinkCommand(this.activeDatabase(), dto)
+            .execute()
+            .done(() => {
+                this.dirtyFlag().reset();
+                this.goToOngoingTasksView();
+            })
+            .always(() => this.spinners.save(false));
     }
 
     addNewScript() {

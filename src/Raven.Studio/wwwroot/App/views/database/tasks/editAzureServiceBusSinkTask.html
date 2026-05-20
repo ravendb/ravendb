@@ -51,47 +51,44 @@
                             </div>
                         </div>
                         <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
-                        <div class="form-group">
-                            <label class="control-label">&nbsp;</label>
-                            <div class="toggle">
-                                <input id="createNewString" type="checkbox" data-bind="checked: $root.createNewConnectionString">
-                                <label for="createNewString">Create new Azure Service Bus connection string</label>
-                            </div>
+                        <div data-bind="if: $root.isNewConnectionStringOpen()">
+                            <div data-bind="react: $root.newConnectionStringView"></div>
                         </div>
-                        <div data-bind="collapse: $root.createNewConnectionString, with: $root.newConnectionString">
-                            <div class="form-group">
-                                <div class="flex-grow" data-bind="compose: $root.connectionStringView"></div>
-                            </div>
-                        </div>
-                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName, visible: !$root.createNewConnectionString()">
+                        <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                             <label class="control-label">Connection String</label>
-                            <div class="flex-grow">
-                                <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
-                                        data-bind="textInput: connectionStringName, disable: $root.azureServiceBusConnectionStringsDetails().length === 0,
-                                                   attr: { 'title': $root.azureServiceBusConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
-                                    <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
-                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                            <div class="flex-horizontal flex-grow">
+                                <div class="btn-block position-relative">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
+                                            data-bind="textInput: connectionStringName, disable: $root.azureServiceBusConnectionStringsDetails().length === 0,
+                                                       attr: { 'title': $root.azureServiceBusConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">
+                                        <span data-bind="text: connectionStringName() || 'Select a connection string'"></span>
+                                        <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    </button>
+                                    <ul class="dropdown-menu"
+                                        data-bind="foreach: $root.azureServiceBusConnectionStringsDetails">
+                                        <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
+                                            <a href="#">
+                                                <div class="row">
+                                                    <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button class="btn btn-default mb-0 margin-left-xxs" type="button" data-bind="click: $root.toggleIsNewConnectionStringOpen, visible: !$root.isNewConnectionStringOpen()">
+                                    <i class="icon-plus"></i>
+                                    <span>Create new connection string</span>
                                 </button>
-                                <ul class="dropdown-menu"
-                                    data-bind="foreach: $root.azureServiceBusConnectionStringsDetails">
-                                    <li data-bind="click: _.partial($root.useConnectionString, $data.Name)">
-                                        <a href="#">
-                                            <div class="row">
-                                                <strong class="col-xs-7" data-bind="text: $data.Name"></strong>
-                                            </div>
-                                        </a>
-                                    </li>
-                                </ul>
-                                <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                             </div>
+                            <span class="help-block" data-bind="validationMessage: connectionStringName"></span>
                         </div>
                         <div class="flex-horizontal">
                             <div class="flex-grow margin-top">
 
                             </div>
                             <div>
-                                <button class="btn btn-default btn-info" title="Test the New connection string connection"
-                                        data-bind="click: $root.onTestConnectionAzureServiceBus, disable: !$root.connectionStringDefined() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
+                                <button class="btn btn-default btn-info" title="Test the connection string connection"
+                                        data-bind="click: $root.onTestConnectionAzureServiceBus, disable: !connectionStringName() || $root.spinners.test(), css: { 'btn-spinner': $root.spinners.test }">
                                     <i class="icon-rocket"></i>
                                     <span>Test Connection</span>
                                 </button>
@@ -113,7 +110,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="panel-addon" data-bind="visible: azureServiceBusConnectionStringsDetails().length === 0 && !createNewConnectionString()">
+                        <div class="panel-addon" data-bind="visible: $root.azureServiceBusConnectionStringsDetails().length === 0 && !$root.isNewConnectionStringOpen()">
                             <div class="padding bg-warning text-warning small">
                                 <i class="icon-warning"></i>&nbsp;&nbsp;No connection strings have been defined yet
                             </div>
