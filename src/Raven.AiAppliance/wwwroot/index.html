@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RavenDB AI Appliance — demo</title>
+    <link rel="stylesheet" href="/chat.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">RavenDB</span>
+            <span class="brand-sep">/</span>
+            <span class="brand-sub">AI Appliance — demo</span>
+        </div>
+        <div class="health">
+            <span id="health-dot" class="dot dot-unknown" title="appliance health"></span>
+            <span id="health-label">checking...</span>
+        </div>
+    </header>
+
+    <section class="toolbar">
+        <label for="agent-id" class="lbl">Agent ID</label>
+        <input id="agent-id" type="text" placeholder="demo-agent" value="demo-agent" autocomplete="off" spellcheck="false">
+        <button id="connect-btn" class="btn btn-primary" type="button">Connect</button>
+        <button id="newchat-btn" class="btn" type="button" disabled>New chat</button>
+        <span class="spacer"></span>
+        <span id="conv-id" class="conv-id" title="current conversation document id"></span>
+    </section>
+
+    <main id="feed" class="feed" aria-live="polite">
+        <div class="hint">
+            <p><strong>Demo skeleton.</strong></p>
+            <ol>
+                <li>The appliance bootstraps RavenDB and the web app in a single container.</li>
+                <li>To run a real chat, an admin must first provision an agent through the setup wizard (T-3, post-skeleton).</li>
+                <li>For the 8-week demo, calling <em>Connect</em> on the default <code>demo-agent</code> will return a structured error until the wizard lands.</li>
+            </ol>
+            <p>Static assets confirm the web app is reachable; <code>GET /healthz</code> confirms RavenDB is ready behind it.</p>
+        </div>
+    </main>
+
+    <footer class="composer">
+        <textarea id="prompt" aria-label="Prompt for the demo agent" placeholder="Ask the demo agent..." rows="2" disabled></textarea>
+        <button id="send-btn" class="btn btn-primary" type="button" disabled>Send</button>
+    </footer>
+
+    <script src="/chat.js"></script>
+</body>
+</html>
