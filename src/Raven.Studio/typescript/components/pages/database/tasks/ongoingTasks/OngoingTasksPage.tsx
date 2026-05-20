@@ -763,7 +763,11 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                             <RabbitMqSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
                                         ))}
                                         {azureServiceBusSinks.map((x) => (
-                                            <AzureServiceBusSinkPanel {...sharedPanelProps} key={taskKey(x.shared)} data={x} />
+                                            <AzureServiceBusSinkPanel
+                                                {...sharedPanelProps}
+                                                key={taskKey(x.shared)}
+                                                data={x}
+                                            />
                                         ))}
                                     </div>
                                 )}
@@ -806,8 +810,8 @@ function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTas
     const isSinkTypeMatching =
         filter.types.includes("Sink") &&
         (sharedInfo.taskType === "KafkaQueueSink" ||
-         sharedInfo.taskType === "RabbitQueueSink" ||
-         sharedInfo.taskType === "AzureServiceBusQueueSink");
+            sharedInfo.taskType === "RabbitQueueSink" ||
+            sharedInfo.taskType === "AzureServiceBusQueueSink");
 
     const isBackupTypeMatching = filter.types.includes("Backup") && sharedInfo.taskType === "Backup";
 

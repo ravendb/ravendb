@@ -176,7 +176,13 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                 <div className="mb-2">
                     <div className="d-flex flex-grow align-items-baseline justify-content-between">
                         <FormLabel>Service Bus Namespace</FormLabel>
-                        <PopoverWithHoverWrapper message={<>Example: <code>mynamespace.servicebus.windows.net</code></>}>
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    Example: <code>mynamespace.servicebus.windows.net</code>
+                                </>
+                            }
+                        >
                             <small className="text-primary">
                                 Format <Icon icon="help" margin="m-0" />
                             </small>
@@ -226,7 +232,13 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
             <div className="mb-2">
                 <div className="d-flex flex-grow align-items-baseline justify-content-between">
                     <FormLabel>Service Bus Namespace</FormLabel>
-                    <PopoverWithHoverWrapper message={<>Example: <code>mynamespace.servicebus.windows.net</code></>}>
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Example: <code>mynamespace.servicebus.windows.net</code>
+                            </>
+                        }
+                    >
                         <small className="text-primary">
                             Format <Icon icon="help" margin="m-0" />
                         </small>

@@ -560,7 +560,8 @@ export class DatabasesStubs {
                     AzureQueueStorageConnectionSettings: null,
                     AmazonSqsConnectionSettings: null,
                     AzureServiceBusConnectionSettings: {
-                        ConnectionString: "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
+                        ConnectionString:
+                            "Endpoint=sb://mynamespace.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=stub",
                         EntraId: null,
                         Passwordless: null,
                     },
