@@ -949,12 +949,14 @@ interface FormErrorIconProps<TFieldValues extends FieldValues> {
     paths: (FieldPath<TFieldValues> | ArrayPath<TFieldValues>)[];
     onError?: () => void;
     errorMessage?: ReactNode;
+    iconClassName?: string;
 }
 
 export function FormErrorIcon<TFieldValues extends FieldValues>({
     control,
     paths,
     onError,
+    iconClassName,
 }: FormErrorIconProps<TFieldValues>) {
     const { hasErrors, message } = useErrorMessage({ control, paths });
 
@@ -975,7 +977,7 @@ export function FormErrorIcon<TFieldValues extends FieldValues>({
                 message: message,
             }}
         >
-            <Icon icon="warning" color="danger" margin="ms-1" />
+            <Icon icon="warning" color="danger" margin="ms-1" className={iconClassName} />
         </ConditionalPopover>
     );
 }
@@ -996,11 +998,23 @@ export function useErrorMessage<TFieldValues extends FieldValues>({
 
     let error: FieldError = undefined;
 
-    for (const path of paths) {
+    const getErrorForPath = (path: string): FieldError => {
         const fieldError = _.get(formState.errors, path);
 
-        // For array fields, react-hook-form nests the error under "root"
-        error = fieldError?.message ? fieldError : fieldError?.root;
+        if (!fieldError) {
+            return null;
+        }
+
+        // If the error for the path is an object without a message, it means that it's an error for a nested field
+        if (!fieldError?.message) {
+            return getErrorForPath(`${path}.${Object.keys(fieldError)[0]}`);
+        }
+
+        return fieldError;
+    };
+
+    for (const path of paths) {
+        error = getErrorForPath(path);
 
         if (error) {
             break;

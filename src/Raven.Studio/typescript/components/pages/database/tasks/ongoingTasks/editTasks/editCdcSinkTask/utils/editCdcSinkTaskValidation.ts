@@ -26,17 +26,17 @@ const hasUniqueValues = <TItem>(items: TItem[], getValue: (item: TItem) => strin
     return new Set(values).size === values.length;
 };
 
-const stringValueListSchema = (uniqueMessage: string) =>
+const stringValueListSchema = (options: { uniqueMessage: string; requiredMessage?: string }) =>
     yup
         .array()
         .of(stringValueItemSchema)
-        .min(1)
-        .test("unique-values", uniqueMessage, (items) => hasUniqueValues(items, (item) => item.value));
+        .min(options.requiredMessage ? 1 : 0, options.requiredMessage)
+        .test("unique-values", options.uniqueMessage, (items) => hasUniqueValues(items, (item) => item.value));
 
 const cdcColumnMappingsSchema = yup
     .array()
     .of(cdcColumnMappingSchema)
-    .min(1)
+    .min(1, "At least one column mapping is required")
     .test("unique-source-columns", "Source columns must be unique", (items) =>
         hasUniqueValues(items, (item) => item.column)
     )
@@ -50,7 +50,10 @@ const cdcSinkOnDeleteSchema = yup.object({
 });
 
 const cdcSinkLinkedTableSchema = yup.object({
-    joinColumns: stringValueListSchema("Join columns must be unique"),
+    joinColumns: stringValueListSchema({
+        requiredMessage: "At least one join column is required",
+        uniqueMessage: "Join columns must be unique",
+    }),
     linkedCollectionName: yup.string().required(),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
@@ -60,11 +63,17 @@ const cdcSinkLinkedTableSchema = yup.object({
 const cdcSinkEmbeddedTableBaseSchema = yup.object({
     caseSensitiveKeys: yup.boolean(),
     columns: cdcColumnMappingsSchema,
-    joinColumns: stringValueListSchema("Join columns must be unique"),
+    joinColumns: stringValueListSchema({
+        requiredMessage: "At least one join column is required",
+        uniqueMessage: "Join columns must be unique",
+    }),
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: stringValueListSchema("Primary key columns must be unique"),
+    primaryKeyColumns: stringValueListSchema({
+        requiredMessage: "At least one primary key column is required",
+        uniqueMessage: "Primary key columns must be unique",
+    }),
     propertyName: yup.string().required(),
     sourceTableName: yup.string().required(),
     sourceTableSchema: yup.string().nullable().required(),
@@ -88,7 +97,10 @@ const cdcSinkTableSchema = yup.object({
     linkedTables: yup.array().of(cdcSinkLinkedTableSchema),
     onDelete: cdcSinkOnDeleteSchema,
     patch: yup.string().nullable(),
-    primaryKeyColumns: stringValueListSchema("Primary key columns must be unique"),
+    primaryKeyColumns: stringValueListSchema({
+        requiredMessage: "At least one primary key column is required",
+        uniqueMessage: "Primary key columns must be unique",
+    }),
     sourceTableName: yup.string().required(),
     sourceTableSchema: yup.string().nullable().required(),
 });
@@ -112,7 +124,7 @@ const editCdcSinkTaskSchema = yup.object({
     tables: yup
         .array()
         .of(cdcSinkTableSchema)
-        .min(1)
+        .min(1, "At least one table is required")
         .test("unique-collection-names", "Collection names must be unique", (items) =>
             hasUniqueValues(items, (item) => item.collectionName)
         ),

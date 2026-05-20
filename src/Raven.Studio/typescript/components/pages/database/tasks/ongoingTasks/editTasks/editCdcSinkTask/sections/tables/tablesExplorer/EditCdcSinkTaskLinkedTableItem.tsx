@@ -12,7 +12,7 @@ import classNames from "classnames";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { useFormContext } from "react-hook-form";
-import { useErrorMessage } from "components/common/Form";
+import { FormErrorIcon } from "components/common/Form";
 import { editCdcSinkTaskConstants } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskConstants";
 
 const { expandButtonWidthPx, nestedTableIndentPx } = editCdcSinkTaskConstants;
@@ -22,7 +22,6 @@ export function EditCdcSinkTaskLinkedTableItem({ path, table, depth, isRootDisab
     const tableActions = useEditCdcSinkTaskTableActions();
     const isActive = useAppSelector(editCdcSinkTaskSelectors.isActiveTable(path));
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
-    const formError = useErrorMessage({ control, paths: [path] });
 
     const label = table.sourceTableName || "Unassigned table";
 
@@ -47,7 +46,7 @@ export function EditCdcSinkTaskLinkedTableItem({ path, table, depth, isRootDisab
                     {label}
                 </span>
                 <Icon icon="link" margin="ms-1" className="font-size-14" />
-                {formError.hasErrors && <Icon icon="warning" color="danger" className="font-size-14" margin="ms-1" />}
+                <FormErrorIcon control={control} paths={[path]} iconClassName="font-size-14" />
             </Button>
             <DropdownWithPortalMenu>
                 <Dropdown.Toggle

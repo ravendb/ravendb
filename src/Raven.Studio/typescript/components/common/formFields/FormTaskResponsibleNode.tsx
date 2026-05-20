@@ -31,13 +31,10 @@ export function FormTaskResponsibleNode<TFieldValues extends FieldValues, TName 
         .filter((x) => x.type === "Member")
         .map((x) => ({ value: x.nodeTag, label: `Node ${x.nodeTag}` }));
 
+    const hasNoNodes = possibleMentorOptions.length === 0;
+
     return (
         <FormGroup>
-            {possibleMentorOptions.length === 0 && (
-                <RichAlert variant="warning">
-                    Currently, the responsible node cannot be selected because there are no nodes available.
-                </RichAlert>
-            )}
             <FormGroup>
                 <ConditionalPopover
                     conditions={[
@@ -45,9 +42,14 @@ export function FormTaskResponsibleNode<TFieldValues extends FieldValues, TName 
                             isActive: isDatabaseSharded,
                             message: "This option is not respected in case of sharded databases.",
                         },
+                        {
+                            isActive: hasNoNodes,
+                            message:
+                                "Currently, the responsible node cannot be selected because there are no nodes available.",
+                        },
                     ]}
                 >
-                    <FormSwitch control={control} name={isSetName} disabled={isDatabaseSharded}>
+                    <FormSwitch control={control} name={isSetName} disabled={isDatabaseSharded || hasNoNodes}>
                         Set Responsible Node
                     </FormSwitch>
                 </ConditionalPopover>
