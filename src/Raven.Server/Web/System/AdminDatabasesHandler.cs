@@ -12,7 +12,6 @@ using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Corax;
@@ -53,7 +52,6 @@ using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Util.Settings;
-using static Lucene.Net.Documents.Field;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 using Size = Sparrow.Size;
@@ -377,23 +375,9 @@ namespace Raven.Server.Web.System
                 var options = InitializeOptions.SkipLoadingDatabaseRecord;
                 documentDatabase.Initialize(options);
 
-                SetLastCompletedClusterTransactionIndex(documentDatabase);
+                documentDatabase.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
 
-                RecreateIndexes(documentDatabase);
-            }
-                    
-            void SetLastCompletedClusterTransactionIndex(DocumentDatabase documentDatabase)
-            {
-                using (documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    documentDatabase.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, 0);
-                    tx.Commit();
-                }
-            }
-
-            void RecreateIndexes(DocumentDatabase documentDatabase)
-            {
+                // recrate the indexes on the new database
                 if (Directory.Exists(indexesPath) == false)
                     return;
 

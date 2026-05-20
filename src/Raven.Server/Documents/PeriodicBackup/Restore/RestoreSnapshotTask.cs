@@ -48,12 +48,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         protected override async Task RestoreAsync()
         {
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                Database.DocumentsStorage.SetLastCompletedClusterTransactionIndex(context, 0);
-                tx.Commit();
-            }
+            Database.DocumentsStorage.ResetLastCompletedClusterTransactionIndex();
 
             await RestoreFromSmugglerFileAsync(Progress, Database, _firstFile, Context, RestoreConfiguration.MaxReadOpsPerSecond);
             await HandleSubscriptionFromSnapshot(FilesToRestore, RestoreSettings.Subscriptions, DatabaseName, Database);
