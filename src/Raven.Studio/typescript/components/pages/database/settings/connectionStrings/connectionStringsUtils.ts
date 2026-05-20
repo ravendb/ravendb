@@ -13,9 +13,15 @@ export const connectionStringsUtils = {
         .nullable()
         .required()
         .test(
-            "no-reserved-prefix",
-            `Name cannot start with the reserved prefix "${serverWideConnectionStringPrefix}"`,
-            (value) => !value?.startsWith(serverWideConnectionStringPrefix)
+            "no-server-wide-prefix",
+            `Name cannot start with the prefix "${serverWideConnectionStringPrefix}"`,
+            (value) => {
+                if (!value) {
+                    return true;
+                }
+
+                return !value.trim().toLowerCase().startsWith(serverWideConnectionStringPrefix.toLowerCase());
+            }
         )
         .test("is-name-unique", "Name must be unique", (value, ctx) => {
             const { isForNewConnection, usedNames } = ctx.options.context as ConnectionStringsNameContext;
