@@ -125,10 +125,6 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         return this.mockResolvedValue(this.mocks.getCdcSinkTaskSchema, dto, TasksStubs.cdcSinkTaskSchema());
     }
 
-    withFetchSqlDatabaseSchema(dto?: MockedValue<Raven.Server.SqlMigration.Schema.DatabaseSchema>) {
-        return this.mockResolvedValue(this.mocks.fetchSqlDatabaseSchema, dto, TasksStubs.sqlDatabaseSchema());
-    }
-
     withTestSnowflakeConnectionString(dto?: Raven.Server.Web.System.NodeConnectionTestResult) {
         return this.mockResolvedValue(
             this.mocks.testSqlConnectionString,

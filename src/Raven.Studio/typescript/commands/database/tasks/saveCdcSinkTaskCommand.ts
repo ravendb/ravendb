@@ -1,10 +1,9 @@
 import commandBase = require("commands/commandBase");
-import database = require("models/resources/database");
 import endpoints = require("endpoints");
 
 export default class saveCdcSinkTaskCommand extends commandBase {
     constructor(
-        private db: database | string,
+        private db: string,
         private payload: Raven.Client.Documents.Operations.CdcSink.CdcSinkConfiguration
     ) {
         super();

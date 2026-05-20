@@ -605,7 +605,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(CdcSinkVerifyRequest));
             scripter.AddType(typeof(CdcSinkVerificationResult));
 
-
             // ongoing tasks - Snowflake ETL
             scripter.AddType(typeof(OngoingTaskSnowflakeEtl));
             scripter.AddType(typeof(SnowflakeEtlConfiguration));

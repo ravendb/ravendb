@@ -689,58 +689,6 @@ export class TasksStubs {
         };
     }
 
-    static sqlDatabaseSchema(): Raven.Server.SqlMigration.Schema.DatabaseSchema {
-        return {
-            CatalogName: "Northwind",
-            Tables: [
-                {
-                    Schema: "dbo",
-                    TableName: "orders",
-                    DefaultQuery: "SELECT * FROM dbo.orders",
-                    PrimaryKeyColumns: ["Id"],
-                    Columns: [
-                        {
-                            Name: "Id",
-                            Type: "String",
-                        },
-                        {
-                            Name: "CompanyId",
-                            Type: "String",
-                        },
-                        {
-                            Name: "OrderedAt",
-                            Type: "String",
-                        },
-                    ],
-                    References: [
-                        {
-                            Schema: "dbo",
-                            Table: "companies",
-                            Columns: ["CompanyId"],
-                        },
-                    ],
-                },
-                {
-                    Schema: "dbo",
-                    TableName: "companies",
-                    DefaultQuery: "SELECT * FROM dbo.companies",
-                    PrimaryKeyColumns: ["Id"],
-                    Columns: [
-                        {
-                            Name: "Id",
-                            Type: "String",
-                        },
-                        {
-                            Name: "Name",
-                            Type: "String",
-                        },
-                    ],
-                    References: [],
-                },
-            ],
-        };
-    }
-
     static testCdcSink(): Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult {
         return {
             Errors: [],
