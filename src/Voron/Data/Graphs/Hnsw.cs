@@ -194,12 +194,23 @@ public unsafe partial class Hnsw
             Options = Unsafe.Read<Options>(optionsPtr);
             SimilarityCalc = _nodeCache != null ? _nodeCache.SimilarityCalc : GetDistanceKernel(Options);
 
+            if (_nodeCache != null)
+            {
+                // Skip ~7 NativeList<Node>.Grow doublings (and Dictionary rehashes) for the typical
+                // per-query visit set when a shared cache is attached. ByteStringMemoryCache.Allocate
+                // showed 36.5s of 165s wall in NativeList<Node>.Grow under load; pre-sizing kills it.
+                _nodes.Initialize(llt.Allocator, InitialNodesCapacityWithCache);
+                _nodeIdToIdx.EnsureCapacity(InitialNodesCapacityWithCache);
+            }
+
             // Lazy lookup only: LoadNodeIndexes / GetNodeIndexById probe the shared cache
             // on demand. Eagerly materializing the entire cache into a per-query SearchState
             // dominated query wall (~49% in dotnet-trace) because the prepop work isn't
             // amortized — each Corax query builds its own IndexSearcher and SearchState.
             // Call PrepopulateFromNodeCache() explicitly for long-lived/batch SearchStates only.
         }
+
+        private const int InitialNodesCapacityWithCache = 256;
 
         public float MinimumSimilarityToDistance(float minimumSimilarity)
         {
