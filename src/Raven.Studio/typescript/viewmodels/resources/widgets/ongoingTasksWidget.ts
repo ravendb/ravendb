@@ -108,7 +108,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         },
         "CdcSink": {
             nameForUI: "CDC Sink",
-            icon: "icon-cdc-sink",
+            icon: "icon-sql-etl",
             colorClass: "cdc-sink"
         },
     }
@@ -342,6 +342,8 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "EmbeddingsGeneration";
             case "GenAiCount":
                 return "GenAi";
+            case "CdcSinkCount":
+                return "CdcSink";
             default:
                 throw new Error("Unknown task type count received:" + input);
             }
