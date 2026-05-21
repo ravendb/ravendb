@@ -1,7 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import Code from "components/common/Code";
-import { EmptySet } from "components/common/EmptySet";
 import { FormErrorIcon, FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import InnerForm from "components/common/InnerForm";
@@ -19,12 +18,12 @@ import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoing
 import { useAppSelector } from "components/store";
 import { useEffect } from "react";
 import { useAsyncCallback, UseAsyncReturn } from "react-async-hook";
-import Button from "react-bootstrap/Button";
 import Accordion from "react-bootstrap/Accordion";
 import AccordionButton from "react-bootstrap/AccordionButton";
-import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
+import { useForm, UseFormReturn, useWatch } from "react-hook-form";
 import * as yup from "yup";
 import ExpandableListContainer from "components/common/ExpandableListContainer";
+import FormStringValueList from "components/common/formFields/FormStringValueList";
 
 type TestCdcSinkRowSelector = Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkRowSelector;
 
@@ -76,11 +75,6 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
     const rowSelector = useWatch({
         control: testForm.control,
         name: "rowSelector",
-    });
-
-    const primaryKeyFieldValues = useFieldArray({
-        control: testForm.control,
-        name: "primaryKeyValues",
     });
 
     // Auto submit on path change
@@ -136,50 +130,15 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
                                         </FormGroup>
                                     )}
                                     {rowSelector === "ByPrimaryKey" && (
-                                        <div>
-                                            <div className="hstack justify-content-between mb-1">
-                                                <div className="hstack">
-                                                    Primary key values
-                                                    <FormErrorIcon
-                                                        control={testForm.control}
-                                                        paths={["primaryKeyValues"]}
-                                                    />
-                                                </div>
-                                                <Button
-                                                    variant="link"
-                                                    size="sm"
-                                                    onClick={() => primaryKeyFieldValues.append({ value: "" })}
-                                                >
-                                                    <Icon icon="plus" />
-                                                    Add primary key value
-                                                </Button>
-                                            </div>
-                                            {primaryKeyFieldValues.fields.length === 0 ? (
-                                                <div className="panel-bg-2 p-1 rounded border border-secondary hstack justify-content-center">
-                                                    <EmptySet compact>No values defined.</EmptySet>
-                                                </div>
-                                            ) : (
-                                                <div className="vstack gap-1">
-                                                    {primaryKeyFieldValues.fields.map((field, idx) => (
-                                                        <div key={field.id} className="hstack gap-1">
-                                                            <FormInput
-                                                                type="text"
-                                                                control={testForm.control}
-                                                                name={`primaryKeyValues.${idx}.value`}
-                                                            />
-                                                            <Button
-                                                                variant="link"
-                                                                className="text-danger"
-                                                                size="sm"
-                                                                onClick={() => primaryKeyFieldValues.remove(idx)}
-                                                            >
-                                                                <Icon icon="trash" margin="m-0" />
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
+                                        <FormStringValueList
+                                            title="Primary key values"
+                                            addButtonLabel="Add primary key value"
+                                            control={testForm.control}
+                                            name="primaryKeyValues"
+                                            fieldNameAccessor={(idx) => `primaryKeyValues.${idx}.value`}
+                                            defaultValue={{ value: "" }}
+                                            className="mb-2"
+                                        />
                                     )}
                                     <FormSwitch control={testForm.control} name="isSimulateOnDelete">
                                         Simulate on delete
