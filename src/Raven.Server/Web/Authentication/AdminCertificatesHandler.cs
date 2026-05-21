@@ -294,10 +294,10 @@ namespace Raven.Server.Web.Authentication
                     (certificateDefinition.SsoServerPublicKeyPinningHashes == null || certificateDefinition.SsoServerPublicKeyPinningHashes.Count == 0))
                     throw new ArgumentException("Either set AllowAnySsoServer = true or provide at least one SSO server public key pinning hash.");
 
-                // Validate that every provided pinning hash matches a registered SSO server cert
-                if (certificateDefinition.AllowAnySsoServer == false)
+                using (ctx.OpenReadTransaction())
                 {
-                    using (ctx.OpenReadTransaction())
+                    // Validate that every provided pinning hash matches a registered SSO server cert
+                    if (certificateDefinition.AllowAnySsoServer == false)
                     {
                         var allSsoHashes = new HashSet<string>(
                             ServerStore.Cluster.GetSsoServerCertificates(ctx).Select(c => c.PublicKeyPinningHash),
@@ -309,6 +309,18 @@ namespace Raven.Server.Web.Authentication
                                 throw new InvalidOperationException(
                                     $"No SSO server certificate found with public key pinning hash '{hash}'. " +
                                     "Register the SSO server certificate first using PUT /admin/certificates with Usage=SsoServer.");
+                        }
+                    }
+
+                    foreach (var id in certificateDefinition.SsoIdentifiers)
+                    {
+                        var payload = new SsoExtensionPayload(id.Identifier, id.Provider, id.Domain);
+                        var existing = ServerStore.Cluster.GetSsoClientCertificateByIdentity(ctx, payload);
+                        if (existing != null)
+                        {
+                            throw new InvalidOperationException(
+                                $"An SSO user entry with identity '{payload.GetDisplayIdentity()}' already exists " +
+                                $"(name: '{existing.Name}'). Edit the existing entry instead of creating a new one.");
                         }
                     }
                 }

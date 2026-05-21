@@ -1103,6 +1103,213 @@ namespace SlowTests.Authentication
             }
         }
 
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_DuplicateIdentity_SameProviderAndIdentifier_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            const string ssoUserId = "john@example.com";
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                        new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                        provider: SsoProvider.Github);
+                });
+
+                Assert.Contains("already exists", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+                Assert.Contains($"{SsoProvider.Github}:{ssoUserId}", ex.ToString());
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_DuplicateIdentity_IdentifierIsCaseInsensitive()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, "John@Example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Certificates.RegisterSsoUserEntry(certificates, "john@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                        new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                        provider: SsoProvider.Github);
+                });
+
+                Assert.Contains("already exists", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_DifferentProvider_SameIdentifier_IsAllowed()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+            const string ssoUserId = "john@example.com";
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+
+                // Same identifier, different provider — identity differs, so this must succeed.
+                Certificates.RegisterSsoUserEntry(certificates, ssoUserId, ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Google);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_DifferentIdentifier_SameProvider_IsAllowed()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, "alice@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+
+                Certificates.RegisterSsoUserEntry(certificates, "bob@example.com", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Github);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_Windows_SameIdentifier_DifferentDomain_IsAllowed()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, "alice", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Windows, domain: "CORP");
+
+                // Domain is part of the identity for Windows, so a different domain must be accepted.
+                Certificates.RegisterSsoUserEntry(certificates, "alice", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Windows, domain: "DEV");
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates)]
+        public void PutSsoUser_Windows_SameIdentifier_SameDomain_IsRejected()
+        {
+            var certificates = Certificates.SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = Certificates.RegisterClientCertificate(
+                certificates.ServerCertificateForCommunication.Value,
+                certificates.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess>(),
+                SecurityClearance.ClusterAdmin);
+
+            var ssoCerts = Certificates.GenerateAndSaveSsoTestCertificates();
+
+            using (var adminStore = GetDocumentStore(new Options
+            {
+                AdminCertificate = adminCert,
+                ClientCertificate = adminCert,
+                ModifyDatabaseName = _ => dbName
+            }))
+            {
+                Certificates.RegisterSsoServerCert(certificates, ssoCerts);
+                Certificates.RegisterSsoUserEntry(certificates, "alice", ssoCerts.SsoServerPublicKeyPinningHash,
+                    new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                    provider: SsoProvider.Windows, domain: "CORP");
+
+                var ex = Assert.ThrowsAny<RavenException>(() =>
+                {
+                    Certificates.RegisterSsoUserEntry(certificates, "alice", ssoCerts.SsoServerPublicKeyPinningHash,
+                        new Dictionary<string, DatabaseAccess> { [dbName] = DatabaseAccess.ReadWrite },
+                        provider: SsoProvider.Windows, domain: "CORP");
+                });
+
+                Assert.Contains("already exists", ex.ToString(), StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("Windows\\CORP:alice", ex.ToString());
+            }
+        }
+
         private static X509Certificate2 CreateSsoUserCertificateWithRawExtension(SsoTestCertificates ssoCerts, byte[] rawExtensionData)
         {
             const string ssoUserIdExtensionOid = "1.3.6.1.4.1.45751.2.2";
