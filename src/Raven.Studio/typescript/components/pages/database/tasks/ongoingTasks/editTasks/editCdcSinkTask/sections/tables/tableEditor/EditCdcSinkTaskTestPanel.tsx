@@ -24,6 +24,7 @@ import Accordion from "react-bootstrap/Accordion";
 import AccordionButton from "react-bootstrap/AccordionButton";
 import { useFieldArray, useForm, UseFormReturn, useWatch } from "react-hook-form";
 import * as yup from "yup";
+import ExpandableListContainer from "components/common/ExpandableListContainer";
 
 type TestCdcSinkRowSelector = Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkRowSelector;
 
@@ -225,17 +226,13 @@ function TestResult({ asyncTest }: TestResultProps) {
     return (
         <>
             {asyncTest.result.Errors?.length > 0 && (
-                <RichAlert variant="danger" className="small vstack gap-2">
-                    {asyncTest.result.Errors.map((error, index) => (
-                        <div key={index}>{error}</div>
-                    ))}
+                <RichAlert variant="danger" className="small break-word">
+                    <ExpandableListContainer items={asyncTest.result.Errors} renderItem={(err) => err} />
                 </RichAlert>
             )}
             {asyncTest.result.Warnings?.length > 0 && (
-                <RichAlert variant="warning" className="small vstack gap-2">
-                    {asyncTest.result.Warnings.map((warning, index) => (
-                        <div key={index}>{warning}</div>
-                    ))}
+                <RichAlert variant="warning" className="small break-word">
+                    <ExpandableListContainer items={asyncTest.result.Warnings} renderItem={(warn) => warn} />
                 </RichAlert>
             )}
             {asyncTest.result.Results?.map((result) => (

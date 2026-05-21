@@ -6,7 +6,6 @@ import {
     ColumnDef,
 } from "@tanstack/react-table";
 import { EmptySet } from "components/common/EmptySet";
-import ExpandableList from "components/common/ExpandableList";
 import { Icon } from "components/common/Icon";
 import { LoadError } from "components/common/LoadError";
 import RichAlert from "components/common/RichAlert";
@@ -15,7 +14,7 @@ import { columnCheckbox } from "components/common/virtualTable/utils/commonColum
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { UseAsyncReturn } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import { UseFieldArrayReturn } from "react-hook-form";
@@ -27,6 +26,7 @@ import {
     FormRootTable,
     FormRootTableColumn,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
+import ExpandableListContainer from "components/common/ExpandableListContainer";
 
 interface EditCdcSinkTaskDiscoveredTableProps {
     asyncGetSchema: UseAsyncReturn<CdcSinkSchema.CdcSinkSourceSchema, [string[]]>;
@@ -126,41 +126,15 @@ function SchemaAlerts({ errors, unsupportedTables }: SchemaAlertsProps) {
         <>
             {errors.length > 0 && (
                 <RichAlert variant="danger" className="mb-2">
-                    <AlertList items={errors} renderItem={(error) => error} />
+                    <ExpandableListContainer items={errors} renderItem={(err) => err} />
                 </RichAlert>
             )}
             {unsupportedTables.length > 0 && (
                 <RichAlert variant="warning" className="mb-2">
-                    <AlertList items={unsupportedTables} renderItem={getUnsupportedTableMessage} />
+                    <ExpandableListContainer items={unsupportedTables} renderItem={getUnsupportedTableMessage} />
                 </RichAlert>
             )}
         </>
-    );
-}
-
-interface AlertListProps<T> {
-    items: T[];
-    renderItem: (item: T) => string;
-}
-
-function AlertList<T>({ items, renderItem }: AlertListProps<T>) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-        <ExpandableList
-            itemsCount={items.length}
-            collapsedItemsCount={2}
-            isExpanded={isExpanded}
-            setIsExpanded={setIsExpanded}
-        >
-            {({ visibleCount }) => (
-                <div className="vstack gap-1">
-                    {items.slice(0, visibleCount).map((item, index) => (
-                        <div key={index}>{renderItem(item)}</div>
-                    ))}
-                </div>
-            )}
-        </ExpandableList>
     );
 }
 

@@ -8,7 +8,7 @@ interface ExpandableListRenderProps {
     hiddenCount: number;
 }
 
-interface ExpandableListProps {
+export interface ExpandableListProps {
     itemsCount: number;
     collapsedItemsCount: number;
     isExpanded: boolean;

@@ -1,8 +1,7 @@
-import ExpandableList from "components/common/ExpandableList";
+import ExpandableListContainer from "components/common/ExpandableListContainer";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import RichAlert from "components/common/RichAlert";
-import { useState } from "react";
 import { UseAsyncReturn } from "react-async-hook";
 
 interface EditCdcSinkTaskVerifyResultProps {
@@ -35,12 +34,12 @@ export default function EditCdcSinkTaskVerifyResult({ asyncVerifySource }: EditC
                 )}
                 {result.Errors?.length > 0 && (
                     <RichAlert variant="danger">
-                        <AlertList items={result.Errors} />
+                        <ExpandableListContainer items={result.Errors} renderItem={(err) => err} />
                     </RichAlert>
                 )}
                 {result.Warnings?.length > 0 && (
                     <RichAlert variant="warning">
-                        <AlertList items={result.Warnings} />
+                        <ExpandableListContainer items={result.Warnings} renderItem={(warn) => warn} />
                     </RichAlert>
                 )}
             </div>
@@ -51,30 +50,5 @@ export default function EditCdcSinkTaskVerifyResult({ asyncVerifySource }: EditC
         <RichAlert variant="success" onCancel={asyncVerifySource.reset}>
             Connection verified successfully
         </RichAlert>
-    );
-}
-
-interface AlertListProps {
-    items: string[];
-}
-
-function AlertList({ items }: AlertListProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-        <ExpandableList
-            itemsCount={items.length}
-            collapsedItemsCount={2}
-            isExpanded={isExpanded}
-            setIsExpanded={setIsExpanded}
-        >
-            {({ visibleCount }) => (
-                <div className="vstack gap-1">
-                    {items.slice(0, visibleCount).map((item, index) => (
-                        <div key={index}>{item}</div>
-                    ))}
-                </div>
-            )}
-        </ExpandableList>
     );
 }
