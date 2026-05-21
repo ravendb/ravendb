@@ -18,7 +18,7 @@ import { editCdcSinkTaskUtils } from "components/pages/database/tasks/ongoingTas
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useAppSelector } from "components/store";
 import { useEffect } from "react";
-import { useAsyncCallback } from "react-async-hook";
+import { useAsyncCallback, UseAsyncReturn } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import Accordion from "react-bootstrap/Accordion";
 import AccordionButton from "react-bootstrap/AccordionButton";
@@ -187,37 +187,7 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
                             </Accordion.Body>
                         </Accordion.Item>
                     </Accordion>
-                    {asyncTest.status === "loading" && (
-                        <LazyLoad active className="h-100">
-                            <div className="h-100"></div>
-                        </LazyLoad>
-                    )}
-                    {asyncTest.status === "error" && <LoadError error="Failed to test table" />}
-                    {asyncTest.status === "success" && (
-                        <>
-                            {asyncTest.result.Errors?.length > 0 && (
-                                <RichAlert variant="danger" className="small">
-                                    {asyncTest.result.Errors.map((error, index) => (
-                                        <div key={index}>{error}</div>
-                                    ))}
-                                </RichAlert>
-                            )}
-                            {asyncTest.result.Warnings?.length > 0 && (
-                                <RichAlert variant="warning" className="small">
-                                    {asyncTest.result.Warnings.map((warning, index) => (
-                                        <div key={index}>{warning}</div>
-                                    ))}
-                                </RichAlert>
-                            )}
-                            {asyncTest.result.Results?.map((result) => (
-                                <Code
-                                    key={result.DocumentId}
-                                    language="json"
-                                    code={JSON.stringify(JSON.parse(result.Document), null, 2)}
-                                />
-                            ))}
-                        </>
-                    )}
+                    <TestResult asyncTest={asyncTest} />
                 </ViewSheet.Body>
                 <ViewSheet.Footer>
                     <ButtonWithSpinner
@@ -232,6 +202,50 @@ export default function EditCdcSinkTaskTestPanel({ editForm, path }: EditCdcSink
                 </ViewSheet.Footer>
             </InnerForm>
         </ViewSheet>
+    );
+}
+
+interface TestResultProps {
+    asyncTest: UseAsyncReturn<Raven.Client.Documents.Operations.CdcSink.Test.TestCdcSinkMappingResult>;
+}
+
+function TestResult({ asyncTest }: TestResultProps) {
+    if (asyncTest.status === "not-requested" || asyncTest.status === "loading") {
+        return (
+            <LazyLoad active className="h-100">
+                <div className="h-100"></div>
+            </LazyLoad>
+        );
+    }
+
+    if (asyncTest.status === "error") {
+        return <LoadError error="Failed to test table" />;
+    }
+
+    return (
+        <>
+            {asyncTest.result.Errors?.length > 0 && (
+                <RichAlert variant="danger" className="small vstack gap-2">
+                    {asyncTest.result.Errors.map((error, index) => (
+                        <div key={index}>{error}</div>
+                    ))}
+                </RichAlert>
+            )}
+            {asyncTest.result.Warnings?.length > 0 && (
+                <RichAlert variant="warning" className="small vstack gap-2">
+                    {asyncTest.result.Warnings.map((warning, index) => (
+                        <div key={index}>{warning}</div>
+                    ))}
+                </RichAlert>
+            )}
+            {asyncTest.result.Results?.map((result) => (
+                <Code
+                    key={result.DocumentId}
+                    language="json"
+                    code={JSON.stringify(JSON.parse(result.Document), null, 2)}
+                />
+            ))}
+        </>
     );
 }
 

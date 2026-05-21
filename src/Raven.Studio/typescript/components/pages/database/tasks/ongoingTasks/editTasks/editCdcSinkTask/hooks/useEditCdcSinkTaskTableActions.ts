@@ -175,7 +175,7 @@ export function useEditCdcSinkTaskTableActions() {
 
 function getTableListLocation(path: CdcActiveTable["path"]) {
     const parts = path.split(".");
-    const index = Number(parts[parts.length - 1]);
+    const index = Number(parts.at(-1));
     const listPath = parts.slice(0, -1).join(".") as TableListPath;
 
     return { index, listPath };
