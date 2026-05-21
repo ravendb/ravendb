@@ -7,6 +7,7 @@ import {
     LinkedTablePath,
     RootTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
+import { CdcSinkSourceSchema } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskSchemaUtils";
 import storageKeyProvider = require("common/storage/storageKeyProvider");
 
 export type CdcActiveTable =
@@ -25,6 +26,7 @@ export type CdcActiveTable =
 
 interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
+    sourceSchema: CdcSinkSourceSchema | null;
     activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
     isFieldMappingExpandedByDefault: boolean;
@@ -46,6 +48,7 @@ function getStoredBoolean(key: string, defaultValue: boolean): boolean {
 
 const initialState: EditCdcSinkTaskState = {
     selectedConnectionString: null,
+    sourceSchema: null,
     activeTable: null,
     expandedTables: {},
     isFieldMappingExpandedByDefault: getStoredBoolean(
@@ -66,6 +69,10 @@ export const editCdcSinkTaskSlice = createSlice({
         },
         connectionStringSelected: (state, action: PayloadAction<SqlConnectionString>) => {
             state.selectedConnectionString = action.payload;
+            state.sourceSchema = null;
+        },
+        sourceSchemaSet: (state, action: PayloadAction<CdcSinkSourceSchema | null>) => {
+            state.sourceSchema = action.payload;
         },
         activeTableSet: (state, action: PayloadAction<CdcActiveTable>) => {
             state.activeTable = action.payload;
@@ -115,6 +122,7 @@ export const editCdcSinkTaskActions = editCdcSinkTaskSlice.actions;
 export const editCdcSinkTaskSelectors = {
     taskId: (state: RootState) => state.editCdcSinkTask.taskId,
     selectedConnectionString: (state: RootState) => state.editCdcSinkTask.selectedConnectionString,
+    sourceSchema: (state: RootState) => state.editCdcSinkTask.sourceSchema,
     activeTable: (state: RootState) => state.editCdcSinkTask.activeTable,
     isActiveTable: (path: CdcActiveTable["path"]) => (state: RootState) =>
         state.editCdcSinkTask.activeTable?.path === path,

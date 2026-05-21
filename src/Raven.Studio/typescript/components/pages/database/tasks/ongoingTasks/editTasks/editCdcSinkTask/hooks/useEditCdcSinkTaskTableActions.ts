@@ -1,4 +1,3 @@
-import useConfirm from "components/common/ConfirmDialog";
 import {
     CdcActiveTable,
     editCdcSinkTaskActions,
@@ -8,7 +7,6 @@ import {
     FormEmbeddedTable,
     FormLinkedTable,
     FormRootTable,
-    LinkedTablePath,
     RootTablePath,
     castToEmbeddedTablePath,
     castToLinkedTablePath,
@@ -34,21 +32,20 @@ const defaultEmbeddedTable = (): FormEmbeddedTable => ({
     primaryKeyColumns: [],
     propertyName: "",
     sourceTableName: "",
-    sourceTableSchema: "public",
+    sourceTableSchema: "",
     type: "Array",
 });
 
 const defaultLinkedTable = (): FormLinkedTable => ({
     joinColumns: [],
-    linkedCollectionName: "NewCollection",
+    linkedCollectionName: "",
     propertyName: "",
     sourceTableName: "",
-    sourceTableSchema: "public",
+    sourceTableSchema: "",
 });
 
 export function useEditCdcSinkTaskTableActions() {
     const dispatch = useAppDispatch();
-    const confirm = useConfirm();
     const { getValues, setValue } = useFormContext<EditCdcSinkTaskFormData>();
 
     const setFieldValue: UseFormSetValue<EditCdcSinkTaskFormData> = (path, value) => {
@@ -94,80 +91,9 @@ export function useEditCdcSinkTaskTableActions() {
         dispatch(editCdcSinkTaskActions.tableExpandedRemoved(activeTable.path));
     };
 
-    const changeLinkedToEmbedded = (path: LinkedTablePath) => {
-        const { listPath, index } = getTableListLocation(path);
-        const linkedTables = getTableList<FormLinkedTable>(listPath);
-        const linkedTable = linkedTables[index];
-        const embeddedListPath = getSiblingListPath(path, "embeddedTables");
-        const embeddedTables = getTableList<FormEmbeddedTable>(embeddedListPath);
-        const newPath = castToEmbeddedTablePath(`${embeddedListPath}.${embeddedTables.length}`);
-
-        setFieldValue(
-            listPath,
-            linkedTables.filter((_, idx) => idx !== index)
-        );
-        setFieldValue(embeddedListPath, [
-            ...embeddedTables,
-            {
-                ...defaultEmbeddedTable(),
-                joinColumns: linkedTable.joinColumns,
-                propertyName: linkedTable.propertyName,
-                sourceTableName: linkedTable.sourceTableName,
-                sourceTableSchema: linkedTable.sourceTableSchema,
-            },
-        ]);
-        dispatch(editCdcSinkTaskActions.tableExpandedRemoved(path));
-        dispatch(editCdcSinkTaskActions.activeTableSet({ type: "embedded", path: newPath }));
-    };
-
-    const changeEmbeddedToLinked = async (path: EmbeddedTablePath) => {
-        const embeddedTable = getValues(path);
-        const hasChildren = embeddedTable.embeddedTables?.length > 0 || embeddedTable.linkedTables?.length > 0;
-
-        if (hasChildren) {
-            const isConfirmed = await confirm({
-                title: "Change to linked table?",
-                message: "Nested tables will be removed.",
-                icon: "link",
-                confirmIcon: "link",
-                confirmText: "Change",
-                actionColor: "warning",
-            });
-
-            if (!isConfirmed) {
-                return;
-            }
-        }
-
-        const { listPath, index } = getTableListLocation(path);
-        const embeddedTables = getTableList<FormEmbeddedTable>(listPath);
-        const linkedListPath = getSiblingListPath(path, "linkedTables");
-        const linkedTables = getTableList<FormLinkedTable>(linkedListPath);
-        const newPath = castToLinkedTablePath(`${linkedListPath}.${linkedTables.length}`);
-
-        setFieldValue(
-            listPath,
-            embeddedTables.filter((_, idx) => idx !== index)
-        );
-        setFieldValue(linkedListPath, [
-            ...linkedTables,
-            {
-                ...defaultLinkedTable(),
-                joinColumns: embeddedTable.joinColumns,
-                propertyName: embeddedTable.propertyName,
-                sourceTableName: embeddedTable.sourceTableName,
-                sourceTableSchema: embeddedTable.sourceTableSchema,
-            },
-        ]);
-        dispatch(editCdcSinkTaskActions.tableExpandedRemoved(path));
-        dispatch(editCdcSinkTaskActions.activeTableSet({ type: "linked", path: newPath }));
-    };
-
     return {
         addEmbeddedTable,
         addLinkedTable,
-        changeEmbeddedToLinked,
-        changeLinkedToEmbedded,
         removeTable,
         toggleRootTableDisabled,
     };
@@ -179,14 +105,4 @@ function getTableListLocation(path: CdcActiveTable["path"]) {
     const listPath = parts.slice(0, -1).join(".") as TableListPath;
 
     return { index, listPath };
-}
-
-function getSiblingListPath(
-    path: LinkedTablePath | EmbeddedTablePath,
-    siblingListName: "embeddedTables" | "linkedTables"
-) {
-    const parts = path.split(".");
-    const parentPath = parts.slice(0, -2).join(".");
-
-    return `${parentPath}.${siblingListName}` as TableListPath;
 }

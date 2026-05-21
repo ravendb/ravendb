@@ -13,6 +13,8 @@ import SizeGetter from "components/common/SizeGetter";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import EditCdcSinkTaskVerifyResult from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskVerifyResult";
 import EditCdcSinkTaskDiscoverySchemasModal from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/discovery/EditCdcSinkTaskDiscoverySchemasModal";
+import { useAppDispatch } from "components/store";
+import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 
 interface EditCdcSinkTaskDiscoverySectionProps {
     tablesFieldArray: UseFieldArrayReturn<EditCdcSinkTaskFormData, "tables", "id">;
@@ -20,6 +22,7 @@ interface EditCdcSinkTaskDiscoverySectionProps {
 
 export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: EditCdcSinkTaskDiscoverySectionProps) {
     const { tasksService } = useServices();
+    const dispatch = useAppDispatch();
     const { value: isPanelOpen, toggle: toggleIsPanelOpen, setTrue: openPanel } = useBoolean(true);
     const { value: isSchemasModalOpen, setTrue: openSchemasModal, setFalse: closeSchemasModal } = useBoolean(false);
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -32,12 +35,17 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
 
     const asyncGetSchema = useAsyncCallback(async (schemas: string[]) => {
         openPanel();
+        dispatch(editCdcSinkTaskActions.sourceSchemaSet(null));
 
-        return await tasksService.getCdcSinkTaskSchema(databaseName, {
+        const sourceSchema = await tasksService.getCdcSinkTaskSchema(databaseName, {
             Schemas: schemas,
             Connection: null,
             ConnectionStringName: connectionStringName,
         });
+
+        dispatch(editCdcSinkTaskActions.sourceSchemaSet(sourceSchema));
+
+        return sourceSchema;
     });
 
     const asyncVerifySource = useAsyncCallback(async () => {

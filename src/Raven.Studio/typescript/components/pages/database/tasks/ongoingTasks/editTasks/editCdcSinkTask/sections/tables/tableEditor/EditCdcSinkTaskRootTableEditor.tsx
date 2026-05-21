@@ -21,16 +21,16 @@ export default function EditCdcSinkTaskRootTableEditor({ path }: { path: RootTab
         <div>
             <div className="grid">
                 <FormGroup className="g-col-4">
-                    <FormLabel>Collection name</FormLabel>
-                    <FormInput type="text" control={control} name={`${path}.collectionName`} />
-                </FormGroup>
-                <FormGroup className="g-col-4">
                     <FormLabel>Source schema</FormLabel>
                     <FormInput type="text" control={control} name={`${path}.sourceTableSchema`} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
                     <FormLabel>Source table</FormLabel>
                     <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
+                </FormGroup>
+                <FormGroup className="g-col-4">
+                    <FormLabel>Collection name</FormLabel>
+                    <FormInput type="text" control={control} name={`${path}.collectionName`} />
                 </FormGroup>
             </div>
             <FormStringValueList

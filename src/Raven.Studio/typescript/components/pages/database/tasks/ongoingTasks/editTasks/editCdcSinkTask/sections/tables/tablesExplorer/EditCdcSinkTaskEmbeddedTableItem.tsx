@@ -90,9 +90,6 @@ export function EditCdcSinkTaskEmbeddedTableItem({
                     <Dropdown.Item onClick={() => tableActions.addLinkedTable(path)}>
                         <Icon icon="link" /> Add new linked table
                     </Dropdown.Item>
-                    <Dropdown.Item onClick={() => tableActions.changeEmbeddedToLinked(path)}>
-                        <Icon icon="link" /> Change to linked
-                    </Dropdown.Item>
                     <Dropdown.Item
                         className="text-danger"
                         onClick={() => tableActions.removeTable({ path, type: "embedded" })}

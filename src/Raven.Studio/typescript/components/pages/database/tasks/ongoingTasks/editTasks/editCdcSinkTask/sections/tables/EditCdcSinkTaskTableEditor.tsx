@@ -10,7 +10,6 @@ import { useFormContext, useWatch } from "react-hook-form";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import Breadcrumb from "react-bootstrap/Breadcrumb";
-import { useEditCdcSinkTaskTableActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskTableActions";
 import EditCdcSinkTaskRootTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskRootTableEditor";
 import EditCdcSinkTaskLinkedTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskLinkedTableEditor";
 import EditCdcSinkTaskEmbeddedTableEditor from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskEmbeddedTableEditor";
@@ -36,7 +35,6 @@ export default function EditCdcSinkTaskTableEditor() {
 
 function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
     const dispatch = useAppDispatch();
-    const tableActions = useEditCdcSinkTaskTableActions();
     const editForm = useFormContext<EditCdcSinkTaskFormData>();
     const breadcrumbItems = useEditCdcSinkTaskBreadcrumbs(activeTable.path);
 
@@ -91,26 +89,6 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                     </Breadcrumb>
                 </div>
                 <div className="ms-auto hstack gap-2 align-items-center">
-                    {activeTable.type === "linked" && (
-                        <Button
-                            variant="secondary"
-                            onClick={() => tableActions.changeLinkedToEmbedded(activeTable.path)}
-                            disabled={isRootTableDisabled}
-                        >
-                            <Icon icon="embed" />
-                            Change to embedded
-                        </Button>
-                    )}
-                    {activeTable.type === "embedded" && (
-                        <Button
-                            variant="secondary"
-                            onClick={() => tableActions.changeEmbeddedToLinked(activeTable.path)}
-                            disabled={isRootTableDisabled}
-                        >
-                            <Icon icon="link" />
-                            Change to linked
-                        </Button>
-                    )}
                     {activeTable.type === "root" && (
                         <Button variant="info" disabled={isRootTableDisabled} onClick={handleOpenRootTableTest}>
                             <Icon icon="rocket" />

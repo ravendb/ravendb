@@ -20,7 +20,7 @@ import AceEditor, { AceEditorProps } from "./ace/AceEditor";
 import classNames from "classnames";
 import DurationPicker, { DurationPickerProps } from "./DurationPicker";
 import SelectCreatable from "./select/SelectCreatable";
-import { GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
+import { ActionMeta, GetOptionValue, GroupBase, InputActionMeta, OnChangeValue, OptionsOrGroups } from "react-select";
 import Select, { InputNotHidden, SelectValue } from "./select/Select";
 import DatePicker, { type DatePickerProps } from "./DatePicker";
 import { Icon } from "components/common/Icon";
@@ -276,6 +276,7 @@ export function FormSelectCreatable<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            afterSelect?: (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => void;
             addon?: ReactNode | string;
         }
 ) {
@@ -293,8 +294,10 @@ export function FormSelectCreatable<
         shouldUnregister,
     });
 
-    const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
-    const optionCreator = rest.optionCreator ?? ((value: string) => ({ value, label: value }));
+    const { afterSelect, getOptionValue, optionCreator, customOptions: initialCustomOptions, ...selectRest } = rest;
+    const valueAccessor = getOptionValue ?? ((option: any) => option.value);
+    const createOption = optionCreator ?? ((value: string) => ({ value, label: value }));
+    const options = selectRest.options ?? [];
 
     const getOptionsFromValue = (
         formValues: PathValue<TFieldValues, TName>,
@@ -307,18 +310,23 @@ export function FormSelectCreatable<
     };
 
     const [customOptions, setCustomOptions] = useState<OptionsOrGroups<Option, Group>>(
-        rest.customOptions ?? getOptionsFromValue(formValues, optionCreator)
+        initialCustomOptions ?? getOptionsFromValue(formValues, createOption)
     );
 
-    const selectedOptions = getFormSelectedOptions<Option>(
-        formValues,
-        [...rest.options, ...customOptions],
-        valueAccessor
-    );
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, [...options, ...customOptions], valueAccessor);
 
     const onCreateOption = (value: string) => {
-        setCustomOptions((options) => [...options, optionCreator(value)]);
-        onChange(rest.isMulti ? [...formValues, value] : value);
+        const createdOption = createOption(value);
+
+        setCustomOptions((options) => [...options, createdOption]);
+        onChange(selectRest.isMulti ? [...formValues, value] : value);
+    };
+
+    const onSelectChange = (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => {
+        onChange(
+            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : options ? valueAccessor(options) : null
+        );
+        afterSelect?.(options, actionMeta);
     };
 
     return (
@@ -326,14 +334,11 @@ export function FormSelectCreatable<
             <InputGroup className="d-flex flex-grow-1">
                 <SelectCreatable
                     value={selectedOptions}
-                    onChange={(options: OnChangeValue<Option, IsMulti>) => {
-                        onChange(
-                            Array.isArray(options) ? options.map((x) => valueAccessor(x)) : valueAccessor(options)
-                        );
-                    }}
+                    onChange={onSelectChange}
                     onCreateOption={onCreateOption}
                     disabled={formState.isSubmitting}
-                    {...rest}
+                    getOptionValue={getOptionValue}
+                    {...selectRest}
                 />
                 {addon && <InputGroup.Text>{addon}</InputGroup.Text>}
             </InputGroup>
@@ -353,6 +358,7 @@ export function FormSelectAutocomplete<
         ComponentProps<typeof SelectCreatable<Option, IsMulti, Group>> & {
             customOptions?: OptionsOrGroups<Option, Group>;
             optionCreator?: (value: string) => any;
+            afterSelect?: (options: OnChangeValue<Option, IsMulti>, actionMeta: ActionMeta<Option>) => void;
             addon?: ReactNode | string;
         }
 ) {

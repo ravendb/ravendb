@@ -18,15 +18,13 @@ import { useCallback, useMemo } from "react";
 import { UseAsyncReturn } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import { UseFieldArrayReturn } from "react-hook-form";
-import { upperFirst, camelCase } from "lodash";
 
 import CdcSinkSchema = Raven.Client.Documents.Operations.CdcSink.Schema;
-import {
-    FormLinkedTable,
-    FormRootTable,
-    FormRootTableColumn,
-} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import ExpandableListContainer from "components/common/ExpandableListContainer";
+import {
+    isTableSupported,
+    mapSqlTableToFormData,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskSchemaUtils";
 
 interface EditCdcSinkTaskDiscoveredTableProps {
     asyncGetSchema: UseAsyncReturn<CdcSinkSchema.CdcSinkSourceSchema, [string[]]>;
@@ -171,13 +169,6 @@ const useColumns = (widthPx: number): ColumnDef<CdcSinkSchema.CdcSinkSourceTable
     );
 };
 
-const pascalCase = (name: string) => upperFirst(camelCase(name));
-const propertyNameFromJoinColumn = (name: string) => pascalCase(name.endsWith("_id") ? name.slice(0, -3) : name);
-
-function isTableSupported(table: CdcSinkSchema.CdcSinkSourceTable) {
-    return table.IsCdcEnabled && table.UnsupportedReason == null;
-}
-
 function getTableName(table: CdcSinkSchema.CdcSinkSourceTable) {
     return `${table.SourceTableSchema}.${table.SourceTableName}`;
 }
@@ -186,41 +177,4 @@ function getUnsupportedTableMessage(table: CdcSinkSchema.CdcSinkSourceTable) {
     const reasons = [!table.IsCdcEnabled ? "CDC is not enabled" : null, table.UnsupportedReason].filter(Boolean);
 
     return `${getTableName(table)}: ${reasons.join(", ")}`;
-}
-
-function isColumnSupported(column: CdcSinkSchema.CdcSinkSourceColumn) {
-    return column.IsCdcCapturable && column.UnsupportedReason == null;
-}
-
-function mapSqlTableToFormData(table: CdcSinkSchema.CdcSinkSourceTable): FormRootTable {
-    const columns = table.Columns.filter(isColumnSupported).map(
-        (x): FormRootTableColumn => ({
-            column: x.Name,
-            name: pascalCase(x.Name),
-            type: x.SuggestedType,
-        })
-    );
-
-    const linkedTables = table.ForeignKeys.map(
-        (x): FormLinkedTable => ({
-            propertyName: x.Columns.map(propertyNameFromJoinColumn).join("And"),
-            joinColumns: x.Columns.map((value) => ({ value })),
-            linkedCollectionName: pascalCase(x.ReferencedTable),
-            sourceTableName: x.ReferencedTable,
-            sourceTableSchema: x.ReferencedSchema,
-        })
-    );
-
-    return {
-        collectionName: pascalCase(table.SourceTableName),
-        columns,
-        disabled: false,
-        embeddedTables: [],
-        linkedTables,
-        onDelete: { ignoreDeletes: false, patch: "" },
-        patch: "",
-        primaryKeyColumns: table.PrimaryKeyColumns.map((value) => ({ value })),
-        sourceTableName: table.SourceTableName,
-        sourceTableSchema: table.SourceTableSchema,
-    } satisfies FormRootTable;
 }

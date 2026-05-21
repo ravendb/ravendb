@@ -1,5 +1,13 @@
-import { FormGroup, FormInput, FormLabel, FormSelect, FormSwitch } from "components/common/Form";
+import {
+    FormGroup,
+    FormInput,
+    FormLabel,
+    FormSelect,
+    FormSelectAutocomplete,
+    FormSwitch,
+} from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
+import { useEditCdcSinkTaskSourceTableAutoFill } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskSourceTableAutoFill";
 import { EmbeddedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -18,6 +26,10 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
     const patch = useWatch({ control, name: `${path}.patch` });
     const ignoreDeletes = useWatch({ control, name: `${path}.onDelete.ignoreDeletes` });
     const deletePatch = useWatch({ control, name: `${path}.onDelete.patch` });
+    const { handleSourceTableChange, sourceSchemaOptions, sourceTableOptions } = useEditCdcSinkTaskSourceTableAutoFill(
+        path,
+        "embedded"
+    );
 
     const hasAdvancedValues = Boolean(caseSensitiveKeys || patch || ignoreDeletes || deletePatch);
 
@@ -25,20 +37,31 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
         <div>
             <div className="grid mb-3">
                 <FormGroup className="g-col-6" marginClass="m-0">
+                    <FormLabel>Source schema</FormLabel>
+                    <FormSelectAutocomplete
+                        control={control}
+                        name={`${path}.sourceTableSchema`}
+                        options={sourceSchemaOptions}
+                        placeholder="Select or enter source schema"
+                    />
+                </FormGroup>
+                <FormGroup className="g-col-6" marginClass="m-0">
+                    <FormLabel>Source table</FormLabel>
+                    <FormSelectAutocomplete
+                        control={control}
+                        name={`${path}.sourceTableName`}
+                        options={sourceTableOptions}
+                        afterSelect={handleSourceTableChange}
+                        placeholder="Select or enter source table"
+                    />
+                </FormGroup>
+                <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Property name</FormLabel>
                     <FormInput type="text" control={control} name={`${path}.propertyName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Relation type</FormLabel>
                     <FormSelect control={control} name={`${path}.type`} options={relationTypeOptions} />
-                </FormGroup>
-                <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Source schema</FormLabel>
-                    <FormInput type="text" control={control} name={`${path}.sourceTableSchema`} />
-                </FormGroup>
-                <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Source table</FormLabel>
-                    <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
             </div>
             <FormStringValueList
