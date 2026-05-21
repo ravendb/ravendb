@@ -52,13 +52,20 @@ export function getSourceTableOptionLabel(table: CdcSinkSourceTable) {
 
 export function getSourceTableOptions(
     schema: CdcSinkSourceSchema | null,
-    sourceTableSchema: string
+    sourceTableSchema: string,
+    excludedTable?: { sourceTableSchema: string; sourceTableName: string }
 ): CdcSinkSourceTableOption[] {
     const schemaFilter = sourceTableSchema?.trim();
 
     return (schema?.Tables ?? [])
         .filter(isTableSupported)
         .filter((table) => !schemaFilter || table.SourceTableSchema === schemaFilter)
+        .filter(
+            (table) =>
+                !excludedTable ||
+                table.SourceTableSchema !== excludedTable.sourceTableSchema ||
+                table.SourceTableName !== excludedTable.sourceTableName
+        )
         .map((table) => ({
             value: getSourceTableOptionValue(table),
             label: getSourceTableOptionLabel(table),

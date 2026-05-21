@@ -29,17 +29,30 @@ type FormPath = FieldPath<EditCdcSinkTaskFormData>;
 export function useEditCdcSinkTaskSourceTableAutoFill(path: AutoFillPath, mode: AutoFillMode) {
     const sourceSchema = useAppSelector(editCdcSinkTaskSelectors.sourceSchema);
     const { control, getValues, setValue } = useFormContext<EditCdcSinkTaskFormData>();
+    const parentPath = getParentPath(path);
 
     const selectedSourceTableSchema = useWatch({
         control,
         name: formPath(`${path}.sourceTableSchema`),
     });
+    const parentSourceTableSchema = useWatch({
+        control,
+        name: formPath(`${parentPath}.sourceTableSchema`),
+    });
+    const parentSourceTableName = useWatch({
+        control,
+        name: formPath(`${parentPath}.sourceTableName`),
+    });
     const sourceTableSchema = String(selectedSourceTableSchema ?? "");
+    const excludedTable = {
+        sourceTableSchema: String(parentSourceTableSchema ?? ""),
+        sourceTableName: String(parentSourceTableName ?? ""),
+    };
 
     const sourceSchemaOptions = useMemo(() => getSourceSchemaOptions(sourceSchema), [sourceSchema]);
     const sourceTableOptions = useMemo(
-        () => getSourceTableOptions(sourceSchema, sourceTableSchema),
-        [sourceSchema, sourceTableSchema]
+        () => getSourceTableOptions(sourceSchema, sourceTableSchema, excludedTable),
+        [sourceSchema, sourceTableSchema, excludedTable.sourceTableSchema, excludedTable.sourceTableName]
     );
 
     const handleSourceTableChange = (
@@ -118,7 +131,6 @@ export function useEditCdcSinkTaskSourceTableAutoFill(path: AutoFillPath, mode: 
     };
 
     const getParentSourceTable = () => {
-        const parentPath = getParentPath(path);
         const parentTable = getValues(formPath(parentPath)) as {
             sourceTableSchema: string;
             sourceTableName: string;
