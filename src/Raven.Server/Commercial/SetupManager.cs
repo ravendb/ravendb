@@ -587,8 +587,11 @@ namespace Raven.Server.Commercial
             }
         }
 
-        internal static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
+        private static async Task ValidateServerCanRunWithSuppliedSettings(SetupInfo setupInfo, ServerStore serverStore, SetupMode setupMode, CancellationToken token)
         {
+            if (setupInfo.ZipOnly)
+                return;
+
             var localNode = setupInfo.NodeSetupInfos[setupInfo.LocalNodeTag];
             var localIps = new List<IPEndPoint>();
 
