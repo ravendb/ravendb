@@ -19,7 +19,7 @@ export default class TaskUtils {
                 case "AmazonSqs":
                     return "AmazonSqsQueueEtl";
                 case "AzureServiceBus":
-                    throw new Error("Not yet supported");
+                    return "AzureServiceBusQueueSink";
                 case "None":
                     throw new Error("Expected non-null BrokerType");
                 default:
