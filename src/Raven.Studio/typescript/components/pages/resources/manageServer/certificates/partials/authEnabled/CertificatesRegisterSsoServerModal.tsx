@@ -107,7 +107,7 @@ export default function CertificatesRegisterSsoServerModal() {
                             <FormInput control={control} type="text" name="name" placeholder="e.g. My SSO Server" />
                         </FormGroup>
                         <FormGroup>
-                            <div className="hstack gap-1 mb-2">
+                            <div className="hstack gap-1 mb-1">
                                 <FormLabel className="mb-0 d-flex align-items-center gap-1">
                                     SSO server URL{" "}
                                     <ConditionalPopover
@@ -116,10 +116,9 @@ export default function CertificatesRegisterSsoServerModal() {
                                             message: (
                                                 <>
                                                     Enter the SSO server&apos;s URL (e.g.{" "}
-                                                    <code>https://sso.example.com</code>). RavenDB will fetch the
-                                                    public certificate from <code>/api/certificate</code> on that
-                                                    server — any path is ignored. If unreachable, use the file
-                                                    upload below.
+                                                    <code>https://sso.example.com</code>). RavenDB will fetch the public
+                                                    certificate from <code>/api/certificate</code> on that server — any
+                                                    path is ignored. If unreachable, use the file upload below.
                                                 </>
                                             ),
                                         }}

@@ -179,7 +179,7 @@ export default function CertificatesRegisterSsoUserModal() {
                             />
                         </FormGroup>
                         <FormGroup>
-                            <div className="hstack gap-1 mb-2">
+                            <div className="hstack gap-1 mb-1">
                                 <FormLabel className="mb-0 d-flex align-items-center gap-1">
                                     Identifiers{" "}
                                     <ConditionalPopover
@@ -203,7 +203,7 @@ export default function CertificatesRegisterSsoUserModal() {
                                 </FormLabel>
                                 <FlexGrow />
                                 <Button
-                                    variant="outline-primary"
+                                    variant="link"
                                     size="sm"
                                     onClick={() =>
                                         identifiersFieldArray.append({
@@ -213,7 +213,7 @@ export default function CertificatesRegisterSsoUserModal() {
                                         })
                                     }
                                 >
-                                    <Icon icon="plus" margin="m-0" />
+                                    <Icon icon="plus" margin="me-1" />
                                     Add
                                 </Button>
                             </div>
@@ -221,8 +221,8 @@ export default function CertificatesRegisterSsoUserModal() {
                                 {identifiersFieldArray.fields.map((field, idx) => {
                                     const provider = formValues.ssoIdentifiers?.[idx]?.provider;
                                     return (
-                                        <Card key={field.id} className="p-2">
-                                            <div className="hstack gap-2 align-items-start">
+                                        <Card key={field.id}>
+                                            <div className="hstack gap-2 align-items-stretch">
                                                 <div style={{ minWidth: "130px" }}>
                                                     <FormSelect
                                                         control={control}
@@ -243,15 +243,16 @@ export default function CertificatesRegisterSsoUserModal() {
                                                     control={control}
                                                     type="text"
                                                     name={`ssoIdentifiers.${idx}.identifier`}
-                                                    placeholder={identifierPlaceholderByProvider[provider] ?? "Username or email"}
+                                                    placeholder={
+                                                        identifierPlaceholderByProvider[provider] ?? "Username or email"
+                                                    }
                                                 />
                                                 <Button
-                                                    variant="link"
-                                                    className="px-0"
+                                                    variant="danger"
                                                     onClick={() => identifiersFieldArray.remove(idx)}
                                                     disabled={identifiersFieldArray.fields.length === 1}
                                                 >
-                                                    <Icon icon="trash" margin="m-0" className="text-danger" />
+                                                    <Icon icon="trash" margin="m-0" />
                                                 </Button>
                                             </div>
                                         </Card>
@@ -279,7 +280,7 @@ export default function CertificatesRegisterSsoUserModal() {
                         </FormGroup>
                         <hr />
                         <FormGroup>
-                            <div className="hstack justify-content-between align-items-center mb-2">
+                            <div className="hstack justify-content-between align-items-center mb-1">
                                 <FormLabel className="mb-0">Authorizing SSO</FormLabel>
                                 <FormSwitch control={control} name="allowAnySso">
                                     Allow any SSO to authorize
