@@ -95,7 +95,7 @@ function getIcon(type: StudioConnectionType): IconName {
         case "AmazonSqs":
             return "amazon-sqs";
         case "AzureServiceBus":
-            return "azure";
+            return "azure-service-bus";
         case "Ai":
             return "sparkles";
         default:

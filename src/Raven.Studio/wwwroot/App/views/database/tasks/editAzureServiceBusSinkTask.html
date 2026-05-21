@@ -1,7 +1,7 @@
 <div class="content-margin edit-azure-service-bus-sink-task edit-ongoing-task" data-bind="css: { 'test-mode': enableTestArea }">
     <div class="align-items-center justify-content-between d-flex margin-bottom-md padding-top-xs">
         <div class="flex-horizontal gap-2">
-            <i class="icon-azure"></i>
+            <i class="icon-azure-service-bus"></i>
             <h2 data-bind="text: $root.isAddingNewAzureServiceBusSinkTask() ? `New Azure Service Bus Sink` : `Edit Azure Service Bus Sink`" class="mb-0"></h2>
             <span class="badge license-restricted-badge enterprise" data-bind="if: !hasQueueSink">Enterprise</span>
         </div>
@@ -57,7 +57,7 @@
                         <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                             <label class="control-label">Connection String</label>
                             <div class="flex-horizontal flex-grow flex-wrap">
-                                <div class="btn-block position-relative">
+                                <div class="flex-grow">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
                                             data-bind="textInput: connectionStringName, disable: $root.azureServiceBusConnectionStringsDetails().length === 0,
                                                        attr: { 'title': $root.azureServiceBusConnectionStringsDetails().length === 0 ? 'No connection strings were defined' : 'Select a connection string' }">

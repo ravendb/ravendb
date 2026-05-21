@@ -259,7 +259,7 @@ function getAvailableConnectionStringsOptions(features: ConnectionStringsLicense
         {
             value: "AzureServiceBus",
             label: "Azure Service Bus",
-            icon: "azure",
+            icon: "azure-service-bus",
             licenseRequired: "Enterprise",
             isDisabled: !features.hasQueueEtl,
         },

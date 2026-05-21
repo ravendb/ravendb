@@ -62,7 +62,7 @@ export function EditAzureServiceBusSinkTaskInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "Azure Service Bus Sink",
-        featureIcon: "azure",
+        featureIcon: "azure-service-bus",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: true },
