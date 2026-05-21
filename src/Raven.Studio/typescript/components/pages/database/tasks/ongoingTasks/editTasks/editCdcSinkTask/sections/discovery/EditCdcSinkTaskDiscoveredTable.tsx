@@ -97,7 +97,7 @@ export default function EditCdcSinkTaskDiscoveredTable({
             <VirtualTable table={table} heightInPx={300} isLoading={asyncGetSchema.loading} />
             {selectedCount > 0 && (
                 <div
-                    className="position-absolute hstack gap-1 rounded-pill border border-secondary panel-bg-2 px-2"
+                    className="position-absolute hstack gap-1 rounded-pill border border-secondary panel-bg-3 px-2"
                     style={{ bottom: "26px", left: "50%", transform: "translateX(-50%)" }}
                 >
                     <span>
