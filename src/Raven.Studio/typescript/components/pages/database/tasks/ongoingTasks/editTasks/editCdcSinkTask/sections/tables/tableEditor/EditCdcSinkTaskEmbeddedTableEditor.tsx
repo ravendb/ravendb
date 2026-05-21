@@ -6,6 +6,7 @@ import {
     FormSelectAutocomplete,
     FormSwitch,
 } from "components/common/Form";
+import RichAlert from "components/common/RichAlert";
 import { SelectOption } from "components/common/select/Select";
 import { useEditCdcSinkTaskSourceTableAutoFill } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskSourceTableAutoFill";
 import { EmbeddedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
@@ -26,15 +27,29 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
     const patch = useWatch({ control, name: `${path}.patch` });
     const ignoreDeletes = useWatch({ control, name: `${path}.onDelete.ignoreDeletes` });
     const deletePatch = useWatch({ control, name: `${path}.onDelete.patch` });
+    const sourceTableSchema = useWatch({ control, name: `${path}.sourceTableSchema` });
+    const sourceTableName = useWatch({ control, name: `${path}.sourceTableName` });
+    const rootTables = useWatch({ control, name: "tables" });
     const { handleSourceTableChange, sourceSchemaOptions, sourceTableOptions } = useEditCdcSinkTaskSourceTableAutoFill(
         path,
         "embedded"
     );
 
     const hasAdvancedValues = Boolean(caseSensitiveKeys || patch || ignoreDeletes || deletePatch);
+    const hasRootTableConflict = rootTables?.some(
+        (table) =>
+            isSameSourceValue(table.sourceTableSchema, sourceTableSchema) &&
+            isSameSourceValue(table.sourceTableName, sourceTableName)
+    );
 
     return (
         <div>
+            {hasRootTableConflict && (
+                <RichAlert variant="warning" className="mb-3">
+                    This source table is already configured as a root table. CDC Sink can process a source table only
+                    once, so embedded updates may be routed to the root table instead.
+                </RichAlert>
+            )}
             <div className="grid mb-3">
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source schema</FormLabel>
@@ -101,3 +116,7 @@ const relationTypeOptions: SelectOption<CdcSinkRelationType>[] = [
     { value: "Map", label: "Map" },
     { value: "Value", label: "Value" },
 ];
+
+function isSameSourceValue(left: string, right: string) {
+    return Boolean(left) && Boolean(right) && left.localeCompare(right, undefined, { sensitivity: "accent" }) === 0;
+}
