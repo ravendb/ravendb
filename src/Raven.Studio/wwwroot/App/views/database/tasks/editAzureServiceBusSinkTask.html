@@ -56,7 +56,7 @@
                         </div>
                         <div class="form-group" data-bind="validationOptions: { insertMessages: false }, validationElement: connectionStringName">
                             <label class="control-label">Connection String</label>
-                            <div class="flex-horizontal flex-grow">
+                            <div class="flex-horizontal flex-grow flex-wrap">
                                 <div class="btn-block position-relative">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown"
                                             data-bind="textInput: connectionStringName, disable: $root.azureServiceBusConnectionStringsDetails().length === 0,
