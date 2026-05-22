@@ -227,7 +227,9 @@ namespace Voron
         public abstract bool IsLinked(long journalNumber, string filePath, out string finalFilePath);
         
         public abstract JournalWriter CreateJournalWriter(long journalNumber, long journalSize);
-        
+
+        public abstract JournalWriter CreateReadOnlyJournalWriter(long journalNumber, long journalSize);
+
         public abstract JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
@@ -542,6 +544,13 @@ namespace Voron
                 }
 
                 return result.Value;
+            }
+
+            public override JournalWriter CreateReadOnlyJournalWriter(long journalNumber, long journalSize)
+            {
+                var name = JournalName(journalNumber);
+                var path = JournalPath.Combine(name);
+                return new JournalWriter(this, path, journalNumber, journalSize, readOnlyForRecovery: true);
             }
 
             public override VoronPathSetting GetJournalPath(long journalNumber)
@@ -976,6 +985,11 @@ namespace Voron
 
                 _logs[name] = value;
                 return value;
+            }
+
+            public override JournalWriter CreateReadOnlyJournalWriter(long journalNumber, long journalSize)
+            {
+                throw new NotSupportedException("Pure-memory env has no hard links; CreateReadOnlyJournalWriter must not be called.");
             }
 
             public override VoronPathSetting GetJournalPath(long journalNumber)
