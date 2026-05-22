@@ -135,6 +135,18 @@ namespace Raven.Server.Documents
                             return;
                         }
 
+                        if (_serverStore.IsLeader())
+                        {
+                            if (type == nameof(AddDatabaseCommand))
+                            {
+                                RunDatabaseCreateExec(databaseName);
+                            }
+                            else if (type == nameof(DeleteDatabaseCommand) && rawRecord.EntireDatabasePendingDeletion())
+                            {
+                                RunDatabaseDeleteExec(databaseName);
+                            }
+                        }
+
                         if (rawRecord.IsSharded)
                         {
                             foreach (var shardRawRecord in rawRecord.GetShardedDatabaseRecords())
@@ -496,6 +508,50 @@ namespace Raven.Server.Documents
         private static void ThrowUnknownClusterDatabaseChangeType(ClusterDatabaseChangeType type)
         {
             throw new InvalidOperationException($"Unknown cluster database change type: {type}");
+        }
+
+        private void RunDatabaseCreateExec(string databaseName)
+        {
+            var config = _serverStore.Configuration.Databases;
+            if (string.IsNullOrEmpty(config.OnDatabaseCreateExec))
+                return;
+
+            try
+            {
+                DatabaseExecUtils.ExecuteOnDatabaseEvent(
+                    config.OnDatabaseCreateExec,
+                    config.OnDatabaseCreateExecArguments,
+                    config.OnDatabaseCreateExecTimeout.AsTimeSpan,
+                    databaseName,
+                    _logger);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to execute '{config.OnDatabaseCreateExec}' for database '{databaseName}' creation event.", e);
+            }
+        }
+
+        private void RunDatabaseDeleteExec(string databaseName)
+        {
+            var config = _serverStore.Configuration.Databases;
+            if (string.IsNullOrEmpty(config.OnDatabaseDeleteExec))
+                return;
+
+            try
+            {
+                DatabaseExecUtils.ExecuteOnDatabaseEvent(
+                    config.OnDatabaseDeleteExec,
+                    config.OnDatabaseDeleteExecArguments,
+                    config.OnDatabaseDeleteExecTimeout.AsTimeSpan,
+                    databaseName,
+                    _logger);
+            }
+            catch (Exception e)
+            {
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"Failed to execute '{config.OnDatabaseDeleteExec}' for database '{databaseName}' deletion event.", e);
+            }
         }
 
         private void NotifyLeaderAboutRemoval(string dbName, string databaseId, string requestId = null)

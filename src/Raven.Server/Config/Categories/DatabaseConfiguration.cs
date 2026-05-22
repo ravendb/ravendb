@@ -162,5 +162,37 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Databases.RegularCleanupThresholdInMin", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public TimeSetting RegularCleanupThreshold { get; set; }
+
+        [Description("EXPERT: A command or executable to run on the leader node when a database is created in the cluster. RavenDB will execute: command [user-arg-1] ... [user-arg-n] <database-name> <database-name-base64>")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseCreate.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string OnDatabaseCreateExec { get; set; }
+
+        [Description("EXPERT: The optional user arguments for the 'Databases.OnDatabaseCreate.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseCreate.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        public string OnDatabaseCreateExecArguments { get; set; }
+
+        [Description("EXPERT: The number of seconds to wait for the 'Databases.OnDatabaseCreate.Exec' executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.OnDatabaseCreate.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting OnDatabaseCreateExecTimeout { get; set; }
+
+        [Description("EXPERT: A command or executable to run on the leader node when a database is deleted from the cluster. RavenDB will execute: command [user-arg-1] ... [user-arg-n] <database-name> <database-name-base64>")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec", ConfigurationEntryScope.ServerWideOnly)]
+        public string OnDatabaseDeleteExec { get; set; }
+
+        [Description("EXPERT: The optional user arguments for the 'Databases.OnDatabaseDelete.Exec' command or executable. The arguments must be escaped for the command line.")]
+        [DefaultValue(null)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.Arguments", ConfigurationEntryScope.ServerWideOnly, isSecured: true)]
+        public string OnDatabaseDeleteExecArguments { get; set; }
+
+        [Description("EXPERT: The number of seconds to wait for the 'Databases.OnDatabaseDelete.Exec' executable to exit. Default: 30 seconds")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Databases.OnDatabaseDelete.Exec.TimeoutInSec", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting OnDatabaseDeleteExecTimeout { get; set; }
     }
 }
