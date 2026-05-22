@@ -397,9 +397,19 @@ namespace Voron.Impl.Journal
                     
                     if (_env.Options.RootJournal is null)
                     {
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
+                        var journalFullPath = _env.Options.GetJournalPath(journalNumber).FullPath;
+                        bool isHardLinked = HardLinkInfo.GetLinkCount(journalFullPath) > 1;
+
+                        var jrnlWriter = isHardLinked
+                            ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
+                            : _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
+
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet());
                         jrnlFile.DoneWriting = new SingleUseFlag();
+                        
+                        if (isHardLinked) 
+                            jrnlFile.DoneWriting.Raise();
+                        
                         jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                         jrnlFile.AddRef(); // creator reference - write ahead log
 
