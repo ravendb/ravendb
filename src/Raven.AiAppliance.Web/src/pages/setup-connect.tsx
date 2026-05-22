@@ -1,29 +1,30 @@
 import { Link } from "react-router";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft, Database } from "lucide-react";
+import { Button } from "@/components/shadcn/ui/button";
 
 export function SetupConnect() {
-  return (
-    <div className="min-h-svh bg-background px-4 py-6 text-foreground">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <Button asChild variant="ghost" className="w-fit">
-          <Link to="/">
-            <ArrowLeft className="size-4" aria-hidden="true" />
-            Dashboard
-          </Link>
-        </Button>
+    return (
+        <div className="flex min-h-full w-full items-start">
+            <section className="w-full rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
+                <Button asChild variant="ghost" size="sm" className="mb-6 w-fit">
+                    <Link to="/">
+                        <ArrowLeft className="size-4" aria-hidden="true" />
+                        Apps
+                    </Link>
+                </Button>
 
-        <section className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
-          <p className="text-sm font-medium text-primary">Setup</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal">
-            Wizard coming soon
-          </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-            This placeholder reserves the `/setup/connect` route for the
-            application setup wizard.
-          </p>
-        </section>
-      </div>
-    </div>
-  );
+                <div className="flex max-w-2xl gap-4">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                        <Database className="size-5" aria-hidden="true" />
+                    </div>
+                    <div>
+                        <h2 className="text-base font-semibold tracking-normal">Wizard coming soon</h2>
+                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                            This placeholder reserves the setup flow for connecting a new app.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
 }
