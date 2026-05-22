@@ -72,12 +72,29 @@ export type ApiClient = ReturnType<typeof createApiClient>;
 
 async function createApiError(response: Response) {
     const details = await readErrorDetails(response);
-    const message =
-        typeof details === "object" && details !== null && "message" in details && typeof details.message === "string"
-            ? details.message
-            : `Request failed with ${response.status}`;
+    const message = getErrorMessage(details) ?? `Request failed with ${response.status}`;
 
     return new ApiError(message, response.status, details);
+}
+
+function getErrorMessage(details: unknown) {
+    if (typeof details !== "object" || details === null) {
+        return undefined;
+    }
+
+    if ("message" in details && typeof details.message === "string") {
+        return details.message;
+    }
+
+    if ("detail" in details && typeof details.detail === "string") {
+        return details.detail;
+    }
+
+    if ("error" in details && typeof details.error === "string") {
+        return details.error;
+    }
+
+    return undefined;
 }
 
 async function readErrorDetails(response: Response) {

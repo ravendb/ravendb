@@ -97,6 +97,7 @@ var app = builder.Build();
 StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
+AppsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);

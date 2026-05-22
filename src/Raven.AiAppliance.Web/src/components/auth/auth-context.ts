@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
-import type { LoginRequest } from "@/api/auth-service";
+import type { RedeemLicenseRequest } from "@/api/bootstrap-service";
 
 export type AuthContextValue = {
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (request: LoginRequest) => Promise<boolean>;
+    login: (request: RedeemLicenseRequest) => Promise<boolean>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
