@@ -12,10 +12,16 @@ import type { ReactNode } from "react";
 import { createBrowserRouter, type RouteObject } from "react-router";
 import App from "@/app";
 import { RedirectAuthenticated, RequireAuth } from "@/components/auth/auth-routes";
-import { DashboardHome } from "@/pages/dashboard-home";
-import { Login } from "@/pages/login";
-import { PlaceholderPage } from "@/pages/placeholder-page";
-import { SetupConnect } from "@/pages/setup-connect";
+import { AppApiUnavailable } from "@/pages/apps/app-api-unavailable";
+import { AppConversations } from "@/pages/apps/app-conversations";
+import { AppDataSource } from "@/pages/apps/app-data-source";
+import { AppOverview } from "@/pages/apps/app-overview";
+import { AppTasks } from "@/pages/apps/app-tasks";
+import { Login } from "@/pages/auth/login";
+import { DashboardHome } from "@/pages/dashboard/dashboard-home";
+import { SetupConnect } from "@/pages/setup/setup-connect";
+import { AiPage } from "@/pages/utility/ai-page";
+import { SimpleInfoPage } from "@/pages/utility/simple-info-page";
 
 export type AppRouteHandle = {
     title: string;
@@ -74,9 +80,7 @@ const appPages: AppRouteDefinition[] = [
             icon: LayoutDashboard,
             section: "database",
         },
-        element: (
-            <PlaceholderPage title="Overview" description="App overview placeholder for the selected application." />
-        ),
+        element: <AppOverview />,
     },
     {
         path: "data-source",
@@ -86,7 +90,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Database,
             section: "database",
         },
-        element: <PlaceholderPage title="Data source" />,
+        element: <AppDataSource />,
     },
     {
         path: "tasks",
@@ -96,7 +100,7 @@ const appPages: AppRouteDefinition[] = [
             icon: SquareKanban,
             section: "database",
         },
-        element: <PlaceholderPage title="Tasks" />,
+        element: <AppTasks />,
     },
     {
         path: "conversations",
@@ -106,7 +110,7 @@ const appPages: AppRouteDefinition[] = [
             icon: MessageSquareText,
             section: "database",
         },
-        element: <PlaceholderPage title="Conversations" />,
+        element: <AppConversations />,
     },
     {
         path: "channels",
@@ -116,7 +120,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Cable,
             section: "settings",
         },
-        element: <PlaceholderPage title="Channels" />,
+        element: <AppApiUnavailable feature="Channels" />,
     },
     {
         path: "usage",
@@ -126,7 +130,7 @@ const appPages: AppRouteDefinition[] = [
             icon: BarChart3,
             section: "settings",
         },
-        element: <PlaceholderPage title="Usage" />,
+        element: <AppApiUnavailable feature="Usage" />,
     },
     {
         path: "settings",
@@ -136,7 +140,7 @@ const appPages: AppRouteDefinition[] = [
             icon: Settings,
             section: "settings",
         },
-        element: <PlaceholderPage title="Settings" description="Settings placeholder for the selected app." />,
+        element: <AppApiUnavailable feature="Settings" />,
     },
 ];
 
@@ -213,34 +217,28 @@ const utilityRoutes: RouteObject[] = [
     },
     {
         path: "docs",
-        element: (
-            <PlaceholderPage title="Docs" description="Documentation placeholder for the initial navigation shell." />
-        ),
+        element: <SimpleInfoPage title="Docs" description="Open RavenDB documentation from the top navigation." />,
         handle: {
             title: "Docs",
         } satisfies AppRouteHandle,
     },
     {
         path: "ai",
-        element: (
-            <PlaceholderPage title="AI" description="AI assistant placeholder for the initial navigation shell." />
-        ),
+        element: <AiPage />,
         handle: {
             title: "AI",
         } satisfies AppRouteHandle,
     },
     {
         path: "community",
-        element: (
-            <PlaceholderPage title="Community" description="Community placeholder for the initial navigation shell." />
-        ),
+        element: <SimpleInfoPage title="Community" description="No community API is exposed by this frontend yet." />,
         handle: {
             title: "Community",
         } satisfies AppRouteHandle,
     },
     {
         path: "help",
-        element: <PlaceholderPage title="Help" description="Help placeholder for the initial navigation shell." />,
+        element: <SimpleInfoPage title="Help" description="No help API is exposed by this frontend yet." />,
         handle: {
             title: "Help",
         } satisfies AppRouteHandle,

@@ -2,22 +2,23 @@ import { Link } from "react-router";
 import { Database, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import { ApiState } from "@/components/data/api-state";
+import { PagePanel } from "@/components/data/page-panel";
 import { Button } from "@/components/shadcn/ui/button";
 
 export function DashboardHome() {
     const appsQuery = useQuery(api.queries.apps.list());
 
     return (
-        <div className="flex min-h-full w-full">
-            <section className="min-h-full w-full rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
-                {appsQuery.isPending ? (
-                    <p className="text-sm text-muted-foreground">Loading apps...</p>
-                ) : appsQuery.isError ? (
-                    <div className="max-w-md space-y-3">
-                        <h2 className="text-sm font-semibold">Could not load apps</h2>
-                        <p className="text-sm text-muted-foreground">Refresh the page or try again in a moment.</p>
-                    </div>
-                ) : appsQuery.data.length > 0 ? (
+        <PagePanel>
+            <ApiState
+                isLoading={appsQuery.isPending}
+                isError={appsQuery.isError}
+                errorTitle="Could not load apps"
+                onRetry={() => void appsQuery.refetch()}
+                loadingLabel="Loading apps..."
+            >
+                {appsQuery.data && appsQuery.data.length > 0 ? (
                     <div className="space-y-4">
                         <div className="flex items-center justify-between gap-3">
                             <h2 className="text-sm font-semibold">Available apps</h2>
@@ -41,7 +42,7 @@ export function DashboardHome() {
                                         </div>
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-semibold">{app.name}</p>
-                                            <p className="truncate text-xs text-muted-foreground">{app.id}</p>
+                                            <p className="truncate text-xs text-muted-foreground">{app.database}</p>
                                         </div>
                                     </div>
                                 </Link>
@@ -51,8 +52,8 @@ export function DashboardHome() {
                 ) : (
                     <EmptyAppsState />
                 )}
-            </section>
-        </div>
+            </ApiState>
+        </PagePanel>
     );
 }
 
@@ -65,8 +66,7 @@ function EmptyAppsState() {
                 </div>
                 <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">
-                    Each app is a separate data silo, complete with its own change data capture, AI-powered assistants,
-                    and communication channels.
+                    Create an app from a source database and CDC mapping.
                 </p>
                 <Button asChild size="sm" className="mt-5">
                     <Link to="/setup/connect">

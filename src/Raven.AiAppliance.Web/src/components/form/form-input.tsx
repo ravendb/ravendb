@@ -12,6 +12,7 @@ type FormInputProps<TFieldValues extends FieldValues, TName extends FieldPath<TF
     UseControllerProps<TFieldValues, TName> & {
         addons?: ReactNode;
         label?: ReactNode;
+        description?: ReactNode;
     };
 
 export function FormInput<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -25,6 +26,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
     label,
     name,
     type,
+    description,
     ...restProps
 }: FormInputProps<TFieldValues, TName>) {
     const generatedId = useId();
@@ -83,6 +85,7 @@ export function FormInput<TFieldValues extends FieldValues, TName extends FieldP
                 {addons && addons}
             </InputGroup>
             {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
+            {description && <FieldDescription>{description}</FieldDescription>}
         </Field>
     );
 }
