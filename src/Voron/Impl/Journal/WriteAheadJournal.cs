@@ -397,8 +397,7 @@ namespace Voron.Impl.Journal
                     
                     if (_env.Options.RootJournal is null)
                     {
-                        var journalFullPath = _env.Options.GetJournalPath(journalNumber).FullPath;
-                        bool isHardLinked = HardLinkInfo.GetLinkCount(journalFullPath) > 1;
+                        bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
 
                         var jrnlWriter = isHardLinked
                             ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
@@ -406,10 +405,10 @@ namespace Voron.Impl.Journal
 
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet());
                         jrnlFile.DoneWriting = new SingleUseFlag();
-                        
-                        if (isHardLinked) 
+
+                        if (isHardLinked)
                             jrnlFile.DoneWriting.Raise();
-                        
+
                         jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                         jrnlFile.AddRef(); // creator reference - write ahead log
 
@@ -562,7 +561,7 @@ namespace Voron.Impl.Journal
                 }
                 var lastFile = _files[^1];
                 bool mustRollToNewFile = _env.Options.RootJournal is null
-                                         && HardLinkInfo.GetLinkCount(lastFile.JournalWriter.FileName.FullPath) > 1;
+                                         && _env.Options.IsJournalHardLinked(lastFile.Number);
                 if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && // room for next tx header + 4kb of data
                     lastFile.HasLegacyTransaction is false && // legacy txs cannot be mixed with new ones in the same file
                     mustRollToNewFile is false) // standalone env must not append to a hard-linked journal - would corrupt the env owning the other link

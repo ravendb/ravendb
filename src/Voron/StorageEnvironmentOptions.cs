@@ -27,6 +27,7 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
+using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Util;
 using Voron.Util.Settings;
@@ -233,6 +234,8 @@ namespace Voron
         public abstract JournalWriter CreateJournalWriterForBranchEnvironment(long journalNumber, string fileName, JournalFile journalFile);
 
         public abstract VoronPathSetting GetJournalPath(long journalNumber);
+
+        public virtual bool IsJournalHardLinked(long journalNumber) => false;
 
         protected bool Disposed;
         private long _initialLogFileSize;
@@ -557,6 +560,14 @@ namespace Voron
             {
                 var name = JournalName(journalNumber);
                 return JournalPath.Combine(name);
+            }
+
+            public override bool IsJournalHardLinked(long journalNumber)
+            {
+                var path = JournalPath.Combine(JournalName(journalNumber)).FullPath;
+                if (File.Exists(path) == false)
+                    return false;
+                return HardLinkInfo.GetLinkCount(path) > 1;
             }
 
             protected override void Disposing()
