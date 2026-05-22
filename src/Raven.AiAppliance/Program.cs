@@ -99,6 +99,7 @@ HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
+StaticAssetEndpoints.MapSpaFallback(app);
 
 app.Run();
 

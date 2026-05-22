@@ -1,4 +1,5 @@
 #!/command/with-contenv sh
 set -e
 
+cd /app/web
 exec dotnet /app/web/Raven.AiAppliance.dll
