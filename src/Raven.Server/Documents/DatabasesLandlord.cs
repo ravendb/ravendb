@@ -137,13 +137,16 @@ namespace Raven.Server.Documents
 
                         if (_serverStore.IsLeader())
                         {
+                            // Only AddDatabaseCommand fires the create hook — topology updates (UpdateDatabaseCommand)
+                            // do not count as creation. Fire-and-forget: the exec can block for up to its timeout
+                            // and must not hold up the cluster change handler.
                             if (type == nameof(AddDatabaseCommand))
                             {
-                                RunDatabaseCreateExec(databaseName);
+                                _ = Task.Run(() => RunDatabaseCreateExec(databaseName));
                             }
                             else if (type == nameof(DeleteDatabaseCommand) && rawRecord.EntireDatabasePendingDeletion())
                             {
-                                RunDatabaseDeleteExec(databaseName);
+                                _ = Task.Run(() => RunDatabaseDeleteExec(databaseName));
                             }
                         }
 

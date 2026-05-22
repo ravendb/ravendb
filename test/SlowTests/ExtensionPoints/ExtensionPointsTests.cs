@@ -280,7 +280,7 @@ exit 129";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.MasterKeyExecArguments)] = $"{keyArgs}";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)] = "bash";
                 customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateLoadExecArguments)] = $"{certArgs}";
-                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://localhost:0" : "https://" + Environment.MachineName + ":0";
 
                 script = "#!/bin/bash\ncat \"$1\"";
                 File.WriteAllText(scriptPath, script);
@@ -398,7 +398,7 @@ exit 0";
                 await File.WriteAllTextAsync(scriptPath, script);
             }
 
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = "https://" + Environment.MachineName + ":0";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = PlatformDetails.RunningOnMacOsx ? "https://localhost:0" : "https://" + Environment.MachineName + ":0";
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = certificates.ServerCertificatePath;
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)] = certProcess.exe;
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificateRenewExecArguments)] = certProcess.certArgs;
@@ -451,51 +451,60 @@ exit 0";
             string script;
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
 
-            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+            var scriptExt = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
+            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExt));
             var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
 
-            if (PlatformDetails.RunningOnPosix)
+            try
             {
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "bash";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"{scriptFile} {outputFile}";
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "bash";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"{scriptFile} {outputFile}";
 
-                script = "#!/bin/bash\necho \"$2 $3\" >> $1";
-                File.WriteAllText(scriptFile, script);
-                Process.Start("chmod", $"700 {scriptFile}");
-            }
-            else
-            {
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "powershell";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
+                    script = "#!/bin/bash\necho \"$2 $3\" >> $1";
+                    File.WriteAllText(scriptFile, script);
+                    Process.Start("chmod", $"700 {scriptFile}");
+                }
+                else
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExec)] = "powershell";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseCreateExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
 
-                script = @"
+                    script = @"
 param([string]$outputPath, [string]$dbName, [string]$dbNameBase64)
 Add-Content $outputPath ""$dbName $dbNameBase64""
 exit 0";
-                File.WriteAllText(scriptFile, script);
-            }
-
-            UseNewLocalServer(customSettings: customSettings);
-
-            using (var store = GetDocumentStore())
-            {
-                // Wait for the database to be fully created
-                await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-
-                // Give some time for the exec to complete (it runs in the cluster change handler)
-                var timeout = Stopwatch.StartNew();
-                while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
-                {
-                    await Task.Delay(100);
+                    File.WriteAllText(scriptFile, script);
                 }
 
-                Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseCreate exec script.");
+                UseNewLocalServer(customSettings: customSettings);
 
-                var content = File.ReadAllText(outputFile).Trim();
-                var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(store.Database));
+                using (var store = GetDocumentStore())
+                {
+                    // Wait for the database to be fully created
+                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
-                Assert.Contains(store.Database, content);
-                Assert.Contains(expectedBase64, content);
+                    // Give some time for the exec to complete (it runs in the cluster change handler)
+                    var timeout = Stopwatch.StartNew();
+                    while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
+                    {
+                        await Task.Delay(100);
+                    }
+
+                    Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseCreate exec script.");
+
+                    var content = File.ReadAllText(outputFile).Trim();
+                    var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(store.Database));
+
+                    Assert.Contains(store.Database, content);
+                    Assert.Contains(expectedBase64, content);
+                }
+            }
+            finally
+            {
+                if (File.Exists(scriptFile)) File.Delete(scriptFile);
+                if (File.Exists(outputFile)) File.Delete(outputFile);
             }
         }
 
@@ -505,58 +514,67 @@ exit 0";
             string script;
             IDictionary<string, string> customSettings = new ConcurrentDictionary<string, string>();
 
-            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
+            var scriptExt = PlatformDetails.RunningOnPosix ? ".sh" : ".ps1";
+            var scriptFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), scriptExt));
             var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
 
-            if (PlatformDetails.RunningOnPosix)
+            try
             {
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "bash";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"{scriptFile} {outputFile}";
+                if (PlatformDetails.RunningOnPosix)
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "bash";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"{scriptFile} {outputFile}";
 
-                script = "#!/bin/bash\necho \"$2 $3\" >> $1";
-                File.WriteAllText(scriptFile, script);
-                Process.Start("chmod", $"700 {scriptFile}");
-            }
-            else
-            {
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "powershell";
-                customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
+                    script = "#!/bin/bash\necho \"$2 $3\" >> $1";
+                    File.WriteAllText(scriptFile, script);
+                    Process.Start("chmod", $"700 {scriptFile}");
+                }
+                else
+                {
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExec)] = "powershell";
+                    customSettings[RavenConfiguration.GetKey(x => x.Databases.OnDatabaseDeleteExecArguments)] = $"-NoProfile {scriptFile} {outputFile}";
 
-                script = @"
+                    script = @"
 param([string]$outputPath, [string]$dbName, [string]$dbNameBase64)
 Add-Content $outputPath ""$dbName $dbNameBase64""
 exit 0";
-                File.WriteAllText(scriptFile, script);
-            }
-
-            UseNewLocalServer(customSettings: customSettings);
-
-            string databaseName;
-            using (var store = GetDocumentStore())
-            {
-                databaseName = store.Database;
-
-                // Ensure the database is created
-                await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-
-                // Delete the database
-                store.Maintenance.Server.Send(new Raven.Client.ServerWide.Operations.DeleteDatabasesOperation(databaseName, hardDelete: true));
-
-                // Wait for the exec to complete
-                var timeout = Stopwatch.StartNew();
-                while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
-                {
-                    await Task.Delay(100);
+                    File.WriteAllText(scriptFile, script);
                 }
+
+                UseNewLocalServer(customSettings: customSettings);
+
+                string databaseName;
+                using (var store = GetDocumentStore())
+                {
+                    databaseName = store.Database;
+
+                    // Ensure the database is created
+                    await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+                    // Delete the database
+                    store.Maintenance.Server.Send(new Raven.Client.ServerWide.Operations.DeleteDatabasesOperation(databaseName, hardDelete: true));
+
+                    // Wait for the exec to complete
+                    var timeout = Stopwatch.StartNew();
+                    while (File.Exists(outputFile) == false && timeout.Elapsed < TimeSpan.FromSeconds(30))
+                    {
+                        await Task.Delay(100);
+                    }
+                }
+
+                Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseDelete exec script.");
+
+                var content = File.ReadAllText(outputFile).Trim();
+                var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName));
+
+                Assert.Contains(databaseName, content);
+                Assert.Contains(expectedBase64, content);
             }
-
-            Assert.True(File.Exists(outputFile), "Output file was not created by the OnDatabaseDelete exec script.");
-
-            var content = File.ReadAllText(outputFile).Trim();
-            var expectedBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName));
-
-            Assert.Contains(databaseName, content);
-            Assert.Contains(expectedBase64, content);
+            finally
+            {
+                if (File.Exists(scriptFile)) File.Delete(scriptFile);
+                if (File.Exists(outputFile)) File.Delete(outputFile);
+            }
         }
     }
 }

@@ -16,7 +16,10 @@ namespace Raven.Server.Utils
                 var databaseNameBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(databaseName));
 
                 var userArgs = arguments ?? string.Empty;
-                var args = $"{userArgs} {CommandLineArgumentEscaper.EscapeSingleArg(databaseName)} {databaseNameBase64}";
+                var escapedDbName = CommandLineArgumentEscaper.EscapeSingleArg(databaseName);
+                var args = string.IsNullOrEmpty(userArgs)
+                    ? $"{escapedDbName} {databaseNameBase64}"
+                    : $"{userArgs} {escapedDbName} {databaseNameBase64}";
 
                 var startInfo = new ProcessStartInfo
                 {
