@@ -33,7 +33,6 @@ using Voron.Impl.FileHeaders;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
-using Voron.Platform;
 using Voron.Util;
 using Voron.Util.PFor;
 using Constants = Voron.Global.Constants;
