@@ -1,43 +1,80 @@
 import { Link } from "react-router";
-import { ArrowRight, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Database, Plus } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/api/api";
+import { Button } from "@/components/shadcn/ui/button";
 
 export function DashboardHome() {
-  return (
-    <div className="mx-auto flex min-h-[calc(100svh-7rem)] w-full max-w-5xl flex-col gap-6">
-      <section className="rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-primary">Apps</p>
-            <h1 className="text-2xl font-semibold tracking-normal">
-              No applications yet
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Add an application to connect a source database, prepare CDC, and
-              provision the first AI agent when the wizard is ready.
-            </p>
-          </div>
-          <Button asChild size="lg" className="w-full md:w-auto">
-            <Link to="/setup/connect">
-              <Plus className="size-4" aria-hidden="true" />
-              Add your first application
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
-      </section>
+    const appsQuery = useQuery(api.queries.apps.list());
 
-      <section className="grid gap-3 md:grid-cols-3">
-        {["CDC status", "Agent health", "Channels"].map((label) => (
-          <div
-            key={label}
-            className="rounded-lg border bg-card p-4 text-card-foreground shadow-xs"
-          >
-            <p className="text-sm font-medium">{label}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Empty</p>
-          </div>
-        ))}
-      </section>
-    </div>
-  );
+    return (
+        <div className="flex min-h-full w-full">
+            <section className="min-h-full w-full rounded-lg border bg-card p-6 text-card-foreground shadow-xs">
+                {appsQuery.isPending ? (
+                    <p className="text-sm text-muted-foreground">Loading apps...</p>
+                ) : appsQuery.isError ? (
+                    <div className="max-w-md space-y-3">
+                        <h2 className="text-sm font-semibold">Could not load apps</h2>
+                        <p className="text-sm text-muted-foreground">Refresh the page or try again in a moment.</p>
+                    </div>
+                ) : appsQuery.data.length > 0 ? (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-sm font-semibold">Available apps</h2>
+                            <Button asChild size="sm">
+                                <Link to="/setup/connect">
+                                    <Plus className="size-3.5" aria-hidden="true" />
+                                    Add app
+                                </Link>
+                            </Button>
+                        </div>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                            {appsQuery.data.map((app) => (
+                                <Link
+                                    key={app.id}
+                                    to={`/apps/${app.id}`}
+                                    className="rounded-lg border bg-background p-4 text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                                            <Database className="size-5" aria-hidden="true" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold">{app.name}</p>
+                                            <p className="truncate text-xs text-muted-foreground">{app.id}</p>
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <EmptyAppsState />
+                )}
+            </section>
+        </div>
+    );
+}
+
+function EmptyAppsState() {
+    return (
+        <div className="flex min-h-full items-center justify-center">
+            <div className="flex max-w-xs flex-col items-center text-center">
+                <div className="flex size-9 items-center justify-center rounded-md bg-accent text-accent-foreground">
+                    <Database className="size-5" aria-hidden="true" />
+                </div>
+                <h2 className="mt-4 text-sm font-semibold">No apps added yet</h2>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                    Each app is a separate data silo, complete with its own change data capture, AI-powered assistants,
+                    and communication channels.
+                </p>
+                <Button asChild size="sm" className="mt-5">
+                    <Link to="/setup/connect">
+                        <Plus className="size-3.5" aria-hidden="true" />
+                        Add app
+                    </Link>
+                </Button>
+            </div>
+        </div>
+    );
 }
