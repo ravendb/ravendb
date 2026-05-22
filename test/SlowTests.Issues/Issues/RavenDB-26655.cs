@@ -80,7 +80,7 @@ public class RavenDB_26655(ITestOutputHelper output) : RavenTestBase(output)
         {
             using var store = new DocumentStore { Urls = new[] { url }, Database = dbName }.Initialize();
 
-            var afterSecondStart = await store.Maintenance.SendAsync(new GetStatisticsOperation());
+            var afterSecondStart = await WaitForDatabaseStatsAsync(store, TimeSpan.FromMinutes(2));
             Output.WriteLine($"phase2 docs={afterSecondStart.CountOfDocuments}");
             Assert.Equal(preToggleDocs, afterSecondStart.CountOfDocuments);
 
