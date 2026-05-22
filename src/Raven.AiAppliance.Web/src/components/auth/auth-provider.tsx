@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
-import type { LoginRequest } from "@/api/auth-service";
+import type { RedeemLicenseRequest } from "@/api/bootstrap-service";
 import { AuthContext } from "@/components/auth/auth-context";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const queryClient = useQueryClient();
-    const authStatusQuery = api.queries.auth.status();
+    const authStatusQuery = api.queries.bootstrap.status();
     const statusQuery = useQuery(authStatusQuery);
-    const isAuthenticated = statusQuery.data?.isAuthenticated ?? false;
+    const isAuthenticated = statusQuery.data?.state === "ready";
 
-    async function login(request: LoginRequest) {
-        const status = await api.services.auth.login(request);
+    async function login(request: RedeemLicenseRequest) {
+        const status = await api.services.bootstrap.redeemLicense(request);
         queryClient.setQueryData(authStatusQuery.queryKey, status);
-        return status.isAuthenticated;
+        return status.state === "ready";
     }
 
     return (
