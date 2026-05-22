@@ -30,6 +30,10 @@
   Note: Docker Desktop on Windows doesn't reliably forward 127.0.0.1-bound
   publishes, so this switch publishes 0.0.0.0:8080. Studio will be reachable
   from any host on your LAN while the demo runs.
+
+.PARAMETER SetupPackagePath
+  Local directory with an already-unpacked setup package. Mounted read-only as
+  /var/lib/ai-appliance/setup, matching RAVEN_AI_SETUP_PACKAGE_PATH.
 #>
 [CmdletBinding()]
 param(
@@ -37,7 +41,8 @@ param(
     [string]$Tag = 'ravendb/ai-appliance:demo',
     [int]$Port = 5000,
     [string]$Volume = 'ai-appliance-data',
-    [switch]$WithStudio
+    [switch]$WithStudio,
+    [string]$SetupPackagePath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,6 +81,12 @@ $runArgs = @(
     '-p', "${Port}:5000",
     '-v', "${Volume}:/var/lib/ai-appliance"
 )
+if ($SetupPackagePath) {
+    $resolvedSetupPackagePath = (Resolve-Path $SetupPackagePath).Path
+    $runArgs += @(
+        '-v', "${resolvedSetupPackagePath}:/var/lib/ai-appliance/setup:ro"
+    )
+}
 if ($WithStudio) {
     Write-Host '-WithStudio enabled: publishing RavenDB on http://localhost:8080 (LAN-reachable on Windows; see help).' -ForegroundColor Yellow
     $runArgs += @('-p', '8080:8080')

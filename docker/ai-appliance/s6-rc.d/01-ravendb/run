@@ -3,6 +3,8 @@ set -e
 
 mkdir -p /var/lib/ai-appliance/ravendb
 
+cd /app/ravendb
+
 # RavenDB config comes from the settings.json overlay baked into the image
 # (docker/ai-appliance/ravendb-settings.json, copied to /app/ravendb/settings.json
 # during the build). The Dockerfile's ENV block defines RAVEN_AI_* vars for the
