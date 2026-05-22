@@ -2,7 +2,7 @@ namespace Tests.Infrastructure;
 
 public class RavenMultiplatformTheoryAttribute : RavenTheoryAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     private readonly RavenPlatform _platform;
     private readonly RavenArchitecture _architecture;

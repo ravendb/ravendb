@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.IdentityModel.Protocols.Configuration;
 using Raven.Client.Documents.Operations.ETL.ElasticSearch;
@@ -9,8 +9,6 @@ namespace Tests.Infrastructure.ConnectionString
 {
     public class ElasticSearchTestNodes
     {
-        private const string EnvironmentVariable = "RAVEN_ELASTICSEARCH_NODE_URLS";
-
         private static ElasticSearchTestNodes _instance;
 
         public static ElasticSearchTestNodes Instance => _instance ??= new ElasticSearchTestNodes();
@@ -25,7 +23,7 @@ namespace Tests.Infrastructure.ConnectionString
 
             Nodes = new Lazy<string[]>(() =>
             {
-                var nodes = Environment.GetEnvironmentVariable(EnvironmentVariable);
+                var nodes = RavenTestHelper.EnvironmentVariables.ElasticSearchNodeUrls;
 
                 return string.IsNullOrEmpty(nodes)
                     ? Array.Empty<string>()
@@ -60,7 +58,7 @@ namespace Tests.Infrastructure.ConnectionString
                 return singleLocalNode;
 
             if (Nodes.Value.Length == 0)
-                throw new InvalidConfigurationException($"Environment variable {EnvironmentVariable} is empty");
+                throw new InvalidConfigurationException($"Environment variable {RavenTestHelper.EnvironmentVariables.ElasticSearchNodeUrlsEnvName} is empty");
 
             if (TryConnect(Nodes.Value, out pingResponse))
                 return Nodes.Value;

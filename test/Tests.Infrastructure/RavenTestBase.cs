@@ -262,7 +262,7 @@ namespace FastTests
                         }
                     }
 
-                    if (RavenTestHelper.RunTestsWithDocsCompression && doc.DocumentsCompression == null && isCompressionTest == false)
+                    if (RavenTestHelper.EnvironmentVariables.RunTestsWithDocsCompression && doc.DocumentsCompression == null && isCompressionTest == false)
                     {
                         doc.DocumentsCompression = new DocumentsCompressionConfiguration
                         {

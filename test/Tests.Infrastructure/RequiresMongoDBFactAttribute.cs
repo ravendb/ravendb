@@ -9,13 +9,13 @@ namespace Tests.Infrastructure
     {
         public RequiresMongoDBFactAttribute()
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
             if (MongoDBConnectionString.Instance.CanConnect == false)

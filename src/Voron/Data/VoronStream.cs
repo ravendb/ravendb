@@ -9,29 +9,21 @@ namespace Voron.Data
 {
     public unsafe class VoronStream : Stream
     {
-        public Slice Name { get; }
-
         private readonly Tree.ChunkDetails[] _chunksDetails;
         private readonly long[] _chunksOffsets;
         private readonly bool _encrypted;
         private long _position;
         private int _index;
-        protected LowLevelTransaction Llt;
-        protected Page LastPage;
+        internal LowLevelTransaction Llt;
+        internal Page LastPage;
 
         public override bool CanRead => true;
         public override bool CanSeek => true;
         public override bool CanWrite => false;
         public sealed override long Length { get; }
 
-        public override string ToString()
+        public VoronStream(Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
         {
-            return Name.ToString();
-        }
-
-        public VoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
-        {
-            Name = name;
             _chunksDetails = chunksDetails;
             _chunksOffsets = new long[_chunksDetails.Length];
 
@@ -213,6 +205,12 @@ namespace Voron.Data
         private static void ThrowWhenValueIsEqualOrLessZero(long position)
         {
             throw new ArgumentException($"Position {position} is not possible inside {nameof(VoronStream)}.");
+        }
+
+        internal void Reset()
+        {
+            Llt = null;
+            LastPage = default(Page);
         }
     }
 }

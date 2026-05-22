@@ -6,7 +6,7 @@ namespace Tests.Infrastructure;
 
 public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     public RequiresMsSqlRetryTheoryAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0)
         : base(maxRetries, delayBetweenRetriesMs)
@@ -30,13 +30,13 @@ public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute, Xunit.v3.
 
     private static bool ShouldSkip(out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;

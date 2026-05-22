@@ -38,7 +38,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.SqlMigration;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Olap;
 using SlowTests.Server.Documents.ETL.Raven;
 using SlowTests.Server.Documents.ETL.SQL;
 using SlowTests.Server.Documents.Migration;

@@ -161,7 +161,7 @@ public class ChatCompletionClient : IDisposable
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string streamPropertyPath, HttpRequestMessage request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
-        AiUsage usage, CancellationToken token)
+        AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var streamedPropertyBuffer = new JsonOperationContextBuffer<byte>(streamingContext);
@@ -212,6 +212,8 @@ public class ChatCompletionClient : IDisposable
                 toolCallState.AddAndReset();
                 break;
             }
+
+            trace?.CaptureSseEvent(streamingContext, sseEvent.Data);
 
             if (sseEvent.Data.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
             {
@@ -315,15 +317,17 @@ public class ChatCompletionClient : IDisposable
         }, "system/msg");
 
         var request = CreateCompletionRequest(context, [prompt, user], attachments: null, tools: null, useTools: false, streaming: false, schema);
-        var r = await CompleteAsync(context, request, new AiUsage(), token);
+        var r = await CompleteAsync(context, request, new AiUsage(), trace: null, token);
         return (r.Result.ToString(), r.Message.ToString());
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, AiDebugTrace trace, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var response = await SendRequestAsync(request, token);
         var responseContent = await GetResponseContentAsync(context, response, token);
+
+        trace?.CaptureResponse(responseContent);
 
         var responseParser = new AiResponseParser(this, response, responseContent);
         responseParser.EnsureSuccessfulResponse();
@@ -426,25 +430,40 @@ public class ChatCompletionClient : IDisposable
         bool useTools,
         bool streaming,
         string schema,
-        string promptCacheKey = null)
-     {
-
+        string promptCacheKey = null,
+        AiDebugTrace trace = null)
+    {
         if (_settings.Model is null)
             throw new ArgumentNullException(nameof(_settings.Model));
 
-        var content = new BlittableJsonContent(async stream =>
-        {
-            await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
-            {
-                if (_forTestingPurposes?.ModifyPayload != null)
-                {
-                    _forTestingPurposes?.ModifyPayload.Invoke(writer);
-                    return;
-                }
+        trace?.CaptureAttachments(attachments);
 
-                WriteCompletionRequestPayload(writer, ctx,
-                    messages.Where(IsValidMessage) // IEnumerable of valid messages
-                    , attachments, tools, useTools, streaming, schema, promptCacheKey);
+        HttpContent content = new BlittableJsonContent(async stream =>
+        {
+            if (trace == null)
+            {
+                await WritePayloadAsync(stream).ConfigureAwait(false);
+                return;
+            }
+
+            await using var target = new TeeStream(stream);
+            try
+            {
+                await WritePayloadAsync(target).ConfigureAwait(false);
+            }
+            finally
+            {
+                trace.CaptureRequestBody(target.Result());
+            }
+
+            async Task WritePayloadAsync(Stream s)
+            {
+                await using var writer = new AsyncBlittableJsonTextWriter(ctx, s);
+                if (_forTestingPurposes?.ModifyPayload != null)
+                    _forTestingPurposes.ModifyPayload.Invoke(writer);
+                else
+                    WriteCompletionRequestPayload(writer, ctx, messages.Where(IsValidMessage),
+                        attachments, tools, useTools, streaming, schema, promptCacheKey);
             }
         }, ConventionsToUse);
 

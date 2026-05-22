@@ -10,5 +10,11 @@ function SetSchemaInfoInTeamCity($projectDir) {
         | Select-String -Pattern $versionRegex -AllMatches `
         | ForEach-Object { $_.Matches } `
         | ForEach-Object { SetTeamCityEnvironmentVariable "RavenDB_Schema_$($_.Groups[1].Value)" $_.Groups[2].Value }
+
+    $voronConstantsFile = Join-Path $projectDir -ChildPath "src\Voron\Constants.cs"
+    $voronContent = Get-Content -Raw $voronConstantsFile
+    $voronVersionRegex = [regex]'public const int CurrentVersion = (\d+);'
+    $voronMatch = [regex]::Match($voronContent, $voronVersionRegex)
+    SetTeamCityEnvironmentVariable "RavenDB_Voron_CurrentVersion" $voronMatch.Groups[1].Value
 }
 

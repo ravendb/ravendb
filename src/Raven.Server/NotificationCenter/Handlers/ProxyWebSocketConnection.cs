@@ -6,7 +6,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Raven.Server.Extensions;
@@ -113,11 +112,7 @@ namespace Raven.Server.NotificationCenter.Handlers
                 }
                 catch (Exception ex)
                 {
-                    // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
-                    if (ex is WebSocketException webSocketException
-                        && (webSocketException.WebSocketErrorCode == WebSocketError.InvalidState)
-                        && (_localWebSocket.State == WebSocketState.Closed || _remoteWebSocket.State == WebSocketState.Closed ||
-                            _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived))
+                    if (WebSocketHelper.IsSocketClosed(ex, _localWebSocket, _remoteWebSocket))
                     {
                         // ignore
                     }
@@ -163,21 +158,9 @@ namespace Raven.Server.NotificationCenter.Handlers
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Websocket proxy got disconnected ({_remoteWebSocketUri} to local)", ex);
                 }
-                catch (AggregateException ae)
-                {
-                    if (IsSocketClosed(ae.ExtractSingleInnerException()))
-                    {
-                        //ignore
-                    }
-                    else
-                    {
-                        throw;
-                    }
-
-                }
                 catch (Exception ex)
                 {
-                    if (IsSocketClosed(ex))
+                    if (WebSocketHelper.IsSocketClosed(ex, _localWebSocket, _remoteWebSocket))
                     {
                         // ignore
                     }
@@ -186,15 +169,6 @@ namespace Raven.Server.NotificationCenter.Handlers
                         throw;
                     }
                 }
-            }
-
-            bool IsSocketClosed(Exception ex)
-            {
-                // if we received close from the client, we want to ignore it and close the websocket (dispose does it)
-                return ex is WebSocketException webSocketException
-                       && (webSocketException.WebSocketErrorCode == WebSocketError.InvalidState)
-                       && (_localWebSocket.State == WebSocketState.Closed || _remoteWebSocket.State == WebSocketState.Closed ||
-                           _localWebSocket.State == WebSocketState.CloseReceived || _remoteWebSocket.State == WebSocketState.CloseReceived);
             }
         }
 

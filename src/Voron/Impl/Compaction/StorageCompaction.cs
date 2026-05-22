@@ -340,7 +340,7 @@ namespace Voron.Impl.Compaction
                                     transactionSize += value.Length;
                                 }
                             }
-                            else if (existingHeader.Flags == (TreeFlags.FixedSizeTrees | TreeFlags.Streams))
+                            else if ((existingHeader.Flags & TreeFlags.Streams) == TreeFlags.Streams)
                             {
                                 var tag = existingTree.GetStreamTag(key);
 

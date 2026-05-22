@@ -1,4 +1,4 @@
-﻿using MySqlConnector;
+using MySqlConnector;
 
 namespace Tests.Infrastructure.ConnectionString
 {
@@ -7,7 +7,7 @@ namespace Tests.Infrastructure.ConnectionString
         private static MySqlConnectionString _instance;
         public static MySqlConnectionString Instance => _instance ??= new MySqlConnectionString();
 
-        private MySqlConnectionString() : base("RAVEN_MYSQL_CONNECTION_STRING")
+        private MySqlConnectionString() : base(RavenTestHelper.EnvironmentVariables.MySqlConnectionStringEnvName)
         {
         }
     }

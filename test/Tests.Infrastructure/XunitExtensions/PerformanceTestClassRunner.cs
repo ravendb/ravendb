@@ -80,8 +80,7 @@ namespace Tests.Infrastructure.XunitExtensions
             return testMethod.Method.GetCustomAttributes(TheoryType, true).Length > 0;
         }
 
-        private static bool IsTestExecutionSamplingEnabled()
-            => bool.TryParse(Environment.GetEnvironmentVariable("TEST_RESOURCE_ANALYZER_SAMPLING"), out var value) && value;
+        private static bool IsTestExecutionSamplingEnabled() => RavenTestHelper.EnvironmentVariables.TestResourceAnalyzerSampling;
 
         private static TestMetrics.TestResult GetTestResult(RunSummary runSummary)
         {

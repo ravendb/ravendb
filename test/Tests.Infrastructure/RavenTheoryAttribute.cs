@@ -6,7 +6,7 @@ namespace Tests.Infrastructure;
 
 public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     private string _skip;
     public readonly RavenTestCategory Category;

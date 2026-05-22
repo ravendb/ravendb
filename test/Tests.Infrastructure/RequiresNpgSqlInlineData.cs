@@ -15,13 +15,13 @@ namespace Tests.Infrastructure
 
         public RequiresNpgSqlInlineData()
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
             if (NpgSqlConnectionString.Instance.CanConnect == false)
