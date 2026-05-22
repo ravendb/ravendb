@@ -4,7 +4,7 @@ using Voron.Impl.FileHeaders;
 
 namespace Voron.Schema.Updates;
 
-public class From23  : IVoronSchemaUpdate
+public class From24  : IVoronSchemaUpdate
 {
     public bool Update(int currentVersion, StorageEnvironmentOptions options, HeaderAccessor headerAccessor, out int versionAfterUpgrade)
     {
@@ -23,7 +23,7 @@ public class From23  : IVoronSchemaUpdate
 
         headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata);
 
-        versionAfterUpgrade = 24;
+        versionAfterUpgrade = 25;
         return true;
     }
 }
