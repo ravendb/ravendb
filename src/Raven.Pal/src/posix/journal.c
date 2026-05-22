@@ -269,6 +269,26 @@ rvn_is_same_hard_link(const char *src, const char *dst, char *is_same, int32_t *
     return SUCCESS;
 }
 
+EXPORT int32_t
+rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_code)
+{
+    struct stat st;
+    if (lstat(path, &st) == -1)
+    {
+        if (errno == ENOENT)
+        {
+            *is_hard_link = false;
+            *detailed_error_code = 0;
+            return SUCCESS;
+        }
+        *detailed_error_code = errno;
+        return FAIL_STAT_FILE;
+    }
+
+    *is_hard_link = st.st_nlink > 1;
+    return SUCCESS;
+}
+
 
 PRIVATE int32_t
 rvn_sync_directories_sync(void* handle, char** folders, int32_t count, int32_t *detailed_error_code)

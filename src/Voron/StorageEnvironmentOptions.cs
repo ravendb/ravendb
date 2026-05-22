@@ -27,7 +27,6 @@ using Voron.Impl.Journal;
 using Voron.Impl.Paging;
 using Voron.Impl.Scratch;
 using Voron.Logging;
-using Voron.Platform;
 using Voron.Platform.Posix;
 using Voron.Util;
 using Voron.Util.Settings;
@@ -565,9 +564,10 @@ namespace Voron
             public override bool IsJournalHardLinked(long journalNumber)
             {
                 var path = JournalPath.Combine(JournalName(journalNumber)).FullPath;
-                if (File.Exists(path) == false)
-                    return false;
-                return HardLinkInfo.GetLinkCount(path) > 1;
+                var rc = Pal.rvn_is_hard_link(path, out var isHardLink, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to check if '{path}' is a hard link");
+                return isHardLink;
             }
 
             protected override void Disposing()

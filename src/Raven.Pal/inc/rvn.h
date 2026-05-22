@@ -229,6 +229,9 @@ EXPORT int32_t
 rvn_is_same_hard_link(const char *src, const char *dst, char *is_same, int32_t *detailed_error_code);
 
 EXPORT int32_t
+rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_code);
+
+EXPORT int32_t
 rvn_open_journal_for_reads(const char *file_name, void **handle, int32_t *detailed_error_code);
 
 EXPORT int32_t
