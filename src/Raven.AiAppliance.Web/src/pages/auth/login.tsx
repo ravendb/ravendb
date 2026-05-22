@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import { z } from "zod";
-import { useAuth } from "@/components/auth/auth-context";
-import { Button } from "@/components/shadcn/ui/button";
 import { toast } from "sonner";
+import { z } from "zod";
 import { FormInput } from "@/components/form/form-input";
+import { Button } from "@/components/shadcn/ui/button";
+import { useAuth } from "@/components/auth/auth-context";
 
 export function Login() {
     const { login } = useAuth();
@@ -16,7 +16,7 @@ export function Login() {
         handleSubmit,
     } = useForm<LoginFormValues>({
         defaultValues: {
-            apiKey: "",
+            licenseKey: "",
         },
         resolver: zodResolver(loginSchema),
     });
@@ -25,7 +25,7 @@ export function Login() {
         try {
             const isAuthenticated = await login(values);
             if (!isAuthenticated) {
-                toast.error("Sign in failed. Please check your API key and try again.");
+                toast.error("Activation is not ready yet.");
                 return;
             }
 
@@ -47,24 +47,17 @@ export function Login() {
 
                 <section className="rounded-xl border bg-card px-6 py-7">
                     <div className="text-center">
-                        <h1 className="text-xl font-semibold">Enter your dashboard API Key</h1>
-                        <p className="mt-3 text-sm text-muted-foreground">We sent it to your email</p>
+                        <h1 className="text-xl font-semibold">Activate dashboard</h1>
+                        <p className="mt-3 text-sm text-muted-foreground">Enter the license key for this appliance.</p>
                     </div>
 
                     <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
-                        <FormInput control={control} name="apiKey" label="API key" type="password" />
+                        <FormInput control={control} name="licenseKey" label="License key" type="password" />
 
                         <Button className="w-full" disabled={isSubmitting}>
-                            {isSubmitting ? "Signing in..." : "Continue"}
+                            {isSubmitting ? "Activating..." : "Continue"}
                         </Button>
                     </form>
-
-                    <div className="mt-7 border-t pt-6">
-                        <p className="text-sm text-muted-foreground">Lost your key? Run on the host:</p>
-                        <code className="mt-3 block rounded-md border bg-muted px-3 py-3 font-mono text-xs text-foreground">
-                            docker exec bridge bridge regen-api-key
-                        </code>
-                    </div>
                 </section>
             </div>
         </main>
@@ -72,7 +65,7 @@ export function Login() {
 }
 
 const loginSchema = z.object({
-    apiKey: z.string().trim().min(1, "API key is required."),
+    licenseKey: z.string().trim().min(1, "License key is required."),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;

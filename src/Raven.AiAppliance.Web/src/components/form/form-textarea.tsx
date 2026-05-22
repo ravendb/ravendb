@@ -1,0 +1,54 @@
+import { useId, type ComponentProps, type ReactNode } from "react";
+import { type FieldPath, type FieldValues, type UseControllerProps, useController } from "react-hook-form";
+import { Field, FieldDescription, FieldLabel } from "@/components/shadcn/ui/field";
+import { Textarea } from "@/components/shadcn/ui/textarea";
+
+type FormTextareaProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = ComponentProps<
+    typeof Textarea
+> &
+    UseControllerProps<TFieldValues, TName> & {
+        description?: ReactNode;
+        label?: ReactNode;
+    };
+
+export function FormTextarea<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
+    className,
+    control,
+    defaultValue,
+    description,
+    disabled,
+    id,
+    label,
+    name,
+    ...restProps
+}: FormTextareaProps<TFieldValues, TName>) {
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
+    const {
+        field: { onBlur, onChange, ref, value },
+        fieldState: { error, invalid },
+        formState,
+    } = useController({
+        control,
+        defaultValue,
+        name,
+    });
+
+    return (
+        <Field className={className} data-invalid={invalid}>
+            <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+            <Textarea
+                id={inputId}
+                onBlur={onBlur}
+                onChange={onChange}
+                ref={ref}
+                value={value ?? ""}
+                disabled={disabled || formState.isSubmitting}
+                aria-invalid={invalid}
+                {...restProps}
+            />
+            {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}
+            {description && <FieldDescription>{description}</FieldDescription>}
+        </Field>
+    );
+}
