@@ -371,6 +371,7 @@ rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_c
         if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
         {
             *is_hard_link = false;
+            *detailed_error_code = 0;
             return SUCCESS;
         }
         *detailed_error_code = error;
@@ -384,6 +385,7 @@ rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_c
     }
     else
     {
+        *is_hard_link = false;
         *detailed_error_code = GetLastError();
         rc = FAIL_STAT_FILE;
     }

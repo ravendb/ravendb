@@ -285,6 +285,15 @@ rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_c
         return FAIL_STAT_FILE;
     }
 
+    // directories typically have st_nlink > 1 (one per subdirectory's '..' entry);
+    // only regular files count as hard-linked here
+    if (!S_ISREG(st.st_mode))
+    {
+        *is_hard_link = false;
+        *detailed_error_code = 0;
+        return SUCCESS;
+    }
+
     *is_hard_link = st.st_nlink > 1;
     return SUCCESS;
 }
