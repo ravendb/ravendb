@@ -35,17 +35,19 @@ namespace SlowTests.Issues
         [InlineData(SecurityClearance.Operator)]
         public void CanPostOneTimeBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
         {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: server);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate3.Value,
-                new Dictionary<string, DatabaseAccess>(), sc);
+                new Dictionary<string, DatabaseAccess>(), sc, server: server);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
 
-            using (var store = GetDocumentStore(new Options() { AdminCertificate = adminCertificate, ClientCertificate = clientCertificate, ModifyDatabaseName = s => dbName }))
+            using (var store = GetDocumentStore(new Options() { Server = server, AdminCertificate = adminCertificate, ClientCertificate = clientCertificate, ModifyDatabaseName = s => dbName }))
             {
                 using (var session = store.OpenSession(dbName))
                 {
@@ -76,18 +78,21 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         public void CannotPostOneTimeBackupConfigurationScriptWitValidUserClearance()
         {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: server);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
+                new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser, server: server);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
                 ModifyDatabaseName = s => dbName
@@ -126,18 +131,21 @@ namespace SlowTests.Issues
         [InlineData(SecurityClearance.Operator)]
         public void CanPostPeriodicBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
         {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: server);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>(), sc);
+                new Dictionary<string, DatabaseAccess>(), sc, server: server);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
                 ModifyDatabaseName = s => dbName
@@ -172,18 +180,21 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         public void CannotPostPeriodicBackupConfigurationScriptWitValidUserClearance()
         {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            using var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
             var dbName = GetDatabaseName();
-            var certificates = Certificates.SetupServerAuthentication();
             X509Certificate2 adminCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value,
-                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+                new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: server);
             X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value,
-                new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
+                new Dictionary<string, DatabaseAccess>() { [dbName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser, server: server);
 
             var path = NewDataPath(forceCreateDir: true);
             var scriptPath = GenerateConfigurationScript(path, out string command);
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = adminCertificate,
                 ClientCertificate = clientCertificate,
                 ModifyDatabaseName = s => dbName

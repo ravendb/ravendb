@@ -29,23 +29,26 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(64, 3, BackupType.Snapshot)]
         public async Task CanBackupAndRestoreDeletedRemoteAttachments(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     foreach (var attachment in Attachments)
                     {
                         await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
                     await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
 
 
@@ -55,7 +58,7 @@ namespace SlowTests.Server.Documents.Attachments
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
@@ -72,7 +75,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -91,20 +94,23 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(64, 3, BackupType.Snapshot)]
         public async Task CanBackupAndRestoreRemoteAttachments(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
@@ -121,7 +127,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -153,21 +159,24 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(3, 1024 * 1024 * 10, BackupType.Snapshot)] // 10 MB
         public async Task CanBackupAndRestoreLargeRemoteAttachments(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
@@ -184,7 +193,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -213,6 +222,8 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(64, 3, BackupType.Snapshot)]
         public async Task CanBackupAndRestoreRemoteAttachmentsFromMultipleCollections(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             Assert.True(attachmentsCount > 32, "this test meant to have more than 32 attachments so we will have more than one document");
             await using (var holder = CreateCloudSettings())
             {
@@ -221,15 +232,16 @@ namespace SlowTests.Server.Documents.Attachments
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections, server);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
@@ -246,7 +258,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings, collections);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -277,17 +289,20 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(64, 3, BackupType.Snapshot)]
         public async Task CanBackupAndRestoreOverwrittenRemoteAttachmentWithIncrementalBackups(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     using (var documentInfoHelper = new DocumentInfoHelper(context))
@@ -306,7 +321,7 @@ namespace SlowTests.Server.Documents.Attachments
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type, incrementalBackupFrequency: "0 0 * * *");
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
                     config.TaskId = backupTaskId;
                     var newAttachments = attachmentsCount;
                     // Make some changes (e.g., add more attachments, remote them)
@@ -360,7 +375,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(attachmentsCount, stats.CountOfRemoteAttachments);
-                    Backup.RunBackup(Server, config.TaskId, store, isFullBackup: false);
+                    Backup.RunBackup(server, config.TaskId, store, isFullBackup: false);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
@@ -377,7 +392,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
@@ -408,21 +423,24 @@ namespace SlowTests.Server.Documents.Attachments
         [InlineData(64, 3, BackupType.Snapshot)]
         public async Task CanBackupAndRestoreRemoteAttachmentsWithIncrementalBackups(int attachmentsCount, int size, BackupType type)
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
                 {
+                    Server = server,
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, server: server);
 
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type, incrementalBackupFrequency: "0 0 * * *");
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
                     config.TaskId = backupTaskId;
                     // Make some changes (e.g., add more attachments, remote them)
 
@@ -431,7 +449,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount * 2, Attachments.Count);
 
                     // move in time & start remote
-                    var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(server, store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RemoteAttachmentsSender.ProcessRemoteAttachments(int.MaxValue, int.MaxValue);
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount * 2, 15_000);
@@ -441,7 +459,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(attachmentsCount * 2, stats.CountOfRemoteAttachments);
 
-                    Backup.RunBackup(Server, config.TaskId, store, isFullBackup: false);
+                    Backup.RunBackup(server, config.TaskId, store, isFullBackup: false);
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
                     using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
@@ -457,7 +475,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await PutRemoteAttachmentsConfiguration(restoredStore, Settings);
 
-                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(restoredStore);
+                        var restoredDatabase = await Databases.GetDocumentDatabaseInstanceFor(server, restoredStore);
                         using (restoredDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {

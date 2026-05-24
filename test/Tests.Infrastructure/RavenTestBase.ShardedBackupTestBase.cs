@@ -178,13 +178,13 @@ public partial class RavenTestBase
 #pragma warning restore CS0649
         }
 
-        public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null)
+        public async Task CheckData(IDocumentStore store, RavenDatabaseMode dbMode = RavenDatabaseMode.Single, long expectedRevisionsCount = 28, string database = null, RavenServer server = null)
         {
             long docsCount = default, tombstonesCount = default, revisionsCount = default;
             database ??= store.Database;
             if (dbMode == RavenDatabaseMode.Sharded)
             {
-                await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database))
+                await foreach (var shard in _parent.Sharding.GetShardsDocumentDatabaseInstancesFor(database, server != null ? new List<RavenServer> { server } : null))
                 {
                     var storage = shard.DocumentsStorage;
 
@@ -202,7 +202,9 @@ public partial class RavenTestBase
             }
             else
             {
-                var db = await _parent.GetDocumentDatabaseInstanceFor(store, database);
+                var db = server != null
+                    ? await _parent.Databases.GetDocumentDatabaseInstanceFor(server, store, database)
+                    : await _parent.GetDocumentDatabaseInstanceFor(store, database);
                 var storage = db.DocumentsStorage;
 
                 docsCount = storage.GetNumberOfDocuments();

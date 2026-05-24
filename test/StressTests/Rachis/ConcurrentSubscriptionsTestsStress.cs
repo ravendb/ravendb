@@ -30,7 +30,7 @@ namespace StressTests.Rachis
             string databaseName = GetDatabaseName();
 
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            await Backup.HoldBackupExecutionIfNeededAndInvoke(ts: null, async () =>
+            await Backup.HoldBackupExecutionIfNeededAndInvoke(databaseName, ts: null, async () =>
             {
                 using (var store = GetDocumentStore(new Options { ModifyDatabaseName = _ => databaseName }))
                 {

@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.ServerWide.Backups;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
@@ -20,8 +22,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Test()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options{Server = server}))
             {
                 using (var session = store.OpenSession())
                 {
@@ -37,7 +41,7 @@ namespace SlowTests.Issues
                 var operation = new UpdatePeriodicBackupOperation(config);
                 var result = await store.Maintenance.SendAsync(operation);
 
-                await Backup.RunBackupAsync(Server, result.TaskId, store);
+                await Backup.RunBackupAsync(server, result.TaskId, store);
 
                 config.BackupType = BackupType.Snapshot;
                 config.TaskId = result.TaskId;
@@ -45,14 +49,15 @@ namespace SlowTests.Issues
                 operation = new UpdatePeriodicBackupOperation(config);
                 await store.Maintenance.SendAsync(operation);
 
-                Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, result.TaskId);
+                Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, result.TaskId);
 
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
-                documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var testingStuff = new ServerBackupRunner.TestingStuffInternal() { SimulateFailedBackup = true };
+                documentDatabase.ServerStore.BackupRunner.ForTestingPurposesOnly().DatabaseTestingStuffInternals[documentDatabase.Name] = testingStuff;
 
-                await Backup.RunBackupAsync(Server, result.TaskId, store, opStatus: OperationStatus.Faulted);
+                await Backup.RunBackupAsync(server, result.TaskId, store, opStatus: OperationStatus.Faulted);
 
-                documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
+                documentDatabase.ServerStore.BackupRunner._forTestingPurposes = null;
 
                 using (var session = store.OpenSession())
                 {
@@ -65,8 +70,8 @@ namespace SlowTests.Issues
                 }
 
                 var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
-                var status = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(config.TaskId);
-                var nextBackupDetails = documentDatabase.PeriodicBackupRunner.GetNextBackupDetails(record.PeriodicBackups.First(), status, out var responsibleNode);
+                var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(store.Database, config.TaskId);
+                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(record.PeriodicBackups.First().TaskId, documentDatabase.Name, out var responsibleNode);
                 
                 Assert.True(nextBackupDetails.IsFull);
                 Assert.Equal("A", responsibleNode);

@@ -16,16 +16,17 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task GetNextBackupTime()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options{Server = server}))
             {
-                var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 1 * * *", backupType: BackupType.Backup, disabled: false);
-                var id = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
-                var documentDatabase = await Databases.GetDocumentDatabaseInstanceFor(store);
-                var status = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(id);
+                var id = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
+                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                var status = documentDatabase.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(documentDatabase.Name, id);
                 config.TaskId = id;
-                var nextBackupDetails = periodicBackupRunner.GetNextBackupDetails(config, status, out string _);
+                var nextBackupDetails = documentDatabase.ServerStore.BackupRunner.GetNextBackupDetails(id, documentDatabase.Name, out string _);
                 var nextBackup = nextBackupDetails.DateTime.ToLocalTime();
 
                 Assert.Equal(1,nextBackup.Hour);

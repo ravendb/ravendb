@@ -546,15 +546,19 @@ namespace SlowTests.Client.Counters
         [RavenFact(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
         public async Task RestoreAndConnectTwoNodesShouldHaveSameCounterValue()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store1 = GetDocumentStore())
+            using (var store1 = GetDocumentStore(new Options { Server = server }))
             using (var store2 = GetDocumentStore(new Options
             {
+                Server = server,
                 CreateDatabase = false
             }))
             using (var store3 = GetDocumentStore(new Options
             {
+                Server = server,
                 CreateDatabase = false
             }))
             {
@@ -570,7 +574,7 @@ namespace SlowTests.Client.Counters
     }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store1);
+                await Backup.UpdateConfigAndRunBackupAsync(server, config, store1);
                 await Restore(backupPath, store2);
                 await Restore(backupPath, store3);
 

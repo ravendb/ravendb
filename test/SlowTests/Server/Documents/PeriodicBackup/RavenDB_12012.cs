@@ -28,8 +28,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task CreateFullAndIncrementalBackupWithIndexInTheMiddle()
         {
+            var server = Server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -41,7 +42,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var input = new IndexDefinition
                 {
@@ -56,7 +57,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await store
                     .Maintenance
                     .SendAsync(new PutIndexesOperation(new[] { input }));
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -80,6 +81,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -94,8 +96,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeInTheMiddle()
         {
+            var server = Server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -107,7 +110,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 CompareExchangeResult<string> compareExchangeResult
                     = store.Operations.Send(
@@ -115,7 +118,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 WaitForValue(() => compareExchangeResult.Successful, true);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 compareExchangeResult
                     = store.Operations.Send(
@@ -123,7 +126,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 WaitForValue(() => compareExchangeResult.Successful, true);
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
                 var databaseName = GetDatabaseName() + "restore";
@@ -146,6 +149,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))
@@ -167,8 +171,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentitiesInTheMiddle()
         {
+            var server = Server;
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -187,11 +192,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 Dictionary<string, long> identities = store.Maintenance.Send(new GetIdentitiesOperation());
 
-                await Backup.RunBackupAsync(Server, backupTaskId, store, isFullBackup: false);
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
 
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
 
@@ -215,6 +220,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 using (var store2 = GetDocumentStore(new Options()
                 {
+                    Server = server,
                     CreateDatabase = false,
                     ModifyDatabaseName = s => databaseName
                 }))

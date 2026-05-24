@@ -25,6 +25,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Snapshot_Should_Not_Include_ServerWideBackupConfiguration()
         {
+            DoNotReuseServer();
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
@@ -72,6 +73,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
         public async Task Snapshot_Should_Not_Include_ServerWideExternalReplication()
         {
+            DoNotReuseServer();
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {

@@ -28,11 +28,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -50,7 +51,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -78,11 +79,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -103,7 +105,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -131,11 +133,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -158,7 +161,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -185,11 +188,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -207,7 +211,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -236,11 +240,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -261,7 +266,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.UseDatabaseKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -290,11 +295,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -316,7 +322,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
@@ -343,11 +349,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -368,7 +375,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.None
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -391,11 +398,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -416,7 +424,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.None
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -440,12 +448,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -462,7 +470,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -489,11 +497,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            var result = await Encryption.EncryptedServerAsync();
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -514,7 +523,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.None
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
@@ -541,14 +550,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
         {
+            var (server, result) = await SetupEncryptedServerAsync();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-
-            var result = await Encryption.EncryptedServerAsync();
 
             const string key1 = "users/1";
             const string key2 = "users/2";
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
@@ -566,7 +575,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath, backupType: BackupType.Snapshot);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -577,7 +586,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await session.SaveChangesAsync();
                 }
 
-                await Backup.RunBackupAndReturnStatusAsync(Server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
+                await Backup.RunBackupAndReturnStatusAsync(server, backupTaskId, store, isFullBackup: false, expectedEtag: 2);
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
 
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
@@ -611,9 +620,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -629,7 +640,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -657,9 +668,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
                 {
@@ -674,7 +687,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     EncryptionMode = EncryptionMode.None
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -697,9 +710,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -715,7 +730,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=",
                     EncryptionMode = EncryptionMode.UseProvidedKey
                 });
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
@@ -743,6 +758,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -773,6 +789,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_encrypted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -848,6 +865,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_sample_data_encrypted()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options
@@ -929,6 +947,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public unsafe void failed_to_restore_backup_wrong_key()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -978,6 +997,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public void encryption_settings_validation()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs=";
 
@@ -1045,6 +1065,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -1087,6 +1108,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_1()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -1120,6 +1142,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
@@ -1152,6 +1175,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_2()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1194,6 +1218,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [InlineData(BackupType.Snapshot, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)]
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var result = await Encryption.EncryptedServerAsync();
 
@@ -1245,6 +1270,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
                 }
             }
+        }
+
+        private async Task<(Raven.Server.RavenServer Server, EncryptionTestBase.EncryptServerResult Result)> SetupEncryptedServerAsync()
+        {
+            var customSettings = new Dictionary<string, string>();
+            var certificates = Certificates.SetupServerAuthentication(customSettings);
+            var server = GetNewServer(new ServerCreationOptions { CustomSettings = customSettings });
+            var result = await Encryption.EncryptedServerAsync(server, certificates);
+            return (server, result);
         }
     }
 }
