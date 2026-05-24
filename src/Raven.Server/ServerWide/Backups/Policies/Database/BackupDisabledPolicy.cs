@@ -19,13 +19,13 @@ public class BackupDisabledPolicy : IDatabaseBackupPolicy
     {
         if (backupState.Configuration.Disabled)
         {
-            reason = $"Cannot start backup {backupState} because it is disabled.";
+            reason = $"[POLICY:BackupDisabled] Cannot start backup {backupState} because it is disabled.";
             return false;
         }
 
         if (backupState.Configuration.HasBackup() == false)
         {
-            reason = $"Cannot start backup {backupState} because all destinations are disabled.";
+            reason = $"[POLICY:BackupDisabled] Cannot start backup {backupState} because all destinations are disabled.";
             return false;
         }
 

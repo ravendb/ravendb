@@ -232,6 +232,8 @@ public class ServerBackupRunner : IDisposable
             return;
         }
 
+        backupState.AddToDecisionLog($"[STARTED] Backup task {backupState.Configuration.TaskId}", startTimeInUtc);
+
         _ = Task.Factory.StartNew(async () =>
         {
             try
@@ -305,8 +307,14 @@ public class ServerBackupRunner : IDisposable
                     taskFactory: onProgress => StartBackupThread(database, backupState, backupTask, tcs, onProgress),
                     token: backupTask.TaskCancelToken);
 
-                _ = task.ContinueWith(_ =>
+                _ = task.ContinueWith(t =>
                 {
+                    var completionTime = DateTime.UtcNow;
+                    if (t.IsFaulted)
+                        backupState.AddToDecisionLog($"[FAILED] Backup task {backupState.Configuration.TaskId}: {t.Exception?.Flatten().InnerException?.Message ?? "unknown error"}", completionTime);
+                    else if (t.IsCanceled == false)
+                        backupState.AddToDecisionLog($"[COMPLETED] Backup task {backupState.Configuration.TaskId}", completionTime);
+
                     backupTask.TaskCancelToken.Dispose();
                     FinishBackup(backupState, backupState.DatabaseName);
 
@@ -321,6 +329,8 @@ public class ServerBackupRunner : IDisposable
             }
             catch (Exception e)
             {
+                backupState.AddToDecisionLog($"[FAILED] Backup task {backupState.Configuration.TaskId}: {e.Message}", DateTime.UtcNow);
+
                 if (_logger.IsErrorEnabled)
                     _logger.Error($"Could not start backup for {backupState}.", e);
 

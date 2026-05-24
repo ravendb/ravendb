@@ -13,7 +13,7 @@ public class ServerStartupPolicy : IServerBackupPolicy
 
     public static bool Disabled = false;
 
-    private const string Reason = "Cannot start any backup(s) because server just started.";
+    private const string Reason = "[POLICY:Startup] Cannot start any backup(s) because server just started.";
 
     private ServerStartupPolicy()
     {

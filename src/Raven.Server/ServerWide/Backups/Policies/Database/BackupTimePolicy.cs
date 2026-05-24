@@ -33,13 +33,13 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
 
         if (backupState.NextBackup == null)
         {
-            reason = $"Cannot start backup {backupState} because next backup time could not be calculated.";
+            reason = $"[POLICY:BackupTime] Cannot start backup {backupState} because next backup time could not be calculated.";
             return false;
         }
 
         if (backupState.NextBackup.DateTime > now)
         {
-            reason = $"Cannot start backup {backupState} because it is not yet time to do so. Next backup will occur at '{backupState.NextBackup.DateTime}'.";
+            reason = $"[POLICY:BackupTime] Cannot start backup {backupState} because it is not yet time to do so. Next backup will occur at '{backupState.NextBackup.DateTime}'.";
             return false;
         }
 

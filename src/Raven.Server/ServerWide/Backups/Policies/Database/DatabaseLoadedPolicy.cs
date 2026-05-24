@@ -28,7 +28,7 @@ public class DatabaseLoadedPolicy : IDatabaseBackupPolicy
         var gracePeriod = serverStore.Configuration.Backup.DatabaseLoadedGracePeriod.AsTimeSpan;
         if (now - database.StartTime < gracePeriod)
         {
-            reason = $"Cannot start backup {backupState} because the database was loaded less than {gracePeriod.TotalSeconds:F0} seconds ago.";
+            reason = $"[POLICY:DatabaseLoaded] Cannot start backup {backupState} because the database was loaded less than {gracePeriod.TotalSeconds:F0} seconds ago.";
             return false;
         }
 
