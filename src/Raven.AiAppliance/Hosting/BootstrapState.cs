@@ -20,6 +20,13 @@ public enum BootstrapPhase
     Redeeming,
 
     /// <summary>
+    /// Setup package applied; RavenDB and the .NET host are restarting so the
+    /// secure config takes effect. Non-bootstrap endpoints return 503; the
+    /// frontend polls /api/bootstrap/status and waits for `ready`.
+    /// </summary>
+    Restarting,
+
+    /// <summary>
     /// Setup package installed + RavenDB reachable; wizard endpoints live.
     /// </summary>
     Ready,
@@ -41,6 +48,15 @@ public interface IBootstrapState
     /// </summary>
     bool TryMarkRedeeming();
 
+    /// <summary>
+    /// Attempts to transition from <see cref="BootstrapPhase.Redeeming"/> to
+    /// <see cref="BootstrapPhase.Restarting"/>. Returns <c>true</c> on success.
+    /// Used after the setup package is on disk but before the .NET host is
+    /// signalled to exit, so the final HTTP response can carry the `restarting`
+    /// state for the frontend's poll loop.
+    /// </summary>
+    bool TryMarkRestarting();
+
     void MarkReady();
     void MarkFailed(string reason);
 }
@@ -59,6 +75,7 @@ public static class BootstrapPhaseExtensions
     {
         BootstrapPhase.NeedsActivation => "needs-activation",
         BootstrapPhase.Redeeming       => "redeeming",
+        BootstrapPhase.Restarting      => "restarting",
         BootstrapPhase.Ready           => "ready",
         _ => phase.ToString().ToLowerInvariant(),
     };
@@ -86,6 +103,16 @@ public sealed class BootstrapStateFlag : IBootstrapState
 
         Volatile.Write(ref _reason, null);
         return true;
+    }
+
+    public bool TryMarkRestarting()
+    {
+        var previous = Interlocked.CompareExchange(
+            ref _phase,
+            (int)BootstrapPhase.Restarting,
+            (int)BootstrapPhase.Redeeming);
+
+        return previous == (int)BootstrapPhase.Redeeming;
     }
 
     public void MarkReady()

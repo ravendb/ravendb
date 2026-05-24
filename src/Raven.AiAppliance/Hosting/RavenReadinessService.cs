@@ -48,7 +48,23 @@ public sealed class RavenReadinessService(
                 opts.RavenUrl, opts.ConfigDatabase, created ? "created" : "already present");
 
             ready.MarkReady();
-            bootstrap.MarkReady();
+
+            // Bootstrap only flips to Ready once activation has produced a setup
+            // package on disk — pre-activation we still want RavenDB up so the
+            // appliance has somewhere to persist state, but the wizard / chat
+            // endpoints have to stay 503 until the secure config is applied.
+            var setupSettings = Path.Combine(opts.SetupPackagePath, "A", "settings.json");
+            if (File.Exists(setupSettings))
+            {
+                logger.LogInformation("Setup package present at {Path}; marking bootstrap Ready.", opts.SetupPackagePath);
+                bootstrap.MarkReady();
+            }
+            else
+            {
+                logger.LogInformation(
+                    "RavenDB reachable but setup package not yet extracted at {Path}; bootstrap stays NeedsActivation until /api/bootstrap/redeem-license completes.",
+                    opts.SetupPackagePath);
+            }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
@@ -66,10 +82,14 @@ public sealed class RavenReadinessService(
     {
         // Host shutdown: ensure /healthz flips back to 503 the moment the
         // service is told to stop, even if ExecuteAsync is still mid-probe.
-        // Idempotent — if we're already past MarkReady() the next observer
-        // sees `shutting down` instead of stale `ready`. (MarkFailed reverts
-        // the phase to NeedsActivation; that's fine on the way out.)
-        bootstrap.MarkFailed("shutting down");
+        // The bootstrap-state half is suppressed during an activation-triggered
+        // restart — the endpoint has already set phase = Restarting and the
+        // frontend is polling for that exact value. Downgrading to
+        // NeedsActivation here would briefly mislead any in-flight status
+        // probe before Kestrel actually stops accepting connections.
+        if (bootstrap.Phase != BootstrapPhase.Restarting)
+            bootstrap.MarkFailed("shutting down");
+
         ready.MarkFailed("shutting down");
         await base.StopAsync(cancellationToken);
     }

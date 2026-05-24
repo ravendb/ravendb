@@ -20,6 +20,17 @@ public sealed class ApplianceOptions
     public string SetupPackagePath { get; set; } = "/setup";
 
     /// <summary>
+    /// Path to a local setup-package zip used by the activation endpoint instead of
+    /// calling <see cref="LicenseApiUrl"/>. <b>Demo-only</b>: the 8-week demo ships a
+    /// pre-baked zip mounted into the container; production will fetch
+    /// <c>license.json</c> + <c>app-name</c> from the license API and run LE
+    /// provisioning locally (no zip path involved). Bound from
+    /// <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>; empty / missing file falls back to the
+    /// HTTP path.
+    /// </summary>
+    public string? SetupPackageZipPath { get; set; }
+
+    /// <summary>
     /// Default upstream license-redemption endpoint. Production uses this as-is;
     /// tests and local dev override via <c>RAVEN_AI_LICENSE_API_URL</c>. Exposed
     /// as a constant so the dev-mode startup warning in <c>Program.cs</c> can

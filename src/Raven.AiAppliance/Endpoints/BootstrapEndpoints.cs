@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.IO.Compression;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Raven.AiAppliance.Hosting;
@@ -28,78 +30,35 @@ public static class BootstrapEndpoints
         });
 
     /// <summary>
-    /// First-run activation. Fetches the setup-package zip from the configured
-    /// license upstream and unpacks it into <see cref="ApplianceOptions.SetupPackagePath"/>,
-    /// then flips <see cref="IBootstrapState"/> to Ready so the wizard endpoints
-    /// become live.
+    /// First-run activation. Acquires the setup-package zip (from
+    /// <see cref="ApplianceOptions.SetupPackageZipPath"/> in the demo, or from the
+    /// license upstream in production), unpacks it into
+    /// <see cref="ApplianceOptions.SetupPackagePath"/>, signals s6 to restart
+    /// RavenDB in secure mode, and triggers a .NET host restart so the
+    /// secure <see cref="Raven.Client.Documents.IDocumentStore"/> is rebuilt
+    /// against the package's <c>PublicServerUrl</c> + admin client cert.
+    /// Response carries <c>{state: "restarting"}</c>; the frontend polls
+    /// <c>/api/bootstrap/status</c> until it sees <c>ready</c>.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>What this does today</b> — the upstream at
-    /// <see cref="ApplianceOptions.LicenseApiUrl"/> returns a pre-baked setup-package
-    /// zip (mocked in tests via <c>MockLicenseApi</c>; in the demo the operator drops
-    /// the zip at the path in <c>APPLIANCE_E2E_SETUP_PACKAGE_PATH</c>). The appliance
-    /// unpacks it on disk and trusts whatever certs/license/settings are inside.
+    /// <b>Demo vs. production source of the setup package.</b> The 8-week demo
+    /// mounts a pre-built zip at the path in <c>RAVEN_AI_SETUP_PACKAGE_ZIP</c>
+    /// (set by the Dockerfile, populated by <c>up.ps1</c> from
+    /// <c>$env:APPLIANCE_E2E_SETUP_PACKAGE_PATH</c>). When the file exists the
+    /// HTTP call is skipped and the license-key value is logged but otherwise
+    /// unused. Production will POST the key to <see cref="ApplianceOptions.LicenseApiUrl"/>
+    /// and receive only <c>license.json</c> + <c>app-name</c>; the appliance
+    /// then runs LE provisioning locally — DNS registration, ACME challenge,
+    /// cert generation, <c>settings.json</c> write — before reaching the same
+    /// restart sequence below.
     /// </para>
     /// <para>
-    /// <b>Production gap (Phase 5 / Stage A)</b> — the upstream must dynamically
-    /// construct a per-license-key setup package containing all of the following.
-    /// None of this is implemented yet on the appliance-builder website (Track J);
-    /// the demo bridges it with a hand-rolled zip.
-    /// </para>
-    /// <list type="number">
-    ///   <item><description>
-    ///     DNS registration of <c>&lt;appname&gt;.ravendb.run</c> (subdomain + A record)
-    ///     so the cert + URLs resolve before the appliance boots.
-    ///   </description></item>
-    ///   <item><description>
-    ///     Wildcard certificate from Let's Encrypt for <c>*.&lt;appname&gt;.ravendb.run</c>
-    ///     via ACME-DNS challenge, written into the zip as
-    ///     <c>cluster.server.certificate.&lt;domain&gt;.pfx</c> +
-    ///     <c>admin.client.certificate.&lt;domain&gt;.pfx</c>. RavenDB's Setup Wizard
-    ///     already produces this layout — see
-    ///     <c>Raven.Server/Commercial/LetsEncrypt/SettingsZipFileHelper.cs</c>.
-    ///   </description></item>
-    ///   <item><description>
-    ///     URL mappings for the dashboard and RavenDB Studio (sidecar
-    ///     <c>appliance.json</c>) so the appliance reads them at boot.
-    ///   </description></item>
-    ///   <item><description>
-    ///     The signed <c>license.json</c> so RavenDB picks it up at start (no separate
-    ///     in-process redeem step on the RavenDB side).
-    ///   </description></item>
-    ///   <item><description>
-    ///     A pre-generated RavenDB <c>settings.json</c> binding on
-    ///     <c>&lt;appname&gt;.ravendb.run:443</c> with TLS + Security.Certificate.Path
-    ///     pointing at the unpacked PFX. The current
-    ///     <c>docker/ai-appliance/ravendb-settings.json</c> is a demo placeholder
-    ///     (Unsecured, public <c>0.0.0.0:8080</c>).
-    ///   </description></item>
-    /// </list>
-    /// <para>
-    /// <b>Production gap (appliance-side)</b> — once the package is on disk this
-    /// method just flips bootstrap to Ready. A real activation needs to additionally:
-    /// </para>
-    /// <list type="number">
-    ///   <item><description>
-    ///     Hot-reload Kestrel's TLS cert from the new PFX so the appliance's
-    ///     <c>:443</c> listener starts serving the right chain.
-    ///   </description></item>
-    ///   <item><description>
-    ///     Restart / rebind the in-process RavenDB so it picks up the new
-    ///     <c>settings.json</c>, cert path, and license. RavenDB doesn't re-read
-    ///     settings on the fly today.
-    ///   </description></item>
-    ///   <item><description>
-    ///     Re-create the appliance's <see cref="Raven.Client.Documents.IDocumentStore"/>
-    ///     against the now-secured RavenDB URL with the admin client cert.
-    ///   </description></item>
-    /// </list>
-    /// <para>
-    /// The E2E test sidesteps both gaps: <c>WebApplicationFactory</c> injects an
-    /// <c>IDocumentStore</c> built by <c>RavenTestBase</c>, and the bundled demo zip
-    /// carries pre-arranged certs the operator already trusts. Don't read the
-    /// happy-path E2E pass as evidence the production gaps are closed.
+    /// <b>Remaining gap (Kestrel cert).</b> RavenDB picks up the new
+    /// <c>settings.json</c> via the s6 restart and the appliance reconnects
+    /// over TLS with the admin cert. Kestrel itself still listens on plain
+    /// HTTP <c>:5000</c>; serving the dashboard on <c>:443</c> with the LE cert
+    /// is a separate follow-up (out of scope for this slice).
     /// </para>
     /// </remarks>
     private static async Task<IResult> RedeemLicenseAsync(
@@ -107,6 +66,7 @@ public static class BootstrapEndpoints
         IBootstrapState bootstrap,
         IOptions<ApplianceOptions> options,
         IHttpClientFactory httpClientFactory,
+        IHostApplicationLifetime lifetime,
         ILogger<BootstrapLicenseLogger> logger,
         CancellationToken ct)
     {
@@ -129,15 +89,35 @@ public static class BootstrapEndpoints
 
         try
         {
-            using var http = httpClientFactory.CreateClient();
-            var url = $"{opts.LicenseApiUrl.TrimEnd('/')}/licenses/{Uri.EscapeDataString(body.LicenseKey)}";
-            using var upstream = await http.GetAsync(url, ct);
-            if (!upstream.IsSuccessStatusCode)
+            // Demo path: a pre-baked zip mounted into the container short-circuits
+            // the HTTP call. The license-key value is logged but otherwise unused;
+            // production hits the license API to fetch license.json + app-name
+            // and runs LE provisioning locally (no zip involved).
+            Stream upstreamStream;
+            HttpResponseMessage? upstreamResponse = null;
+            HttpClient? http = null;
+            if (!string.IsNullOrEmpty(opts.SetupPackageZipPath) && File.Exists(opts.SetupPackageZipPath))
             {
-                var msg = $"license api returned {(int)upstream.StatusCode} {upstream.ReasonPhrase}";
-                logger.LogWarning("License redemption failed: {Reason}", msg);
-                bootstrap.MarkFailed(msg);
-                return Results.Problem(detail: msg, statusCode: (int)upstream.StatusCode);
+                logger.LogInformation(
+                    "Reading setup package from local path {Path} (demo mode).",
+                    opts.SetupPackageZipPath);
+                upstreamStream = File.OpenRead(opts.SetupPackageZipPath);
+            }
+            else
+            {
+                http = httpClientFactory.CreateClient();
+                var url = $"{opts.LicenseApiUrl.TrimEnd('/')}/licenses/{Uri.EscapeDataString(body.LicenseKey)}";
+                upstreamResponse = await http.GetAsync(url, ct);
+                if (!upstreamResponse.IsSuccessStatusCode)
+                {
+                    var msg = $"license api returned {(int)upstreamResponse.StatusCode} {upstreamResponse.ReasonPhrase}";
+                    logger.LogWarning("License redemption failed: {Reason}", msg);
+                    bootstrap.MarkFailed(msg);
+                    upstreamResponse.Dispose();
+                    http.Dispose();
+                    return Results.Problem(detail: msg, statusCode: (int)upstreamResponse.StatusCode);
+                }
+                upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(ct);
             }
 
             // Stream the zip to a temp file (capped) instead of buffering in
@@ -150,7 +130,7 @@ public static class BootstrapEndpoints
             long downloadedBytes;
             try
             {
-                await using (var upstreamStream = await upstream.Content.ReadAsStreamAsync(ct))
+                await using (upstreamStream)
                 await using (var tempFile = File.Create(tempZipPath))
                 {
                     var buffer = new byte[81920];
@@ -177,6 +157,9 @@ public static class BootstrapEndpoints
             }
             finally
             {
+                upstreamResponse?.Dispose();
+                http?.Dispose();
+
                 // Best-effort cleanup. Narrow to the two exceptions File.Delete
                 // can legitimately throw on a stray temp file (the path is
                 // ours, no malformed-path risks) — anything else is unexpected
@@ -192,14 +175,42 @@ public static class BootstrapEndpoints
                 "Setup package redeemed and unpacked to {Path} ({Bytes} bytes).",
                 opts.SetupPackagePath, downloadedBytes);
 
-            // Production gap (appliance-side): MarkReady() here only flips the
-            // bootstrap state machine. Hot-reloading Kestrel's TLS cert from the
-            // new PFX, restarting in-process RavenDB against the new
-            // settings.json, and re-creating the IDocumentStore against the
-            // now-secured URL are all deferred — see the <remarks> on this
-            // method for the full enumeration.
-            bootstrap.MarkReady();
-            return Results.Ok(new { state = "ready" });
+            bootstrap.TryMarkRestarting();
+
+            // Restart RavenDB so it re-reads settings.json. The s6 run script
+            // copies A/settings.json from the setup package over the baked-in
+            // unsecured config on every start; RavenDB itself does not hot-
+            // reload its settings. Linux-only — Windows / test hosts (no s6)
+            // skip this and rely on the .NET host restart only, which is fine
+            // for tests since they inject the IDocumentStore directly.
+            if (OperatingSystem.IsLinux())
+            {
+                try
+                {
+                    using var s6 = Process.Start(new ProcessStartInfo("s6-svc", "-r /run/service/01-ravendb")
+                    {
+                        UseShellExecute = false,
+                    });
+                    s6?.WaitForExit(5000);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex,
+                        "Could not signal s6 to restart RavenDB; relying on .NET host restart only.");
+                }
+            }
+
+            logger.LogInformation(
+                "Activation complete; restarting .NET host to bind secure IDocumentStore.");
+
+            // Brief delay so the HTTP response flushes to the client before
+            // Kestrel shuts down — otherwise the browser sees a connection-
+            // reset and can't read the `restarting` state from the body it's
+            // about to render the spinner from.
+            _ = Task.Delay(500, CancellationToken.None)
+                .ContinueWith(_ => lifetime.StopApplication(), TaskScheduler.Default);
+
+            return Results.Ok(new { state = "restarting" });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
