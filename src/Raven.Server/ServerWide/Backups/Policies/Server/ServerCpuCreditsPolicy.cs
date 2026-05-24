@@ -13,7 +13,7 @@ public class ServerCpuCreditsPolicy : IServerBackupPolicy
 
     public static bool Disabled;
 
-    private const string Reason = "Cannot start any backup(s) because server CPU Credits are near exhaustion.";
+    private const string Reason = "[POLICY:CpuCredits] Cannot start any backup(s) because server CPU Credits are near exhaustion.";
 
     private ServerCpuCreditsPolicy()
     {

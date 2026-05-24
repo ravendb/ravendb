@@ -19,7 +19,7 @@ public class BackupRunningPolicy : IDatabaseBackupPolicy
     {
         reason = null;
         if (backupState.Running)
-            reason = "Cannot start another backup while a backup is already running.";
+            reason = "[POLICY:BackupRunning] Cannot start another backup while a backup is already running.";
 
         return backupState.Running == false;
     }

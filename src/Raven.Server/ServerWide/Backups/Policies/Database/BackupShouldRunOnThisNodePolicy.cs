@@ -22,13 +22,13 @@ public class BackupShouldRunOnThisNodePolicy : IDatabaseBackupPolicy
         var nodeTag = BackupUtils.GetResponsibleNodeTag(context, backupState.DatabaseName, backupState.Configuration.TaskId);
         if (nodeTag == null)
         {
-            reason = $"Cannot start backup {backupState} because no node is responsible for this task.";
+            reason = $"[POLICY:ShouldRunOnThisNode] Cannot start backup {backupState} because no node is responsible for this task.";
             return false;
         }
 
         if (nodeTag != serverStore.NodeTag)
         {
-            reason = $"Cannot start backup {backupState} because this node is not responsible for this task.";
+            reason = $"[POLICY:ShouldRunOnThisNode] Cannot start backup {backupState} because this node is not responsible for this task.";
             return false;
         }
 

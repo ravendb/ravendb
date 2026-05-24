@@ -31,7 +31,7 @@ public class ServerConcurrentBackupPolicy : IServerBackupPolicy
 
         if (_concurrentBackupsCounter.CanRunBackup(databaseName) == false)
         {
-            reason = $"Cannot start backup(s) because the maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
+            reason = $"[POLICY:ConcurrentBackup] Cannot start backup(s) because the maximum number of concurrent backups ({_concurrentBackupsCounter.MaxNumberOfConcurrentBackups}) is reached.";
             return false;
         }
 

@@ -19,7 +19,7 @@ public class DatabaseExistsPolicy : IDatabaseBackupPolicy
     {
         if (serverStore.Cluster.DatabaseExists(backupState.DatabaseName) == false)
         {
-            reason = $"Cannot start backup {backupState} because database doesn't exist.";
+            reason = $"[POLICY:DatabaseExists] Cannot start backup {backupState} because database doesn't exist.";
             return false;
         }
 

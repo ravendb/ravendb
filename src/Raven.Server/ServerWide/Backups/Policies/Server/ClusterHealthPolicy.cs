@@ -25,7 +25,7 @@ public class ClusterHealthPolicy : IServerBackupPolicy
             return true;
         }
 
-        reason = $"Cannot start any backup(s) because cluster is in '{state}' state.";
+        reason = $"[POLICY:ClusterHealth] Cannot start any backup(s) because cluster is in '{state}' state.";
         return false;
     }
 }

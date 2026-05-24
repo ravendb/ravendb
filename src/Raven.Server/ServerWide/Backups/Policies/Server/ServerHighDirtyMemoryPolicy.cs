@@ -15,7 +15,7 @@ public class ServerHighDirtyMemoryPolicy : IServerBackupPolicy
 
     public static bool Disabled;
 
-    private const string Reason = "Cannot start any backup(s) because server is in high dirty memory state.";
+    private const string Reason = "[POLICY:HighDirtyMemory] Cannot start any backup(s) because server is in high dirty memory state.";
 
     private ServerHighDirtyMemoryPolicy()
     {
