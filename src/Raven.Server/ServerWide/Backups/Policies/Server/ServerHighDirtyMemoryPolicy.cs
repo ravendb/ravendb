@@ -3,6 +3,12 @@ using Sparrow.LowMemory;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Server;
 
+/// <summary>
+/// Blocks all backups when the server's dirty-memory level is high.
+/// High dirty memory means the process is holding more unwritten pages than the OS can
+/// comfortably flush; adding snapshot I/O at this point risks further memory pressure.
+/// Set <see cref="Disabled"/> to true in tests to bypass the check.
+/// </summary>
 public class ServerHighDirtyMemoryPolicy : IServerBackupPolicy
 {
     public static readonly ServerHighDirtyMemoryPolicy Instance = new();
@@ -14,8 +20,8 @@ public class ServerHighDirtyMemoryPolicy : IServerBackupPolicy
     private ServerHighDirtyMemoryPolicy()
     {
     }
-    
-    public bool CanDoBackup(ServerStore serverStore, DateTime now, out string reason)
+
+    public bool CanDoBackup(ServerStore serverStore, DateTime now, string databaseName, out string reason)
     {
         if (Disabled)
         {
