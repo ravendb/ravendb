@@ -11,6 +11,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Web.Http;
 using Sparrow.Json;
+using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
             if (responsibleNode == ServerStore.NodeTag)
             {
-                var backup = RequestHandler.Database.PeriodicBackupRunner.PeriodicBackups.FirstOrDefault(x => x.Configuration.TaskId == taskId);
+                var backup = ServerStore.BackupRunner.GetDatabaseStateByTaskId(RequestHandler.Database.Name, taskId);
                 if (backup == null)
                 {
                     throw new InvalidOperationException($"Backup task id: {taskId} doesn't exist");

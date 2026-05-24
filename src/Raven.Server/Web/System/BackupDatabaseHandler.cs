@@ -41,8 +41,7 @@ namespace Raven.Server.Web.System
 
                     var database = await task;
 
-                    var backups = database.PeriodicBackupRunner.GetPeriodicBackupsInformation();
-
+                    var backups = database.ServerStore.BackupRunner.GetPeriodicBackupsInformation(database.Name);
                     result.Timers.AddRange(backups);
                 }
 

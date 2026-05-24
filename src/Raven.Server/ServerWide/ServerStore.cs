@@ -2975,7 +2975,7 @@ namespace Raven.Server.ServerWide
                                     dbIdEtagDictionary[kvp.Key] = kvp.Value;
                             }
 
-                            if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key, database.PeriodicBackupRunner.GetNextIdleDatabaseActivity(database.Name)))
+                            if (DatabasesLandlord.UnloadDirectly(databaseKvp.Key))
                                 IdleDatabases[database.Name] = dbIdEtagDictionary;
                         }
                         catch (OperationCanceledException)

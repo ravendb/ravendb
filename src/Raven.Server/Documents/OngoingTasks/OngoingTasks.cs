@@ -202,9 +202,9 @@ public sealed class OngoingTasks : AbstractOngoingTasks<SubscriptionConnectionsS
     protected override PeriodicBackupStatus GetClusterBackupStatus(long taskId, PeriodicBackupConfiguration backupConfiguration, out string responsibleNodeTag,
         out NextBackup nextBackup, out RunningBackup onGoingBackup, out bool isEncrypted)
     {
-        var backupStatus = _database.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(taskId);
-        nextBackup = _database.PeriodicBackupRunner.GetNextBackupDetails(backupConfiguration, backupStatus, out responsibleNodeTag);
-        onGoingBackup = _database.PeriodicBackupRunner.OnGoingBackup(taskId);
+        var backupStatus = _database.ServerStore.BackupRunner.GetMostUpdatedClusterBackupStatus(_database.Name, taskId);
+        nextBackup = _database.ServerStore.BackupRunner.GetNextBackupDetails(taskId, _database.Name, out responsibleNodeTag);
+        onGoingBackup = _database.ServerStore.BackupRunner.OnGoingBackup(_database.Name, taskId);
         isEncrypted = BackupTask.IsBackupEncrypted(_database, backupConfiguration);
 
         return backupStatus;
