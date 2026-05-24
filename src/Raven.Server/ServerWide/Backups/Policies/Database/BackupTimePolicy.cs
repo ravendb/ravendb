@@ -4,6 +4,11 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.ServerWide.Backups.Policies.Database;
 
+/// <summary>
+/// Blocks backups that are not yet due based on their full or incremental schedule.
+/// On the first evaluation for a task, reads the persisted status from the cluster store to
+/// initialize <see cref="DatabaseBackupState.NextBackup"/>; subsequent ticks use the cached value.
+/// </summary>
 public class BackupTimePolicy : IDatabaseBackupPolicy
 {
     public static readonly BackupTimePolicy Instance = new();
@@ -13,17 +18,16 @@ public class BackupTimePolicy : IDatabaseBackupPolicy
 
     }
 
-    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, ServerBackupRunner.DatabaseBackupState backupState, DateTime now, out string reason)
+    public bool CanDoBackup(ClusterOperationContext context, ServerStore serverStore, DatabaseBackupState backupState, DateTime now, out string reason)
     {
         if (backupState.NextBackup == null)
         {
-            var backupStatus = BackupUtils.GetBackupStatusFromCluster(serverStore, context, backupState.DatabaseName, backupState.Configuration.TaskId);
+            var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, backupState.DatabaseName, backupState.Configuration.TaskId);
             backupState.NextBackup = BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
             {
                 BackupStatus = backupStatus,
                 Configuration = backupState.Configuration,
-                NodeTag = serverStore.NodeTag,
-                ResponsibleNodeTag = serverStore.NodeTag
+                NodeTag = serverStore.NodeTag
             });
         }
 
