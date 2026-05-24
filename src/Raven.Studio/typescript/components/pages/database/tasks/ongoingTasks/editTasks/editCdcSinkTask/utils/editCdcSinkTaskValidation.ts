@@ -41,7 +41,7 @@ const cdcColumnMappingsSchema = yup
     .test("unique-source-columns", "Source columns must be unique", (items) =>
         hasUniqueValues(items, (item) => item.column)
     )
-    .test("unique-target-columns", "Target columns must be unique", (items) =>
+    .test("unique-target-columns", "Target properties must be unique", (items) =>
         hasUniqueValues(items, (item) => item.name)
     );
 

@@ -13,6 +13,7 @@ import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoing
 import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import { useFieldArray, useFormContext } from "react-hook-form";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type CdcColumnType = Raven.Client.Documents.Operations.CdcSink.CdcColumnType;
 type FieldMappingPath = RootTablePath | EmbeddedTablePath;
@@ -57,8 +58,30 @@ export default function EditCdcSinkTaskFieldMapping({ path }: { path: FieldMappi
                     <div className="field-mapping-row panel-bg-2 rounded-top p-1">
                         <div>Source column</div>
                         <div></div>
-                        <div>Target column</div>
-                        <div>Type</div>
+                        <div>
+                            Target property
+                            <PopoverWithHoverWrapper message="The RavenDB document field where the source column value will be stored.">
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </div>
+                        <div>
+                            Type
+                            <PopoverWithHoverWrapper
+                                message={
+                                    <>
+                                        How the source column value is stored in the document:
+                                        <br />
+                                        <strong>Default</strong> - stored as a regular property.
+                                        <br />
+                                        <strong>JSON</strong> - parsed as JSON before storing.
+                                        <br />
+                                        <strong>Attachment</strong> - stored as a RavenDB attachment.
+                                    </>
+                                }
+                            >
+                                <Icon icon="info" color="info" margin="ms-1" />
+                            </PopoverWithHoverWrapper>
+                        </div>
                         <div></div>
                     </div>
                     <ExpandableList

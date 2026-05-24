@@ -17,6 +17,8 @@ import RichAlert from "components/common/RichAlert";
 import { useEffect, useMemo } from "react";
 import { editCdcSinkTaskActions } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/store/editCdcSinkTaskSlice";
 import { FormTaskResponsibleNode } from "components/common/formFields/FormTaskResponsibleNode";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Icon } from "components/common/Icon";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -89,9 +91,7 @@ export default function EditCdcSinkTaskBasicSection() {
                 />
                 <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
             </div>
-            <div className="mb-1">
-                Specify the task name, enter a connection string, and verify the source connection.
-            </div>
+            <div className="mb-1">Specify the task name, select a connection string, and configure task options.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <div>
                     <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
@@ -135,8 +135,9 @@ export default function EditCdcSinkTaskBasicSection() {
                         {hasPostgresSettings && (
                             <>
                                 <RichAlert variant="info">
-                                    PostgreSQL connections can use a custom publication name and replication slot. Leave
-                                    them empty to let the server auto-generate both values.
+                                    For PostgreSQL connections, you can specify a custom publication name and
+                                    replication slot name. Leave these fields empty to let the server auto-generate both
+                                    values.
                                 </RichAlert>
                                 <FormGroup className="mt-2">
                                     <FormLabel>Publication Name</FormLabel>
@@ -167,6 +168,18 @@ export default function EditCdcSinkTaskBasicSection() {
                         <FormGroup>
                             <FormSwitch control={control} name="skipInitialLoad">
                                 Skip initial load
+                                <PopoverWithHoverWrapper
+                                    message={
+                                        <>
+                                            By default, the task takes a snapshot of existing rows before streaming new
+                                            changes.
+                                            <br />
+                                            Enable this option to stream only new changes.
+                                        </>
+                                    }
+                                >
+                                    <Icon icon="info" color="info" margin="ms-1" />
+                                </PopoverWithHoverWrapper>
                             </FormSwitch>
                         </FormGroup>
                     </div>

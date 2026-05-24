@@ -7,6 +7,8 @@ import EditCdcSinkTaskFieldMapping from "./EditCdcSinkTaskFieldMapping";
 import EditCdcSinkTaskOnDeleteFields from "./EditCdcSinkTaskOnDeleteFields";
 import EditCdcSinkTaskPatchAdvancedField from "./EditCdcSinkTaskPatchAdvancedField";
 import FormStringValueList from "components/common/formFields/FormStringValueList";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Icon } from "components/common/Icon";
 
 export default function EditCdcSinkTaskRootTableEditor({ path }: { path: RootTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
@@ -29,12 +31,24 @@ export default function EditCdcSinkTaskRootTableEditor({ path }: { path: RootTab
                     <FormInput type="text" control={control} name={`${path}.sourceTableName`} />
                 </FormGroup>
                 <FormGroup className="g-col-4">
-                    <FormLabel>Collection name</FormLabel>
+                    <FormLabel>
+                        Target collection
+                        <PopoverWithHoverWrapper message="The RavenDB collection where documents generated from rows in the source table will be stored.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.collectionName`} />
                 </FormGroup>
             </div>
             <FormStringValueList
-                title="Primary key columns"
+                title={
+                    <>
+                        Primary key columns
+                        <PopoverWithHoverWrapper message="Columns that uniquely identify each source row. Their values are used to derive the RavenDB document ID.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </>
+                }
                 addButtonLabel="Add primary key column"
                 control={control}
                 name={`${path}.primaryKeyColumns`}

@@ -13,6 +13,7 @@ type FormStringValueListProps<
     defaultValue: FieldArray<TFieldValues, TName>;
     fieldNameAccessor: (idx: number) => FieldPath<TFieldValues>;
     className?: string;
+    emptyMessage?: React.ReactNode;
 };
 
 export default function FormStringValueList<TFieldValues extends FieldValues, TName extends ArrayPath<TFieldValues>>({
@@ -23,6 +24,7 @@ export default function FormStringValueList<TFieldValues extends FieldValues, TN
     defaultValue,
     fieldNameAccessor,
     className,
+    emptyMessage,
 }: FormStringValueListProps<TFieldValues, TName>) {
     const fieldArray = useFieldArray({
         control,
@@ -43,7 +45,7 @@ export default function FormStringValueList<TFieldValues extends FieldValues, TN
             </div>
             {fieldArray.fields.length === 0 ? (
                 <div className="panel-bg-2 p-1 rounded border border-secondary hstack justify-content-center">
-                    <EmptySet compact>No values defined.</EmptySet>
+                    <EmptySet compact>{emptyMessage ?? "No values defined."}</EmptySet>
                 </div>
             ) : (
                 <div className="vstack gap-1">

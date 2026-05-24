@@ -25,7 +25,7 @@ export default function EditCdcSinkTaskTablesSection({ tablesFieldArray }: EditC
                 <FormErrorIcon control={control} paths={["tables"]} onError={openPanel} />
                 <CollapseButton isExpanded={isPanelOpen} toggle={togglePanel} />
             </div>
-            <div className="mb-1">Customize the source tables or add new ones.</div>
+            <div className="mb-1">Configure how source tables are mapped to target collections.</div>
             <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
                 <TablesPanel tablesFieldArray={tablesFieldArray} />
             </Collapse>

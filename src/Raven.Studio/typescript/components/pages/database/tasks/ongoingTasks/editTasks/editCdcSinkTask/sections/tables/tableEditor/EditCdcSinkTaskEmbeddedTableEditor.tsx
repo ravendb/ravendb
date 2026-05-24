@@ -22,6 +22,8 @@ import EditCdcSinkTaskFieldMapping from "./EditCdcSinkTaskFieldMapping";
 import EditCdcSinkTaskOnDeleteFields from "./EditCdcSinkTaskOnDeleteFields";
 import EditCdcSinkTaskPatchAdvancedField from "./EditCdcSinkTaskPatchAdvancedField";
 import FormStringValueList from "components/common/formFields/FormStringValueList";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Icon } from "components/common/Icon";
 
 type CdcSinkRelationType = Raven.Client.Documents.Operations.CdcSink.CdcSinkRelationType;
 
@@ -74,16 +76,45 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                     />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Property name</FormLabel>
+                    <FormLabel>
+                        Target property
+                        <PopoverWithHoverWrapper message="The RavenDB document field where the embedded related data will be stored.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.propertyName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Relation type</FormLabel>
+                    <FormLabel>
+                        Relation type
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    How related rows are embedded in the parent document:
+                                    <br />
+                                    <strong>Array</strong> - multiple rows stored as an array of objects.
+                                    <br />
+                                    <strong>Map</strong> - multiple rows stored as a keyed object (dictionary).
+                                    <br />
+                                    <strong>Value</strong> - a single row stored directly as an object.
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <FormSelect control={control} name={`${path}.type`} options={relationTypeOptions} />
                 </FormGroup>
             </div>
             <FormStringValueList
-                title="Primary key columns"
+                title={
+                    <>
+                        Primary key columns
+                        <PopoverWithHoverWrapper message="Columns that uniquely identify rows in this related table.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </>
+                }
                 addButtonLabel="Add primary key column"
                 control={control}
                 name={`${path}.primaryKeyColumns`}
@@ -92,7 +123,14 @@ export default function EditCdcSinkTaskEmbeddedTableEditor({ path }: { path: Emb
                 className="mb-2"
             />
             <FormStringValueList
-                title="Join columns"
+                title={
+                    <>
+                        Join columns
+                        <PopoverWithHoverWrapper message="Columns used to match rows in this related table with rows from the root table.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </>
+                }
                 addButtonLabel="Add join column"
                 control={control}
                 name={`${path}.joinColumns`}

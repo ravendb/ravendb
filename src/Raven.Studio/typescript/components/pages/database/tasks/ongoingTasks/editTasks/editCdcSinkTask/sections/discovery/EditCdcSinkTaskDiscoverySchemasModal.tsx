@@ -42,7 +42,7 @@ export default function EditCdcSinkTaskDiscoverySchemasModal({
             <InnerForm onSubmit={handleSubmit(handleDiscover)}>
                 <Modal.Body className="vstack gap-3">
                     <RichAlert variant="info">
-                        Leave schemas empty to discover tables from the default schemas for the selected connection.
+                        Leave schemas empty to discover tables from the default schemas of the configured connection.
                     </RichAlert>
                     <FormStringValueList
                         title="Schemas"
@@ -51,6 +51,7 @@ export default function EditCdcSinkTaskDiscoverySchemasModal({
                         name="schemas"
                         fieldNameAccessor={(idx) => `schemas.${idx}.value`}
                         defaultValue={{ value: "" }}
+                        emptyMessage="No schemas added"
                     />
                 </Modal.Body>
                 <Modal.Footer>

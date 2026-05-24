@@ -22,12 +22,13 @@ import classNames from "classnames";
 import { useViewSheet } from "components/common/splitView/ViewSheet";
 import EditCdcSinkTaskTestPanel from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/sections/tables/tableEditor/EditCdcSinkTaskTestPanel";
 import { useEffect } from "react";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function EditCdcSinkTaskTableEditor() {
     const activeTable = useAppSelector(editCdcSinkTaskSelectors.activeTable);
 
     if (!activeTable) {
-        return <EmptySet>Select a table to view its configuration details.</EmptySet>;
+        return <EmptySet className="text-muted">Select a table to view its configuration details.</EmptySet>;
     }
 
     return <ActiveTableEditor key={activeTable.path} activeTable={activeTable} />;
@@ -90,10 +91,12 @@ function ActiveTableEditor({ activeTable }: { activeTable: CdcActiveTable }) {
                 </div>
                 <div className="ms-auto hstack gap-2 align-items-center">
                     {activeTable.type === "root" && (
-                        <Button variant="info" disabled={isRootTableDisabled} onClick={handleOpenRootTableTest}>
-                            <Icon icon="rocket" />
-                            Test
-                        </Button>
+                        <PopoverWithHoverWrapper message="Preview documents generated from sample rows.">
+                            <Button variant="info" disabled={isRootTableDisabled} onClick={handleOpenRootTableTest}>
+                                <Icon icon="rocket" />
+                                Test
+                            </Button>
+                        </PopoverWithHoverWrapper>
                     )}
                 </div>
             </div>

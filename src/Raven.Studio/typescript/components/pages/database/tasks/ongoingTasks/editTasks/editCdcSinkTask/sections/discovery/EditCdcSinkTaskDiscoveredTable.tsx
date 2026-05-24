@@ -58,7 +58,9 @@ export default function EditCdcSinkTaskDiscoveredTable({
     if (asyncGetSchema.status === "not-requested") {
         return (
             <div className="panel-bg-1 p-2 rounded border border-secondary hstack justify-content-center">
-                <EmptySet compact>No tables have been discovered yet</EmptySet>
+                <EmptySet compact className="text-muted">
+                    Click &quot;Discover tables&quot; to fetch available tables from the source database.
+                </EmptySet>
             </div>
         );
     }

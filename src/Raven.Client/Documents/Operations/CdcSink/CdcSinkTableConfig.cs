@@ -34,9 +34,11 @@ public class CdcSinkTableConfig : IDynamicJson
 
     /// <summary>
     /// Optional JavaScript transformation patch.
-    /// Runs on the document after column mapping and embedded operations.
-    /// Available variables: this = document, $row = raw CDC row (all columns),
-    /// $old = the previous version of this document (for updates, null for inserts).
+    /// Runs on the document after column mapping and embedded operations have been applied.
+    /// Available variables:
+    ///   this = the document AFTER column mapping has been applied (already contains the new values from the CDC row),
+    ///   $row = the raw CDC row with all columns as-is from the source database,
+    ///   $old = the document as it was stored in RavenDB BEFORE this CDC event was processed (null for inserts).
     /// </summary>
     public string Patch { get; set; }
 

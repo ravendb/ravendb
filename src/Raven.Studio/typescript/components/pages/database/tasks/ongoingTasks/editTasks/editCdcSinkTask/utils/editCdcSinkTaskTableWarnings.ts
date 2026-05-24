@@ -133,7 +133,8 @@ export function getEmbeddedRootTableConflictWarningFromAnalysis(
         return null;
     }
 
-    return "This source table is already configured as a root table. CDC Sink can process a source table only once, so embedded updates may be routed to the root table instead.";
+    return `This source table is already configured as a root table.
+CDC Sink can process a source table only once, so embedded updates may be routed to the root table instead.`;
 }
 
 export function getMissingRelatedCollectionWarningFromAnalysis(

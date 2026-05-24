@@ -124,8 +124,9 @@ public class CdcSinkDocumentProcessor
                 .Append("\": ").Append(funcName).Append(".call(this, $row, $old); break;\n");
         }
 
-        // $old is the previous embedded item data — null for inserts and root patches,
-        // populated for embedded updates. Enables delta computations in scripts:
+        // $old is the previous value before the change — null for inserts of new
+        // documents/items, populated for updates and deletes (both root and embedded).
+        // Enables delta computations in scripts:
         //   this.Total += $row.Amount - ($old?.Amount || 0)
         var dispatchScript = $$"""
             for (var i = 0; i < rows.length; i++) {

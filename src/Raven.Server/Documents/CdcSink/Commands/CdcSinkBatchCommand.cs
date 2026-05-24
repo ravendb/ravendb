@@ -1429,7 +1429,8 @@ public sealed class CdcSinkBatchCommand : DocumentMergedTransactionCommand
             JsArray CreateRows()
             {
                 // Build the $rows array: [{table: "orders", row: {...}, old: {...}}, ...]
-                // $old is the previous embedded item (null for inserts, deletes, and root patches).
+                // $old is the previous value (null for inserts of new documents/items).
+                // For updates and deletes, $old contains the previous value before the change.
                 // Enables delta computations: this.Total += $row.Amount - ($old?.Amount || 0)
                 var rowsArray = new JsArray(runner.ScriptEngine, capacity: (uint)patches.Count);
                 for (int i = 0; i < patches.Count; i++)

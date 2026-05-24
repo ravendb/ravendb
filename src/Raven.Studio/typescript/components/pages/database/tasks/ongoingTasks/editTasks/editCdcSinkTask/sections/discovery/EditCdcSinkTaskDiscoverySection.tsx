@@ -67,13 +67,22 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                         <h3 className="m-0">Schema Explorer</h3>
                         <CollapseButton isExpanded={isPanelOpen} toggle={toggleIsPanelOpen} />
                     </div>
-                    <div className="mb-1">Fetch existing tables from the linked source.</div>
+                    <div className="mb-1">
+                        Discover existing tables from the configured connection.
+                        <br />
+                        After tables are shown, select the ones you want and click &quot;Configure selected tables&quot;
+                        to add them below.
+                    </div>
                 </div>
                 <ConditionalPopover
                     conditions={[
                         {
                             isActive: !connectionStringName,
-                            message: "Please provide a connection string to fetch tables.",
+                            message: "A connection string is required to discover tables.",
+                        },
+                        {
+                            isActive: !!connectionStringName,
+                            message: "Click to fetch tables from the source database.",
                         },
                     ]}
                     className="ms-auto"
@@ -96,11 +105,15 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                     conditions={[
                         {
                             isActive: !connectionStringName,
-                            message: "Please provide a connection string to verify source.",
+                            message: "A connection string is required to verify the CDC setup.",
                         },
                         {
                             isActive: !hasTables,
-                            message: "Please discover tables to verify the source connection.",
+                            message: "Tables must be discovered before verifying the CDC setup.",
+                        },
+                        {
+                            isActive: hasTables && !!connectionStringName,
+                            message: "Click to verify that CDC is properly configured on the source tables.",
                         },
                     ]}
                 >
@@ -112,7 +125,7 @@ export default function EditCdcSinkTaskDiscoverySection({ tablesFieldArray }: Ed
                         disabled={!hasTables || !connectionStringName}
                         icon="test"
                     >
-                        Verify source
+                        Verify CDC setup
                     </ButtonWithSpinner>
                 </ConditionalPopover>
             </div>

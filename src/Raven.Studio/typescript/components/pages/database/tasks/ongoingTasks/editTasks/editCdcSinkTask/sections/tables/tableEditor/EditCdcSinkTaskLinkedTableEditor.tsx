@@ -11,6 +11,8 @@ import { LinkedTablePath } from "components/pages/database/tasks/ongoingTasks/ed
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Icon } from "components/common/Icon";
 
 export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: LinkedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
@@ -55,16 +57,42 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
                     />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Property name</FormLabel>
+                    <FormLabel>
+                        Target property
+                        <PopoverWithHoverWrapper message="The RavenDB document field that will hold the reference to the linked (related) document.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.propertyName`} />
                 </FormGroup>
                 <FormGroup className="g-col-6" marginClass="m-0">
-                    <FormLabel>Linked collection</FormLabel>
+                    <FormLabel>
+                        Linked collection
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    The RavenDB collection name for the related documents.
+                                    <br />
+                                    The related document ID is derived from this collection name and the join column
+                                    values.
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <FormInput type="text" control={control} name={`${path}.linkedCollectionName`} />
                 </FormGroup>
             </div>
             <FormStringValueList
-                title="Join columns"
+                title={
+                    <>
+                        Join columns
+                        <PopoverWithHoverWrapper message="The foreign key columns used to join this linked table to the parent table. Their values, combined with the linked collection name, form the related document ID.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </>
+                }
                 addButtonLabel="Add join column"
                 control={control}
                 name={`${path}.joinColumns`}
