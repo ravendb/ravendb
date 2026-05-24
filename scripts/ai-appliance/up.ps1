@@ -31,9 +31,13 @@
   publishes, so this switch publishes 0.0.0.0:8080. Studio will be reachable
   from any host on your LAN while the demo runs.
 
-.PARAMETER SetupPackagePath
-  Local directory with an already-unpacked setup package. Mounted read-only as
-  /var/lib/ai-appliance/setup, matching RAVEN_AI_SETUP_PACKAGE_PATH.
+.NOTES
+  Demo setup-package zip: this script mounts $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
+  (the same env you use for the AiApplianceTests E2E suite) at the Dockerfile-
+  pinned in-container path /var/lib/ai-appliance/setup-source.zip. The activation
+  endpoint reads from there in demo mode instead of calling the license API.
+  Production builds won't set this env and won't ship a zip; the appliance falls
+  back to the HTTP path automatically.
 #>
 [CmdletBinding()]
 param(
@@ -41,8 +45,7 @@ param(
     [string]$Tag = 'ravendb/ai-appliance:demo',
     [int]$Port = 5000,
     [string]$Volume = 'ai-appliance-data',
-    [switch]$WithStudio,
-    [string]$SetupPackagePath
+    [switch]$WithStudio
 )
 
 $ErrorActionPreference = 'Stop'
@@ -78,14 +81,22 @@ if ($existing) {
 $runArgs = @(
     'run', '-d',
     '--name', 'ai-appliance-demo',
+    # Activation triggers a graceful StopApplication() from inside the .NET
+    # host; --restart=unless-stopped makes Docker bring the container back so
+    # the next start sees the freshly-extracted setup package and connects
+    # securely.
+    '--restart=unless-stopped',
     '-p', "${Port}:5000",
     '-v', "${Volume}:/var/lib/ai-appliance"
 )
-if ($SetupPackagePath) {
-    $resolvedSetupPackagePath = (Resolve-Path $SetupPackagePath).Path
-    $runArgs += @(
-        '-v', "${resolvedSetupPackagePath}:/var/lib/ai-appliance/setup:ro"
-    )
+# Mount the demo setup-package zip if APPLIANCE_E2E_SETUP_PACKAGE_PATH points
+# at one. The container path is hardcoded in the Dockerfile via
+# RAVEN_AI_SETUP_PACKAGE_ZIP — the appliance reads from there in demo mode.
+$demoZip = $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
+if ($demoZip -and (Test-Path $demoZip)) {
+    $resolvedZip = (Resolve-Path $demoZip).Path
+    Write-Host "Mounting demo setup-package zip: $resolvedZip" -ForegroundColor DarkGray
+    $runArgs += @('-v', "${resolvedZip}:/var/lib/ai-appliance/setup-source.zip:ro")
 }
 if ($WithStudio) {
     Write-Host '-WithStudio enabled: publishing RavenDB on http://localhost:8080 (LAN-reachable on Windows; see help).' -ForegroundColor Yellow

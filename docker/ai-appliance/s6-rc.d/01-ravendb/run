@@ -3,12 +3,48 @@ set -e
 
 mkdir -p /var/lib/ai-appliance/ravendb
 
+# When activation has produced a setup package, overlay its secure settings
+# on top of the baked-in unsecured config and pin the public hostname to
+# 127.0.0.1 inside the container so the LE cert (issued for the domain)
+# validates when the appliance connects via PublicServerUrl. Pre-activation
+# the file is absent and RavenDB starts unsecured on loopback (Setup.Mode=
+# Unsecured from docker/ai-appliance/ravendb-settings.json).
+SETUP_DIR="${RAVEN_AI_SETUP_PACKAGE_PATH:-/var/lib/ai-appliance/setup}"
+SETUP_SETTINGS="$SETUP_DIR/A/settings.json"
+if [ -f "$SETUP_SETTINGS" ]; then
+    cp "$SETUP_SETTINGS" /app/ravendb/settings.json
+    # A/settings.json references Security.Certificate.Path as a bare filename
+    # (e.g. "cluster.server.certificate.egor-ai.pfx"); RavenDB resolves it
+    # against its working directory (/app/ravendb/), so the matching PFX has
+    # to land next to settings.json.
+    cp "$SETUP_DIR"/A/cluster.server.certificate.*.pfx /app/ravendb/ 2>/dev/null || true
+    # -E + [[:space:]]* tolerates whatever JSON formatting the upstream
+    # produces (RavenDB's setup wizard pretty-prints with a space after ":";
+    # production may differ). Strip "https://" + everything from the next
+    # delimiter to land on the bare hostname.
+    PUBLIC_HOST=$(grep -oE '"PublicServerUrl"[[:space:]]*:[[:space:]]*"[^"]*"' "$SETUP_SETTINGS" \
+        | sed 's|.*https://||' | sed 's|["/].*||')
+    if [ -n "$PUBLIC_HOST" ] && ! grep -q "$PUBLIC_HOST" /etc/hosts 2>/dev/null; then
+        echo "127.0.0.1 $PUBLIC_HOST" >> /etc/hosts
+    fi
+
+    # Register the admin client cert from the package as a well-known admin
+    # so RavenDB trusts it without a manual /admin/certificates roundtrip.
+    # RavenDB's setup wizard normally bootstraps the admin cert into the
+    # server's certificate database during first-start by deploying its
+    # pre-seeded RavenData dir alongside settings.json; we use a fresh data
+    # dir under the persistent volume, so we have to wire trust ourselves.
+    ADMIN_PFX=$(ls "$SETUP_DIR"/admin.client.certificate.*.pfx 2>/dev/null | head -1)
+    if [ -n "$ADMIN_PFX" ]; then
+        ADMIN_THUMB=$(openssl pkcs12 -in "$ADMIN_PFX" -nokeys -passin pass: 2>/dev/null \
+            | openssl x509 -fingerprint -sha1 -noout 2>/dev/null \
+            | sed 's|.*=||' | tr -d ':')
+        if [ -n "$ADMIN_THUMB" ]; then
+            export RAVEN_Security_WellKnownCertificates_Admin="$ADMIN_THUMB"
+        fi
+    fi
+fi
+
 cd /app/ravendb
 
-# RavenDB config comes from the settings.json overlay baked into the image
-# (docker/ai-appliance/ravendb-settings.json, copied to /app/ravendb/settings.json
-# during the build). The Dockerfile's ENV block defines RAVEN_AI_* vars for the
-# *appliance*, not RAVEN_* for RavenDB itself. Operators can still override
-# RavenDB at `docker run -e RAVEN_ServerUrl=...` time (RavenDB env-var binding
-# wins over settings.json) — only safe with mTLS, which the 8-week demo skips.
 exec dotnet /app/ravendb/Raven.Server.dll
