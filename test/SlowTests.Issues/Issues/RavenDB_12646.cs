@@ -20,10 +20,13 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task Backup_And_Restore_Revisions()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore(new Options
             {
+                Server = server,
                 ModifyDatabaseRecord = record => record.Settings[RavenConfiguration.GetKey(x => x.PerformanceHints.MaxNumberOfResults)] = "1"
             }))
             {
@@ -36,7 +39,7 @@ namespace SlowTests.Issues
                     session.Query<Employee>().ToList(); // this will generate performance hint
                 }
 
-                var database = await GetDatabase(store.Database);
+                var database = await GetDatabase(store.Database, server);
                 var outcome = database.NotificationCenter.Paging.UpdatePagingInternal(null, out string reason);
                 Assert.True(outcome, reason);
 
@@ -49,7 +52,7 @@ namespace SlowTests.Issues
                 var beforeBackupStats = store.Maintenance.Send(new GetStatisticsOperation());
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();

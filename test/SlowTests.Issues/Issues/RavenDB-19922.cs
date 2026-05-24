@@ -28,8 +28,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_MentorNode()
         {
-            DoNotReuseServer();
-
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -57,8 +55,11 @@ namespace SlowTests.Issues
 
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                string tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                string tag1;
+                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                {
+                    tag1 = db.ServerStore.BackupRunner.WhoseTaskIsIt(store.Database, taskId);
+                }
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
                 
@@ -69,8 +70,10 @@ namespace SlowTests.Issues
                 string tag2 = "";
                 await WaitForValueAsync(async () =>
                 {
-                    var dbi = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    tag2 = dbi.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                    {
+                        tag2 = db.ServerStore.BackupRunner.WhoseTaskIsIt(store.Database, taskId);
+                    }
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -83,8 +86,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeNotResponding()
         {
-            DoNotReuseServer();
-
             const int clusterSize = 3;
             string tag2 = "";
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -105,15 +106,19 @@ namespace SlowTests.Issues
             {
                 Urls = new[] { leaderServer.WebUrl },
                 Conventions = new DocumentConventions { DisableTopologyUpdates = true },
-                Database = databaseName
+                Database = databaseName,
             })
             {
                 var mentorNode = nodes.First(s => s.ServerStore.NodeTag != leaderServer.ServerStore.NodeTag);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *", mentorNode: mentorNode.ServerStore.NodeTag, name: "backup");
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
-                var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                string tag1 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                string tag1;
+                using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                {
+                    tag1 = db.ServerStore.BackupRunner.WhoseTaskIsIt(store.Database, taskId);
+                }
 
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
@@ -124,8 +129,10 @@ namespace SlowTests.Issues
                 //Wait for new responsible node
                 await WaitForValueAsync(async () =>
                 {
-                    var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                    tag2 = db.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    using (var db = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database))
+                    {
+                        tag2 = db.ServerStore.BackupRunner.WhoseTaskIsIt(store.Database, taskId);
+                    }
                     return tag1.Equals(tag2);
                 }, false);
                 Assert.NotEqual(tag1, tag2);
@@ -147,8 +154,8 @@ namespace SlowTests.Issues
 
                 await WaitForValueAsync(async () =>
                 {
-                    var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
+                    tag2 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
                     return tag1.Equals(tag2);
                 }, true);
 
@@ -161,8 +168,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_PinnedMentorNode()
         {
-            DoNotReuseServer();
-
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -193,7 +198,7 @@ namespace SlowTests.Issues
                 info += $"leader = {leaderServer.ServerStore.NodeTag}, mentorNode = {mentorNode.ServerStore.NodeTag}";
 
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                var tag1 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
 
                 Assert.Equal(mentorNode.ServerStore.NodeTag, tag1);
 
@@ -211,7 +216,7 @@ namespace SlowTests.Issues
                 await WaitForValueAsync(async () =>
                 {
                     database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    tag2 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -231,8 +236,8 @@ namespace SlowTests.Issues
                 await WaitForValueAsync(async () =>
                 {
                     database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
-                    return tag1.Equals(tag2);
+                    tag2 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
+                        return tag1.Equals(tag2);
                 }, true);
 
                 Assert.Equal(tag1, tag2);
@@ -242,8 +247,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_CurrentResponsibleNodeRemovedFromTopology()
         {
-            DoNotReuseServer();
-
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -272,7 +275,7 @@ namespace SlowTests.Issues
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                var tag1 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
                 CheckDecisionLog(leaderServer, new MentorNode(tag1, config.Name).ReasonForDecisionLog);
 
                 var removedNode = nodes.First(s => s.ServerStore.NodeTag == tag1);
@@ -283,7 +286,7 @@ namespace SlowTests.Issues
                 await WaitForValueAsync(async () =>
                 {
                     database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                    tag2 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                    tag2 = database.ServerStore.BackupRunner.WhoseTaskIsIt(database.Name, taskId);
                     return tag1.Equals(tag2);
                 }, false);
 
@@ -299,8 +302,6 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ResponsibleNodeForBackup_NonExistingResponsibleNode()
         {
-            DoNotReuseServer();
-
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -328,7 +329,7 @@ namespace SlowTests.Issues
                 long taskId = await InitializeBackup(store, clusterSize, leaderServer, nodes, config);
 
                 var database = await leaderServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
-                var tag1 = database.PeriodicBackupRunner.WhoseTaskIsIt(taskId);
+                var tag1 = database.ServerStore.BackupRunner.WhoseTaskIsIt(databaseName, taskId);
 
                 CheckDecisionLog(leaderServer, new NonExistingResponsibleNode(tag1, config.Name).ReasonForDecisionLog);
             }
@@ -337,8 +338,10 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Delete_Backup_Task_Values_After_Task_Deletion()
         {
+            DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options{Server = server}))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -347,11 +350,11 @@ namespace SlowTests.Issues
                 }
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
                 store.Maintenance.Send(new DeleteOngoingTaskOperation(backupTaskId, OngoingTaskType.Backup));
 
-                using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var responsibleNodeInfo = Raven.Server.Utils.BackupUtils.GetResponsibleNodeInfoFromCluster(context, store.Database, backupTaskId);

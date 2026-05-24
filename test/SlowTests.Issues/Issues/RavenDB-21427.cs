@@ -448,15 +448,16 @@ namespace SlowTests.Issues
         public async Task Prevent_License_Downgrade_PeriodicBackup()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.PeriodicBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_COMM, LimitType.PeriodicBackup);
 
-                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_DEV);
-                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_DEV);
+                await LicenseHelper.ChangeLicense(server, LicenseTestBase.RL_PRO);
             }
         }
 
@@ -464,17 +465,18 @@ namespace SlowTests.Issues
         public async Task Prevent_Put_PeriodicBackup()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *");
                 var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
                 Assert.Equal(LimitType.PeriodicBackup, exception.LimitType);
 
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_PRO);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_DEV);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_DEV);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
             }
         }
@@ -483,8 +485,9 @@ namespace SlowTests.Issues
         public async Task Prevent_License_Downgrade_Encrypted_Backup()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var config = Backup.CreateBackupConfiguration(backupPath,
                     fullBackupFrequency: "* */1 * * *",
@@ -495,10 +498,10 @@ namespace SlowTests.Issues
                         Key = "OI7Vll7DroXdUORtc6Uo64wdAk1W0Db9ExXXgcg5IUs="
                     });
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.EncryptedBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_COMM, LimitType.EncryptedBackup);
 
-                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_DEV);
-                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_DEV);
+                await LicenseHelper.ChangeLicense(server, LicenseTestBase.RL_PRO);
             }
         }
 
@@ -506,8 +509,9 @@ namespace SlowTests.Issues
         public async Task Prevent_License_Downgrade_Snapshot()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var config = Backup.CreateBackupConfiguration(backupPath,
                     fullBackupFrequency: "* */1 * * *",
@@ -515,10 +519,10 @@ namespace SlowTests.Issues
                     backupType: BackupType.Snapshot);
 
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.SnapshotBackup);
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_PRO, LimitType.SnapshotBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_COMM, LimitType.SnapshotBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_PRO, LimitType.SnapshotBackup);
 
-                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_DEV);
+                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_DEV);
             }
         }
 
@@ -526,9 +530,10 @@ namespace SlowTests.Issues
         public async Task Prevent_Put_Snapshot_Backup()
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
 
                 var config = new PeriodicBackupConfiguration
                 {
@@ -544,12 +549,12 @@ namespace SlowTests.Issues
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
                 Assert.Equal(LimitType.SnapshotBackup, exception.LimitType);
 
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_PRO);
                 exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
                 Assert.Equal(LimitType.SnapshotBackup, exception.LimitType);
 
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_DEV);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_DEV);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
             }
         }
@@ -558,7 +563,8 @@ namespace SlowTests.Issues
         public async Task Prevent_License_Downgrade_Snapshot_Backup()
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var config = new PeriodicBackupConfiguration
                 {
@@ -571,9 +577,9 @@ namespace SlowTests.Issues
                     }
                 };
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.SnapshotBackup);
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_PRO, LimitType.SnapshotBackup);
-                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_DEV);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_COMM, LimitType.SnapshotBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_PRO, LimitType.SnapshotBackup);
+                await LicenseHelper.ChangeLicense(server, LicenseTestBase.RL_DEV);
             }
         }
 
@@ -581,9 +587,10 @@ namespace SlowTests.Issues
         public async Task Prevent_Put_Cloud_Backup()
         {
             DoNotReuseServer();
-            using (var store = GetDocumentStore())
+            using var server = GetNewServer();
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
                 var config = new PeriodicBackupConfiguration
                 {
                     BackupType = BackupType.Backup,
@@ -600,10 +607,10 @@ namespace SlowTests.Issues
                     await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config)));
                 Assert.Equal(LimitType.CloudBackup, exception.LimitType);
 
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_PRO);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
 
-                await LicenseHelper.PutLicense(Server, LicenseTestBase.RL_DEV);
+                await LicenseHelper.PutLicense(server, LicenseTestBase.RL_DEV);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
             }
         }
@@ -612,8 +619,9 @@ namespace SlowTests.Issues
         public async Task Prevent_License_Downgrade_Cloud_Backup()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 var config = new PeriodicBackupConfiguration
                 {
@@ -628,10 +636,10 @@ namespace SlowTests.Issues
                     }
                 };
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                await LicenseHelper.FailToChangeLicense(Server, LicenseTestBase.RL_COMM, LimitType.CloudBackup);
+                await LicenseHelper.FailToChangeLicense(server, LicenseTestBase.RL_COMM, LimitType.CloudBackup);
 
-                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_DEV);
-                await LicenseHelper.ChangeLicense(Server, LicenseTestBase.RL_PRO);
+                await LicenseHelper.ChangeLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_DEV);
+                await LicenseHelper.ChangeLicense(server, LicenseTestBase.RL_PRO);
             }
         }
 
@@ -639,10 +647,11 @@ namespace SlowTests.Issues
         public async Task Put_Disabled_PeriodicBackup()
         {
             DoNotReuseServer();
+            using var server = GetNewServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server }))
             {
-                await LicenseHelper.PutLicenseAndDisableRevisionCompression(Server, store, LicenseTestBase.RL_COMM);
+                await LicenseHelper.PutLicenseAndDisableRevisionCompression(server, store, LicenseTestBase.RL_COMM);
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* */1 * * *", incrementalBackupFrequency: "* */2 * * *", disabled: true);
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
             }

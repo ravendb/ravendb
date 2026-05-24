@@ -377,7 +377,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
         }
     }
 
-    protected async Task CanBackupRemoteAttachmentsInternal(int attachmentsCount, int size)
+    protected async Task CanBackupRemoteAttachmentsInternal(int attachmentsCount, int size, RavenServer server = null)
     {
         await using (var holder = CreateCloudSettings())
         {
@@ -385,12 +385,12 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
             var ids = new List<(string Id, string Collection)>();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server ?? Server }))
             {
                 var identifier = await CanUploadRemoteAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(server ?? Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();
@@ -1075,7 +1075,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
             }
         }
     }
-    protected async Task CanUploadRemoteAttachmentToCloudFromBackupAndGet(int attachmentsCount, int size)
+    protected async Task CanUploadRemoteAttachmentToCloudFromBackupAndGet(int attachmentsCount, int size, RavenServer server = null)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
         await using (var holder = CreateCloudSettings())
@@ -1083,7 +1083,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
             int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
             var ids = new List<(string Id, string Collection)>();
             List<string> collections = null;
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(new Options { Server = server ?? Server }))
             {
                 var identifier = await PutRemoteAttachmentsConfiguration(store, Settings, collections);
                 await CreateDocs(store, docsCount, ids, collections);
@@ -1091,7 +1091,7 @@ public abstract class RemoteAttachmentsHolder<TSettings> : RemoteAttachmentsHold
 
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
-                await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
+                await Backup.UpdateConfigAndRunBackupAsync(server ?? Server, config, store);
 
                 // restore the database with a different name
                 var restoredDatabaseName = GetDatabaseName();

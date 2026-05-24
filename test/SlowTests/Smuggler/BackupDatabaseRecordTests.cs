@@ -76,6 +76,7 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64)]
         public async Task CanExportAndImportDatabaseRecord()
         {
+            DoNotReuseServer();
             var file = Path.GetTempFileName();
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -322,8 +323,9 @@ namespace SlowTests.Smuggler
 
                     operation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
-                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
-                    var backups = periodicBackupRunner.PeriodicBackups;
+
+                    var BackupRunner = Server.ServerStore.BackupRunner;
+                    var backups = BackupRunner.GetDatabaseBackups(store2.Database);
 
                     Assert.Equal("Backup", backups.First().Configuration.Name);
                     Assert.Equal(true, backups.First().Configuration.IncrementalBackupFrequency.Equals("0 */6 * * *"));
@@ -670,6 +672,7 @@ namespace SlowTests.Smuggler
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportMergedDatabaseRecord()
         {
+            DoNotReuseServer();
             var file = Path.GetTempFileName();
             try
             {
@@ -1104,9 +1107,7 @@ namespace SlowTests.Smuggler
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
                     int disabled = 0;
-
-                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store2)).PeriodicBackupRunner;
-                    var backups = periodicBackupRunner.PeriodicBackups;
+                    var backups = Server.ServerStore.BackupRunner.GetDatabaseBackups(store2.Database);
 
                     disabled = 0;
                     Assert.Equal(3, backups.Count);
@@ -1227,6 +1228,7 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, RavenArchitecture.AllX64, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var dummy = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
             string privateKey;
@@ -1514,12 +1516,11 @@ namespace SlowTests.Smuggler
                     DatabaseName = databaseName,
                 }))
                 {
-                    var periodicBackupRunner = (await Databases.GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
-                    var backups = periodicBackupRunner.PeriodicBackups;
+                    var restoredBackups = Server.ServerStore.BackupRunner.GetDatabaseBackups(databaseName);
 
-                    Assert.Equal(2, backups.Count);
-                    Assert.Equal(true, backups.Any(x => x.Configuration.Name.Equals("Backup")));
-                    foreach (var backup in backups)
+                    Assert.Equal(2, restoredBackups.Count);
+                    Assert.Equal(true, restoredBackups.Any(x => x.Configuration.Name.Equals("Backup")));
+                    foreach (var backup in restoredBackups)
                     {
                         if (!backup.Configuration.Name.Equals("Backup"))
                             continue;
@@ -1645,6 +1646,7 @@ namespace SlowTests.Smuggler
         [RavenMultiplatformFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions, RavenArchitecture.AllX64)]
         public async Task CanRestoreSubscriptionsFromBackup()
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
@@ -1727,6 +1729,7 @@ namespace SlowTests.Smuggler
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)
         {
+            DoNotReuseServer();
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
             using (var store = GetDocumentStore())
