@@ -511,6 +511,7 @@ namespace Raven.Server.Documents
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
                 DeleteLocalBackupStatuses(dbName, throwOnError: true);
+                _serverStore.BackupRunner?.RemoveDatabase(dbName);
             }
             finally
             {

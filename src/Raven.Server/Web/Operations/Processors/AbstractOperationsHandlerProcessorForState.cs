@@ -23,7 +23,7 @@ internal abstract class AbstractOperationsHandlerProcessorForState<TRequestHandl
     public override async ValueTask ExecuteAsync()
     {
         var id = RequestHandler.GetLongQueryString("id");
-
+        var server = RequestHandler.ServerStore.NodeTag;
         var state = GetOperationState(id);
 
         if (state == null)

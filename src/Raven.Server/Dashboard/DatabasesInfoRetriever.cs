@@ -29,6 +29,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage;
 using Raven.Server.Utils;
@@ -313,7 +314,7 @@ namespace Raven.Server.Dashboard
                             ReplicationFactor = replicationFactor,
                             ErroredIndexesCount = indexStorage.GetIndexes().Count(index => index.State == IndexState.Error),
                             IndexingErrorsCount = indexStorage.GetIndexes().Sum(index => index.GetErrorCount()),
-                            BackupInfo = database.PeriodicBackupRunner?.GetBackupInfo(context),
+                            BackupInfo = database.ServerStore.BackupRunner?.GetBackupInfo(context, database.Name),
                             OngoingTasksCount = ongoingTasksCount,
                             Online = true
                         };
@@ -391,7 +392,8 @@ namespace Raven.Server.Dashboard
             long genAiCountOnNode = GetTaskCountOnNode<GenAiConfiguration>(database, dbRecord, serverStore, database.EtlLoader.GenAiDestinations,
                 task => EtlLoader.GetProcessState(task.Transforms, database, task.Name));
 
-            var periodicBackupCount = database.PeriodicBackupRunner.PeriodicBackups.Count;
+            database.ServerStore.BackupRunner.BackupsPerDatabasePerTaskId.TryGetValue(database.Name, out var databaseBackupStates);
+            var periodicBackupCount = databaseBackupStates?.Count ?? 0;
             long periodicBackupCountOnNode = BackupUtils.GetTasksCountOnNode(serverStore, database.Name, context);
 
             var subscriptionCount = database.SubscriptionStorage.GetAllSubscriptionsCount();

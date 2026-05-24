@@ -21,8 +21,6 @@ internal sealed class PeriodicBackupInfo
 
     public DateTime? CreatedAt { get; set; }
 
-    public bool Disposed { get; set; }
-
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -33,8 +31,7 @@ internal sealed class PeriodicBackupInfo
             [nameof(FullBackupFrequency)] = FullBackupFrequency,
             [nameof(IncrementalBackupFrequency)] = IncrementalBackupFrequency,
             [nameof(NextBackup)] = NextBackup?.ToJson(),
-            [nameof(CreatedAt)] = CreatedAt?.GetDefaultRavenFormat(),
-            [nameof(Disposed)] = Disposed
+            [nameof(CreatedAt)] = CreatedAt?.GetDefaultRavenFormat()
         };
     }
 }

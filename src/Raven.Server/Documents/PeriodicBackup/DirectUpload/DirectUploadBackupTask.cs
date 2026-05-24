@@ -1,6 +1,7 @@
 using System.IO;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Backups;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
@@ -8,7 +9,7 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 public class DirectUploadBackupTask : BackupTask
 {
     internal DirectUploadBackupTask(DocumentDatabase database, BackupParameters backupParameters,
-        BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, PeriodicBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)
+        BackupConfiguration configuration, OperationCancelToken token, RavenLogger logger, ServerBackupRunner.TestingStuff forTestingPurposes = null) : base(database, backupParameters, configuration, token, logger, forTestingPurposes)
     {
     }
 
