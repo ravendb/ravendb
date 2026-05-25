@@ -1,5 +1,6 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { RecursiveRequired } from "components/utils/common";
+import { getDuplicateRootTableErrors } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTableWarnings";
 import { Resolver } from "react-hook-form/dist/types/resolvers";
 import * as yup from "yup";
 
@@ -105,7 +106,7 @@ const cdcSinkTableSchema = yup.object({
     sourceTableSchema: yup.string().nullable().required(),
 });
 
-const editCdcSinkTaskSchema = yup.object({
+export const editCdcSinkTaskSchema = yup.object({
     name: yup.string().nullable().required(),
     state: yup.string<CdcTaskState>().required(),
     isSetResponsibleNode: yup.boolean(),
@@ -127,7 +128,23 @@ const editCdcSinkTaskSchema = yup.object({
         .min(1, "At least one table is required")
         .test("unique-collection-names", "Collection names must be unique", (items) =>
             hasUniqueValues(items, (item) => item.collectionName)
-        ),
+        )
+        .test("unique-root-source-tables", function (items) {
+            const duplicateErrors = getDuplicateRootTableErrors(items);
+
+            if (duplicateErrors.length === 0) {
+                return true;
+            }
+
+            return new yup.ValidationError(
+                duplicateErrors.map(({ index, message }) =>
+                    this.createError({
+                        path: `tables.${index}.sourceTableName`,
+                        message,
+                    })
+                )
+            );
+        }),
 });
 
 export type EditCdcSinkTaskFormData = RecursiveRequired<yup.InferType<typeof editCdcSinkTaskSchema>>;

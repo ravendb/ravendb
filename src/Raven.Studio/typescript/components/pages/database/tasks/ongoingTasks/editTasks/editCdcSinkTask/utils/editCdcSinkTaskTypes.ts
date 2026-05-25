@@ -37,12 +37,15 @@ export type FormLinkedTable = FormRootTable["linkedTables"][number];
 interface ExplorerRowSchema {
     type: "schema";
     path: string;
+    rowKey: string;
     label: string;
 }
 
 export interface ExplorerRowRootTable {
     type: "root";
     path: RootTablePath;
+    rowKey: string;
+    warningMessages?: string[];
     table: FormRootTable;
     hasChildren: boolean;
     isExpanded: boolean;
@@ -51,6 +54,8 @@ export interface ExplorerRowRootTable {
 export interface ExplorerRowLinkedTable {
     type: "linked";
     path: LinkedTablePath;
+    rowKey: string;
+    warningMessages?: string[];
     table: FormLinkedTable;
     isRootDisabled: boolean;
     depth: number;
@@ -59,6 +64,8 @@ export interface ExplorerRowLinkedTable {
 export interface ExplorerRowEmbeddedTable {
     type: "embedded";
     path: EmbeddedTablePath;
+    rowKey: string;
+    warningMessages?: string[];
     table: FormEmbeddedTable;
     hasChildren: boolean;
     isExpanded: boolean;

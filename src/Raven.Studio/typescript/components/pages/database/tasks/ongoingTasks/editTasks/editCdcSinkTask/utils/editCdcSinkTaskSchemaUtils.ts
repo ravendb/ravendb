@@ -51,7 +51,7 @@ export function getSourceTableOptionLabel(table: CdcSinkSourceTable) {
 }
 
 export function getSourceTableOptions(
-    schema: CdcSinkSourceSchema | null,
+    schema: CdcSinkSourceSchema,
     sourceTableSchema: string,
     excludedTable?: { sourceTableSchema: string; sourceTableName: string }
 ): CdcSinkSourceTableOption[] {
@@ -73,7 +73,7 @@ export function getSourceTableOptions(
         }));
 }
 
-export function getSourceSchemaOptions(schema: CdcSinkSourceSchema | null): SelectOption<string>[] {
+export function getSourceSchemaOptions(schema: CdcSinkSourceSchema): SelectOption<string>[] {
     const schemas = new Set((schema?.Tables ?? []).filter(isTableSupported).map((table) => table.SourceTableSchema));
 
     return Array.from(schemas)
@@ -84,11 +84,7 @@ export function getSourceSchemaOptions(schema: CdcSinkSourceSchema | null): Sele
         }));
 }
 
-export function findSourceTable(
-    schema: CdcSinkSourceSchema | null,
-    sourceTableSchema: string,
-    sourceTableName: string
-) {
+export function findSourceTable(schema: CdcSinkSourceSchema, sourceTableSchema: string, sourceTableName: string) {
     return (schema?.Tables ?? []).find(
         (table) => table.SourceTableSchema === sourceTableSchema && table.SourceTableName === sourceTableName
     );

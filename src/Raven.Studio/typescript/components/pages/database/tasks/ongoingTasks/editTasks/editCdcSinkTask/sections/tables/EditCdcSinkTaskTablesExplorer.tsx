@@ -2,7 +2,7 @@ import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 import { Icon } from "components/common/Icon";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import { FieldPath, UseFieldArrayReturn } from "react-hook-form";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -23,6 +23,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
     const dispatch = useAppDispatch();
     const isFieldMappingExpandedByDefault = useAppSelector(editCdcSinkTaskSelectors.isFieldMappingExpandedByDefault);
     const [filter, setFilter] = useState("");
+    const rootFieldIds = useMemo(() => tablesFieldArray.fields.map((field) => field.id), [tablesFieldArray.fields]);
 
     const handleAddRootTable = () => {
         tablesFieldArray.append({
@@ -125,7 +126,7 @@ export default function EditCdcSinkTaskTablesExplorer({ tablesFieldArray }: Edit
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
             />
-            <EditCdcSinkTaskTableItems filter={filter} />
+            <EditCdcSinkTaskTableItems filter={filter} rootFieldIds={rootFieldIds} />
         </div>
     );
 }

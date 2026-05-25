@@ -171,7 +171,7 @@ export function useEditCdcSinkTaskSourceTableAutoFill(path: AutoFillPath, mode: 
 
 function getEmbeddedPropertyName(
     selectedTable: CdcSinkSourceTable,
-    relation: { foreignKey: CdcSinkSourceForeignKey; type: "selectedToParent" | "parentToSelected" } | null
+    relation: { foreignKey: CdcSinkSourceForeignKey; type: "selectedToParent" | "parentToSelected" }
 ) {
     if (relation?.type === "parentToSelected") {
         return relation.foreignKey.Columns.map(propertyNameFromJoinColumn).join("And");

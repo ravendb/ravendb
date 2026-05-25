@@ -14,10 +14,17 @@ import Dropdown from "react-bootstrap/Dropdown";
 import { useFormContext } from "react-hook-form";
 import { FormErrorIcon } from "components/common/Form";
 import { editCdcSinkTaskConstants } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskConstants";
+import { EditCdcSinkTaskTableWarningIcon } from "./EditCdcSinkTaskTableWarningIcon";
 
 const { expandButtonWidthPx } = editCdcSinkTaskConstants;
 
-export function EditCdcSinkTaskRootTableItem({ path, table, isExpanded, hasChildren }: ExplorerRowRootTable) {
+export function EditCdcSinkTaskRootTableItem({
+    path,
+    table,
+    isExpanded,
+    hasChildren,
+    warningMessages,
+}: ExplorerRowRootTable) {
     const dispatch = useAppDispatch();
     const tableActions = useEditCdcSinkTaskTableActions();
     const isActive = useAppSelector(editCdcSinkTaskSelectors.isActiveTable(path));
@@ -64,6 +71,7 @@ export function EditCdcSinkTaskRootTableItem({ path, table, isExpanded, hasChild
                     {label}
                 </span>
                 <FormErrorIcon control={control} paths={[path]} iconClassName="font-size-14" />
+                <EditCdcSinkTaskTableWarningIcon messages={warningMessages} className="font-size-14" />
             </Button>
             <DropdownWithPortalMenu>
                 <Dropdown.Toggle

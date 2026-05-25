@@ -1,19 +1,38 @@
 import { FormGroup, FormInput, FormLabel, FormSelectAutocomplete } from "components/common/Form";
 import FormStringValueList from "components/common/formFields/FormStringValueList";
+import RichAlert from "components/common/RichAlert";
 import { useEditCdcSinkTaskSourceTableAutoFill } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskSourceTableAutoFill";
+import {
+    analyzeRootTables,
+    getLinkedTableWarningMessagesFromAnalysis,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTableWarnings";
 import { LinkedTablePath } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
-import { useFormContext } from "react-hook-form";
+import { useMemo } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 
 export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: LinkedTablePath }) {
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
+    const linkedTable = useWatch({ control, name: path });
+    const rootTables = useWatch({ control, name: "tables" });
     const { handleSourceTableChange, sourceSchemaOptions, sourceTableOptions } = useEditCdcSinkTaskSourceTableAutoFill(
         path,
         "linked"
     );
 
+    const rootTablesAnalysis = useMemo(() => analyzeRootTables(rootTables), [rootTables]);
+    const warningMessages = useMemo(
+        () => getLinkedTableWarningMessagesFromAnalysis(rootTablesAnalysis, linkedTable),
+        [rootTablesAnalysis, linkedTable]
+    );
+
     return (
         <div>
+            {warningMessages.map((warning) => (
+                <RichAlert key={warning} variant="warning" className="mb-3">
+                    {warning}
+                </RichAlert>
+            ))}
             <div className="grid mb-3">
                 <FormGroup className="g-col-6" marginClass="m-0">
                     <FormLabel>Source schema</FormLabel>

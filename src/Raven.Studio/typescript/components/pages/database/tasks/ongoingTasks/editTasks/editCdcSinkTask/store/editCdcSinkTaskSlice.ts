@@ -26,7 +26,7 @@ export type CdcActiveTable =
 
 interface EditCdcSinkTaskState {
     selectedConnectionString: SqlConnectionString;
-    sourceSchema: CdcSinkSourceSchema | null;
+    sourceSchema: CdcSinkSourceSchema;
     activeTable?: CdcActiveTable;
     expandedTables: Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean>>;
     isFieldMappingExpandedByDefault: boolean;
@@ -71,7 +71,7 @@ export const editCdcSinkTaskSlice = createSlice({
             state.selectedConnectionString = action.payload;
             state.sourceSchema = null;
         },
-        sourceSchemaSet: (state, action: PayloadAction<CdcSinkSourceSchema | null>) => {
+        sourceSchemaSet: (state, action: PayloadAction<CdcSinkSourceSchema>) => {
             state.sourceSchema = action.payload;
         },
         activeTableSet: (state, action: PayloadAction<CdcActiveTable>) => {

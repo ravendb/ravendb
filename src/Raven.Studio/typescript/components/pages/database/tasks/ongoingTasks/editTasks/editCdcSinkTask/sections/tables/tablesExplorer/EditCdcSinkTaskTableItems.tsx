@@ -7,6 +7,7 @@ import {
     ExplorerRow,
     FormEmbeddedTable,
     FormRootTable,
+    getRootTablePath,
 } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTypes";
 import { EditCdcSinkTaskFormData } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskValidation";
 import _ from "lodash";
@@ -17,6 +18,13 @@ import { EditCdcSinkTaskLinkedTableItem } from "./EditCdcSinkTaskLinkedTableItem
 import { EditCdcSinkTaskEmbeddedTableItem } from "./EditCdcSinkTaskEmbeddedTableItem";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { editCdcSinkTaskConstants } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskConstants";
+import {
+    analyzeRootTables,
+    getEmbeddedTableWarningMessagesFromAnalysis,
+    getLinkedTableWarningMessagesFromAnalysis,
+    getRootTableWarningMessagesFromAnalysis,
+    RootTablesAnalysis,
+} from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/utils/editCdcSinkTaskTableWarnings";
 
 const { explorerRowHeightPx } = editCdcSinkTaskConstants;
 
@@ -24,65 +32,43 @@ type ExpandedTables = Partial<Record<FieldPath<EditCdcSinkTaskFormData>, boolean
 
 interface EditCdcSinkTaskTableItemsProps {
     filter: string;
+    rootFieldIds: string[];
 }
 
-export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsProps) {
+interface BuildExplorerRowsArgs {
+    allTables: FormRootTable[];
+    expandedTables: ExpandedTables;
+    filter: string;
+    rootFieldIds: string[];
+}
+
+interface IndexedRootTable {
+    index: number;
+    table: FormRootTable;
+}
+
+export function EditCdcSinkTaskTableItems({ filter, rootFieldIds }: EditCdcSinkTaskTableItemsProps) {
     const parentRef = useRef<HTMLDivElement>(null);
     const expandedTables = useAppSelector((state) => state.editCdcSinkTask.expandedTables);
     const { control } = useFormContext<EditCdcSinkTaskFormData>();
     const allTables = useWatch({ control, name: "tables" }) ?? [];
 
-    const filteredTables = useMemo(() => {
-        const normalizedFilter = filter.trim().toLowerCase();
-
-        const filteredGroupedTables = Object.entries(
-            _.groupBy(allTables, (table) => table?.sourceTableSchema || "public")
-        )
-            .map(([schema, rootTables]) => ({
-                schema,
-                tables: normalizedFilter
-                    ? rootTables.filter((table) =>
-                          (table?.sourceTableName ?? "").toLowerCase().includes(normalizedFilter)
-                      )
-                    : rootTables,
-            }))
-            .filter((group) => group.tables.length > 0);
-
-        return filteredGroupedTables.flatMap(({ schema, tables }) => {
-            const rows: ExplorerRow[] = [{ type: "schema", path: `schema:${schema}`, label: schema }];
-
-            tables.forEach((table, idx) => {
-                const rootPath = `tables.${idx}` as const;
-                const isExpanded = Boolean(expandedTables[rootPath]);
-                rows.push({
-                    type: "root",
-                    path: rootPath,
-                    table,
-                    hasChildren: hasChildren(table),
-                    isExpanded,
-                });
-
-                if (expandedTables[rootPath]) {
-                    addChildRows({
-                        rows,
-                        parentPath: rootPath,
-                        table,
-                        isRootDisabled: Boolean(table?.disabled),
-                        depth: 1,
-                        expandedTables,
-                    });
-                }
-            });
-
-            return rows;
-        });
-    }, [filter, expandedTables, allTables]);
+    const filteredTables = useMemo(
+        () =>
+            buildExplorerRows({
+                allTables,
+                expandedTables,
+                filter,
+                rootFieldIds,
+            }),
+        [filter, expandedTables, allTables, rootFieldIds]
+    );
 
     const virtualizer = useVirtualizer({
         count: filteredTables.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => explorerRowHeightPx,
-        getItemKey: (index) => filteredTables[index].path,
+        getItemKey: (index) => filteredTables[index].rowKey,
         overscan: 4,
     });
     const virtualRows = virtualizer.getVirtualItems();
@@ -131,6 +117,72 @@ export function EditCdcSinkTaskTableItems({ filter }: EditCdcSinkTaskTableItemsP
     );
 }
 
+export function buildExplorerRows({ allTables, expandedTables, filter, rootFieldIds }: BuildExplorerRowsArgs) {
+    const normalizedFilter = filter.trim().toLowerCase();
+    const rootTablesAnalysis = analyzeRootTables(allTables);
+
+    const indexedTables: IndexedRootTable[] = allTables.map((table, index) => ({
+        table,
+        index,
+    }));
+
+    const filteredGroupedTables = Object.entries(
+        _.groupBy(indexedTables, ({ table }) => table?.sourceTableSchema || "public")
+    )
+        .map(([schema, rootTables]) => ({
+            schema,
+            tables: normalizedFilter
+                ? rootTables.filter(({ table }) =>
+                      (table?.sourceTableName ?? "").toLowerCase().includes(normalizedFilter)
+                  )
+                : rootTables,
+        }))
+        .filter((group) => group.tables.length > 0);
+
+    return filteredGroupedTables.flatMap(({ schema, tables }) => {
+        const rows: ExplorerRow[] = [
+            {
+                type: "schema",
+                path: `schema:${schema}`,
+                rowKey: `schema:${schema}`,
+                label: schema,
+            },
+        ];
+
+        tables.forEach(({ table, index }) => {
+            const rootPath = getRootTablePath(index);
+            const rootRowKey = getRootRowKey(rootFieldIds, index, rootPath);
+            const isExpanded = Boolean(expandedTables[rootPath]);
+            const warningMessages = getRootTableWarningMessagesFromAnalysis(rootTablesAnalysis, table);
+
+            rows.push({
+                type: "root",
+                path: rootPath,
+                rowKey: rootRowKey,
+                warningMessages,
+                table,
+                hasChildren: hasChildren(table),
+                isExpanded,
+            });
+
+            if (isExpanded) {
+                addChildRows({
+                    rows,
+                    parentPath: rootPath,
+                    rowKeyPrefix: rootRowKey,
+                    table,
+                    isRootDisabled: Boolean(table?.disabled),
+                    depth: 1,
+                    expandedTables,
+                    rootTablesAnalysis,
+                });
+            }
+        });
+
+        return rows;
+    });
+}
+
 function ExplorerRowItem({ row }: { row: ExplorerRow }) {
     const rowType = row.type;
     switch (rowType) {
@@ -172,18 +224,32 @@ function getActiveSchemaLabel(rows: ExplorerRow[], scrollOffset: number): string
 interface AddChildRowsArgs {
     rows: ExplorerRow[];
     parentPath: string;
+    rowKeyPrefix: string;
     table: FormRootTable | FormEmbeddedTable;
     isRootDisabled: boolean;
     depth: number;
     expandedTables: ExpandedTables;
+    rootTablesAnalysis: RootTablesAnalysis;
 }
 
-function addChildRows({ rows, parentPath, table, isRootDisabled, depth, expandedTables }: AddChildRowsArgs) {
+function addChildRows({
+    rows,
+    parentPath,
+    rowKeyPrefix,
+    table,
+    isRootDisabled,
+    depth,
+    expandedTables,
+    rootTablesAnalysis,
+}: AddChildRowsArgs) {
     table?.linkedTables?.forEach((linkedTable, idx) => {
         const path = castToLinkedTablePath(`${parentPath}.linkedTables.${idx}`);
+        const warningMessages = getLinkedTableWarningMessagesFromAnalysis(rootTablesAnalysis, linkedTable);
         rows.push({
             type: "linked",
             path,
+            rowKey: `${rowKeyPrefix}:linked:${idx}`,
+            warningMessages,
             table: linkedTable,
             isRootDisabled,
             depth,
@@ -192,10 +258,14 @@ function addChildRows({ rows, parentPath, table, isRootDisabled, depth, expanded
 
     table?.embeddedTables?.forEach((embeddedTable, idx) => {
         const path = castToEmbeddedTablePath(`${parentPath}.embeddedTables.${idx}`);
+        const rowKey = `${rowKeyPrefix}:embedded:${idx}`;
         const isExpanded = Boolean(expandedTables[path]);
+        const warningMessages = getEmbeddedTableWarningMessagesFromAnalysis(rootTablesAnalysis, embeddedTable);
         rows.push({
             type: "embedded",
             path,
+            rowKey,
+            warningMessages,
             table: embeddedTable,
             isRootDisabled,
             depth,
@@ -207,10 +277,12 @@ function addChildRows({ rows, parentPath, table, isRootDisabled, depth, expanded
             addChildRows({
                 rows,
                 parentPath: path,
+                rowKeyPrefix: rowKey,
                 table: embeddedTable,
                 isRootDisabled,
                 depth: depth + 1,
                 expandedTables,
+                rootTablesAnalysis,
             });
         }
     });
@@ -218,4 +290,8 @@ function addChildRows({ rows, parentPath, table, isRootDisabled, depth, expanded
 
 function hasChildren(table: FormRootTable | FormEmbeddedTable) {
     return Boolean(table?.linkedTables?.length || table?.embeddedTables?.length);
+}
+
+function getRootRowKey(rootFieldIds: string[], index: number, rootPath: ReturnType<typeof getRootTablePath>) {
+    return `root:${rootFieldIds[index] ?? rootPath}`;
 }
