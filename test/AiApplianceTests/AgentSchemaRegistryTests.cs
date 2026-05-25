@@ -9,14 +9,14 @@ namespace AiApplianceTests;
 
 public class AgentSchemaRegistryTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void Empty_registry_resolves_to_empty_All()
     {
         var registry = new AgentSchemaRegistry([]);
         Assert.Empty(registry.All);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void TryGet_returns_false_for_unknown_identifier()
     {
         var registry = new AgentSchemaRegistry([new FakeSchema("a")]);
@@ -24,7 +24,7 @@ public class AgentSchemaRegistryTests(ITestOutputHelper output) : NoDisposalNeed
         Assert.Null(s);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void TryGet_resolves_registered_schemas_case_insensitively()
     {
         var fake = new FakeSchema("Demo-Agent");
@@ -33,14 +33,14 @@ public class AgentSchemaRegistryTests(ITestOutputHelper output) : NoDisposalNeed
         Assert.Same(fake, s);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void Require_throws_when_identifier_is_missing()
     {
         var registry = new AgentSchemaRegistry([new FakeSchema("a")]);
         Assert.Throws<KeyNotFoundException>(() => registry.Require("b"));
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void Duplicate_identifier_in_DI_is_a_startup_error()
     {
         var ex = Assert.Throws<InvalidOperationException>(() =>

@@ -25,7 +25,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 {
     // ---- W7 ----
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Agent_endpoint_returns_404_for_unknown_slug()
     {
         var store = GetDocumentStore();
@@ -40,7 +40,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Agent_endpoint_returns_agentId_for_known_slug()
     {
         var store = GetDocumentStore();
@@ -63,7 +63,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
     // ---- W8 ----
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_returns_404_for_unknown_slug()
     {
         var store = GetDocumentStore();
@@ -78,7 +78,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_returns_widgetId_for_known_app()
     {
         var store = GetDocumentStore();
@@ -100,7 +100,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.StartsWith("wgt_", widgetId);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_rejects_unsupported_type()
     {
         var store = GetDocumentStore();

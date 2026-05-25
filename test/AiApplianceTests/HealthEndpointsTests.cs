@@ -15,7 +15,7 @@ public class HealthEndpointsTests(ITestOutputHelper output, HealthEndpointsTests
 {
     private readonly Factory _factory = factory;
 
-    [RavenFact(RavenTestCategory.Monitoring)]
+    [RavenFact(RavenTestCategory.AiAppliance | RavenTestCategory.Monitoring)]
     public async Task Returns_503_before_bootstrap_phase_is_ready()
     {
         _factory.Bootstrap.MarkFailed("not yet");
@@ -24,7 +24,7 @@ public class HealthEndpointsTests(ITestOutputHelper output, HealthEndpointsTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
     }
 
-    [RavenFact(RavenTestCategory.Monitoring)]
+    [RavenFact(RavenTestCategory.AiAppliance | RavenTestCategory.Monitoring)]
     public async Task Returns_200_once_bootstrap_phase_is_ready()
     {
         _factory.Bootstrap.MarkReady();

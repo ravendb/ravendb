@@ -30,7 +30,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
 {
     private const string HardcodedLicenseKey = "egor-ai-test-license";
 
-    [RavenFact(RavenTestCategory.Sinks, NpgSqlRequired = true)]
+    [RavenFact(RavenTestCategory.AiAppliance | RavenTestCategory.Sinks, NpgSqlRequired = true)]
     public async Task EndToEnd_FullApplianceFlow_PostgresSourceToIFrameAgent_Works()
     {
         // ---------- T1. Mock license API serving the real setup-package zip ----------
