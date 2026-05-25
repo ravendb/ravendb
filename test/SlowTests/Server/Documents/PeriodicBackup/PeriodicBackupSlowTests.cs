@@ -4365,6 +4365,53 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
         
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task BackupTypeChange_WhenBackupRunningAndCanceled_ShouldNotCrashServer()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession())
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    await session.StoreAsync(new User(), "users/" + i);
+                }
+
+                await session.SaveChangesAsync();
+            }
+            
+            var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 *");
+            var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+            var taskId = result.TaskId;
+
+            Backup.WaitForResponsibleNodeUpdate(Server.ServerStore, store.Database, taskId);
+
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            var runner = database.PeriodicBackupRunner;
+
+            var holdTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            runner.ForTestingPurposesOnly().OnBackupTaskRunHoldBackupExecution = holdTcs;
+
+            await store.Maintenance.SendAsync(new StartBackupOperation(isFullBackup: true, taskId));
+
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) != null, true),
+                "Backup did not start within the expected time");
+
+            config.TaskId = taskId;
+            config.BackupType = BackupType.Snapshot;
+            config.Disabled = true;
+            await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+
+            holdTcs.SetResult(null);
+
+            Assert.True(WaitForValue(() => runner.OnGoingBackup(taskId) == null, true, timeout: 30_000),
+                "Backup did not finish within the expected time");
+
+            var dbRecord = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
+            Assert.NotNull(dbRecord);
+        }
+        
         private static IDisposable ReadOnly(string path)
         {
             var files = Directory.GetFiles(path);
