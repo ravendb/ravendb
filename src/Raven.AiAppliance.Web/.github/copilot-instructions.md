@@ -31,6 +31,8 @@ Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is fi
 - Put shared form UI in `src/components/form`.
 - Put new shadcn-generated files only under `src/components/shadcn`.
 - Treat shadcn files as external generated code; avoid editing them unless necessary.
+- Use uppercase `SCREAMING_SNAKE_CASE` for module-level constants.
+- Follow React best practices: avoid unnecessary effects; prefer derived state, event handlers and packages mechanisms before reaching for `useEffect`.
 
 ## Commands
 
