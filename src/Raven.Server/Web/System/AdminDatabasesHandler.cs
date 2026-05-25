@@ -348,7 +348,7 @@ namespace Raven.Server.Web.System
                 return;
 
             var databaseConfiguration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, databaseName, settings);
-            if (databaseConfiguration.Core.RunInMemory)
+            if (databaseConfiguration.Core.RunInMemory || Directory.Exists(databaseConfiguration.Core.DataDirectory.FullPath) == false)
                 return;
 
             var addToInitLog = new Action<LogMode, string>((logMode, txt) =>
