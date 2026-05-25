@@ -53,12 +53,6 @@ public class AiConversationMessagesResult : IDynamicJson
     public bool HasMoreMessages { get; set; }
 
     /// <summary>
-    /// Names of all attachments (images, files) referenced across the returned messages, deduplicated.
-    /// Empty when the page contains no attachments.
-    /// </summary>
-    public string[] AttachmentNames { get; set; }
-
-    /// <summary>
     /// IDs of sub-agent conversations spawned during this conversation.
     /// Each can be queried separately via GetConversationMessages.
     /// </summary>
@@ -85,7 +79,6 @@ public class AiConversationMessagesResult : IDynamicJson
             [nameof(TotalUsage)] = TotalUsage?.ToJson(),
             [nameof(LastMessageAt)] = LastMessageAt,
             [nameof(HasMoreMessages)] = HasMoreMessages,
-            [nameof(AttachmentNames)] = AttachmentNames != null ? new DynamicJsonArray(AttachmentNames) : null,
             [nameof(SubConversationIds)] = SubConversationIds != null ? new DynamicJsonArray(SubConversationIds) : null,
             [nameof(Messages)] = Messages != null ? new DynamicJsonArray(Messages) : null
         };
