@@ -55,7 +55,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages : Abstr
                 TotalUsage = conversation.TotalUsage,
                 LastMessageAt = conversation.LastMessageAt,
                 HasMoreMessages = collector.HasMoreMessages,
-                AttachmentNames = collector.AttachmentNames.ToArray(),
                 SubConversationIds = conversation.SubConversationIds.ToList(),
                 Messages = collector.GetResults()
             };
