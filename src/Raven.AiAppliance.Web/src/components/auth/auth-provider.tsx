@@ -13,7 +13,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function login(request: RedeemLicenseRequest) {
         const status = await api.services.bootstrap.redeemLicense(request);
         queryClient.setQueryData(authStatusQuery.queryKey, status);
-        return status.state === "ready";
+        return status;
     }
 
     return (

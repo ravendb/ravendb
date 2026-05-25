@@ -53,7 +53,7 @@ public sealed class RavenReadinessService(
             // package on disk — pre-activation we still want RavenDB up so the
             // appliance has somewhere to persist state, but the wizard / chat
             // endpoints have to stay 503 until the secure config is applied.
-            var setupSettings = Path.Combine(opts.SetupPackagePath, "A", "settings.json");
+            var setupSettings = GetSetupSettingsPath(opts);
             if (File.Exists(setupSettings))
             {
                 logger.LogInformation("Setup package present at {Path}; marking bootstrap Ready.", opts.SetupPackagePath);
@@ -74,7 +74,11 @@ public sealed class RavenReadinessService(
         {
             logger.LogError(ex, "RavenDB readiness probe gave up after {Timeout}.", opts.ReadinessOverallTimeout);
             ready.MarkFailed(ex.Message);
-            bootstrap.MarkFailed(ex.Message);
+
+            if (File.Exists(GetSetupSettingsPath(opts)))
+                bootstrap.MarkRestarting(ex.Message);
+            else
+                bootstrap.MarkFailed(ex.Message);
         }
     }
 
@@ -93,4 +97,7 @@ public sealed class RavenReadinessService(
         ready.MarkFailed("shutting down");
         await base.StopAsync(cancellationToken);
     }
+
+    private static string GetSetupSettingsPath(ApplianceOptions options) =>
+        Path.Combine(options.SetupPackagePath, "A", "settings.json");
 }

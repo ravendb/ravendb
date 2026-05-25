@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { ApiClient } from "@/api/http-client";
 
-export type BootstrapPhase = "needs-activation" | "redeeming" | "ready";
+export type BootstrapPhase = "needs-activation" | "redeeming" | "restarting" | "ready";
 
 export type BootstrapStatus = {
     state: BootstrapPhase;

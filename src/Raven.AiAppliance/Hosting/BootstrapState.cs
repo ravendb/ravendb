@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+
 namespace Raven.AiAppliance.Hosting;
 
 /// <summary>
@@ -57,6 +59,7 @@ public interface IBootstrapState
     /// </summary>
     bool TryMarkRestarting();
 
+    void MarkRestarting(string? reason = null);
     void MarkReady();
     void MarkFailed(string reason);
 }
@@ -83,8 +86,16 @@ public static class BootstrapPhaseExtensions
 
 public sealed class BootstrapStateFlag : IBootstrapState
 {
-    private int _phase = (int)BootstrapPhase.NeedsActivation;
+    private int _phase;
     private string? _reason;
+
+    public BootstrapStateFlag(IOptions<ApplianceOptions> options)
+    {
+        var setupSettings = Path.Combine(options.Value.SetupPackagePath, "A", "settings.json");
+        _phase = File.Exists(setupSettings)
+            ? (int)BootstrapPhase.Restarting
+            : (int)BootstrapPhase.NeedsActivation;
+    }
 
     public BootstrapPhase Phase => (BootstrapPhase)Volatile.Read(ref _phase);
     public string? Reason => Volatile.Read(ref _reason);
@@ -113,6 +124,12 @@ public sealed class BootstrapStateFlag : IBootstrapState
             (int)BootstrapPhase.Redeeming);
 
         return previous == (int)BootstrapPhase.Redeeming;
+    }
+
+    public void MarkRestarting(string? reason = null)
+    {
+        Volatile.Write(ref _reason, reason);
+        Volatile.Write(ref _phase, (int)BootstrapPhase.Restarting);
     }
 
     public void MarkReady()
