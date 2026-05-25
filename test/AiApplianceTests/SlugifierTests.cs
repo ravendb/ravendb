@@ -7,7 +7,7 @@ namespace AiApplianceTests;
 
 public class SlugifierTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    [RavenTheory(RavenTestCategory.Core)]
+    [RavenTheory(RavenTestCategory.AiAppliance)]
     [InlineData("Northwind Demo",   "northwind-demo")]
     [InlineData("northwind-demo",   "northwind-demo")]   // already a slug
     [InlineData("ACME SHOP",        "acme-shop")]
@@ -21,7 +21,7 @@ public class SlugifierTests(ITestOutputHelper output) : NoDisposalNeeded(output)
         Assert.Equal(expected, Slugifier.ToSlug(input));
     }
 
-    [RavenTheory(RavenTestCategory.Core)]
+    [RavenTheory(RavenTestCategory.AiAppliance)]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]

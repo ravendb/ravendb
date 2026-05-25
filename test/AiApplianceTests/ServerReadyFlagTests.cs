@@ -7,7 +7,7 @@ namespace AiApplianceTests;
 
 public class ServerReadyFlagTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void Starts_not_ready()
     {
         IServerReady flag = new ServerReadyFlag();
@@ -15,7 +15,7 @@ public class ServerReadyFlagTests(ITestOutputHelper output) : NoDisposalNeeded(o
         Assert.Null(flag.LastError);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void MarkReady_flips_state_and_clears_error()
     {
         IServerReady flag = new ServerReadyFlag();
@@ -25,7 +25,7 @@ public class ServerReadyFlagTests(ITestOutputHelper output) : NoDisposalNeeded(o
         Assert.Null(flag.LastError);
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public void MarkFailed_records_error_and_resets_ready()
     {
         IServerReady flag = new ServerReadyFlag();
