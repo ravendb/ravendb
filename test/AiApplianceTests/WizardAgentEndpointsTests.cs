@@ -63,8 +63,10 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
     // ---- W8 ----
 
-    [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Channel_endpoint_returns_404_for_unknown_slug()
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("demo-agent")]   // valid agentId — still 404 because slug is unknown
+    [InlineData("ghost-agent")]  // invalid agentId — L1: must NOT leak via differential 400 vs 404
+    public async Task Channel_endpoint_returns_404_for_unknown_slug(string agentId)
     {
         var store = GetDocumentStore();
 
@@ -73,7 +75,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         var resp = await client.PostAsJsonAsync(
             "/api/apps/nonexistent/setup/channel",
-            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
+            new { type = "iframe", agentId, allowedOrigins = new[] { "http://localhost" } });
 
         Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
     }
@@ -98,6 +100,10 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var widgetId = json.GetProperty("widgetId").GetString();
         Assert.False(string.IsNullOrEmpty(widgetId), $"widgetId was empty: {json}");
         Assert.StartsWith("wgt_", widgetId);
+        // H1: 128-bit random (Base64url-encoded) → ≥22 chars after wgt_,
+        // i.e. ≥26 total. Earlier 32-bit form would have produced 12.
+        Assert.True(widgetId.Length >= 24,
+            $"widgetId length {widgetId.Length} is below the 128-bit-entropy floor (expected ≥24 incl. 'wgt_' prefix): '{widgetId}'");
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
@@ -115,6 +121,159 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             new { type = "whatsapp", agentId = "demo-agent", allowedOrigins = Array.Empty<string>() });
 
         Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_returns_same_widgetId_for_repeated_calls()
+    {
+        // M3: idempotency. Two POSTs with the same body must return the same
+        // widgetId — operator double-click / client retry should not create
+        // orphan channel docs.
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
+
+        var resp1 = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body);
+        Assert.True(resp1.IsSuccessStatusCode, await resp1.Content.ReadAsStringAsync());
+        var widgetId1 = (await resp1.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
+
+        // Let the in-process auto-index catch up so the idempotency query on
+        // the server side sees the freshly-stored channel. Without this the
+        // second POST may read stale and create a second doc.
+        Indexes.WaitForIndexing(store, perAppDb);
+
+        var resp2 = await client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body);
+        Assert.True(resp2.IsSuccessStatusCode, await resp2.Content.ReadAsStringAsync());
+        var widgetId2 = (await resp2.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("widgetId").GetString();
+
+        Assert.Equal(widgetId1, widgetId2);
+
+        // And only one channel doc in the per-app DB.
+        using var session = store.OpenAsyncSession(perAppDb);
+        var count = await session.Query<ChannelInstance>().CountAsync();
+        Assert.Equal(1, count);
+    }
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("*")]                                  // M2: wildcard widens trust
+    [InlineData("example.com")]                        // M2: scheme-less
+    [InlineData("ftp://example.com")]                  // M2: non-http(s) scheme
+    [InlineData("")]                                   // M2: empty entry
+    public async Task Channel_endpoint_rejects_invalid_allowed_origin(string badOrigin)
+    {
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { badOrigin } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_rejects_too_many_allowed_origins()
+    {
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // M2: 33 entries exceeds the 32 cap.
+        var tooMany = Enumerable.Range(0, 33)
+            .Select(i => $"http://example{i}.com")
+            .ToArray();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = tooMany });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("")]                              // M4: BEL control char
+    [InlineData("name\twith\ttabs")]                    // M4: tab is also a control char
+    public async Task Channel_endpoint_rejects_invalid_display_name(string badName)
+    {
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new
+            {
+                type = "iframe",
+                agentId = "demo-agent",
+                allowedOrigins = new[] { "http://localhost" },
+                displayName = badName,
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_rejects_too_long_display_name()
+    {
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new
+            {
+                type = "iframe",
+                agentId = "demo-agent",
+                allowedOrigins = new[] { "http://localhost" },
+                displayName = new string('x', 201),  // M4: 200-char cap
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_persists_canonical_agent_id_casing()
+    {
+        // L3: AgentSchemaRegistry resolves case-insensitively, but the
+        // persisted ChannelInstance.AgentId must adopt the registry's
+        // canonical casing — otherwise later case-sensitive queries
+        // (e.g. M3's idempotency lookup) break across re-runs that
+        // mix casings.
+        var store = GetDocumentStore();
+        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "Demo-Agent", allowedOrigins = new[] { "http://localhost" } });
+
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        var channel = await session.Query<ChannelInstance>().FirstAsync();
+        Assert.Equal("demo-agent", channel.AgentId);
     }
 
     // ---- helpers ----
