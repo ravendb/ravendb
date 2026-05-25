@@ -6,15 +6,11 @@ namespace Tests.Infrastructure;
 
 public static class AzureServiceBusHelper
 {
-    private const string ConnectionStringEnvironmentVariable = "RAVEN_AZURE_SERVICE_BUS_CONNECTION_STRING";
-
-    private const string ConnectionStringAdminEnvironmentVariable = "RAVEN_AZURE_SERVICE_BUS_ADMIN_CONNECTION_STRING";
-
     private const string CannotConnectSkipMessage = "Test requires Azure Service Bus namespace.";
 
-    private const string EnvironmentVariableNotFoundSkipMessage = $"'{ConnectionStringEnvironmentVariable}' environment variable not found.";
+    private const string EnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AzureConnectionStringEnvName}' environment variable not found.";
 
-    private const string AdminEnvironmentVariableNotFoundSkipMessage = $"'{ConnectionStringAdminEnvironmentVariable}' environment variable not found.";
+    private const string AdminEnvironmentVariableNotFoundSkipMessage = $"'{RavenTestHelper.EnvironmentVariables.AzureConnectionStringAdminEnvName}' environment variable not found.";
 
     private const double MillisecondsToWaitForAzureServiceBus = 15000;
 
@@ -39,19 +35,19 @@ public static class AzureServiceBusHelper
         }
     }
 
-    public static string GetConnectionString() => Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
+    public static string GetConnectionString() => Environment.GetEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureConnectionStringEnvName);
 
-    public static string GetAdminConnectionString() => Environment.GetEnvironmentVariable(ConnectionStringAdminEnvironmentVariable);
+    public static string GetAdminConnectionString() => Environment.GetEnvironmentVariable(RavenTestHelper.EnvironmentVariables.AzureConnectionStringAdminEnvName);
 
     public static bool ShouldSkip(out string skipMessage)
     {
-        if (RavenTestHelper.SkipIntegrationTests)
+        if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
         {
             skipMessage = RavenTestHelper.SkipIntegrationMessage;
             return true;
         }
 
-        if (RavenTestHelper.IsRunningOnCI)
+        if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
         {
             skipMessage = null;
             return false;
