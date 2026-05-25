@@ -31,6 +31,18 @@ public sealed class ApplianceOptions
     public string? SetupPackageZipPath { get; set; }
 
     /// <summary>
+    /// s6-rc service path to restart after the setup package is extracted (e.g.
+    /// <c>/run/service/01-ravendb</c>). When set, the activation endpoint
+    /// signals s6 to restart RavenDB into secure mode and then exits the .NET
+    /// host so s6 brings it back wired to the secure <c>IDocumentStore</c>.
+    /// When empty (WAF tests, local <c>dotnet run</c>, any unsupervised host)
+    /// the endpoint stays in-process and flips bootstrap to Ready inline —
+    /// there's no supervisor to restart us cleanly. Bound from
+    /// <c>RAVEN_AI_RAVENDB_S6_SERVICE</c>.
+    /// </summary>
+    public string? RavenDbS6Service { get; set; }
+
+    /// <summary>
     /// Default upstream license-redemption endpoint. Production uses this as-is;
     /// tests and local dev override via <c>RAVEN_AI_LICENSE_API_URL</c>. Exposed
     /// as a constant so the dev-mode startup warning in <c>Program.cs</c> can

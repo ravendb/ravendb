@@ -23,13 +23,22 @@
   semantics RavenDB needs.
 
 .PARAMETER WithStudio
-  Publish RavenDB's port 8080 so you can open http://localhost:8080/studio in
-  a browser. Off by default; the design's loopback-only acceptance (§3.9)
-  stays intact for the normal demo run.
+  Publish RavenDB's secure port 443 so you can open
+  https://a.egor-ai.ravendb.run/ in a browser and reach Studio. Off by default
+  (the design's loopback-only acceptance §3.9 stays intact for the normal demo
+  run). Also auto-imports the admin client cert from the demo zip into
+  Cert:\CurrentUser\My so Chrome can authenticate; idempotent (re-runs skip
+  the import if the thumbprint is already in the store).
 
-  Note: Docker Desktop on Windows doesn't reliably forward 127.0.0.1-bound
-  publishes, so this switch publishes 0.0.0.0:8080. Studio will be reachable
-  from any host on your LAN while the demo runs.
+  *.ravendb.run has public-DNS A records pointing to 127.0.0.1, so no
+  hosts-file edit is needed on the Windows side. Chrome will prompt to pick
+  the imported client cert on the first request to Studio.
+
+.PARAMETER StudioHostPort
+  Host port to publish for RavenDB's 443. Default: 443. Use a non-privileged
+  port (e.g. 8443) if 443 is taken by another service; the browser URL then
+  becomes https://a.egor-ai.ravendb.run:<port>/ and the cert still validates
+  (it's bound to the domain, not the port). Only meaningful with -WithStudio.
 
 .NOTES
   Demo setup-package zip: this script mounts $env:APPLIANCE_E2E_SETUP_PACKAGE_PATH
@@ -45,7 +54,8 @@ param(
     [string]$Tag = 'ravendb/ai-appliance:demo',
     [int]$Port = 5000,
     [string]$Volume = 'ai-appliance-data',
-    [switch]$WithStudio
+    [switch]$WithStudio,
+    [int]$StudioHostPort = 443
 )
 
 $ErrorActionPreference = 'Stop'
@@ -99,13 +109,62 @@ if ($demoZip -and (Test-Path $demoZip)) {
     $runArgs += @('-v', "${resolvedZip}:/var/lib/ai-appliance/setup-source.zip:ro")
 }
 if ($WithStudio) {
-    Write-Host '-WithStudio enabled: publishing RavenDB on http://localhost:8080 (LAN-reachable on Windows; see help).' -ForegroundColor Yellow
-    $runArgs += @('-p', '8080:8080')
+    Write-Host "-WithStudio enabled: publishing RavenDB on https://localhost:$StudioHostPort and importing admin cert." -ForegroundColor Yellow
+    $runArgs += @('-p', "${StudioHostPort}:443")
+
+    # Auto-import the admin client cert from the demo zip so Chrome can
+    # authenticate to Studio. RavenDB rejects any client cert that isn't in
+    # its well-known-admin list AND that the local cert store also trusts; we
+    # set up the server side via RAVEN_Security_WellKnownCertificates_Admin
+    # (the s6 run script + activation endpoint handle that), and the browser
+    # side here.
+    if ($demoZip -and (Test-Path $demoZip)) {
+        # Extract admin.client.certificate.*.pfx from the demo zip into a
+        # temp dir, then import to the current user's Personal store. The
+        # PFX is unprotected (RavenDB setup wizard generates them without a
+        # password); Import-PfxCertificate still requires a SecureString, so
+        # we pass an empty one.
+        $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ([Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $tmp | Out-Null
+        try {
+            Expand-Archive -Path $demoZip -DestinationPath $tmp -Force
+            $pfx = Get-ChildItem -Path $tmp -Filter 'admin.client.certificate.*.pfx' | Select-Object -First 1
+            if ($null -ne $pfx) {
+                $emptyPwd = New-Object System.Security.SecureString
+                $loaded   = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 ($pfx.FullName, $emptyPwd)
+                $existingCert = Get-ChildItem -Path Cert:\CurrentUser\My |
+                    Where-Object { $_.Thumbprint -eq $loaded.Thumbprint } |
+                    Select-Object -First 1
+                if ($null -eq $existingCert) {
+                    Import-PfxCertificate -FilePath $pfx.FullName `
+                        -CertStoreLocation Cert:\CurrentUser\My `
+                        -Password $emptyPwd | Out-Null
+                    Write-Host "  Imported admin cert (thumbprint $($loaded.Thumbprint)) to Cert:\CurrentUser\My" -ForegroundColor DarkGray
+                } else {
+                    Write-Host "  Admin cert already in Cert:\CurrentUser\My (thumbprint $($loaded.Thumbprint))" -ForegroundColor DarkGray
+                }
+            } else {
+                Write-Warning "-WithStudio: no admin.client.certificate.*.pfx found inside $demoZip; Studio will return 403 until you import the cert manually."
+            }
+        } finally {
+            Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    } else {
+        Write-Warning "-WithStudio without `$env:APPLIANCE_E2E_SETUP_PACKAGE_PATH set: nothing to import. Studio will return 403 until you import the admin cert manually."
+    }
 }
 $runArgs += $Tag
 
 Write-Host "Starting $Tag on http://localhost:$Port (volume: $Volume)..." -ForegroundColor Cyan
 & docker @runArgs | Out-Null
+
+if ($WithStudio) {
+    # RavenDB's root path 302-redirects to /studio/index.html; the bare URL is
+    # what the user types and the browser follows the redirect transparently.
+    $studioUrl = if ($StudioHostPort -eq 443) { 'https://a.egor-ai.ravendb.run/' } else { "https://a.egor-ai.ravendb.run:$StudioHostPort/" }
+    Write-Host ''
+    Write-Host "Studio: $studioUrl  (Chrome will prompt for client cert on first request)" -ForegroundColor Green
+}
 
 Write-Host ''
 Write-Host 'Tailing logs (Ctrl+C to detach; container keeps running):' -ForegroundColor Cyan

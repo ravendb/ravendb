@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
@@ -87,6 +88,8 @@ public static class BootstrapEndpoints
             });
         }
 
+        HttpClient? http = null;
+        HttpResponseMessage? upstreamResponse = null;
         try
         {
             // Demo path: a pre-baked zip mounted into the container short-circuits
@@ -94,8 +97,6 @@ public static class BootstrapEndpoints
             // production hits the license API to fetch license.json + app-name
             // and runs LE provisioning locally (no zip involved).
             Stream upstreamStream;
-            HttpResponseMessage? upstreamResponse = null;
-            HttpClient? http = null;
             if (!string.IsNullOrEmpty(opts.SetupPackageZipPath) && File.Exists(opts.SetupPackageZipPath))
             {
                 logger.LogInformation(
@@ -107,14 +108,15 @@ public static class BootstrapEndpoints
             {
                 http = httpClientFactory.CreateClient();
                 var url = $"{opts.LicenseApiUrl.TrimEnd('/')}/licenses/{Uri.EscapeDataString(body.LicenseKey)}";
+                // http and upstreamResponse are disposed in the outer finally;
+                // a throw from GetAsync (DNS, TLS, socket) lands there too,
+                // unlike the pre-fix code which leaked both.
                 upstreamResponse = await http.GetAsync(url, ct);
                 if (!upstreamResponse.IsSuccessStatusCode)
                 {
                     var msg = $"license api returned {(int)upstreamResponse.StatusCode} {upstreamResponse.ReasonPhrase}";
                     logger.LogWarning("License redemption failed: {Reason}", msg);
                     bootstrap.MarkFailed(msg);
-                    upstreamResponse.Dispose();
-                    http.Dispose();
                     return Results.Problem(detail: msg, statusCode: (int)upstreamResponse.StatusCode);
                 }
                 upstreamStream = await upstreamResponse.Content.ReadAsStreamAsync(ct);
@@ -157,9 +159,6 @@ public static class BootstrapEndpoints
             }
             finally
             {
-                upstreamResponse?.Dispose();
-                http?.Dispose();
-
                 // Best-effort cleanup. Narrow to the two exceptions File.Delete
                 // can legitimately throw on a stray temp file (the path is
                 // ours, no malformed-path risks) — anything else is unexpected
@@ -175,19 +174,41 @@ public static class BootstrapEndpoints
                 "Setup package redeemed and unpacked to {Path} ({Bytes} bytes).",
                 opts.SetupPackagePath, downloadedBytes);
 
-            bootstrap.TryMarkRestarting();
-
-            // Restart RavenDB so it re-reads settings.json. The s6 run script
-            // copies A/settings.json from the setup package over the baked-in
-            // unsecured config on every start; RavenDB itself does not hot-
-            // reload its settings. Linux-only — Windows / test hosts (no s6)
-            // skip this and rely on the .NET host restart only, which is fine
-            // for tests since they inject the IDocumentStore directly.
-            if (OperatingSystem.IsLinux())
+            // Persist the admin client cert's thumbprint next to the unpacked
+            // package so the s6 01-ravendb run script can export it as
+            // RAVEN_Security_WellKnownCertificates_Admin before RavenDB starts.
+            // Computed here (where we already have the cert handle) instead of
+            // shelling out to openssl in the script — immune to PKCS#12 bag
+            // ordering and one less binary the container needs.
+            var adminPfx = Directory
+                .GetFiles(opts.SetupPackagePath, "admin.client.certificate.*.pfx")
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (adminPfx is not null)
             {
+                using var cert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: default);
+                File.WriteAllText(
+                    Path.Combine(opts.SetupPackagePath, "admin-thumbprint"),
+                    cert.Thumbprint);
+            }
+
+            if (!string.IsNullOrEmpty(opts.RavenDbS6Service))
+            {
+                // Container deployment: s6 supervises both RavenDB and 02-web,
+                // so we can safely kick RavenDB into secure mode and exit
+                // ourselves — s6 brings us back, and on the second start the
+                // secure IDocumentStore wires up against PublicServerUrl +
+                // admin cert. Outside the container (WAF tests, local
+                // dotnet run, any unsupervised host) RavenDbS6Service is
+                // empty and we take the inline MarkReady branch below.
+
+                // Single-writer flow guarded by TryMarkRedeeming() above; CAS
+                // always wins. Bool is discarded intentionally.
+                bootstrap.TryMarkRestarting();
+
                 try
                 {
-                    using var s6 = Process.Start(new ProcessStartInfo("s6-svc", "-r /run/service/01-ravendb")
+                    using var s6 = Process.Start(new ProcessStartInfo("s6-svc", "-r " + opts.RavenDbS6Service)
                     {
                         UseShellExecute = false,
                     });
@@ -198,19 +219,26 @@ public static class BootstrapEndpoints
                     logger.LogWarning(ex,
                         "Could not signal s6 to restart RavenDB; relying on .NET host restart only.");
                 }
+
+                logger.LogInformation(
+                    "Activation complete; restarting .NET host to bind secure IDocumentStore.");
+
+                // Brief delay so the HTTP response flushes to the client
+                // before Kestrel shuts down — otherwise the browser sees a
+                // connection-reset and can't read the `restarting` state
+                // from the body it's about to render the spinner from.
+                _ = Task.Delay(500, CancellationToken.None)
+                    .ContinueWith(_ => lifetime.StopApplication(), TaskScheduler.Default);
+
+                return Results.Ok(new { state = "restarting" });
             }
 
-            logger.LogInformation(
-                "Activation complete; restarting .NET host to bind secure IDocumentStore.");
-
-            // Brief delay so the HTTP response flushes to the client before
-            // Kestrel shuts down — otherwise the browser sees a connection-
-            // reset and can't read the `restarting` state from the body it's
-            // about to render the spinner from.
-            _ = Task.Delay(500, CancellationToken.None)
-                .ContinueWith(_ => lifetime.StopApplication(), TaskScheduler.Default);
-
-            return Results.Ok(new { state = "restarting" });
+            // Unsupervised host: no s6, no process to restart us. Flip
+            // straight to Ready — the in-process IDocumentStore keeps
+            // talking to whatever RavenDB it was already talking to
+            // (WAF-supplied in tests; loopback unsecured Raven in dev).
+            bootstrap.MarkReady();
+            return Results.Ok(new { state = "ready" });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -234,6 +262,14 @@ public static class BootstrapEndpoints
             logger.LogError(ex, "License redemption threw.");
             bootstrap.MarkFailed(ex.Message);
             return Results.Problem(detail: ex.Message, statusCode: 500);
+        }
+        finally
+        {
+            // HTTP plumbing disposal on every exit path — including a throw
+            // from http.GetAsync (DNS / TLS / socket) which would otherwise
+            // skip the inline disposals.
+            upstreamResponse?.Dispose();
+            http?.Dispose();
         }
     }
 

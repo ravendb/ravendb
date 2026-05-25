@@ -61,8 +61,16 @@ public static class RavenStoreFactory
         using (var stream = File.OpenRead(settingsFile))
         using (var doc = JsonDocument.Parse(stream))
         {
-            if (!doc.RootElement.TryGetProperty("PublicServerUrl", out var pub))
+            // Guard the JSON kind: a malformed setup package where
+            // PublicServerUrl is a non-string (number, object, true) would
+            // otherwise throw InvalidOperationException out of DI build and
+            // refuse to start the appliance entirely. Falling through to the
+            // unsecured branch is the safer behaviour.
+            if (!doc.RootElement.TryGetProperty("PublicServerUrl", out var pub) ||
+                pub.ValueKind != JsonValueKind.String)
+            {
                 return false;
+            }
             publicUrl = pub.GetString();
         }
 
@@ -71,17 +79,22 @@ public static class RavenStoreFactory
 
         // Admin client cert sits at the package root (not under A/) so the
         // operator can pull it out for portal access without rummaging through
-        // the per-node directory.
-        var certs = Directory.Exists(options.SetupPackagePath)
-            ? Directory.GetFiles(options.SetupPackagePath, "admin.client.certificate.*.pfx")
-            : [];
-        if (certs.Length == 0)
+        // the per-node directory. Sorted-first cert pick keeps the choice
+        // deterministic across filesystems if a future package ever ships
+        // multiple admin PFXs (today there's always exactly one).
+        var adminPfx = Directory.Exists(options.SetupPackagePath)
+            ? Directory
+                .GetFiles(options.SetupPackagePath, "admin.client.certificate.*.pfx")
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .FirstOrDefault()
+            : null;
+        if (adminPfx is null)
             return false;
 
         // RavenDB's setup-wizard produces unprotected admin client PFXs by
         // default; passing `default` (empty span) matches the loader's
         // "no password" idiom.
-        var adminCert = X509CertificateLoader.LoadPkcs12FromFile(certs[0], password: default);
+        var adminCert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: default);
 
         var secured = new DocumentStore
         {

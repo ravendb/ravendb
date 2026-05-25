@@ -32,6 +32,7 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_CONFIG_DB",            v => options.ConfigDatabase = v);
         ReadEnv("RAVEN_AI_SETUP_PACKAGE_PATH",   v => options.SetupPackagePath = v);
         ReadEnv("RAVEN_AI_SETUP_PACKAGE_ZIP",    v => options.SetupPackageZipPath = v);
+        ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
         ReadEnv("RAVEN_AI_LLM_PROVIDER",         v => options.LlmProvider = v);
         ReadEnv("RAVEN_AI_LLM_ENDPOINT",         v => options.LlmEndpoint = v);
