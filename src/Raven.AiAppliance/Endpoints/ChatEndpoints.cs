@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
@@ -49,7 +50,8 @@ public static class ChatEndpoints
     private static async Task HandleStreamAsync(
         HttpContext ctx,
         IDocumentStore store,
-        IAgentSchemaRegistry schemas)
+        IAgentSchemaRegistry schemas,
+        ILogger<ChatStreamLogger> logger)
     {
         ChatRequest? body;
         try
@@ -133,9 +135,15 @@ public static class ChatEndpoints
         }
         catch (Exception e)
         {
+            // Log full exception server-side; surface only a generic
+            // message to the client. Raw e.Message from RavenDB / agent /
+            // downstream services can include file paths, connection
+            // strings, DB names, and other internal detail we shouldn't
+            // disclose over the chat stream.
+            logger.LogError(e, "Chat stream failed for agentId={AgentId}", body.AgentId);
             try
             {
-                await WriteLineAsync(ctx, new { type = "error", message = e.Message });
+                await WriteLineAsync(ctx, new { type = "error", message = "Chat stream failed. See server logs for details." });
             }
             catch
             {
@@ -143,6 +151,9 @@ public static class ChatEndpoints
             }
         }
     }
+
+    /// Logger category marker — keeps the ILogger generic-arg out of the public surface.
+    internal sealed class ChatStreamLogger;
 
     private static async Task WriteBadRequestAsync(HttpContext ctx, string error)
     {

@@ -53,29 +53,41 @@ public static class RavenStoreFactory
     {
         store = null!;
 
+        // A/settings.json being absent is the legit pre-activation pathway —
+        // RavenDB hasn't been configured yet, the activation screen is live,
+        // the unsecured loopback store in Create() carries us until the
+        // operator redeems the license. Return false → fall through.
         var settingsFile = Path.Combine(options.SetupPackagePath, "A", "settings.json");
         if (!File.Exists(settingsFile))
             return false;
 
+        // From here on, the setup package marker IS on disk. The appliance is
+        // secure-mode-only — RavenDB has been restarted into secure mode and
+        // is no longer listening on plain HTTP loopback, so any malformed-
+        // package failure below must fail loudly. Returning false would
+        // silently downgrade to the unsecured branch in Create() which
+        // points at RavenDB's now-defunct :8080, leaving the appliance
+        // permanently broken AND hiding the real cause.
         string? publicUrl;
         using (var stream = File.OpenRead(settingsFile))
         using (var doc = JsonDocument.Parse(stream))
         {
-            // Guard the JSON kind: a malformed setup package where
-            // PublicServerUrl is a non-string (number, object, true) would
-            // otherwise throw InvalidOperationException out of DI build and
-            // refuse to start the appliance entirely. Falling through to the
-            // unsecured branch is the safer behaviour.
             if (!doc.RootElement.TryGetProperty("PublicServerUrl", out var pub) ||
                 pub.ValueKind != JsonValueKind.String)
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Setup package at '{settingsFile}' is malformed: PublicServerUrl is missing or not a string. " +
+                    "Re-run activation with a valid setup package.");
             }
             publicUrl = pub.GetString();
         }
 
         if (string.IsNullOrWhiteSpace(publicUrl))
-            return false;
+        {
+            throw new InvalidOperationException(
+                $"Setup package at '{settingsFile}' has an empty PublicServerUrl. " +
+                "Re-run activation with a valid setup package.");
+        }
 
         // Admin client cert sits at the package root (not under A/) so the
         // operator can pull it out for portal access without rummaging through
@@ -89,12 +101,30 @@ public static class RavenStoreFactory
                 .FirstOrDefault()
             : null;
         if (adminPfx is null)
-            return false;
+        {
+            throw new InvalidOperationException(
+                $"Setup package at '{options.SetupPackagePath}' has no admin.client.certificate.*.pfx file. " +
+                "Re-run activation with a valid setup package.");
+        }
 
         // RavenDB's setup-wizard produces unprotected admin client PFXs by
         // default; passing `default` (empty span) matches the loader's
-        // "no password" idiom.
-        var adminCert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: default);
+        // "no password" idiom. Wrap the load so a corrupt or password-
+        // protected PFX surfaces a focused error instead of a raw
+        // CryptographicException out of DI build.
+        X509Certificate2 adminCert;
+        try
+        {
+            adminCert = X509CertificateLoader.LoadPkcs12FromFile(adminPfx, password: default);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Failed to load admin client certificate from '{adminPfx}'. " +
+                "The PFX may be corrupt or password-protected. " +
+                "Re-run activation with a valid setup package.",
+                ex);
+        }
 
         var secured = new DocumentStore
         {

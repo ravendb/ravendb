@@ -477,13 +477,68 @@ namespace Tests.Infrastructure
             var zipStream = assembly.GetManifestResourceStream(prefix + ".zip");
             if (zipStream != null)
             {
+                // ZipArchive in Read mode does not dispose its underlying stream
+                // until the archive itself is disposed; entry.Open() returns a
+                // sub-stream whose lifetime is bounded by the archive. Returning
+                // it bare meant the caller's `using` on the returned stream only
+                // disposed the entry — the archive + manifest stream leaked
+                // until process exit. OwningSqlResourceStream cascades disposal
+                // back through the chain.
                 var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-                var entry = archive.Entries.First(e => e.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
-                return entry.Open();
+                var entry = archive.Entries.FirstOrDefault(e => e.Name.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
+                if (entry == null)
+                {
+                    archive.Dispose();
+                    zipStream.Dispose();
+                    throw new InvalidOperationException(
+                        $"SQL resource zip '{prefix}.zip' has no .sql entry; cannot open SQL fixture.");
+                }
+                return new OwningSqlResourceStream(entry.Open(), archive, zipStream);
             }
 
             return assembly.GetManifestResourceStream(prefix + ".sql")
                 ?? throw new InvalidOperationException($"No SQL resource found for prefix '{prefix}'");
+        }
+
+        private sealed class OwningSqlResourceStream : Stream
+        {
+            private readonly Stream _entryStream;
+            private readonly ZipArchive _archive;
+            private readonly Stream _zipStream;
+
+            public OwningSqlResourceStream(Stream entryStream, ZipArchive archive, Stream zipStream)
+            {
+                _entryStream = entryStream;
+                _archive = archive;
+                _zipStream = zipStream;
+            }
+
+            public override bool CanRead => _entryStream.CanRead;
+            public override bool CanSeek => _entryStream.CanSeek;
+            public override bool CanWrite => _entryStream.CanWrite;
+            public override long Length => _entryStream.Length;
+            public override long Position
+            {
+                get => _entryStream.Position;
+                set => _entryStream.Position = value;
+            }
+
+            public override void Flush() => _entryStream.Flush();
+            public override int Read(byte[] buffer, int offset, int count) => _entryStream.Read(buffer, offset, count);
+            public override long Seek(long offset, SeekOrigin origin) => _entryStream.Seek(offset, origin);
+            public override void SetLength(long value) => _entryStream.SetLength(value);
+            public override void Write(byte[] buffer, int offset, int count) => _entryStream.Write(buffer, offset, count);
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    _entryStream.Dispose();
+                    _archive.Dispose();
+                    _zipStream.Dispose();
+                }
+                base.Dispose(disposing);
+            }
         }
 
         private static void TerminateWalSender(NpgsqlCommand dbCommand, string dbName)
