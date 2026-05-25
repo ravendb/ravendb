@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -97,6 +98,12 @@ public static class AppsEndpoints
         return Results.Ok(new { agentId = result.AgentIdentifier });
     }
 
+    // Channel-instance constants. M2/M4 caps prevent unbounded doc growth +
+    // give the future /embed/{widgetId} page a trustworthy list to consume.
+    private const int MaxAllowedOrigins = 32;
+    private const int MaxOriginLength = 256;
+    private const int MaxDisplayNameLength = 200;
+
     private static async Task<IResult> ProvisionChannelAsync(
         string slug,
         ProvisionChannelRequest body,
@@ -115,9 +122,12 @@ public static class AppsEndpoints
         if (!string.Equals(body.Type, "iframe", StringComparison.OrdinalIgnoreCase))
             return Results.BadRequest(new { error = $"unsupported channel type '{body.Type}'. Supported: iframe." });
 
-        if (!schemas.TryGet(body.AgentId, out _))
-            return Results.BadRequest(new { error = $"unknown agentId '{body.AgentId}'" });
-
+        // L1: load App first so unknown-slug always returns 404 regardless of
+        // whether agentId is valid. Previously the schemas.TryGet ran first,
+        // and the 400-vs-404 differential leaked which agentIds were
+        // registered to unauthenticated probers (M1's lack of auth made this
+        // a real concern; once auth lands the leak becomes moot, but the
+        // reorder is free either way).
         var opts = options.Value;
         await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
 
@@ -132,23 +142,92 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new { error = $"no app with slug '{slug}'" });
 
-        // widgetId is the stable customer-facing identifier baked into embed
-        // snippets — see design §3.4 + the plan's TDD discussion. Generated
-        // (not user-supplied) so rename of DisplayName never breaks the URL.
-        // 32-bit space ≈ 4B values is plenty per-app; empty-change-vector
-        // store gives atomic uniqueness; 5-attempt retry absorbs the
-        // statistically impossible collision.
+        // L3: validate against the registry AND adopt the registry's canonical
+        // casing for storage. schemas.TryGet is case-insensitive but the
+        // caller's original casing was being persisted, which would trip up
+        // any later case-sensitive groupBy / query on AgentId.
+        if (!schemas.TryGet(body.AgentId, out var schema))
+            return Results.BadRequest(new { error = $"unknown agentId '{body.AgentId}'" });
+
+        // M2: validate AllowedOrigins at intake so the future /embed/{widgetId}
+        // page reads from a trustworthy list. Reject "*" (silently widens trust
+        // across all customers via operator typo), scheme-less entries (no
+        // ambiguity about which protocol to allow), and cap entries + per-entry
+        // length to keep the doc bounded under repeated edits.
+        var origins = body.AllowedOrigins ?? [];
+        if (origins.Length > MaxAllowedOrigins)
+            return Results.BadRequest(new { error = $"allowedOrigins exceeds limit of {MaxAllowedOrigins} entries" });
+
+        foreach (var origin in origins)
+        {
+            if (string.IsNullOrWhiteSpace(origin) || origin.Length > MaxOriginLength)
+                return Results.BadRequest(new { error = $"allowedOrigins entry is empty or exceeds {MaxOriginLength} chars" });
+
+            if (origin == "*")
+                return Results.BadRequest(new { error = "wildcard '*' is not an allowed origin; list explicit http(s) origins" });
+
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                return Results.BadRequest(new { error = $"allowedOrigins entry '{origin}' is not a valid http(s) absolute URL" });
+        }
+
+        // M4: cap DisplayName length and forbid control chars at intake. The
+        // XML doc on ChannelInstance.DisplayName says "shown in the dashboard";
+        // if the dashboard ever does dangerouslySetInnerHTML / equivalent,
+        // unsanitized DisplayName is operator-on-operator stored XSS. Intake
+        // sanitation = caught once; downstream sanitation = caught every read.
+        if (body.DisplayName is not null)
+        {
+            if (body.DisplayName.Length > MaxDisplayNameLength)
+                return Results.BadRequest(new { error = $"displayName exceeds {MaxDisplayNameLength} chars" });
+
+            if (body.DisplayName.Any(char.IsControl))
+                return Results.BadRequest(new { error = "displayName contains control characters" });
+        }
+
+        // M3: idempotency. Check for an existing IFrame channel bound to the
+        // same agent — if one exists, return its widgetId instead of creating
+        // an orphan. Operator double-click in the future dashboard or a client
+        // retry on transient failure would otherwise create an orphan channel
+        // that still routes to the agent. (a)-variant from the review: one
+        // channel per (slug, agentId, Type). Multi-channel-per-agent will live
+        // in the dashboard's Channels tab, not in this provisioning endpoint.
+        using (var session = store.OpenAsyncSession(app.Database))
+        {
+            var existing = await session.Query<ChannelInstance>()
+                .Where(c => c.Type == "IFrame" && c.AgentId == schema.Identifier)
+                .FirstOrDefaultAsync(ct);
+
+            if (existing is { Id: { } existingDocId })
+            {
+                var existingWidgetId = existingDocId["@channels/".Length..];
+                logger.LogInformation(
+                    "Channel already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
+                    app.Slug, schema.Identifier, existingWidgetId);
+                return Results.Ok(new { widgetId = existingWidgetId });
+            }
+        }
+
+        // H1: widgetId is the stable customer-facing identifier baked into
+        // embed snippets — once a customer pastes the snippet into their HTML,
+        // rotation requires re-issuing every snippet. The earlier 32-bit
+        // (8-hex) form was sized for collision avoidance, but the brute-force /
+        // guessability risk dominates if /embed/{widgetId} ever ships in
+        // anonymous mode (design §3.5 — widgetId becomes the bearer
+        // credential). 128 bits via RandomNumberGenerator gives a value-space
+        // big enough that brute-force is permanently impractical.
         for (var attempt = 0; attempt < 5; attempt++)
         {
-            var widgetId = "wgt_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
+                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
             var docId = $"@channels/{widgetId}";
             var channel = new ChannelInstance
             {
                 Id = docId,
                 Type = "IFrame",
                 DisplayName = body.DisplayName ?? "iframe",
-                AgentId = body.AgentId,
-                AllowedOrigins = body.AllowedOrigins ?? [],
+                AgentId = schema.Identifier,
+                AllowedOrigins = origins,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -160,15 +239,15 @@ public static class AppsEndpoints
 
                 logger.LogInformation(
                     "Provisioned channel slug={Slug} widgetId={WidgetId} agentId={AgentId} type={Type}",
-                    app.Slug, widgetId, body.AgentId, channel.Type);
+                    app.Slug, widgetId, schema.Identifier, channel.Type);
 
                 return Results.Ok(new { widgetId });
             }
             catch (ConcurrencyException)
             {
-                // GUID collision in a 4-billion-value space — astronomically
-                // unlikely; loop generates a new ID. Reaching attempt 5
-                // signals broken RNG, not normal operation.
+                // 128-bit GUID collision is mathematically irrelevant; loop
+                // stays as belt-and-braces. Reaching attempt 5 signals broken
+                // RNG, not normal operation.
             }
         }
 
