@@ -1,8 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { z } from "zod";
+import { api } from "@/api/api";
+import type { BootstrapPhase } from "@/api/bootstrap-service";
 import { FormInput } from "@/components/form/form-input";
 import { Button } from "@/components/shadcn/ui/button";
 import { useAuth } from "@/components/auth/auth-context";
@@ -10,6 +15,29 @@ import { useAuth } from "@/components/auth/auth-context";
 export function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
+    const bootstrapStatusQuery = api.queries.bootstrap.status();
+    const activationStartedAtRef = useRef<number | null>(null);
+    const [activationTimedOut, setActivationTimedOut] = useState(false);
+    const statusQuery = useQuery({
+        ...bootstrapStatusQuery,
+        refetchInterval: (query) => {
+            if (!isActivationPending(query.state.data?.state)) {
+                activationStartedAtRef.current = null;
+                return false;
+            }
+
+            activationStartedAtRef.current ??= query.state.dataUpdatedAt;
+
+            const lastStatusCheckAt = Math.max(query.state.dataUpdatedAt, query.state.errorUpdatedAt);
+            if (lastStatusCheckAt - activationStartedAtRef.current >= ACTIVATION_TIMEOUT_MS) {
+                setActivationTimedOut(true);
+                return false;
+            }
+
+            return activationTimedOut ? false : ACTIVATION_POLL_INTERVAL_MS;
+        },
+    });
+    const isActivationWaiting = isActivationPending(statusQuery.data?.state);
     const {
         control,
         formState: { isSubmitting },
@@ -23,15 +51,23 @@ export function Login() {
 
     async function handleLogin(values: LoginFormValues) {
         try {
-            const isAuthenticated = await login(values);
-            if (!isAuthenticated) {
-                toast.error("Activation is not ready yet.");
+            const status = await login(values);
+            if (status.state === "ready") {
+                navigate("/", {
+                    replace: true,
+                });
                 return;
             }
 
-            navigate("/", {
-                replace: true,
-            });
+            if (isActivationPending(status.state)) {
+                setActivationTimedOut(false);
+                return;
+            }
+
+            if (status.state === "needs-activation") {
+                toast.error("Activation could not be started. Check the license key and try again.");
+                return;
+            }
         } catch {
             toast.error("Sign in failed. Please try again later.");
         }
@@ -51,13 +87,24 @@ export function Login() {
                         <p className="mt-3 text-sm text-muted-foreground">Enter the license key for this appliance.</p>
                     </div>
 
-                    <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
-                        <FormInput control={control} name="licenseKey" label="License key" type="password" />
+                    {isActivationWaiting ? (
+                        <ActivationWaiting
+                            timedOut={activationTimedOut}
+                            onRetry={() => {
+                                activationStartedAtRef.current = null;
+                                setActivationTimedOut(false);
+                                void statusQuery.refetch();
+                            }}
+                        />
+                    ) : (
+                        <form className="mt-7 space-y-5" onSubmit={handleSubmit(handleLogin)}>
+                            <FormInput control={control} name="licenseKey" label="License key" type="password" />
 
-                        <Button className="w-full" disabled={isSubmitting}>
-                            {isSubmitting ? "Activating..." : "Continue"}
-                        </Button>
-                    </form>
+                            <Button className="w-full" disabled={isSubmitting}>
+                                {isSubmitting ? "Activating..." : "Continue"}
+                            </Button>
+                        </form>
+                    )}
                 </section>
             </div>
         </main>
@@ -69,3 +116,33 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+const ACTIVATION_POLL_INTERVAL_MS = 5_000;
+const ACTIVATION_TIMEOUT_MS = 120_000;
+
+function isActivationPending(state: BootstrapPhase | undefined) {
+    return state === "redeeming" || state === "restarting";
+}
+
+function ActivationWaiting({ timedOut, onRetry }: { timedOut: boolean; onRetry: () => void }) {
+    return (
+        <div className="mt-7 space-y-5 text-center">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" aria-hidden="true" />
+            <div className="space-y-2">
+                <h2 className="text-base font-semibold">
+                    {timedOut ? "Activation is taking longer than expected" : "Restarting server"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    {timedOut
+                        ? "The server did not report readiness within 120 seconds. Check the status again in a moment."
+                        : "Activation was accepted. Wait up to 120 seconds while the server restarts."}
+                </p>
+            </div>
+            {timedOut && (
+                <Button className="w-full" onClick={onRetry}>
+                    Check again
+                </Button>
+            )}
+        </div>
+    );
+}
