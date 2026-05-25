@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using Raven.Client;
 
 namespace Raven.Server.Documents.Replication
 {
     public static class ChangeVectorParser
     {
-        public const string RaftTag = "RAFT";
-        public const string TrxnTag = "TRXN";
-        public const string SinkTag = "SINK";
-        public const string MoveTag = "MOVE";
+        public const string RaftTag = Constants.ChangeVector.RaftTag;
+        public const string TrxnTag = Constants.ChangeVector.TrxnTag;
+        public const string SinkTag = Constants.ChangeVector.SinkTag;
+        public const string MoveTag = Constants.ChangeVector.MoveTag;
 
         public static readonly int RaftInt = RaftTag.ParseNodeTag();
         public static readonly int TrxnInt = TrxnTag.ParseNodeTag();
