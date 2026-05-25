@@ -37,7 +37,14 @@ public class HealthEndpointsTests(ITestOutputHelper output, HealthEndpointsTests
     {
         // RavenHealthCheck reads IBootstrapState (not IServerReady) — controlling
         // that flag is what flips /healthz between 503 and 200.
-        public IBootstrapState Bootstrap { get; } = new BootstrapStateFlag();
+        public IBootstrapState Bootstrap { get; } = new BootstrapStateFlag(
+            Microsoft.Extensions.Options.Options.Create(new ApplianceOptions
+            {
+                SetupPackagePath = Path.Combine(
+                    Path.GetTempPath(),
+                    nameof(HealthEndpointsTests),
+                    Guid.NewGuid().ToString("N"))
+            }));
 
         protected override IHost CreateHost(IHostBuilder builder)
         {
