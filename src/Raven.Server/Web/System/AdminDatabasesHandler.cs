@@ -282,7 +282,7 @@ namespace Raven.Server.Web.System
                             && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
-                                await RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
+                                await RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord, rawDatabaseRecord.Settings);
                         }
                     }
                 }
@@ -344,12 +344,12 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private async Task RecreateDatabase(string databaseName, DatabaseRecord databaseRecord)
+        private async Task RecreateDatabase(string databaseName, DatabaseRecord databaseRecord, Dictionary<string, string> settings)
         {
             if (Server.ServerStore.Cluster.DatabaseExists(databaseName))
                 return;
 
-            var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
+            var databaseConfiguration = DatabasesLandlord.CreateDatabaseConfiguration(ServerStore, databaseName, settings);
             if (databaseConfiguration.Core.RunInMemory)
                 return;
 
