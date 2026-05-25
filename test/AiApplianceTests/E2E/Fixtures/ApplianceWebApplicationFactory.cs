@@ -18,15 +18,18 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
     private readonly string _licenseApiUrl;
     private readonly string _setupPackagePath;
     private readonly IDocumentStore _applianceStore;
+    private readonly Action<ApplianceOptions>? _configureOptions;
 
     public ApplianceWebApplicationFactory(
         string licenseApiUrl,
         string setupPackagePath,
-        IDocumentStore applianceStore)
+        IDocumentStore applianceStore,
+        Action<ApplianceOptions>? configureOptions = null)
     {
         _licenseApiUrl = licenseApiUrl;
         _setupPackagePath = setupPackagePath;
         _applianceStore = applianceStore;
+        _configureOptions = configureOptions;
     }
 
     protected override IHost CreateHost(IHostBuilder builder)
@@ -37,6 +40,7 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
             {
                 opts.LicenseApiUrl = _licenseApiUrl;
                 opts.SetupPackagePath = _setupPackagePath;
+                _configureOptions?.Invoke(opts);
             });
 
             services.RemoveAll<IDocumentStore>();

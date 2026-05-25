@@ -58,7 +58,22 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         using var factory = new ApplianceWebApplicationFactory(
             licenseApiUrl: licenseApi.BaseAddress,
             setupPackagePath: setupRoot,
-            applianceStore: store);
+            applianceStore: store,
+            configureOptions: opts =>
+            {
+                // Default LlmProvider is "openai" with an empty API key —
+                // RavenDB rejects the connection-string put with "ApiKey
+                // field cannot be empty" when T11 (W7 provision-agent)
+                // fires. Switching to Ollama means no key is required.
+                // We don't actually exercise the LLM in T11 — only the
+                // connection-string + agent-doc PUT against the per-app
+                // RavenDB; T12 doesn't need the LLM either. Tests that
+                // exercise live chat would override this back to OpenAI
+                // with a real key.
+                opts.LlmProvider = "ollama";
+                opts.LlmEndpoint = "http://localhost:11434/";
+                opts.LlmModel = "llama3.1";
+            });
         var client = factory.CreateClient();
 
         var statusBefore = await client.GetFromJsonAsync<JsonElement>("/api/bootstrap/status");
