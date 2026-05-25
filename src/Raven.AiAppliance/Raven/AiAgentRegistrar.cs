@@ -24,13 +24,22 @@ public static class AiAgentRegistrar
         IDocumentStore store,
         IAgentSchema schema,
         ApplianceOptions options,
+        string? targetDatabase = null,
         CancellationToken ct = default)
     {
+        // targetDatabase = null → use the store's default database (legacy callers,
+        // appliance startup against the config DB). Per-app provisioning passes
+        // the app's own database name so the connection-string + agent live on
+        // that DB, not the config one.
         var aiCs = BuildAiConnectionString(options);
-        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiCs), ct);
+        var maintenance = targetDatabase is null
+            ? store.Maintenance
+            : store.Maintenance.ForDatabase(targetDatabase);
+        await maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiCs), ct);
 
         var agent = BuildAgent(schema, options);
-        await store.AI.CreateAgentAsync(agent, schema.AnswerSample, ct);
+        var ai = targetDatabase is null ? store.AI : store.AI.ForDatabase(targetDatabase);
+        await ai.CreateAgentAsync(agent, schema.AnswerSample, ct);
 
         return new RegisterResult(
             ConnectionStringName: options.LlmConnectionStringName,
