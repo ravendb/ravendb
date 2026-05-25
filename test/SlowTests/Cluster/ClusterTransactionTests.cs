@@ -2649,6 +2649,70 @@ select incl(c)"
         }
 
         [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionStore_SameEntitySameId_UpdatesAtomicGuardCV()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var user = new User { Name = "Karmel" };
+
+                // Store via cluster transaction Store with empty guard (new document)
+                session.Advanced.ClusterTransaction
+                    .Store("users/1", user, atomicGuardChangeVector: string.Empty);
+
+                // Store the same entity again with a different guard value → should just update the CV
+                session.Advanced.ClusterTransaction
+                    .Store("users/1", user, atomicGuardChangeVector: "updated-cv");
+
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var loaded = await session.LoadAsync<User>("users/1");
+                Assert.NotNull(loaded);
+                Assert.Equal("Karmel", loaded.Name);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ClusterTransactionStore_ThrowsWhenDeferredCommandExists()
+        {
+            using var store = GetDocumentStore();
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession(new SessionOptions
+            {
+                TransactionMode = TransactionMode.ClusterWide
+            }))
+            {
+                var atomicGuard = await session.Advanced.ClusterTransaction
+                    .GetAtomicGuardAsync("users/1");
+
+                // Defer a delete command for users/1
+                session.Advanced.Defer(new Raven.Client.Documents.Commands.Batches.DeleteCommandData("users/1", null));
+
+                Assert.Throws<InvalidOperationException>(() =>
+                {
+                    session.Advanced.ClusterTransaction
+                        .Store("users/1", new User { Name = "Indych" }, atomicGuard);
+                });
+            }
+        }
+
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task TestCase()
         {
             using var store = GetDocumentStore();
