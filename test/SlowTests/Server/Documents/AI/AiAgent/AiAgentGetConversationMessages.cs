@@ -40,8 +40,6 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Equal(conversationId, result.ConversationId);
         Assert.Equal(AgentName, result.Agent);
         Assert.NotNull(result.TotalUsage);
-        Assert.NotNull(result.AttachmentNames);
-        Assert.Empty(result.AttachmentNames);
         Assert.True(result.Messages.Count > 0);
 
         // Should have system, user, and assistant messages
@@ -309,15 +307,19 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
         Assert.Single(result.Messages);
         var msg = result.Messages[0];
         Assert.Equal(AiMessageRole.User, msg.Role);
-        Assert.Equal("Look at this image\nWhat do you see?", msg.Content);
+        Assert.Equal("Look at this image" + Environment.NewLine + "What do you see?", msg.Content);
     }
 
     [RavenFact(RavenTestCategory.Ai)]
     public async Task CanGetConversationMessages_AttachmentsExtracted()
     {
+        // The server emits a synthetic user message of the shape "[Attachments: name1, name2, ...]"
+        // when attachments are added to a turn (see ConversationHandler.AddMessageWithAttachmentsName).
+        // The reader should parse those names into AiConversationMessage.Attachments.
         using var store = GetDocumentStore();
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
 
+        var baseTime = DateTime.UtcNow;
         using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
         using (var tx = context.OpenWriteTransaction())
         {
@@ -327,16 +329,19 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                 ["Parameters"] = null,
                 ["Messages"] = new Sparrow.Json.Parsing.DynamicJsonArray
                 {
+                    // Real user prompt
                     new Sparrow.Json.Parsing.DynamicJsonValue
                     {
                         ["role"] = "user",
-                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonArray
-                        {
-                            new Sparrow.Json.Parsing.DynamicJsonValue { ["type"] = "text", ["text"] = "Please analyze this" },
-                            new Sparrow.Json.Parsing.DynamicJsonValue { ["type"] = "image_url", ["name"] = "report.pdf" },
-                            new Sparrow.Json.Parsing.DynamicJsonValue { ["type"] = "image_url", ["name"] = "chart.png" }
-                        },
-                        ["date"] = DateTime.UtcNow
+                        ["content"] = "Please analyze these",
+                        ["date"] = baseTime
+                    },
+                    // Synthetic attachments marker that the server emits when files are attached
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = "[Attachments: report.pdf, chart.png, photo.jpg]",
+                        ["date"] = baseTime.AddTicks(1)
                     }
                 },
                 ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
@@ -346,8 +351,8 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                     ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
                 },
                 ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
-                ["LastMessageAt"] = DateTime.UtcNow,
-                ["CreatedAt"] = DateTime.UtcNow,
+                ["LastMessageAt"] = baseTime.AddTicks(1),
+                ["CreatedAt"] = baseTime,
                 ["Expires"] = null,
                 ["RemainingToolIterations"] = 16,
                 ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
@@ -369,18 +374,359 @@ public class AiAgentGetConversationMessages(ITestOutputHelper output) : RavenTes
                 PageSize = 50
             });
 
-        Assert.Single(result.Messages);
-        Assert.NotNull(result.AttachmentNames);
-        Assert.Equal(2, result.AttachmentNames.Length);
-        Assert.Contains("report.pdf", result.AttachmentNames);
-        Assert.Contains("chart.png", result.AttachmentNames);
-        var msg = result.Messages[0];
-        Assert.Equal(AiMessageRole.User, msg.Role);
-        Assert.Equal("Please analyze this", msg.Content);
-        Assert.NotNull(msg.Attachments);
-        Assert.Equal(2, msg.Attachments.Count);
-        Assert.Equal("report.pdf", msg.Attachments[0]);
-        Assert.Equal("chart.png", msg.Attachments[1]);
+        Assert.Equal(2, result.Messages.Count);
+
+        // First message: plain user text, no attachments. The client deserializer returns an
+        // empty list (not null) when the JSON key is missing/null — see JsonDeserializationBase.ToCollectionOfString.
+        Assert.Equal(AiMessageRole.User, result.Messages[0].Role);
+        Assert.Equal("Please analyze these", result.Messages[0].Content);
+        Assert.Empty(result.Messages[0].Attachments);
+
+        // Second message: the "[Attachments: ...]" marker — names extracted into Attachments,
+        // Content nulled (the marker text itself is implementation detail).
+        var marker = result.Messages[1];
+        Assert.Equal(AiMessageRole.User, marker.Role);
+        Assert.Null(marker.Content);
+        Assert.NotNull(marker.Attachments);
+        Assert.Equal(new[] { "report.pdf", "chart.png", "photo.jpg" }, marker.Attachments);
+    }
+
+    [RavenFact(RavenTestCategory.Ai)]
+    public async Task CanGetConversationMessages_RealWorldImageAnalyzerConversation()
+    {
+        // Replays a realistic persisted "image analyzer" conversation that exercises every
+        // content shape the reader has to support:
+        //   - string content (system, plain user, tool response)
+        //   - structured content array of "text" parts (multi-part user prompt)
+        //   - "[Attachments: ...]" synthetic marker (Content nulled, Attachments populated)
+        //   - object content (assistant structured output — surfaced as JSON)
+        //   - assistant with null content + tool_calls (tool response merged into ToolCalls[].Result)
+        using var store = GetDocumentStore();
+        var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+
+        const string conversationId = "chats/image-analyzer";
+
+        using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+        using (var tx = context.OpenWriteTransaction())
+        {
+            // UTC timestamps from the persisted document supplied by the user. Kept verbatim so the
+            // monotonic ordering and dedup-key behaviour can be observed against real data.
+            DateTime D(string iso) => DateTime.Parse(iso, null, System.Globalization.DateTimeStyles.RoundtripKind);
+
+            var doc = context.ReadObject(new Sparrow.Json.Parsing.DynamicJsonValue
+            {
+                ["Agent"] = "image-analyzer",
+                ["Parameters"] = null,
+                ["Messages"] = new Sparrow.Json.Parsing.DynamicJsonArray
+                {
+                    // 1. system
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "system",
+                        ["content"] = "You are my friend have a chat with me",
+                        ["date"] = D("2026-05-26T14:27:59.9348759Z")
+                    },
+                    // 2. user — multi-part text
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonArray
+                        {
+                            new Sparrow.Json.Parsing.DynamicJsonValue { ["type"] = "text", ["text"] = "what are inside the images I sent you? what are their colors?" },
+                            new Sparrow.Json.Parsing.DynamicJsonValue { ["type"] = "text", ["text"] = "what do you see on those images?" }
+                        },
+                        ["date"] = D("2026-05-26T14:27:59.9553911Z")
+                    },
+                    // 3. user — synthetic attachments marker
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = "[Attachments: banana.png, star.png, heart.png]",
+                        ["date"] = D("2026-05-26T14:28:02.9262631Z")
+                    },
+                    // 4. assistant — structured output (object content)
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                        {
+                            ["Answer"] = "I see three images: 1) a yellow banana with a slight shadow underneath. 2) a yellow five-pointed star on a black background. 3) a red heart (solid) on a black background."
+                        },
+                        ["date"] = D("2026-05-26T14:28:02.9262740Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 144, ["CompletionTokens"] = 100, ["TotalTokens"] = 244, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    },
+                    // 5. user — string
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = "look again at banana.png and give me more info",
+                        ["date"] = D("2026-05-26T14:29:22.3172944Z")
+                    },
+                    // 6. assistant — null content + tool_calls
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["content"] = null,
+                        ["tool_calls"] = new Sparrow.Json.Parsing.DynamicJsonArray
+                        {
+                            new Sparrow.Json.Parsing.DynamicJsonValue
+                            {
+                                ["id"] = "call_dkp18EaCZOxzr8LcOBWm47dS",
+                                ["type"] = "function",
+                                ["function"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                                {
+                                    ["name"] = "__RetrieveAttachment",
+                                    ["arguments"] = "{\"names\":[\"banana.png\"]}"
+                                }
+                            }
+                        },
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["date"] = D("2026-05-26T14:29:24.9020805Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 158, ["CompletionTokens"] = 26, ["TotalTokens"] = 184, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    },
+                    // 7. tool response (merged into msg 6's ToolCalls)
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["tool_call_id"] = "call_dkp18EaCZOxzr8LcOBWm47dS",
+                        ["role"] = "tool",
+                        ["content"] = "Attachment: banana.png",
+                        ["date"] = D("2026-05-26T14:29:24.9139616Z")
+                    },
+                    // 8. assistant — structured output
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                        {
+                            ["Answer"] = "The banana image shows a single, whole banana lying horizontally with its stem to the right."
+                        },
+                        ["date"] = D("2026-05-26T14:29:28.5144884Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 0, ["CompletionTokens"] = 228, ["TotalTokens"] = 222, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    },
+                    // 9. user
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = "who are you",
+                        ["date"] = D("2026-05-26T14:29:35.2933234Z")
+                    },
+                    // 10. assistant — structured output
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                        {
+                            ["Answer"] = "I'm your friend (an AI assistant). I can chat, help with questions, describe images you send, and help with tasks. How can I help next?"
+                        },
+                        ["date"] = D("2026-05-26T14:29:37.3628655Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 20, ["CompletionTokens"] = 88, ["TotalTokens"] = 108, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    },
+                    // 11. user
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "user",
+                        ["content"] = "look again at star.png and give me more info",
+                        ["date"] = D("2026-05-26T14:29:47.2857319Z")
+                    },
+                    // 12. assistant — null content + tool_calls
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["content"] = null,
+                        ["tool_calls"] = new Sparrow.Json.Parsing.DynamicJsonArray
+                        {
+                            new Sparrow.Json.Parsing.DynamicJsonValue
+                            {
+                                ["id"] = "call_5jFEXrZu1A4p4lomIFqabT3V",
+                                ["type"] = "function",
+                                ["function"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                                {
+                                    ["name"] = "__RetrieveAttachment",
+                                    ["arguments"] = "{\"names\":[\"star.png\"]}"
+                                }
+                            }
+                        },
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["date"] = D("2026-05-26T14:29:48.5266184Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 11, ["CompletionTokens"] = 26, ["TotalTokens"] = 37, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    },
+                    // 13. tool response (merged into msg 12's ToolCalls)
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["tool_call_id"] = "call_5jFEXrZu1A4p4lomIFqabT3V",
+                        ["role"] = "tool",
+                        ["content"] = "Attachment: star.png",
+                        ["date"] = D("2026-05-26T14:29:48.5277669Z")
+                    },
+                    // 14. assistant — structured output
+                    new Sparrow.Json.Parsing.DynamicJsonValue
+                    {
+                        ["role"] = "assistant",
+                        ["refusal"] = null,
+                        ["annotations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                        ["content"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                        {
+                            ["Answer"] = "The star image is a simple five-pointed star centered on a solid black background."
+                        },
+                        ["date"] = D("2026-05-26T14:29:52.4408905Z"),
+                        ["usage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                            { ["PromptTokens"] = 0, ["CompletionTokens"] = 229, ["TotalTokens"] = 124, ["CachedTokens"] = 0, ["ReasoningTokens"] = 0 }
+                    }
+                },
+                ["LinkedConversations"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                ["TotalUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    ["PromptTokens"] = 3097, ["CompletionTokens"] = 697, ["TotalTokens"] = 3794,
+                    ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
+                },
+                ["OpenActionCalls"] = new Sparrow.Json.Parsing.DynamicJsonValue(),
+                ["LastMessageAt"] = D("2026-05-26T14:29:52.4408905Z"),
+                ["CreatedAt"] = D("2026-05-26T14:27:59.9307710Z"),
+                ["Expires"] = null,
+                ["CurrentUsage"] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    ["PromptTokens"] = 690, ["CompletionTokens"] = 229, ["TotalTokens"] = 919,
+                    ["CachedTokens"] = 0, ["ReasoningTokens"] = 0
+                },
+                ["RemainingToolIterations"] = 16,
+                ["SubConversationIds"] = new Sparrow.Json.Parsing.DynamicJsonArray(),
+                [Raven.Client.Constants.Documents.Metadata.Key] = new Sparrow.Json.Parsing.DynamicJsonValue
+                {
+                    [Raven.Client.Constants.Documents.Metadata.Collection] = Raven.Client.Constants.Documents.Collections.AiAgentConversationCollection
+                }
+            }, "test-doc");
+
+            database.DocumentsStorage.Put(context, conversationId, null, doc);
+            tx.Commit();
+        }
+
+        // === Detailed view ===
+        // Tool messages get merged into their parent assistant's ToolCalls, so the 2 stand-alone
+        // "tool" rows disappear from the result. That leaves: 1 system + 5 user + 6 assistant = 12.
+        var detailed = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = conversationId,
+                DetailLevel = AiConversationDetailLevel.Detailed,
+                PageSize = 100
+            });
+
+        Assert.Equal("image-analyzer", detailed.Agent);
+        Assert.Equal(12, detailed.Messages.Count);
+
+        // Chronological order (oldest first).
+        for (int i = 1; i < detailed.Messages.Count; i++)
+            Assert.True(detailed.Messages[i].Timestamp >= detailed.Messages[i - 1].Timestamp);
+
+        // [0] system, plain string content. Client deserializer returns empty list (not null)
+        // for missing/null Attachments — see JsonDeserializationBase.ToCollectionOfString.
+        Assert.Equal(AiMessageRole.System, detailed.Messages[0].Role);
+        Assert.Equal("You are my friend have a chat with me", detailed.Messages[0].Content);
+        Assert.Empty(detailed.Messages[0].Attachments);
+
+        // [1] user, multi-part text — joined with line breaks.
+        Assert.Equal(AiMessageRole.User, detailed.Messages[1].Role);
+        Assert.Equal(
+            "what are inside the images I sent you? what are their colors?" + Environment.NewLine + "what do you see on those images?",
+            detailed.Messages[1].Content);
+        Assert.Empty(detailed.Messages[1].Attachments);
+
+        // [2] user, "[Attachments: ...]" marker → Content null, Attachments populated.
+        Assert.Equal(AiMessageRole.User, detailed.Messages[2].Role);
+        Assert.Null(detailed.Messages[2].Content);
+        Assert.NotNull(detailed.Messages[2].Attachments);
+        Assert.Equal(new[] { "banana.png", "star.png", "heart.png" }, detailed.Messages[2].Attachments);
+
+        // [3] assistant, object content → surfaced as JSON containing the Answer.
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[3].Role);
+        Assert.NotNull(detailed.Messages[3].Content);
+        Assert.Contains("yellow banana", detailed.Messages[3].Content);
+        Assert.Contains("Answer", detailed.Messages[3].Content);    // JSON shape preserved
+        Assert.NotNull(detailed.Messages[3].Usage);
+        Assert.Equal(244, detailed.Messages[3].Usage.TotalTokens);
+        // Client deserializer returns empty list (not null) for missing/null ToolCalls.
+        Assert.Empty(detailed.Messages[3].ToolCalls);
+
+        // [4] user, plain string.
+        Assert.Equal(AiMessageRole.User, detailed.Messages[4].Role);
+        Assert.Equal("look again at banana.png and give me more info", detailed.Messages[4].Content);
+
+        // [5] assistant, null content + tool_calls; tool response from msg 7 merged into ToolCalls[0].Result.
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[5].Role);
+        Assert.Null(detailed.Messages[5].Content);
+        Assert.NotNull(detailed.Messages[5].ToolCalls);
+        Assert.Single(detailed.Messages[5].ToolCalls);
+        Assert.Equal("call_dkp18EaCZOxzr8LcOBWm47dS", detailed.Messages[5].ToolCalls[0].Id);
+        Assert.Equal("__RetrieveAttachment", detailed.Messages[5].ToolCalls[0].Name);
+        Assert.Equal("{\"names\":[\"banana.png\"]}", detailed.Messages[5].ToolCalls[0].Arguments);
+        Assert.Equal("Attachment: banana.png", detailed.Messages[5].ToolCalls[0].Result);
+
+        // [6] assistant, structured output (after the tool call returned).
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[6].Role);
+        Assert.Contains("whole banana lying horizontally", detailed.Messages[6].Content);
+
+        // [7] user
+        Assert.Equal(AiMessageRole.User, detailed.Messages[7].Role);
+        Assert.Equal("who are you", detailed.Messages[7].Content);
+
+        // [8] assistant
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[8].Role);
+        Assert.Contains("AI assistant", detailed.Messages[8].Content);
+
+        // [9] user
+        Assert.Equal(AiMessageRole.User, detailed.Messages[9].Role);
+        Assert.Equal("look again at star.png and give me more info", detailed.Messages[9].Content);
+
+        // [10] assistant, null content + tool_calls; tool response from msg 13 merged into ToolCalls[0].Result.
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[10].Role);
+        Assert.Null(detailed.Messages[10].Content);
+        Assert.NotNull(detailed.Messages[10].ToolCalls);
+        Assert.Single(detailed.Messages[10].ToolCalls);
+        Assert.Equal("call_5jFEXrZu1A4p4lomIFqabT3V", detailed.Messages[10].ToolCalls[0].Id);
+        Assert.Equal("Attachment: star.png", detailed.Messages[10].ToolCalls[0].Result);
+
+        // [11] assistant, structured output (star description).
+        Assert.Equal(AiMessageRole.Assistant, detailed.Messages[11].Role);
+        Assert.Contains("five-pointed star", detailed.Messages[11].Content);
+
+        // Conversation-level metadata
+        Assert.NotNull(detailed.TotalUsage);
+        Assert.Equal(3794, detailed.TotalUsage.TotalTokens);
+        Assert.False(detailed.HasMoreMessages);
+
+        // === Simple view ===
+        // User messages all pass; assistants are filtered to those WITH content. The two
+        // tool-call-only assistant messages (Content null) get dropped: 5 user + 4 assistant = 9.
+        var simple = await store.AI.GetConversationMessagesAsync(
+            new GetConversationMessagesOptions
+            {
+                ConversationId = conversationId,
+                DetailLevel = AiConversationDetailLevel.Simple,
+                PageSize = 100
+            });
+
+        Assert.Equal(9, simple.Messages.Count);
+        Assert.DoesNotContain(simple.Messages, m => m.Role == AiMessageRole.System);
+        Assert.DoesNotContain(simple.Messages, m => m.Role == AiMessageRole.Assistant && m.Content == null);
+
+        // The attachments-marker user message still appears in Simple view (User passes regardless
+        // of content), with the parsed Attachments still populated.
+        var attachmentsMsg = Assert.Single(simple.Messages, m => m.Attachments is { Count: 3 });
+        Assert.Equal(new[] { "banana.png", "star.png", "heart.png" }, attachmentsMsg.Attachments);
+        Assert.Null(attachmentsMsg.Content);
     }
 
     [RavenFact(RavenTestCategory.Ai)]

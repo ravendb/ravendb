@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
-using NuGet.Packaging;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
@@ -31,8 +30,7 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
         private readonly List<AiConversationMessage> _results = new();
         private readonly Dictionary<string, (string Content, string SubConversationId)> _toolResponses = new(StringComparer.Ordinal);
-        private readonly HashSet<(long TimestampTicks, string Role, string ToolCallId, int Hash)> _seenMessageKeys = new();
-        private readonly HashSet<string> _attachmentNames = new(StringComparer.Ordinal);
+        private readonly HashSet<(long TimestampTicks, int Hash)> _seenMessageKeys = new();
         private bool _hasMoreMessages;
 
         public Collector(DocumentsOperationContext context, DocumentsStorage storage, ConversationDocument conversation,
@@ -49,11 +47,14 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
         }
 
         public bool HasMoreMessages => _hasMoreMessages;
-        public HashSet<string> AttachmentNames => _attachmentNames;
 
         public List<AiConversationMessage> GetResults()
         {
-            _results.Sort((a, b) => a.Timestamp.CompareTo(b.Timestamp));
+            // Forward traversal collects oldest→newest (already chronological).
+            // Backward traversal collects newest→oldest, so flip to match the DTO contract
+            // ("Messages in chronological order (oldest first)").
+            if (_forward == false)
+                _results.Reverse();
             return _results;
         }
 
@@ -234,19 +235,15 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             return true;
         }
 
-        private static (long TimestampTicks, string Role, string ToolCallId, int Hash) CreateDeduplicationKey(BlittableJsonReaderObject msg)
+        private static (long TimestampTicks, int Hash) CreateDeduplicationKey(BlittableJsonReaderObject msg)
         {
-            // (TimestampTicks, Role, ToolCallId) alone is not enough: ToolCallId is null on user/assistant/system
-            // messages, and in old conversations created before the monotonic-timestamp fix several messages can
-            // share the same date tick. We add a hash of the serialized message as a strong discriminator —
-            // BlittableJsonReaderObject.ToString() produces deterministic JSON, so the same logical message
-            // (present in both the current doc and a history snapshot) hashes identically and still dedups,
-            // while distinct messages that happen to share (ticks, role) no longer collide.
+            // Timestamp alone is not unique for old conversations created before the monotonic timestamp fix.
+            // Add a hash of the serialized blittable message so identical messages dedup correctly,
+            // while distinct messages sharing the same timestamp do not collide.
+
             msg.TryGet(ConversationDocument.DateProperty, out DateTime timestamp);
-            msg.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role);
-            msg.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId);
-            int hash = msg.ToString().GetHashCode();
-            return (timestamp.Ticks, role, toolCallId, hash);
+            var hash = msg.GetHashCode();
+            return (timestamp.Ticks, hash);
         }
 
         private void TryProcessMessage(ConversationDocument.MessagesList messages, ref int index)
@@ -280,9 +277,6 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
 
             if (PassesDetailFilter(converted) == false)
                 return;
-
-            if (converted.Attachments is { Count: > 0 })
-                _attachmentNames.AddRange(converted.Attachments);
 
             _results.Add(converted);
         }
@@ -354,33 +348,45 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             List<string> attachments = null;
 
             msg.TryGetMember(ChatCompletionClient.Constants.RequestFields.Content, out var contentObj);
-            if (contentObj is BlittableJsonReaderArray contentArray)
+            switch (contentObj)
             {
-                var sb = new StringBuilder();
-                for (int i = 0; i < contentArray.Length; i++)
-                {
-                    if (contentArray[i] is not BlittableJsonReaderObject part)
-                        continue;
-
-                    part.TryGet("type", out string type);
-                    switch (type)
+                case BlittableJsonReaderArray contentArray:
+                    // Structured user content. The only stored part type is "text"; multiple text parts
+                    // are joined with line breaks into a single content string.
+                    var sb = new StringBuilder();
+                    for (int i = 0; i < contentArray.Length; i++)
                     {
-                        case "text" when part.TryGet("text", out string text):
+                        if (contentArray[i] is BlittableJsonReaderObject part
+                            && part.TryGet(ChatCompletionClient.Constants.AttachmentsRequestFields.TypeText, out string text))
+                        {
                             if (sb.Length > 0)
-                                sb.Append('\n');
+                                sb.AppendLine();
                             sb.Append(text);
-                            break;
-
-                        case "image_url" or "image" when part.TryGet("name", out string name) && name != null:
-                            (attachments ??= []).Add(name);
-                            break;
+                        }
                     }
-                }
-                content = sb.Length > 0 ? sb.ToString() : null;
-            }
-            else
-            {
-                content = contentObj?.ToString();
+                    content = sb.Length > 0 ? sb.ToString() : null;
+                    break;
+
+                case BlittableJsonReaderObject contentJsonObj:
+                    // Assistant messages with structured output (e.g. {"Answer": "..."}) — surface as JSON
+                    // so the consumer can parse it against the agent's known output schema.
+                    content = contentJsonObj.ToString();
+                    break;
+
+                default:
+                    // Plain string content (system, user, tool, plain assistant). The synthetic
+                    // "[Attachments: name1, name2, ...]" marker is produced by the server when a user
+                    // sends attachments — when we recognize it, surface only the parsed names in
+                    // Attachments and leave Content null (the marker text is implementation detail,
+                    // not something the chatbot UI should display).
+                    content = contentObj?.ToString();
+                    if (content != null)
+                    {
+                        attachments = TryParseAttachmentNames(content);
+                        if (attachments != null)
+                            content = null;
+                    }
+                    break;
             }
 
             msg.TryGet(ConversationDocument.DateProperty, out DateTime timestamp);
@@ -438,6 +444,38 @@ internal sealed partial class AiAgentProcessorForGetConversationMessages
             }
 
             return result;
+        }
+
+        // Matches the synthetic marker emitted by ConversationHandler.AddMessageWithAttachmentsName,
+        // e.g. "[Attachments: banana.png, star.png, heart.png]". Returns null when the content
+        // doesn't match the exact prefix/suffix shape (so regular user text is left alone).
+        private const string AttachmentsMarkerPrefix = "[Attachments: ";
+        private const string AttachmentsMarkerSuffix = "]";
+
+        private static List<string> TryParseAttachmentNames(string content)
+        {
+            if (content.StartsWith(AttachmentsMarkerPrefix, StringComparison.Ordinal) == false
+                || content.EndsWith(AttachmentsMarkerSuffix, StringComparison.Ordinal) == false)
+                return null;
+
+            var inner = content.AsSpan(
+                AttachmentsMarkerPrefix.Length,
+                content.Length - AttachmentsMarkerPrefix.Length - AttachmentsMarkerSuffix.Length);
+
+            List<string> names = null;
+            int start = 0;
+            for (int i = 0; i <= inner.Length; i++)
+            {
+                if (i != inner.Length && inner[i] != ',')
+                    continue;
+
+                var name = inner.Slice(start, i - start).Trim();
+                if (name.Length > 0)
+                    (names ??= []).Add(name.ToString());
+                start = i + 1;
+            }
+
+            return names;
         }
     }
 }
