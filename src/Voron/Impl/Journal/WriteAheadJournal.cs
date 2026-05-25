@@ -396,6 +396,11 @@ namespace Voron.Impl.Journal
                     
                     if (_env.Options.RootJournal is null)
                     {
+                        // A standalone env may still find local journals that are hard-linked to another env's journals,
+                        // left over from a previous run with shared journals enabled. We must never write to such a file -
+                        // it would corrupt the env owning the other link. Hard-linked journals are kept read-only for the
+                        // duration of recovery, and the env will allocate a fresh journal for any subsequent writes.
+                        // See RavenDB-26655.
                         bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
 
                         var jrnlWriter = isHardLinked
