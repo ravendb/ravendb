@@ -282,7 +282,7 @@ namespace Raven.Server.Web.System
                             && Server.ServerStore.Cluster.DatabaseExists(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if database state needs to be updated (including recreating indexes)"))
-                                RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
+                                await RecreateDatabase(rawDatabaseRecord.DatabaseName, databaseRecord);
                         }
                     }
                 }
