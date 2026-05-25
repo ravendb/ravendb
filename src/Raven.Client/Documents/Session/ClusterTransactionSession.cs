@@ -64,18 +64,20 @@ namespace Raven.Client.Documents.Session
 
                 var value = await _session.Operations.SendAsync(
                     new GetCompareExchangeValueOperation<BlittableJsonReaderObject>(atomicGuardKey, materializeMetadata: false),
-                    sessionInfo: _session._sessionInfo, token: token).ConfigureAwait(false);
+                    sessionInfo: _session.SessionInfo, token: token).ConfigureAwait(false);
 
                 if (value == null)
                     return null;
 
-                if (value.Index > 0)
+                changeVector = value.ChangeVector;
+
+                if (changeVector == null && value.Index > 0)
                 {
                     var clusterTransactionId = _session.SessionInfo?.ClusterTransactionId;
                     if (clusterTransactionId == null)
-                        return null; // can't compute change vector without cluster tx id
+                        return null;
 
-                    changeVector = $"TRXN:{value.Index}-{clusterTransactionId}";
+                    changeVector = $"{Constants.ChangeVector.TrxnTag}:{value.Index}-{clusterTransactionId}";
                 }
 
                 if (changeVector != null)
@@ -183,10 +185,10 @@ namespace Raven.Client.Documents.Session
 
             // Check for deferred commands
             if (session.DeferredCommandsDictionary.ContainsKey((documentId, CommandType.ClientAnyCommand, null)))
-                throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document id: " + documentId);
+                throw new InvalidOperationException("Can't store document, there is a deferred command registered for this document in the session. Document ID: " + documentId);
 
             if (session.DeletedEntities.Contains(entity))
-                throw new InvalidOperationException("Can't store object, it was already deleted in this session. Document id: " + documentId);
+                throw new InvalidOperationException("Can't store object, it was already deleted in this session. Document ID: " + documentId);
 
             session.GenerateEntityIdOnTheClient.TrySetIdentity(entity, documentId);
 
