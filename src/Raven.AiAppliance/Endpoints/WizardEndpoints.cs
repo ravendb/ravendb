@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Infrastructure;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
@@ -16,12 +14,10 @@ using Raven.Client.Exceptions;
 
 namespace Raven.AiAppliance.Endpoints;
 
-/// Stage C.1 wizard backend endpoints. Mapped unconditionally — there is no
-/// endpoint-level <see cref="BootstrapPhase"/> gate yet, so callers must
-/// respect <c>/api/bootstrap/status</c> and only POST here once the appliance
-/// reports <c>Ready</c>. A middleware-based gate that returns 503 for
-/// non-bootstrap routes while <see cref="BootstrapPhase"/> != Ready is a
-/// follow-up.
+/// Stage C.1 wizard backend endpoints. Reachability is enforced by
+/// <c>ReadinessGateMiddleware</c> (returns 503 for non-bootstrap routes
+/// while <c>IServerReady.IsReady</c> is false); handlers can assume the
+/// config DB exists.
 public static class WizardEndpoints
 {
     /// Fixed-name connection string used by the wizard to probe a source DB
@@ -57,15 +53,11 @@ public static class WizardEndpoints
     private static async Task<IResult> ConnectAsync(
         ConnectRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (TryRejectInvalidRequest(body, out var error))
             return error;
-
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
 
         var sqlConnectionString = new SqlConnectionString
         {
@@ -73,13 +65,13 @@ public static class WizardEndpoints
             FactoryName      = body!.Provider,
             ConnectionString = body.ConnectionString,
         };
-        await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+        await store.Maintenance.ForDatabase(store.Database).SendAsync(
             new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString), ct);
 
         ConnectResult result;
         try
         {
-            result = await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+            result = await store.Maintenance.ForDatabase(store.Database).SendAsync(
                 new CdcSinkVerifyOperation(WizardSourceProbeName, body.TableNames), ct);
         }
         catch (Exception ex)
@@ -89,7 +81,7 @@ public static class WizardEndpoints
             result.Errors.Add($"Verification threw: {ex.Message}");
         }
 
-        await PersistAsync(store, opts.ConfigDatabase, state =>
+        await PersistAsync(store, state =>
         {
             // Don't persist the raw ConnectionString — credentials are kept
             // only on the registered _wizard-source-probe SqlConnectionString
@@ -105,15 +97,11 @@ public static class WizardEndpoints
     private static async Task<IResult> DiscoverAsync(
         ConnectRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (TryRejectInvalidRequest(body, out var error))
             return error;
-
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
 
         // Upsert the probe (idempotent — same shape Connect uses) so the
         // schema-discovery call can use the *named* SqlConnectionString
@@ -127,13 +115,13 @@ public static class WizardEndpoints
             FactoryName      = body!.Provider,
             ConnectionString = body.ConnectionString,
         };
-        await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+        await store.Maintenance.ForDatabase(store.Database).SendAsync(
             new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString), ct);
 
         CdcSinkSourceSchema schema;
         try
         {
-            schema = await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+            schema = await store.Maintenance.ForDatabase(store.Database).SendAsync(
                 new GetCdcSinkSchemaOperation(WizardSourceProbeName), ct);
         }
         catch (Exception ex)
@@ -143,7 +131,7 @@ public static class WizardEndpoints
             schema.Errors.Add($"Discovery threw: {ex.Message}");
         }
 
-        await PersistAsync(store, opts.ConfigDatabase, state =>
+        await PersistAsync(store, state =>
         {
             // ConnectionString deliberately not persisted — see Connect handler note.
             state.Provider             = body.Provider;
@@ -164,7 +152,6 @@ public static class WizardEndpoints
     private static async Task<IResult> MapAsync(
         CdcSinkConfiguration body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
@@ -189,9 +176,7 @@ public static class WizardEndpoints
             return Results.BadRequest(new { errors });
         }
 
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-        await PersistAsync(store, opts.ConfigDatabase, state =>
+        await PersistAsync(store, state =>
         {
             state.LastMapConfiguration = body;
             state.LastMapAt            = DateTime.UtcNow;
@@ -211,18 +196,14 @@ public static class WizardEndpoints
     private static async Task<IResult> TestMappingAsync(
         TestMappingRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.SourceTableName))
             return Results.BadRequest(new { error = "sourceTableName is required" });
 
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         WizardState? state;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
             state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
 
         if (state?.LastMapConfiguration is null)
@@ -241,7 +222,7 @@ public static class WizardEndpoints
         TestCdcSinkMappingResult result;
         try
         {
-            result = await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+            result = await store.Maintenance.ForDatabase(store.Database).SendAsync(
                 new TestCdcSinkMappingOperation(request), ct);
         }
         catch (Exception ex)
@@ -268,7 +249,6 @@ public static class WizardEndpoints
     private static async Task<IResult> ProvisionAsync(
         ProvisionRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
@@ -282,19 +262,13 @@ public static class WizardEndpoints
                 error = $"appName '{body.AppName}' has no ASCII alphanumeric characters; cannot derive slug.",
             });
 
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         // Read LastMapConfiguration NoTracking — we'll mutate Name in-place
         // before installing on the per-app DB, and the no-tracking option
         // keeps that mutation from drifting back into wizard-state on a
-        // session SaveChanges.
+        // session SaveChanges. SessionOptions.Database left null so the
+        // store's default (the config DB) resolves.
         CdcSinkConfiguration cdcConfig;
-        using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
-        {
-            Database = opts.ConfigDatabase,
-            NoTracking = true,
-        }))
+        using (var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions { NoTracking = true }))
         {
             var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
             if (state?.LastMapConfiguration is null)
@@ -324,7 +298,7 @@ public static class WizardEndpoints
         // name on the per-app DB must match cdcConfig.ConnectionStringName
         // (W3 default is _wizard-source-probe). Credentials read fresh from
         // the registered probe — we never store them on the wizard-state doc.
-        var probes = await store.Maintenance.ForDatabase(opts.ConfigDatabase).SendAsync(
+        var probes = await store.Maintenance.ForDatabase(store.Database).SendAsync(
             new GetConnectionStringsOperation(WizardSourceProbeName, ConnectionStringType.Sql), ct);
 
         if (probes.SqlConnectionStrings is null ||
@@ -363,7 +337,7 @@ public static class WizardEndpoints
             CreatedAt   = DateTime.UtcNow,
         };
 
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
             // Slug-keyed id (not HiLo) so the App lookup in W7 / W8 / GetAsync
@@ -427,14 +401,13 @@ public static class WizardEndpoints
     /// </summary>
     private static async Task PersistAsync(
         IDocumentStore store,
-        string configDb,
         Action<WizardState> mutate,
         CancellationToken ct)
     {
         const int MaxAttempts = 2;
         for (var attempt = 1; ; attempt++)
         {
-            using var session = store.OpenAsyncSession(configDb);
+            using var session = store.OpenAsyncSession();
             session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
 
             var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct)

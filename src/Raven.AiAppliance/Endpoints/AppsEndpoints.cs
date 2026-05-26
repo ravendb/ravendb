@@ -2,9 +2,6 @@ using System.Security.Cryptography;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Raven.AiAppliance.Hosting;
-using Raven.AiAppliance.Infrastructure;
 using Raven.AiAppliance.Raven;
 using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
@@ -29,13 +26,9 @@ public static class AppsEndpoints
 
     private static async Task<IResult> ListAsync(
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
-        using var session = store.OpenAsyncSession(opts.ConfigDatabase);
+        using var session = store.OpenAsyncSession();
         var apps = await session.Query<App>()
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync(ct);
@@ -46,13 +39,9 @@ public static class AppsEndpoints
     private static async Task<IResult> GetAsync(
         string slug,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
-        using var session = store.OpenAsyncSession(opts.ConfigDatabase);
+        using var session = store.OpenAsyncSession();
         var app = await session.LoadAsync<App>($"apps/{slug}", ct);
 
         return app is null ? Results.NotFound() : Results.Ok(AppDto.From(app));
@@ -62,16 +51,12 @@ public static class AppsEndpoints
         string slug,
         ProvisionAgentRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         IAgentSchema schema,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             // LoadAsync (not Query) because the App doc id is slug-keyed
             // (apps/{slug}, set in W6) — no index, no staleness race against
@@ -144,7 +129,6 @@ public static class AppsEndpoints
         string slug,
         ProvisionChannelRequest body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         IAgentSchemaRegistry schemas,
         ILogger<AppsLogger> logger,
         CancellationToken ct)
@@ -164,11 +148,8 @@ public static class AppsEndpoints
         // registered to unauthenticated probers (M1's lack of auth made this
         // a real concern; once auth lands the leak becomes moot, but the
         // reorder is free either way).
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             // LoadAsync (not Query) — see ProvisionAgentAsync comment.
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
