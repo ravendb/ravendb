@@ -565,7 +565,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     }
 
     /// <summary>
-    /// Removes up to <paramref name="n"/> messages from the beginning of the conversation in place,
+    /// Removes up to <paramref name="truncateCount"/> messages from the beginning of the conversation in place,
     /// while always preserving the system prompt at index 0.
     ///
     /// If an assistant message containing <c>tool_calls</c> is removed, all matching
@@ -577,74 +577,87 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
     /// </summary>
     private static void TrimMessages(
         List<BlittableJsonReaderObject> messages,
-        int n)
+        int truncateCount)
     {
-        if (messages == null || messages.Count <= 1 || n <= 0)
+        if (messages == null || messages.Count <= 1 || truncateCount <= 0)
             return;
 
         // Never remove the system prompt at index 0
-        n = Math.Min(n, messages.Count - 1);
+        truncateCount = Math.Min(truncateCount, messages.Count - 1);
 
-        // Skip system prompt
-        var slice = messages.Skip(1).Take(n).ToList();
-
-        var truncatedCount = 0;
+        var removedCount = 0;
         var toolCallIds = new HashSet<string>();
 
-        foreach (var message in slice)
+        int i;
+        // Bound by messages.Count (re-evaluated each iteration) so the access below is always safe
+        // as the list shrinks. The break condition stops us once we've scheduled enough removals;
+        // we don't bound by n+1 because that's the *original* target and the list is shrinking.
+        for (i = 1; i < messages.Count; i++)
         {
-            if (truncatedCount >= n)
+            if (removedCount + toolCallIds.Count >= truncateCount)
                 break;
+
+            var message = messages[i];
 
             // Message may already be removed because it was deleted as part of tool cleanup
             if (messages.Remove(message) == false)
                 continue;
 
-            truncatedCount++;
+            removedCount++;
+            i--;
 
-            // Check if assistant message contains tool_calls
-            if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) == false ||
-                toolCalls == null ||
-                toolCalls.Length == 0)
+            if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.Role, out string role) == false)
                 continue;
 
-            foreach (BlittableJsonReaderObject toolCall in toolCalls)
+            if (role == ChatCompletionClient.Constants.RequestFields.RoleAssistantValue)
             {
-                if (toolCall.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id) &&
-                    string.IsNullOrWhiteSpace(id) == false)
+                // Check if assistant message contains tool_calls
+                if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls) &&
+                    toolCalls != null)
                 {
-                    toolCallIds.Add(id);
+                    foreach (BlittableJsonReaderObject toolCall in toolCalls)
+                    {
+                        if (toolCall.TryGet(ChatCompletionClient.Constants.ResponseFields.Id, out string id) &&
+                            string.IsNullOrWhiteSpace(id) == false)
+                        {
+                            toolCallIds.Add(id);
+                        }
+                    }
+                }
+
+                continue;
+            }
+            if (role == ChatCompletionClient.Constants.RequestFields.RoleToolValue)
+            {
+                if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId) == false)
+                    continue;
+
+                toolCallIds.Remove(toolCallId);
+            }
+        }
+
+        if (toolCallIds.Count > 0)
+        {
+            // Bound by messages.Count (current size after the first pass) — not n+1, which
+            // is the original target and would over-shoot the now-shrunken list.
+            for (int j = i; j < messages.Count; j++)
+            {
+                var message = messages[j];
+                if (message.TryGet(ChatCompletionClient.Constants.ResponseFields.Role, out string role) == false ||
+                    role != ChatCompletionClient.Constants.RequestFields.RoleToolValue ||
+                    message.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId) == false)
+                    continue;
+
+                if (toolCallIds.Contains(toolCallId))
+                {
+                    toolCallIds.Remove(toolCallId);
+                    messages.Remove(message);
+                    j--;
+
+                    if (toolCallIds.Count == 0)
+                        break;
                 }
             }
-
-            if (toolCallIds.Count == 0)
-                continue;
-
-            // Walk forward and remove matching tool results
-            for (int i = 1; i < messages.Count; i++)
-            {
-                if (toolCallIds.Count == 0)
-                    break;
-
-                var candidate = messages[i];
-
-                if (candidate.TryGet(ChatCompletionClient.Constants.ResponseFields.Role, out string role) == false ||
-                    role != ChatCompletionClient.Constants.RequestFields.RoleToolValue)
-                    continue;
-
-                if (candidate.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCallId, out string toolCallId) == false)
-                    continue;
-
-                if (toolCallIds.Remove(toolCallId) == false)
-                    continue;
-
-                messages.RemoveAt(i);
-                i--;
-
-                truncatedCount++;
-            }
-
-            toolCallIds.Clear();
         }
     }
 
