@@ -119,33 +119,45 @@
         border-color: var(--color-border);
         outline-color: color-mix(in oklch, var(--color-ring) 50%, transparent);
     }
+
     html,
     body,
     #root {
         height: 100%;
     }
+
     body {
         background-color: var(--color-background);
         color: var(--color-foreground);
         font-family: var(--font-sans);
     }
+
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+
     ::selection {
         background-color: oklch(0.488 0.243 264.376 / 35%);
         color: var(--color-foreground);
     }
+
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
     }
+
     ::-webkit-scrollbar-track {
         background: transparent;
     }
+
     ::-webkit-scrollbar-thumb {
         background: color-mix(in oklch, var(--color-foreground) 10%, transparent);
         border-radius: 8px;
         border: 2px solid transparent;
         background-clip: padding-box;
     }
+
     ::-webkit-scrollbar-thumb:hover {
         background: color-mix(in oklch, var(--color-foreground) 20%, transparent);
         background-clip: padding-box;
