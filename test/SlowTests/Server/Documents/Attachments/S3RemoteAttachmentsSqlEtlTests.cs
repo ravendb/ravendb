@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.Attachments.Remote;
 using Raven.Client.Extensions;
 using Raven.Server.SqlMigration;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Olap;
 using SlowTests.Server.Documents.ETL.SQL;
 using Tests.Infrastructure;
 using Xunit;

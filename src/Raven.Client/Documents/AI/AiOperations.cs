@@ -147,4 +147,7 @@ public class AiOperations
     /// <param name="changeVector">An optional change vector for concurrency control.</param>
     public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
         new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
+
+    internal IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, bool? debug, string changeVector = null) =>
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector, debug);
 }

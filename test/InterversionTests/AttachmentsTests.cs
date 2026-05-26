@@ -26,7 +26,6 @@ using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Olap;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
@@ -107,10 +106,10 @@ namespace InterversionTests
 
                 Etl.AddEtl(store, configuration, connectionString);
 
-                IEnumerable<TaskItemErrorTableValue> errors = null;
+                IEnumerable<TaskProcessErrorTableValue> errors = null;
                 Assert.True(await WaitForValueAsync(async () =>
                 {
-                    errors = await Etl.GetItemLoadErrorsAsync(store.Database, configuration);
+                    errors = await Etl.GetProcessLoadErrorsAsync(store.Database, configuration);
 
                     return errors.Any();
                 }, true, 60_000, interval: 322));

@@ -68,6 +68,11 @@ namespace Raven.Server.Commercial
         {
             var exceptions = new List<Exception>();
 
+            if (StartAsPassive && ZipOnly)
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(StartAsPassive)} is not supported when generating a setup package ({nameof(ZipOnly)} is true). The passive flag affects how the local node bootstraps, which doesn't apply to a package consumed by other nodes."));
+            }
+
             if (License == null)
             {
                 exceptions.Add(new InvalidOperationException($"{nameof(License)} must be set"));
@@ -120,6 +125,9 @@ namespace Raven.Server.Commercial
             }
             
             parameters.PackageOutputPath = Path.ChangeExtension(parameters.PackageOutputPath, Path.GetExtension(parameters.PackageOutputPath)?.ToLower());
+
+            if (exceptions.Count > 0)
+                throw new AggregateException($"{nameof(SetupInfo)} validation exceptions list: ", exceptions);
         }
 
         public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)
@@ -160,11 +168,19 @@ namespace Raven.Server.Commercial
         public override void ValidateInfo(CreateSetupPackageParameters parameters)
         {
             List<Exception> exceptions = new ();
-            
+
+            if (StartAsPassive && ZipOnly)
+            {
+                exceptions.Add(new InvalidOperationException($"{nameof(StartAsPassive)} is not supported when generating a setup package ({nameof(ZipOnly)} is true). The passive flag affects how the local node bootstraps, which doesn't apply to a package consumed by other nodes."));
+            }
+
             if (NodeSetupInfos is null || NodeSetupInfos.Any() == false)
             {
                 exceptions.Add(new InvalidOperationException($"{nameof(NodeSetupInfos)} must be set"));
             }
+            
+            if (LocalNodeTag is null && NodeSetupInfos is { Count: > 0 })
+                LocalNodeTag = NodeSetupInfos.Keys.First();
 
             foreach (var tag in NodeSetupInfos.Keys.Where(tag => SetupWizardUtils.IsValidNodeTag(tag) == false))
             {
@@ -207,7 +223,6 @@ namespace Raven.Server.Commercial
             
             if (exceptions.Count > 0)
                 throw new AggregateException($"{nameof(UnsecuredSetupInfo)} validation exceptions list: ", exceptions);
-
         }
 
         public override async Task<byte[]> GenerateZipFile(CreateSetupPackageParameters parameters)

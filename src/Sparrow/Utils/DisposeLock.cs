@@ -44,12 +44,12 @@ namespace Sparrow.Utils
             return disposable;
         }
 
-        public async ValueTask<IDisposable> EnsureNotDisposedAsync()
+        public async ValueTask<IDisposable> EnsureNotDisposedAsync(bool continueOnCapturedContext = false)
         {
             IDisposable disposable = null;
             try
             {
-                disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(false);
+                disposable = await _lock.ReaderLockAsync(_cts.Token).ConfigureAwait(continueOnCapturedContext);
             }
             catch
             {

@@ -11,12 +11,13 @@ interface DatabaseCustomSortersListProps {
     fetchStatus: AsyncStateStatus;
     reload: () => void;
     serverWideSorterNames: string[];
+    takenNames: string[];
     remove: (idx: number) => void;
-    markAsSaved: (idx: number) => void;
+    markAsSaved: (idx: number, name: string) => void;
 }
 
 export default function DatabaseCustomSortersList(props: DatabaseCustomSortersListProps) {
-    const { sorters, fetchStatus, reload, remove, serverWideSorterNames, markAsSaved } = props;
+    const { sorters, fetchStatus, reload, remove, serverWideSorterNames, takenNames, markAsSaved } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -29,14 +30,14 @@ export default function DatabaseCustomSortersList(props: DatabaseCustomSortersLi
     if (sorters.length === 0) {
         return <EmptySet>No custom sorters have been defined</EmptySet>;
     }
-
     return sorters.map((sorter, idx) => (
         <DatabaseCustomSortersListItem
             key={sorter.id}
             initialSorter={sorter}
+            takenNames={takenNames.filter((name) => name !== sorter.name)}
             serverWideSorterNames={serverWideSorterNames}
             remove={() => remove(idx)}
-            markAsSaved={() => markAsSaved(idx)}
+            markAsSaved={(name: string) => markAsSaved(idx, name)}
         />
     ));
 }

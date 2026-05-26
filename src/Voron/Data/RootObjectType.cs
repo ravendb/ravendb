@@ -12,5 +12,6 @@
         Set = 7,
         Container = 8,
         PersistentDictionary = 9,
+        InlineStream = 10,
     }
 }

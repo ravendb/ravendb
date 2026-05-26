@@ -8,7 +8,7 @@ namespace Tests.Infrastructure;
 
 public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute, Xunit.v3.IFactAttribute
 {
-        string Xunit.v3.IFactAttribute.Skip => this.Skip;
+    string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
     private string _skip;
     private readonly RavenTestCategory _category;

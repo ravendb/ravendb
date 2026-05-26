@@ -8,7 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Restore;
 
-namespace SlowTests.Server.Documents.ETL.Olap;
+namespace Tests.Infrastructure;
 
 public class S3TestsHelper
 {

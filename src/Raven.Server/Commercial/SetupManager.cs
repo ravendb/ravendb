@@ -1163,15 +1163,15 @@ namespace Raven.Server.Commercial
                         throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                     }
 
-                    if (unsecuredSetupInfo.LocalNodeTag != null)
+                    if (unsecuredSetupInfo.StartAsPassive == false)
                     {
                         await serverStore.EnsureNotPassiveAsync(publicServerUrl, unsecuredSetupInfo.LocalNodeTag);
+
+                        await DeleteAllExistingCertificates(serverStore);
 
                         if (unsecuredSetupInfo.License != null)
                             await serverStore.LicenseManager.ActivateAsync(unsecuredSetupInfo.License, RaftIdGenerator.DontCareId);
                     }
-
-                    await DeleteAllExistingCertificates(serverStore);
 
                     serverStore.HasFixedPort = unsecuredSetupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                 },
@@ -1230,13 +1230,16 @@ namespace Raven.Server.Commercial
                                 throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
                             }
 
-                            await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
+                            if (setupInfo.StartAsPassive == false)
+                            {
+                                await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
 
-                            await DeleteAllExistingCertificates(serverStore);
+                                await DeleteAllExistingCertificates(serverStore);
 
-                    await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                    if (setupInfo.License != null)
-                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                                await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                                if (setupInfo.License != null)
+                                    await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                            }
 
                             serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
                         },

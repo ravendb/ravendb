@@ -237,7 +237,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task CanPatchRemoteAttachments_NonExists()
         {
             int attachmentsCount = 2;
@@ -702,7 +702,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
+        [RavenTheory(RavenTestCategory.Attachments, S3Required = true)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanPutAttachmentThenAddRemoteConfigAndNewAttachment(bool remoteExistingAttachments)
@@ -770,7 +770,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task CanCrudAttachmentWhenHaveRemoteAttachment()
         {
             var attachmentsCount = 1;
@@ -879,7 +879,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task CanPutInRemoteAttachmentAndDeleteTheDocBeforeUploadingToRemote()
         {
             await using (var holder = CreateCloudSettings())
@@ -945,7 +945,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task CanPutInRemoteAttachmentAndDeleteTheDocBeforeUploadingToRemoteInCluster()
         {
             var srcDb = GetDatabaseName();
@@ -1025,7 +1025,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task DeletingDocumentWithRemoteAttachmentShouldKeepRemoteAttachmentByDefault()
         {
             var attachmentsCount = 1;
@@ -1064,7 +1064,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task DeletingDocumentWithRemoteAttachmentShouldKeepRemoteAttachmentByDefaultInCluster()
         {
             var attachmentsCount = 1;
@@ -1158,7 +1158,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [RavenFact(RavenTestCategory.Attachments, AwsRequired = true)]
         public async Task DeletingAttachmentShouldRemoveFromRemoteTree()
         {
             await using (var holder = CreateCloudSettings())

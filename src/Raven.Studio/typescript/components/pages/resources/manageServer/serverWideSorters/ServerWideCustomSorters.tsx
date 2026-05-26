@@ -17,7 +17,7 @@ import Button from "react-bootstrap/Button";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 
 export default function ServerWideCustomSorters() {
-    const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
+    const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto, markAsSaved } = useCustomSorters();
 
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
 
@@ -75,7 +75,9 @@ export default function ServerWideCustomSorters() {
                                 sorters={sorters}
                                 fetchStatus={asyncGetSorters.status}
                                 reload={asyncGetSorters.execute}
+                                takenNames={sorters.map((s) => s.name).filter(Boolean)}
                                 remove={removeSorter}
+                                markAsSaved={markAsSaved}
                             />
                         </div>
                     </Col>

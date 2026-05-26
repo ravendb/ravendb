@@ -11,7 +11,6 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -271,12 +270,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public override IndexStateRecord UpdateIndexCache(Transaction tx)
         {
-            var dirs = ImmutableDictionary.CreateBuilder<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>();
-            dirs[_directory.Name] = GetLuceneFilesChunks(tx, _directory.Name);
+            var dirs = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.LuceneFileLocations>();
+            dirs[_directory.Name] = GetLuceneFiles(tx, _directory.Name);
 
             foreach (var (name, _) in _suggestionsDirectories)
             {
-                dirs[name] = GetLuceneFilesChunks(tx, name);
+                dirs[name] = GetLuceneFiles(tx, name);
             }
 
             if(tx.LowLevelTransaction.TryGetClientState(out IndexStateRecord rec) is false)
@@ -360,27 +359,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return builder.ToImmutable();
                 }
 
-        private ImmutableDictionary<string, Tree.ChunkDetails[]> GetLuceneFilesChunks(Transaction tx, string name)
+        private unsafe IndexStateRecord.LuceneFileLocations GetLuceneFiles(Transaction tx, string name)
         {
-            var builder = ImmutableDictionary.CreateBuilder<string, Tree.ChunkDetails[]>();
+            var chunks = ImmutableDictionary.CreateBuilder<string, Tree.ChunkDetails[]>();
+            var inlines = ImmutableDictionary.CreateBuilder<string, IndexStateRecord.InlineFileLocation>();
+
             var filesTree = tx.ReadTree(name);
             if (filesTree == null)
-                return builder.ToImmutable();
+                return IndexStateRecord.LuceneFileLocations.Empty;
+
             using (var it = filesTree.Iterate(false))
             {
                 if (it.Seek(Slices.BeforeAllKeys))
                 {
                     do
                     {
-                        var chunkDetails = filesTree.ReadTreeChunks(it.CurrentKey, out _);
+                        var key = it.CurrentKey;
+
+                        if (filesTree.IsInlineStream(key, out var inlineData, out _, out var page))
+                        {
+                            var header = (Tree.InlineStreamHeader*)inlineData;
+                            var tagSize = header->Info.TagSize;
+                            var dataSize = (int)header->Info.TotalSize;
+                            var dataOffsetInPage = (int)(inlineData + Tree.InlineStreamHeader.SizeOf + tagSize - page.Base);
+                            inlines[key.ToString()] = new IndexStateRecord.InlineFileLocation(
+                                page.PageNumber, dataOffsetInPage, dataSize);
+                            continue;
+                        }
+
+                        var chunkDetails = filesTree.ReadTreeChunks(key, out _);
                         if (chunkDetails == null)
                             continue;
-                        builder[it.CurrentKey.ToString()] = chunkDetails;
+                        chunks[key.ToString()] = chunkDetails;
                     } while (it.MoveNext());
                 }
             }
 
-            return builder.ToImmutable();
+            return new IndexStateRecord.LuceneFileLocations(chunks.ToImmutable(), inlines.ToImmutable());
         }
 
         private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)

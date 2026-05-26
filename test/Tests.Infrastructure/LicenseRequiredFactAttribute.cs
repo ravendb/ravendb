@@ -8,18 +8,7 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        internal static readonly bool HasLicense;
-
-        internal static string SkipMessage = "Requires License to be set via 'RAVEN_LICENSE' or 'RAVEN_LICENSE_PATH' environment variable.";
-
-        static LicenseRequiredFactAttribute()
-        {
-            HasLicense =
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE")) == false ||
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN.LICENSE")) == false || 
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH")) == false || 
-                string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("RAVEN.LICENSE.PATH")) == false;
-        }
+        internal static string SkipMessage = $"Requires License to be set via '{RavenTestHelper.EnvironmentVariables.LicenseEnvName}' environment variable.";
 
         public new string Skip
         {
@@ -34,7 +23,7 @@ namespace Tests.Infrastructure
 
         internal static bool ShouldSkip()
         {
-            return HasLicense == false;
+            return RavenTestHelper.EnvironmentVariables.HasLicense == false;
         }
     }
 }

@@ -428,7 +428,8 @@ function CompletedSummary() {
     const { getStudioUrl } = useSetupWizardFinishUtils();
 
     const isSettingCluster = nodeAddressStep.nodes.length > 1 || method === "usePackage";
-    const localNodeTag = nodeAddressStep.nodes?.[0]?.nodeTag ?? nodeTag;
+    const localNode = nodeAddressStep.nodes?.[0];
+    const localNodeTag = localNode?.nodeTag ?? nodeTag;
     const isSetupUnsecured = securityOption === "none" || (method === "usePackage" && !isZipSecure);
     const isSetupPackage = method === "createPackage";
     const showInfoAboutInstalledCertificate = !isSetupUnsecured && !isSetupPackage;
@@ -652,7 +653,6 @@ function useSetupWizardFinishUtils() {
 
     const getUnsecuredDto = (): Raven.Server.Commercial.UnsecuredSetupInfo => {
         const localNode = getLocalNode();
-        const isPassive = localNode.isPassive;
 
         return {
             AutoIndexingEngineType: additionalSettingsStep.isAdvancedSettingsVisible
@@ -669,16 +669,18 @@ function useSetupWizardFinishUtils() {
                 ? additionalSettingsStep.staticIndexingEngineType
                 : null,
             EnableExperimentalFeatures: additionalSettingsStep.postgresqlIntegration,
-            LocalNodeTag: isPassive ? null : localNode.nodeTag,
-            Environment: isPassive ? null : additionalSettingsStep.studioEnvironment,
+            LocalNodeTag: localNode.nodeTag,
+            Environment: additionalSettingsStep.studioEnvironment,
             License: licenseKeyStep.key == "" ? null : JSON.parse(licenseKeyStep.key),
             ZipOnly: setupMethodStep.method === "createPackage",
+            StartAsPassive: localNode.isPassive ?? false,
             NodeSetupInfos: getNodeSetupInfos(),
         };
     };
 
     const getSecuredDto = (): Raven.Server.Commercial.SetupInfo => {
         const { adminCertificateExpirationTime } = additionalSettingsStep;
+        const localNode = getLocalNode();
 
         const ClientCertNotAfter = adminCertificateExpirationTime
             ? moment.utc().add(additionalSettingsStep.adminCertificateExpirationTime, "months").format()
@@ -704,12 +706,13 @@ function useSetupWizardFinishUtils() {
             Email: domainStep.email,
             Domain: domainStep.domain,
             RootDomain: domainStep.rootDomain,
-            LocalNodeTag: getLocalNode().nodeTag,
+            LocalNodeTag: localNode.nodeTag,
             RegisterClientCert: true, // it should be always true. we should detect if same cert is installed and if no then install
             Certificate: selfSignedCertificateStep.certificate,
             Password: selfSignedCertificateStep.password,
             ClientCertNotAfter,
             ZipOnly: setupMethodStep.method === "createPackage",
+            StartAsPassive: localNode.isPassive ?? false,
             NodeSetupInfos: getNodeSetupInfos(),
         };
     };

@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Runtime.CompilerServices;
+using Raven.Client.Extensions.Streams;
 using Voron;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -8,46 +10,109 @@ using Voron.Impl;
 
 namespace Raven.Server.Indexing;
 
-public sealed class LuceneVoronStream : VoronStream
+/// <summary>
+/// Wraps either a chunk-based <see cref="VoronStream"/> or an inline <see cref="UnmanagedVoronStream"/>
+/// for use by Lucene index inputs. Supports cross-transaction reuse by refreshing the underlying
+/// stream's transaction state (page cache reset or inline pointer update).
+/// </summary>
+public sealed unsafe class LuceneVoronStream
 {
-    public LuceneVoronStream(Slice name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt) : base(name, chunksDetails, llt)
+    private readonly VoronStream _voronStream;     // non-null when chunk-based
+    private readonly UnmanagedVoronStream _inlineStream;  // non-null when inline
+    private readonly string _treeName;
+    private readonly string _name;
+    private LowLevelTransaction _llt;
+    private Stream _stream;
+
+    /// <summary>Chunk-based stream constructor.</summary>
+    public LuceneVoronStream(string name, Tree.ChunkDetails[] chunksDetails, LowLevelTransaction llt)
     {
+        _name = name;
+        _voronStream = new VoronStream(chunksDetails, llt);
+        _stream = _voronStream;
+        _llt = llt;
         RegisterTransactionCleanup();
     }
 
+    /// <summary>Inline (unmanaged pointer) stream constructor.</summary>
+    public LuceneVoronStream(string name, string treeName, byte* inlineDataPtr, int inlineDataSize, LowLevelTransaction llt)
+    {
+        _name = name;
+        _treeName = treeName;
+        _inlineStream = new UnmanagedVoronStream(inlineDataPtr, inlineDataSize);
+        _stream = _inlineStream;
+        _llt = llt;
+        RegisterTransactionCleanup();
+    }
+
+    public long Position
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _stream.Position;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => _stream.Position = value;
+    }
+
+    public long Length
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => _stream.Length;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int ReadByte() => _stream.ReadByte();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public int Read(byte[] buffer, int offset, int count) => _stream.Read(buffer, offset, count);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void ReadEntireBlock(byte[] buffer, int offset, int count) => _stream.ReadEntireBlock(buffer, offset, count);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public long Seek(long offset, SeekOrigin origin) => _stream.Seek(offset, origin);
+
     private void RegisterTransactionCleanup()
     {
-        Llt.Transaction.LowLevelTransaction.OnDispose += _ =>
+        _llt.Transaction.LowLevelTransaction.OnDispose += _ =>
         {
-            // Lucene caches VoronStream instances (via SegmentReader) per thread, so they can outlive
-            // the transaction that created them. Nulling _llt here allows the GC to collect the
-            // disposed LowLevelTransaction and its associated structures (page positions, journal
-            // references, etc.), which can be substantial depending on the indexing batch size.
+            // Lucene caches these instances (via SegmentReader) per thread, so they can outlive
+            // the transaction that created them. Nulling the fields here allows the GC to collect the
+            // disposed LowLevelTransaction and its associated structures.
             // When the stream is reused, UpdateCurrentTransaction will set a fresh transaction.
-            Llt = null;
+            _llt = null;
+            _inlineStream?.UpdatePtr(null);
+            _voronStream?.Reset();
         };
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void UpdateCurrentTransaction(Transaction tx)
     {
-        if (tx != null)
-        {
-            if (Llt == tx.LowLevelTransaction)
-                return;
+        ArgumentNullException.ThrowIfNull(tx);
 
-            Llt = tx.LowLevelTransaction;
-            RegisterTransactionCleanup();
-            LastPage = default(Page);
+        if (_llt == tx.LowLevelTransaction)
             return;
-        }
 
-        ThrowTransactionIsNull();
+        _llt = tx.LowLevelTransaction;
+        RegisterTransactionCleanup();
+
+        if (_inlineStream != null)
+        {
+            var tree = tx.ReadTree(_treeName);
+            byte* inlineData = null;
+            if (tree == null || tree.IsInlineStream(_name, out inlineData, out _, out _) == false)
+                ThrowMissingInlineStream();
+            var header = (Tree.InlineStreamHeader*)inlineData;
+            _inlineStream.UpdatePtr(inlineData + Tree.InlineStreamHeader.SizeOf + header->Info.TagSize);
+        }
+        else
+        {
+            _voronStream.Llt = tx.LowLevelTransaction;
+            _voronStream.LastPage = default(Page);
+        }
     }
 
     [DoesNotReturn]
-    private static void ThrowTransactionIsNull()
-    {
-        throw new ArgumentNullException("tx");
-    }
+    private void ThrowMissingInlineStream() =>
+        throw new InvalidOperationException($"Inline stream '{_name}' in tree '{_treeName}' not found after transaction refresh.");
 }

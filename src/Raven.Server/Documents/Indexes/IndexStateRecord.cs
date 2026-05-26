@@ -16,7 +16,7 @@ public record IndexStateRecord(
     HandleReferencesBase.State Documents,
     HandleReferencesBase.State Tombstones,
     ImmutableDictionary<string, IndexStateRecord.CollectionEtags> Collections,
-    ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>> DirectoriesByName,
+    ImmutableDictionary<string, IndexStateRecord.LuceneFileLocations> DirectoriesByName,
     LuceneIndexState LuceneIndexState,
     ImmutableDictionary<string, LuceneIndexState> LuceneSuggestionStates)
 {
@@ -29,9 +29,20 @@ public record IndexStateRecord(
         HandleReferencesBase.State.CreateEmpty(),
         HandleReferencesBase.State.CreateEmpty(),
         ImmutableDictionary<string, CollectionEtags>.Empty,
-        ImmutableDictionary<string, ImmutableDictionary<string, Tree.ChunkDetails[]>>.Empty,
+        ImmutableDictionary<string, LuceneFileLocations>.Empty,
         new LuceneIndexState(),
         ImmutableDictionary<string, LuceneIndexState>.Empty);
+
+    public sealed record LuceneFileLocations(
+        ImmutableDictionary<string, Tree.ChunkDetails[]> Chunks,
+        ImmutableDictionary<string, InlineFileLocation> Inlines)
+    {
+        public static readonly LuceneFileLocations Empty = new(
+            ImmutableDictionary<string, Tree.ChunkDetails[]>.Empty,
+            ImmutableDictionary<string, InlineFileLocation>.Empty);
+    }
+
+    public readonly record struct InlineFileLocation(long PageNumber, int DataOffsetInPage, int DataSize);
 
     public sealed class ReferenceCollectionEtags
     {

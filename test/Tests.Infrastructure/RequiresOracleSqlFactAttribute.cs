@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
@@ -9,13 +9,13 @@ public class RequiresOracleSqlFactAttribute : FactAttribute
     {
         public RequiresOracleSqlFactAttribute()
         {
-            if (RavenTestHelper.SkipIntegrationTests)
+            if (RavenTestHelper.EnvironmentVariables.SkipIntegrationTests)
             {
                 Skip = RavenTestHelper.SkipIntegrationMessage;
                 return;
             }
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (RavenTestHelper.EnvironmentVariables.IsRunningOnCI)
                 return;
 
             if (OracleConnectionString.Instance.CanConnect == false)

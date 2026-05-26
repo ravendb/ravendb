@@ -33,6 +33,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
     private readonly List<ICommandData> _attachmentsCommands;
+    private readonly bool? _debug;
 
     /// <summary>
     /// Initializes a new conversation step for the specified agent and conversation.
@@ -151,6 +152,22 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _attachmentsCommands = attachmentsCommands;
     }
 
+    internal RunConversationOperation(string agentId,
+        string conversationId,
+        IEnumerable<ContentPart> promptParts,
+        List<AiAgentActionResponse> actionResponses,
+        List<AiAgentArtificialActionResponse> artificialActions,
+        AiConversationCreationOptions options,
+        string changeVector,
+        List<ICommandData> attachmentsCommands,
+        string streamPropertyPath,
+        Func<string, Task> streamedChunksCallback,
+        bool? debug)
+        : this(agentId, conversationId, promptParts, actionResponses, artificialActions, options, changeVector, attachmentsCommands, streamPropertyPath, streamedChunksCallback)
+    {
+        _debug = debug;
+    }
+
     [Obsolete("Use the constructor that accepts a List or an Array instead. This is for backward compatibility.", error: false)]
     public RunConversationOperation(
             string agentId,
@@ -232,6 +249,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
             if (_parent._streamPropertyPath is not null)
                 url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
+
+            if (_parent._debug.HasValue)
+                url += $"&debug={_parent._debug.Value}";
 
             var body = new ConversionRequestBody
             {

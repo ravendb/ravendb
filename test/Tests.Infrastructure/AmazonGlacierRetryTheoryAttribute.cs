@@ -10,28 +10,20 @@ namespace Tests.Infrastructure
     {
         string Xunit.v3.IFactAttribute.Skip => this.Skip;
 
-        private const string GlacierCredentialEnvironmentVariable = "GLACIER_CREDENTIAL";
-
         private static readonly GlacierSettings _glacierSettings;
 
         public static GlacierSettings GlacierSettings => new GlacierSettings(_glacierSettings);
 
         private static readonly string ParsingError;
 
-        private static readonly bool EnvVariableMissing;
-
         static AmazonGlacierRetryTheoryAttribute()
         {
-            var glacierSettingsString = Environment.GetEnvironmentVariable(GlacierCredentialEnvironmentVariable);
-            if (glacierSettingsString == null)
-            {
-                EnvVariableMissing = true;
+            if (RavenTestHelper.EnvironmentVariables.GlacierCredential == null)
                 return;
-            }
 
             try
             {
-                _glacierSettings = JsonConvert.DeserializeObject<GlacierSettings>(glacierSettingsString);
+                _glacierSettings = JsonConvert.DeserializeObject<GlacierSettings>(RavenTestHelper.EnvironmentVariables.GlacierCredential);
             }
             catch (Exception e)
             {
@@ -60,7 +52,7 @@ namespace Tests.Infrastructure
 
         private static bool ShouldSkip(out string skipMessage)
         {
-            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, GlacierCredentialEnvironmentVariable, ParsingError, _glacierSettings, skipIsRunningOnCI: true);
+            skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(RavenTestHelper.EnvironmentVariables.GlacierCredential == null, RavenTestHelper.EnvironmentVariables.GlacierCredentialEnvName, ParsingError, _glacierSettings, skipIsRunningOnCI: true);
             return string.IsNullOrEmpty(skipMessage) == false;
         }
     }

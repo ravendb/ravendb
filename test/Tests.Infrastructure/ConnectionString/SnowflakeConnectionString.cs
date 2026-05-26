@@ -1,4 +1,4 @@
-﻿using Snowflake.Data.Client;
+using Snowflake.Data.Client;
 namespace Tests.Infrastructure.ConnectionString;
 
 public class SnowflakeConnectionString : SqlConnectionString<SnowflakeDbConnection>
@@ -6,7 +6,7 @@ public class SnowflakeConnectionString : SqlConnectionString<SnowflakeDbConnecti
     private static SnowflakeConnectionString _instance;
     public static SnowflakeConnectionString Instance => _instance ??= new SnowflakeConnectionString();
 
-    private SnowflakeConnectionString() : base("RAVEN_SNOWFLAKE_CONNECTION_STRING")
+    private SnowflakeConnectionString() : base(RavenTestHelper.EnvironmentVariables.SnowflakeConnectionStringEnvName)
     {
     }
 }

@@ -39,17 +39,15 @@ public class RavenExternalReplicationAttribute : RavenDataAttributeBase
         {
             foreach (var (srcDatabaseMode, srcOptions) in RavenDataAttribute.GetOptions(_source))
             {
-                using (SkipIfNeeded(dstDatabaseMode))
-                using (SkipIfNeeded(srcDatabaseMode))
-                {
-                    if (_data == null || _data.Length == 0)
-                    {
-                        result.Add(new TheoryDataRow(srcOptions, dstOptions));
-                        continue;
-                    }
+                var skipReason = GetSkipReason(dstDatabaseMode) ?? GetSkipReason(srcDatabaseMode);
 
-                    result.Add(new TheoryDataRow(new object[] { srcOptions, dstOptions }.Concat(_data).ToArray()));
-                }
+                var row = _data == null || _data.Length == 0
+                    ? new TheoryDataRow(srcOptions, dstOptions)
+                    : new TheoryDataRow(new object[] { srcOptions, dstOptions }.Concat(_data).ToArray());
+
+                if (skipReason != null)
+                    row.Skip = skipReason;
+                result.Add(row);
             }
         }
         return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);

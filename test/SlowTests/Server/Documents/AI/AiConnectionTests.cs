@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.AI
         {
         }
 
-        private class TestAiConnectionStringOperation : IMaintenanceOperation<NodeConnectionTestResult>
+        internal class TestAiConnectionStringOperation : IMaintenanceOperation<NodeConnectionTestResult>
         {
             private readonly AiConnectionString _connectionString;
 

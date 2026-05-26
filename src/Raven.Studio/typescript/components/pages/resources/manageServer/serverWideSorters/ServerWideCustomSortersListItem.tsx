@@ -12,7 +12,7 @@ import {
 import DeleteCustomSorterConfirm from "components/common/customSorters/DeleteCustomSorterConfirm";
 import {
     CustomSorterFormData,
-    customSorterYupResolver,
+    createCustomSorterYupResolver,
 } from "components/common/customSorters/editCustomSorterValidation";
 import { throttledUpdateLicenseLimitsUsage } from "components/common/shell/setup";
 import useBoolean from "components/hooks/useBoolean";
@@ -31,14 +31,16 @@ import Button from "react-bootstrap/Button";
 
 interface ServerWideCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
+    takenNames: string[];
     remove: () => void;
+    markAsSaved: (name: string) => void;
 }
 
 export default function ServerWideCustomSortersListItem(props: ServerWideCustomSortersListItemProps) {
-    const { initialSorter, remove } = props;
+    const { initialSorter, takenNames, remove, markAsSaved } = props;
 
     const form = useForm<CustomSorterFormData>({
-        resolver: customSorterYupResolver,
+        resolver: createCustomSorterYupResolver(takenNames),
         defaultValues: initialSorter,
     });
     const { control, formState, handleSubmit, reset, setValue } = form;
@@ -64,6 +66,7 @@ export default function ServerWideCustomSortersListItem(props: ServerWideCustomS
                 Code: formData.code,
             });
 
+            markAsSaved(formData.name);
             toggleIsEditMode();
             reset(formData);
             throttledUpdateLicenseLimitsUsage();

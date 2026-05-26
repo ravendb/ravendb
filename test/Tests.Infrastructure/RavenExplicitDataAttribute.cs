@@ -32,21 +32,23 @@ public class RavenExplicitDataAttribute : RavenDataAttributeBase
         {
             foreach (var (searchMode, o) in RavenDataAttribute.FillOptions(options, SearchEngineMode))
             {
-                using (SkipIfNeeded(databaseMode))
-                {
-                    var length = 1;
-                    if (Data is { Length: > 0 })
-                        length += Data.Length;
+                var skipReason = GetSkipReason(databaseMode);
 
-                    var array = new object[length];
+                var length = 1;
+                if (Data is { Length: > 0 })
+                    length += Data.Length;
 
-                    array[0] = new RavenTestParameters { SearchEngine = searchMode, DatabaseMode = databaseMode, Options = o };
+                var array = new object[length];
 
-                    for (var i = 1; i < array.Length; i++)
-                        array[i] = Data[i - 1];
+                array[0] = new RavenTestParameters { SearchEngine = searchMode, DatabaseMode = databaseMode, Options = o };
 
-                    result.Add(new TheoryDataRow(array));
-                }
+                for (var i = 1; i < array.Length; i++)
+                    array[i] = Data[i - 1];
+
+                var row = new TheoryDataRow(array);
+                if (skipReason != null)
+                    row.Skip = skipReason;
+                result.Add(row);
             }
         }
         return new ValueTask<IReadOnlyCollection<ITheoryDataRow>>(result);

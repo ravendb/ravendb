@@ -10,11 +10,13 @@ interface ServerWideCustomSortersListProps {
     sorters: CustomSorter[];
     fetchStatus: AsyncStateStatus;
     reload: () => void;
+    takenNames: string[];
     remove: (idx: number) => void;
+    markAsSaved: (idx: number, name: string) => void;
 }
 
 export default function ServerWideCustomSortersList(props: ServerWideCustomSortersListProps) {
-    const { sorters, fetchStatus, reload, remove } = props;
+    const { sorters, fetchStatus, reload, remove, takenNames, markAsSaved } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -29,6 +31,12 @@ export default function ServerWideCustomSortersList(props: ServerWideCustomSorte
     }
 
     return sorters.map((sorter, idx) => (
-        <ServerWideCustomSortersListItem key={sorter.id} initialSorter={sorter} remove={() => remove(idx)} />
+        <ServerWideCustomSortersListItem
+            key={sorter.id}
+            initialSorter={sorter}
+            takenNames={takenNames.filter((name) => name !== sorter.name)}
+            remove={() => remove(idx)}
+            markAsSaved={(name: string) => markAsSaved(idx, name)}
+        />
     ));
 }
