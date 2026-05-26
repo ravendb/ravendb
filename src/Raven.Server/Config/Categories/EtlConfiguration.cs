@@ -86,7 +86,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("ETL.ProcessHealthStatusImpairedThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float ProcessHealthStatusImpairedThreshold { get; set; }
 
-        [Description("Max ratio of documents in a batch that can be excluded due to transaction-aborting errors. Beyond this threshold the batch fails.")]
+        [Description("Max ratio of inserts in a batch that can be excluded due to transaction-aborting errors. Beyond this threshold the batch fails. A small minimum number of retries is always allowed regardless of this ratio to handle tiny and medium batches.")]
         [DefaultValue(0.05f)]
         [ConfigurationEntry("ETL.SQL.MaxTransactionRetryRatio", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public float MaxTransactionRetryRatio { get; set; }

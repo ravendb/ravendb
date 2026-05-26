@@ -121,8 +121,8 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             }
         }
         throw new InvalidOperationException(
-            $"Load aborted after {maxRetries} attempts: too many documents in this batch caused transaction-aborting errors. " +
-            $"See per document errors for the cause or raise '{RavenConfiguration.GetKey(x => x.Etl.MaxTransactionRetryRatio)}' to tolerate more.",
+            $"Load aborted after {maxRetries} attempts: too many inserts in this batch caused transaction-aborting errors. " +
+            $"See per item errors for the cause or raise '{RavenConfiguration.GetKey(x => x.Etl.MaxTransactionRetryRatio)}' to tolerate more.",
             lastRetryableFailure);
     }
 
