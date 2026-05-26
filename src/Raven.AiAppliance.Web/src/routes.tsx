@@ -28,6 +28,9 @@ export type AppRouteHandle = {
     subtitle?: string;
     appScoped?: boolean;
     breadcrumb?: string;
+    isPageTitleHidden?: boolean;
+    isSidebarHidden?: boolean;
+    isBareLayout?: boolean;
 };
 
 export type NavigationItem = {
@@ -213,6 +216,9 @@ const utilityRoutes: RouteObject[] = [
             title: "Add new application",
             subtitle: "Application connection wizard",
             breadcrumb: "Add new application",
+            isBareLayout: true,
+            isPageTitleHidden: true,
+            isSidebarHidden: true,
         } satisfies AppRouteHandle,
     },
     {
