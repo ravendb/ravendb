@@ -18,9 +18,9 @@ const selectors = {
     configuredTables: "Configured Tables",
     enterprise: "Enterprise",
     ordersTable: "dbo.orders",
-    discoverTablesButton: /Discover tables/i,
+    discoverTablesButton: /^Discover tables$/i,
     discoverButton: /^Discover$/i,
-    configureSelectedTablesButton: /Configure selected tables/i,
+    configureSelectedTablesButton: /^Configure selected tables$/i,
     saveTaskButton: /Save task configuration/i,
 };
 
