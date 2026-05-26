@@ -583,7 +583,11 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             return;
 
         // Never remove the system prompt at index 0
-        truncateCount = Math.Min(truncateCount, messages.Count - 1);
+        if (truncateCount >= messages.Count - 1)
+        {
+            messages.RemoveRange(1, messages.Count - 1);
+            return;
+        }
 
         var removedCount = 0;
         var toolCallIds = new HashSet<string>();
@@ -600,9 +604,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
             var message = messages[i];
 
             // Message may already be removed because it was deleted as part of tool cleanup
-            if (messages.Remove(message) == false)
-                continue;
-
+            messages.RemoveAt(i);
             removedCount++;
             i--;
 
@@ -651,7 +653,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 if (toolCallIds.Contains(toolCallId))
                 {
                     toolCallIds.Remove(toolCallId);
-                    messages.Remove(message);
+                    messages.RemoveAt(j);
                     j--;
 
                     if (toolCallIds.Count == 0)
