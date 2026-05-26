@@ -741,17 +741,23 @@ namespace Voron.Impl.Journal
                     continue;
 
                 var rc = Pal.rvn_ensure_hard_link_non_durable(_journalPager.FileName, dest, out var errorCode);
-                if (rc == PalFlags.FailCodes.Success) 
+                if (rc == PalFlags.FailCodes.Success)
                     continue;
-                
-                // error handling here is complex, because we need to account for users manually removing / copying / moving the 
-                // branch directory directly. That may break the existing links, but we cannot assume much about this. So we'll 
+
+                // error handling here is complex, because we need to account for users manually removing / copying / moving the
+                // branch directory directly. That may break the existing links, but we cannot assume much about this. So we'll
                 // be optimistic about it and move on. This code is only meant to apply if we had a machine level failures and need
                 // to re-wire the hard links that may have been dropped because it is too expensive to make them durable at the
                 // link creation time
-                if (_log.IsWarnEnabled is false) 
+
+                // Destination exists as a separate inode: source folder was copied without preserving hard links.
+                // The destination already holds valid branch journal content; skip silently to avoid spamming on every recovery.
+                if (File.Exists(dest))
                     continue;
-                    
+
+                if (_log.IsWarnEnabled is false)
+                    continue;
+
                 var msg = PalHelper.CreateErrorMessage(rc, errorCode, $"Failed to ensure hard link from '{_journalPager.FileName}' to: '{dest}', this can be because of manual manipulation of the storage environment directories.", out _);
                 _log.Warn(msg);
             }
