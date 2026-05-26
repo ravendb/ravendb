@@ -21,6 +21,9 @@ function App() {
         .map((match) => match.handle)
         .find(isAppRouteHandle);
     const hasActiveApp = Boolean(appId || activeRoute?.appScoped);
+    const isSidebarHidden = Boolean(activeRoute?.isSidebarHidden);
+    const isPageTitleHidden = Boolean(activeRoute?.isPageTitleHidden);
+    const isBareLayout = Boolean(activeRoute?.isBareLayout);
     const activeAppQuery = useQuery({
         ...api.queries.apps.detail(appId ?? ""),
         enabled: Boolean(appId),
@@ -34,6 +37,7 @@ function App() {
             className={cn(
                 "app-shell bg-background text-foreground",
                 isSidebarEffectivelyCollapsed && "app-shell--collapsed",
+                isSidebarHidden && "app-shell--no-sidebar",
             )}
         >
             <header className="app-shell__header border-b bg-background px-3 py-2">
@@ -83,69 +87,79 @@ function App() {
                 </nav>
             </header>
 
-            <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
-                {!isCompactSidebarViewport && (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        className="w-full px-1"
-                        onClick={() => setIsSidebarCollapsed((value) => !value)}
-                        aria-label={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
-                        title={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
-                    >
-                        {isSidebarEffectivelyCollapsed ? (
-                            <PanelLeftOpen className="size-4" aria-hidden="true" />
-                        ) : (
-                            <PanelLeftClose className="size-4" aria-hidden="true" />
-                        )}
-                    </Button>
+            {!isSidebarHidden && (
+                <aside className="app-shell__sidebar border-r border-sidebar-border bg-sidebar">
+                    {!isCompactSidebarViewport && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            className="w-full px-1"
+                            onClick={() => setIsSidebarCollapsed((value) => !value)}
+                            aria-label={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
+                            title={isSidebarEffectivelyCollapsed ? "Expand navigation" : "Collapse navigation"}
+                        >
+                            {isSidebarEffectivelyCollapsed ? (
+                                <PanelLeftOpen className="size-4" aria-hidden="true" />
+                            ) : (
+                                <PanelLeftClose className="size-4" aria-hidden="true" />
+                            )}
+                        </Button>
+                    )}
+                    <nav className="flex-1 space-y-5 px-3 py-2" aria-label="Apps">
+                        <SidebarSection>
+                            {navigationItems.map((item) => (
+                                <SidebarLink key={item.to} item={item} isCollapsed={isSidebarEffectivelyCollapsed} />
+                            ))}
+                        </SidebarSection>
+
+                        {hasActiveApp &&
+                            appNavigationSections.map((section) => (
+                                <SidebarSection
+                                    key={section.label}
+                                    label={section.label}
+                                    isCollapsed={isSidebarEffectivelyCollapsed}
+                                >
+                                    {section.items.map((item) => (
+                                        <SidebarLink
+                                            key={item.to}
+                                            item={{
+                                                ...item,
+                                                to: getAppNavigationUrl(appId, item.to),
+                                            }}
+                                            isCollapsed={isSidebarEffectivelyCollapsed}
+                                        />
+                                    ))}
+                                </SidebarSection>
+                            ))}
+                    </nav>
+                    <div className="space-y-2 p-3">
+                        <SidebarAction
+                            to="/community"
+                            icon={Users}
+                            label="Community"
+                            isCollapsed={isSidebarEffectivelyCollapsed}
+                        />
+                        <SidebarAction
+                            to="/help"
+                            icon={CircleHelp}
+                            label="Help"
+                            isCollapsed={isSidebarEffectivelyCollapsed}
+                        />
+                    </div>
+                </aside>
+            )}
+
+            <main
+                className={cn(
+                    "app-shell__main",
+                    isBareLayout ? "gap-0 p-0" : "gap-3 px-4 py-5 lg:px-5",
+                    isPageTitleHidden && "grid-rows-[minmax(0,1fr)]",
                 )}
-                <nav className="flex-1 space-y-5 px-3 py-2" aria-label="Apps">
-                    <SidebarSection>
-                        {navigationItems.map((item) => (
-                            <SidebarLink key={item.to} item={item} isCollapsed={isSidebarEffectivelyCollapsed} />
-                        ))}
-                    </SidebarSection>
-
-                    {hasActiveApp &&
-                        appNavigationSections.map((section) => (
-                            <SidebarSection
-                                key={section.label}
-                                label={section.label}
-                                isCollapsed={isSidebarEffectivelyCollapsed}
-                            >
-                                {section.items.map((item) => (
-                                    <SidebarLink
-                                        key={item.to}
-                                        item={{
-                                            ...item,
-                                            to: getAppNavigationUrl(appId, item.to),
-                                        }}
-                                        isCollapsed={isSidebarEffectivelyCollapsed}
-                                    />
-                                ))}
-                            </SidebarSection>
-                        ))}
-                </nav>
-                <div className="space-y-2 p-3">
-                    <SidebarAction
-                        to="/community"
-                        icon={Users}
-                        label="Community"
-                        isCollapsed={isSidebarEffectivelyCollapsed}
-                    />
-                    <SidebarAction
-                        to="/help"
-                        icon={CircleHelp}
-                        label="Help"
-                        isCollapsed={isSidebarEffectivelyCollapsed}
-                    />
-                </div>
-            </aside>
-
-            <main className="app-shell__main gap-3 px-4 py-5 lg:px-5">
-                <h1 className="text-xl font-semibold tracking-normal">{activeRoute?.title ?? "My apps"}</h1>
+            >
+                {!isPageTitleHidden && (
+                    <h1 className="text-xl font-semibold tracking-normal">{activeRoute?.title ?? "My apps"}</h1>
+                )}
                 <div className="min-h-0 overflow-auto">
                     <Outlet />
                 </div>

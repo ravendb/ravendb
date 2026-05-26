@@ -9,6 +9,7 @@ type FormTextareaProps<TFieldValues extends FieldValues, TName extends FieldPath
     UseControllerProps<TFieldValues, TName> & {
         description?: ReactNode;
         label?: ReactNode;
+        textareaClassName?: string;
     };
 
 export function FormTextarea<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>>({
@@ -20,6 +21,7 @@ export function FormTextarea<TFieldValues extends FieldValues, TName extends Fie
     id,
     label,
     name,
+    textareaClassName,
     ...restProps
 }: FormTextareaProps<TFieldValues, TName>) {
     const generatedId = useId();
@@ -45,6 +47,7 @@ export function FormTextarea<TFieldValues extends FieldValues, TName extends Fie
                 value={value ?? ""}
                 disabled={disabled || formState.isSubmitting}
                 aria-invalid={invalid}
+                className={textareaClassName}
                 {...restProps}
             />
             {error?.message && <FieldDescription className="text-destructive">{error.message}</FieldDescription>}

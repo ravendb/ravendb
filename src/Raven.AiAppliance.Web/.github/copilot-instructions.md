@@ -32,6 +32,7 @@ Frontend for Raven AI Appliance. It is a Vite + React + TypeScript app and is fi
 - Put new shadcn-generated files only under `src/components/shadcn`.
 - Treat shadcn files as external generated code; avoid editing them unless necessary.
 - Use uppercase `SCREAMING_SNAKE_CASE` for module-level constants.
+- Prefix boolean variables and properties with clear boolean words like `is`, `has`, `can`, `should`, or `was`.
 - Follow React best practices: avoid unnecessary effects; prefer derived state, event handlers and packages mechanisms before reaching for `useEffect`.
 
 ## Commands
