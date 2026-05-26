@@ -14,6 +14,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
@@ -22,9 +23,11 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Commands.Studio;
 using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Handlers.Processors;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common.Test;
+using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1283,13 +1286,142 @@ public class RavenDB_21192 : RavenTestBase
                 
                 var result = (RavenEtlTestScriptResult)testResult;
                 Assert.Single(result.TransformationErrors);
-                
+
                 var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
                 Assert.Empty(itemErrors);
             }
         }
     }
-    
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void SqlEtlTestScriptErrorsShouldNotBePersisted()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var user = new User { Id = "users/1", Name = "Joe Doe" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(user);
+                session.SaveChanges();
+            }
+
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            const string connectionStringName = "simulate";
+            
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+            {
+                Name = connectionStringName,
+                ConnectionString = "Server=tcp:not-a-real-server,1433;Database=fake;User Id=u;Password=p;",
+                FactoryName = "Microsoft.Data.SqlClient"
+            }));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var testResult = SqlEtl.TestScript(
+                    new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
+                    {
+                        DocumentId = user.Id,
+                        PerformRolledBackTransaction = false,
+                        Configuration = new SqlEtlConfiguration
+                        {
+                            Name = connectionStringName,
+                            ConnectionStringName = connectionStringName,
+                            SqlTables =
+                            {
+                                new SqlEtlTable { TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false }
+                            },
+                            Transforms =
+                            {
+                                new Transformation
+                                {
+                                    Collections = { "Users" },
+                                    Name = "Users",
+                                    Script =
+                                        """
+                                        throw new Error("dummy error");
+                                        loadToUsers({ Id: id(this), Name: this.Name });
+                                        """
+                                }
+                            }
+                        }
+                    }, database, database.ServerStore, context);
+
+                var result = (RelationalDatabaseEtlTestScriptResult)testResult;
+                Assert.Single(result.TransformationErrors);
+                Assert.Empty(result.ItemLoadErrors);
+
+                var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
+                Assert.Empty(itemErrors);
+
+                var processErrors = database.TaskErrorsStorage.ReadAllProcessErrors(TaskCategory.Etl);
+                Assert.Empty(processErrors);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Etl)]
+    public void SqlEtlTestScriptLoadFailures_ShouldNotPersistErrors()
+    {
+        using (var store = GetDocumentStore())
+        {
+            var user = new User { Id = "users/1", Name = "Joe Doe" };
+
+            using (var session = store.OpenSession())
+            {
+                session.Store(user);
+                session.SaveChanges();
+            }
+
+            var database = GetDatabase(store.Database).GetAwaiter().GetResult();
+
+            const string connectionStringName = "simulate";
+            
+            store.Maintenance.Send(new PutConnectionStringOperation<SqlConnectionString>(new SqlConnectionString
+            {
+                Name = connectionStringName,
+                ConnectionString = "Server=tcp:127.0.0.1,1;Database=fake;User Id=u;Password=p;Connect Timeout=1;TrustServerCertificate=true",
+                FactoryName = "Microsoft.Data.SqlClient"
+            }));
+
+            using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var testScript = new TestRelationalDatabaseEtlScript<SqlConnectionString, SqlEtlConfiguration>
+                {
+                    DocumentId = user.Id,
+                    PerformRolledBackTransaction = true,
+                    Configuration = new SqlEtlConfiguration
+                    {
+                        Name = connectionStringName,
+                        ConnectionStringName = connectionStringName,
+                        SqlTables =
+                        {
+                            new SqlEtlTable { TableName = "Users", DocumentIdColumn = "Id", InsertOnlyMode = false }
+                        },
+                        Transforms =
+                        {
+                            new Transformation
+                            {
+                                Collections = { "Users" },
+                                Name = "Users",
+                                Script = "loadToUsers({ Id: id(this), Name: this.Name });"
+                            }
+                        }
+                    }
+                };
+                
+                Assert.ThrowsAny<Exception>(() => SqlEtl.TestScript(testScript, database, database.ServerStore, context));
+
+                var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
+                Assert.Empty(itemErrors);
+
+                var processErrors = database.TaskErrorsStorage.ReadAllProcessErrors(TaskCategory.Etl);
+                Assert.Empty(processErrors);
+            }
+        }
+    }
+
     [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Etl)]
     public async Task CanGetEtlErrorsSnmpMetrics_V2C()
     {
