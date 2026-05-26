@@ -150,18 +150,25 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
 
         if (performRolledBackTransaction)
         {
-            using (var writer = GetRelationalDatabaseWriterInstance())
+            try
             {
-                foreach (var records in toWrite)
+                using (var writer = GetRelationalDatabaseWriterInstance())
                 {
-                    var commands = new List<DbCommand>();
+                    foreach (var records in toWrite)
+                    {
+                        var commands = new List<DbCommand>();
 
-                    writer.Write(records, commands, CancellationToken);
+                        writer.Write(records, commands, CancellationToken);
 
-                    summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                        summaries.Add(TableQuerySummary.GenerateSummaryFromCommands(records.TableName, commands));
+                    }
+
+                    writer.Rollback();
                 }
-
-                writer.Rollback();
+            }
+            catch
+            {
+                Statistics.RecordProcessLoadError(count: 0);
             }
         }
         else

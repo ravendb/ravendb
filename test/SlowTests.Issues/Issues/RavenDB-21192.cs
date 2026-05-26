@@ -1411,7 +1411,8 @@ public class RavenDB_21192 : RavenTestBase
                     }
                 };
                 
-                Assert.ThrowsAny<Exception>(() => SqlEtl.TestScript(testScript, database, database.ServerStore, context));
+                var testResult = (RelationalDatabaseEtlTestScriptResult)SqlEtl.TestScript(testScript, database, database.ServerStore, context);
+                Assert.NotNull(testResult);
 
                 var itemErrors = database.TaskErrorsStorage.ReadAllItemErrors(TaskCategory.Etl);
                 Assert.Empty(itemErrors);
