@@ -58,22 +58,7 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         using var factory = new ApplianceWebApplicationFactory(
             licenseApiUrl: licenseApi.BaseAddress,
             setupPackagePath: setupRoot,
-            applianceStore: store,
-            configureOptions: opts =>
-            {
-                // Default LlmProvider is "openai" with an empty API key —
-                // RavenDB rejects the connection-string put with "ApiKey
-                // field cannot be empty" when T11 (W7 provision-agent)
-                // fires. Switching to Ollama means no key is required.
-                // We don't actually exercise the LLM in T11 — only the
-                // connection-string + agent-doc PUT against the per-app
-                // RavenDB; T12 doesn't need the LLM either. Tests that
-                // exercise live chat would override this back to OpenAI
-                // with a real key.
-                opts.LlmProvider = "ollama";
-                opts.LlmEndpoint = "http://localhost:11434/";
-                opts.LlmModel = "llama3.1";
-            });
+            applianceStore: store);
         var client = factory.CreateClient();
 
         var statusBefore = await client.GetFromJsonAsync<JsonElement>("/api/bootstrap/status");
@@ -174,9 +159,28 @@ public class ApplianceFullFlowTests(ITestOutputHelper output) : CdcSinkIntegrati
         Assert.True(ordersCount >= 800,
             $"expected >=800 Orders after initial load, got {ordersCount}");
 
-        // ---------- T11. AI agent ----------
+        // ---------- T11a. Create the AI connection string ----------
+        // Wizard step: operator picks "add new" on the LLM step and submits
+        // their LLM details (provider, endpoint, model, api key). We use
+        // Ollama here so the E2E doesn't depend on a live OpenAI key — the
+        // T11/T12 flow only exercises the connection-string + agent doc
+        // PUT against the per-app DB; we don't actually hit the LLM. A
+        // test that exercises live chat would POST an OpenAI CS with a
+        // real key instead.
+        var csResp = await client.PostAsJsonAsync($"/api/apps/{slug}/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode,
+            $"ai connection-string returned {csResp.StatusCode}: {await csResp.Content.ReadAsStringAsync()}");
+
+        // ---------- T11b. Provision agent referencing the CS ----------
         var agentResp = await client.PostAsJsonAsync($"/api/apps/{slug}/setup/agent",
-            new { framing = "customer-support" });
+            new { connectionStringName = "demo-llm", framing = "customer-support" });
         Assert.True(agentResp.IsSuccessStatusCode,
             $"agent returned {agentResp.StatusCode}: {await agentResp.Content.ReadAsStringAsync()}");
         var agentJson = await agentResp.Content.ReadFromJsonAsync<JsonElement>();

@@ -1,93 +1,40 @@
 using Raven.AiAppliance.Agents;
-using Raven.AiAppliance.Hosting;
 using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 
 namespace Raven.AiAppliance.Raven;
 
-/// Registers (or refreshes) an AI connection string + an agent for a given schema.
-/// Both server-side puts are upserts, so the operation is safe to re-run.
-/// T-1 does not call this on startup; T-3's wizard will.
+/// Registers an agent for a given schema against an existing AI connection
+/// string on the target per-app database. The connection string itself is
+/// owned by the AI connection-strings endpoints (POST + lifecycle); this type
+/// only handles agent creation. CreateAgentAsync is an upsert server-side, so
+/// the operation is safe to re-run.
 public static class AiAgentRegistrar
 {
-    public sealed record RegisterResult(
-        string ConnectionStringName,
-        string AgentIdentifier,
-        string Provider,
-        string Endpoint,
-        string Model);
+    public sealed record RegisterResult(string ConnectionStringName, string AgentIdentifier);
 
     public static async Task<RegisterResult> RegisterAsync(
         IDocumentStore store,
         IAgentSchema schema,
-        ApplianceOptions options,
+        string connectionStringName,
         string targetDatabase,
         CancellationToken ct = default)
     {
-        var aiCs = BuildAiConnectionString(options);
-        await store.Maintenance.ForDatabase(targetDatabase)
-            .SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiCs), ct);
-
-        var agent = BuildAgent(schema, options);
+        var agent = BuildAgent(schema, connectionStringName);
         await store.AI.ForDatabase(targetDatabase)
             .CreateAgentAsync(agent, schema.AnswerSample, ct);
 
         return new RegisterResult(
-            ConnectionStringName: options.LlmConnectionStringName,
-            AgentIdentifier:      schema.Identifier,
-            Provider:             options.LlmProvider,
-            Endpoint:             options.LlmEndpoint,
-            Model:                options.LlmModel);
+            ConnectionStringName: connectionStringName,
+            AgentIdentifier:      schema.Identifier);
     }
 
-    public static async Task<bool> UnregisterAsync(IDocumentStore store, string agentIdentifier, CancellationToken ct = default)
-    {
-        var existing = await store.AI.GetAgentAsync(agentIdentifier, ct);
-        if (existing is null) return false;
-        await store.AI.DeleteAgentAsync(agentIdentifier, ct);
-        return true;
-    }
-
-    private static AiConnectionString BuildAiConnectionString(ApplianceOptions options)
-    {
-        var cs = new AiConnectionString
-        {
-            Name       = options.LlmConnectionStringName,
-            Identifier = options.LlmConnectionStringName,
-            ModelType  = AiModelType.Chat,
-        };
-
-        switch (options.LlmProvider.ToLowerInvariant())
-        {
-            case "openai":
-                cs.OpenAiSettings = new OpenAiSettings(
-                    apiKey:   options.LlmApiKey,
-                    endpoint: options.LlmEndpoint,
-                    model:    options.LlmModel);
-                break;
-
-            case "ollama":
-                cs.OllamaSettings = new OllamaSettings(
-                    uri:   options.LlmEndpoint,
-                    model: options.LlmModel);
-                break;
-
-            default:
-                throw new InvalidOperationException(
-                    $"Unsupported LLM provider '{options.LlmProvider}'. Use 'openai' (covers OpenAI-compatible endpoints) or 'ollama'.");
-        }
-
-        return cs;
-    }
-
-    private static AiAgentConfiguration BuildAgent(IAgentSchema schema, ApplianceOptions options)
+    private static AiAgentConfiguration BuildAgent(IAgentSchema schema, string connectionStringName)
     {
         var agent = new AiAgentConfiguration(
             name:                 schema.DisplayName,
-            connectionStringName: options.LlmConnectionStringName,
+            connectionStringName: connectionStringName,
             systemPrompt:         schema.SystemPrompt)
         {
             Identifier = schema.Identifier,

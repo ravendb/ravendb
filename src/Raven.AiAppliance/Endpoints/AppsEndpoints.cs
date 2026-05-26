@@ -10,6 +10,8 @@ using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 
 namespace Raven.AiAppliance.Endpoints;
@@ -80,17 +82,46 @@ public static class AppsEndpoints
         if (app is null)
             return Results.NotFound(new { error = $"no app with slug '{slug}'" });
 
+        if (body is null || string.IsNullOrWhiteSpace(body.ConnectionStringName))
+            return Results.BadRequest(new { error = "connectionStringName is required" });
+
+        // Look up the operator's AI connection string on the per-app DB. The
+        // CS was POSTed via /api/apps/{slug}/ai/connection-strings (the
+        // dashboard's "pick existing OR add new" step) — we don't accept
+        // inline CS in this body. Defence in depth: also re-gate ModelType +
+        // provider here, since a CS that landed via direct RavenDB Studio
+        // would bypass the POST-time gate.
+        var cs = await store.Maintenance.ForDatabase(app.Database)
+            .SendAsync(new GetConnectionStringsOperation(body.ConnectionStringName, ConnectionStringType.Ai), ct);
+
+        if (cs.AiConnectionStrings is null ||
+            cs.AiConnectionStrings.TryGetValue(body.ConnectionStringName, out var aiCs) == false)
+        {
+            return Results.BadRequest(new
+            {
+                error = $"connection string '{body.ConnectionStringName}' not found; create it via " +
+                        $"POST /api/apps/{slug}/ai/connection-strings first"
+            });
+        }
+
+        if (aiCs.ModelType != AiModelType.Chat)
+            return Results.BadRequest(new { error = $"connection string '{aiCs.Name}' has ModelType={aiCs.ModelType}; agent provisioning requires Chat" });
+
+        var provider = aiCs.GetActiveProvider();
+        if (provider != AiConnectorType.OpenAi && provider != AiConnectorType.Ollama)
+            return Results.BadRequest(new { error = $"connection string '{aiCs.Name}' uses unsupported provider '{provider}' in demo; supported: OpenAi, Ollama" });
+
         // Framing is recorded for now but not yet wired to schema selection
         // (design §1.3 step 9 — AI-suggest paths are a follow-up). The 8-week
         // demo always registers the DI-injected schema.
         logger.LogInformation(
-            "Provisioning agent for app slug={Slug} framing={Framing} schema={SchemaId}",
-            app.Slug, body?.Framing ?? "(none)", schema.Identifier);
+            "Provisioning agent for app slug={Slug} framing={Framing} schema={SchemaId} cs={ConnectionStringName}",
+            app.Slug, body.Framing ?? "(none)", schema.Identifier, aiCs.Name);
 
         var result = await AiAgentRegistrar.RegisterAsync(
             store: store,
             schema: schema,
-            options: opts,
+            connectionStringName: aiCs.Name,
             targetDatabase: app.Database,
             ct: ct);
 
