@@ -229,7 +229,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.Single(widgetIds);
 
         using var session = store.OpenAsyncSession(perAppDb);
-        Assert.Equal(1, await session.Query<ChannelInstance>().CountAsync());
+        Assert.Equal(1, await session.Query<Channel>().CountAsync());
         Assert.Equal(1, await session.Query<ChannelBinding>().CountAsync());
     }
 
@@ -266,8 +266,35 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
 
         // And only one channel doc in the per-app DB.
         using var session = store.OpenAsyncSession(perAppDb);
-        var count = await session.Query<ChannelInstance>().CountAsync();
+        var count = await session.Query<Channel>().CountAsync();
         Assert.Equal(1, count);
+    }
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("http://example.com/app")]             // C3: path
+    [InlineData("https://example.com/foo/bar")]        // C3: nested path
+    [InlineData("https://example.com/?q=1")]           // C3: query
+    [InlineData("https://example.com/#frag")]          // C3: fragment
+    public async Task Channel_endpoint_rejects_origin_with_path_query_or_fragment(string badOrigin)
+    {
+        // C3 from Copilot review #4362803113: allowedOrigins entries must be
+        // origins (scheme + host + optional port) — what the browser sends in
+        // the Origin header. Paths/queries/fragments slip through Uri.TryCreate
+        // + scheme check but don't match the runtime header value, causing
+        // silent CORS misconfig at the future /embed/{widgetId} page.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { badOrigin } });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
     [RavenTheory(RavenTestCategory.AiAppliance)]
@@ -366,10 +393,37 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_doc_lands_in_Channels_collection()
+    {
+        // C4 from Copilot review #4362803113: the design §3.4 spec says the
+        // collection is "Channels", but RavenDB derives the collection name
+        // from the CLR type — so a class named ChannelInstance lands in
+        // "ChannelInstances". Renaming the class to Channel makes the
+        // persisted collection match the spec without overriding conventions.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        var ch = await session.Query<Channel>().FirstAsync();
+        var collection = session.Advanced.GetMetadataFor(ch)["@collection"]!.ToString();
+        Assert.Equal("Channels", collection);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_persists_canonical_agent_id_casing()
     {
         // L3: AgentSchemaRegistry resolves case-insensitively, but the
-        // persisted ChannelInstance.AgentId must adopt the registry's
+        // persisted Channel.AgentId must adopt the registry's
         // canonical casing — otherwise later case-sensitive queries
         // (e.g. M3's idempotency lookup) break across re-runs that
         // mix casings.
@@ -388,7 +442,7 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
 
         using var session = store.OpenAsyncSession(perAppDb);
-        var channel = await session.Query<ChannelInstance>().FirstAsync();
+        var channel = await session.Query<Channel>().FirstAsync();
         Assert.Equal("demo-agent", channel.AgentId);
     }
 
