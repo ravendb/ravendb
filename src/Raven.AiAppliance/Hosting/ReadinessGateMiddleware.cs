@@ -34,12 +34,20 @@ public static class ReadinessGate
                 var ready = context.RequestServices.GetRequiredService<IServerReady>();
                 if (!ready.IsReady)
                 {
+                    // C4 (Copilot review #4365219160): the response body is
+                    // public-safe only. `ready.LastError` comes from
+                    // IServerReady.MarkFailed call sites that pass ex.Message
+                    // (license-API upstream errors, RavenDB probe failures,
+                    // setup-package validation errors) and can include paths,
+                    // hostnames, or stack-trace fragments. All MarkFailed
+                    // sites already log the underlying error via ILogger; the
+                    // gate just emits the static "not ready" string so an
+                    // unauthenticated probe can't fish for internal detail.
                     context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
                     context.Response.Headers.RetryAfter = "5";
                     await context.Response.WriteAsJsonAsync(new
                     {
                         error = "appliance is not ready yet; poll /api/bootstrap/status",
-                        lastError = ready.LastError,
                     });
                     return;
                 }
