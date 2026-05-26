@@ -6,9 +6,9 @@ using Raven.AiAppliance.Raven;
 using Raven.AiAppliance.Schema;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 
 namespace Raven.AiAppliance.Endpoints;
@@ -201,84 +201,99 @@ public static class AppsEndpoints
                 return Results.BadRequest(new { error = "displayName contains control characters" });
         }
 
-        // M3: idempotency. Check for an existing IFrame channel bound to the
-        // same agent — if one exists, return its widgetId instead of creating
-        // an orphan. Operator double-click in the future dashboard or a client
-        // retry on transient failure would otherwise create an orphan channel
-        // that still routes to the agent. (a)-variant from the review: one
-        // channel per (slug, agentId, Type). Multi-channel-per-agent will live
-        // in the dashboard's Channels tab, not in this provisioning endpoint.
+        // C2 (Copilot review #4362803113): idempotency on (slug, type, agentId)
+        // via an atomic guard on a deterministic binding doc id. The previous
+        // query-then-put was only race-safe for sequential retries (M3's
+        // WaitForNonStaleResults absorbed index staleness); concurrent POSTs
+        // could both miss the query and create duplicate channel docs.
+        //
+        // Mechanism: write the binding doc AND the channel doc in one
+        // TransactionMode.ClusterWide session — RavenDB auto-creates an
+        // atomic guard at "rvn-atomic/{bindingId}" (see
+        // ClusterWideTransactionHelper). Concurrent writers Raft-serialize;
+        // the loser catches ClusterTransactionConcurrencyException and reads
+        // the winner's binding to return the same widgetId.
+        var bindingId = $"channel-bindings/{app.Slug}/{IFrameType}/{schema.Identifier}";
+
+        // Fast path: the common "operator double-click / client retry" case
+        // skips the cluster-wide round trip entirely.
         using (var session = store.OpenAsyncSession(app.Database))
         {
-            // C3 (Copilot review #4361946757): the idempotency lookup is
-            // intrinsically a secondary access pattern — the channel doc's
-            // primary id is @channels/{widgetId} (design §3.4) for the
-            // future /embed/{widgetId} page. WaitForNonStaleResults absorbs
-            // the race window between a first POST committing and a rapid-
-            // fire second POST arriving before the index has caught up; on
-            // the second POST we block until the index has seen the first
-            // doc, then find it, then return its widgetId.
-            var existing = await session.Query<ChannelInstance>()
-                .Customize(c => c.WaitForNonStaleResults())
-                .Where(c => c.Type == IFrameType && c.AgentId == schema.Identifier)
-                .FirstOrDefaultAsync(ct);
-
-            if (existing is { Id: { } existingDocId })
+            var existing = await session.LoadAsync<ChannelBinding>(bindingId, ct);
+            if (existing is not null)
             {
-                var existingWidgetId = existingDocId["@channels/".Length..];
                 logger.LogInformation(
-                    "Channel already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
-                    app.Slug, schema.Identifier, existingWidgetId);
-                return Results.Ok(new { widgetId = existingWidgetId });
+                    "Channel binding already exists for slug={Slug} agentId={AgentId}; returning existing widgetId={WidgetId}",
+                    app.Slug, schema.Identifier, existing.WidgetId);
+                return Results.Ok(new { widgetId = existing.WidgetId });
             }
         }
 
-        // H1: widgetId is the stable customer-facing identifier baked into
-        // embed snippets — once a customer pastes the snippet into their HTML,
-        // rotation requires re-issuing every snippet. The earlier 32-bit
-        // (8-hex) form was sized for collision avoidance, but the brute-force /
-        // guessability risk dominates if /embed/{widgetId} ever ships in
-        // anonymous mode (design §3.5 — widgetId becomes the bearer
-        // credential). 128 bits via RandomNumberGenerator gives a value-space
-        // big enough that brute-force is permanently impractical.
-        for (var attempt = 0; attempt < 5; attempt++)
+        // Slow path: no binding yet. Try to create one atomically.
+        //
+        // H1 (security review 2026-05-25): widgetId is the stable customer-
+        // facing identifier baked into embed snippets and the bearer
+        // credential for the future anonymous /embed/{widgetId} page. 128
+        // bits from RandomNumberGenerator keeps it unguessable — note that
+        // we do NOT derive it from the binding tuple, because slug + type +
+        // agentId are operator/public-facing inputs (Shape C from the
+        // planning doc was rejected for this reason).
+        var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
+            .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var channelDocId = $"@channels/{widgetId}";
+
+        try
         {
-            var widgetId = "wgt_" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(16))
-                .TrimEnd('=').Replace('+', '-').Replace('/', '_');
-            var docId = $"@channels/{widgetId}";
-            var channel = new ChannelInstance
+            using var session = store.OpenAsyncSession(new global::Raven.Client.Documents.Session.SessionOptions
             {
-                Id = docId,
+                Database = app.Database,
+                TransactionMode = TransactionMode.ClusterWide,
+            });
+
+            await session.StoreAsync(new ChannelBinding
+            {
+                Id = bindingId,
+                WidgetId = widgetId,
+                CreatedAt = DateTime.UtcNow,
+            }, ct);
+
+            await session.StoreAsync(new ChannelInstance
+            {
+                Id = channelDocId,
                 Type = IFrameType,
                 DisplayName = body.DisplayName ?? IFrameType,
                 AgentId = schema.Identifier,
                 AllowedOrigins = origins,
                 CreatedAt = DateTime.UtcNow,
-            };
+            }, ct);
 
-            try
-            {
-                using var session = store.OpenAsyncSession(app.Database);
-                await session.StoreAsync(channel, changeVector: string.Empty, id: docId, ct);
-                await session.SaveChangesAsync(ct);
+            await session.SaveChangesAsync(ct);
 
-                logger.LogInformation(
-                    "Provisioned channel slug={Slug} widgetId={WidgetId} agentId={AgentId} type={Type}",
-                    app.Slug, widgetId, schema.Identifier, channel.Type);
+            logger.LogInformation(
+                "Provisioned channel slug={Slug} widgetId={WidgetId} agentId={AgentId} type={Type}",
+                app.Slug, widgetId, schema.Identifier, IFrameType);
 
-                return Results.Ok(new { widgetId });
-            }
-            catch (ConcurrencyException)
-            {
-                // 128-bit GUID collision is mathematically irrelevant; loop
-                // stays as belt-and-braces. Reaching attempt 5 signals broken
-                // RNG, not normal operation.
-            }
+            return Results.Ok(new { widgetId });
         }
+        catch (ClusterTransactionConcurrencyException)
+        {
+            // Lost the race. The winner's binding is now committed (the
+            // atomic guard fired BECAUSE the binding doc id we tried to
+            // create already exists). Read it back and return the same
+            // widgetId — the concurrent caller sees idempotent success.
+            using var session = store.OpenAsyncSession(app.Database);
+            var winner = await session.LoadAsync<ChannelBinding>(bindingId, ct);
+            if (winner is null)
+            {
+                throw new InvalidOperationException(
+                    $"ClusterTransactionConcurrencyException fired for '{bindingId}' but the binding doc could not be loaded after the conflict.");
+            }
 
-        throw new InvalidOperationException(
-            $"Could not generate a unique widgetId after 5 attempts. " +
-            $"This usually means the RNG is broken; investigate before retrying.");
+            logger.LogInformation(
+                "Lost race for binding slug={Slug} agentId={AgentId}; returning winner's widgetId={WidgetId}",
+                app.Slug, schema.Identifier, winner.WidgetId);
+            return Results.Ok(new { widgetId = winner.WidgetId });
+        }
     }
 
     /// Logger category marker — keeps the ILogger generic-arg out of the public surface.

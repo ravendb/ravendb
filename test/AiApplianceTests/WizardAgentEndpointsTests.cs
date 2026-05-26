@@ -190,6 +190,50 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_endpoint_returns_same_widgetId_under_concurrent_calls()
+    {
+        // C2 from Copilot review #4362803113: the previous query-then-put
+        // idempotency was only race-safe for *sequential* retries (an
+        // index-staleness scenario the M3 WaitForNonStaleResults handled).
+        // Two concurrent POSTs with the same (slug, type, agentId) could
+        // both miss the query and both store a fresh @channels/{widgetId}
+        // — different widgetIds, identical binding tuple, duplicate
+        // channels routing to the same agent. The fix uses an atomic
+        // guard on a deterministic channel-bindings/{slug}/{type}/{agentId}
+        // doc id (Shape B from the planning doc): the cluster-wide tx
+        // serializes concurrent writers through Raft, the loser catches
+        // ClusterTransactionConcurrencyException, reads the winner's
+        // binding, and returns the same widgetId.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+        var body = new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } };
+
+        var tasks = Enumerable.Range(0, 10)
+            .Select(_ => client.PostAsJsonAsync("/api/apps/my-app/setup/channel", body))
+            .ToArray();
+        var responses = await Task.WhenAll(tasks);
+
+        var widgetIds = new HashSet<string>();
+        foreach (var resp in responses)
+        {
+            Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+            var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            widgetIds.Add(json.GetProperty("widgetId").GetString()!);
+        }
+
+        Assert.Single(widgetIds);
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        Assert.Equal(1, await session.Query<ChannelInstance>().CountAsync());
+        Assert.Equal(1, await session.Query<ChannelBinding>().CountAsync());
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_returns_same_widgetId_for_repeated_calls()
     {
         // M3: idempotency. Two POSTs with the same body must return the same
