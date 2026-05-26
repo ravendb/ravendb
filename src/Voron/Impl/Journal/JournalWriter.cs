@@ -63,6 +63,20 @@ namespace Voron.Impl.Journal
             NumberOfAllocated4Kb = (int)(actualSize / Constants.Storage.JournalPageSize);
         }
 
+        /// <summary>
+        /// Recovery-only ctor
+        /// </summary>
+        public JournalWriter(StorageEnvironmentOptions options, VoronPathSetting filename, long journalNumber, long size, bool readOnlyForRecovery)
+        {
+            Debug.Assert(readOnlyForRecovery);
+            _options = options;
+            _journalNumber = journalNumber;
+            FileName = filename;
+            _log = RavenLogManager.Instance.GetLoggerForVoron<JournalWriter>(options, options.BasePath.FullPath);
+            _writeHandle = new SafeJournalHandle();
+            NumberOfAllocated4Kb = (int)(size / Constants.Storage.JournalPageSize);
+        }
+
         public void Write(long posBy4Kb, Span<Pal.journal_entry> entries, long totalNumberOf4Kbs)
         {
             Debug.Assert(_options.IoMetrics != null);

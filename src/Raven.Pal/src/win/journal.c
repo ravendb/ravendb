@@ -357,3 +357,39 @@ rvn_is_same_hard_link(const char *src, const char *dst, char *is_same, int32_t *
         CloseHandle(dst_handle);
     return rc;
 }
+
+EXPORT int32_t
+rvn_is_hard_link(const char *path, char *is_hard_link, int32_t *detailed_error_code)
+{
+    BY_HANDLE_FILE_INFORMATION info;
+    HANDLE h = CreateFileW((LPCWSTR)path, GENERIC_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (h == INVALID_HANDLE_VALUE)
+    {
+        int32_t error = GetLastError();
+        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND)
+        {
+            *is_hard_link = false;
+            *detailed_error_code = 0;
+            return SUCCESS;
+        }
+        *detailed_error_code = error;
+        return FAIL_OPEN_FILE;
+    }
+
+    int32_t rc = SUCCESS;
+    if (GetFileInformationByHandle(h, &info))
+    {
+        *is_hard_link = info.nNumberOfLinks > 1;
+    }
+    else
+    {
+        *is_hard_link = false;
+        *detailed_error_code = GetLastError();
+        rc = FAIL_STAT_FILE;
+    }
+
+    CloseHandle(h);
+    return rc;
+}

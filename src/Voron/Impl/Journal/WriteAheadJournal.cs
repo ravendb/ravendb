@@ -396,9 +396,23 @@ namespace Voron.Impl.Journal
                     
                     if (_env.Options.RootJournal is null)
                     {
-                        var jrnlWriter = _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
+                        // A standalone env may still find local journals that are hard-linked to another env's journals,
+                        // left over from a previous run with shared journals enabled. We must never write to such a file -
+                        // it would corrupt the env owning the other link. Hard-linked journals are kept read-only for the
+                        // duration of recovery, and the env will allocate a fresh journal for any subsequent writes.
+                        // See RavenDB-26655.
+                        bool isHardLinked = _env.Options.IsJournalHardLinked(journalNumber);
+
+                        var jrnlWriter = isHardLinked
+                            ? _env.Options.CreateReadOnlyJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize)
+                            : _env.Options.CreateJournalWriter(journalNumber, journalPagerState.TotalAllocatedSize);
+
                         var jrnlFile = new JournalFile(_env, jrnlWriter, journalNumber, journalReader.RecoveredJournalIds.ToFrozenSet());
                         jrnlFile.DoneWriting = new SingleUseFlag();
+
+                        if (isHardLinked)
+                            jrnlFile.DoneWriting.Raise();
+
                         jrnlFile.InitFrom(_env, journalReader, transactionHeaders);
                         jrnlFile.AddRef(); // creator reference - write ahead log
 
@@ -550,15 +564,20 @@ namespace Voron.Impl.Journal
                     _files[i].DoneWriting.Raise();
                 }
                 var lastFile = _files[^1];
-                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 &&
-                    lastFile.HasLegacyTransaction is false)
-                    // it must have at least one page for the next transaction header and one 4kb for data
+                bool mustRollToNewFile = _env.Options.RootJournal is null
+                                         && _env.Options.IsJournalHardLinked(lastFile.Number);
+                if (lastFile.GetAvailable4Kbs(_env.CurrentStateRecord) >= 2 && // room for next tx header + 4kb of data
+                    lastFile.HasLegacyTransaction is false && // legacy txs cannot be mixed with new ones in the same file
+                    mustRollToNewFile is false) // standalone env must not append to a hard-linked journal - would corrupt the env owning the other link
                 {
                     CurrentFile = lastFile;
                 }
                 else
                 {
                     lastFile.DoneWriting.Raise();
+                    if (mustRollToNewFile)
+                        addToInitLog?.Invoke(LogLevel.Info,
+                            $"Journal '{lastFile.JournalWriter.FileName.FullPath}' is hard-linked; rolling to a new file.");
                 }
             }
 
