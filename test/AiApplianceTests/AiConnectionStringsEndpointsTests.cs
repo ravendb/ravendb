@@ -60,6 +60,38 @@ public class AiConnectionStringsEndpointsTests(ITestOutputHelper output) : Raven
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Post_returns_400_for_empty_body()
+    {
+        // C1 from Copilot review #4362803113: minimal APIs can bind an empty
+        // request body as null. Without a defensive null-check the handler
+        // dereferences body.Name and 500s; this asserts the 400 short-circuit.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Empty body, application/json content type. ASP.NET minimal API
+        // binding for a non-nullable complex param 400s before the handler
+        // — verifies the framework default is wired up correctly.
+        var emptyResp = await client.PostAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new StringContent("", System.Text.Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.BadRequest, emptyResp.StatusCode);
+
+        // Literal `null` JSON body. The binder parses this as null, hands
+        // the null to the handler, and without an explicit null-check the
+        // handler dereferences body.Name → NRE → 500. This is the hole
+        // Copilot's C1 flagged.
+        var nullResp = await client.PostAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new StringContent("null", System.Text.Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.BadRequest, nullResp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Post_rejects_empty_name()
     {
         var store = GetDocumentStore();

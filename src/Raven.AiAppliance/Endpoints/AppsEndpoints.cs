@@ -182,13 +182,23 @@ public static class AppsEndpoints
             if (origin == "*")
                 return Results.BadRequest(new { error = "wildcard '*' is not an allowed origin; list explicit http(s) origins" });
 
+            // C3 (Copilot review #4362803113): the browser Origin header is
+            // scheme+host[:port] only — paths, queries, and fragments don't
+            // appear at runtime. Accepting them at intake meant the persisted
+            // entry would silently fail to match the browser's Origin string
+            // on the future /embed/{widgetId} page. Reject anything past the
+            // authority, except for a bare "/" path which Uri normalizes onto
+            // origin-only URLs.
             if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-                return Results.BadRequest(new { error = $"allowedOrigins entry '{origin}' is not a valid http(s) absolute URL" });
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+                (uri.AbsolutePath != "" && uri.AbsolutePath != "/") ||
+                string.IsNullOrEmpty(uri.Query) == false ||
+                string.IsNullOrEmpty(uri.Fragment) == false)
+                return Results.BadRequest(new { error = $"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)" });
         }
 
         // M4: cap DisplayName length and forbid control chars at intake. The
-        // XML doc on ChannelInstance.DisplayName says "shown in the dashboard";
+        // XML doc on Channel.DisplayName says "shown in the dashboard";
         // if the dashboard ever does dangerouslySetInnerHTML / equivalent,
         // unsanitized DisplayName is operator-on-operator stored XSS. Intake
         // sanitation = caught once; downstream sanitation = caught every read.
@@ -257,7 +267,7 @@ public static class AppsEndpoints
                 CreatedAt = DateTime.UtcNow,
             }, ct);
 
-            await session.StoreAsync(new ChannelInstance
+            await session.StoreAsync(new Channel
             {
                 Id = channelDocId,
                 Type = IFrameType,

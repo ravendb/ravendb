@@ -5,7 +5,7 @@ namespace Raven.AiAppliance.Wizard;
 /// #4362803113). One document per <c>(slug, type, agentId)</c> tuple,
 /// stored with a deterministic id <c>channel-bindings/{slug}/{type}/{agentId}</c>
 /// on the per-app database. Written together with the corresponding
-/// <see cref="ChannelInstance"/> in a <c>TransactionMode.ClusterWide</c>
+/// <see cref="Channel"/> in a <c>TransactionMode.ClusterWide</c>
 /// session — RavenDB auto-creates an atomic guard on the binding doc id,
 /// which serializes concurrent writers through Raft. The loser of the race
 /// catches <see cref="Raven.Client.Exceptions.ClusterTransactionConcurrencyException"/>,
