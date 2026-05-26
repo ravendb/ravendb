@@ -271,6 +271,37 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.AiAppliance)]
+    [InlineData("https://example.com/",  "https://example.com")]   // C2 (review 4365219160): trailing slash normalized away
+    [InlineData("http://example.com:8080/", "http://example.com:8080")] // explicit port retained, slash dropped
+    [InlineData("https://example.com",   "https://example.com")]   // already canonical → unchanged
+    public async Task Channel_endpoint_normalizes_origin_on_persist(string supplied, string expected)
+    {
+        // C2 (Copilot review 4365219160): an origin like `https://example.com/`
+        // passes the earlier path-rejection check (AbsolutePath = "/" is the
+        // canonical form for origin-only URLs) but the BROWSER `Origin` header
+        // is scheme+host[:port] only — no trailing slash. If we persisted the
+        // raw `supplied` value, runtime CORS-style matching on the future
+        // /embed/{widgetId} page would silently fail. Normalize on intake.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { supplied } });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        var channel = await session.Query<Channel>().FirstAsync();
+        Assert.Single(channel.AllowedOrigins);
+        Assert.Equal(expected, channel.AllowedOrigins[0]);
+    }
+
+    [RavenTheory(RavenTestCategory.AiAppliance)]
     [InlineData("http://example.com/app")]             // C3: path
     [InlineData("https://example.com/foo/bar")]        // C3: nested path
     [InlineData("https://example.com/?q=1")]           // C3: query

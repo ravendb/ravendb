@@ -174,8 +174,9 @@ public static class AppsEndpoints
         if (origins.Length > MaxAllowedOrigins)
             return Results.BadRequest(new { error = $"allowedOrigins exceeds limit of {MaxAllowedOrigins} entries" });
 
-        foreach (var origin in origins)
+        for (var i = 0; i < origins.Length; i++)
         {
+            var origin = origins[i];
             if (string.IsNullOrWhiteSpace(origin) || origin.Length > MaxOriginLength)
                 return Results.BadRequest(new { error = $"allowedOrigins entry is empty or exceeds {MaxOriginLength} chars" });
 
@@ -195,6 +196,15 @@ public static class AppsEndpoints
                 string.IsNullOrEmpty(uri.Query) == false ||
                 string.IsNullOrEmpty(uri.Fragment) == false)
                 return Results.BadRequest(new { error = $"allowedOrigins entry '{origin}' is not an origin (scheme+host[:port] only)" });
+
+            // C2 (Copilot review #4365219160): normalize on persist. `https://example.com/`
+            // passes the path gate above (AbsolutePath is `/`) but its raw form
+            // carries a trailing slash that the browser Origin header never
+            // does. Persist the canonical `scheme://host[:port]` form so
+            // runtime matching at /embed/{widgetId} doesn't have to defensively
+            // strip slashes on every read. Uri.Authority handles default-port
+            // stripping for us.
+            origins[i] = $"{uri.Scheme}://{uri.Authority}";
         }
 
         // M4: cap DisplayName length and forbid control chars at intake. The
