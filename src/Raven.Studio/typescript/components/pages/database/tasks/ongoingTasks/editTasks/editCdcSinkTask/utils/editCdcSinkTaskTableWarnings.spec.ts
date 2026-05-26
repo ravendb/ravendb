@@ -81,8 +81,8 @@ describe("CDC Sink table warnings", () => {
         );
 
         expect(warning).toBe(`No root table is configured for the related "Companies" collection.
-The Company property will contain related document IDs that reference documents in the "Companies" collection,
-but those documents will not be created unless "dbo.companies" is also configured as a root table.`);
+The Company property will contain related document IDs that reference documents in the "Companies" collection.
+However, those documents will not be created unless "dbo.companies" is also configured as a root table.`);
     });
 
     it("returns root-level warnings from the whole table tree", () => {
@@ -135,8 +135,8 @@ but those documents will not be created unless "dbo.companies" is also configure
         expect(warnings).toEqual([
             expect.stringContaining("already configured as a root table"),
             `No root table is configured for the related "Media" collection.
-The Media property will contain related document IDs that reference documents in the "Media" collection,
-but those documents will not be created unless "public.media" is also configured as a root table.`,
+The Media property will contain related document IDs that reference documents in the "Media" collection.
+However, those documents will not be created unless "public.media" is also configured as a root table.`,
         ]);
     });
 

@@ -2,6 +2,7 @@ import { FormGroup, FormInput, FormLabel, FormSelectAutocomplete } from "compone
 import FormStringValueList from "components/common/formFields/FormStringValueList";
 import RichAlert from "components/common/RichAlert";
 import { useEditCdcSinkTaskSourceTableAutoFill } from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/hooks/useEditCdcSinkTaskSourceTableAutoFill";
+import EditCdcSinkTaskWarningMessage from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskWarningMessage";
 import {
     analyzeRootTables,
     getLinkedTableWarningMessagesFromAnalysis,
@@ -30,7 +31,7 @@ export default function EditCdcSinkTaskLinkedTableEditor({ path }: { path: Linke
         <div>
             {warningMessages.map((warning) => (
                 <RichAlert key={warning} variant="warning" className="mb-3">
-                    {warning}
+                    <EditCdcSinkTaskWarningMessage message={warning} />
                 </RichAlert>
             ))}
             <div className="grid mb-3">

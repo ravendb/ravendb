@@ -1,5 +1,6 @@
 import { Icon } from "components/common/Icon";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import EditCdcSinkTaskWarningMessage from "components/pages/database/tasks/ongoingTasks/editTasks/editCdcSinkTask/partials/EditCdcSinkTaskWarningMessage";
 
 interface EditCdcSinkTaskTableWarningIconProps {
     messages?: string[];
@@ -15,11 +16,13 @@ export function EditCdcSinkTaskTableWarningIcon({ messages, className }: EditCdc
         <PopoverWithHoverWrapper
             message={
                 messages.length === 1 ? (
-                    messages[0]
+                    <EditCdcSinkTaskWarningMessage message={messages[0]} />
                 ) : (
                     <ul className="mb-0 ps-3">
                         {messages.map((message) => (
-                            <li key={message}>{message}</li>
+                            <li key={message}>
+                                <EditCdcSinkTaskWarningMessage message={message} />
+                            </li>
                         ))}
                     </ul>
                 )

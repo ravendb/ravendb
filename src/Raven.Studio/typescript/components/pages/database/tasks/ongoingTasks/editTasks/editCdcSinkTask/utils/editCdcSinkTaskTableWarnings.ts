@@ -159,8 +159,8 @@ export function getMissingRelatedCollectionWarningFromAnalysis(
     }
 
     return `No root table is configured for the related "${linkedCollectionName}" collection.
-The ${propertyName} property will contain related document IDs that reference documents in the "${linkedCollectionName}" collection,
-but those documents will not be created unless "${sourceTableSchema}.${sourceTableName}" is also configured as a root table.`;
+The ${propertyName} property will contain related document IDs that reference documents in the "${linkedCollectionName}" collection.
+However, those documents will not be created unless "${sourceTableSchema}.${sourceTableName}" is also configured as a root table.`;
 }
 
 export function analyzeRootTables(rootTables: ReadonlyArray<RootTableAnalysisInput>): RootTablesAnalysis {
