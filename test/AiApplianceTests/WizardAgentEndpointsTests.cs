@@ -44,7 +44,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Agent_endpoint_returns_agentId_for_known_slug()
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -84,7 +85,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Channel_endpoint_returns_widgetId_for_known_app()
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -100,17 +102,20 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         var widgetId = json.GetProperty("widgetId").GetString();
         Assert.False(string.IsNullOrEmpty(widgetId), $"widgetId was empty: {json}");
         Assert.StartsWith("wgt_", widgetId);
-        // H1: 128-bit random (Base64url-encoded) → ≥22 chars after wgt_,
-        // i.e. ≥26 total. Earlier 32-bit form would have produced 12.
-        Assert.True(widgetId.Length >= 24,
-            $"widgetId length {widgetId.Length} is below the 128-bit-entropy floor (expected ≥24 incl. 'wgt_' prefix): '{widgetId}'");
+        // H1: 128-bit random (Base64url-encoded) → exactly 22 chars after the
+        // padding is trimmed (16 bytes × 4/3 = 21.33 → 22 chars without padding),
+        // plus the 'wgt_' prefix (4) = 26 total. Earlier 32-bit form produced 12;
+        // assert against the actual lower bound, not a loose >=24.
+        Assert.True(widgetId.Length >= 26,
+            $"widgetId length {widgetId.Length} is below the 128-bit-entropy floor (expected ≥26 incl. 'wgt_' prefix): '{widgetId}'");
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_endpoint_rejects_unsupported_type()
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -130,7 +135,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // widgetId — operator double-click / client retry should not create
         // orphan channel docs.
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -167,7 +173,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Channel_endpoint_rejects_invalid_allowed_origin(string badOrigin)
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -184,7 +191,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Channel_endpoint_rejects_too_many_allowed_origins()
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -203,12 +211,13 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.AiAppliance)]
-    [InlineData("")]                              // M4: BEL control char
+    [InlineData("a\u0007b")]                          // M4: BEL control char (escape-sequence so source is all printable)
     [InlineData("name\twith\ttabs")]                    // M4: tab is also a control char
     public async Task Channel_endpoint_rejects_invalid_display_name(string badName)
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -231,7 +240,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     public async Task Channel_endpoint_rejects_too_long_display_name()
     {
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -259,7 +269,8 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
         // (e.g. M3's idempotency lookup) break across re-runs that
         // mix casings.
         var store = GetDocumentStore();
-        var perAppDb = await CreatePerAppDatabaseAsync(store);
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
         await SeedAppAsync(store, slug: "my-app", database: perAppDb);
 
         using var factory = NewApplianceFactory(store);
@@ -301,11 +312,18 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
                 opts.LlmModel = "llama3.1";
             });
 
-    private static async Task<string> CreatePerAppDatabaseAsync(IDocumentStore store)
+    /// <summary>
+    /// Creates a uniquely-named per-app database on the test store and
+    /// returns its name plus a cleanup handle. Tests <c>using</c> the
+    /// handle so the database drops at test end — otherwise these DBs
+    /// accumulate on the (shared) test server across runs and slow the
+    /// dev loop down (Copilot review #4361946757 C6).
+    /// </summary>
+    private async Task<(string Name, IDisposable Cleanup)> CreatePerAppDatabaseAsync(IDocumentStore store)
     {
         var name = "per-app-" + Guid.NewGuid().ToString("N");
         await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(name)));
-        return name;
+        return (name, Databases.EnsureDatabaseDeletion(name, store));
     }
 
     private static async Task SeedAppAsync(IDocumentStore store, string slug, string database)

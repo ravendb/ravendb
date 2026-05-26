@@ -51,9 +51,7 @@ public static class AppsEndpoints
         await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
 
         using var session = store.OpenAsyncSession(opts.ConfigDatabase);
-        var app = await session.Query<App>()
-            .Where(x => x.Slug == slug)
-            .FirstOrDefaultAsync(ct);
+        var app = await session.LoadAsync<App>($"apps/{slug}", ct);
 
         return app is null ? Results.NotFound() : Results.Ok(AppDto.From(app));
     }
@@ -73,9 +71,10 @@ public static class AppsEndpoints
         App? app;
         using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
         {
-            app = await session.Query<App>()
-                .Where(x => x.Slug == slug)
-                .FirstOrDefaultAsync(ct);
+            // LoadAsync (not Query) because the App doc id is slug-keyed
+            // (apps/{slug}, set in W6) — no index, no staleness race against
+            // an immediately-prior Provision call in the wizard chain.
+            app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
 
         if (app is null)
@@ -103,6 +102,12 @@ public static class AppsEndpoints
     private const int MaxAllowedOrigins = 32;
     private const int MaxOriginLength = 256;
     private const int MaxDisplayNameLength = 200;
+
+    // Channel-type label per design §3.4 (capital I + F). Single source of
+    // truth so DisplayName's default-to-Type behaviour (per the XML doc on
+    // ProvisionChannelRequest) actually does default to the persisted type
+    // and not a literal "iframe" string.
+    private const string IFrameType = "IFrame";
 
     private static async Task<IResult> ProvisionChannelAsync(
         string slug,
@@ -134,9 +139,8 @@ public static class AppsEndpoints
         App? app;
         using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
         {
-            app = await session.Query<App>()
-                .Where(x => x.Slug == slug)
-                .FirstOrDefaultAsync(ct);
+            // LoadAsync (not Query) — see ProvisionAgentAsync comment.
+            app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
 
         if (app is null)
@@ -194,8 +198,17 @@ public static class AppsEndpoints
         // in the dashboard's Channels tab, not in this provisioning endpoint.
         using (var session = store.OpenAsyncSession(app.Database))
         {
+            // C3 (Copilot review #4361946757): the idempotency lookup is
+            // intrinsically a secondary access pattern — the channel doc's
+            // primary id is @channels/{widgetId} (design §3.4) for the
+            // future /embed/{widgetId} page. WaitForNonStaleResults absorbs
+            // the race window between a first POST committing and a rapid-
+            // fire second POST arriving before the index has caught up; on
+            // the second POST we block until the index has seen the first
+            // doc, then find it, then return its widgetId.
             var existing = await session.Query<ChannelInstance>()
-                .Where(c => c.Type == "IFrame" && c.AgentId == schema.Identifier)
+                .Customize(c => c.WaitForNonStaleResults())
+                .Where(c => c.Type == IFrameType && c.AgentId == schema.Identifier)
                 .FirstOrDefaultAsync(ct);
 
             if (existing is { Id: { } existingDocId })
@@ -224,8 +237,8 @@ public static class AppsEndpoints
             var channel = new ChannelInstance
             {
                 Id = docId,
-                Type = "IFrame",
-                DisplayName = body.DisplayName ?? "iframe",
+                Type = IFrameType,
+                DisplayName = body.DisplayName ?? IFrameType,
                 AgentId = schema.Identifier,
                 AllowedOrigins = origins,
                 CreatedAt = DateTime.UtcNow,

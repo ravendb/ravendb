@@ -366,7 +366,12 @@ public static class WizardEndpoints
         using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
         {
             session.Advanced.OptimisticConcurrencyMode = OptimisticConcurrencyMode.Writes;
-            await session.StoreAsync(app, id: "apps/", ct);
+            // Slug-keyed id (not HiLo) so the App lookup in W7 / W8 / GetAsync
+            // can use LoadAsync<App>($"apps/{slug}") instead of an index query.
+            // Eliminates the index-staleness race between W6 Provision and
+            // immediately-following W7/W8 calls in the wizard chain (the race
+            // Copilot review #4361946757 C1/C2 flagged on PR #9).
+            await session.StoreAsync(app, id: $"apps/{slug}", ct);
             await session.SaveChangesAsync(ct);
         }
 
