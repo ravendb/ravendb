@@ -42,4 +42,15 @@ internal sealed class Channel
 
     /// <summary>UTC creation timestamp.</summary>
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Doc id of the corresponding <see cref="ChannelBinding"/>:
+    /// <c>channel-bindings/{slug}/{type}/{agentId}</c>. Stored explicitly
+    /// because the binding id needs the app slug, which lives on the App doc
+    /// in the config DB — not derivable from in-doc fields. Lets the future
+    /// "delete channel" / Channels &amp; Adapters tab cascade-delete the
+    /// binding without a cross-DB lookup. The reverse link
+    /// (binding -> channel) is intentionally NOT stored: <see
+    /// cref="ChannelBinding.WidgetId"/> already exists and the channel doc id
+    /// is <c>@channels/{widgetId}</c> — trivially derivable.</summary>
+    public string? BindingId { get; set; }
 }

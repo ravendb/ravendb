@@ -275,6 +275,7 @@ public static class AppsEndpoints
                 AgentId = schema.Identifier,
                 AllowedOrigins = origins,
                 CreatedAt = DateTime.UtcNow,
+                BindingId = bindingId,
             }, ct);
 
             await session.SaveChangesAsync(ct);
