@@ -541,7 +541,7 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
                 if (truncateCount > 0)
                 {
                     var chatBefore = reduction.History == null ? null : _document.ToHistoryBlittable(context, _configuration, historyExpiration);
-                    _document.Messages.RemoveRange(1, truncateCount);
+                    TrimMessages(_document.Messages, truncateCount);
                     return chatBefore;
                 }
             }
@@ -562,6 +562,89 @@ public partial class ConversationHandler(ServerStore server, DocumentDatabase da
         }
 
         return null; // if reduction wasn't executed -> no history to persist (return null)
+    }
+
+    /// <summary>
+    /// Truncates up to <paramref name="n"/> messages from the beginning of the conversation,
+    /// while always preserving the system prompt at index 0.
+    ///
+    /// If an assistant message containing <c>tool_calls</c> is removed, all matching
+    /// <c>role = "tool"</c> result messages are also removed to keep the conversation valid.
+    ///
+    /// This cleanup is required because OpenAI chat APIs reject orphaned tool messages:
+    /// a <c>role = "tool"</c> message must always have a corresponding preceding assistant
+    /// message containing the matching <c>tool_calls</c> entry.
+    ///
+    /// Returns the total number of removed messages, including removed tool result messages.
+    /// </summary>
+    private static void TrimMessages(
+        List<BlittableJsonReaderObject> messages,
+        int n)
+    {
+        if (messages == null || messages.Count == 0 || n <= 0 || n >= messages.Count-1)
+            return;
+
+        // Skip system prompt
+        var slice = messages.Skip(1).Take(n).ToList();
+
+        var truncatedCount = 0;
+        var toolCallIds = new HashSet<string>();
+
+        foreach (var message in slice)
+        {
+            if (truncatedCount >= n)
+                break;
+
+            // Message may already be removed because it was deleted as part of tool cleanup
+            if (messages.Remove(message) == false)
+                continue;
+
+            truncatedCount++;
+
+            // Check if assistant message contains tool_calls
+            if (message.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls) == false ||
+                toolCalls == null ||
+                toolCalls.Length == 0)
+                continue;
+
+            foreach (BlittableJsonReaderObject toolCall in toolCalls)
+            {
+                if (toolCall.TryGet("id", out string id) &&
+                    string.IsNullOrWhiteSpace(id) == false)
+                {
+                    toolCallIds.Add(id);
+                }
+            }
+
+            if (toolCallIds.Count == 0)
+                continue;
+
+            // Walk forward and remove matching tool results
+            for (int i = 1; i < messages.Count; i++)
+            {
+                if (toolCallIds.Count == 0)
+                    break;
+
+                var candidate = messages[i];
+
+                if (candidate.TryGet("role", out string role) == false ||
+                    role != "tool")
+                    continue;
+
+                if (candidate.TryGet("tool_call_id", out string toolCallId) == false)
+                    continue;
+
+                if (toolCallIds.Remove(toolCallId) == false)
+                    continue;
+
+                messages.RemoveAt(i);
+                i--;
+
+                truncatedCount++;
+            }
+
+            toolCallIds.Clear();
+        }
     }
 
     private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument oldChat, CancellationToken token)
