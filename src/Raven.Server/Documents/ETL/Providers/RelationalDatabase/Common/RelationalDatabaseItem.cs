@@ -23,4 +23,6 @@ public sealed class RelationalDatabaseItem : ExtractedItem
     }
 
     public List<RelationalDatabaseColumn> Columns { get; set; }
+
+    public bool SkipOnTxRetry { get; set; }
 }
