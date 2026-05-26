@@ -100,6 +100,8 @@ var app = builder.Build();
     }
 }
 
+app.UseReadinessGate();
+
 StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);

@@ -13,6 +13,8 @@ namespace AiApplianceTests.E2E.Fixtures;
 ///     exercise real RavenDB code paths without launching a second instance.
 ///   - Removes RavenReadinessService — the test store is already ready; we don't want
 ///     the probe loop firing against the (unused) default RavenDB URL.
+///   - Flips IServerReady to ready so the new ReadinessGateMiddleware lets requests
+///     through. RavenReadinessService would normally do this; we removed it.
 internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Program>
 {
     private readonly string _licenseApiUrl;
@@ -53,6 +55,8 @@ internal sealed class ApplianceWebApplicationFactory : WebApplicationFactory<Pro
                 services.Remove(d);
         });
 
-        return base.CreateHost(builder);
+        var host = base.CreateHost(builder);
+        host.Services.GetRequiredService<IServerReady>().MarkReady();
+        return host;
     }
 }

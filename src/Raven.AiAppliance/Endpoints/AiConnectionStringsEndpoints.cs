@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Raven.AiAppliance.Hosting;
-using Raven.AiAppliance.Infrastructure;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
@@ -27,15 +24,11 @@ public static class AiConnectionStringsEndpoints
         string slug,
         string name,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
@@ -81,14 +74,10 @@ public static class AiConnectionStringsEndpoints
         string slug,
         string name,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
@@ -122,14 +111,10 @@ public static class AiConnectionStringsEndpoints
     private static async Task<IResult> ListAsync(
         string slug,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
@@ -158,15 +143,11 @@ public static class AiConnectionStringsEndpoints
         string slug,
         AiConnectionString body,
         IDocumentStore store,
-        IOptions<ApplianceOptions> options,
         ILogger<AiConnectionStringsLogger> logger,
         CancellationToken ct)
     {
-        var opts = options.Value;
-        await RavenStoreFactory.EnsureDatabaseAsync(store, opts.ConfigDatabase, ct);
-
         App? app;
-        using (var session = store.OpenAsyncSession(opts.ConfigDatabase))
+        using (var session = store.OpenAsyncSession())
         {
             app = await session.LoadAsync<App>($"apps/{slug}", ct);
         }
