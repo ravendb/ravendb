@@ -20,7 +20,7 @@ namespace Raven.AiAppliance.Hosting;
 /// SPA must render so it can poll <c>/api/bootstrap/status</c>, and liveness
 /// probes need to work in every phase.
 /// </remarks>
-public static class ReadinessGate
+public static class ReadinessGateMiddleware
 {
     public static IApplicationBuilder UseReadinessGate(this WebApplication app) =>
         app.Use(async (context, next) =>
