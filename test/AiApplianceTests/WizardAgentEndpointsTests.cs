@@ -5,6 +5,7 @@ using AiApplianceTests.E2E.Fixtures;
 using FastTests;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
@@ -41,7 +42,52 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
-    public async Task Agent_endpoint_returns_agentId_for_known_slug()
+    public async Task Agent_endpoint_returns_agentId_and_references_operator_provided_cs()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // Operator creates the AI connection string first (the dashboard's
+        // "pick existing OR add new" step). The agent provisioning then
+        // references that CS by name — same wire pattern the dashboard will
+        // use.
+        var csResp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/ai/connection-strings",
+            new
+            {
+                name = "demo-llm",
+                identifier = "demo-llm",
+                modelType = "Chat",
+                ollamaSettings = new { uri = "http://localhost:11434/", model = "llama3.1" }
+            });
+        Assert.True(csResp.IsSuccessStatusCode, await csResp.Content.ReadAsStringAsync());
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new { connectionStringName = "demo-llm", framing = "customer-support" });
+
+        Assert.True(resp.IsSuccessStatusCode,
+            $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
+        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
+        var agentId = json.GetProperty("agentId").GetString();
+        Assert.False(string.IsNullOrEmpty(agentId), $"agentId was empty: {json}");
+
+        // The strong assertion: the registered agent references the operator's
+        // CS, not any appliance-side default. Without this check the test
+        // passes vacuously regardless of what CS the agent ended up using.
+        var agents = await store.Maintenance.ForDatabase(perAppDb)
+            .SendAsync(new GetAiAgentsOperation());
+        var agent = Assert.Single(agents.AiAgents);
+        Assert.Equal("demo-llm", agent.ConnectionStringName);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_returns_400_for_missing_connection_string_name()
     {
         var store = GetDocumentStore();
         var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
@@ -55,11 +101,26 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
             "/api/apps/my-app/setup/agent",
             new { framing = "customer-support" });
 
-        Assert.True(resp.IsSuccessStatusCode,
-            $"agent returned {resp.StatusCode}: {await resp.Content.ReadAsStringAsync()}");
-        var json = await resp.Content.ReadFromJsonAsync<JsonElement>();
-        var agentId = json.GetProperty("agentId").GetString();
-        Assert.False(string.IsNullOrEmpty(agentId), $"agentId was empty: {json}");
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Agent_endpoint_returns_400_for_unknown_connection_string_name()
+    {
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        // No POST to /ai/connection-strings — the named CS doesn't exist.
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/agent",
+            new { connectionStringName = "ghost-llm", framing = "customer-support" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
     }
 
     // ---- W8 ----
@@ -300,16 +361,6 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
                 // serial tests against the shared RavenDB server don't
                 // step on each other's App docs.
                 opts.ConfigDatabase = store.Database;
-
-                // Default LlmProvider is "openai" with an empty API key;
-                // RavenDB rejects the connection-string put with "ApiKey
-                // field cannot be empty". Switching to Ollama (no key
-                // required) lets the agent-registration path complete
-                // end-to-end against the in-process store without needing
-                // a real LLM credential.
-                opts.LlmProvider = "ollama";
-                opts.LlmEndpoint = "http://localhost:11434/";
-                opts.LlmModel = "llama3.1";
             });
 
     /// <summary>

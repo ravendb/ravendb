@@ -34,10 +34,6 @@ builder.Services.AddOptions<ApplianceOptions>()
         ReadEnv("RAVEN_AI_SETUP_PACKAGE_ZIP",    v => options.SetupPackageZipPath = v);
         ReadEnv("RAVEN_AI_RAVENDB_S6_SERVICE",   v => options.RavenDbS6Service = v);
         ReadEnv("RAVEN_AI_LICENSE_API_URL",      v => options.LicenseApiUrl = v);
-        ReadEnv("RAVEN_AI_LLM_PROVIDER",         v => options.LlmProvider = v);
-        ReadEnv("RAVEN_AI_LLM_ENDPOINT",         v => options.LlmEndpoint = v);
-        ReadEnv("RAVEN_AI_LLM_MODEL",            v => options.LlmModel = v);
-        ReadEnv("RAVEN_AI_LLM_API_KEY",          v => options.LlmApiKey = v);
     })
     .ValidateDataAnnotations()
     .ValidateOnStart();
@@ -51,6 +47,14 @@ builder.Services.AddSingleton<IAgentSchemaRegistry, AgentSchemaRegistry>();
 builder.Services.AddSingleton<IAgentSchema, DemoAgentSchema>();
 builder.Services.AddHostedService<RavenReadinessService>();
 builder.Services.AddHttpClient();
+
+// Wire-shape: enums travel as their string names (e.g. AiModelType "Chat" not 1,
+// AiConnectorType "Ollama" not 3). Matches RavenDB Studio's payload, lets
+// operators paste the same JSON they'd paste into the AI tab.
+builder.Services.ConfigureHttpJsonOptions(opts =>
+{
+    opts.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+});
 
 builder.Services.AddResiliencePipeline(RavenReadinessService.PipelineName, (pipelineBuilder, ctx) =>
 {
@@ -100,6 +104,7 @@ StaticAssetEndpoints.Map(app);
 HealthEndpoints.Map(app);
 BootstrapEndpoints.Map(app);
 AppsEndpoints.Map(app);
+AiConnectionStringsEndpoints.Map(app);
 WizardEndpoints.Map(app);
 ChatEndpoints.Map(app);
 StaticAssetEndpoints.MapSpaFallback(app);
