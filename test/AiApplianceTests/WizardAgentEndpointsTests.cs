@@ -393,6 +393,32 @@ public class WizardAgentEndpointsTests(ITestOutputHelper output) : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.AiAppliance)]
+    public async Task Channel_carries_its_binding_id()
+    {
+        // The reverse direction (channel -> binding) is not derivable from
+        // in-doc fields: rebuilding the binding id needs the app slug, which
+        // lives on the App doc in the config DB, not in the per-app DB. Store
+        // BindingId on the Channel so the future delete-channel / Channels &
+        // Adapters tab can navigate back without a cross-DB lookup.
+        var store = GetDocumentStore();
+        var (perAppDb, perAppDbCleanup) = await CreatePerAppDatabaseAsync(store);
+        using var _ = perAppDbCleanup;
+        await SeedAppAsync(store, slug: "my-app", database: perAppDb);
+
+        using var factory = NewApplianceFactory(store);
+        var client = factory.CreateClient();
+
+        var resp = await client.PostAsJsonAsync(
+            "/api/apps/my-app/setup/channel",
+            new { type = "iframe", agentId = "demo-agent", allowedOrigins = new[] { "http://localhost" } });
+        Assert.True(resp.IsSuccessStatusCode, await resp.Content.ReadAsStringAsync());
+
+        using var session = store.OpenAsyncSession(perAppDb);
+        var channel = await session.Query<Channel>().FirstAsync();
+        Assert.Equal("channel-bindings/my-app/IFrame/demo-agent", channel.BindingId);
+    }
+
+    [RavenFact(RavenTestCategory.AiAppliance)]
     public async Task Channel_doc_lands_in_Channels_collection()
     {
         // C4 from Copilot review #4362803113: the design §3.4 spec says the
