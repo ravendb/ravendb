@@ -299,15 +299,20 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                             Logger.Info($"Failure to replicate deletions to relational database for: {_etlName}, " +
                                         "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        var errorMessage = $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}";
-                        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+                        if (Configuration.TestMode == false)
                         {
-                            CreatedAt = SystemTime.UtcNow,
-                            TaskName = _taskName,
-                            AffectedDocumentsCount = countOfDeletes,
-                            Step = TaskErrorStep.Load,
-                            Error = errorMessage
-                        });
+                            var errorMessage = $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}";
+
+                            Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+                            {
+                                CreatedAt = SystemTime.UtcNow,
+                                TaskName = _taskName,
+                                AffectedDocumentsCount = countOfDeletes,
+                                Step = TaskErrorStep.Load,
+                                Error = errorMessage
+                            });
+                        }
+
                         _statistics.RecordProcessLoadError(countOfDeletes);
                     }
                 }

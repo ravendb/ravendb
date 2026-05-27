@@ -164,6 +164,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
     public RelationalDatabaseEtlTestScriptResult RunTest(DocumentsOperationContext context, IEnumerable<RelationalDatabaseTableWithRecords> toWrite, bool performRolledBackTransaction)
     {
         var summaries = new List<TableQuerySummary>();
+        TaskProcessError processError = null;
 
         if (performRolledBackTransaction)
         {
@@ -185,14 +186,14 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             }
             catch (Exception e)
             {
-                Database.TaskErrorsStorage.StoreProcessError(TaskCategory, new TaskProcessError
+                processError = new TaskProcessError
                 {
                     CreatedAt = SystemTime.UtcNow,
                     TaskName = Name,
                     AffectedDocumentsCount = 0,
-                    Step = TaskErrorStep.Load,
+                    Step = TaskErrorStep.Unknown,
                     Error = e.ToString()
-                });
+                };
                 Statistics.RecordProcessLoadError(count: 0);
             }
         }
@@ -208,7 +209,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
                 summaries.Add(new TableQuerySummary { TableName = records.TableName, Commands = commands });
             }
         }
-        
+
         var itemErrors = Statistics.ReadInMemoryItemErrors();
 
         return new RelationalDatabaseEtlTestScriptResult
@@ -216,7 +217,8 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
             TransformationErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Transformation).ToList(),
             ItemLoadErrors = itemErrors.Where(x => x.Step == TaskErrorStep.Load).ToList(),
             SlowSqlWarnings = Statistics.LastSlowSqlWarningsInCurrentBatch.Statements.ToList(),
-            Summary = summaries
+            Summary = summaries,
+            ProcessError = processError
         };
     }
 }
