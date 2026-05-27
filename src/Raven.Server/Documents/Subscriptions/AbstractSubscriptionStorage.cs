@@ -353,8 +353,6 @@ public abstract class AbstractSubscriptionStorage<TState> : AbstractSubscription
     {
         if (state == null)
             throw new ArgumentNullException(nameof(state));
-        if (subscriptionId <= 0)
-            throw new ArgumentOutOfRangeException(nameof(subscriptionId));
 
         var tag = GetSubscriptionResponsibleNode(context, state);
         OngoingTaskConnectionStatus connectionStatus = OngoingTaskConnectionStatus.NotActive;

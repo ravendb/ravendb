@@ -31,6 +31,8 @@ namespace SlowTests.Issues
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true);
             var databaseName = await Encryption.EncryptedClusterAsync(nodes, certificates);
 
+            var nonLeaderTags = nodes.Where(n => n != leader).Select(n => n.ServerStore.NodeTag).ToList();
+
             var options = new Options
             {
                 Server = leader,
@@ -39,7 +41,12 @@ namespace SlowTests.Issues
                 AdminCertificate = certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = _ => databaseName,
                 Encrypted = true,
-                RunInMemory = false
+                RunInMemory = false,
+                ModifyDatabaseRecord = r => r.Topology = new DatabaseTopology
+                {
+                    Members = nonLeaderTags,
+                    ReplicationFactor = 2
+                }
             };
             using (var store = GetDocumentStore(options))
             {

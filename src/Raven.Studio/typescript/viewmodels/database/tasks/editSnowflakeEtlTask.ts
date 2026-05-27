@@ -61,12 +61,14 @@ class snowflakeTaskTestMode {
     transformationErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
     loadErrors = ko.observableArray<Raven.Server.Documents.ETL.TaskItemError>([]);
     slowSqlWarnings = ko.observableArray<Raven.Server.NotificationCenter.Notifications.Details.SlowSqlStatementInfo>([]);
-    
+    processError = ko.observable<Raven.Server.Documents.ETL.TaskProcessError>(null);
+
     warningsCount = ko.pureComputed(() => {
         const transformationCount = this.transformationErrors().length;
         const loadErrorCount = this.loadErrors().length;
         const slowSqlCount = this.slowSqlWarnings().length;
-        return transformationCount + loadErrorCount + slowSqlCount;
+        const processErrorCount = this.processError() ? 1 : 0;
+        return transformationCount + loadErrorCount + slowSqlCount + processErrorCount;
     });
     
     constructor(db: database, validateParent: () => boolean, 
@@ -157,9 +159,10 @@ class snowflakeTaskTestMode {
                     this.testResults(testResult.Summary.flatMap(x => x.Commands));
                     this.debugOutput(testResult.DebugOutput);
                     this.loadErrors(testResult.ItemLoadErrors);
-                    this.slowSqlWarnings(testResult.SlowSqlWarnings); 
+                    this.slowSqlWarnings(testResult.SlowSqlWarnings);
                     this.transformationErrors(testResult.TransformationErrors);
-                    
+                    this.processError(testResult.ProcessError);
+
                     if (this.warningsCount()) {
                         $('.test-container a[href="#warnings"]').tab('show');
                     } else {

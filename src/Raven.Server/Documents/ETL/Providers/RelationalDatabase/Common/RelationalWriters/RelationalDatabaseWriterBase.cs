@@ -42,6 +42,8 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     private readonly List<Func<DbParameter, string, bool>> _stringParserList;
     private const int LongStatementWarnThresholdInMs = 3000;
 
+    protected virtual bool ShouldAbortAndRetryTransaction(Exception e) => false;
+
     protected RelationalDatabaseWriterBase(DocumentDatabase database, EtlConfiguration<TRelationalConnectionString> configuration, string taskName,
         RelationalDatabaseEtlMetricsCountersManager sqlMetrics, EtlProcessStatistics statistics, bool shouldConnectToTarget = true)
     {
@@ -152,6 +154,9 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         var sp = new Stopwatch();
         foreach (var itemToReplicate in toInsert)
         {
+            if (itemToReplicate.SkipOnTxRetry)
+                continue;
+
             sp.Restart();
 
             using (var cmd = GetInsertCommand(tableName, pkName, itemToReplicate))
@@ -173,11 +178,22 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                         {
                             Logger.Info(
                                 $"Failed to replicate changes to relational database for: {_etlName} " +
-                                $"(doc: {itemToReplicate.DocumentId}), will continue trying. {Environment.NewLine}{cmd.CommandText}", e);
+                                $"(doc: {itemToReplicate.DocumentId}), the document will be skipped and ETL will continue. {Environment.NewLine}{cmd.CommandText}", e);
                         }
 
                         var errorMessage = $"Insert statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}. Error:{Environment.NewLine}{e}";
                         _statistics.RecordItemLoadError(errorMessage, itemToReplicate.DocumentId);
+
+                        if (ShouldAbortAndRetryTransaction(e))
+                        {
+                            // an error that caused the whole transaction to be in invalid state so next inserts will also fail, and the only way to
+                            // recover from it is to retry the transaction, so we throw a special exception that will be handled by the caller
+                            // the problematic document that caused the problem will be excluded from the retried transaction to avoid hitting the same error again
+
+                            itemToReplicate.SkipOnTxRetry = true;
+
+                            throw new RetryableTransactionException(e);
+                        }
                     }
                 }
                 finally
@@ -283,15 +299,20 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
                             Logger.Info($"Failure to replicate deletions to relational database for: {_etlName}, " +
                                         "will continue trying." + Environment.NewLine + cmd.CommandText, e);
 
-                        var errorMessage = $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}";
-                        Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+                        if (Configuration.TestMode == false)
                         {
-                            CreatedAt = SystemTime.UtcNow,
-                            TaskName = _taskName,
-                            AffectedDocumentsCount = countOfDeletes,
-                            Step = TaskErrorStep.Load,
-                            Error = errorMessage
-                        });
+                            var errorMessage = $"Delete statement:{Environment.NewLine}{cmd.CommandText}{Environment.NewLine}Error:{Environment.NewLine}{e}";
+
+                            Database.TaskErrorsStorage.StoreProcessError(TaskCategory.Etl, new TaskProcessError
+                            {
+                                CreatedAt = SystemTime.UtcNow,
+                                TaskName = _taskName,
+                                AffectedDocumentsCount = countOfDeletes,
+                                Step = TaskErrorStep.Load,
+                                Error = errorMessage
+                            });
+                        }
+
                         _statistics.RecordProcessLoadError(countOfDeletes);
                     }
                 }
