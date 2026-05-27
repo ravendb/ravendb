@@ -919,9 +919,13 @@ namespace Voron
         public SizeReport GenerateSizeReport(bool includeTempBuffers)
         {
             long journalsSize = 0;
+            long hardLinkedJournalsSize = 0;
             foreach (var journal in Journal.Files)
             {
-                journalsSize += (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
+                var size = (long)journal.JournalWriter.NumberOfAllocated4Kb * 4 * Constants.Size.Kilobyte;
+                journalsSize += size;
+                if (journal.IsHardLinked)
+                    hardLinkedJournalsSize += size;
             }
 
             long tempBuffers = 0;
@@ -949,6 +953,7 @@ namespace Voron
                 DataFilePhysicalSizeInBytes = _currentStateRecord.DataPagerState.TotalPhysicalSpace,
                 DataFileAllocatedSizeInBytes = _currentStateRecord.DataPagerState.TotalAllocatedSize,
                 JournalsInBytes = journalsSize,
+                HardLinkedJournalsInBytes = hardLinkedJournalsSize,
                 TempBuffersInBytes = tempBuffers,
             };
         }

@@ -19,7 +19,9 @@ namespace Voron.Impl.Journal
         private List<TransactionHeader> _transactionHeaders = new();
 
         public FrozenSet<Guid> RecoveredJournalIds = recoveredJournalIds;
-        
+
+        public bool IsHardLinked { get; init; }
+
         public override string ToString()
         {
             return $"Number: {Number}";

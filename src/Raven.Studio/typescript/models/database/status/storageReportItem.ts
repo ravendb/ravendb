@@ -24,6 +24,8 @@ class storageReportItem {
     isGrouped: boolean;
     
     recyclableJournal = false;
+    hardLinkedJournal = false;
+    physicalSizeHint?: string;
 
     constructor(name: string, type: string, showType: boolean, size: number, internalChildren: storageReportItem[] = null, isGrouped = false) {
         this.name = name;
