@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var s3Settings = configuration.S3Settings;
             if (s3Settings != null && s3Settings.Disabled == false)
             {
-                if (s3Settings.CustomServerUrl == null && s3Settings.DisableChecksumValidation == true)
+                if (string.IsNullOrWhiteSpace(s3Settings.CustomServerUrl) && s3Settings.DisableChecksumValidation == true)
                 {
                     throw new ArgumentException($"{nameof(s3Settings.DisableChecksumValidation)} can't be set to true if {nameof(s3Settings.CustomServerUrl)} is null");
                 }

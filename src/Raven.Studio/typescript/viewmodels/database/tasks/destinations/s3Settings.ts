@@ -176,7 +176,7 @@ class s3Settings extends amazonSettings {
         dto.BucketName = this.bucketName();
         dto.CustomServerUrl = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.customServerUrl() : undefined;
         dto.ForcePathStyle = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.forcePathStyle() : false;
-        dto.DisableChecksumValidation = !this.hasConfigurationScript() && this.useCustomS3Host ? this.disableChecksumValidation() : false;
+        dto.DisableChecksumValidation = !this.hasConfigurationScript() && this.useCustomS3Host() ? this.disableChecksumValidation() : false;
         dto.StorageClass = this.storageClass();
         
         return genUtils.trimProperties(dto, ["CustomServerUrl", "RemoteFolderName", "AwsRegionName", "AwsAccessKey", "AwsSessionToken"]);
