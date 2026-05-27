@@ -22,7 +22,7 @@ const VariablesLegend = () => (
                 <br />
                 <strong>Embedded deletes</strong>: the parent document, with the embedded item already removed.
                 <br />
-                If <em>Ignore deletes</em> is on, the item is still there - the deletion hasn&apos;t been applied yet.
+                If <em>Skip deletion</em> is on, the item is still there - the deletion hasn&apos;t been applied yet.
             </li>
             <li>
                 <code>$row</code> -<br />
@@ -41,7 +41,7 @@ const VariablesLegend = () => (
 );
 
 const ArchiveSyntaxHelp = () => {
-    const code = `// Combine with "Ignore deletes" to keep the document instead of removing it.
+    const code = `// Combine with "Skip deletion" to keep the document instead of removing it.
 this.Archived = true;
 this.ArchivedAt = new Date().toISOString();`;
 
@@ -75,7 +75,7 @@ put('DeletedOrders/' + id(this), {
 };
 
 const RecomputeAggregateSyntaxHelp = () => {
-    const code = `// For embedded deletes (without "Ignore deletes"): 
+    const code = `// For embedded deletes (without "Skip deletion"): 
 // the item is already removed from this.Lines,
 // so re-summing gives the correct post-deletion total.
 this.TotalQuantity = (this.Lines || [])
@@ -103,7 +103,7 @@ const deletePatchSyntaxHelp = (
 );
 
 const deletePatchPlaceholder = `// Optional. Runs on DELETE events from the source BEFORE the delete is applied or ignored.
-// e.g.  this.Archived = true;   // combine with "Ignore deletes" for soft-delete
+// e.g.  this.Archived = true;   // combine with "Skip deletion" for soft-delete
 // Click the (?) icon below for syntax and more examples.`;
 
 export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTablePath | EmbeddedTablePath }) {
@@ -113,26 +113,26 @@ export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTabl
         <div>
             <FormGroup>
                 <FormSwitch control={control} name={`${path}.onDelete.ignoreDeletes`}>
-                    Ignore deletes
+                    Skip deletion
                     <PopoverWithHoverWrapper
                         message={
                             <>
                                 <p>
                                     <strong>Default (OFF):</strong>
                                     <br />
-                                    DELETE events from the source are applied to RavenDB - root-table documents are
+                                    DELETE events from the source are applied to RavenDB: root-table documents are
                                     deleted, embedded items are removed from the parent document, and <code>Value</code>
                                     -type embedded properties are set to <code>null</code>.
                                 </p>
                                 <p>
                                     <strong>When enabled:</strong>
                                     <br />
-                                    DELETE events are <strong>not applied</strong>. The document, embedded item, or{" "}
-                                    <code>Value</code>-type property is kept.
+                                    DELETE events are <strong>not applied</strong> to the target document. The document,
+                                    embedded item, or <code>Value</code>-type property is kept.
                                 </p>
                                 <p>
                                     If a delete patch is configured, it still runs BEFORE the delete decision, even when{" "}
-                                    <em>Ignore deletes</em> is on.
+                                    <em>Skip deletion</em> is on.
                                     <br />
                                     You can use it to mark the document as archived,
                                     <br />
@@ -157,7 +157,7 @@ export default function EditCdcSinkTaskOnDeleteFields({ path }: { path: RootTabl
                                 </p>
                                 <p>
                                     Use it when a delete should trigger additional changes, such as marking documents as
-                                    archived (combined with <em>Ignore deletes</em>), writing an audit record with{" "}
+                                    archived (combined with <em>Skip deletion</em>), writing an audit record with{" "}
                                     <code>put()</code>, or reversing parent-level aggregates when an embedded item is
                                     removed.
                                 </p>
