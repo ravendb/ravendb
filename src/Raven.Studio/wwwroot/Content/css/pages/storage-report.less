@@ -15,6 +15,7 @@
 @chart-trees-color: @color-1-1;
 @chart-tree-color: @color-1;
 @chart-configuration-color: @color-5-3;
+@chart-sharedjournals-color: @color-4-3;
 @chart-free-color: @gray-darker;
 
 
@@ -145,6 +146,20 @@
                 fill: lighten(@chart-configuration-color, 5%);
                 &.grouped {
                     fill: darken(@chart-configuration-color, 10%);
+                }
+            }
+        }
+
+        &.sharedjournals {
+            fill: @chart-sharedjournals-color;
+            &.grouped {
+                fill: darken(@chart-sharedjournals-color, 7%);
+            }
+
+            &:hover {
+                fill: lighten(@chart-sharedjournals-color, 5%);
+                &.grouped {
+                    fill: darken(@chart-sharedjournals-color, 10%);
                 }
             }
         }
@@ -438,6 +453,14 @@
 
                 &:hover {
                     background-color: lighten(@chart-configuration-color,5%);
+                }
+            }
+
+            &.sharedjournals {
+                background-color: @chart-sharedjournals-color;
+
+                &:hover {
+                    background-color: lighten(@chart-sharedjournals-color,5%);
                 }
             }
 

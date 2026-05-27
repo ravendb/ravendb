@@ -18,7 +18,7 @@ class ioStats extends shardViewModelBase {
 
         this.graph = new ioStatsGraph(
             () => `database-${detailedDatabaseName}`,
-            ["Documents", "Index", "Configuration"],
+            ["Documents", "Index", "Configuration", "SharedJournals"],
             true,
             (onUpdate, cutOff) => new dbLiveIOStatsWebSocketClient(this.db, this.location, onUpdate, cutOff));
     }

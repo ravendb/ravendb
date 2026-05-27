@@ -1893,7 +1893,8 @@ namespace Voron
             Documents,
             Index,
             Configuration,
-            System
+            System,
+            SharedJournals
         }
     }
 }
