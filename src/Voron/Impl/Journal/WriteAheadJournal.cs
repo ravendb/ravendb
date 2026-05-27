@@ -2093,7 +2093,7 @@ namespace Voron.Impl.Journal
                 if (_env.Options.IsLinked(_journalIndex, journalFile.JournalWriter.FileName.FullPath, out existingJournalFileName))
                 {
                     // The file is already linked, so we can reuse the file link
-                    matchingJournal = AddJournal(_journalIndex);
+                    matchingJournal = AddJournal(_journalIndex, isHardLinked: true);
                     return matchingJournal;
                 }
             }
@@ -2101,20 +2101,20 @@ namespace Voron.Impl.Journal
             long journalIndex = _journalIndex + 1;
 
             _env.Options.LinkFiles(journalIndex,journalFile.JournalWriter.FileName.FullPath, out existingJournalFileName);
-            matchingJournal = AddJournal(journalIndex);
+            matchingJournal = AddJournal(journalIndex, isHardLinked: true);
 
-            // we modify the in memory state _after_ we created the file, because we have to make sure that 
-            // we have created it successfully first. 
+            // we modify the in memory state _after_ we created the file, because we have to make sure that
+            // we have created it successfully first.
             _journalIndex++;
-            
+
             return matchingJournal;
 
-            JournalFile AddJournal(long index)
+            JournalFile AddJournal(long index, bool isHardLinked)
             {
                 var journalWriter = _env.Options.CreateJournalWriterForBranchEnvironment(index, existingJournalFileName, journalFile);
                 var journal = new JournalFile(_env, journalWriter, index, FrozenSet<Guid>.Empty)
                 {
-                    IsHardLinked = true
+                    IsHardLinked = isHardLinked
                 };
                 journal.NewlyCreatedFile = true;
                 journal.DoneWriting = journalFile.DoneWriting;

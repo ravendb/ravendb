@@ -140,22 +140,27 @@ public class RavenDB_26653 : RavenTestBase
         Assert.Equal(0, rootReport.HardLinkedJournalsInBytes);
         Assert.True(rootReport.JournalsInBytes > 0, "expected root env to have non-empty journals");
 
-        var indexes = database.IndexStore.GetIndexes().ToList();
-        Assert.NotEmpty(indexes);
+        var indexEnvs = database.GetAllStoragesEnvironment(new List<StorageEnvironmentWithType.StorageEnvironmentType>
+        {
+            StorageEnvironmentWithType.StorageEnvironmentType.Index
+        }).ToList();
+        Assert.NotEmpty(indexEnvs);
 
         long branchHardLinkedTotal = 0;
         long branchJournalsTotal = 0;
-        foreach (var index in indexes)
+        long branchDataFiles = 0;
+        foreach (var indexEnv in indexEnvs)
         {
-            var branchEnv = index._indexStorage.Environment();
+            var branchEnv = indexEnv.Environment;
 
             Assert.All(branchEnv.Journal.Files, j => Assert.True(j.IsHardLinked,
-                $"index '{index.Name}' branch env journal #{j.Number} must be hard-linked while shared journals enabled"));
+                $"index '{indexEnv.Name}' branch env journal #{j.Number} must be hard-linked while shared journals enabled"));
 
             var branchReport = branchEnv.GenerateSizeReport(includeTempBuffers: false);
             Assert.Equal(branchReport.JournalsInBytes, branchReport.HardLinkedJournalsInBytes);
             branchJournalsTotal += branchReport.JournalsInBytes;
             branchHardLinkedTotal += branchReport.HardLinkedJournalsInBytes;
+            branchDataFiles += branchReport.DataFilePhysicalSizeInBytes;
         }
 
         Assert.True(branchHardLinkedTotal > 0, "expected branch envs to have hard-linked journals");
@@ -164,7 +169,6 @@ public class RavenDB_26653 : RavenTestBase
         var totalsAfterDedup = database.GetSizeOnDisk();
 
         long expectedJournalsContribution = rootReport.JournalsInBytes;
-        long branchDataFiles = indexes.Sum(i => i._indexStorage.Environment().GenerateSizeReport(includeTempBuffers: false).DataFilePhysicalSizeInBytes);
         long docsAndConfigDataFiles = 0;
         long docsAndConfigJournals = 0;
         foreach (var env in database.GetAllStoragesEnvironment(new List<StorageEnvironmentWithType.StorageEnvironmentType>
