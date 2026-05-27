@@ -337,7 +337,6 @@ class storageReport extends shardViewModelBase {
                 journal.AllocatedSpaceInBytes,
                 []
             );
-            item.hardLinkedJournal = journal.IsHardLink;
             if (journal.IsHardLink === false) {
                 item.physicalSize = journal.AllocatedSpaceInBytes;
             } else {
@@ -352,7 +351,7 @@ class storageReport extends shardViewModelBase {
 
         const journalsItem = new storageReportItem("Journals", "journals", false, allocatedSum, mappedJournals);
         journalsItem.physicalSize = onDiskSum;
-        if (mappedJournals.some(j => j.hardLinkedJournal)) {
+        if (journals.some(j => j.IsHardLink)) {
             journalsItem.physicalSizeHint = "Hard-linked journals are counted once at @SharedJournals root.";
         }
         return journalsItem;
