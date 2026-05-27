@@ -66,11 +66,10 @@ public interface IBootstrapState
 
 /// <summary>
 /// Single source of truth for the kebab-case wire spelling of each
-/// <see cref="BootstrapPhase"/> value. Shared by /api/bootstrap/status and the
-/// /healthz description so the two stay in lock-step. (Both used to derive
-/// their string from <c>Phase.ToString().ToLowerInvariant()</c> independently,
-/// which produced `needsactivation` for one and `needs-activation` for the
-/// other — drift the user could see.)
+/// <see cref="BootstrapPhase"/> value on non-JSON surfaces such as /healthz.
+/// The JSON API returns the enum directly and relies on
+/// <see cref="System.Text.Json.Serialization.JsonStringEnumConverter"/> to emit
+/// the PascalCase name.
 /// </summary>
 public static class BootstrapPhaseExtensions
 {

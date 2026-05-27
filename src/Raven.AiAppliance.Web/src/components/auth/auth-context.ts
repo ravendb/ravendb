@@ -1,10 +1,10 @@
 import { createContext, useContext } from "react";
-import type { RedeemLicenseRequest, RedeemLicenseResponse } from "@/api/bootstrap-service";
+import type { BootstrapStatusResponse, RedeemLicenseRequest } from "@/api/generated/server-api";
 
 export type AuthContextValue = {
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (request: RedeemLicenseRequest) => Promise<RedeemLicenseResponse>;
+    login: (request: RedeemLicenseRequest) => Promise<BootstrapStatusResponse>;
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

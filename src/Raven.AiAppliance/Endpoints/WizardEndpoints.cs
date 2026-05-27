@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Infrastructure;
 using Raven.AiAppliance.Wizard;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.CdcSink;
 using Raven.Client.Documents.Operations.CdcSink.Schema;
 using Raven.Client.Documents.Operations.CdcSink.Test;
-using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL.SQL;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
@@ -42,12 +43,33 @@ public static class WizardEndpoints
 
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/setup");
-        group.MapPost("/connect",      ConnectAsync);
-        group.MapPost("/discover",     DiscoverAsync);
-        group.MapPost("/map",          MapAsync);
-        group.MapPost("/test-mapping", TestMappingAsync);
-        group.MapPost("/provision",    ProvisionAsync);
+        var group = app.MapGroup("/api/setup").WithTags("setup");
+        group.MapPost("/connect", ConnectAsync)
+            .WithName("setup.connect")
+            .Accepts<ConnectRequest>("application/json")
+            .Produces<ConnectResult>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/discover", DiscoverAsync)
+            .WithName("setup.discover")
+            .Accepts<ConnectRequest>("application/json")
+            .Produces<DiscoverResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/map", MapAsync)
+            .WithName("setup.map")
+            .Accepts<MapRequest>("application/json")
+            .Produces<CdcSinkConfiguration>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/test-mapping", TestMappingAsync)
+            .WithName("setup.testMapping")
+            .Accepts<TestMappingRequest>("application/json")
+            .Produces<TestMappingResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
+        group.MapPost("/provision", ProvisionAsync)
+            .WithName("setup.provision")
+            .Accepts<ProvisionRequest>("application/json")
+            .Produces<ProvisionResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ApiErrorResponse>(StatusCodes.Status409Conflict);
     }
 
     private static async Task<IResult> ConnectAsync(
@@ -139,50 +161,52 @@ public static class WizardEndpoints
             state.LastDiscoverAt       = DateTime.UtcNow;
         }, ct);
 
-        return Results.Ok(schema);
+        return Results.Ok(DiscoverResponse.From(schema));
     }
 
     /// <summary>
-    /// W3 Map. Accepts a CdcSinkConfiguration JSON (manual or import path),
+    /// W3 Map. Accepts a CDC mapping JSON (manual or import path),
     /// applies forgiving defaults for the wizard-context fields (Name +
     /// ConnectionStringName), validates it, and persists to wizard-state for
     /// W4 Test-mapping / W6 Provision to read back. No LLM path (AI-suggest)
     /// in this slice.
     /// </summary>
     private static async Task<IResult> MapAsync(
-        CdcSinkConfiguration body,
+        MapRequest body,
         IDocumentStore store,
         ILogger<WizardLogger> logger,
         CancellationToken ct)
     {
         if (body is null)
-            return Results.BadRequest(new { error = "request body required" });
+            return Results.BadRequest(new ApiErrorResponse("request body required"));
+
+        var cdcConfig = body.ToClientConfiguration();
 
         // Forgiving defaults — caller supplies Tables, wizard fills the
         // scaffolding. Provision (W6) renames `Name` to the per-app value;
         // ConnectionStringName defaults to the probe Connect/Discover
         // already register on the config DB.
-        if (string.IsNullOrWhiteSpace(body.Name))
-            body.Name = "wizard-cdc";
-        if (string.IsNullOrWhiteSpace(body.ConnectionStringName))
-            body.ConnectionStringName = WizardSourceProbeName;
+        if (string.IsNullOrWhiteSpace(cdcConfig.Name))
+            cdcConfig.Name = "wizard-cdc";
+        if (string.IsNullOrWhiteSpace(cdcConfig.ConnectionStringName))
+            cdcConfig.ConnectionStringName = WizardSourceProbeName;
 
         // validateConnection: false — Map doesn't bind a real SqlConnectionString
         // to the config object. The probe is on the config DB; the per-app CS is
         // set up at Provision time.
-        if (!body.Validate(out var errors, validateName: true, validateConnection: false))
+        if (!cdcConfig.Validate(out var errors, validateName: true, validateConnection: false))
         {
             logger.LogInformation("Map: configuration rejected by Validate ({Count} errors)", errors.Count);
-            return Results.BadRequest(new { errors });
+            return Results.BadRequest(new ApiErrorResponse(Errors: errors.ToArray()));
         }
 
         await PersistAsync(store, state =>
         {
-            state.LastMapConfiguration = body;
+            state.LastMapConfiguration = cdcConfig;
             state.LastMapAt            = DateTime.UtcNow;
         }, ct);
 
-        return Results.Ok(body);
+        return Results.Ok(cdcConfig);
     }
 
     /// <summary>
@@ -200,14 +224,14 @@ public static class WizardEndpoints
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.SourceTableName))
-            return Results.BadRequest(new { error = "sourceTableName is required" });
+            return Results.BadRequest(new ApiErrorResponse("sourceTableName is required"));
 
         WizardState? state;
         using (var session = store.OpenAsyncSession())
             state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
 
         if (state?.LastMapConfiguration is null)
-            return Results.BadRequest(new { error = "no map configuration found; call /api/setup/map first" });
+            return Results.BadRequest(new ApiErrorResponse("no map configuration found; call /api/setup/map first"));
 
         var request = new TestCdcSinkMappingRequest
         {
@@ -232,7 +256,7 @@ public static class WizardEndpoints
             result.Errors.Add($"Test mapping threw: {ex.Message}");
         }
 
-        return Results.Ok(result);
+        return Results.Ok(TestMappingResponse.From(result));
     }
 
     /// <summary>
@@ -253,14 +277,12 @@ public static class WizardEndpoints
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.AppName))
-            return Results.BadRequest(new { error = "appName is required" });
+            return Results.BadRequest(new ApiErrorResponse("appName is required"));
 
         var slug = Slugifier.ToSlug(body.AppName);
         if (string.IsNullOrEmpty(slug))
-            return Results.BadRequest(new
-            {
-                error = $"appName '{body.AppName}' has no ASCII alphanumeric characters; cannot derive slug.",
-            });
+            return Results.BadRequest(new ApiErrorResponse(
+                $"appName '{body.AppName}' has no ASCII alphanumeric characters; cannot derive slug."));
 
         // Read LastMapConfiguration NoTracking — we'll mutate Name in-place
         // before installing on the per-app DB, and the no-tracking option
@@ -272,7 +294,7 @@ public static class WizardEndpoints
         {
             var state = await session.LoadAsync<WizardState>(WizardState.DocumentId, ct);
             if (state?.LastMapConfiguration is null)
-                return Results.BadRequest(new { error = "no map configuration found; call /api/setup/map first" });
+                return Results.BadRequest(new ApiErrorResponse("no map configuration found; call /api/setup/map first"));
 
             cdcConfig = state.LastMapConfiguration;
         }
@@ -288,10 +310,10 @@ public static class WizardEndpoints
         }
         catch (ConcurrencyException)
         {
-            return Results.Conflict(new { error = $"database '{slug}' already exists" });
+            return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
         }
         if (!created)
-            return Results.Conflict(new { error = $"database '{slug}' already exists" });
+            return Results.Conflict(new ApiErrorResponse($"database '{slug}' already exists"));
 
         // Transplant the source SqlConnectionString from the config DB probe
         // to the per-app DB. The CDC task references the CS by name, so the
@@ -304,10 +326,8 @@ public static class WizardEndpoints
         if (probes.SqlConnectionStrings is null ||
             !probes.SqlConnectionStrings.TryGetValue(WizardSourceProbeName, out var probeCs))
         {
-            return Results.BadRequest(new
-            {
-                error = $"probe connection string '{WizardSourceProbeName}' is not registered on the config DB; call /api/setup/connect first.",
-            });
+            return Results.BadRequest(new ApiErrorResponse(
+                $"probe connection string '{WizardSourceProbeName}' is not registered on the config DB; call /api/setup/connect first."));
         }
 
         var transplantedCs = new SqlConnectionString
@@ -352,14 +372,14 @@ public static class WizardEndpoints
         logger.LogInformation("Provisioned app slug={Slug} id={Id} cdcTask={CdcTaskName}",
             app.Slug, app.Id, app.CdcTaskName);
 
-        return Results.Ok(new { id = app.Id, slug = app.Slug });
+        return Results.Ok(new ProvisionResponse(app.Id!, app.Slug));
     }
 
     private static bool TryRejectInvalidRequest(ConnectRequest? body, out IResult error)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.Provider) || string.IsNullOrWhiteSpace(body.ConnectionString))
         {
-            error = Results.BadRequest(new { error = "provider and connectionString are required" });
+            error = Results.BadRequest(new ApiErrorResponse("provider and connectionString are required"));
             return true;
         }
 
@@ -375,16 +395,14 @@ public static class WizardEndpoints
         }
         catch (Exception ex) when (ex is NotSupportedException or NotImplementedException)
         {
-            error = Results.BadRequest(new { error = $"unsupported provider '{body.Provider}': {ex.Message}" });
+            error = Results.BadRequest(new ApiErrorResponse($"unsupported provider '{body.Provider}': {ex.Message}"));
             return true;
         }
 
         if (!CdcSupportedProviders.Contains(parsed))
         {
-            error = Results.BadRequest(new
-            {
-                error = $"provider '{body.Provider}' (parses as {parsed}) is recognized by Raven.Client but not supported by CDC. Supported: {string.Join(", ", CdcSupportedProviders)}.",
-            });
+            error = Results.BadRequest(new ApiErrorResponse(
+                $"provider '{body.Provider}' (parses as {parsed}) is recognized by Raven.Client but not supported by CDC. Supported: {string.Join(", ", CdcSupportedProviders)}."));
             return true;
         }
 

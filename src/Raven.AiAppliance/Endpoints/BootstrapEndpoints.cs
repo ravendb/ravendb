@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Hosting;
 
 namespace Raven.AiAppliance.Endpoints;
@@ -14,21 +15,22 @@ namespace Raven.AiAppliance.Endpoints;
 /// they're the only way out of <see cref="BootstrapPhase.NeedsActivation"/>.
 public static class BootstrapEndpoints
 {
-    public sealed record RedeemLicenseRequest(string LicenseKey);
-
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/bootstrap");
-        group.MapGet("/status", GetStatus);
-        group.MapPost("/redeem-license", RedeemLicenseAsync);
+        group.MapGet("/status", GetStatus)
+            .WithName("bootstrap.status")
+            .Produces<BootstrapStatusResponse>();
+        group.MapPost("/redeem-license", RedeemLicenseAsync)
+            .WithName("bootstrap.redeemLicense")
+            .Accepts<RedeemLicenseRequest>("application/json")
+            .Produces<BootstrapStatusResponse>()
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<BootstrapRedeemConflictResponse>(StatusCodes.Status409Conflict);
     }
 
     private static IResult GetStatus(IBootstrapState state) =>
-        Results.Ok(new
-        {
-            state = state.Phase.ToWire(),
-            reason = state.Reason,
-        });
+        Results.Ok(new BootstrapStatusResponse(state.Phase, state.Reason));
 
     /// <summary>
     /// First-run activation. Acquires the setup-package zip (from
@@ -72,7 +74,7 @@ public static class BootstrapEndpoints
         CancellationToken ct)
     {
         if (body is null || string.IsNullOrWhiteSpace(body.LicenseKey))
-            return Results.BadRequest(new { error = "licenseKey is required" });
+            return Results.BadRequest(new ApiErrorResponse("licenseKey is required"));
 
         var opts = options.Value;
 
@@ -81,11 +83,9 @@ public static class BootstrapEndpoints
         // zips and racing the IDocumentStore reload.
         if (!bootstrap.TryMarkRedeeming())
         {
-            return Results.Conflict(new
-            {
-                error = "redemption already in progress or completed",
-                state = bootstrap.Phase.ToWire(),
-            });
+            return Results.Conflict(new BootstrapRedeemConflictResponse(
+                "redemption already in progress or completed",
+                bootstrap.Phase));
         }
 
         HttpClient? http = null;
@@ -230,7 +230,7 @@ public static class BootstrapEndpoints
                 _ = Task.Delay(500, CancellationToken.None)
                     .ContinueWith(_ => lifetime.StopApplication(), TaskScheduler.Default);
 
-                return Results.Ok(new { state = "restarting" });
+                return Results.Ok(new BootstrapStatusResponse(BootstrapPhase.Restarting));
             }
 
             // Unsupervised host: no s6, no process to restart us. Flip
@@ -238,7 +238,7 @@ public static class BootstrapEndpoints
             // talking to whatever RavenDB it was already talking to
             // (WAF-supplied in tests; loopback unsecured Raven in dev).
             bootstrap.MarkReady();
-            return Results.Ok(new { state = "ready" });
+            return Results.Ok(new BootstrapStatusResponse(BootstrapPhase.Ready));
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {

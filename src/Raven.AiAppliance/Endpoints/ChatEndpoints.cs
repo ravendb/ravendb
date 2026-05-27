@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Raven.AiAppliance.Contracts;
 using Raven.AiAppliance.Schema;
 using Raven.Client.Documents;
 using Raven.Client.Documents.AI;
@@ -35,16 +36,14 @@ public static class ChatEndpoints
         IncludeFields = true,
     };
 
-    public sealed record ChatRequest(
-        string AgentId,
-        string Prompt,
-        string? ConversationId,
-        Dictionary<string, string>? Parameters);
-
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/chat");
-        group.MapPost("/stream", HandleStreamAsync);
+        var group = app.MapGroup("/api/chat").WithTags("chat");
+        group.MapPost("/stream", HandleStreamAsync)
+            .WithName("chat.stream")
+            .Accepts<ChatRequest>("application/json")
+            .Produces<string>(StatusCodes.Status200OK, contentType: "application/x-ndjson")
+            .Produces<ApiErrorResponse>(StatusCodes.Status400BadRequest);
     }
 
     private static async Task HandleStreamAsync(
@@ -158,7 +157,7 @@ public static class ChatEndpoints
     private static async Task WriteBadRequestAsync(HttpContext ctx, string error)
     {
         ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await ctx.Response.WriteAsJsonAsync(new { error });
+        await ctx.Response.WriteAsJsonAsync(new ApiErrorResponse(error));
     }
 
     private static async Task WriteLineAsync(HttpContext ctx, object payload)

@@ -11,11 +11,12 @@
 #     -t ravendb/ai-appliance:demo \
 #     .
 #
-# Four stages:
-#   1. ravendb-build — dotnet publish of Raven.Server.
-#   2. appliance-frontend-build — pnpm build of Raven.AiAppliance.Web.
-#   3. web-build     — dotnet publish of Raven.AiAppliance.
-#   4. runtime       — aspnet base image, s6-overlay v3, both artifacts copied in.
+# Five stages:
+#   1. ravendb-build          — dotnet publish of Raven.Server.
+#   2. appliance-openapi-build — dotnet build of Raven.AiAppliance to emit openapi.json.
+#   3. appliance-frontend-build — pnpm build of Raven.AiAppliance.Web.
+#   4. web-build              — dotnet publish of Raven.AiAppliance.
+#   5. runtime                — aspnet base image, s6-overlay v3, both artifacts copied in.
 #
 # Security posture is intentionally minimal: RavenDB starts with
 # Setup.Mode=Unsecured, Studio binds to 0.0.0.0:8080 inside the container,
@@ -48,11 +49,23 @@ RUN dotnet publish src/Raven.Server/Raven.Server.csproj \
         --nologo
 
 # -----------------------------------------------------------------------------
-# Stage 2: build Raven.AiAppliance.Web.
+# Stage 2: build-time OpenAPI document for Raven.AiAppliance.
+# -----------------------------------------------------------------------------
+FROM ${SDK_IMAGE} AS appliance-openapi-build
+WORKDIR /src
+COPY . .
+
+RUN dotnet build src/Raven.AiAppliance/Raven.AiAppliance.csproj \
+       -c Release \
+       --nologo \
+       --tl:off
+
+# -----------------------------------------------------------------------------
+# Stage 3: build Raven.AiAppliance.Web.
 # -----------------------------------------------------------------------------
 FROM ${NODE_IMAGE} AS appliance-frontend-build
 ARG PNPM_VERSION
-WORKDIR /src/Raven.AiAppliance.Web
+WORKDIR /workspace
 
 RUN corepack enable \
     && corepack prepare pnpm@${PNPM_VERSION} --activate
@@ -60,15 +73,22 @@ RUN corepack enable \
 COPY src/Raven.AiAppliance.Web/package.json \
      src/Raven.AiAppliance.Web/pnpm-lock.yaml \
      src/Raven.AiAppliance.Web/pnpm-workspace.yaml \
-     ./
+    ./src/Raven.AiAppliance.Web/
+
+WORKDIR /workspace/src/Raven.AiAppliance.Web
 
 RUN pnpm install --frozen-lockfile
 
-COPY src/Raven.AiAppliance.Web/ ./
+WORKDIR /workspace
+COPY --from=appliance-openapi-build /src/src/Raven.AiAppliance/obj/openapi/ai-appliance.json ./src/Raven.AiAppliance/obj/openapi/ai-appliance.json
+COPY src/Raven.AiAppliance.Web/ ./src/Raven.AiAppliance.Web/
+
+WORKDIR /workspace/src/Raven.AiAppliance.Web
+ENV RAVEN_AI_OPENAPI_SKIP_SPEC_BUILD=1
 RUN pnpm build
 
 # -----------------------------------------------------------------------------
-# Stage 3: build Raven.AiAppliance.
+# Stage 4: build Raven.AiAppliance.
 # -----------------------------------------------------------------------------
 FROM ${SDK_IMAGE} AS web-build
 WORKDIR /src
@@ -81,10 +101,10 @@ RUN dotnet publish src/Raven.AiAppliance/Raven.AiAppliance.csproj \
 
 # Replace the server's checked-in placeholder wwwroot with the Vite build.
 RUN rm -rf /publish/web/wwwroot
-COPY --from=appliance-frontend-build /src/Raven.AiAppliance.Web/dist /publish/web/wwwroot
+COPY --from=appliance-frontend-build /workspace/src/Raven.AiAppliance.Web/dist /publish/web/wwwroot
 
 # -----------------------------------------------------------------------------
-# Stage 4: runtime. ASP.NET base + s6-overlay supervising RavenDB and the web app.
+# Stage 5: runtime. ASP.NET base + s6-overlay supervising RavenDB and the web app.
 # -----------------------------------------------------------------------------
 FROM ${RUNTIME_IMAGE} AS runtime
 ARG S6_OVERLAY_VERSION

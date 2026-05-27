@@ -19,4 +19,4 @@ namespace Raven.AiAppliance.Wizard;
 /// DI-supplied <see cref="Schema.IAgentSchema"/> regardless. Multi-framing
 /// schema picking + framing persistence both live under design §1.3 step 9
 /// "AI-suggest" paths.</param>
-internal sealed record ProvisionAgentRequest(string ConnectionStringName, string? Framing = null);
+public sealed record ProvisionAgentRequest(string ConnectionStringName, string? Framing = null);

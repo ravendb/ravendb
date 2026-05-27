@@ -10,10 +10,8 @@ internal sealed class RavenHealthCheck(IBootstrapState bootstrap) : IHealthCheck
         if (bootstrap.Phase == BootstrapPhase.Ready)
             return Task.FromResult(HealthCheckResult.Healthy());
 
-        // ToWire() is the kebab-case spelling shared with /api/bootstrap/status,
-        // so /healthz descriptions and the bootstrap status endpoint stay in
-        // sync (vs. ad-hoc `Phase.ToString().ToLowerInvariant()` which produced
-        // "needsactivation" — no hyphen — and drifted from the status wire).
+        // /healthz is plain text, so keep using the dedicated kebab-case mapper
+        // instead of the JSON enum representation used by /api/bootstrap/status.
         var phase = bootstrap.Phase.ToWire();
         var description = bootstrap.Reason is { Length: > 0 } reason
             ? $"appliance not ready ({phase}): {reason}"

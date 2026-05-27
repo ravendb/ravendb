@@ -1,11 +1,6 @@
+import { API_ENDPOINTS } from "@/api/generated/server-api";
+import type { ChatRequest } from "@/api/generated/server-api";
 import type { ApiClient } from "@/api/http-client";
-
-export type ChatRequest = {
-    agentId: string;
-    prompt: string;
-    conversationId?: string | null;
-    parameters?: Record<string, string> | null;
-};
 
 export type ChatStreamEvent =
     | {
@@ -25,7 +20,7 @@ export type ChatStreamEvent =
 export function createChatService(client: ApiClient) {
     return {
         stream: async function* (request: ChatRequest): AsyncGenerator<ChatStreamEvent> {
-            const response = await client.post<Response>("/chat/stream", request, {
+            const response = await client.post<Response>(API_ENDPOINTS.chat.stream, request, {
                 responseType: "response",
             });
 

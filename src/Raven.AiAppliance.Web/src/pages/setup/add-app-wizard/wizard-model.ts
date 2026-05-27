@@ -1,9 +1,10 @@
 import type {
-    CdcSinkConfiguration,
-    CdcSinkSourceSchema,
-    CdcSinkSourceTable,
+    CdcSinkTableConfig,
     ConnectRequest,
-} from "@/api/setup-service";
+    DiscoverResponse,
+    DiscoverTableResponse,
+    MapRequest,
+} from "@/api/generated/server-api";
 
 export const DESCRIPTION_MAX_LENGTH = 200;
 export const DEFAULT_TEST_ROWS = 5;
@@ -167,7 +168,7 @@ export function parseTableNames(value: SetupWizardFormValues["tableNames"]) {
     return value.map((table) => table.name.trim()).filter(Boolean);
 }
 
-export function buildAutoConfiguration(schema: CdcSinkSourceSchema, tableNames: string[]): CdcSinkConfiguration {
+export function buildAutoConfiguration(schema: DiscoverResponse, tableNames: string[]): MapRequest {
     const requestedTables = new Set(tableNames.map((name) => name.toLowerCase()));
     const tables = schema.tables
         .filter((table) => isTableUsable(table))
@@ -186,8 +187,12 @@ export function buildAutoConfiguration(schema: CdcSinkSourceSchema, tableNames: 
                     name: toPropertyName(column.name),
                     type: toColumnMappingType(column.suggestedType),
                 })),
+            disabled: false,
             embeddedTables: [],
             linkedTables: [],
+            onDelete: {
+                ignoreDeletes: false,
+            },
             primaryKeyColumns: table.primaryKeyColumns,
             sourceTableName: table.sourceTableName,
             sourceTableSchema: table.sourceTableSchema,
@@ -199,23 +204,25 @@ export function buildAutoConfiguration(schema: CdcSinkSourceSchema, tableNames: 
     };
 }
 
-export function isTableUsable(table: CdcSinkSourceTable) {
+export function isTableUsable(table: DiscoverTableResponse) {
     return table.isCdcEnabled && !table.unsupportedReason;
 }
 
-export function getTableKey(table: CdcSinkSourceTable) {
+export function getTableKey(table: DiscoverTableResponse) {
     return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
 }
 
-export function getMappedTableKey(table: CdcSinkConfiguration["tables"][number]) {
-    return table.sourceTableSchema ? `${table.sourceTableSchema}.${table.sourceTableName}` : table.sourceTableName;
+export function getMappedTableKey(table: CdcSinkTableConfig) {
+    const sourceTableName = table.sourceTableName ?? "";
+
+    return table.sourceTableSchema ? `${table.sourceTableSchema}.${sourceTableName}` : sourceTableName;
 }
 
-export function getTableLabel(table: CdcSinkSourceTable) {
+export function getTableLabel(table: DiscoverTableResponse) {
     return getTableKey(table);
 }
 
-export function getPrimaryKeyLabel(table: Pick<CdcSinkSourceTable, "primaryKeyColumns">) {
+export function getPrimaryKeyLabel(table: Pick<DiscoverTableResponse, "primaryKeyColumns">) {
     return table.primaryKeyColumns.length ? table.primaryKeyColumns.join(", ") : "None";
 }
 
@@ -227,16 +234,16 @@ export function firstMessage(messages: string[]) {
     return messages.find(Boolean);
 }
 
-function toColumnMappingType(type: CdcSinkSourceTable["columns"][number]["suggestedType"]) {
-    if (type === "Json" || type === 1) {
-        return 1 as const;
+function toColumnMappingType(type: DiscoverTableResponse["columns"][number]["suggestedType"]) {
+    if (type === "Json") {
+        return "Json" as const;
     }
 
-    if (type === "Attachment" || type === 2) {
-        return 2 as const;
+    if (type === "Attachment") {
+        return "Attachment" as const;
     }
 
-    return undefined;
+    return "Default" as const;
 }
 
 function toCollectionName(value: string) {

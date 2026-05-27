@@ -1,5 +1,8 @@
 namespace Raven.AiAppliance.Wizard;
 
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// Wire-shape of the verifier result returned by the server-side
 /// <c>POST /admin/cdc-sink/verify</c>. Local mirror of
@@ -11,8 +14,20 @@ namespace Raven.AiAppliance.Wizard;
 /// </summary>
 public sealed class ConnectResult
 {
-    public bool Success { get; set; }
-    public bool HasPermissionToSetup { get; set; }
-    public List<string> Errors { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
+    [SetsRequiredMembers]
+    public ConnectResult()
+    {
+    }
+
+    [JsonRequired]
+    public required bool Success { get; set; }
+
+    [JsonRequired]
+    public required bool HasPermissionToSetup { get; set; }
+
+    [JsonRequired]
+    public required List<string> Errors { get; set; } = new();
+
+    [JsonRequired]
+    public required List<string> Warnings { get; set; } = new();
 }

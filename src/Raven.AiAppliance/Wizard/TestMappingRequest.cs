@@ -8,7 +8,7 @@ namespace Raven.AiAppliance.Wizard;
 /// <c>First</c> / <c>Upsert</c> in the handler — by-PK and delete previews
 /// aren't part of the wizard surface yet.
 /// </summary>
-internal sealed record TestMappingRequest(
+public sealed record TestMappingRequest(
     string SourceTableName,
     int? MaxRows = null,
     string? SourceTableSchema = null);
