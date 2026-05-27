@@ -616,7 +616,8 @@ namespace Raven.Server.Documents
         {
             StorageEnvironmentWithType.StorageEnvironmentType.Documents,
             StorageEnvironmentWithType.StorageEnvironmentType.Configuration,
-            StorageEnvironmentWithType.StorageEnvironmentType.Index
+            StorageEnvironmentWithType.StorageEnvironmentType.Index,
+            StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals
         };
 
         private static readonly List<StorageEnvironmentWithType.StorageEnvironmentType> DefaultStorageEnvironmentTypesForBackup = new()
@@ -1492,6 +1493,14 @@ namespace Raven.Server.Documents
                                         LastIndexQueryTime = index.GetLastQueryingTime()
                                     };
                         }
+                        break;
+
+                    case StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals:
+                        var sharedJournalsEnv = IndexStore?.SharedJournals?.Env;
+                        if (sharedJournalsEnv != null)
+                            yield return
+                                new StorageEnvironmentWithType(Config.Categories.IndexingConfiguration.SharedJournalsStorageName,
+                                    StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals, sharedJournalsEnv);
                         break;
                 }
             }

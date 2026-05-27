@@ -52,7 +52,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
                         writer.WriteComma();
                         
                         writer.WritePropertyName("SharedJournals");
-                        writer.WriteString(env.Environment.Options.RootJournal is null ? "Root" : "Branch");
+                        string sharedJournalsRole;
+                        if (env.Type == StorageEnvironmentWithType.StorageEnvironmentType.SharedJournals)
+                            sharedJournalsRole = "Root";
+                        else if (env.Environment.Options.RootJournal != null)
+                            sharedJournalsRole = "Branch";
+                        else
+                            sharedJournalsRole = "None";
+                        writer.WriteString(sharedJournalsRole);
                         writer.WriteComma();
 
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env));
